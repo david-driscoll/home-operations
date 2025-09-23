@@ -1,0 +1,22 @@
+{
+  "name": "home-operations",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/david-driscoll/home-operations#readme",
+  "bugs": {
+    "url": "https://github.com/david-driscoll/home-operations/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-driscoll/home-operations.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

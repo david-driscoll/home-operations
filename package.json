@@ -1,0 +1,48 @@
+{
+  "name": "home-operations",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/david-driscoll/home-operations#readme",
+  "bugs": {
+    "url": "https://github.com/david-driscoll/home-operations/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-driscoll/home-operations.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/jiff": "^0.7.7",
+    "@types/node": "^24.5.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@1password/connect": "^1.4.2",
+    "@muhlba91/pulumi-proxmoxve": "^7.5.0",
+    "@pulumi/authentik": "file:sdks/authentik",
+    "@pulumi/b2": "file:sdks/b2",
+    "@pulumi/cloudflare": "^6.9.1",
+    "@pulumi/command": "^1.1.0",
+    "@pulumi/docker": "^4.8.2",
+    "@pulumi/kubernetes": "^4.23.0",
+    "@pulumi/minio": "^0.16.5",
+    "@pulumi/proxmox": "file:sdks/proxmox",
+    "@pulumi/pulumi": "^3.113.0",
+    "@pulumi/random": "^4.18.3",
+    "@pulumi/tailscale": "^0.21.1",
+    "@pulumi/unifi": "file:sdks/unifi",
+    "@pulumi/uptimekuma": "file:sdks/uptimekuma",
+    "@pulumiverse/talos": "^0.6.0",
+    "jiff": "^0.7.3",
+    "openapi-client-axios": "^7.7.0",
+    "rpc-websocket-client": "^1.1.4"
+  }
+}

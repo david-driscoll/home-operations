@@ -1,0 +1,149 @@
+import * as pulumi from "@pulumi/pulumi";
+export interface LxcDiskMountoptions {
+    noatime?: pulumi.Input<boolean>;
+    nodev?: pulumi.Input<boolean>;
+    noexec?: pulumi.Input<string>;
+    nosuid?: pulumi.Input<boolean>;
+}
+export interface LxcDiskTimeouts {
+    create?: pulumi.Input<string>;
+    default?: pulumi.Input<string>;
+    delete?: pulumi.Input<string>;
+    read?: pulumi.Input<string>;
+    update?: pulumi.Input<string>;
+}
+export interface LxcFeatures {
+    fuse?: pulumi.Input<boolean>;
+    keyctl?: pulumi.Input<boolean>;
+    mknod?: pulumi.Input<boolean>;
+    mount?: pulumi.Input<string>;
+    nesting?: pulumi.Input<boolean>;
+}
+export interface LxcMountpoint {
+    acl?: pulumi.Input<boolean>;
+    backup?: pulumi.Input<boolean>;
+    file?: pulumi.Input<string>;
+    key: pulumi.Input<string>;
+    mp: pulumi.Input<string>;
+    quota?: pulumi.Input<boolean>;
+    replicate?: pulumi.Input<boolean>;
+    shared?: pulumi.Input<boolean>;
+    size: pulumi.Input<string>;
+    slot: pulumi.Input<number>;
+    storage: pulumi.Input<string>;
+    volume?: pulumi.Input<string>;
+}
+export interface LxcNetwork {
+    bridge?: pulumi.Input<string>;
+    firewall?: pulumi.Input<boolean>;
+    gw?: pulumi.Input<string>;
+    gw6?: pulumi.Input<string>;
+    hwaddr?: pulumi.Input<string>;
+    ip?: pulumi.Input<string>;
+    ip6?: pulumi.Input<string>;
+    mtu?: pulumi.Input<number>;
+    name: pulumi.Input<string>;
+    rate?: pulumi.Input<number>;
+    tag?: pulumi.Input<number>;
+    trunks?: pulumi.Input<string>;
+    type?: pulumi.Input<string>;
+}
+export interface LxcRootfs {
+    acl?: pulumi.Input<boolean>;
+    quota?: pulumi.Input<boolean>;
+    replicate?: pulumi.Input<boolean>;
+    ro?: pulumi.Input<boolean>;
+    shared?: pulumi.Input<boolean>;
+    size: pulumi.Input<string>;
+    storage: pulumi.Input<string>;
+    volume?: pulumi.Input<string>;
+}
+export interface LxcTimeouts {
+    create?: pulumi.Input<string>;
+    default?: pulumi.Input<string>;
+    delete?: pulumi.Input<string>;
+    read?: pulumi.Input<string>;
+    update?: pulumi.Input<string>;
+}
+export interface PoolTimeouts {
+    create?: pulumi.Input<string>;
+    default?: pulumi.Input<string>;
+    delete?: pulumi.Input<string>;
+    read?: pulumi.Input<string>;
+    update?: pulumi.Input<string>;
+}
+export interface VmQemuDisk {
+    aio?: pulumi.Input<string>;
+    backup?: pulumi.Input<boolean>;
+    cache?: pulumi.Input<string>;
+    discard?: pulumi.Input<string>;
+    file?: pulumi.Input<string>;
+    format?: pulumi.Input<string>;
+    iops?: pulumi.Input<number>;
+    iopsMax?: pulumi.Input<number>;
+    iopsMaxLength?: pulumi.Input<number>;
+    iopsRd?: pulumi.Input<number>;
+    iopsRdMax?: pulumi.Input<number>;
+    iopsRdMaxLength?: pulumi.Input<number>;
+    iopsWr?: pulumi.Input<number>;
+    iopsWrMax?: pulumi.Input<number>;
+    iopsWrMaxLength?: pulumi.Input<number>;
+    iothread?: pulumi.Input<number>;
+    mbps?: pulumi.Input<number>;
+    mbpsRd?: pulumi.Input<number>;
+    mbpsRdMax?: pulumi.Input<number>;
+    mbpsWr?: pulumi.Input<number>;
+    mbpsWrMax?: pulumi.Input<number>;
+    media?: pulumi.Input<string>;
+    replicate?: pulumi.Input<number>;
+    size: pulumi.Input<string>;
+    slot?: pulumi.Input<number>;
+    ssd?: pulumi.Input<number>;
+    storage: pulumi.Input<string>;
+    storageType?: pulumi.Input<string>;
+    type: pulumi.Input<string>;
+    volume?: pulumi.Input<string>;
+}
+export interface VmQemuHostpci {
+    host?: pulumi.Input<string>;
+    pcie?: pulumi.Input<number>;
+    rombar?: pulumi.Input<number>;
+}
+export interface VmQemuNetwork {
+    bridge?: pulumi.Input<string>;
+    firewall?: pulumi.Input<boolean>;
+    linkDown?: pulumi.Input<boolean>;
+    macaddr?: pulumi.Input<string>;
+    model: pulumi.Input<string>;
+    mtu?: pulumi.Input<number>;
+    queues?: pulumi.Input<number>;
+    rate?: pulumi.Input<number>;
+    /**
+     * VLAN tag.
+     */
+    tag?: pulumi.Input<number>;
+}
+export interface VmQemuSerial {
+    id: pulumi.Input<number>;
+    type: pulumi.Input<string>;
+}
+export interface VmQemuTimeouts {
+    create?: pulumi.Input<string>;
+    default?: pulumi.Input<string>;
+    delete?: pulumi.Input<string>;
+    read?: pulumi.Input<string>;
+    update?: pulumi.Input<string>;
+}
+export interface VmQemuUnusedDisk {
+    file: pulumi.Input<string>;
+    slot: pulumi.Input<number>;
+    storage: pulumi.Input<string>;
+}
+export interface VmQemuUsb {
+    host: pulumi.Input<string>;
+    usb3?: pulumi.Input<boolean>;
+}
+export interface VmQemuVga {
+    memory?: pulumi.Input<number>;
+    type?: pulumi.Input<string>;
+}

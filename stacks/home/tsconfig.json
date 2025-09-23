@@ -1,0 +1,21 @@
+{
+    "extends": "../../tsconfig.json",
+    "ts-node": {
+        "esm": true,
+        "experimentalSpecifierResolution": "node"
+    },
+    "compilerOptions": {
+        "baseUrl": "../..",
+        "paths": {
+            "@components/*": [
+                "../../components/*"
+            ],
+            "@openapi/*": [
+                "../../types/*"
+            ],
+            "@dynamic/*": [
+                "../../dynamic/*"
+            ]
+        }
+    }
+}

@@ -1,0 +1,26 @@
+{
+  "servers": {
+    "pulumi": {
+      "command": "npx",
+      "args": [
+        "@pulumi/mcp-server",
+        "stdio"
+      ],
+      "type": "stdio"
+    }
+    //   "kubernetes": {
+    //     "command": "npx",
+    //     "args": [
+    //       "-y",
+    //       "kubernetes-mcp-server@latest"
+    //     ]
+    //   },
+    //  "flux-operator-mcp": {
+    //    "command": "flux-operator-mcp",
+    //    "args": ["serve"],
+    //    "env": {
+    //      "KUBECONFIG": "/path/to/.kube/config"
+    //    }
+    //  }
+  }
+}

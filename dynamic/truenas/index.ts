@@ -1,0 +1,11 @@
+export { TruenasProvider, TruenasResource } from "./truenas.js";
+export { TruenasDatasetProvider, TruenasDataset } from "./truenas-dataset.js";
+export { TruenasSmbShareProvider, TruenasSmbShare } from "./truenas-smb-share.js";
+export { TruenasNfsShareProvider, TruenasNfsShare } from "./truenas-nfs-share.js";
+export { TruenasPoolProvider, TruenasPool } from "./truenas-pool.js";
+export { TruenasUserProvider, TruenasUser } from "./truenas-user.js";
+export { TruenasGroupProvider, TruenasGroup } from "./truenas-group.js";
+export { TruenasDiskProvider, TruenasDisk } from "./truenas-disk.js";
+export { TruenasSystemProvider, TruenasSystem } from "./truenas-system.js";
+export { TruenasAppProvider, TruenasApp } from "./truenas-app.js";
+export type { CustomResourceOptions } from "@pulumi/pulumi";

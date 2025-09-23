@@ -1,0 +1,72 @@
+import * as pulumi from "@pulumi/pulumi";
+export declare function getNetwork(args?: GetNetworkArgs, opts?: pulumi.InvokeOptions): Promise<GetNetworkResult>;
+/**
+ * A collection of arguments for invoking getNetwork.
+ */
+export interface GetNetworkArgs {
+    id?: string;
+    name?: string;
+    site?: string;
+}
+/**
+ * A collection of values returned by getNetwork.
+ */
+export interface GetNetworkResult {
+    readonly dhcpDns: string[];
+    readonly dhcpEnabled: boolean;
+    readonly dhcpLease: number;
+    readonly dhcpStart: string;
+    readonly dhcpStop: string;
+    readonly dhcpV6Dns: string[];
+    readonly dhcpV6DnsAuto: boolean;
+    readonly dhcpV6Enabled: boolean;
+    readonly dhcpV6Lease: number;
+    readonly dhcpV6Start: string;
+    readonly dhcpV6Stop: string;
+    readonly dhcpdBootEnabled: boolean;
+    readonly dhcpdBootFilename: string;
+    readonly dhcpdBootServer: string;
+    readonly domainName: string;
+    readonly id: string;
+    readonly igmpSnooping: boolean;
+    readonly ipv6InterfaceType: string;
+    readonly ipv6PdInterface: string;
+    readonly ipv6PdPrefixid: string;
+    readonly ipv6PdStart: string;
+    readonly ipv6PdStop: string;
+    readonly ipv6RaEnable: boolean;
+    readonly ipv6RaPreferredLifetime: number;
+    readonly ipv6RaPriority: string;
+    readonly ipv6RaValidLifetime: number;
+    readonly ipv6StaticSubnet: string;
+    readonly multicastDns: boolean;
+    readonly name: string;
+    readonly networkGroup: string;
+    readonly purpose: string;
+    readonly site: string;
+    readonly subnet: string;
+    readonly vlanId: number;
+    readonly wanDhcpV6PdSize: number;
+    readonly wanDns: string[];
+    readonly wanEgressQos: number;
+    readonly wanGateway: string;
+    readonly wanGatewayV6: string;
+    readonly wanIp: string;
+    readonly wanIpv6: string;
+    readonly wanNetmask: string;
+    readonly wanNetworkgroup: string;
+    readonly wanPrefixlen: number;
+    readonly wanType: string;
+    readonly wanTypeV6: string;
+    readonly wanUsername: string;
+    readonly xWanPassword: string;
+}
+export declare function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetNetworkResult>;
+/**
+ * A collection of arguments for invoking getNetwork.
+ */
+export interface GetNetworkOutputArgs {
+    id?: pulumi.Input<string>;
+    name?: pulumi.Input<string>;
+    site?: pulumi.Input<string>;
+}
