@@ -4,7 +4,8 @@ runtime:
   name: nodejs
   options:
     packagemanager: npm
-    typescript: true
+    typescript: false
+    nodeargs: "--import tsx/esm"
 config:
   pulumi:tags:
     value:

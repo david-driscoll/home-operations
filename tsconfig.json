@@ -22,5 +22,10 @@
         "./dynamic/*"
       ]
     }
-  }
+  },
+  "include": [
+    "components/**/*.ts",
+    "components/**/*.mts",
+    "types/**/*.d.ts",
+  ],
 }

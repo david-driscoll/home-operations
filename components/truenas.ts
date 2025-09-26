@@ -1,5 +1,5 @@
-import { op } from "./op.js";
-import { createTypedTrueNASClient } from "./truenas/index.js";
+import { op } from "./op.ts";
+import { createTypedTrueNASClient } from "./truenas/index.ts";
 
 export async function createTruenasClient(credentialTitle: string) {
   const truenasCredential = await op.getItemByTitle(credentialTitle);

@@ -8,8 +8,5 @@
     "**/*.mts"
   ],
   "references": [
-    {
-      "path": "../../components/"
-    }
   ]
 }

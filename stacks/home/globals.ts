@@ -3,7 +3,7 @@ import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumi/unifi";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { op } from "../../components/op.js";
+import { op } from "../../components/op.ts";
 
 export interface GlobalResourcesArgs {}
 
@@ -65,12 +65,16 @@ export class GlobalResources extends ComponentResource {
       mergeOptions(cro, { provider: this.tailscaleProvider })
     );
 
-    this.truenasMinioProvider = new MinioProvider("truenas-minio", {
-      minioRegion: "homelab",
-      minioInsecure: true,
-      minioUser: this.truenasMinioCredential.apply((z) => z.fields["username"].value!),
-      minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
-      minioServer: this.truenasCredential.apply((z) => `http://${this.truenasCredential.apply((z) => z.fields["domain"].value)}:9000`),
-    });
+    this.truenasMinioProvider = new MinioProvider(
+      "truenas-minio",
+      {
+        minioRegion: "homelab",
+        minioInsecure: true,
+        minioUser: this.truenasMinioCredential.apply((z) => z.fields["username"].value!),
+        minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
+        minioServer: this.truenasCredential.apply((z) => `http://${this.truenasCredential.apply((z) => z.fields["domain"].value)}:9000`),
+      },
+      cro
+    );
   }
 }

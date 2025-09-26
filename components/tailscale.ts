@@ -1,6 +1,6 @@
-import { op } from "./op.js";
+import { op } from "./op.ts";
 import { readFile } from "fs/promises";
-import type { Client } from "../types/tailscale.js";
+import type { Client } from "../types/tailscale.ts";
 import { OpenAPIClientAxios } from "openapi-client-axios";
 
 const tailscaleCredential = await op.getItemByTitle("Tailscale Terraform OAuth Client");
