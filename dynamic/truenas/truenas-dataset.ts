@@ -1,6 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import { TruenasProvider, TruenasResource, TruenasResourceInputs, TruenasResourceOutputs } from "./truenas.js";
-import { Dataset } from "@components/truenas/truenas-types.js";
 
 // Dataset resource types
 export interface DatasetInputs extends TruenasResourceInputs {
@@ -193,20 +192,20 @@ export class TruenasDatasetProvider extends TruenasProvider<DatasetInputs, Datas
 export class TruenasDataset extends TruenasResource<DatasetInputs, DatasetOutputs> implements pulumi.Lifted<pulumi.Unwrap<DatasetOutputs>> {
   public readonly credential!: pulumi.Output<string>;
   public readonly name!: pulumi.Output<string>;
-  public readonly pool!: pulumi.Output<string | undefined>;
-  public readonly type!: pulumi.Output<"FILESYSTEM" | "VOLUME" | undefined>;
-  public readonly quota!: pulumi.Output<number | undefined>;
-  public readonly reservation!: pulumi.Output<number | undefined>;
-  public readonly compression!: pulumi.Output<"off" | "on" | "gzip" | "lz4" | "lzjb" | "zle" | "zstd" | undefined>;
-  public readonly deduplication!: pulumi.Output<"on" | "off" | "verify" | "sha256" | "sha256,verify" | undefined>;
-  public readonly volsize!: pulumi.Output<number | undefined>;
-  public readonly volblocksize!: pulumi.Output<number | undefined>;
-  public readonly properties!: pulumi.Output<Record<string, string> | undefined>;
-  public readonly inherit!: pulumi.Output<string[] | undefined>;
+  public readonly pool!: pulumi.Output<string>;
+  public readonly type!: pulumi.Output<"FILESYSTEM" | "VOLUME">;
+  public readonly quota!: pulumi.Output<number>;
+  public readonly reservation!: pulumi.Output<number>;
+  public readonly compression!: pulumi.Output<"off" | "on" | "gzip" | "lz4" | "lzjb" | "zle" | "zstd">;
+  public readonly deduplication!: pulumi.Output<"on" | "off" | "verify" | "sha256" | "sha256,verify">;
+  public readonly volsize!: pulumi.Output<number>;
+  public readonly volblocksize!: pulumi.Output<number>;
+  public readonly properties!: pulumi.Output<Record<string, string>>;
+  public readonly inherit!: pulumi.Output<string[]>;
   public readonly path!: pulumi.Output<string>;
-  public readonly mountpoint!: pulumi.Output<string | undefined>;
-  public readonly available!: pulumi.Output<number | undefined>;
-  public readonly used!: pulumi.Output<number | undefined>;
+  public readonly mountpoint!: pulumi.Output<string>;
+  public readonly available!: pulumi.Output<number>;
+  public readonly used!: pulumi.Output<number>;
 
   constructor(name: string, args: DatasetInputs, opts?: pulumi.CustomResourceOptions) {
     const provider = new TruenasDatasetProvider();

@@ -1,6 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import { TruenasProvider, TruenasResource, TruenasResourceInputs, TruenasResourceOutputs } from "./truenas.js";
-import { Pool } from "@components/truenas/truenas-types.js";
 
 // Pool resource types
 export interface PoolInputs extends TruenasResourceInputs {

@@ -1,15 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": "../.."
-  },
-  "include": [
-    "**/*.ts",
-    "**/*.mts"
-  ],
-  "references": [
-    {
-      "path": "../../components/"
-    }
-  ]
+    "baseUrl": "../..",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  }
 }

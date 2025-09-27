@@ -1,6 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import { TruenasProvider, TruenasResource, TruenasResourceInputs, TruenasResourceOutputs } from "./truenas.js";
-import { Disk } from "@components/truenas/truenas-types.js";
 
 // Disk resource types (mainly read-only for monitoring)
 export interface DiskInputs extends TruenasResourceInputs {

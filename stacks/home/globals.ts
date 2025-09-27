@@ -7,18 +7,20 @@ import { op } from "../../components/op.ts";
 
 export interface GlobalResourcesArgs {}
 
+export type OnePasswordItem = Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>;
+
 export class GlobalResources extends ComponentResource {
-  public readonly cloudflareCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
+  public readonly cloudflareCredential: Output<OnePasswordItem>;
   public readonly cloudflareProvider: CloudflareProvider;
-  public readonly unifiCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
+  public readonly unifiCredential: Output<OnePasswordItem>;
   public readonly unifiProvider: UnifiProvider;
-  public readonly proxmoxCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
-  public readonly tailscaleCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
+  public readonly proxmoxCredential: Output<OnePasswordItem>;
+  public readonly tailscaleCredential: Output<OnePasswordItem>;
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly tailscaleAuthKey: TailnetKey;
-  public readonly truenasCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
-  public readonly truenasMinioCredential: Output<Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>>;
+  public readonly truenasCredential: Output<OnePasswordItem>;
+  public readonly truenasMinioCredential: Output<OnePasswordItem>;
   public readonly truenasMinioProvider: MinioProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {

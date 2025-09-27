@@ -1,8 +1,8 @@
 import { ID, Input, Unwrap, dynamic, output } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
-import { createTruenasClient } from "@components/truenas.js";
+import { createTruenasClient } from "../../components/truenas.js";
 import { diff } from "jiff";
-import TypedTrueNASClient from "@components/truenas/typed-truenas-client.js";
+import TypedTrueNASClient from "../../components/truenas/typed-truenas-client.js";
 
 // Base interface for all TrueNAS resource inputs
 export interface TruenasResourceInputs {

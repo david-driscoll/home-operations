@@ -1,12 +1,13 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": "../.."
+    "baseUrl": "..",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
   "include": [
     "**/*.ts",
     "**/*.mts"
   ],
-  "references": [
-  ]
+  "references": []
 }
