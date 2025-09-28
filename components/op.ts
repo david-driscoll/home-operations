@@ -1,24 +1,30 @@
 import { FullItem, OPConnect } from "@1password/connect";
 
-const client = new OPConnect({
-  serverURL: process.env.CONNECT_HOST!,
-  token: process.env.CONNECT_TOKEN!,
-  keepAlive: true,
-});
-
 let vaultUuid: string | undefined;
 
-export const op = {
-  async getItemByTitle(itemId: string) {
+export class OPClient {
+  public client: OPConnect;
+  /**
+   *
+   */
+  constructor() {
+    this.client = new OPConnect({
+      serverURL: process.env.CONNECT_HOST!,
+      token: process.env.CONNECT_TOKEN!,
+      keepAlive: true,
+    });
+  }
+
+  public async getItemByTitle(itemId: string) {
     if (!vaultUuid) {
-      const vaults = await client.listVaults();
+      const vaults = await this.client.listVaults();
       const personalVault = vaults.find((v) => v.name === "Eris");
       if (!personalVault) {
         throw new Error("No vault found in 1Password Connect");
       }
       vaultUuid = personalVault.id!;
     }
-    const item = await client.getItemByTitle(vaultUuid, itemId);
+    const item = await this.client.getItemByTitle(vaultUuid, itemId);
     item.sections = item.sections || [];
     item.fields = item.fields || [];
     item.files = item.files || [];
@@ -51,5 +57,5 @@ export const op = {
         })
       ),
     };
-  },
-};
+  }
+}

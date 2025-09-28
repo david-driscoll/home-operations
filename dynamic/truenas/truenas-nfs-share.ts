@@ -67,7 +67,7 @@ export class TruenasNfsShareProvider extends TruenasProvider<NfsShareInputs, Nfs
       if (inputs.mapall_group) shareData.mapall_group = inputs.mapall_group;
 
       const truenas = await this.getClient(inputs.credential);
-      const result = await truenas["sharing.nfs.create"](shareData);
+      const result = await truenas.sharing.nfs.create(shareData);
 
       const id = result.id?.toString() || this.generateId();
 
@@ -102,9 +102,9 @@ export class TruenasNfsShareProvider extends TruenasProvider<NfsShareInputs, Nfs
       if (news.mapall_group) updateData.mapall_group = news.mapall_group;
 
       const truenas = await this.getClient(news.credential);
-      await truenas["sharing.nfs.update"](parseInt(id), updateData);
+      await truenas.sharing.nfs.update(parseInt(id), updateData);
 
-      const result = await truenas["sharing.nfs.query"]([{ field: "id", operator: "=", value: parseInt(id) }]);
+      const result = await truenas.sharing.nfs.query([["id", "=", parseInt(id)]]);
       const share = result[0];
 
       return {
@@ -119,7 +119,7 @@ export class TruenasNfsShareProvider extends TruenasProvider<NfsShareInputs, Nfs
   async delete(id: pulumi.ID, props: pulumi.Unwrap<NfsShareOutputs>): Promise<void> {
     try {
       const truenas = await this.getClient(props.credential);
-      await truenas["sharing.nfs.delete"](parseInt(id.toString()));
+      await truenas.sharing.nfs.delete(parseInt(id.toString()));
     } catch (error: any) {
       if (!this.isNotFoundError(error)) {
         throw new Error(`Failed to delete NFS share: ${error.message}`);
@@ -134,7 +134,7 @@ export class TruenasNfsShareProvider extends TruenasProvider<NfsShareInputs, Nfs
       }
 
       const truenas = await this.getClient(props.credential);
-      const result = await truenas["sharing.nfs.query"]([{ field: "id", operator: "=", value: parseInt(id.toString()) }]);
+      const result = await truenas.sharing.nfs.query([["id", "=", id]]);
       const share = result[0];
 
       if (!share) {

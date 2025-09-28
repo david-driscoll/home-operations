@@ -103,7 +103,7 @@ export class TruenasUserProvider extends TruenasProvider<UserInputs, UserOutputs
       if (inputs.attributes) userData.attributes = inputs.attributes;
 
       const truenas = await this.getClient(inputs.credential);
-      const result = await truenas["user.create"](userData);
+      const result = await truenas.user.create(userData);
 
       const id = result.id?.toString() || this.generateId();
 
@@ -156,11 +156,11 @@ export class TruenasUserProvider extends TruenasProvider<UserInputs, UserOutputs
 
       const truenas = await this.getClient(news.credential);
       if (Object.keys(updateData).length > 0) {
-        await truenas["user.update"](parseInt(id), updateData);
+        await truenas.user.update(parseInt(id), updateData);
       }
 
       // Read updated user
-      const result = await truenas["user.get_instance"](parseInt(id));
+      const result = await truenas.user.getInstance(parseInt(id));
 
       return {
         ...news,
@@ -181,7 +181,7 @@ export class TruenasUserProvider extends TruenasProvider<UserInputs, UserOutputs
   async delete(id: pulumi.ID, props: pulumi.Unwrap<UserOutputs>): Promise<void> {
     try {
       const truenas = await this.getClient(props.credential);
-      await truenas["user.delete"](parseInt(id.toString()));
+      await truenas.user.delete(parseInt(id.toString()));
     } catch (error: any) {
       if (!this.isNotFoundError(error)) {
         throw new Error(`Failed to delete user: ${error.message}`);
@@ -196,7 +196,7 @@ export class TruenasUserProvider extends TruenasProvider<UserInputs, UserOutputs
       }
 
       const truenas = await this.getClient(props.credential);
-      const result = await truenas["user.get_instance"](parseInt(id.toString()));
+      const result = await truenas.user.getInstance(parseInt(id.toString()));
 
       return {
         id: id,

@@ -7,10 +7,10 @@ import { getDevice, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tails
 import { remote, local, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "./globals.js";
-import { op } from "../../components/op.js";
 import { tailscale } from "../../components/tailscale.js";
+import { OPClient } from "../../components/op.js";
 
-export type OnePasswordItem = pulumi.Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>;
+export type OnePasswordItem = pulumi.Unwrap<ReturnType<(OPClient)["getItemByTitle"]>>;
 
 export interface ProxmoxHostArgs {
   globals: GlobalResources;

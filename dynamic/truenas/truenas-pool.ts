@@ -121,7 +121,7 @@ export class TruenasPoolProvider extends TruenasProvider<PoolInputs, PoolOutputs
       }
 
       const truenas = await this.getClient(inputs.credential);
-      const result = await truenas["pool.create"](poolData);
+      const result = await truenas.pool.create(poolData);
 
       const id = result.id?.toString() || this.generateId();
 
@@ -167,11 +167,11 @@ export class TruenasPoolProvider extends TruenasProvider<PoolInputs, PoolOutputs
 
       const truenas = await this.getClient(news.credential);
       if (Object.keys(updateData).length > 0) {
-        await truenas["pool.update"](parseInt(id), updateData);
+        await truenas.pool.update(parseInt(id), updateData);
       }
 
       // Read updated pool
-      const result = await truenas["pool.get_instance"](parseInt(id));
+      const result = await truenas.pool.getInstance(parseInt(id));
 
       return {
         ...news,
@@ -200,7 +200,7 @@ export class TruenasPoolProvider extends TruenasProvider<PoolInputs, PoolOutputs
     try {
       const truenas = await this.getClient(props.credential);
       // Use export instead of delete for safety
-      await truenas["pool.export"](parseInt(id.toString()));
+      await truenas.pool.export(parseInt(id.toString()));
     } catch (error: any) {
       if (!this.isNotFoundError(error)) {
         throw new Error(`Failed to delete pool: ${error.message}`);
@@ -215,7 +215,7 @@ export class TruenasPoolProvider extends TruenasProvider<PoolInputs, PoolOutputs
       }
 
       const truenas = await this.getClient(props.credential);
-      const result = await truenas["pool.get_instance"](parseInt(id.toString()));
+      const result = await truenas.pool.getInstance(parseInt(id.toString()));
 
       return {
         id: id,

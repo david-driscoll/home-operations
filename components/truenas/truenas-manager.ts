@@ -1,11 +1,11 @@
 /**
  * Example usage of the TrueNAS JSON-RPC API client in a Pulumi context
  *
- * This example demonstrates how to integrate the new JSON-RPC API client
+ * This example demonstrates how to integrate the new namespace-based JSON-RPC API client
  * with your existing Pulumi infrastructure code.
  */
 
-import { createTypedTrueNASClient } from "./index.js";
+import { TrueNASClient } from "./truenas-client.js";
 import type { Dataset, NFSShare, SMBShare } from "./truenas-types.js";
 
 /**
@@ -15,35 +15,8 @@ import type { Dataset, NFSShare, SMBShare } from "./truenas-types.js";
  * resources that can be used in Pulumi dynamic providers.
  */
 export class TrueNASResourceManager {
-  private client: ReturnType<typeof createTypedTrueNASClient>;
-
-  constructor(private host: string, private credentials: { username: string; password: string } | { apiKey: string }, options?: { port?: number; ssl?: boolean }) {
-    this.client = createTypedTrueNASClient(host, {
-      ssl: options?.ssl ?? true,
-      port: options?.port ?? 443,
-      reconnectOnClose: true,
-      maxReconnectAttempts: 3,
-    });
-  }
-
-  /**
-   * Initialize connection and authenticate
-   */
-  async connect(): Promise<void> {
-    await this.client.connect();
-
-    if ("apiKey" in this.credentials) {
-      await this.client.authenticateWithApiKey(this.credentials.apiKey);
-    } else {
-      await this.client.authenticate(this.credentials.username, this.credentials.password);
-    }
-  }
-
-  /**
-   * Cleanup connection
-   */
-  async disconnect(): Promise<void> {
-    this.client.disconnect();
+  constructor(private client: TrueNASClient) {
+    this.client = client;
   }
 
   /**
@@ -63,7 +36,7 @@ export class TrueNASResourceManager {
   ): Promise<Dataset> {
     try {
       // Check if dataset already exists
-      const existing = await this.client.getDataset(name);
+      const existing = await this.client.pool.dataset.getInstance(name);
 
       // Update if configuration differs
       const updates: any = {};
@@ -76,7 +49,7 @@ export class TrueNASResourceManager {
       }
 
       if (needsUpdate) {
-        return await this.client["pool.dataset.update"](name, updates);
+        return await this.client.pool.dataset.update(name, updates);
       }
 
       return existing;
@@ -88,7 +61,7 @@ export class TrueNASResourceManager {
         ...config,
       };
 
-      return await this.client["pool.dataset.create"](datasetConfig);
+      return await this.client.pool.dataset.create(datasetConfig);
     }
   }
 
@@ -108,7 +81,7 @@ export class TrueNASResourceManager {
       enabled?: boolean;
     }
   ): Promise<NFSShare> {
-    const shares = await this.client.getNFSShares([{ field: "path", operator: "=", value: path }]);
+    const shares = await this.client.sharing.nfs.query([["path", "=", path]]);
 
     if (shares.length > 0) {
       const share = shares[0];
@@ -133,7 +106,7 @@ export class TrueNASResourceManager {
       }
 
       if (needsUpdate) {
-        return await this.client["sharing.nfs.update"](share.id, updates);
+        return await this.client.sharing.nfs.update(share.id, updates);
       }
 
       return share;
@@ -151,7 +124,7 @@ export class TrueNASResourceManager {
         enabled: config.enabled ?? true,
       };
 
-      return await this.client["sharing.nfs.create"](shareConfig);
+      return await this.client.sharing.nfs.create(shareConfig);
     }
   }
 
@@ -171,7 +144,7 @@ export class TrueNASResourceManager {
       timemachine_quota?: number;
     }
   ): Promise<SMBShare> {
-    const shares = await this.client.getSMBShares([{ field: "name", operator: "=", value: name }]);
+    const shares = await this.client.sharing.smb.query([["name", "=", name]]);
 
     if (shares.length > 0) {
       const share = shares[0];
@@ -196,7 +169,7 @@ export class TrueNASResourceManager {
       }
 
       if (needsUpdate) {
-        return await this.client["sharing.smb.update"](share.id, updates);
+        return await this.client.sharing.smb.update(share.id, updates);
       }
 
       return share;
@@ -215,7 +188,7 @@ export class TrueNASResourceManager {
         purpose: "NO_PRESET",
       };
 
-      return await this.client["sharing.smb.create"](shareConfig);
+      return await this.client.sharing.smb.create(shareConfig);
     }
   }
 
@@ -228,7 +201,7 @@ export class TrueNASResourceManager {
     pools: Array<{ name: string; status: string; healthy: boolean }>;
     alerts: any[];
   }> {
-    const [systemInfo, pools] = await Promise.all([this.client.getSystemInfo(), this.client.getPools()]);
+    const [systemInfo, pools] = await Promise.all([this.client.system.info(), this.client.pool.query()]);
 
     return {
       version: systemInfo.version,
@@ -256,7 +229,7 @@ export class TrueNASResourceManager {
       encrypted: boolean;
     }>
   > {
-    const datasets = await this.client.getDatasets();
+    const datasets = await this.client.pool.dataset.query();
 
     return datasets.map((dataset) => ({
       name: dataset.name,
@@ -276,7 +249,7 @@ export class TrueNASResourceManager {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
-      const job = await this.client.getJob(jobId);
+      const job = await this.client.core.getJobs([["id", "=", jobId]]).then((jobs) => jobs[0]);
 
       if (job.state === "SUCCESS") {
         return job.result;
@@ -289,53 +262,6 @@ export class TrueNASResourceManager {
     }
 
     throw new Error(`Job ${jobId} timed out after ${timeoutMs}ms`);
-  }
-}
-
-/**
- * Example usage in a Pulumi dynamic provider
- */
-export async function exampleUsage() {
-  const manager = new TrueNASResourceManager("truenas.local", { username: "admin", password: "your-password" }, { ssl: true, port: 443 });
-
-  try {
-    await manager.connect();
-
-    // Ensure a dataset exists
-    const dataset = await manager.ensureDataset("tank/data/backups", {
-      pool: "tank",
-      compression: "lz4",
-      quota: "1TB",
-      atime: false,
-    });
-
-    console.log("Dataset ensured:", dataset.name);
-
-    // Create an NFS share for the dataset
-    const nfsShare = await manager.ensureNFSShare("/mnt/tank/data/backups", {
-      comment: "Backup storage via NFS",
-      networks: ["192.168.1.0/24"],
-      readonly: false,
-      enabled: true,
-    });
-
-    console.log("NFS share ensured:", nfsShare.path);
-
-    // Create an SMB share for the same dataset
-    const smbShare = await manager.ensureSMBShare("backups", "/mnt/tank/data/backups", {
-      comment: "Backup storage via SMB",
-      readonly: false,
-      browsable: true,
-      enabled: true,
-    });
-
-    console.log("SMB share ensured:", smbShare.name);
-
-    // Get system health
-    const health = await manager.getSystemHealth();
-    console.log("System health:", health);
-  } finally {
-    await manager.disconnect();
   }
 }
 

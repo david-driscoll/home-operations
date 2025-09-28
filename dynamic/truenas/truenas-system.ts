@@ -90,10 +90,8 @@ export class TruenasSystemProvider extends TruenasProvider<SystemInputs, SystemO
     try {
       const truenas = await this.getClient(inputs.credential);
 
-      // Get current system info
-      const systemInfo = await truenas["system.info"]();
-
-      // Update system configuration if any settings are provided
+      // Get current system info for reading
+      const systemInfo = await truenas.system.info(); // Update system configuration if any settings are provided
       const updateData: any = {};
       if (inputs.hostname !== undefined) updateData.hostname = inputs.hostname;
       if (inputs.timezone !== undefined) updateData.timezone = inputs.timezone;
@@ -172,8 +170,8 @@ export class TruenasSystemProvider extends TruenasProvider<SystemInputs, SystemO
         await (truenas as any)["system.general.update"](updateData);
       }
 
-      // Read updated system info
-      const systemInfo = await truenas["system.info"]();
+      // Get updated system info
+      const systemInfo = await truenas.system.info();
 
       return {
         ...news,
@@ -232,7 +230,7 @@ export class TruenasSystemProvider extends TruenasProvider<SystemInputs, SystemO
       }
 
       const truenas = await this.getClient(props.credential);
-      const systemInfo = await truenas["system.info"]();
+      const systemInfo = await truenas.system.info();
 
       // Get current system configuration
       const config = await (truenas as any)["system.general.config"]();

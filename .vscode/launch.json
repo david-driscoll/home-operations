@@ -9,7 +9,10 @@
         "type": "node",
         "autoAttachChildProcesses": true,
         "request": "launch",
-        "console": "integratedTerminal"
+        "console": "integratedTerminal",
+        "pauseForSourceMap": true,
+        "sourceMaps": true,
+         
       }
 
     ]

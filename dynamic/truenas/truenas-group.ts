@@ -69,7 +69,7 @@ export class TruenasGroupProvider extends TruenasProvider<GroupInputs, GroupOutp
       if (inputs.users) groupData.users = inputs.users;
 
       const truenas = await this.getClient(inputs.credential);
-      const result = await truenas["group.create"](groupData);
+      const result = await truenas.group.create(groupData);
 
       const id = result.id?.toString() || this.generateId();
 
@@ -108,11 +108,11 @@ export class TruenasGroupProvider extends TruenasProvider<GroupInputs, GroupOutp
 
       const truenas = await this.getClient(news.credential);
       if (Object.keys(updateData).length > 0) {
-        await truenas["group.update"](parseInt(id), updateData);
+        await truenas.group.update(parseInt(id), updateData);
       }
 
       // Read updated group
-      const result = await truenas["group.get_instance"](parseInt(id));
+      const result = await truenas.group.getInstance(parseInt(id));
 
       return {
         ...news,
@@ -131,7 +131,7 @@ export class TruenasGroupProvider extends TruenasProvider<GroupInputs, GroupOutp
   async delete(id: pulumi.ID, props: pulumi.Unwrap<GroupOutputs>): Promise<void> {
     try {
       const truenas = await this.getClient(props.credential);
-      await truenas["group.delete"](parseInt(id.toString()));
+      await truenas.group.delete(parseInt(id.toString()));
     } catch (error: any) {
       if (!this.isNotFoundError(error)) {
         throw new Error(`Failed to delete group: ${error.message}`);
@@ -146,7 +146,7 @@ export class TruenasGroupProvider extends TruenasProvider<GroupInputs, GroupOutp
       }
 
       const truenas = await this.getClient(props.credential);
-      const result = await truenas["group.get_instance"](parseInt(id.toString()));
+      const result = await truenas.group.getInstance(parseInt(id.toString()));
 
       return {
         id: id,

@@ -1,10 +1,11 @@
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "./globals.js";
-import { op } from "../../components/op.js";
+import { OPClient } from "../../components/op.js";
 import { ProxmoxHost } from "./ProxmoxHost.js";
 import { TruenasVm } from "../../dynamic/truenas/index.js";
 
 const globals = new GlobalResources({}, {});
+const op = new OPClient();
 
 const mainProxmox = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmox = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
@@ -18,12 +19,12 @@ var twilightSparkle = new ProxmoxHost("twilight-sparkle", {
   proxmox: alphaSiteProxmox,
 });
 
-// var spike = new TruenasVm("spike", {
-//   credential: globals.truenasCredential.apply((z) => z.title!),
-//   globals: globals,
-//   host: twilightSparkle,
-// });
-// spike.addClusterBackup("test-backup", false);
+var spike = new TruenasVm("spike", {
+  credential: globals.truenasCredential.apply((z) => z.title!),
+  globals: globals,
+  host: twilightSparkle,
+});
+spike.addClusterBackup("test-backup", false);
 
 var celestia = new ProxmoxHost("celestia", {
   globals: globals,

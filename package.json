@@ -42,6 +42,7 @@
     "@pulumiverse/talos": "^0.6.0",
     "jiff": "^0.7.3",
     "openapi-client-axios": "^7.7.0",
-    "rpc-websocket-client": "^1.1.4"
+    "vscode-jsonrpc": "^8.2.1",
+    "vscode-ws-jsonrpc": "^3.5.0"
   }
 }

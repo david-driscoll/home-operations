@@ -7,9 +7,9 @@
  *
  * @example
  * ```typescript
- * import { createTypedTrueNASClient } from './api';
+ * import { createTrueNASClient } from './index.js';
  *
- * const client = createTypedTrueNASClient('truenas.local', {
+ * const client = createTrueNASClient('truenas.local', {
  *   ssl: true,
  *   port: 443
  * });
@@ -17,19 +17,16 @@
  * await client.connect();
  * await client.authenticate('admin', 'password');
  *
- * const systemInfo = await client.getSystemInfo();
- * const pools = await client.getPools();
+ * const systemInfo = await client.system.info();
+ * const pools = await client.pool.query();
  * ```
  */
 
 // Export the base client
-export { TrueNASClient, createTrueNASClient } from "./truenas-client.js";
-
-// Export the typed client
-export { TypedTrueNASClient, createTypedTrueNASClient } from "./typed-truenas-client.js";
+export * from "./truenas-client.js";
 
 // Export all type definitions
 export * from "./truenas-types.js";
 
-// Re-export the main client as default
-export { createTypedTrueNASClient as default } from "./typed-truenas-client.js";
+// Export the manager
+export * from "./truenas-manager.js";

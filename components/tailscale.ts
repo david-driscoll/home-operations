@@ -1,4 +1,4 @@
-import { op } from "./op.ts";
+import { OPClient } from "./op.ts";
 import { readFile } from "fs/promises";
 import type { Client } from "../types/tailscale.ts";
 import { OpenAPIClientAxios } from "openapi-client-axios";
@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 console.log({ url: import.meta.url, __filename: __filename });
 const __dirname = dirname(__filename);
 
-const tailscaleCredential = await op.getItemByTitle("Tailscale Terraform OAuth Client");
+const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");
 const specFilename = path.join(__dirname, "tailscale.json");
 const spec = await readFile(specFilename, "utf-8");
 

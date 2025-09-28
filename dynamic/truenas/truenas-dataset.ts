@@ -83,7 +83,7 @@ export class TruenasDatasetProvider extends TruenasProvider<DatasetInputs, Datas
 
       const truenas = await this.getClient(inputs.credential);
       // Use the TrueNAS JSON-RPC API
-      const result = await truenas["pool.dataset.create"](datasetData);
+      const result = await truenas.pool.dataset.create(datasetData);
 
       const id = result.id?.toString() || this.generateId();
 
@@ -119,11 +119,11 @@ export class TruenasDatasetProvider extends TruenasProvider<DatasetInputs, Datas
 
       const truenas = await this.getClient(news.credential);
       if (Object.keys(updateData).length > 0) {
-        await truenas["pool.dataset.update"](id, updateData);
+        await truenas.pool.dataset.update(id, updateData);
       }
 
       // Read updated dataset
-      const result = await truenas["pool.dataset.get_instance"](id);
+      const result = await truenas.pool.dataset.getInstance(id);
 
       return {
         ...news,
@@ -144,7 +144,7 @@ export class TruenasDatasetProvider extends TruenasProvider<DatasetInputs, Datas
   async delete(id: pulumi.ID, props: pulumi.Unwrap<DatasetOutputs>): Promise<void> {
     try {
       const truenas = await this.getClient(props.credential);
-      await truenas["pool.dataset.delete"](id.toString());
+      await truenas.pool.dataset.delete(id.toString());
     } catch (error: any) {
       if (!this.isNotFoundError(error)) {
         throw new Error(`Failed to delete dataset: ${error.message}`);
@@ -158,7 +158,7 @@ export class TruenasDatasetProvider extends TruenasProvider<DatasetInputs, Datas
       }
 
       const truenas = await this.getClient(props.credential);
-      const result = await truenas["pool.dataset.get_instance"](id.toString());
+      const result = await truenas.pool.dataset.getInstance(id.toString());
 
       return {
         id: id,

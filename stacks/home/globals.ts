@@ -3,7 +3,9 @@ import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumi/unifi";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { op } from "../../components/op.ts";
+import { OPClient } from "../../components/op.ts";
+
+const op = new OPClient();
 
 export interface GlobalResourcesArgs {}
 

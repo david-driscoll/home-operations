@@ -1,8 +1,8 @@
 import { ID, Input, Unwrap, dynamic, output } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
-import { createTruenasClient } from "../../components/truenas.js";
+import { getTruenasClient } from "../../components/truenas.js";
 import { diff } from "jiff";
-import TypedTrueNASClient from "../../components/truenas/typed-truenas-client.js";
+import { TrueNASClient } from "../../components/truenas/truenas-client.js";
 
 // Base interface for all TrueNAS resource inputs
 export interface TruenasResourceInputs {
@@ -17,10 +17,9 @@ export interface TruenasResourceOutputs extends pulumi.Unwrap<TruenasResourceInp
 // Base TrueNAS Dynamic Provider with generic types
 export abstract class TruenasProvider<TInputs extends TruenasResourceInputs, TOutputs extends TruenasResourceOutputs> implements dynamic.ResourceProvider<Unwrap<TInputs>, Unwrap<TOutputs>> {
   abstract resourceType: string;
-  private _client: TypedTrueNASClient | undefined;
 
-  protected async getClient(credential: string) {
-    return (this._client ??= await createTruenasClient(credential));
+  protected async getClient(credential: string): Promise<TrueNASClient> {
+    return await getTruenasClient(credential);
   }
 
   protected get stables() {

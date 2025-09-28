@@ -12,13 +12,13 @@ export { TruenasSystemProvider, TruenasSystem } from "./truenas-system.js";
 export { TruenasAppProvider, TruenasApp } from "./truenas-app.js";
 export type { CustomResourceOptions } from "@pulumi/pulumi";
 
-import { op } from "../../components/op.js";
-import { createTruenasClient } from "../../components/truenas.js";
+import { OPClient } from "../../components/op.js";
+import { getTruenasClient } from "../../components/truenas.js";
 import { TruenasNfsShare } from "./truenas-nfs-share.js";
 import { TruenasDataset } from "./truenas-dataset.js";
 import { GlobalResources } from "../../stacks/home/globals.js";
 import { ProxmoxHost } from "../../stacks/home/ProxmoxHost.js";
-export type OnePasswordItem = pulumi.Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>;
+export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["getItemByTitle"]>>;
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
@@ -30,11 +30,8 @@ export class TruenasVm extends pulumi.ComponentResource<TruenasVmArgs> {
   constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
     super("custom:truenas:Vm", name, args, opts);
 
-    const client = pulumi.output(args.credential).apply(createTruenasClient);
+    const client = pulumi.output(args.credential).apply(getTruenasClient);
 
-    this.backupDataset = client.apply((z) => z.getDataset(this.backupDatasetId));
-    this.mediaDataset = client.apply((z) => z.getDataset(this.mediaDatasetId));
-    this.dataDataset = client.apply((z) => z.getDataset(this.dataDatasetId));
     this.credential = pulumi.output(args.credential);
   }
 
@@ -47,9 +44,6 @@ export class TruenasVm extends pulumi.ComponentResource<TruenasVmArgs> {
   public get mediaDatasetId() {
     return "stash/media";
   }
-  public backupDataset: pulumi.Output<import("../../components/truenas/truenas-types").Dataset>;
-  public dataDataset: pulumi.Output<import("../../components/truenas/truenas-types").Dataset>;
-  public mediaDataset: pulumi.Output<import("../../components/truenas/truenas-types").Dataset>;
   public credential: pulumi.Output<string>;
   public addClusterBackup(name: string, importExisting?: boolean) {
     return new ClusterBackup(
@@ -82,8 +76,9 @@ export class ClusterBackup extends pulumi.ComponentResource {
       name,
       {
         credential: args.truenas.credential,
-        pool: args.truenas.backupDataset.apply((z) => z.pool),
-        name: pulumi.interpolate`${args.truenas.backupDataset.apply((z) => z.id)}/${name}`,
+        pool: "stash",
+        type: "FILESYSTEM",
+        name: pulumi.interpolate`${args.truenas.backupDatasetId}/${name}`,
       },
       {
         ...cro,
@@ -96,8 +91,9 @@ export class ClusterBackup extends pulumi.ComponentResource {
       `${name}-longhorn-dataset`,
       {
         credential: args.truenas.credential,
-        pool: args.truenas.backupDataset.apply((z) => z.pool),
-        name: pulumi.interpolate`${args.truenas.backupDataset.apply((z) => z.id)}/longhorn`,
+        pool: "stash",
+        type: "FILESYSTEM",
+        name: pulumi.interpolate`${args.truenas.backupDatasetId}/longhorn`,
       },
       {
         ...cro,
@@ -110,8 +106,9 @@ export class ClusterBackup extends pulumi.ComponentResource {
       `${name}-volsync-dataset`,
       {
         credential: args.truenas.credential,
-        pool: args.truenas.backupDataset.apply((z) => z.pool),
-        name: pulumi.interpolate`${args.truenas.backupDataset.apply((z) => z.id)}/volsync`,
+        pool: "stash",
+        type: "FILESYSTEM",
+        name: pulumi.interpolate`${args.truenas.backupDatasetId}/volsync`,
       },
       {
         ...cro,
