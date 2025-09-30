@@ -9,8 +9,9 @@ import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "./globals.js";
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.js";
+import { ITruenasVm } from "./truenas/index.ts";
 
-export type OnePasswordItem = pulumi.Unwrap<ReturnType<(OPClient)["getItemByTitle"]>>;
+export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["getItemByTitle"]>>;
 
 export interface ProxmoxHostArgs {
   globals: GlobalResources;
@@ -20,17 +21,28 @@ export interface ProxmoxHostArgs {
   macAddress: string;
   isBackupServer: boolean;
   installTailscale?: boolean;
+  truenas?: ITruenasVm;
 }
 
 export class ProxmoxHost extends ComponentResource {
+  public readonly name: Output<string>;
+  public readonly internalIpAddress: Output<string>;
+  public readonly tailscaleIpAddress: Output<string>;
+  public readonly macAddress: Output<string>;
   public readonly device: Output<GetDeviceResult>;
   public readonly unifiDns: UnifiDnsRecord;
   public readonly cloudflareDns: CloudflareDnsRecord;
   public readonly pveProvider: ProxmoxVEProvider;
   public readonly lxcProvider: ProxmoxProvider;
+  public readonly backupVolumes: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string; }> | undefined>;
 
   constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
+
+    this.name = output(name);
+    this.internalIpAddress = output(args.internalIpAddress);
+    this.tailscaleIpAddress = output(args.tailscaleIpAddress);
+    this.macAddress = output(args.macAddress);
 
     const cro: CustomResourceOptions = { parent: this };
     args.installTailscale ??= true;
@@ -106,6 +118,8 @@ export class ProxmoxHost extends ComponentResource {
         deleteBeforeReplace: true,
       })
     );
+
+    this.backupVolumes = pulumi.output(args.truenas?.addClusterBackup(name));
 
     const connection: types.input.remote.ConnectionArgs = {
       host: args.internalIpAddress,

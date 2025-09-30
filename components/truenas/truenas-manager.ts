@@ -6,7 +6,26 @@
  */
 
 import { TrueNASClient } from "./truenas-client.js";
-import type { Dataset, NFSShare, SMBShare } from "./truenas-types.js";
+import {
+  DatasetCreateRequest,
+  DatasetQueryRequest,
+  DatasetUpdateRequest,
+  NFSQueryRequest,
+  NFSUpdateRequest,
+  NFSCreateRequest,
+  SMBQueryRequest,
+  SMBUpdateRequest,
+  SMBCreateRequest,
+  SystemInfoRequest,
+  PoolQueryRequest,
+  JobQueryRequest,
+  type Dataset,
+  type NFSShare,
+  type SMBShare,
+  type SystemInfo,
+  type Pool,
+  type Job,
+} from "./truenas-types.js";
 
 /**
  * TrueNAS Resource Manager for Pulumi
@@ -25,43 +44,102 @@ export class TrueNASResourceManager {
   async ensureDataset(
     name: string,
     config: {
-      pool: string;
-      compression?: string;
-      quota?: string;
-      reservation?: string;
+      type: "FILESYSTEM" | "VOLUME";
+      volsize?: number;
+      volblocksize?: "512" | "1K" | "2K" | "4K" | "8K" | "16K" | "32K" | "64K" | "128K";
+      sparse?: boolean;
+      force_size?: boolean;
+      compression?:
+        | "OFF"
+        | "LZ4"
+        | "GZIP"
+        | "GZIP-1"
+        | "GZIP-9"
+        | "ZSTD"
+        | "ZSTD-FAST"
+        | "ZLE"
+        | "LZJB"
+        | "ZSTD-1"
+        | "ZSTD-2"
+        | "ZSTD-3"
+        | "ZSTD-4"
+        | "ZSTD-5"
+        | "ZSTD-6"
+        | "ZSTD-7"
+        | "ZSTD-8"
+        | "ZSTD-9"
+        | "ZSTD-10"
+        | "ZSTD-11"
+        | "ZSTD-12"
+        | "ZSTD-13"
+        | "ZSTD-14"
+        | "ZSTD-15"
+        | "ZSTD-16"
+        | "ZSTD-17"
+        | "ZSTD-18"
+        | "ZSTD-19"
+        | "ZSTD-FAST-1"
+        | "ZSTD-FAST-2"
+        | "ZSTD-FAST-3"
+        | "ZSTD-FAST-4"
+        | "ZSTD-FAST-5"
+        | "ZSTD-FAST-6"
+        | "ZSTD-FAST-7"
+        | "ZSTD-FAST-8"
+        | "ZSTD-FAST-9"
+        | "ZSTD-FAST-10"
+        | "ZSTD-FAST-20"
+        | "ZSTD-FAST-30"
+        | "ZSTD-FAST-40"
+        | "ZSTD-FAST-50"
+        | "ZSTD-FAST-60"
+        | "ZSTD-FAST-70"
+        | "ZSTD-FAST-80"
+        | "ZSTD-FAST-90"
+        | "ZSTD-FAST-100"
+        | "ZSTD-FAST-500"
+        | "ZSTD-FAST-1000";
+      quota?: number;
+      quota_warning?: number;
+      quota_critical?: number;
+      refquota?: number;
+      refquota_warning?: number;
+      refquota_critical?: number;
+      reservation?: number;
+      refreservation?: number;
+      special_small_block_size?: number;
+      copies?: number;
+      snapdir?: "VISIBLE" | "HIDDEN";
+      deduplication?: "ON" | "OFF" | "VERIFY";
+      checksum?: "ON" | "OFF" | "FLETCHER2" | "FLETCHER4" | "SHA256" | "SHA512" | "SKEIN";
       recordsize?: string;
-      atime?: boolean;
-      readonly?: boolean;
+      casesensitivity?: "SENSITIVE" | "INSENSITIVE" | "MIXED";
+      aclmode?: "PASSTHROUGH" | "RESTRICTED";
+      acltype?: "NOACL" | "NFS4ACL" | "POSIXACL";
+      share_type?: "GENERIC" | "SMB";
+      xattrs?: "ON" | "SA";
+      atime?: "ON" | "OFF";
+      exec?: "ON" | "OFF";
+      readonly?: "ON" | "OFF";
+      comments?: string;
+      managedby?: string;
+      sync?: "STANDARD" | "ALWAYS" | "DISABLED";
     }
   ): Promise<Dataset> {
+    const connection = await this.client.connection;
     try {
       // Check if dataset already exists
-      const existing = await this.client.pool.dataset.getInstance(name);
-
-      // Update if configuration differs
-      const updates: any = {};
-      let needsUpdate = false;
-
-      // Compare and prepare updates
-      if (config.compression && existing.properties.compression?.value !== config.compression) {
-        updates.compression = config.compression;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        return await this.client.pool.dataset.update(name, updates);
-      }
-
-      return existing;
-    } catch (error) {
-      // Dataset doesn't exist, create it
-      const datasetConfig = {
-        name,
-        type: "FILESYSTEM",
+      const existing = await connection.sendRequest(DatasetQueryRequest, [["name", "=", name]], {});
+      return await connection.sendRequest(DatasetUpdateRequest, existing[0].id, {
         ...config,
-      };
-
-      return await this.client.pool.dataset.create(datasetConfig);
+        name: undefined,
+        type: undefined,
+      });
+    } catch (error) {
+      return await connection.sendRequest(DatasetCreateRequest, {
+        name,
+        ...config,
+      });
     }
   }
 
@@ -71,60 +149,27 @@ export class TrueNASResourceManager {
   async ensureNFSShare(
     path: string,
     config: {
-      comment?: string;
-      networks?: string[];
-      hosts?: string[];
-      readonly?: boolean;
-      maproot_user?: string;
-      maproot_group?: string;
-      security?: string[];
-      enabled?: boolean;
-    }
-  ): Promise<NFSShare> {
-    const shares = await this.client.sharing.nfs.query([["path", "=", path]]);
+    comment?: string;
+    networks?: string[];
+    hosts?: string[];
+    alldirs?: boolean;
+    quiet?: boolean;
+    ro?: boolean;
+    maproot_user?: string;
+    maproot_group?: string;
+    mapall_user?: string;
+    mapall_group?: string;
+    security?: string[];
+    enabled?: boolean;
+  }): Promise<NFSShare> {
+    const connection = await this.client.connection;
+    const shares = (await connection.sendRequest(NFSQueryRequest, [["path", "=", path]], {})) as NFSShare[];
 
     if (shares.length > 0) {
       const share = shares[0];
-
-      // Check if update is needed
-      const updates: any = {};
-      let needsUpdate = false;
-
-      if (config.comment !== undefined && share.comment !== config.comment) {
-        updates.comment = config.comment;
-        needsUpdate = true;
-      }
-
-      if (config.readonly !== undefined && share.ro !== config.readonly) {
-        updates.ro = config.readonly;
-        needsUpdate = true;
-      }
-
-      if (config.enabled !== undefined && share.enabled !== config.enabled) {
-        updates.enabled = config.enabled;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        return await this.client.sharing.nfs.update(share.id, updates);
-      }
-
-      return share;
+      return await connection.sendRequest(NFSUpdateRequest, share.id, { ...config, path });
     } else {
-      // Create new share
-      const shareConfig = {
-        path,
-        comment: config.comment || "",
-        networks: config.networks || [],
-        hosts: config.hosts || [],
-        ro: config.readonly ?? false,
-        maproot_user: config.maproot_user || null,
-        maproot_group: config.maproot_group || null,
-        security: config.security || [],
-        enabled: config.enabled ?? true,
-      };
-
-      return await this.client.sharing.nfs.create(shareConfig);
+      return await connection.sendRequest(NFSCreateRequest, { ...config, path });
     }
   }
 
@@ -144,51 +189,14 @@ export class TrueNASResourceManager {
       timemachine_quota?: number;
     }
   ): Promise<SMBShare> {
-    const shares = await this.client.sharing.smb.query([["name", "=", name]]);
+    const connection = await this.client.connection;
+    const shares = (await connection.sendRequest(SMBQueryRequest, [["name", "=", name]], {})) as SMBShare[];
 
     if (shares.length > 0) {
       const share = shares[0];
-
-      // Check if update is needed
-      const updates: any = {};
-      let needsUpdate = false;
-
-      if (config.comment !== undefined && share.comment !== config.comment) {
-        updates.comment = config.comment;
-        needsUpdate = true;
-      }
-
-      if (config.readonly !== undefined && share.ro !== config.readonly) {
-        updates.ro = config.readonly;
-        needsUpdate = true;
-      }
-
-      if (config.enabled !== undefined && share.enabled !== config.enabled) {
-        updates.enabled = config.enabled;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        return await this.client.sharing.smb.update(share.id, updates);
-      }
-
-      return share;
+      return await connection.sendRequest(SMBUpdateRequest, share.id, config);
     } else {
-      // Create new share
-      const shareConfig = {
-        name,
-        path,
-        comment: config.comment || "",
-        ro: config.readonly ?? false,
-        browsable: config.browsable ?? true,
-        guestok: config.guestok ?? false,
-        enabled: config.enabled ?? true,
-        timemachine: config.timemachine ?? false,
-        timemachine_quota: config.timemachine_quota || 0,
-        purpose: "NO_PRESET",
-      };
-
-      return await this.client.sharing.smb.create(shareConfig);
+      return await connection.sendRequest(SMBCreateRequest, config);
     }
   }
 
@@ -201,12 +209,13 @@ export class TrueNASResourceManager {
     pools: Array<{ name: string; status: string; healthy: boolean }>;
     alerts: any[];
   }> {
-    const [systemInfo, pools] = await Promise.all([this.client.system.info(), this.client.pool.query()]);
+    const connection = await this.client.connection;
+    const [systemInfo, pools] = await Promise.all([connection.sendRequest(SystemInfoRequest), connection.sendRequest(PoolQueryRequest, [], {}) as Promise<Pool[]>]);
 
     return {
       version: systemInfo.version,
       uptime: systemInfo.uptime,
-      pools: pools.map((pool) => ({
+      pools: pools.map((pool: Pool) => ({
         name: pool.name,
         status: pool.status,
         healthy: pool.healthy,
@@ -229,9 +238,10 @@ export class TrueNASResourceManager {
       encrypted: boolean;
     }>
   > {
-    const datasets = await this.client.pool.dataset.query();
+    const connection = await this.client.connection;
+    const datasets = (await connection.sendRequest(DatasetQueryRequest, [], {})) as Dataset[];
 
-    return datasets.map((dataset) => ({
+    return datasets.map((dataset: Dataset) => ({
       name: dataset.name,
       pool: dataset.pool,
       type: dataset.type,
@@ -246,10 +256,12 @@ export class TrueNASResourceManager {
    * Monitor jobs and wait for completion
    */
   async waitForJob(jobId: number, timeoutMs: number = 300000): Promise<any> {
+    const connection = await this.client.connection;
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
-      const job = await this.client.core.getJobs([["id", "=", jobId]]).then((jobs) => jobs[0]);
+      const jobs = (await connection.sendRequest(JobQueryRequest, [["id", "=", jobId]], {})) as Job[];
+      const job = jobs[0] as Job;
 
       if (job.state === "SUCCESS") {
         return job.result;

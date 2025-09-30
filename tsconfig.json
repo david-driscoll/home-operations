@@ -2,11 +2,6 @@
   "compilerOptions": {
     "composite": true,
     "strict": true,
-    "rootDirs": [
-      "components",
-      "stacks",
-      "dynamic"
-    ],
     "outDir": "bin",
     "target": "es2024",
     "module": "nodenext",

@@ -1,4 +1,4 @@
-import { TrueNASClient, TrueNASResourceManager } from "./truenas/index.ts";
+import { AuthLoginWithApiKeyRequest, TrueNASClient, TrueNASResourceManager } from "./truenas/index.ts";
 import { OPClient } from "@components/op.ts";
 
 // Create a simple function that doesn't capture complex objects
@@ -12,11 +12,11 @@ export async function getTruenasClient(credentialTitle: string) {
     reconnectOnClose: true,
     maxReconnectAttempts: 3,
   });
-  await truenasClient.connection;
+  const connection = await truenasClient.connection;
 
   // Try API key first, then fall back to username/password
   const apiKey = item.fields["credential"].value!;
-  const auth = await truenasClient.auth.loginWithApiKey(apiKey);
+  const auth = await connection.sendRequest(AuthLoginWithApiKeyRequest, apiKey);
   if (!auth) {
     throw new Error("Failed to authenticate to TrueNAS with provided API key");
   }

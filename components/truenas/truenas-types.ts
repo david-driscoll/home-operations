@@ -3,7 +3,7 @@
  * Generated for TrueNAS v25.04.1
  */
 
-import { RequestType, RequestType0, RequestType1, RequestType2, NotificationType, NotificationType0, ParameterStructures } from "vscode-jsonrpc";
+import { RequestType, RequestType0, RequestType2, NotificationType, NotificationType0, ParameterStructures } from "vscode-jsonrpc";
 
 // Collection update notification types
 export const CollectionUpdateNotification = new NotificationType<{
@@ -41,7 +41,7 @@ export const JobUpdateNotification = new NotificationType<Job>("job.status");
 // Authentication Request Types
 export const AuthLoginRequest = new RequestType2<string, string, any, never>("auth.login");
 export const AuthLoginExRequest = new RequestType<AuthLoginExParams, AuthLoginExResponse, never>("auth.login_ex", ParameterStructures.byPosition);
-export const AuthLoginWithApiKeyRequest = new RequestType1<string, boolean, never>("auth.login_with_api_key", ParameterStructures.byPosition);
+export const AuthLoginWithApiKeyRequest = new RequestType<string, boolean, never>("auth.login_with_api_key", ParameterStructures.byPosition);
 export const AuthLogoutRequest = new RequestType0<boolean, never>("auth.logout");
 export const AuthMeRequest = new RequestType0<any, never>("auth.me");
 export const AuthCheckRequest = new RequestType0<boolean, never>("auth.check");
@@ -49,7 +49,7 @@ export const AuthTwoFactorAuthRequest = new RequestType2<string, string, boolean
 export const AuthGenerateTokenRequest = new RequestType0<string, never>("auth.generate_token");
 export const AuthGenerateOnetimePasswordRequest = new RequestType0<string, never>("auth.generate_onetime_password");
 export const AuthSessionsRequest = new RequestType0<any[], never>("auth.sessions");
-export const AuthTerminateSessionRequest = new RequestType1<string, void, never>("auth.terminate_session", ParameterStructures.byPosition);
+export const AuthTerminateSessionRequest = new RequestType<string, void, never>("auth.terminate_session", ParameterStructures.byPosition);
 export const AuthTerminateOtherSessionsRequest = new RequestType0<void, never>("auth.terminate_other_sessions");
 
 // System Information Request Types
@@ -63,270 +63,231 @@ export const SystemShutdownRequest = new RequestType<{ delay?: number }, void, n
 export const SystemGeneralCountryChoicesRequest = new RequestType0<Record<string, string>, never>("system.general.country_choices");
 
 // System NTP Server Request Types
-export const SystemNtpServerQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("system.ntpserver.query");
-export const SystemNtpServerGetRequest = new RequestType1<number, any, never>("system.ntpserver.get_instance", ParameterStructures.byPosition);
-export const SystemNtpServerCreateRequest = new RequestType1<any, any, never>("system.ntpserver.create", ParameterStructures.byPosition);
+export const SystemNtpServerQueryRequest = new RequestType2<QueryFilterExpression<NtpServer> | undefined, QueryOptions | undefined, NtpServer[], never>("system.ntpserver.query");
+export const SystemNtpServerGetRequest = new RequestType<number, any, never>("system.ntpserver.get_instance", ParameterStructures.byPosition);
+export const SystemNtpServerCreateRequest = new RequestType<any, any, never>("system.ntpserver.create", ParameterStructures.byPosition);
 export const SystemNtpServerUpdateRequest = new RequestType2<number, any, any, never>("system.ntpserver.update");
-export const SystemNtpServerDeleteRequest = new RequestType1<number, boolean, never>("system.ntpserver.delete", ParameterStructures.byPosition);
+export const SystemNtpServerDeleteRequest = new RequestType<number, boolean, never>("system.ntpserver.delete", ParameterStructures.byPosition);
 
 // System Security Request Types
 export const SystemSecurityConfigRequest = new RequestType0<any, never>("system.security.config");
-export const SystemSecurityUpdateRequest = new RequestType1<any, any, never>("system.security.update", ParameterStructures.byPosition);
+export const SystemSecurityUpdateRequest = new RequestType<any, any, never>("system.security.update", ParameterStructures.byPosition);
 export const SystemSecurityInfoFipsAvailableRequest = new RequestType0<boolean, never>("system.security.info.fips_available");
 export const SystemSecurityInfoFipsEnabledRequest = new RequestType0<boolean, never>("system.security.info.fips_enabled");
 
 // Pool Management Request Types
-export const PoolQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, Pool[], never>("pool.query");
-export const PoolGetRequest = new RequestType1<number | string, Pool, never>("pool.get", ParameterStructures.byPosition);
-export const PoolCreateRequest = new RequestType1<any, Pool, never>("pool.create", ParameterStructures.byPosition);
+export const PoolQueryRequest = new RequestType2<QueryFilterExpression<Pool> | undefined, QueryOptions | undefined, Pool[], never>("pool.query");
+export const PoolGetRequest = new RequestType<number | string, Pool, never>("pool.get", ParameterStructures.byPosition);
+export const PoolCreateRequest = new RequestType<any, Pool, never>("pool.create", ParameterStructures.byPosition);
 export const PoolUpdateRequest = new RequestType2<number | string, any, Pool, never>("pool.update");
 export const PoolDeleteRequest = new RequestType2<number | string, { cascade?: boolean; restart_services?: boolean } | undefined, boolean, never>("pool.delete");
-export const PoolScrubRequest = new RequestType1<number | string, number, never>("pool.scrub", ParameterStructures.byPosition);
+export const PoolScrubRequest = new RequestType<number | string, number, never>("pool.scrub", ParameterStructures.byPosition);
 export const PoolExportRequest = new RequestType2<number | string, { cascade?: boolean; restart_services?: boolean } | undefined, boolean, never>("pool.export");
 export const PoolImportRequest = new RequestType2<string, any | undefined, Pool, never>("pool.import");
-export const PoolUpgradeRequest = new RequestType1<number | string, boolean, never>("pool.upgrade", ParameterStructures.byPosition);
+export const PoolUpgradeRequest = new RequestType<number | string, boolean, never>("pool.upgrade", ParameterStructures.byPosition);
 
 // Dataset Management Request Types
-export const DatasetQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, Dataset[], never>("pool.dataset.query");
-export const DatasetGetRequest = new RequestType1<string, Dataset, never>("pool.dataset.get_instance", ParameterStructures.byPosition);
-export const DatasetCreateRequest = new RequestType1<any, Dataset, never>("pool.dataset.create", ParameterStructures.byPosition);
+export const DatasetQueryRequest = new RequestType2<QueryFilterExpression<Dataset> | undefined, QueryOptions | undefined, Dataset[], never>("pool.dataset.query");
+export const DatasetGetRequest = new RequestType<string, Dataset, never>("pool.dataset.get_instance", ParameterStructures.byPosition);
+export const DatasetCreateRequest = new RequestType<any, Dataset, never>("pool.dataset.create", ParameterStructures.byPosition);
 export const DatasetUpdateRequest = new RequestType2<string, any, Dataset, never>("pool.dataset.update");
 export const DatasetDeleteRequest = new RequestType2<string, { recursive?: boolean; force?: boolean } | undefined, boolean, never>("pool.dataset.delete");
-export const DatasetMountRequest = new RequestType1<string, boolean, never>("pool.dataset.mount", ParameterStructures.byPosition);
+export const DatasetMountRequest = new RequestType<string, boolean, never>("pool.dataset.mount", ParameterStructures.byPosition);
 export const DatasetUnmountRequest = new RequestType2<string, { force?: boolean } | undefined, boolean, never>("pool.dataset.unmount");
-export const DatasetDetailsRequest = new RequestType1<string, any, never>("pool.dataset.details", ParameterStructures.byPosition);
-export const DatasetSnapshotCountRequest = new RequestType1<string, number, never>("pool.dataset.snapshot_count", ParameterStructures.byPosition);
+export const DatasetDetailsRequest = new RequestType<string, any, never>("pool.dataset.details", ParameterStructures.byPosition);
+export const DatasetSnapshotCountRequest = new RequestType<string, number, never>("pool.dataset.snapshot_count", ParameterStructures.byPosition);
 export const DatasetDestroySnapshotsRequest = new RequestType2<string, any, void, never>("pool.dataset.destroy_snapshots");
 
 // Snapshot Management Request Types
-export const SnapshotQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("pool.snapshot.query");
-export const SnapshotCreateRequest = new RequestType1<any, any, never>("pool.snapshot.create", ParameterStructures.byPosition);
+export const SnapshotQueryRequest = new RequestType2<QueryFilterExpression<Snapshot> | undefined, QueryOptions | undefined, Snapshot[], never>("pool.snapshot.query");
+export const SnapshotCreateRequest = new RequestType<any, any, never>("pool.snapshot.create", ParameterStructures.byPosition);
 export const SnapshotDeleteRequest = new RequestType2<string, { defer?: boolean } | undefined, boolean, never>("pool.snapshot.delete");
 export const SnapshotCloneRequest = new RequestType2<string, any, Dataset, never>("pool.snapshot.clone");
 export const SnapshotRollbackRequest = new RequestType2<string, { force?: boolean } | undefined, boolean, never>("pool.snapshot.rollback");
 
 // Disk Management Request Types
-export const DiskQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, Disk[], never>("disk.query");
-export const DiskGetRequest = new RequestType1<string, Disk, never>("disk.get", ParameterStructures.byPosition);
+export const DiskQueryRequest = new RequestType2<QueryFilterExpression<Disk> | undefined, QueryOptions | undefined, Disk[], never>("disk.query");
+export const DiskGetRequest = new RequestType<string, Disk, never>("disk.get", ParameterStructures.byPosition);
 export const DiskUpdateRequest = new RequestType2<string, any, Disk, never>("disk.update");
 export const DiskWipeRequest = new RequestType2<string, string, number, never>("disk.wipe");
 export const DiskSmartTestRequest = new RequestType2<string, string, number, never>("disk.smarttest");
 
 // User Management Request Types
 export const UserQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, User[], never>("user.query");
-export const UserGetRequest = new RequestType1<number, User, never>("user.get_instance", ParameterStructures.byPosition);
-export const UserCreateRequest = new RequestType1<any, User, never>("user.create", ParameterStructures.byPosition);
+export const UserGetRequest = new RequestType<number, User, never>("user.get_instance", ParameterStructures.byPosition);
+export const UserCreateRequest = new RequestType<any, User, never>("user.create", ParameterStructures.byPosition);
 export const UserUpdateRequest = new RequestType2<number, any, User, never>("user.update");
 export const UserDeleteRequest = new RequestType2<number, { delete_group?: boolean } | undefined, boolean, never>("user.delete");
 export const UserGetNextUidRequest = new RequestType0<number, never>("user.get_next_uid");
-export const UserGetUserObjRequest = new RequestType1<any, any, never>("user.get_user_obj", ParameterStructures.byPosition);
+export const UserGetUserObjRequest = new RequestType<any, any, never>("user.get_user_obj", ParameterStructures.byPosition);
 export const UserHasLocalAdministratorSetUpRequest = new RequestType0<boolean, never>("user.has_local_administrator_set_up");
-export const UserSetupLocalAdministratorRequest = new RequestType1<any, any, never>("user.setup_local_administrator", ParameterStructures.byPosition);
+export const UserSetupLocalAdministratorRequest = new RequestType<any, any, never>("user.setup_local_administrator", ParameterStructures.byPosition);
 export const UserSetPasswordRequest = new RequestType2<number, string, void, never>("user.set_password");
 export const UserShellChoicesRequest = new RequestType0<Record<string, string>, never>("user.shell_choices");
-export const UserRenew2faSecretRequest = new RequestType1<number, any, never>("user.renew_2fa_secret", ParameterStructures.byPosition);
-export const UserUnset2faSecretRequest = new RequestType1<number, void, never>("user.unset_2fa_secret", ParameterStructures.byPosition);
+export const UserRenew2faSecretRequest = new RequestType<number, any, never>("user.renew_2fa_secret", ParameterStructures.byPosition);
+export const UserUnset2faSecretRequest = new RequestType<number, void, never>("user.unset_2fa_secret", ParameterStructures.byPosition);
 
 // Group Management Request Types
-export const GroupQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, Group[], never>("group.query");
-export const GroupGetRequest = new RequestType1<number, Group, never>("group.get_instance", ParameterStructures.byPosition);
-export const GroupCreateRequest = new RequestType1<any, Group, never>("group.create", ParameterStructures.byPosition);
+export const GroupQueryRequest = new RequestType2<QueryFilterExpression<Group> | undefined, QueryOptions | undefined, Group[], never>("group.query");
+export const GroupGetRequest = new RequestType<number, Group, never>("group.get_instance", ParameterStructures.byPosition);
+export const GroupCreateRequest = new RequestType<any, Group, never>("group.create", ParameterStructures.byPosition);
 export const GroupUpdateRequest = new RequestType2<number, any, Group, never>("group.update");
-export const GroupDeleteRequest = new RequestType1<number, boolean, never>("group.delete", ParameterStructures.byPosition);
+export const GroupDeleteRequest = new RequestType<number, boolean, never>("group.delete", ParameterStructures.byPosition);
 export const GroupGetNextGidRequest = new RequestType0<number, never>("group.get_next_gid");
-export const GroupGetGroupObjRequest = new RequestType1<any, any, never>("group.get_group_obj", ParameterStructures.byPosition);
-export const GroupHasPasswordEnabledUserRequest = new RequestType1<number, boolean, never>("group.has_password_enabled_user", ParameterStructures.byPosition);
+export const GroupGetGroupObjRequest = new RequestType<any, any, never>("group.get_group_obj", ParameterStructures.byPosition);
+export const GroupHasPasswordEnabledUserRequest = new RequestType<number, boolean, never>("group.has_password_enabled_user", ParameterStructures.byPosition);
 
 // Sharing Request Types
-export const NFSQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, NFSShare[], never>("sharing.nfs.query");
-export const NFSGetRequest = new RequestType1<number, NFSShare, never>("sharing.nfs.get", ParameterStructures.byPosition);
-export const NFSCreateRequest = new RequestType1<any, NFSShare, never>("sharing.nfs.create", ParameterStructures.byPosition);
+export const NFSQueryRequest = new RequestType2<QueryFilterExpression<NFSShare> | undefined, QueryOptions | undefined, NFSShare[], never>("sharing.nfs.query");
+export const NFSGetRequest = new RequestType<number, NFSShare, never>("sharing.nfs.get", ParameterStructures.byPosition);
+export const NFSCreateRequest = new RequestType<any, NFSShare, never>("sharing.nfs.create", ParameterStructures.byPosition);
 export const NFSUpdateRequest = new RequestType2<number, any, NFSShare, never>("sharing.nfs.update");
-export const NFSDeleteRequest = new RequestType1<number, boolean, never>("sharing.nfs.delete", ParameterStructures.byPosition);
+export const NFSDeleteRequest = new RequestType<number, boolean, never>("sharing.nfs.delete", ParameterStructures.byPosition);
 
-export const SMBQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, SMBShare[], never>("sharing.smb.query");
-export const SMBGetRequest = new RequestType1<number, SMBShare, never>("sharing.smb.get", ParameterStructures.byPosition);
-export const SMBCreateRequest = new RequestType1<any, SMBShare, never>("sharing.smb.create", ParameterStructures.byPosition);
+export const SMBQueryRequest = new RequestType2<QueryFilterExpression<SMBShare> | undefined, QueryOptions | undefined, SMBShare[], never>("sharing.smb.query");
+export const SMBGetRequest = new RequestType<number, SMBShare, never>("sharing.smb.get", ParameterStructures.byPosition);
+export const SMBCreateRequest = new RequestType<any, SMBShare, never>("sharing.smb.create", ParameterStructures.byPosition);
 export const SMBUpdateRequest = new RequestType2<number, any, SMBShare, never>("sharing.smb.update");
-export const SMBDeleteRequest = new RequestType1<number, boolean, never>("sharing.smb.delete", ParameterStructures.byPosition);
-export const SMBGetAclRequest = new RequestType1<number, any, never>("sharing.smb.getacl", ParameterStructures.byPosition);
+export const SMBDeleteRequest = new RequestType<number, boolean, never>("sharing.smb.delete", ParameterStructures.byPosition);
+export const SMBGetAclRequest = new RequestType<number, any, never>("sharing.smb.getacl", ParameterStructures.byPosition);
 export const SMBSetAclRequest = new RequestType2<number, any, void, never>("sharing.smb.setacl");
 export const SMBPresetsRequest = new RequestType0<any[], never>("sharing.smb.presets");
 
 // Pool Scrub Request Types
-export const PoolScrubQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("pool.scrub.query");
-export const PoolScrubGetRequest = new RequestType1<number, any, never>("pool.scrub.get_instance", ParameterStructures.byPosition);
-export const PoolScrubCreateRequest = new RequestType1<any, any, never>("pool.scrub.create", ParameterStructures.byPosition);
-export const PoolScrubUpdateRequest = new RequestType2<number, any, any, never>("pool.scrub.update");
-export const PoolScrubDeleteRequest = new RequestType1<number, boolean, never>("pool.scrub.delete", ParameterStructures.byPosition);
-export const PoolScrubRunRequest = new RequestType1<number, any, never>("pool.scrub.run", ParameterStructures.byPosition);
-export const PoolScrubScrubRequest = new RequestType1<string, any, never>("pool.scrub.scrub", ParameterStructures.byPosition);
+export const PoolScrubQueryRequest = new RequestType2<QueryFilterExpression<Scrub> | undefined, QueryOptions | undefined, Scrub[], never>("pool.scrub.query");
+export const PoolScrubGetRequest = new RequestType<number, Scrub, never>("pool.scrub.get_instance", ParameterStructures.byPosition);
+export const PoolScrubCreateRequest = new RequestType<any, Scrub, never>("pool.scrub.create", ParameterStructures.byPosition);
+export const PoolScrubUpdateRequest = new RequestType2<number, any, Scrub, never>("pool.scrub.update");
+export const PoolScrubDeleteRequest = new RequestType<number, boolean, never>("pool.scrub.delete", ParameterStructures.byPosition);
+export const PoolScrubRunRequest = new RequestType<number, any, never>("pool.scrub.run", ParameterStructures.byPosition);
+export const PoolScrubScrubRequest = new RequestType<string, any, never>("pool.scrub.scrub", ParameterStructures.byPosition);
 
 // Pool Snapshot Task Request Types
-export const PoolSnapshotTaskQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("pool.snapshottask.query");
-export const PoolSnapshotTaskGetRequest = new RequestType1<number, any, never>("pool.snapshottask.get_instance", ParameterStructures.byPosition);
-export const PoolSnapshotTaskCreateRequest = new RequestType1<any, any, never>("pool.snapshottask.create", ParameterStructures.byPosition);
+export const PoolSnapshotTaskQueryRequest = new RequestType2<QueryFilterExpression<Snapshot> | undefined, QueryOptions | undefined, Snapshot[], never>("pool.snapshottask.query");
+export const PoolSnapshotTaskGetRequest = new RequestType<number, any, never>("pool.snapshottask.get_instance", ParameterStructures.byPosition);
+export const PoolSnapshotTaskCreateRequest = new RequestType<any, any, never>("pool.snapshottask.create", ParameterStructures.byPosition);
 export const PoolSnapshotTaskUpdateRequest = new RequestType2<number, any, any, never>("pool.snapshottask.update");
-export const PoolSnapshotTaskDeleteRequest = new RequestType1<number, boolean, never>("pool.snapshottask.delete", ParameterStructures.byPosition);
-export const PoolSnapshotTaskRunRequest = new RequestType1<number, any, never>("pool.snapshottask.run", ParameterStructures.byPosition);
+export const PoolSnapshotTaskDeleteRequest = new RequestType<number, boolean, never>("pool.snapshottask.delete", ParameterStructures.byPosition);
+export const PoolSnapshotTaskRunRequest = new RequestType<number, any, never>("pool.snapshottask.run", ParameterStructures.byPosition);
 export const PoolSnapshotTaskMaxCountRequest = new RequestType0<number, never>("pool.snapshottask.max_count");
 export const PoolSnapshotTaskMaxTotalCountRequest = new RequestType0<number, never>("pool.snapshottask.max_total_count");
-export const PoolSnapshotTaskDeleteWillChangeRetentionForRequest = new RequestType1<number, any[], never>("pool.snapshottask.delete_will_change_retention_for", ParameterStructures.byPosition);
+export const PoolSnapshotTaskDeleteWillChangeRetentionForRequest = new RequestType<number, any[], never>("pool.snapshottask.delete_will_change_retention_for", ParameterStructures.byPosition);
 export const PoolSnapshotTaskUpdateWillChangeRetentionForRequest = new RequestType2<number, any, any[], never>("pool.snapshottask.update_will_change_retention_for");
 
 // Pool Resilver Request Types
 export const PoolResilverConfigRequest = new RequestType0<any, never>("pool.resilver.config");
-export const PoolResilverUpdateRequest = new RequestType1<any, any, never>("pool.resilver.update", ParameterStructures.byPosition);
+export const PoolResilverUpdateRequest = new RequestType<any, any, never>("pool.resilver.update", ParameterStructures.byPosition);
 
 // Additional Pool Request Types
-export const PoolDdtPrefetchRequest = new RequestType1<string, void, never>("pool.ddt_prefetch", ParameterStructures.byPosition);
-export const PoolDdtPruneRequest = new RequestType1<string, void, never>("pool.ddt_prune", ParameterStructures.byPosition);
+export const PoolDdtPrefetchRequest = new RequestType<string, void, never>("pool.ddt_prefetch", ParameterStructures.byPosition);
+export const PoolDdtPruneRequest = new RequestType<string, void, never>("pool.ddt_prune", ParameterStructures.byPosition);
 
 // Application Management Request Types
-export const AppQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, App[], never>("app.query");
-export const AppGetRequest = new RequestType1<string, App, never>("app.get_instance", ParameterStructures.byPosition);
-export const AppCreateRequest = new RequestType1<any, App, never>("app.create", ParameterStructures.byPosition);
+export const AppQueryRequest = new RequestType2<QueryFilterExpression<App> | undefined, QueryOptions | undefined, App[], never>("app.query");
+export const AppGetRequest = new RequestType<string, App, never>("app.get_instance", ParameterStructures.byPosition);
+export const AppCreateRequest = new RequestType<any, App, never>("app.create", ParameterStructures.byPosition);
 export const AppUpdateRequest = new RequestType2<string, any, App, never>("app.update");
-export const AppDeleteRequest = new RequestType1<string, boolean, never>("app.delete", ParameterStructures.byPosition);
-export const AppStartRequest = new RequestType1<string, void, never>("app.start", ParameterStructures.byPosition);
-export const AppStopRequest = new RequestType1<string, void, never>("app.stop", ParameterStructures.byPosition);
-export const AppRestartRequest = new RequestType1<string, void, never>("app.restart", ParameterStructures.byPosition);
-export const AppRedeployRequest = new RequestType1<string, void, never>("app.redeploy", ParameterStructures.byPosition);
-export const AppUpgradeRequest = new RequestType1<string, void, never>("app.upgrade", ParameterStructures.byPosition);
+export const AppDeleteRequest = new RequestType<string, boolean, never>("app.delete", ParameterStructures.byPosition);
+export const AppStartRequest = new RequestType<string, void, never>("app.start", ParameterStructures.byPosition);
+export const AppStopRequest = new RequestType<string, void, never>("app.stop", ParameterStructures.byPosition);
+export const AppRestartRequest = new RequestType<string, void, never>("app.restart", ParameterStructures.byPosition);
+export const AppRedeployRequest = new RequestType<string, void, never>("app.redeploy", ParameterStructures.byPosition);
+export const AppUpgradeRequest = new RequestType<string, void, never>("app.upgrade", ParameterStructures.byPosition);
 export const AppRollbackRequest = new RequestType2<string, string, void, never>("app.rollback");
-export const AppRollbackVersionsRequest = new RequestType1<string, string[], never>("app.rollback_versions", ParameterStructures.byPosition);
+export const AppRollbackVersionsRequest = new RequestType<string, string[], never>("app.rollback_versions", ParameterStructures.byPosition);
 export const AppAvailableRequest = new RequestType0<any[], never>("app.available");
 export const AppAvailableSpaceRequest = new RequestType0<number, never>("app.available_space");
 export const AppCategoriesRequest = new RequestType0<string[], never>("app.categories");
 export const AppLatestRequest = new RequestType0<any[], never>("app.latest");
-export const AppSimilarRequest = new RequestType1<string, any[], never>("app.similar", ParameterStructures.byPosition);
+export const AppSimilarRequest = new RequestType<string, any[], never>("app.similar", ParameterStructures.byPosition);
 export const AppConfigRequest = new RequestType0<any, never>("app.config");
-export const AppConvertToCustomRequest = new RequestType1<string, void, never>("app.convert_to_custom", ParameterStructures.byPosition);
+export const AppConvertToCustomRequest = new RequestType<string, void, never>("app.convert_to_custom", ParameterStructures.byPosition);
 export const AppCertificateAuthorityChoicesRequest = new RequestType0<Record<string, string>, never>("app.certificate_authority_choices");
 export const AppCertificateChoicesRequest = new RequestType0<Record<string, string>, never>("app.certificate_choices");
-export const AppContainerConsoleChoicesRequest = new RequestType1<string, any[], never>("app.container_console_choices", ParameterStructures.byPosition);
-export const AppContainerIdsRequest = new RequestType1<string, string[], never>("app.container_ids", ParameterStructures.byPosition);
+export const AppContainerConsoleChoicesRequest = new RequestType<string, any[], never>("app.container_console_choices", ParameterStructures.byPosition);
+export const AppContainerIdsRequest = new RequestType<string, string[], never>("app.container_ids", ParameterStructures.byPosition);
 export const AppGpuChoicesRequest = new RequestType0<any[], never>("app.gpu_choices");
 export const AppIpChoicesRequest = new RequestType0<string[], never>("app.ip_choices");
 export const AppOutdatedDockerImagesRequest = new RequestType0<any[], never>("app.outdated_docker_images");
-export const AppPullImagesRequest = new RequestType1<{ force?: boolean } | undefined, void, never>("app.pull_images", ParameterStructures.byPosition);
-export const AppUpgradeSummaryRequest = new RequestType1<string, any, never>("app.upgrade_summary", ParameterStructures.byPosition);
+export const AppPullImagesRequest = new RequestType<{ force?: boolean } | undefined, void, never>("app.pull_images", ParameterStructures.byPosition);
+export const AppUpgradeSummaryRequest = new RequestType<string, any, never>("app.upgrade_summary", ParameterStructures.byPosition);
 export const AppUsedPortsRequest = new RequestType0<any[], never>("app.used_ports");
 
 // App Image Request Types
 export const AppImageQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("app.image.query");
-export const AppImageGetRequest = new RequestType1<string, any, never>("app.image.get_instance", ParameterStructures.byPosition);
-export const AppImageDeleteRequest = new RequestType1<string, boolean, never>("app.image.delete", ParameterStructures.byPosition);
-export const AppImagePullRequest = new RequestType1<string, void, never>("app.image.pull", ParameterStructures.byPosition);
+export const AppImageGetRequest = new RequestType<string, any, never>("app.image.get_instance", ParameterStructures.byPosition);
+export const AppImageDeleteRequest = new RequestType<string, boolean, never>("app.image.delete", ParameterStructures.byPosition);
+export const AppImagePullRequest = new RequestType<string, void, never>("app.image.pull", ParameterStructures.byPosition);
 export const AppImageDockerhubRateLimitRequest = new RequestType0<any, never>("app.image.dockerhub_rate_limit");
 
 // App Registry Request Types
 export const AppRegistryQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("app.registry.query");
-export const AppRegistryGetRequest = new RequestType1<number, any, never>("app.registry.get_instance", ParameterStructures.byPosition);
-export const AppRegistryCreateRequest = new RequestType1<any, any, never>("app.registry.create", ParameterStructures.byPosition);
+export const AppRegistryGetRequest = new RequestType<number, any, never>("app.registry.get_instance", ParameterStructures.byPosition);
+export const AppRegistryCreateRequest = new RequestType<any, any, never>("app.registry.create", ParameterStructures.byPosition);
 export const AppRegistryUpdateRequest = new RequestType2<number, any, any, never>("app.registry.update");
-export const AppRegistryDeleteRequest = new RequestType1<number, boolean, never>("app.registry.delete", ParameterStructures.byPosition);
+export const AppRegistryDeleteRequest = new RequestType<number, boolean, never>("app.registry.delete", ParameterStructures.byPosition);
 
 // App IX Volume Request Types
 export const AppIxVolumeQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("app.ix_volume.query");
-export const AppIxVolumeExistsRequest = new RequestType1<string, boolean, never>("app.ix_volume.exists", ParameterStructures.byPosition);
-
-// Virtual Machine Request Types
-export const VMQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, VirtualMachine[], never>("vm.query");
-export const VMGetRequest = new RequestType1<number, VirtualMachine, never>("vm.get_instance", ParameterStructures.byPosition);
-export const VMCreateRequest = new RequestType1<any, VirtualMachine, never>("vm.create", ParameterStructures.byPosition);
-export const VMUpdateRequest = new RequestType2<number, any, VirtualMachine, never>("vm.update");
-export const VMDeleteRequest = new RequestType1<number, boolean, never>("vm.delete", ParameterStructures.byPosition);
-export const VMCloneRequest = new RequestType2<number, string, VirtualMachine, never>("vm.clone");
-export const VMStartRequest = new RequestType1<number, void, never>("vm.start", ParameterStructures.byPosition);
-export const VMStopRequest = new RequestType2<number, { force?: boolean } | undefined, void, never>("vm.stop");
-export const VMPowerOffRequest = new RequestType1<number, void, never>("vm.poweroff", ParameterStructures.byPosition);
-export const VMRestartRequest = new RequestType1<number, void, never>("vm.restart", ParameterStructures.byPosition);
-export const VMSuspendRequest = new RequestType1<number, void, never>("vm.suspend", ParameterStructures.byPosition);
-export const VMResumeRequest = new RequestType1<number, void, never>("vm.resume", ParameterStructures.byPosition);
-export const VMStatusRequest = new RequestType1<number, any, never>("vm.status", ParameterStructures.byPosition);
-export const VMGetConsoleRequest = new RequestType1<number, any, never>("vm.get_console", ParameterStructures.byPosition);
-export const VMGetAvailableMemoryRequest = new RequestType0<number, never>("vm.get_available_memory");
-export const VMGetMemoryUsageRequest = new RequestType0<any, never>("vm.get_memory_usage");
-export const VMGetDisplayDevicesRequest = new RequestType1<number, any[], never>("vm.get_display_devices", ParameterStructures.byPosition);
-export const VMBootloaderOptionsRequest = new RequestType0<string[], never>("vm.bootloader_options");
-export const VMFlagsRequest = new RequestType0<any, never>("vm.flags");
-export const VMLogFileDownloadRequest = new RequestType1<number, any, never>("vm.log_file_download", ParameterStructures.byPosition);
-export const VMLogFilePathRequest = new RequestType1<number, string, never>("vm.log_file_path", ParameterStructures.byPosition);
-export const VMPortWizardRequest = new RequestType0<any, never>("vm.port_wizard");
-export const VMRandomMacRequest = new RequestType0<string, never>("vm.random_mac");
-export const VMResolutionChoicesRequest = new RequestType0<Record<string, string>, never>("vm.resolution_choices");
-export const VMSupportsVirtualizationRequest = new RequestType0<boolean, never>("vm.supports_virtualization");
-export const VMVirtualizationDetailsRequest = new RequestType0<any, never>("vm.virtualization_details");
-
-// VM Device Request Types
-export const VMDeviceQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("vm.device.query");
-export const VMDeviceGetRequest = new RequestType1<number, any, never>("vm.device.get_instance", ParameterStructures.byPosition);
-export const VMDeviceCreateRequest = new RequestType1<any, any, never>("vm.device.create", ParameterStructures.byPosition);
-export const VMDeviceUpdateRequest = new RequestType2<number, any, any, never>("vm.device.update");
-export const VMDeviceDeleteRequest = new RequestType1<number, boolean, never>("vm.device.delete", ParameterStructures.byPosition);
-export const VMDeviceBindChoicesRequest = new RequestType0<Record<string, string>, never>("vm.device.bind_choices");
-export const VMDeviceDiskChoicesRequest = new RequestType0<Record<string, string>, never>("vm.device.disk_choices");
-export const VMDevicePassthroughDeviceRequest = new RequestType1<string, any, never>("vm.device.passthrough_device", ParameterStructures.byPosition);
-export const VMDevicePassthroughDeviceChoicesRequest = new RequestType0<Record<string, string>, never>("vm.device.passthrough_device_choices");
+export const AppIxVolumeExistsRequest = new RequestType<string, boolean, never>("app.ix_volume.exists", ParameterStructures.byPosition);
 
 // Core Request Types
 export const CorePingRequest = new RequestType0<string, never>("core.ping");
-export const CoreSetOptionsRequest = new RequestType1<any, void, never>("core.set_options", ParameterStructures.byPosition);
+export const CoreSetOptionsRequest = new RequestType<any, void, never>("core.set_options", ParameterStructures.byPosition);
 
 // Job Management Request Types
-export const JobQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, Job[], never>("core.get_jobs");
-export const JobGetRequest = new RequestType1<number, Job, never>("core.job_info", ParameterStructures.byPosition);
-export const JobAbortRequest = new RequestType1<number, boolean, never>("core.job_abort", ParameterStructures.byPosition);
-export const JobDownloadLogsRequest = new RequestType1<number, FileDownloadJobResult, never>("core.download_job_logs", ParameterStructures.byPosition);
+export const JobQueryRequest = new RequestType2<QueryFilterExpression<Job> | undefined, QueryOptions | undefined, Job[], never>("core.get_jobs");
+export const JobGetRequest = new RequestType<number, Job, never>("core.job_info", ParameterStructures.byPosition);
+export const JobAbortRequest = new RequestType<number, boolean, never>("core.job_abort", ParameterStructures.byPosition);
+export const JobDownloadLogsRequest = new RequestType<number, FileDownloadJobResult, never>("core.download_job_logs", ParameterStructures.byPosition);
 
 // Service Management Request Types
-export const ServiceQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("service.query");
-export const ServiceStartRequest = new RequestType1<string, boolean, never>("service.start", ParameterStructures.byPosition);
-export const ServiceStopRequest = new RequestType1<string, boolean, never>("service.stop", ParameterStructures.byPosition);
-export const ServiceRestartRequest = new RequestType1<string, boolean, never>("service.restart", ParameterStructures.byPosition);
-export const ServiceReloadRequest = new RequestType1<string, boolean, never>("service.reload", ParameterStructures.byPosition);
+export const ServiceQueryRequest = new RequestType2<QueryFilterExpression<Service> | undefined, QueryOptions | undefined, Service[], never>("service.query");
+export const ServiceStartRequest = new RequestType<string, boolean, never>("service.start", ParameterStructures.byPosition);
+export const ServiceStopRequest = new RequestType<string, boolean, never>("service.stop", ParameterStructures.byPosition);
+export const ServiceRestartRequest = new RequestType<string, boolean, never>("service.restart", ParameterStructures.byPosition);
+export const ServiceReloadRequest = new RequestType<string, boolean, never>("service.reload", ParameterStructures.byPosition);
 
 // Alert Management Request Types
-export const AlertListRequest = new RequestType0<any[], never>("alert.list");
-export const AlertDismissRequest = new RequestType1<string, boolean, never>("alert.dismiss", ParameterStructures.byPosition);
-export const AlertRestoreRequest = new RequestType1<string, boolean, never>("alert.restore", ParameterStructures.byPosition);
+export const AlertListRequest = new RequestType0<Alert[], never>("alert.list");
+export const AlertDismissRequest = new RequestType<string, boolean, never>("alert.dismiss", ParameterStructures.byPosition);
+export const AlertRestoreRequest = new RequestType<string, boolean, never>("alert.restore", ParameterStructures.byPosition);
 
 // Network Interface Request Types
-export const InterfaceQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("interface.query");
+export const InterfaceQueryRequest = new RequestType2<QueryFilterExpression<NetworkInterface> | undefined, QueryOptions | undefined, NetworkInterface[], never>("interface.query");
 export const InterfaceUpdateRequest = new RequestType2<string, any, any, never>("interface.update");
 
 // Certificate Management Request Types
-export const CertificateQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("certificate.query");
-export const CertificateCreateRequest = new RequestType1<any, any, never>("certificate.create", ParameterStructures.byPosition);
+export const CertificateQueryRequest = new RequestType2<QueryFilterExpression<Certificate> | undefined, QueryOptions | undefined, Certificate[], never>("certificate.query");
+export const CertificateCreateRequest = new RequestType<any, any, never>("certificate.create", ParameterStructures.byPosition);
 export const CertificateUpdateRequest = new RequestType2<number, any, any, never>("certificate.update");
-export const CertificateDeleteRequest = new RequestType1<number, boolean, never>("certificate.delete", ParameterStructures.byPosition);
+export const CertificateDeleteRequest = new RequestType<number, boolean, never>("certificate.delete", ParameterStructures.byPosition);
 
 // Subscription and Real-time Request Types
-export const CoreSubscribeRequest = new RequestType1<ApiEventCollection, boolean, never>("core.subscribe", ParameterStructures.byPosition);
-export const CoreUnsubscribeRequest = new RequestType1<ApiEventCollection, boolean, never>("core.unsubscribe", ParameterStructures.byPosition);
-export const ReportingRealtimeRequest = new RequestType1<any, any, never>("reporting.realtime", ParameterStructures.byPosition);
+export const CoreSubscribeRequest = new RequestType<ApiEventCollection, boolean, never>("core.subscribe", ParameterStructures.byPosition);
+export const CoreUnsubscribeRequest = new RequestType<ApiEventCollection, boolean, never>("core.unsubscribe", ParameterStructures.byPosition);
+export const ReportingRealtimeRequest = new RequestType<any, any, never>("reporting.realtime", ParameterStructures.byPosition);
 
 // File Operations Request Types
-export const FilesystemStatRequest = new RequestType1<string, any, never>("filesystem.stat", ParameterStructures.byPosition);
+export const FilesystemStatRequest = new RequestType<string, any, never>("filesystem.stat", ParameterStructures.byPosition);
 export const FilesystemListdirRequest = new RequestType<{ path: string; filters?: QueryFilterExpression; options?: QueryOptions }, any[], never>("filesystem.listdir");
 export const FilesystemMkdirRequest = new RequestType2<string, { mode?: string } | undefined, boolean, never>("filesystem.mkdir");
-export const FilesystemChdirRequest = new RequestType1<string, boolean, never>("filesystem.chdir", ParameterStructures.byPosition);
-export const FilesystemUnlinkRequest = new RequestType1<string, boolean, never>("filesystem.unlink", ParameterStructures.byPosition);
+export const FilesystemChdirRequest = new RequestType<string, boolean, never>("filesystem.chdir", ParameterStructures.byPosition);
+export const FilesystemUnlinkRequest = new RequestType<string, boolean, never>("filesystem.unlink", ParameterStructures.byPosition);
 
 // Cloud Sync Request Types
-export const CloudSyncQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("cloudsync.query");
-export const CloudSyncCreateRequest = new RequestType1<any, any, never>("cloudsync.create", ParameterStructures.byPosition);
+export const CloudSyncQueryRequest = new RequestType2<QueryFilterExpression<CloudSync> | undefined, QueryOptions | undefined, CloudSync[], never>("cloudsync.query");
+export const CloudSyncCreateRequest = new RequestType<any, any, never>("cloudsync.create", ParameterStructures.byPosition);
 export const CloudSyncUpdateRequest = new RequestType2<number, any, any, never>("cloudsync.update");
-export const CloudSyncDeleteRequest = new RequestType1<number, boolean, never>("cloudsync.delete", ParameterStructures.byPosition);
-export const CloudSyncSyncRequest = new RequestType1<number, number, never>("cloudsync.sync", ParameterStructures.byPosition);
+export const CloudSyncDeleteRequest = new RequestType<number, boolean, never>("cloudsync.delete", ParameterStructures.byPosition);
+export const CloudSyncSyncRequest = new RequestType<number, number, never>("cloudsync.sync", ParameterStructures.byPosition);
 
 // Replication Request Types
-export const ReplicationQueryRequest = new RequestType2<QueryFilterExpression | undefined, QueryOptions | undefined, any[], never>("replication.query");
-export const ReplicationCreateRequest = new RequestType1<any, any, never>("replication.create", ParameterStructures.byPosition);
+export const ReplicationQueryRequest = new RequestType2<QueryFilterExpression<Replication> | undefined, QueryOptions | undefined, Replication[], never>("replication.query");
+export const ReplicationCreateRequest = new RequestType<any, any, never>("replication.create", ParameterStructures.byPosition);
 export const ReplicationUpdateRequest = new RequestType2<number, any, any, never>("replication.update");
-export const ReplicationDeleteRequest = new RequestType1<number, boolean, never>("replication.delete", ParameterStructures.byPosition);
-export const ReplicationRunRequest = new RequestType1<number, number, never>("replication.run", ParameterStructures.byPosition);
+export const ReplicationDeleteRequest = new RequestType<number, boolean, never>("replication.delete", ParameterStructures.byPosition);
+export const ReplicationRunRequest = new RequestType<number, number, never>("replication.run", ParameterStructures.byPosition);
 
 // API Event Types - Comprehensive list of subscribable events
 export type ApiEventCollection =
@@ -468,6 +429,18 @@ export interface SystemInfo {
   ecc_memory: boolean;
 }
 
+// NTP Server types
+export interface NtpServer {
+  id: number;
+  address: string;
+  burst: boolean;
+  iburst: boolean;
+  prefer: boolean;
+  minpoll: number;
+  maxpoll: number;
+  force: boolean;
+}
+
 // Pool types
 export interface Pool {
   id: number;
@@ -547,6 +520,29 @@ export interface PoolAutoTrim {
   rawvalue: string;
   value: string;
   source: string;
+}
+
+// Snapshot types
+export interface Snapshot {
+  id: string;
+  name: string;
+  dataset: string;
+  type: string;
+  snapshot_name: string;
+  properties: Record<string, DatasetProperty>;
+  holds: Record<string, string>;
+  retention: any;
+}
+
+// Scrub types
+export interface Scrub {
+  id: number;
+  pool: number | string;
+  pool_name: string;
+  description: string;
+  schedule: any;
+  threshold: number;
+  enabled: boolean;
 }
 
 // Dataset types
@@ -945,7 +941,7 @@ export interface FileUploadJobResult {
   job_id: number;
 }
 
-export type QueryFilter = [field: string, operator: QueryOperator, value: any];
+export type QueryFilter<T> = [field: keyof T, operator: QueryOperator, value: any];
 
 export type QueryOperator =
   // Basic comparison operators
@@ -982,12 +978,11 @@ export type QueryOperator =
 export type QueryFilterArray = [string, QueryOperator, any];
 
 // Query filter with logical connectives - supports both object and array formats
-export type QueryFilterExpression =
-  | QueryFilter
-  | QueryFilterArray
-  | ["OR", QueryFilterExpression[]]
-  | ["AND", QueryFilterExpression[]] // explicit AND (default is implicit)
-  | QueryFilterExpression[]; // implicit AND
+export type QueryFilterExpression<T = {}> = QueryFilter<T>[]; //; | ["OR", QueryFilterExpression<T>[]] | ["AND", QueryFilterExpression<T>[]];
+// | QueryFilterArray
+// | ["OR", QueryFilterExpression[]]
+// | ["AND", QueryFilterExpression[]] // explicit AND (default is implicit)
+// | QueryFilterExpression[]; // implicit AND
 
 // Enhanced Query Options for v25.04.1
 export interface QueryOptions {
@@ -1051,3 +1046,220 @@ export const JsonRpcErrorCodes = {
 } as const;
 
 export type JsonRpcErrorCode = (typeof JsonRpcErrorCodes)[keyof typeof JsonRpcErrorCodes];
+
+// Cloud Sync types
+export interface CloudSync {
+  id: number;
+  description: string;
+  direction: string;
+  path: string;
+  credentials: number;
+  bucket: string;
+  bucket_input: string;
+  folder: string;
+  encryption: boolean;
+  filename_encryption: boolean;
+  encryption_password: string;
+  encryption_salt: string;
+  transfers: number | null;
+  bandwidth_limit: any[];
+  include: string[];
+  exclude: string[];
+  task_encryption: string;
+  storage_class: string;
+  chunk_size: string;
+  fast_list: boolean;
+  follow_symlinks: boolean;
+  enabled: boolean;
+  job: Job | null;
+  locked: boolean;
+}
+
+// Replication types
+export interface Replication {
+  id: number;
+  name: string;
+  direction: "PUSH" | "PULL";
+  transport: "SSH" | "SSH+NETCAT" | "LOCAL";
+  ssh_credentials: number | null;
+  netcat_active_side: "LOCAL" | "REMOTE" | null;
+  netcat_active_side_listen_address: string | null;
+  netcat_active_side_port_min: number | null;
+  netcat_active_side_port_max: number | null;
+  netcat_passive_side_connect_address: string | null;
+  source_datasets: string[];
+  target_dataset: string;
+  recursive: boolean;
+  exclude: string[];
+  properties: boolean;
+  properties_exclude: string[];
+  properties_override: Record<string, any>;
+  replicate: boolean;
+  encryption: boolean;
+  encryption_key: string | null;
+  encryption_key_format: "HEX" | "PASSPHRASE" | null;
+  encryption_key_location: string | null;
+  periodic_snapshot_tasks: number[];
+  naming_schema: string[];
+  also_include_naming_schema: string[];
+  auto: boolean;
+  schedule: any;
+  restrict_schedule: any;
+  only_matching_schedule: boolean;
+  allow_from_scratch: boolean;
+  hold_pending_snapshots: boolean;
+  retention_policy: "SOURCE" | "CUSTOM" | "NONE";
+  lifetime_value: number | null;
+  lifetime_unit: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR" | null;
+  compression: "DISABLED" | "LZ4" | "GZIP" | "ZSTD" | null;
+  speed_limit: number | null;
+  large_block: boolean;
+  embed: boolean;
+  compressed: boolean;
+  retries: number;
+  logging_level: "DEFAULT" | "DEBUG" | "INFO" | "WARNING" | "ERROR" | null;
+  enabled: boolean;
+  state: any;
+  job: Job | null;
+  locked: boolean;
+}
+
+// Service types
+export interface Service {
+  id: number;
+  service: string;
+  enable: boolean;
+  state: "RUNNING" | "STOPPED" | "UNKNOWN";
+  pids: number[];
+}
+
+// Alert types
+export interface Alert {
+  id: string;
+  source: string;
+  klass: string;
+  args: any;
+  node: string;
+  key: string;
+  datetime: string;
+  last_occurrence: string;
+  dismissed: boolean;
+  mail: boolean;
+  text: string;
+  level: "INFO" | "NOTICE" | "WARNING" | "ERROR" | "CRITICAL" | "ALERT" | "EMERGENCY";
+  formatted: string;
+  one_shot: boolean;
+}
+
+// Network Interface types
+export interface NetworkInterface {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  mtu: number;
+  state: {
+    name: string;
+    orig_name: string;
+    description: string;
+    mtu: number;
+    cloned: boolean;
+    flags: string[];
+    nd6_flags: string[];
+    capabilities: string[];
+    aliases: NetworkInterfaceAlias[];
+    link_state: string;
+    media_type: string | null;
+    media_subtype: string | null;
+    active_media_type: string | null;
+    active_media_subtype: string | null;
+    supported_media: string[];
+    media_options: string[] | null;
+    link_address: string | null;
+    permanent_link_address: string | null;
+  };
+  aliases: NetworkInterfaceAlias[];
+  ipv4_dhcp: boolean;
+  ipv6_auto: boolean;
+  options: string;
+  bridge_members: string[];
+  lag_protocol: string | null;
+  lag_ports: string[];
+  vlan_parent_interface: string | null;
+  vlan_tag: number | null;
+  vlan_pcp: number | null;
+  failover_critical: boolean;
+  failover_group: number | null;
+  failover_vhid: number | null;
+  failover_aliases: NetworkInterfaceAlias[];
+  failover_virtual_aliases: NetworkInterfaceAlias[];
+}
+
+export interface NetworkInterfaceAlias {
+  type: "INET" | "INET6";
+  address: string;
+  netmask: number;
+  broadcast?: string;
+}
+
+// Certificate types
+export interface Certificate {
+  id: number;
+  type: number;
+  name: string;
+  certificate: string | null;
+  privatekey: string | null;
+  CSR: string | null;
+  acme_uri: string | null;
+  domains_authenticators: Record<string, string>;
+  renew_days: number;
+  revoked_date: string | null;
+  revoked: boolean;
+  expired: boolean;
+  issuer: CertificateIssuer | null;
+  chain_list: string[];
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  organization: string | null;
+  organizational_unit: string | null;
+  common: string | null;
+  san: string[] | null;
+  email: string | null;
+  DN: string | null;
+  subject_name_hash: string | null;
+  digest_algorithm: string | null;
+  from: string | null;
+  until: string | null;
+  root_path: string;
+  acme_directory_uri: string;
+  certificate_path: string | null;
+  privatekey_path: string | null;
+  csr_path: string | null;
+  cert_type: string;
+  revoked_certs: any[];
+  crl_path: string;
+  signedby: CertificateAuthority | null;
+}
+
+export interface CertificateIssuer {
+  name: string;
+  organization: string | null;
+  organizational_unit: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  email: string | null;
+}
+
+export interface CertificateAuthority {
+  id: number;
+  type: number;
+  name: string;
+  certificate: string;
+  privatekey: string;
+  root_path: string;
+  certificate_path: string;
+  privatekey_path: string;
+  serial: number;
+}
