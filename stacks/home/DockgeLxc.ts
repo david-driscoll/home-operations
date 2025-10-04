@@ -69,21 +69,6 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { provider: args.host.pveProvider })
     );
 
-    const systemConfig = new proxmox.storage.File(
-      `${name}-system`,
-      {
-        datastoreId: "local",
-        contentType: "snippets",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: output(readFile("./scripts/dockge-cloud-init.yaml", "utf-8")),
-          fileName: `${name}-system-cloud-config.yaml`,
-        },
-        fileMode: "0644",
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
     const ignorednsFile = new proxmox.storage.File(
       `${name}-ignoredns`,
       {
@@ -115,6 +100,23 @@ instance-id: "${name}"`,
       mergeOptions(cro, { provider: args.host.pveProvider })
     );
 
+    const sshKeys = all([args.sshPublicKeys, this.privateKey.publicKeyOpenssh]).apply((z) => z[0].concat([z[1]]));
+
+    const replacements = all([sshKeys.apply((z) => z.join('", "')), args.globals.tailscaleAuthKey.key, hostname, name, output(readFile("./scripts/cloud-init.yaml", "utf-8"))]).apply((z) => ({
+      sshKeys: z[0],
+      tailscaleAuthKey: z[1],
+      hostname: z[2],
+      name: z[3],
+      template: z[4],
+    }));
+
+    const configTemplate = replacements.apply((z) =>
+      z.template
+        .replace(/\$\{name\}/g, z.name)
+        .replace(/ssh_authorized_keys: \[.*?\]/g, `ssh_authorized_keys: ["${z.sshKeys}"]`)
+        .replace(/\$\{args\.globals\.tailscaleAuthKey\.key\}/g, z.tailscaleAuthKey)
+    );
+
     const userdata = new proxmox.storage.File(
       `${name}-user-data`,
       {
@@ -122,10 +124,7 @@ instance-id: "${name}"`,
         datastoreId: "local",
         nodeName: args.host.name,
         sourceRaw: {
-          data: interpolate`#cloud-config
-password: Password123!
-package_update: true
-package_upgrade: true`,
+          data: configTemplate,
           fileName: `${name}-user-data.yaml`,
         },
       },
@@ -139,42 +138,15 @@ package_upgrade: true`,
         datastoreId: "local",
         nodeName: args.host.name,
         sourceRaw: {
-          data: interpolate`{}`,
-          fileName: `${name}-network-config.yaml`,
-        },
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    const userConfig = new proxmox.storage.File(
-      `${name}-cloud-config`,
-      {
-        contentType: "snippets",
-        datastoreId: "local",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: interpolate`#cloud-config
-allow_userdata: false
-hostname: ${name}
-timezone: America/New_York
-users:
-  - default
-  - name: docker
-    groups:
-      - sudo
-    shell: /bin/bash
-    ssh_authorized_keys: [${all([args.sshPublicKeys, this.privateKey.publicKeyOpenssh.apply((z) => [z])]).apply((keys) =>
-      keys
-        .flatMap((z) => z)
-        .map((key) => `"${key}"`)
-        .join(",")
-    )}]
-    sudo: ALL=(ALL) NOPASSWD:ALL
-
-runcmd:
-  - tailscale up --auth-key=${args.globals.tailscaleAuthKey.key} --hostname ${name}
-  - tailscale set --accept-dns --accept-routes --auto-update --advertise-exit-node --ssh=true`,
-          fileName: `${name}-userdata-cloud-config.yaml`,
+          data: interpolate`{
+  "version": 2,
+  "ethernets": {
+    "eth0": {
+      "dhcp4": true
+    }
+  }
+}`,
+          fileName: `${name}-network-config.json`,
         },
       },
       mergeOptions(cro, { provider: args.host.pveProvider })
@@ -193,6 +165,10 @@ runcmd:
               },
             },
           ],
+          // dns: {
+          //   domain: args.globals.tailscaleDomain,
+          //   servers: ["100.100.100.100"],
+          // },
           userAccount: {
             keys: all([args.sshPublicKeys, this.privateKey.publicKeyOpenssh]).apply((z) => z[0].concat([z[1]])),
             password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
@@ -221,6 +197,8 @@ runcmd:
           {
             name: "eth0",
             bridge: "vmbr0",
+            enabled: true,
+            firewall: true,
           },
         ],
         description: "Dockge LXC Container",
@@ -234,66 +212,57 @@ runcmd:
       mergeOptions(cro, { provider: args.host.pveProvider, dependsOn: [this.lxcTemplate] })
     );
 
+    const triggers = all([fileHash(ignorednsFile), fileHash(metadata), fileHash(userdata), fileHash(networkconfig)]);
+
     // using pct and remote.command, lets run cloud-init
     const copyCloudInitToLxc = new remote.Command(
       `${name}-copy-to-lxc`,
       {
         connection: args.host.remoteConnection,
+        triggers,
         create: interpolate`
-# ${fileHash(ignorednsFile)})}
-# ${fileHash(systemConfig)}
-# ${fileHash(userConfig)}
-# ${fileHash(metadata)}
-# ${fileHash(userdata)}
-# ${fileHash(networkconfig)}}
 pct push ${this.container.vmId} /var/lib/vz/snippets/${ignorednsFile.fileName} /etc/.pve-ignore.resolv.conf && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${systemConfig.fileName} /etc/cloud/cloud.cfg.d/01-system.cfg && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${userConfig.fileName} /etc/cloud/cloud.cfg.d/99-user.cfg && \\
-pct exec ${this.container.vmId} -- mkdir -p /var/lib/cloud/instances/${name} && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${metadata.fileName} /var/lib/cloud/instances/${name}/meta-data.txt && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${userdata.fileName} /var/lib/cloud/instances/${name}/user-data.txt && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${networkconfig.fileName} /var/lib/cloud/instances/${name}/network-config.json && \\
-pct exec ${this.container.vmId} -- cloud-init schema --system
+pct exec ${this.container.vmId} -- mkdir -p /var/lib/cloud/seed/nocloud-net/ && \\
+pct push ${this.container.vmId} /var/lib/vz/snippets/${metadata.fileName} /var/lib/cloud/seed/nocloud-net/meta-data && \\
+pct push ${this.container.vmId} /var/lib/vz/snippets/${userdata.fileName} /var/lib/cloud/seed/nocloud-net/user-data && \\
+pct push ${this.container.vmId} /var/lib/vz/snippets/${networkconfig.fileName} /var/lib/cloud/seed/nocloud-net/network-config.json
 `,
       },
       mergeOptions(cro, { dependsOn: [] })
     );
 
-    //     // using pct and remote.command, lets run cloud-init
-    //     const cloudInit = new remote.Command(
-    //       `${name}-cloud-init`,
-    //       {
-    //         connection: args.host.remoteConnection,
-    //         create: interpolate`
-    // pct exec ${this.container.vmId} -- cloud-init clean;
-    // pct exec ${this.container.vmId} -- cloud-init --all-stages`,
-    //       },
-    //       mergeOptions(cro, { dependsOn: [copyCloudInitToLxc] })
-    //     );
+    // using pct and remote.command, lets run cloud-init
+    const checkSchema = new remote.Command(
+      `${name}-check-schema`,
+      {
+        connection: args.host.remoteConnection,
+        triggers,
+        create: interpolate`
+pct exec ${this.container.vmId} -- cloud-init schema --system
+`,
+      },
+      mergeOptions(cro, { dependsOn: [copyCloudInitToLxc] })
+    );
 
     // using pct and remote.command, lets run cloud-init
     const cloudInitWait = new remote.Command(
       `${name}-cloud-init-wait`,
       {
         connection: args.host.remoteConnection,
+        triggers,
         create: interpolate`
-# ${fileHash(ignorednsFile)})}
-# ${fileHash(systemConfig)}
-# ${fileHash(userConfig)}
-# ${fileHash(metadata)}
-# ${fileHash(userdata)}
-# ${fileHash(networkconfig)}
 pct reboot ${this.container.vmId};
 pct exec ${this.container.vmId} -- cloud-init status --long --wait`,
       },
-      mergeOptions(cro, { dependsOn: [copyCloudInitToLxc] })
+      mergeOptions(cro, { dependsOn: [checkSchema, copyCloudInitToLxc] })
     );
 
     const ipAddress = new remote.Command(
       `${name}-get-ip`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${this.container.vmId} -- ip route get 1 | awk '{print $(NF-2); exit}'`,
+        triggers,
+        create: interpolate`pct exec ${this.container.vmId} -- `,
       },
       mergeOptions(cro, { dependsOn: [cloudInitWait] })
     );

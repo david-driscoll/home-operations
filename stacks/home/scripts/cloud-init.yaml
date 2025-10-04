@@ -1,18 +1,10 @@
 #cloud-config
 # yaml-language-server: $schema=https://raw.githubusercontent.com/canonical/cloud-init/refs/heads/main/cloudinit/config/schemas/versions.schema.cloud-config.json
+password: Password123!
 
 # Create the docker group first
 groups:
   - docker
-
-# Configure users - explicitly define the default user with docker group
-users:
-  - default
-  - name: ubuntu  # or whatever your default user is
-    groups: [adm, audio, cdrom, dialout, dip, floppy, netdev, plugdev, sudo, video, docker]
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-    shell: /bin/bash
-
 # Update and install packages
 package_update: true
 package_upgrade: true
@@ -28,3 +20,24 @@ runcmd:
   - sh -c "curl -fsSL https://tailscale.com/install.sh | sh"
   - sh -c "echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && sudo sysctl -p /etc/sysctl.d/99-tailscale.conf"
   - curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+  - tailscale up --auth-key=${args.globals.tailscaleAuthKey.key} --hostname ${name}
+  - tailscale set --accept-dns --accept-routes --auto-update --advertise-exit-node --ssh=true
+
+hostname: ${name}
+timezone: America/New_York
+users:
+  - default
+  - name: docker
+    groups:
+      - sudo
+    shell: /bin/bash
+    ssh_authorized_keys: [""]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+manage_resolv_conf: false
+# resolv_conf:
+#   domain: example.com
+#   nameservers: [8.8.8.8, 8.8.4.4]
+#   options: {rotate: true, timeout: 1}
+#   searchdomains: [foo.example.com, bar.example.com]
+#   sortlist: [10.0.0.1/255, 10.0.0.2]

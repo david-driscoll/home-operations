@@ -61,18 +61,18 @@ var alphaSite = new ProxmoxHost("alpha-site", {
   remote: false,
 });
 
-// var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
-//   globals,
-//   host: celestia,
-//   memory: 4 * 1024,
-//   cores: 4,
-//   sshPublicKeys: [],
-// });
+var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
+  globals,
+  host: celestia,
+  memory: 4 * 1024,
+  cores: 4,
+  sshPublicKeys: [],
+});
 
-// var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
-//   globals,
-//   host: luna,
-//   memory: 4 * 1024,
-//   cores: 4,
-//   sshPublicKeys: [],
-// });
+var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
+  globals,
+  host: luna,
+  memory: 4 * 1024,
+  cores: 4,
+  sshPublicKeys: [],
+});
