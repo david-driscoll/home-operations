@@ -20,12 +20,14 @@
   "devDependencies": {
     "@types/jiff": "^0.7.7",
     "@types/node": "^24.5.2",
+    "@types/node-unifi": "^2.5.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },
   "dependencies": {
     "@1password/connect": "^1.4.2",
     "@muhlba91/pulumi-proxmoxve": "^7.5.0",
+    "@pulumi/adguard": "file:sdks/adguard",
     "@pulumi/authentik": "file:sdks/authentik",
     "@pulumi/b2": "file:sdks/b2",
     "@pulumi/cloudflare": "^6.9.1",
@@ -35,12 +37,14 @@
     "@pulumi/minio": "^0.16.5",
     "@pulumi/pulumi": "^3.113.0",
     "@pulumi/random": "^4.18.3",
+    "@pulumi/std": "^2.2.0",
     "@pulumi/tailscale": "^0.21.1",
     "@pulumi/tls": "^5.2.2",
     "@pulumi/unifi": "file:sdks/unifi",
     "@pulumi/uptimekuma": "file:sdks/uptimekuma",
     "@pulumiverse/talos": "^0.6.0",
     "jiff": "^0.7.3",
+    "node-unifi": "^2.5.1",
     "openapi-client-axios": "^7.7.0",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-ws-jsonrpc": "^3.5.0"

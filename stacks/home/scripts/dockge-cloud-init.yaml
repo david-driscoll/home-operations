@@ -1,0 +1,30 @@
+#cloud-config
+# yaml-language-server: $schema=https://raw.githubusercontent.com/canonical/cloud-init/refs/heads/main/cloudinit/config/schemas/versions.schema.cloud-config.json
+
+# Create the docker group first
+groups:
+  - docker
+
+# Configure users - explicitly define the default user with docker group
+users:
+  - default
+  - name: ubuntu  # or whatever your default user is
+    groups: [adm, audio, cdrom, dialout, dip, floppy, netdev, plugdev, sudo, video, docker]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+
+# Update and install packages
+package_update: true
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+  - net-tools
+  - curl
+
+# Run commands after everything else is set up
+runcmd:
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+  - sh -c "curl -fsSL https://tailscale.com/install.sh | sh"
+  - sh -c "echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && sudo sysctl -p /etc/sysctl.d/99-tailscale.conf"
+  - curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh

@@ -6,7 +6,6 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 const __filename = fileURLToPath(import.meta.url);
-console.log({ url: import.meta.url, __filename: __filename });
 const __dirname = dirname(__filename);
 
 const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");

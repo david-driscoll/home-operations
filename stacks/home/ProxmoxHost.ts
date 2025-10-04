@@ -1,61 +1,73 @@
 import { ComponentResource, ComponentResourceOptions, CustomResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
-import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
-import { Provider as ProxmoxProvider } from "@pulumi/proxmox";
+import { download, Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
+import proxmox from "@muhlba91/pulumi-proxmoxve";
 import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
 import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
-import { getDevice, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
+import { getDeviceOutput, DeviceTags, DeviceKey, DeviceAuthorization, GetDeviceResult, get4Via6 } from "@pulumi/tailscale";
 import { remote, local, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "./globals.js";
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.js";
 import { ITruenasVm } from "./truenas/index.ts";
+import { createDnsRecord, getHostnames } from "./helper.ts";
 
 export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["getItemByTitle"]>>;
 
 export interface ProxmoxHostArgs {
   globals: GlobalResources;
   proxmox: Input<OnePasswordItem>;
-  internalIpAddress: string;
   tailscaleIpAddress: string;
   macAddress: string;
-  isBackupServer: boolean;
+  isProxmoxBackupServer: boolean;
+  remote: boolean;
+  internalIpAddress?: string;
   installTailscale?: boolean;
   truenas?: ITruenasVm;
 }
 
 export class ProxmoxHost extends ComponentResource {
   public readonly name: Output<string>;
-  public readonly internalIpAddress: Output<string>;
-  public readonly tailscaleIpAddress: Output<string>;
-  public readonly macAddress: Output<string>;
+  public readonly internalIpAddress: string;
+  public readonly tailscaleIpAddress: string;
+  public readonly macAddress: string;
   public readonly device: Output<GetDeviceResult>;
-  public readonly unifiDns: UnifiDnsRecord;
-  public readonly cloudflareDns: CloudflareDnsRecord;
   public readonly pveProvider: ProxmoxVEProvider;
-  public readonly lxcProvider: ProxmoxProvider;
-  public readonly backupVolumes: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string; }> | undefined>;
+  public readonly backupVolumes: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string }> | undefined>;
+  public readonly tailscaleHostname: Output<string>;
+  public readonly hostname: Output<string>;
+  public readonly arch: Output<string>;
+  public readonly remote: boolean;
+  public readonly dns: ReturnType<typeof createDnsRecord>;
+  public readonly remoteConnection: types.input.remote.ConnectionArgs;
 
   constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
 
     this.name = output(name);
-    this.internalIpAddress = output(args.internalIpAddress);
-    this.tailscaleIpAddress = output(args.tailscaleIpAddress);
-    this.macAddress = output(args.macAddress);
+    if (args.remote) {
+      this.internalIpAddress = args.tailscaleIpAddress;
+    } else {
+      if (args.internalIpAddress === undefined) {
+        throw new Error("internalIpAddress must be provided for non-remote Proxmox hosts");
+      }
+      this.internalIpAddress = args.internalIpAddress;
+    }
+    this.tailscaleIpAddress = args.tailscaleIpAddress;
+    this.macAddress = args.macAddress;
+    this.remote = args.remote;
 
-    const cro: CustomResourceOptions = { parent: this };
+    const { hostname, tailscaleHostname } = getHostnames(name, args.globals);
+    this.hostname = hostname;
+    this.tailscaleHostname = tailscaleHostname;
+
+    const cro = { parent: this };
     args.installTailscale ??= true;
 
     const apiCredential = output(args.proxmox);
+    this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
-    const endpoint = apiCredential.apply((z) => {
-      const endpointValue = z.fields?.endpoint?.value;
-      if (!endpointValue) {
-        throw new Error("endpoint is required");
-      }
-      return endpointValue;
-    });
+    this.dns = createDnsRecord(name, this.hostname, output(this.internalIpAddress), args.globals, cro);
 
     // Create ProxmoxVE Provider
     this.pveProvider = new ProxmoxVEProvider(
@@ -64,7 +76,7 @@ export class ProxmoxHost extends ComponentResource {
         randomVmIds: true,
         randomVmIdStart: 1000,
         randomVmIdEnd: 1999,
-        endpoint: endpoint,
+        endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
         apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
         ssh: {
           username: "root",
@@ -74,60 +86,23 @@ export class ProxmoxHost extends ComponentResource {
       cro
     );
 
-    // Create Proxmox LXC Provider
-    this.lxcProvider = new ProxmoxProvider(
-      `${name}-lxc-provider`,
-      {
-        pmApiUrl: endpoint,
-        pmApiTokenId: apiCredential.apply((z) => z.fields["username"].value!),
-        pmApiTokenSecret: apiCredential.apply((z) => z.fields["credential"].value!),
-      },
-      cro
-    );
-
-    const hostname = interpolate`${name}.host.driscoll.tech`;
-    const tailscaleHostname = interpolate`${name}.${args.globals.tailscaleDomain}`;
-
-    // Create Cloudflare DNS record
-    this.cloudflareDns = new CloudflareDnsRecord(
-      name,
-      {
-        name: hostname,
-        zoneId: args.globals.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!),
-        content: args.internalIpAddress,
-        type: "A",
-        ttl: 1,
-      },
-      mergeOptions(cro, {
-        provider: args.globals.cloudflareProvider,
-        deleteBeforeReplace: true,
-      })
-    );
-
-    // Create Unifi DNS record
-    this.unifiDns = new UnifiDnsRecord(
-      name,
-      {
-        name: hostname,
-        type: "A",
-        record: args.internalIpAddress,
-        ttl: 0,
-      },
-      mergeOptions(cro, {
-        provider: args.globals.unifiProvider,
-        deleteBeforeReplace: true,
-      })
-    );
-
     this.backupVolumes = pulumi.output(args.truenas?.addClusterBackup(name));
 
-    const connection: types.input.remote.ConnectionArgs = {
-      host: args.internalIpAddress,
+    const connection: types.input.remote.ConnectionArgs = this.remoteConnection = {
+      host: this.internalIpAddress,
       user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
     };
 
     if (args.installTailscale) {
+      const snippetsCommand = new remote.Command(
+        `${name}-snippets`,
+        {
+          connection,
+          create: `pvesm set local --content images,rootdir,vztmpl,backup,iso,snippets`,
+        },
+        cro
+      );
       // Configure SSH environment
 
       const configureSshEnv = new remote.Command(
@@ -175,7 +150,7 @@ export class ProxmoxHost extends ComponentResource {
         {
           connection: connection,
           remotePath: "/etc/cron.weekly/tailscale",
-          source: new asset.FileAsset(args.isBackupServer ? "scripts/tailscale-pbs.sh" : "scripts/tailscale.sh"),
+          source: new asset.FileAsset(args.isProxmoxBackupServer ? "scripts/tailscale-pbs.sh" : "scripts/tailscale.sh"),
         },
         mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] })
       );
@@ -192,27 +167,10 @@ export class ProxmoxHost extends ComponentResource {
     }
 
     // Get Tailscale device
-    this.device = output(
-      getDevice(
-        {
-          hostname: name,
-        },
-        {
-          provider: args.globals.tailscaleProvider,
-          parent: this,
-        }
-      ).then(async (result) => {
-        await tailscale.paths["/device/{deviceId}/ip"].post(
-          {
-            deviceId: result.id,
-          },
-          {
-            ipv4: args.tailscaleIpAddress,
-          }
-        );
-        return result;
-      })
-    );
+    this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
+      await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.id }, { ipv4: args.tailscaleIpAddress });
+      return result;
+    });
 
     if (args.installTailscale) {
       // Create device tags

@@ -2,6 +2,7 @@ import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOpti
 import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumi/unifi";
+import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { OPClient } from "../../components/op.ts";
 
@@ -20,10 +21,14 @@ export class GlobalResources extends ComponentResource {
   public readonly tailscaleCredential: Output<OnePasswordItem>;
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
+  public readonly searchDomain: Output<string>;
   public readonly tailscaleAuthKey: TailnetKey;
   public readonly truenasCredential: Output<OnePasswordItem>;
   public readonly truenasMinioCredential: Output<OnePasswordItem>;
   public readonly truenasMinioProvider: MinioProvider;
+  public readonly gateway: Output<string>;
+  public readonly adguardCredential: Output<OnePasswordItem>;
+  public readonly adguardProvider: AdguardProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -35,6 +40,19 @@ export class GlobalResources extends ComponentResource {
     this.tailscaleCredential = output(op.getItemByTitle("Tailscale Terraform OAuth Client"));
     this.truenasCredential = output(op.getItemByTitle("Eris Truenas Credentials"));
     this.truenasMinioCredential = output(op.getItemByTitle("minio root user"));
+
+    this.adguardCredential = output(op.getItemByTitle("AdGuard Home"));
+    this.adguardProvider = new AdguardProvider(
+      "adguard",
+      {
+        host: this.adguardCredential.apply((z) => z.urls.find((z) => z.label === "host")?.href!.substring(8)!),
+        username: this.adguardCredential.apply((z) => z.fields["username"].value!),
+        password: this.adguardCredential.apply((z) => z.fields["password"].value!),
+        insecure: false,
+        scheme: "https",
+      },
+      cro
+    );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
     this.unifiProvider = new UnifiProvider(
@@ -53,6 +71,8 @@ export class GlobalResources extends ComponentResource {
       },
       cro
     );
+    this.searchDomain = output("driscoll.tech");
+    this.gateway = output("10.10.0.1");
     this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.fields["hostname"].value!);
 
     this.tailscaleAuthKey = new TailnetKey(
