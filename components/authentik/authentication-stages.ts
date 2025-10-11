@@ -1,8 +1,8 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 import { AuthenticatorStages } from "./authenticator-stages.js";
-import { DefaultFlows } from "./default-flows.js";
+import { DefaultFlows } from "./default-flows.ts";
 
 export class AuthenticationStages extends SharedComponentResource {
   private _mfa?: authentik.StageAuthenticatorValidate;
@@ -10,10 +10,7 @@ export class AuthenticationStages extends SharedComponentResource {
   private _sourceLogin?: authentik.StageUserLogin;
   private _password?: authentik.StagePassword;
 
-  constructor(
-    private authenticatorStages: AuthenticatorStages,
-    opts?: pulumi.ComponentResourceOptions
-  ) {
+  constructor(private authenticatorStages: AuthenticatorStages, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthenticationStages", "stages-authentication", opts);
   }
 
@@ -71,12 +68,9 @@ export class AuthenticationStages extends SharedComponentResource {
       this._password = new authentik.StagePassword(
         "authentication-password",
         {
-          backends: [
-            "authentik.core.auth.InbuiltBackend",
-            "authentik.core.auth.TokenBackend",
-          ],
+          backends: ["authentik.core.auth.InbuiltBackend", "authentik.core.auth.TokenBackend"],
           allowShowPassword: true,
-          configureFlow: DefaultFlows.passwordChange.apply(z => z.id),
+          configureFlow: DefaultFlows.passwordChange.apply((z) => z.id),
         },
         this.parent
       );

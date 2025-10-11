@@ -26,6 +26,7 @@ export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
+  title: string;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -37,6 +38,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly dockgeDns: ReturnType<typeof createDnsRecord>;
   public readonly internalDns: ReturnType<typeof createDnsRecord>;
+  public readonly stacks: Output<string[]>;
   constructor(name: string, args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
@@ -104,8 +106,8 @@ export class DockgeLxc extends ComponentResource {
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
     });
 
-    function replaceVariable(key: RegExp, value: Output<string>) {
-      return (input: Output<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
+    function replaceVariable(key: RegExp, value: Input<string>) {
+      return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
     }
 
     async function createStack(path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
@@ -165,22 +167,6 @@ export class DockgeLxc extends ComponentResource {
       return { name: stackName, path, compose };
     }
 
-    const replacements = [
-      replaceVariable(/\$\{host\}/g, output(args.host.name)),
-      replaceVariable(/\$\{hostname\}/g, hostname),
-      replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
-      replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
-      replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
-      replaceVariable(
-        /\$\{cloudflareApiToken\}/g,
-        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
-      ),
-      replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
-    ];
-
-    const stacks = output(readdir("./stacks/").then((files) => files.map((f) => createStack(`./stacks/${f}`, replacements))));
-    stacks.apply((z) => z.forEach((s) => console.log(`Loaded default stack ${s.name} from ${s.path}`)));
-
     this.dns = createDnsRecord(name, this.hostname, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
     this.internalDns = createDnsRecord(`${name}-internal`, interpolate`internal.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
     this.dockgeDns = createDnsRecord(`${name}-dockge`, interpolate`dockge.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
@@ -224,5 +210,30 @@ export class DockgeLxc extends ComponentResource {
         dependsOn: [tailscaleSet],
       }
     );
+
+    const replacements = [
+      replaceVariable(/\$\{host\}/g, output(args.host.name)),
+      replaceVariable(/\$\{hostname\}/g, hostname),
+      replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
+      replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
+      replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
+      replaceVariable(
+        /\$\{cloudflareApiToken\}/g,
+        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
+      ),
+      replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
+      replaceVariable(/\$\{CLUSTER_TITLE\}/g, args.title),
+      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.dns.hostname),
+    ];
+
+    this.stacks = output(readdir("./docker/_common").then((files) => files.map((f) => createStack(`./docker/_common/${f}`, replacements))))
+      .apply((z) => {
+        const hostStacks = output(readdir(`./docker/${args.host.name}`).then((files) => files.map((f) => createStack(`./docker/${args.host.name}/${f}`, replacements))));
+        return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
+      })
+      .apply((z) => {
+        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
+        return z.map((z) => z.name);
+      });
   }
 }

@@ -12,7 +12,7 @@ import { OPClient } from "../../components/op.ts";
 import { createDnsRecord, getHostnames } from "./helper.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 
-export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["getItemByTitle"]>>;
+export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface ProxmoxHostArgs {
   globals: GlobalResources;

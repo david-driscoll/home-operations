@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class Fields extends SharedComponentResource {
   private _loginUser?: authentik.StagePromptField;
@@ -63,10 +63,7 @@ export class Fields extends SharedComponentResource {
     return this._name;
   }
 
-  private createField(
-    name: string,
-    args: Omit<authentik.StagePromptFieldArgs, "order">
-  ): authentik.StagePromptField {
+  private createField(name: string, args: Omit<authentik.StagePromptFieldArgs, "order">): authentik.StagePromptField {
     const currentOrder = this.order;
     this.order += 10;
     return new authentik.StagePromptField(

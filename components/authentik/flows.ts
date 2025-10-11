@@ -9,7 +9,7 @@ import { InvalidationStages } from "./invalidation-stages.js";
 import { AuthenticatorStages } from "./authenticator-stages.js";
 import { AuthenticationStages } from "./authentication-stages.js";
 import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
-import { OPClient } from "../../components/op.ts";
+import { OPClient } from "../op.ts";
 
 interface PlexServerField {
   value?: string;

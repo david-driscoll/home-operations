@@ -10,3 +10,8 @@ config:
   pulumi:tags:
     value:
       pulumi:template: typescript
+  applications:authentik:
+    value: {}
+  applications:cluster-definition:
+    value: {}
+

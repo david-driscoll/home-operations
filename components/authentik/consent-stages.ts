@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { SharedComponentResource } from "./shared-component-resource.js";
+import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class ConsentStages extends SharedComponentResource {
   private _oneMonth?: authentik.StageConsent;

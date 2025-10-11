@@ -1,7 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import { SharedComponentResource } from "./shared-component-resource.js";
-import { Fields } from "./fields.js";
+import { Fields } from "./fields.ts";
 
 export class StagePrompts extends SharedComponentResource {
   private _userSettings?: authentik.StagePrompt;
@@ -10,21 +10,14 @@ export class StagePrompts extends SharedComponentResource {
   private _externalEnrollmentWrite?: authentik.StageUserWrite;
   private _sourceAuthenticationUpdate?: authentik.StageUserWrite;
 
-  constructor(
-    private fields: Fields,
-    opts?: pulumi.ComponentResourceOptions
-  ) {
+  constructor(private fields: Fields, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikStagePrompts", "authentik-stage-prompts", opts);
   }
 
   public get userSettings(): authentik.StagePrompt {
     if (!this._userSettings) {
       this._userSettings = this.createStagePrompt("user-settings", (args) => {
-        args.fields = [
-          this.fields.name.stagePromptFieldId,
-          this.fields.username.stagePromptFieldId,
-          this.fields.email.stagePromptFieldId,
-        ];
+        args.fields = [this.fields.name.stagePromptFieldId, this.fields.username.stagePromptFieldId, this.fields.email.stagePromptFieldId];
       });
     }
     return this._userSettings;
@@ -33,11 +26,7 @@ export class StagePrompts extends SharedComponentResource {
   public get enrollment(): authentik.StagePrompt {
     if (!this._enrollment) {
       this._enrollment = this.createStagePrompt("enrollment", (args) => {
-        args.fields = [
-          this.fields.email.stagePromptFieldId,
-          this.fields.username.stagePromptFieldId,
-          this.fields.name.stagePromptFieldId,
-        ];
+        args.fields = [this.fields.email.stagePromptFieldId, this.fields.username.stagePromptFieldId, this.fields.name.stagePromptFieldId];
       });
     }
     return this._enrollment;
@@ -88,10 +77,7 @@ export class StagePrompts extends SharedComponentResource {
     return this._sourceAuthenticationUpdate;
   }
 
-  private createStagePrompt(
-    name: string,
-    configure: (args: authentik.StagePromptArgs) => void
-  ): authentik.StagePrompt {
+  private createStagePrompt(name: string, configure: (args: authentik.StagePromptArgs) => void): authentik.StagePrompt {
     const args: authentik.StagePromptArgs = {
       fields: [],
     };

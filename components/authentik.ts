@@ -11,12 +11,20 @@ import { OnePasswordItem } from "../dynamic/1password/OnePasswordItem.ts";
 export interface AuthentikResourcesArgs {
   cluster: ClusterDefinition;
   serviceConnectionId: pulumi.Input<string>;
-  authentik: pulumi.Input<{
-    groups: Record<string, string>;
-    roles: Record<string, string>;
-    scopeMappings: Record<string, string>;
-    flows: Record<string, string>;
-  }>;
+  authentikCredential: pulumi.Input<string>;
+}
+
+export interface AuthentikOutputs {
+  groups: { [K in keyof typeof import("./authentik/groups.ts").AuthentikGroups]: string };
+  roles: { [K in keyof typeof import("./authentik/groups.ts").AuthentikGroups]: string };
+  scopeMappings: Record<string, string>;
+  flows: { [K in keyof typeof import("./authentik/flows.ts").FlowsManager]: string };
+}
+
+export class AuthentikOutputs {
+  constructor() {
+    
+  }
 }
 
 export class AuthentikResourceManager extends pulumi.ComponentResource {
@@ -30,7 +38,7 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
   constructor(private readonly args: AuthentikResourcesArgs, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
 
-    this.authentik = pulumi.output(args.authentik);
+    this.authentik = pulumi.output(args.authentikCredential);
     this.cluster = args.cluster;
     this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", "providers", {}, { parent: this });
     this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", "applications", {}, { parent: this });
@@ -397,12 +405,26 @@ export interface ApplicationDefinition {
   authentik?: ApplicationDefinitionAuthentik;
 }
 
-export interface ClusterDefinition {
+export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
+
+export interface DockgeClusterDefinition {
+  type: "dockge";
   name: string;
   title: string;
   rootDomain: string;
   authentikDomain: string;
-  secret?: string;
+  icon?: string;
+  background?: string;
+  favicon?: string;
+}
+
+export interface KubernetesClusterDefinition {
+  type: "kubernetes";
+  name: string;
+  title: string;
+  rootDomain: string;
+  authentikDomain: string;
+  secret: string;
   icon?: string;
   background?: string;
   favicon?: string;

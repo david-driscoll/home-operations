@@ -1,10 +1,12 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { OPClient } from "../../components/op.ts";
-import { AuthentikGroups } from "./groups.ts";
-import { FlowsManager } from "./flows.ts";
-import { ApplicationResourcesManager, type ClusterDefinition } from "./application-resources.ts";
-import { Roles } from "@components/constants.ts";
+import { OPClient, OPClientItem } from "../../components/op.ts";
+import { AuthentikGroups } from "../../components/authentik/groups.ts";
+import { FlowsManager } from "../../components/authentik/flows.ts";
+import { ApplicationResourcesManager } from "../../components/authentik/application-resources.ts";
+import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemInputs, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
+import { FullItem } from "@1password/connect";
+import { FullItemAllOfFields } from "@1password/connect/dist/model/models.js";
 
 // Stack configuration
 const config = new pulumi.Config();
@@ -37,22 +39,50 @@ function exportScopeMappings(flows: FlowsManager): { [key: string]: pulumi.Outpu
   return Object.fromEntries(Array.from(flows.propertyMappings.allScopeMappings).map(([key, mapping]) => [key, mapping.scopeMappingId])) as any;
 }
 
+function exportFields(section: { id: string; label: string }, value: { [key: string]: pulumi.Output<string> }): OnePasswordItemSectionInput {
+  return {
+    id: pulumi.output(section.id),
+    label: pulumi.output(section.label),
+    fields: pulumi.output(
+      Object.fromEntries(
+        Object.entries(value).map(([key, output]) => [
+          key,
+          {
+            label: key,
+            type: FullItemAllOfFields.TypeEnum.String,
+            value: output,
+            section,
+          },
+        ])
+      )
+    ),
+    files: {},
+  };
+}
+
 export const groups = exportGroups(authentikGroups);
 export const roles = exportRoles(authentikGroups);
 export const flows = exportFlows(authentikFlows);
 export const scopeMappings = exportScopeMappings(flowsManager);
 
-// // Define cluster information
-// const clusterInfo: Record<string, ClusterDefinition> = {
-//   sgc: {
-//     metadata: { name: "sgc" },
-//     spec: { domain: "https://authentik.driscoll.tech" },
-//   },
-//   eq: {
-//     metadata: { name: "eq" },
-//     spec: { domain: "https://authentik.driscoll.tech" },
-//   },
-// };
+const authentikSecret = new OnePasswordItem("authentik-outputs", {
+  category: FullItem.CategoryEnum.SecureNote,
+  title: "Authentik Outputs",
+  fields: {
+    ["notePlain"]: {
+      label: "Note",
+      purpose: FullItemAllOfFields.PurposeEnum.Notes,
+      type: FullItemAllOfFields.TypeEnum.String,
+      value: "This item contains outputs from the authentik stack.",
+    },
+  },
+  sections: {
+    groups: exportFields({ id: "groups", label: "Groups" }, groups),
+    roles: exportFields({ id: "roles", label: "Roles" }, roles),
+    flows: exportFields({ id: "flows", label: "Flows" }, flows),
+    scopeMappings: exportFields({ id: "scopeMappings", label: "Scope Mappings" }, scopeMappings),
+  },
+});
 
 // Initialize application resources manager
 const applicationResources = new ApplicationResourcesManager(
@@ -68,13 +98,3 @@ const applicationResources = new ApplicationResourcesManager(
   },
   { parent: undefined }
 );
-
-// Note: To complete the integration, you would need to:
-// 1. Set up Kubernetes provider to read ApplicationDefinition CRDs
-// 2. Call applicationResources.createApplications() with the CRD data
-// 3. Configure additional brands per cluster if needed
-//
-// Example (when Kubernetes integration is ready):
-// const k8sProvider = new k8s.Provider("k8s", {...});
-// const applications = await getApplicationDefinitionsFromK8s(k8sProvider);
-// await applicationResources.createApplications(applications);

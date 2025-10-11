@@ -12,7 +12,7 @@ const op = new OPClient();
 
 export interface GlobalResourcesArgs {}
 
-export type OnePasswordItem = Unwrap<ReturnType<(typeof op)["getItemByTitle"]>>;
+export type OnePasswordItem = Unwrap<ReturnType<(typeof op)["mapItem"]>>;
 
 export class GlobalResources extends ComponentResource {
   public readonly cloudflareCredential: Output<OnePasswordItem>;
