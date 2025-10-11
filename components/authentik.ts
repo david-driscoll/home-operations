@@ -9,7 +9,9 @@ import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOf
 import { Application } from "sdks/authentik/bin/application.js";
 import { OnePasswordItem } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
-import { OPClientItem } from "./op.ts";
+import { OPClientItem, OPClient } from "./op.ts";
+
+const op = new OPClient();
 export interface AuthentikResourcesArgs {
   cluster: ClusterDefinition;
   serviceConnectionId: pulumi.Input<string>;
@@ -40,12 +42,15 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
   private readonly outpostsComponent: pulumi.ComponentResource;
   private readonly proxyProviders: pulumi.Output<number>[] = [];
   public readonly cluster: ClusterDefinition;
-  private readonly authentik: pulumi.Output<{ groups: Record<string, string>; roles: Record<string, string>; scopeMappings: Record<string, string>; flows: Record<string, string> }>;
+  private readonly authentik: pulumi.Output<AuthentikOutputs>;
 
   constructor(private readonly args: AuthentikResourcesArgs, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
 
-    this.authentik = pulumi.output(args.authentikCredential);
+    this.authentik = pulumi
+      .output(args.authentikCredential)
+      .apply((title) => op.getItemByTitle(title))
+      .apply((item) => new AuthentikOutputs(item));
     this.cluster = args.cluster;
     this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", "providers", {}, { parent: this });
     this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", "applications", {}, { parent: this });
@@ -341,16 +346,16 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
 
   private mapFlowsToProvider(providerConfig: AuthentikProviderBase) {
     return {
-      authorizationFlow: providerConfig.authorizationFlow || this.authentik.flows.apply((z) => z.authorizationFlow!),
-      authenticationFlow: providerConfig.authenticationFlow || this.authentik.flows.apply((z) => z.authenticationFlow!),
-      invalidationFlow: providerConfig.invalidationFlow || this.authentik.flows.apply((z) => z.invalidationFlow!),
+      authorizationFlow: providerConfig.authorizationFlow || this.authentik.flows.implicitConsentFlow,
+      authenticationFlow: providerConfig.authenticationFlow || this.authentik.flows.authenticationFlow,
+      invalidationFlow: providerConfig.invalidationFlow || this.authentik.flows.providerLogoutFlow,
     };
   }
 
   private resolvePropertyMappings(mappings?: pulumi.Input<string>[]) {
     if (!mappings) return pulumi.output([]);
 
-    return pulumi.output(mappings).apply((maps) => maps.map((scopeName) => pulumi.output(this.args.authentik).scopeMappings.apply((z) => z[scopeName]!)));
+    return pulumi.output(mappings).apply((maps) => maps.map((scopeName) => pulumi.output(this.authentik.scopeMappings[scopeName])));
   }
 
   private createAuthentikApplication(resourceName: string, definition: ApplicationDefinition, provider?: pulumi.CustomResource): authentik.Application {
@@ -378,7 +383,7 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
     // Add group bindings for access control
     if (definition.accessPolicy?.groups) {
       for (const groupName of definition.accessPolicy.groups) {
-        const group = pulumi.output(this.args.authentik).groups.apply((g) => g[groupName]!);
+        const group = this.authentik.groups[groupName];
         addPolicyBindingToApplication(app, { group });
       }
     }
@@ -407,7 +412,7 @@ export interface ApplicationDefinition {
   category: string;
   accessPolicy?: {
     entitlements?: string[];
-    groups?: string[];
+    groups?: RolesValues[];
   };
   authentik?: ApplicationDefinitionAuthentik;
 }

@@ -23,7 +23,7 @@ const serviceConnection = new authentik.ServiceConnectionDocker(
 
 const authentikApplicationManager = new AuthentikResourceManager({
   serviceConnectionId: serviceConnection.serviceConnectionDockerId,
-  authentik: pulumi.output(authentikOutput),
+  authentikCredential: "Authentik Token",
   cluster: clusterDefinition,
 });
 
