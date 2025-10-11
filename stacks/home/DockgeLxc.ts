@@ -1,19 +1,22 @@
 import * as proxmox from "@muhlba91/pulumi-proxmoxve";
-import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
+import { DnsRecord as CloudflareDnsRecord, Tunnel } from "@pulumi/cloudflare";
 import { DnsRecord as UnifiDnsRecord, User, getUserOutput } from "@pulumi/unifi";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, runtime } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { PrivateKey } from "@pulumi/tls";
-import { GlobalResources } from "./globals.ts";
+import { GlobalResources } from "../../components/globals.ts";
 import { createDnsRecord, getContainerHostnames } from "./helper.ts";
 import { CT } from "@muhlba91/pulumi-proxmoxve/types/input.js";
-import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
+import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { tailscale } from "@components/tailscale.ts";
 import { getUser } from "sdks/unifi/getUser.ts";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { md5 } from "@pulumi/std";
 import { md5Output } from "@pulumi/std/md5.js";
+import { getContainerOutput } from "@muhlba91/pulumi-proxmoxve/getContainer.js";
+import { basename, resolve } from "node:path";
+import { mkdirSync } from "node:fs";
 
 function fileHash(file: proxmox.storage.File) {
   return md5Output({ input: file.sourceRaw.apply((z) => z?.data ?? file.id).apply((z) => output(z)) }).result;
@@ -22,299 +25,193 @@ function fileHash(file: proxmox.storage.File) {
 export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
-  memory: Input<number>;
-  cores: Input<number>;
-  sshPublicKeys: Input<string[]>;
-  datastore?: Input<string>;
+  vmId: number;
 }
 export class DockgeLxc extends ComponentResource {
-  public readonly container: proxmox.ct.Container;
-  public readonly lxcTemplate: proxmox.download.File;
-  public readonly privateKey: PrivateKey;
   public readonly tailscaleHostname: Output<string>;
+  public readonly tailscaleIpAddress: Output<string>;
   public readonly hostname: Output<string>;
-  // public readonly device: Output<GetDeviceResult>;
+  public readonly device: Output<GetDeviceResult>;
   public readonly dns: ReturnType<typeof createDnsRecord>;
+  public readonly ipAddress: Output<string>;
+  public readonly remoteConnection: types.input.remote.ConnectionArgs;
+  public readonly dockgeDns: ReturnType<typeof createDnsRecord>;
+  public readonly internalDns: ReturnType<typeof createDnsRecord>;
   constructor(name: string, args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
 
-    const parts = args.host.internalIpAddress.split(".");
-    const tailscaleIpAddress = `${parts[0]}.${parts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`;
-
-    this.privateKey = new PrivateKey(
-      `${name}-private-key`,
-      {
-        algorithm: "RSA",
-        rsaBits: 4096,
-      },
-      cro
-    );
-
-    const { hostname, tailscaleHostname } = getContainerHostnames("dockge", args.host, args.globals);
-    this.hostname = hostname;
-    this.tailscaleHostname = tailscaleHostname;
-
-    this.lxcTemplate = new proxmox.download.File(
-      `${name}-template`,
-      {
-        nodeName: args.host.name,
-        contentType: "vztmpl",
-        datastoreId: args.datastore ?? "local",
-        url: `https://cloud-images.ubuntu.com/noble/20251001/noble-server-cloudimg-amd64-root.tar.xz`,
-        overwrite: true,
-        overwriteUnmanaged: true,
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    const ignorednsFile = new proxmox.storage.File(
-      `${name}-ignoredns`,
-      {
-        datastoreId: "local",
-        contentType: "snippets",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: "",
-          fileName: `ignore-resolv.conf`,
-        },
-        fileMode: "0644",
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    const metadata = new proxmox.storage.File(
-      `${name}-meta-data`,
-      {
-        contentType: "snippets",
-        datastoreId: "local",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: interpolate`#cloud-config
-local-hostname: "${hostname}"
-instance-id: "${name}"`,
-          fileName: `${name}-meta-data.yaml`,
-        },
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    const sshKeys = all([args.sshPublicKeys, this.privateKey.publicKeyOpenssh]).apply((z) => z[0].concat([z[1]]));
-
-    const replacements = all([sshKeys.apply((z) => z.join('", "')), args.globals.tailscaleAuthKey.key, hostname, name, output(readFile("./scripts/cloud-init.yaml", "utf-8"))]).apply((z) => ({
-      sshKeys: z[0],
-      tailscaleAuthKey: z[1],
-      hostname: z[2],
-      name: z[3],
-      template: z[4],
-    }));
-
-    const configTemplate = replacements.apply((z) =>
-      z.template
-        .replace(/\$\{name\}/g, z.name)
-        .replace(/ssh_authorized_keys: \[.*?\]/g, `ssh_authorized_keys: ["${z.sshKeys}"]`)
-        .replace(/\$\{args\.globals\.tailscaleAuthKey\.key\}/g, z.tailscaleAuthKey)
-    );
-
-    const userdata = new proxmox.storage.File(
-      `${name}-user-data`,
-      {
-        contentType: "snippets",
-        datastoreId: "local",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: configTemplate,
-          fileName: `${name}-user-data.yaml`,
-        },
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    const networkconfig = new proxmox.storage.File(
-      `${name}-network-config`,
-      {
-        contentType: "snippets",
-        datastoreId: "local",
-        nodeName: args.host.name,
-        sourceRaw: {
-          data: interpolate`{
-  "version": 2,
-  "ethernets": {
-    "eth0": {
-      "dhcp4": true
-    }
-  }
-}`,
-          fileName: `${name}-network-config.json`,
-        },
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider })
-    );
-
-    this.container = new proxmox.ct.Container(
-      name,
-      {
-        nodeName: args.host.name,
-        initialization: {
-          hostname: name,
-          ipConfigs: [
-            {
-              ipv4: {
-                address: "dhcp",
-              },
-            },
-          ],
-          // dns: {
-          //   domain: args.globals.tailscaleDomain,
-          //   servers: ["100.100.100.100"],
-          // },
-          userAccount: {
-            keys: all([args.sshPublicKeys, this.privateKey.publicKeyOpenssh]).apply((z) => z[0].concat([z[1]])),
-            password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
-          },
-        },
-        operatingSystem: {
-          templateFileId: this.lxcTemplate.id,
-          type: "debian",
-        },
-        // hookScriptFileId: tailscaleHook.id,
-        memory: {
-          dedicated: args.memory,
-          swap: 1024,
-        },
-        startOnBoot: true,
-        started: true,
-        cpu: {
-          cores: args.cores,
-          architecture: args.host.arch,
-        },
-        disk: {
-          datastoreId: args.datastore ?? "local-lvm",
-          size: 32,
-        },
-        networkInterfaces: [
-          {
-            name: "eth0",
-            bridge: "vmbr0",
-            enabled: true,
-            firewall: true,
-          },
-        ],
-        description: "Dockge LXC Container",
-        unprivileged: false,
-        tags: ["dockge", "home", "services"],
-        startup: {
-          order: 1,
-          upDelay: 10,
-        },
-      },
-      mergeOptions(cro, { provider: args.host.pveProvider, dependsOn: [this.lxcTemplate] })
-    );
-
-    const triggers = all([fileHash(ignorednsFile), fileHash(metadata), fileHash(userdata), fileHash(networkconfig)]);
-
-    // using pct and remote.command, lets run cloud-init
-    const copyCloudInitToLxc = new remote.Command(
-      `${name}-copy-to-lxc`,
+    const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
+    const ipAddressResource = new remote.Command(
+      `${name}-get-ip-address`,
       {
         connection: args.host.remoteConnection,
-        triggers,
-        create: interpolate`
-pct push ${this.container.vmId} /var/lib/vz/snippets/${ignorednsFile.fileName} /etc/.pve-ignore.resolv.conf && \\
-pct exec ${this.container.vmId} -- mkdir -p /var/lib/cloud/seed/nocloud-net/ && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${metadata.fileName} /var/lib/cloud/seed/nocloud-net/meta-data && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${userdata.fileName} /var/lib/cloud/seed/nocloud-net/user-data && \\
-pct push ${this.container.vmId} /var/lib/vz/snippets/${networkconfig.fileName} /var/lib/cloud/seed/nocloud-net/network-config.json
-`,
+        create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+      },
+      mergeOptions(cro, { dependsOn: [] })
+    );
+    this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
+    const ipAddress = (this.ipAddress = args.host.remote ? ipAddressResource.stdout : this.tailscaleIpAddress);
+
+    const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
+    this.hostname = hostname;
+    this.tailscaleHostname = tailscaleHostname;
+    const sshConfig = new remote.Command(
+      `${name}-ssh-config`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct exec ${args.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
       },
       mergeOptions(cro, { dependsOn: [] })
     );
 
-    // using pct and remote.command, lets run cloud-init
-    const checkSchema = new remote.Command(
-      `${name}-check-schema`,
+    const installTailscale = new remote.Command(
+      `${name}-tailscale-install`,
       {
         connection: args.host.remoteConnection,
-        triggers,
-        create: interpolate`
-pct exec ${this.container.vmId} -- cloud-init schema --system
-`,
+        create: interpolate`pct exec ${args.vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
       },
-      mergeOptions(cro, { dependsOn: [copyCloudInitToLxc] })
+      mergeOptions(cro, { dependsOn: [ipAddressResource] })
     );
 
-    // using pct and remote.command, lets run cloud-init
-    const cloudInitWait = new remote.Command(
-      `${name}-cloud-init-wait`,
+    const tailscaleArgs = interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
+
+    // Set Tailscale configuration
+    const tailscaleUp = new remote.Command(
+      `${name}-tailscale-up`,
       {
         connection: args.host.remoteConnection,
-        triggers,
-        create: interpolate`
-pct reboot ${this.container.vmId};
-pct exec ${this.container.vmId} -- cloud-init status --long --wait`,
+        create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale up ${tailscaleArgs} --reset`,
+        environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [checkSchema, copyCloudInitToLxc] })
+      mergeOptions(cro, { dependsOn: [installTailscale] })
     );
 
-    const ipAddress = new remote.Command(
-      `${name}-get-ip`,
+    const tailscaleSet = new remote.Command(
+      `${name}-tailscale-set`,
       {
         connection: args.host.remoteConnection,
-        triggers,
-        create: interpolate`pct exec ${this.container.vmId} -- `,
+        create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale set ${tailscaleArgs} --auto-update `,
+        environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [cloudInitWait] })
+      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] })
     );
 
-    const a = all([
-      output({
-        stderr: ipAddress.stderr,
-        stdin: ipAddress.stdin,
-        stdout: ipAddress.stdout,
-      }),
-    ]);
+    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
+      host: this.tailscaleHostname,
+      user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
+      password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
+    });
 
-    this.dns = createDnsRecord(
-      name,
-      this.hostname,
-      a.apply((z) => {
-        console.log(z);
-        return z[0].stdout.trim();
-      }),
-      args.globals,
-      mergeOptions(cro, { dependsOn: [cloudInitWait] })
-    );
+    function replaceVariable(key: RegExp, value: Output<string>) {
+      return (input: Output<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
+    }
+
+    async function createStack(path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
+      const stackName = basename(path);
+      const files = await readdir(path);
+      const fileAssets = output(
+        files.map(async (file) => {
+          const content = await readFile(resolve(path, file), "utf-8");
+          const items = replacements.reduce((p, r) => r(p), output(content));
+
+          return items.apply(async (content) => {
+            mkdirSync(`./.tmp/`, { recursive: true });
+            await writeFile(`./.tmp/${args.host.name}-${stackName}-${file}`, content);
+            return {
+              id: (await md5({ input: content })).result,
+              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+              source: new asset.FileAsset(`./.tmp/${args.host.name}-${stackName}-${file}`),
+            };
+          });
+        })
+      );
+
+      const mkdir = new remote.Command(
+        `${args.host.name}-${stackName}-mkdir`,
+        {
+          connection: args.host.remoteConnection,
+          create: interpolate`mkdir -p /opt/stacks/${stackName}`,
+        },
+        mergeOptions(cro, { dependsOn: [tailscaleSet] })
+      );
+
+      const copyFiles = fileAssets.apply((assets) => {
+        return assets.map(
+          (item) =>
+            new remote.CopyToRemote(
+              `${args.host.name}-${item.id}-copy-file`,
+              {
+                connection: connection,
+                remotePath: item.remotePath,
+                source: item.source,
+              },
+              mergeOptions(cro, { dependsOn: [mkdir] })
+            )
+        );
+      });
+
+      const compose = new remote.Command(
+        `${args.host.name}-${stackName}-compose`,
+        {
+          connection: connection,
+          triggers: copyFiles.apply((z) => z.map((f) => f.id)),
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
+        },
+        mergeOptions(cro, { dependsOn: copyFiles })
+      );
+
+      return { name: stackName, path, compose };
+    }
+
+    const replacements = [
+      replaceVariable(/\$\{host\}/g, output(args.host.name)),
+      replaceVariable(/\$\{hostname\}/g, hostname),
+      replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
+      replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
+      replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
+      replaceVariable(
+        /\$\{cloudflareApiToken\}/g,
+        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
+      ),
+      replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
+    ];
+
+    const stacks = output(readdir("./stacks/").then((files) => files.map((f) => createStack(`./stacks/${f}`, replacements))));
+    stacks.apply((z) => z.forEach((s) => console.log(`Loaded default stack ${s.name} from ${s.path}`)));
+
+    this.dns = createDnsRecord(name, this.hostname, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.internalDns = createDnsRecord(`${name}-internal`, interpolate`internal.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.dockgeDns = createDnsRecord(`${name}-dockge`, interpolate`dockge.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
 
     // Get Tailscale device - this will need to be done after the hook script runs
     // and Tailscale is configured. For now, we'll comment this out as it requires
     // manual Tailscale configuration after container creation.
-    /*
-    this.device = output(
-      getDevice(
-        { hostname: name },
-        { provider: args.globals.tailscaleProvider, parent: this }
-      ).then(async (result) => {
-        await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.id }, { ipv4: tailscaleIpAddress });
+
+    this.device = all([this.tailscaleIpAddress, getDeviceOutput({ name: tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] })]).apply(
+      async ([tailscaleIpAddress, result]) => {
+        await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
         return result;
-      })
+      }
     );
 
-    // Create device tags
+    // // Create device tags
     const deviceTags = new DeviceTags(
       `${name}-tags`,
       {
-        tags: ["tag:proxmox", "tag:exit-node"],
+        tags: ["tag:dockge"],
         deviceId: this.device.apply((z) => z.id),
       },
       {
         provider: args.globals.tailscaleProvider,
         parent: this,
         retainOnDelete: true,
+        dependsOn: [tailscaleSet],
       }
     );
 
-    // Create device key
+    // // Create device key
     const deviceKey = new DeviceKey(
       `${name}-key`,
       {
@@ -324,8 +221,8 @@ pct exec ${this.container.vmId} -- cloud-init status --long --wait`,
       {
         provider: args.globals.tailscaleProvider,
         parent: this,
+        dependsOn: [tailscaleSet],
       }
     );
-    */
   }
 }

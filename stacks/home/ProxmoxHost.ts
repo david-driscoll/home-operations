@@ -6,11 +6,11 @@ import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
 import { getDeviceOutput, DeviceTags, DeviceKey, DeviceAuthorization, GetDeviceResult, get4Via6 } from "@pulumi/tailscale";
 import { remote, local, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { GlobalResources } from "./globals.js";
+import { GlobalResources } from "../../components/globals.ts";
 import { tailscale } from "../../components/tailscale.js";
-import { OPClient } from "../../components/op.js";
-import { ITruenasVm } from "./truenas/index.ts";
+import { OPClient } from "../../components/op.ts";
 import { createDnsRecord, getHostnames } from "./helper.ts";
+import { TruenasVm } from "./TruenasVm.ts";
 
 export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["getItemByTitle"]>>;
 
@@ -23,17 +23,17 @@ export interface ProxmoxHostArgs {
   remote: boolean;
   internalIpAddress?: string;
   installTailscale?: boolean;
-  truenas?: ITruenasVm;
+  truenas?: TruenasVm;
 }
 
 export class ProxmoxHost extends ComponentResource {
-  public readonly name: Output<string>;
+  public readonly name: string;
   public readonly internalIpAddress: string;
   public readonly tailscaleIpAddress: string;
   public readonly macAddress: string;
   public readonly device: Output<GetDeviceResult>;
   public readonly pveProvider: ProxmoxVEProvider;
-  public readonly backupVolumes: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string }> | undefined>;
+  public readonly backupVolumes?: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string }>>;
   public readonly tailscaleHostname: Output<string>;
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
@@ -44,7 +44,7 @@ export class ProxmoxHost extends ComponentResource {
   constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
 
-    this.name = output(name);
+    this.name = name;
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
     } else {
@@ -86,13 +86,15 @@ export class ProxmoxHost extends ComponentResource {
       cro
     );
 
-    this.backupVolumes = pulumi.output(args.truenas?.addClusterBackup(name));
+    if (args.truenas) {
+      this.backupVolumes = pulumi.output(args.truenas.addClusterBackup(name, this));
+    }
 
-    const connection: types.input.remote.ConnectionArgs = this.remoteConnection = {
+    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.internalIpAddress,
       user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
-    };
+    });
 
     if (args.installTailscale) {
       const snippetsCommand = new remote.Command(
@@ -109,7 +111,7 @@ export class ProxmoxHost extends ComponentResource {
         `${name}-configure-ssh-env`,
         {
           connection: connection,
-          create: "mkdir -p /etc/ssh/ssh_config.d && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/ssh_config.d/99-tailscale.conf",
+          create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
         },
         cro
       );
@@ -134,14 +136,28 @@ export class ProxmoxHost extends ComponentResource {
         mergeOptions(cro, { dependsOn: [installTailscale] })
       );
 
+      const tailscaleArgs = interpolate`--hostname=${name} --accept-dns --accept-routes --advertise-exit-node --ssh --accept-risk=lose-ssh`;
+
+      // Set Tailscale configuration
+      const tailscaleUp = new remote.Command(
+        `${name}-tailscale-up`,
+        {
+          connection: connection,
+          create: interpolate`tailscale up ${tailscaleArgs} --reset`,
+          environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
+        },
+        mergeOptions(cro, { dependsOn: [installTailscale] })
+      );
+
       // Set Tailscale configuration
       const tailscaleSet = new remote.Command(
         `${name}-tailscale-set`,
         {
           connection: connection,
-          create: interpolate`TS_AUTHKEY=${args.globals.tailscaleAuthKey.key} tailscale set --hostname ${name} --accept-dns --accept-routes --auto-update --advertise-exit-node --ssh=true`,
+          create: interpolate`tailscale set ${tailscaleArgs} --auto-update`,
+          environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
         },
-        mergeOptions(cro, { dependsOn: [installTailscale] })
+        mergeOptions(cro, { dependsOn: [tailscaleUp, installTailscale] })
       );
 
       // Copy Tailscale cron script

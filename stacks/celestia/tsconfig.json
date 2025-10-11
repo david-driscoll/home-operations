@@ -1,14 +1,16 @@
 {
   "compilerOptions": {
-    "composite": true,
     "strict": true,
-    "outDir": "bin",
+    "baseUrl": "../..",
+    "rootDir": "../..",
+    "outDir": "../../bin",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "target": "es2024",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "sourceMap": true,
     "experimentalDecorators": true,
-    "allowImportingTsExtensions": true,
     "pretty": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -26,8 +28,9 @@
     }
   },
   "include": [
-    "components/**/*.ts",
-    "components/**/*.mts",
-    "types/**/*.ts",
-  ],
+    "./*.ts",
+    "../../components/**/*.ts",
+    "../../dynamic/**/*.ts",
+    "../../types/**/*.ts"
+  ]
 }

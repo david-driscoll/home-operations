@@ -2,11 +2,13 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "..",
+    "rootDir": "..",
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": [
     "**/*.ts",
+    "../dynamic/**/*.ts",
     "**/*.mts"
   ],
   "references": []

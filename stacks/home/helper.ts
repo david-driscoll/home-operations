@@ -1,5 +1,5 @@
 import { ComponentResource, ComponentResourceOptions, interpolate, mergeOptions, output, Output } from "@pulumi/pulumi";
-import { GlobalResources } from "./globals.ts";
+import { GlobalResources } from "../../components/globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
 import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
@@ -13,8 +13,9 @@ export function getHostnames(name: string, globals: GlobalResources) {
 
 export function getContainerHostnames(name: string, host: ProxmoxHost, globals: GlobalResources) {
   const hostname = interpolate`${host.name}.${globals.searchDomain}`;
-  const tailscaleHostname = interpolate`${name}-${host.name}.${globals.tailscaleDomain}`;
-  return { hostname, tailscaleHostname };
+  const tailscaleName = interpolate`${name}-${host.name}`;
+  const tailscaleHostname = interpolate`${tailscaleName}.${globals.tailscaleDomain}`;
+  return { hostname, tailscaleName, tailscaleHostname };
 }
 
 export function createDnsRecord(name: string, hostname: Output<string>, ipAddress: Output<string>, globals: GlobalResources, cro: ComponentResourceOptions) {

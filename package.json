@@ -18,6 +18,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
+    "@types/backblaze-b2": "^1.5.6",
     "@types/jiff": "^0.7.7",
     "@types/node": "^24.5.2",
     "@types/node-unifi": "^2.5.1",
@@ -43,7 +44,9 @@
     "@pulumi/unifi": "file:sdks/unifi",
     "@pulumi/uptimekuma": "file:sdks/uptimekuma",
     "@pulumiverse/talos": "^0.6.0",
+    "backblaze-b2": "^1.7.1",
     "jiff": "^0.7.3",
+    "jsondiffpatch": "^0.7.3",
     "node-unifi": "^2.5.1",
     "openapi-client-axios": "^7.7.0",
     "vscode-jsonrpc": "^8.2.1",

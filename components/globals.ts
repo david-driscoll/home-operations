@@ -1,10 +1,12 @@
-import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions } from "@pulumi/pulumi";
+import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions, interpolate } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumi/unifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { OPClient } from "../../components/op.ts";
+import { Provider as BackblazeProvider } from "@pulumi/b2";
+import { Provider as AuthentikProvider } from "@pulumi/authentik";
+import { OPClient } from "./op.ts";
 
 const op = new OPClient();
 
@@ -19,6 +21,7 @@ export class GlobalResources extends ComponentResource {
   public readonly unifiProvider: UnifiProvider;
   public readonly proxmoxCredential: Output<OnePasswordItem>;
   public readonly tailscaleCredential: Output<OnePasswordItem>;
+  public readonly backblazeCredential: Output<OnePasswordItem>;
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
@@ -29,6 +32,9 @@ export class GlobalResources extends ComponentResource {
   public readonly gateway: Output<string>;
   public readonly adguardCredential: Output<OnePasswordItem>;
   public readonly adguardProvider: AdguardProvider;
+  public readonly backblazeProvider: BackblazeProvider;
+  public readonly authentikCredential: Output<OnePasswordItem>;
+  public readonly authentikProvider: AuthentikProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -96,7 +102,27 @@ export class GlobalResources extends ComponentResource {
         minioInsecure: true,
         minioUser: this.truenasMinioCredential.apply((z) => z.fields["username"].value!),
         minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
-        minioServer: this.truenasCredential.apply((z) => `http://${this.truenasCredential.apply((z) => z.fields["domain"].value)}:9000`),
+        minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["domain"].value)}:9000`,
+      },
+      cro
+    );
+
+    this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
+    this.backblazeProvider = new BackblazeProvider(
+      "backblaze",
+      {
+        applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
+        applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
+      },
+      cro
+    );
+
+    this.authentikCredential = output(op.getItemByTitle("Authentik Token"));
+    this.authentikProvider = new AuthentikProvider(
+      "authentik",
+      {
+        url: this.authentikCredential.fields.apply((z) => z.url.value!),
+        token: this.authentikCredential.fields.apply((z) => z.credential.value!),
       },
       cro
     );

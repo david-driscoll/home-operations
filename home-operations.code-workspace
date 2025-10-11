@@ -1,0 +1,17 @@
+{
+  "folders": [
+	{
+		"name": "home-operations",
+		"path": "."
+	},
+	{
+		"name": "stargate-command-cluster",
+		"path": "../stargate-command-cluster"
+	},
+	{
+		"name": "equestria-cluster",
+		"path": "../equestria-cluster"
+	}
+],
+  "settings": {}
+}

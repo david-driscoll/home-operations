@@ -1,13 +1,12 @@
 #cloud-config
 # yaml-language-server: $schema=https://raw.githubusercontent.com/canonical/cloud-init/refs/heads/main/cloudinit/config/schemas/versions.schema.cloud-config.json
-password: Password123!
 
 # Create the docker group first
 groups:
   - docker
 # Update and install packages
 package_update: true
-package_upgrade: true
+# package_upgrade: true
 packages:
   - qemu-guest-agent
   - net-tools
@@ -22,17 +21,6 @@ runcmd:
   - curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
   - tailscale up --auth-key=${args.globals.tailscaleAuthKey.key} --hostname ${name}
   - tailscale set --accept-dns --accept-routes --auto-update --advertise-exit-node --ssh=true
-
-hostname: ${name}
-timezone: America/New_York
-users:
-  - default
-  - name: docker
-    groups:
-      - sudo
-    shell: /bin/bash
-    ssh_authorized_keys: [""]
-    sudo: ALL=(ALL) NOPASSWD:ALL
 
 manage_resolv_conf: false
 # resolv_conf:
