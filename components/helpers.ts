@@ -1,3 +1,5 @@
+import { Output } from "@pulumi/pulumi";
+
 export function removeUndefinedProperties<T>(obj: T): T {
   if (obj === null || obj === undefined) {
     return obj;
@@ -13,4 +15,8 @@ export function removeUndefinedProperties<T>(obj: T): T {
     ) as T;
   }
   return obj;
+}
+
+export function awaitOutput<T>(output: Output<T>) {
+  return new Promise<T>((r) => output.apply(r));
 }

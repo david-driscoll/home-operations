@@ -10,6 +10,7 @@ import { OPClient } from "../op.ts";
 import { OnePasswordItem } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
+import { GlobalResources } from "@components/globals.ts";
 
 export interface ClusterFlows {
   signingKey?: pulumi.Input<string>;
@@ -164,6 +165,7 @@ export interface AuthentikProviderGoogleWorkspace extends AuthentikProviderBase 
 }
 
 export interface ApplicationResourcesArgs {
+  globals: GlobalResources;
   groups: AuthentikGroups;
   propertyMappings: PropertyMappings;
   clusterFlows: ClusterFlows;
@@ -326,7 +328,7 @@ export class ApplicationResourcesManager extends pulumi.ComponentResource {
         },
         opts
       );
-      const signingKey = new ApplicationCertificate(resourceName, { parent: opts.parent });
+      const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(
         resourceName,
@@ -335,7 +337,7 @@ export class ApplicationResourcesManager extends pulumi.ComponentResource {
           ...this.mapFlowsToProvider(oauth2),
           clientId: clientId.result,
           clientSecret: clientSecret.result,
-          signingKey: signingKey.signingKeyPair.id,
+          signingKey: signingKey.signingKey.id,
           clientType: oauth2.clientType,
           allowedRedirectUris: oauth2.redirectUris?.map((uri) => ({
             matching_mode: uri.matchingMode ?? "strict",

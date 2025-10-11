@@ -7,9 +7,11 @@ import { ApplicationResourcesManager } from "../../components/authentik/applicat
 import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemInputs, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/models.js";
+import { GlobalResources } from "@components/globals.ts";
 
 // Stack configuration
 const config = new pulumi.Config();
+const globals = new GlobalResources({ parent: undefined });
 
 // Initialize 1Password client
 const opClient = new OPClient();
@@ -87,6 +89,7 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
 // Initialize application resources manager
 const applicationResources = new ApplicationResourcesManager(
   {
+    globals,
     groups: authentikGroups,
     propertyMappings: flowsManager.propertyMappings,
     clusterFlows: {

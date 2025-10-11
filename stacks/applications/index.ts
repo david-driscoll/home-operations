@@ -1,54 +1,34 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import { GlobalResources, ClusterDefinition, createClusterDefinition } from "../../components/globals.ts";
+import { AuthentikApplicationManager } from "@components/authentik.ts";
+import { dockgeApplications } from "./dockge.ts";
+import { kubernetesApplications } from "./kubernetes.ts";
 import { OPClient } from "../../components/op.ts";
-import { GlobalResources } from "../../components/globals.ts";
-import { ApplicationCertificate, AuthentikResourceManager, ClusterDefinition } from "@components/authentik.ts";
+
+const op = new OPClient();
 
 const globals = new GlobalResources({}, {});
 const config = new pulumi.Config(`applications`);
-const clusterDefinition = config.requireObject<ClusterDefinition>("cluster-definition");
-const authentikOutput = config.requireObject<typeof import("../authentik/index.ts")>("authentik");
+const clusterCredential = config.require("clusterCredential");
+const clusterDefinition = createClusterDefinition(await op.getItemByTitle(clusterCredential));
 
-const certificate = new ApplicationCertificate(clusterDefinition.name);
-
-const serviceConnection = new authentik.ServiceConnectionDocker(
-  clusterDefinition.name,
-  {
-    name: clusterDefinition.name,
-    url: `ssh://root@${clusterDefinition.rootDomain}`,
-    tlsAuthentication: certificate.signingKeyPair.certificateKeyPairId,
-  },
-  { provider: globals.authentikProvider }
-);
-
-const authentikApplicationManager = new AuthentikResourceManager({
-  serviceConnectionId: serviceConnection.serviceConnectionDockerId,
-  authentikCredential: "Authentik Token",
+const authentikApplicationManager = new AuthentikApplicationManager({
+  globals,
+  authentikCredential: "Authentik Outputs",
   cluster: clusterDefinition,
 });
 
-authentikApplicationManager.createApplication({
-  name: "traefik-internal",
-  category: authentikApplicationManager.cluster.title,
-  title: "Traefik Dashboard",
-  description: "Access to the Traefik dashboard",
-  url: `https://internal.${authentikApplicationManager.cluster.rootDomain}/dashboard/`,
-  icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/traefik.svg",
-  authentik: {
-    providerProxy: {
-      mode: "forward_single",
-      externalHost: `https://internal.${authentikApplicationManager.cluster.rootDomain}`,
-    },
-  },
-});
+let clusterResult: { serviceConnectionId: pulumi.Output<string> };
+switch (clusterDefinition.type) {
+  case "dockge":
+    clusterResult = await dockgeApplications(globals, clusterDefinition, authentikApplicationManager);
+    break;
+  case "kubernetes":
+    clusterResult = await kubernetesApplications(globals, clusterDefinition, authentikApplicationManager);
+    break;
+  default:
+    throw new Error(`Unknown cluster definition ${clusterDefinition}`);
+}
 
-authentikApplicationManager.createApplication({
-  name: "dockge",
-  category: authentikApplicationManager.cluster.title,
-  title: "Dockge",
-  description: "Access to the Dockge",
-  url: `https://dockge.${authentikApplicationManager.cluster.rootDomain}`,
-  icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dockge.svg",
-});
-
-authentikApplicationManager.createOutpost();
+authentikApplicationManager.createOutpost(clusterResult.serviceConnectionId);

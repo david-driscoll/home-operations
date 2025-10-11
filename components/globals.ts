@@ -6,9 +6,48 @@ import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as BackblazeProvider } from "@pulumi/b2";
 import { Provider as AuthentikProvider } from "@pulumi/authentik";
-import { OPClient } from "./op.ts";
+import { OPClient, OPClientItem } from "./op.ts";
 
 const op = new OPClient();
+
+export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
+
+export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
+  return {
+    type: item.fields.type.value as any,
+    authentikDomain: item.fields.authentikDomain.value!,
+    name: item.fields.name.value!,
+    rootDomain: item.fields.rootDomain.value!,
+    secret: item.fields.secret?.value!,
+    title: item.fields.title.value!,
+    background: item.fields.background?.value,
+    favicon: item.fields.favicon?.value,
+    icon: item.fields.icon?.value,
+  };
+}
+
+export interface DockgeClusterDefinition {
+  type: "dockge";
+  name: string;
+  title: string;
+  rootDomain: string;
+  authentikDomain: string;
+  icon?: string;
+  background?: string;
+  favicon?: string;
+}
+
+export interface KubernetesClusterDefinition {
+  type: "kubernetes";
+  name: string;
+  title: string;
+  rootDomain: string;
+  authentikDomain: string;
+  secret: string;
+  icon?: string;
+  background?: string;
+  favicon?: string;
+}
 
 export interface GlobalResourcesArgs {}
 
@@ -33,8 +72,6 @@ export class GlobalResources extends ComponentResource {
   public readonly adguardCredential: Output<OnePasswordItem>;
   public readonly adguardProvider: AdguardProvider;
   public readonly backblazeProvider: BackblazeProvider;
-  public readonly authentikCredential: Output<OnePasswordItem>;
-  public readonly authentikProvider: AuthentikProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -113,16 +150,6 @@ export class GlobalResources extends ComponentResource {
       {
         applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
         applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
-      },
-      cro
-    );
-
-    this.authentikCredential = output(op.getItemByTitle("Authentik Token"));
-    this.authentikProvider = new AuthentikProvider(
-      "authentik",
-      {
-        url: this.authentikCredential.apply((c) => c.fields.url.value!),
-        token: this.authentikCredential.fields.apply((z) => z.credential.value!),
       },
       cro
     );

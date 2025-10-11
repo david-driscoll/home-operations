@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@1password/connect": "^1.4.2",
+    "@kubernetes/client-node": "^1.4.0",
     "@muhlba91/pulumi-proxmoxve": "^7.5.0",
     "@pulumi/adguard": "file:sdks/adguard",
     "@pulumi/authentik": "file:sdks/authentik",

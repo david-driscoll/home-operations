@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import { OPClient } from "../../components/op.ts";
 import { GlobalResources } from "../../components/globals.ts";
-import { ApplicationCertificate, AuthentikResourceManager } from "@components/authentik.ts";
+import { ApplicationCertificate, AuthentikApplicationManager } from "@components/authentik.ts";
 
 const globals = new GlobalResources({}, {});
 const config = new pulumi.Config();
@@ -16,17 +16,13 @@ const clusterInfo = {
 
 const certificate = new ApplicationCertificate(clusterInfo.name);
 
-const serviceConnection = new authentik.ServiceConnectionDocker(
-  clusterInfo.name,
-  {
-    name: clusterInfo.name,
-    url: `ssh://root@${clusterInfo.rootDomain}`,
-    tlsAuthentication: certificate.signingKeyPair.certificateKeyPairId,
-  },
-  { provider: globals.authentikProvider }
-);
+const serviceConnection = new authentik.ServiceConnectionDocker(clusterInfo.name, {
+  name: clusterInfo.name,
+  url: `ssh://root@${clusterInfo.rootDomain}`,
+  tlsAuthentication: certificate.signingKeyPair.certificateKeyPairId,
+});
 
-const authentikApplicationManager = new AuthentikResourceManager({
+const authentikApplicationManager = new AuthentikApplicationManager({
   serviceConnectionId: serviceConnection.serviceConnectionDockerId,
   authentik: pulumi.output(authentikOutput),
   cluster: clusterInfo,

@@ -3,18 +3,20 @@ import * as authentik from "@pulumi/authentik";
 import * as random from "@pulumi/random";
 import * as k8s from "@pulumi/kubernetes";
 import * as tls from "@pulumi/tls";
-import * as authentikSdk from "@pulumi/authentik";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Application } from "sdks/authentik/bin/application.js";
 import { OnePasswordItem } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
 import { OPClientItem, OPClient } from "./op.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
+import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
+  globals: GlobalResources;
   cluster: ClusterDefinition;
-  serviceConnectionId: pulumi.Input<string>;
   authentikCredential: pulumi.Input<string>;
 }
 type RolesKeys = keyof typeof Roles;
@@ -36,7 +38,7 @@ export class AuthentikOutputs {
   }
 }
 
-export class AuthentikResourceManager extends pulumi.ComponentResource {
+export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
   private readonly applicationsComponent: pulumi.ComponentResource;
   private readonly outpostsComponent: pulumi.ComponentResource;
@@ -70,23 +72,23 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
     return { app, provider };
   }
 
-  public async createOutpost() {
+  public async createOutpost(serviceConnectionId: pulumi.Output<string>) {
     // Create outpost
     if (this.proxyProviders.length > 0) {
       return new authentik.Outpost(
-        this.args.cluster.name,
+        this.cluster.name,
         {
-          serviceConnection: this.args.serviceConnectionId,
+          serviceConnection: serviceConnectionId,
           type: "proxy",
-          name: `Outpost for ${this.args.cluster.title}`,
+          name: `Outpost for ${this.cluster.title}`,
           config: JSON.stringify({
             authentik_host: "https://authentik.driscoll.tech/",
             authentik_host_insecure: false,
-            authentik_host_browser: this.args.cluster.authentikDomain,
+            authentik_host_browser: this.cluster.authentikDomain,
             log_level: "info",
-            object_naming_template: `ak-outpost-${this.args.cluster.name}`,
+            object_naming_template: `ak-outpost-${this.cluster.name}`,
             kubernetes_replicas: 2,
-            kubernetes_namespace: this.args.cluster.name,
+            kubernetes_namespace: this.cluster.name,
             kubernetes_ingress_class_name: "internal",
           }),
           protocolProviders: this.proxyProviders,
@@ -98,7 +100,7 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
 
   private createAuthentikProvider(resourceName: string, definition: ApplicationDefinition, authentikDefinition: ApplicationDefinitionAuthentik) {
     const slug = definition.slug || resourceName;
-    const providerName = `Provider for ${definition.name} (${this.args.cluster.name})`;
+    const providerName = `Provider for ${definition.name} (${this.cluster.name})`;
     const opts = { parent: this.providersComponent };
 
     // Proxy Provider
@@ -140,7 +142,7 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
         },
         opts
       );
-      const signingKey = new ApplicationCertificate(resourceName, { parent: opts.parent });
+      const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, opts);
 
       const provider = new authentik.ProviderOauth2(
         resourceName,
@@ -149,7 +151,7 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
           ...this.mapFlowsToProvider(oauth2),
           clientId: clientId.result,
           clientSecret: clientSecret.result,
-          signingKey: signingKey.signingKeyPair.id,
+          signingKey: signingKey.signingKey.id,
           clientType: oauth2.clientType,
           allowedRedirectUris: oauth2.redirectUris?.map((uri) => ({
             matching_mode: uri.matchingMode ?? "strict",
@@ -417,31 +419,6 @@ export interface ApplicationDefinition {
   authentik?: ApplicationDefinitionAuthentik;
 }
 
-export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
-
-export interface DockgeClusterDefinition {
-  type: "dockge";
-  name: string;
-  title: string;
-  rootDomain: string;
-  authentikDomain: string;
-  icon?: string;
-  background?: string;
-  favicon?: string;
-}
-
-export interface KubernetesClusterDefinition {
-  type: "kubernetes";
-  name: string;
-  title: string;
-  rootDomain: string;
-  authentikDomain: string;
-  secret: string;
-  icon?: string;
-  background?: string;
-  favicon?: string;
-}
-
 export interface ApplicationDefinitionAuthentik {
   providerProxy?: AuthentikProviderProxy;
   providerOauth2?: AuthentikProviderOauth2;
@@ -545,52 +522,4 @@ export interface AuthentikProviderGoogleWorkspace extends AuthentikProviderBase 
   excludeUsersServiceAccount?: boolean;
   filterGroup?: pulumi.Input<string>;
   defaultGroupEmailDomain: string;
-}
-
-export class ApplicationCertificate extends pulumi.ComponentResource {
-  public readonly signingPrivateKey: tls.PrivateKey;
-  public readonly signingCertificate: tls.SelfSignedCert;
-  public readonly signingKeyPair: authentikSdk.CertificateKeyPair;
-
-  constructor(name: string, opts?: pulumi.ComponentResourceOptions) {
-    super("custom:resource:ApplicationCertificate", name, {}, opts);
-
-    this.signingPrivateKey = new tls.PrivateKey(
-      `${name}-private-key`,
-      {
-        algorithm: "RSA",
-        rsaBits: 4096,
-      },
-      { parent: this }
-    );
-
-    this.signingCertificate = new tls.SelfSignedCert(
-      `${name}-certificate`,
-      {
-        privateKeyPem: this.signingPrivateKey.privateKeyPem,
-        allowedUses: ["certSigning"],
-        validityPeriodHours: 365 * 24, // 1 year
-        earlyRenewalHours: 24, // 1 day
-        subject: {
-          commonName: `${name} Signing Key`,
-          organizationalUnit: "Authentik",
-          country: "Anywhere",
-          locality: "Everywhere",
-        },
-      },
-      { parent: this }
-    );
-
-    this.signingKeyPair = new authentikSdk.CertificateKeyPair(
-      `${name}-key-pair`,
-      {
-        certificateData: this.signingCertificate.certPem,
-        keyData: this.signingPrivateKey.privateKeyPem,
-      },
-      { parent: this }
-    );
-  }
-}
-function addPolicyBindingToApplication(app: Application, arg1: { group: pulumi.Output<string> }) {
-  throw new Error("Function not implemented.");
 }
