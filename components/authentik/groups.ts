@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { Roles } from "../constants.ts";
+import { Roles, Groups } from "../constants.ts";
 
 interface GroupDef {
   groupName: string;

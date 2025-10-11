@@ -83,11 +83,13 @@ export class OPClient {
     const fields = [
       ...Object.entries(item.fields ?? []).map(([fieldKey, field]) => ({
         id: fieldKey,
+        label: fieldKey,
         ...field,
       })),
       ...Object.entries(item.sections ?? []).flatMap(([sectionKey, s]) =>
         Object.entries(s.fields ?? []).map(([fieldKey, field]) => ({
-          id: `${sectionKey}-${fieldKey}`,
+          id: `${sectionKey}.${fieldKey}`,
+          label: fieldKey,
           ...field,
         }))
       ),
@@ -139,17 +141,17 @@ export class OPClient {
       if (field.value === undefined) {
         continue;
       }
-      if (!field.section || !field.section.id) rootFields.push([field.label!, removeUndefinedProperties(field)] as const);
+      if (!field.section || !field.section.id || field.section.id === "add more") rootFields.push([field.label!, removeUndefinedProperties(field)] as const);
     }
     for (const file of files) {
       if (file.name === undefined) {
         continue;
       }
-      if (!file.section || !file.section.id) rootFiles.push([file.name!, removeUndefinedProperties(file)] as const);
+      if (!file.section || !file.section.id || file.section.id === "add more") rootFiles.push([file.name!, removeUndefinedProperties(file)] as const);
     }
     const sectionParts: [string, { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } }][] = [];
     for (let section of sections) {
-      if (section.id === undefined) {
+      if (section.id === undefined || section.id === "add more") {
         continue;
       }
       section = removeUndefinedProperties(section);

@@ -121,7 +121,7 @@ export class GlobalResources extends ComponentResource {
     this.authentikProvider = new AuthentikProvider(
       "authentik",
       {
-        url: this.authentikCredential.fields.apply((z) => z.url.value!),
+        url: this.authentikCredential.apply((c) => c.fields.url.value!),
         token: this.authentikCredential.fields.apply((z) => z.credential.value!),
       },
       cro

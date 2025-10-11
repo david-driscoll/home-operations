@@ -8,22 +8,29 @@ import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Application } from "sdks/authentik/bin/application.js";
 import { OnePasswordItem } from "../dynamic/1password/OnePasswordItem.ts";
+import { Roles } from "./constants.ts";
+import { OPClientItem } from "./op.ts";
 export interface AuthentikResourcesArgs {
   cluster: ClusterDefinition;
   serviceConnectionId: pulumi.Input<string>;
   authentikCredential: pulumi.Input<string>;
 }
+type RolesKeys = keyof typeof Roles;
+type RolesValues = (typeof Roles)[RolesKeys];
 
 export interface AuthentikOutputs {
-  groups: { [K in keyof typeof import("./authentik/groups.ts").AuthentikGroups]: string };
-  roles: { [K in keyof typeof import("./authentik/groups.ts").AuthentikGroups]: string };
+  groups: { [K in RolesValues]: string };
+  roles: { [K in RolesValues]: string };
   scopeMappings: Record<string, string>;
-  flows: { [K in keyof typeof import("./authentik/flows.ts").FlowsManager]: string };
+  flows: { [K in keyof ReturnType<import("./authentik/flows.ts").FlowsManager["createFlows"]>]: string };
 }
 
 export class AuthentikOutputs {
-  constructor() {
-    
+  constructor(value: OPClientItem) {
+    this.groups = Object.fromEntries(Object.entries(value.sections["groups"].fields).map(([key, value]) => [key, value.value] as const)) as any;
+    this.roles = Object.fromEntries(Object.entries(value.sections["roles"].fields).map(([key, value]) => [key, value.value] as const)) as any;
+    this.scopeMappings = Object.fromEntries(Object.entries(value.sections["scopeMappings"].fields).map(([key, value]) => [key, value.value] as const)) as any;
+    this.flows = Object.fromEntries(Object.entries(value.sections["flows"].fields).map(([key, value]) => [key, value.value] as const)) as any;
   }
 }
 
@@ -154,22 +161,22 @@ export class AuthentikResourceManager extends pulumi.ComponentResource {
       const oidcCredentials = new OnePasswordItem(`${definition.name}-oidc-credentials`, {
         category: FullItem.CategoryEnum.APICredential,
         title: `${definition.name}-oidc-credentials`,
-        fields: [
-          pulumi.output({ label: "client_id", value: clientId.result, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "client_secret", value: clientSecret.result, type: FullItemAllOfFields.TypeEnum.Concealed }),
-          pulumi.output({ label: "authorization_url", value: `${this.cluster.authentikDomain}/application/o/authorize/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "token_url", value: `${this.cluster.authentikDomain}/application/o/token/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "userinfo_url", value: `${this.cluster.authentikDomain}/application/o/userinfo/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "revoke_url", value: `${this.cluster.authentikDomain}/application/o/revoke/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "issuer", value: `${this.cluster.authentikDomain}/application/o/${slug}/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "end_session_url", value: `${this.cluster.authentikDomain}/application/o/${slug}/end-session/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({ label: "jwks_url", value: `${this.cluster.authentikDomain}/application/o/${slug}/jwks/`, type: FullItemAllOfFields.TypeEnum.String }),
-          pulumi.output({
+        fields: pulumi.output({
+          client_id: { value: clientId.result, type: FullItemAllOfFields.TypeEnum.String },
+          client_secret: { value: clientSecret.result, type: FullItemAllOfFields.TypeEnum.Concealed },
+          authorization_url: { value: `${this.cluster.authentikDomain}/application/o/authorize/`, type: FullItemAllOfFields.TypeEnum.String },
+          token_url: { value: `${this.cluster.authentikDomain}/application/o/token/`, type: FullItemAllOfFields.TypeEnum.String },
+          userinfo_url: { value: `${this.cluster.authentikDomain}/application/o/userinfo/`, type: FullItemAllOfFields.TypeEnum.String },
+          revoke_url: { value: `${this.cluster.authentikDomain}/application/o/revoke/`, type: FullItemAllOfFields.TypeEnum.String },
+          issuer: { value: `${this.cluster.authentikDomain}/application/o/${slug}/`, type: FullItemAllOfFields.TypeEnum.String },
+          end_session_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/end-session/`, type: FullItemAllOfFields.TypeEnum.String },
+          jwks_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/jwks/`, type: FullItemAllOfFields.TypeEnum.String },
+          openid_configuration_url: {
             label: "openid_configuration_url",
             value: `${this.cluster.authentikDomain}/application/o/${slug}/.well-known/openid-configuration`,
             type: FullItemAllOfFields.TypeEnum.String,
-          }),
-        ],
+          },
+        }),
       });
 
       return { provider, oidcCredentials };

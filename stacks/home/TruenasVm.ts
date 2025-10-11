@@ -185,26 +185,26 @@ export class TruenasVm {
     const backupCredential = new OnePasswordItem(`${name}-b2-credential`, {
       title: pulumi.interpolate`B2 Backup Key ${name}`,
       category: FullItem.CategoryEnum.APICredential,
-      fields: [
-        pulumi.output({ label: "username", value: b2BucketApplicationKey.applicationKeyId, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "credential", value: b2BucketApplicationKey.applicationKey, type: FullItemAllOfFields.TypeEnum.Concealed }),
-        pulumi.output({ label: "keyName", value: b2BucketApplicationKey.keyName, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "bucket", value: b2Bucket.bucketName, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "hostname", value: "s3.us-east-005.backblazeb2.com", type: FullItemAllOfFields.TypeEnum.String }),
-      ],
+      fields: pulumi.output({
+        username: { value: b2BucketApplicationKey.applicationKeyId, type: FullItemAllOfFields.TypeEnum.String },
+        credential: { value: b2BucketApplicationKey.applicationKey, type: FullItemAllOfFields.TypeEnum.Concealed },
+        keyName: { value: b2BucketApplicationKey.keyName, type: FullItemAllOfFields.TypeEnum.String },
+        bucket: { value: b2Bucket.bucketName, type: FullItemAllOfFields.TypeEnum.String },
+        hostname: { value: "s3.us-east-005.backblazeb2.com", type: FullItemAllOfFields.TypeEnum.String },
+      }),
       tags: ["backblaze", "backup", name],
     });
 
     const databaseCredential = new OnePasswordItem(`${name}-b2-db-credential`, {
       title: pulumi.interpolate`B2 Database Key ${name}`,
       category: FullItem.CategoryEnum.APICredential,
-      fields: [
-        pulumi.output({ label: "username", value: b2DatabaseBucketApplicationKey.applicationKeyId, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "credential", value: b2DatabaseBucketApplicationKey.applicationKey, type: FullItemAllOfFields.TypeEnum.Concealed }),
-        pulumi.output({ label: "keyName", value: b2DatabaseBucketApplicationKey.keyName, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "bucket", value: b2DatabaseBucket.bucketName, type: FullItemAllOfFields.TypeEnum.String }),
-        pulumi.output({ label: "hostname", value: "s3.us-east-005.backblazeb2.com", type: FullItemAllOfFields.TypeEnum.String }),
-      ],
+      fields: pulumi.output({
+        username: { value: b2DatabaseBucketApplicationKey.applicationKeyId, type: FullItemAllOfFields.TypeEnum.String },
+        credential: { value: b2DatabaseBucketApplicationKey.applicationKey, type: FullItemAllOfFields.TypeEnum.Concealed },
+        keyName: { value: b2DatabaseBucketApplicationKey.keyName, type: FullItemAllOfFields.TypeEnum.String },
+        bucket: { value: b2DatabaseBucket.bucketName, type: FullItemAllOfFields.TypeEnum.String },
+        hostname: { value: "s3.us-east-005.backblazeb2.com", type: FullItemAllOfFields.TypeEnum.String },
+      }),
       tags: ["backblaze", "database", "backup", name],
     });
 
