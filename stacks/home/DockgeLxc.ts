@@ -240,25 +240,25 @@ export class DockgeLxc extends ComponentResource {
 
     const dockgeInfo = new OnePasswordItem(`${args.host.name}-dockge`, {
       category: FullItem.CategoryEnum.SecureNote,
-      title: `DockgeLxc: ${args.host.title}`,
+      title: interpolate`DockgeLxc: ${args.host.title}`,
+      tags: ["dockge", "lxc"],
       sections: {
         tailscale: getTailscaleSection(this.device),
-        dns: createDnsSection("DNS (the problem)", this.dns),
-        internalDns: createDnsSection("Internal DNS", this.internalDns),
-        dockgeDns: createDnsSection("Dockge Dns", this.dockgeDns),
+        dns: createDnsSection(this.dns),
+        internalDns: createDnsSection(this.internalDns),
+        dockgeDns: createDnsSection(this.dockgeDns),
         ssh: {
-          label: "SSH Connection",
           fields: {
-            hostname: { type: TypeEnum.String, label: "Hostname", value: this.tailscaleHostname },
-            username: { type: TypeEnum.String, label: "Username", value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-            password: { type: TypeEnum.Concealed, label: "Password", value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+            hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+            username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+            password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
           },
         },
       },
       fields: {
-        hostname: { type: TypeEnum.String, label: "Hostname", value: this.hostname },
-        ipAddress: { type: TypeEnum.String, label: "IP Address", value: this.ipAddress },
-        tailscaleIpAddress: { type: TypeEnum.String, label: "Tailscale IP Address", value: this.tailscaleIpAddress },
+        hostname: { type: TypeEnum.String, value: this.hostname },
+        ipAddress: { type: TypeEnum.String, value: this.ipAddress },
+        tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
       },
     });
   }

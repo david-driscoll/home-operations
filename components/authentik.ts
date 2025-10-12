@@ -167,7 +167,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
       const oidcCredentials = new OnePasswordItem(`${definition.name}-oidc-credentials`, {
         category: FullItem.CategoryEnum.APICredential,
-        title: `${definition.name}-oidc-credentials`,
+        title: pulumi.interpolate`${definition.name}-oidc-credentials`,
         fields: pulumi.output({
           client_id: { value: clientId.result, type: TypeEnum.String },
           client_secret: { value: clientSecret.result, type: TypeEnum.Concealed },
@@ -178,11 +178,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           issuer: { value: `${this.cluster.authentikDomain}/application/o/${slug}/`, type: TypeEnum.String },
           end_session_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/end-session/`, type: TypeEnum.String },
           jwks_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/jwks/`, type: TypeEnum.String },
-          openid_configuration_url: {
-            label: "openid_configuration_url",
-            value: `${this.cluster.authentikDomain}/application/o/${slug}/.well-known/openid-configuration`,
-            type: TypeEnum.String,
-          },
+          openid_configuration_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/.well-known/openid-configuration`, type: TypeEnum.String },
         }),
       });
 
@@ -391,16 +387,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     }
 
     return app;
-  }
-
-  private parseClusterInfo(app: ApplicationDefinition): ClusterDefinition {
-    throw new Error("Cluster info parsing not yet implemented");
-    // return {
-    //   clusterName: app.metadata.labels?.["driscoll.dev/cluster"] || "sgc",
-    //   clusterTitle: app.metadata.annotations?.["driscoll.dev/clusterTitle"] || "Stargate Command",
-    //   namespace: app.metadata.namespace,
-    //   originalName: app.metadata.annotations?.["driscoll.dev/originalName"] || app.metadata.name,
-    // };
   }
 }
 

@@ -36,7 +36,6 @@ export function getTailscaleDevice(device: Output<GetDeviceResult>) {
 
 export function getTailscaleSection(device: Output<GetDeviceResult>): OnePasswordItemSectionInput {
   return {
-    label: "Tailscale Device",
     fields: {
       hostname: {
         type: TypeEnum.String,
@@ -46,17 +45,9 @@ export function getTailscaleSection(device: Output<GetDeviceResult>): OnePasswor
         type: TypeEnum.String,
         value: device.name!,
       },
-      nodeId: {
-        type: TypeEnum.String,
-        value: device.nodeId!,
-      },
       tags: {
         type: TypeEnum.String,
         value: device.tags.apply((z) => z.join(","))!,
-      },
-      id: {
-        type: TypeEnum.String,
-        value: device.id!,
       },
       addresses: {
         type: TypeEnum.String,

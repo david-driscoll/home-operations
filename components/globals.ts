@@ -139,7 +139,7 @@ export class GlobalResources extends ComponentResource {
         minioInsecure: true,
         minioUser: this.truenasMinioCredential.apply((z) => z.fields["username"].value!),
         minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
-        minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["domain"].value)}:9000`,
+        minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["hostname"].value)}:9000`,
       },
       cro
     );

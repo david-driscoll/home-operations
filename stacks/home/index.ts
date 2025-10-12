@@ -35,7 +35,7 @@ const spikeVm = new TruenasVm({
 });
 
 var celestiaHost = new ProxmoxHost("celestia", {
-  title: celestiaCluster.title,
+  title: celestiaCluster.fields.title.value!,
   globals: globals,
   isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
@@ -47,7 +47,7 @@ var celestiaHost = new ProxmoxHost("celestia", {
 });
 
 var lunaHost = new ProxmoxHost("luna", {
-  title: lunaCluster.title,
+  title: lunaCluster.fields.title.value!,
   globals: globals,
   isProxmoxBackupServer: true,
   tailscaleIpAddress: "100.111.10.104",

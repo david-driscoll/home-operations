@@ -61,9 +61,8 @@ export function createDnsRecord(name: string, hostname: Output<string>, ipAddres
   return { hostname, ipAddress: output(ipAddress), unifi, cloudflare, adguard };
 }
 
-export function createDnsSection(label: string, dns: ReturnType<typeof createDnsRecord>): OnePasswordItemSectionInput {
+export function createDnsSection(dns: ReturnType<typeof createDnsRecord>): OnePasswordItemSectionInput {
   return {
-    label,
     fields: {
       hostname: {
         type: TypeEnum.String,

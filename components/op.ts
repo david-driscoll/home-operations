@@ -14,7 +14,7 @@ export interface OPClientItemFiles {
 }
 
 export interface OPClientItemSections {
-  [key: string]: { id: string; label: string; fields: OPClientItemFields; files: OPClientItemFiles };
+  [key: string]: { id: string; fields: OPClientItemFields; files: OPClientItemFiles };
 }
 
 export interface OPClientItem {
@@ -53,12 +53,25 @@ export class OPClient {
 
   public async createItem(item: OPClientItemInput) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(await this.client.createItem(vaultUuid, this.mapToFullItem(vaultUuid, item)), undefined);
+    return this.mapItem(
+      await this.client.createItem(vaultUuid, {
+        ...this.mapToFullItem(item),
+        vault: { id: vaultUuid },
+      } as any),
+      undefined
+    );
   }
 
   public async updateItem(id: string, item: OPClientItemInput) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(await this.client.updateItem(vaultUuid, { id, ...this.mapToFullItem(vaultUuid, item) } as any), id);
+    return this.mapItem(
+      await this.client.updateItem(vaultUuid, {
+        id,
+        ...this.mapToFullItem(item),
+        vault: { id: vaultUuid },
+      } as any),
+      id
+    );
   }
 
   public async deleteItem(id: string) {
@@ -76,38 +89,36 @@ export class OPClient {
     return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemId), undefined);
   }
 
-  private mapToFullItem(vaultId: string, item: OPClientItemInput & { id?: string }): FullItem {
-    const sections = Object.entries(item.sections ?? [])
-      .map(([key, s]) => ({ id: key, label: s.label }))
-      .map(removeUndefinedProperties);
+  public mapToFullItem(item: OPClientItemInput & { id?: string }): FullItem {
+    const sections = Object.entries(item.sections ?? []).map(([key, s]) => ({ id: s.id ?? key, label: key }));
     const fields = [
       ...Object.entries(item.fields ?? []).map(([fieldKey, field]) => ({
-        id: fieldKey,
-        label: fieldKey,
         ...field,
+        label: fieldKey,
       })),
-      ...Object.entries(item.sections ?? []).flatMap(([sectionKey, s]) =>
-        Object.entries(s.fields ?? []).map(([fieldKey, field]) => ({
-          id: `${sectionKey}.${fieldKey}`,
-          label: fieldKey,
+      ...Object.entries(item.sections ?? []).flatMap(([sectionKey, section]) =>
+        Object.entries(section.fields ?? []).map(([fieldKey, field]) => ({
           ...field,
+          section: { id: section.id ?? sectionKey, label: sectionKey },
+          label: fieldKey,
         }))
       ),
-    ]
-      // .map((item) => {
-      //   delete item.id;
-      //   return item;
-      // })
-      .map(removeUndefinedProperties);
-    const files = [...Object.values(item.files ?? []), ...Object.values(item.sections ?? []).flatMap((s) => Object.values(s.files ?? []))]
-      // .map((item) => {
-      //   delete item.id;
-      //   return item;
-      // })
-      .map(removeUndefinedProperties);
+    ];
+    const files = [
+      ...Object.entries(item.files ?? []).map(([fileKey, file]) => ({
+        ...file,
+        name: fileKey,
+      })),
+      ...Object.entries(item.sections ?? []).flatMap(([sectionKey, section]) =>
+        Object.entries(section.files ?? []).map(([fileKey, file]) => ({
+          ...file,
+          section: { id: section.id ?? sectionKey, label: sectionKey },
+          name: fileKey,
+        }))
+      ),
+    ];
     const result = {
       id: item.id,
-      vault: { id: vaultId },
       title: item.title,
       category: item.category,
       urls: item.urls,
@@ -116,7 +127,8 @@ export class OPClient {
       fields,
       files,
     };
-    return result as any;
+    console.log("mapToFullItem:", result);
+    return removeUndefinedProperties(result) as any;
   }
 
   public mapItem(
@@ -128,9 +140,15 @@ export class OPClient {
     category: FullItem.CategoryEnum;
     urls: ItemUrls[];
     tags: string[];
-    sections: { [key: string]: { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } } };
-    fields: { [key: string]: FullItemAllOfFields };
-    files: { [key: string]: ItemFile };
+    sections: {
+      [key: string]: {
+        id: string;
+        fields: { [key: string]: Omit<FullItemAllOfFields, "section" | "label"> };
+        files: { [key: string]: Omit<ItemFile, "section" | "label"> };
+      };
+    };
+    fields: { [key: string]: Omit<FullItemAllOfFields, "section" | "label"> };
+    files: { [key: string]: Omit<ItemFile, "section" | "label"> };
   } {
     const fields = item.fields ?? [];
     const sections = item.sections ?? [];
@@ -141,28 +159,25 @@ export class OPClient {
       if (field.value === undefined) {
         continue;
       }
-      if (!field.section || !field.section.id || field.section.id === "add more") rootFields.push([field.label!, removeUndefinedProperties(field)] as const);
+      if (!field.section || !field.section.id || field.section.id === "add more") rootFields.push([field.label!, field] as const);
     }
     for (const file of files) {
       if (file.name === undefined) {
         continue;
       }
-      if (!file.section || !file.section.id || file.section.id === "add more") rootFiles.push([file.name!, removeUndefinedProperties(file)] as const);
+      if (!file.section || !file.section.id || file.section.id === "add more") rootFiles.push([file.name!, file] as const);
     }
     const sectionParts: [string, { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } }][] = [];
     for (let section of sections) {
       if (section.id === undefined || section.id === "add more") {
         continue;
       }
-      section = removeUndefinedProperties(section);
-      const sectionFields = fields.filter((f) => f.section?.id === section.id).map((f) => [f.label!, removeUndefinedProperties(f)] as const);
-      const sectionFiles = files.filter((f) => f.section?.id === section.id).map((f) => [f.name!, removeUndefinedProperties(f)] as const);
+      const sectionFields = fields.filter((f) => f.section?.id === section.id).map((f) => [f.label!, f] as const);
+      const sectionFiles = files.filter((f) => f.section?.id === section.id).map((f) => [f.name!, f] as const);
       sectionParts.push([section.id!, { id: section.id!, label: section.label ?? section.id!, fields: Object.fromEntries(sectionFields), files: Object.fromEntries(sectionFiles) }] as const);
     }
 
-    item = removeUndefinedProperties(item);
-
-    return {
+    const result = removeUndefinedProperties({
       id: item.id ?? id!,
       title: item.title!,
       category: item.category!,
@@ -171,6 +186,7 @@ export class OPClient {
       sections: Object.fromEntries(sectionParts),
       fields: Object.fromEntries(rootFields),
       files: Object.fromEntries(rootFiles),
-    };
+    });
+    return result;
   }
 }

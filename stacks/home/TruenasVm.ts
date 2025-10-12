@@ -10,7 +10,7 @@ import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { getTruenasClient } from "../../components/truenas.ts";
 import TrueNASResourceManager from "../../components/truenas/truenas-manager.ts";
-import { OnePasswordItem } from "@dynamic/1password/OnePasswordItem.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Dataset } from "@components/truenas/index.ts";

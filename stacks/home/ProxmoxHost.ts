@@ -225,23 +225,23 @@ export class ProxmoxHost extends ComponentResource {
 
     const proxmoxInfo = new OnePasswordItem(`${this.name}-proxmox`, {
       category: FullItem.CategoryEnum.SecureNote,
-      title: `ProxmoxHost: ${args.title}`,
+      title: pulumi.interpolate`ProxmoxHost: ${args.title}`,
+      tags: ["proxmox", "host"],
       sections: {
         tailscale: getTailscaleSection(this.device),
-        dns: createDnsSection("DNS (the problem)", this.dns),
+        dns: createDnsSection(this.dns),
         ssh: {
-          label: "SSH Connection",
           fields: {
-            hostname: { type: TypeEnum.String, label: "Hostname", value: this.tailscaleHostname },
-            username: { type: TypeEnum.String, label: "Username", value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-            password: { type: TypeEnum.Concealed, label: "Password", value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+            hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+            username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+            password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
           },
         },
       },
       fields: {
-        hostname: { type: TypeEnum.String, label: "Hostname", value: this.hostname },
-        ipAddress: { type: TypeEnum.String, label: "IP Address", value: this.internalIpAddress },
-        tailscaleIpAddress: { type: TypeEnum.String, label: "Tailscale IP Address", value: this.tailscaleIpAddress },
+        hostname: { type: TypeEnum.String, value: this.hostname },
+        ipAddress: { type: TypeEnum.String, value: this.internalIpAddress },
+        tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
       },
     });
 
