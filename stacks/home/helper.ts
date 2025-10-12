@@ -4,6 +4,7 @@ import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
 import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
 import { Rewrite } from "@pulumi/adguard";
+import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 
 export function getHostnames(name: string, globals: GlobalResources) {
   const hostname = interpolate`${name}.host.${globals.searchDomain}`;
@@ -58,4 +59,20 @@ export function createDnsRecord(name: string, hostname: Output<string>, ipAddres
     })
   );
   return { hostname, ipAddress: output(ipAddress), unifi, cloudflare, adguard };
+}
+
+export function createDnsSection(label: string, dns: ReturnType<typeof createDnsRecord>): OnePasswordItemSectionInput {
+  return {
+    label,
+    fields: {
+      hostname: {
+        type: TypeEnum.String,
+        value: dns.hostname,
+      },
+      ipAddress: {
+        type: TypeEnum.String,
+        value: dns.ipAddress,
+      },
+    },
+  };
 }

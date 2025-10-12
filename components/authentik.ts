@@ -6,7 +6,7 @@ import * as tls from "@pulumi/tls";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Application } from "sdks/authentik/bin/application.js";
-import { OnePasswordItem } from "../dynamic/1password/OnePasswordItem.ts";
+import { OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
 import { OPClientItem, OPClient } from "./op.ts";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
@@ -169,19 +169,19 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         category: FullItem.CategoryEnum.APICredential,
         title: `${definition.name}-oidc-credentials`,
         fields: pulumi.output({
-          client_id: { value: clientId.result, type: FullItemAllOfFields.TypeEnum.String },
-          client_secret: { value: clientSecret.result, type: FullItemAllOfFields.TypeEnum.Concealed },
-          authorization_url: { value: `${this.cluster.authentikDomain}/application/o/authorize/`, type: FullItemAllOfFields.TypeEnum.String },
-          token_url: { value: `${this.cluster.authentikDomain}/application/o/token/`, type: FullItemAllOfFields.TypeEnum.String },
-          userinfo_url: { value: `${this.cluster.authentikDomain}/application/o/userinfo/`, type: FullItemAllOfFields.TypeEnum.String },
-          revoke_url: { value: `${this.cluster.authentikDomain}/application/o/revoke/`, type: FullItemAllOfFields.TypeEnum.String },
-          issuer: { value: `${this.cluster.authentikDomain}/application/o/${slug}/`, type: FullItemAllOfFields.TypeEnum.String },
-          end_session_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/end-session/`, type: FullItemAllOfFields.TypeEnum.String },
-          jwks_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/jwks/`, type: FullItemAllOfFields.TypeEnum.String },
+          client_id: { value: clientId.result, type: TypeEnum.String },
+          client_secret: { value: clientSecret.result, type: TypeEnum.Concealed },
+          authorization_url: { value: `${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
+          token_url: { value: `${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
+          userinfo_url: { value: `${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
+          revoke_url: { value: `${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
+          issuer: { value: `${this.cluster.authentikDomain}/application/o/${slug}/`, type: TypeEnum.String },
+          end_session_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/end-session/`, type: TypeEnum.String },
+          jwks_url: { value: `${this.cluster.authentikDomain}/application/o/${slug}/jwks/`, type: TypeEnum.String },
           openid_configuration_url: {
             label: "openid_configuration_url",
             value: `${this.cluster.authentikDomain}/application/o/${slug}/.well-known/openid-configuration`,
-            type: FullItemAllOfFields.TypeEnum.String,
+            type: TypeEnum.String,
           },
         }),
       });

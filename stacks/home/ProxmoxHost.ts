@@ -9,14 +9,18 @@ import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "../../components/globals.ts";
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
-import { createDnsRecord, getHostnames } from "./helper.ts";
+import { createDnsRecord, createDnsSection, getHostnames } from "./helper.ts";
 import { TruenasVm } from "./TruenasVm.ts";
+import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { FullItem } from "@1password/connect";
 
-export type OnePasswordItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
+export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface ProxmoxHostArgs {
+  title: Input<string>;
   globals: GlobalResources;
-  proxmox: Input<OnePasswordItem>;
+  proxmox: Input<OPClientItem>;
   tailscaleIpAddress: string;
   macAddress: string;
   isProxmoxBackupServer: boolean;
@@ -40,11 +44,13 @@ export class ProxmoxHost extends ComponentResource {
   public readonly remote: boolean;
   public readonly dns: ReturnType<typeof createDnsRecord>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
+  public readonly title: Output<string>;
 
   constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
 
     this.name = name;
+    this.title = output(args.title);
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
     } else {
@@ -217,7 +223,41 @@ export class ProxmoxHost extends ComponentResource {
       );
     }
 
+    const proxmoxInfo = new OnePasswordItem(`${this.name}-proxmox`, {
+      category: FullItem.CategoryEnum.SecureNote,
+      title: `ProxmoxHost: ${args.title}`,
+      sections: {
+        tailscale: getTailscaleSection(this.device),
+        dns: createDnsSection("DNS (the problem)", this.dns),
+        ssh: {
+          label: "SSH Connection",
+          fields: {
+            hostname: { type: TypeEnum.String, label: "Hostname", value: this.tailscaleHostname },
+            username: { type: TypeEnum.String, label: "Username", value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+            password: { type: TypeEnum.Concealed, label: "Password", value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+          },
+        },
+      },
+      fields: {
+        hostname: { type: TypeEnum.String, label: "Hostname", value: this.hostname },
+        ipAddress: { type: TypeEnum.String, label: "IP Address", value: this.internalIpAddress },
+        tailscaleIpAddress: { type: TypeEnum.String, label: "Tailscale IP Address", value: this.tailscaleIpAddress },
+      },
+    });
+
     // Note: The commented-out Hosts resource would need to be implemented
     // if you have a custom Hosts resource or provider for managing /etc/hosts
   }
+}
+
+export function getProxmoxProperties(instance: ProxmoxHost) {
+  return {
+    tailscale: getTailscaleDevice(instance.device),
+    name: instance.name,
+    hostname: instance.hostname,
+    ipAddress: instance.internalIpAddress,
+    macAddress: instance.macAddress,
+    dns: instance.dns,
+    remoteConnection: instance.remoteConnection!,
+  };
 }

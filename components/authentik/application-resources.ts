@@ -7,9 +7,8 @@ import { PropertyMappings } from "./property-mappings.ts";
 import { AuthentikGroups } from "./groups.ts";
 import { addPolicyBindingToApplication } from "./extension-methods.ts";
 import { OPClient } from "../op.ts";
-import { OnePasswordItem } from "@dynamic/1password/OnePasswordItem.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { GlobalResources } from "@components/globals.ts";
 
 export interface ClusterFlows {
@@ -355,19 +354,19 @@ export class ApplicationResourcesManager extends pulumi.ComponentResource {
         category: FullItem.CategoryEnum.APICredential,
         title: `${definition.metadata.name}-oidc-credentials`,
         fields: pulumi.output({
-          client_id: { label: "client_id", value: clientId.result, type: FullItemAllOfFields.TypeEnum.String },
-          client_secret: { label: "client_secret", value: clientSecret.result, type: FullItemAllOfFields.TypeEnum.Concealed },
-          authorization_url: { label: "authorization_url", value: `${clusterDefinition.spec.domain}/application/o/authorize/`, type: FullItemAllOfFields.TypeEnum.String },
-          token_url: { label: "token_url", value: `${clusterDefinition.spec.domain}/application/o/token/`, type: FullItemAllOfFields.TypeEnum.String },
-          userinfo_url: { label: "userinfo_url", value: `${clusterDefinition.spec.domain}/application/o/userinfo/`, type: FullItemAllOfFields.TypeEnum.String },
-          revoke_url: { label: "revoke_url", value: `${clusterDefinition.spec.domain}/application/o/revoke/`, type: FullItemAllOfFields.TypeEnum.String },
-          issuer: { label: "issuer", value: `${clusterDefinition.spec.domain}/application/o/${slug}/`, type: FullItemAllOfFields.TypeEnum.String },
-          end_session_url: { label: "end_session_url", value: `${clusterDefinition.spec.domain}/application/o/${slug}/end-session/`, type: FullItemAllOfFields.TypeEnum.String },
-          jwks_url: { label: "jwks_url", value: `${clusterDefinition.spec.domain}/application/o/${slug}/jwks/`, type: FullItemAllOfFields.TypeEnum.String },
+          client_id: { label: "client_id", value: clientId.result, type: TypeEnum.String },
+          client_secret: { label: "client_secret", value: clientSecret.result, type: TypeEnum.Concealed },
+          authorization_url: { label: "authorization_url", value: `${clusterDefinition.spec.domain}/application/o/authorize/`, type: TypeEnum.String },
+          token_url: { label: "token_url", value: `${clusterDefinition.spec.domain}/application/o/token/`, type: TypeEnum.String },
+          userinfo_url: { label: "userinfo_url", value: `${clusterDefinition.spec.domain}/application/o/userinfo/`, type: TypeEnum.String },
+          revoke_url: { label: "revoke_url", value: `${clusterDefinition.spec.domain}/application/o/revoke/`, type: TypeEnum.String },
+          issuer: { label: "issuer", value: `${clusterDefinition.spec.domain}/application/o/${slug}/`, type: TypeEnum.String },
+          end_session_url: { label: "end_session_url", value: `${clusterDefinition.spec.domain}/application/o/${slug}/end-session/`, type: TypeEnum.String },
+          jwks_url: { label: "jwks_url", value: `${clusterDefinition.spec.domain}/application/o/${slug}/jwks/`, type: TypeEnum.String },
           openid_configuration_url: {
             label: "openid_configuration_url",
             value: `${clusterDefinition.spec.domain}/application/o/${slug}/.well-known/openid-configuration`,
-            type: FullItemAllOfFields.TypeEnum.String,
+            type: TypeEnum.String,
           },
         }),
       });

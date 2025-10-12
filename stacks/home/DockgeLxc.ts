@@ -6,7 +6,7 @@ import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpo
 import { remote, types } from "@pulumi/command";
 import { PrivateKey } from "@pulumi/tls";
 import { GlobalResources } from "../../components/globals.ts";
-import { createDnsRecord, getContainerHostnames } from "./helper.ts";
+import { createDnsRecord, createDnsSection, getContainerHostnames } from "./helper.ts";
 import { CT } from "@muhlba91/pulumi-proxmoxve/types/input.js";
 import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { tailscale } from "@components/tailscale.ts";
@@ -17,6 +17,9 @@ import { md5Output } from "@pulumi/std/md5.js";
 import { getContainerOutput } from "@muhlba91/pulumi-proxmoxve/getContainer.js";
 import { basename, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { FullItem } from "@1password/connect";
+import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 
 function fileHash(file: proxmox.storage.File) {
   return md5Output({ input: file.sourceRaw.apply((z) => z?.data ?? file.id).apply((z) => output(z)) }).result;
@@ -26,7 +29,6 @@ export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
-  title: string;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -222,7 +224,7 @@ export class DockgeLxc extends ComponentResource {
         args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
       ),
       replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
-      replaceVariable(/\$\{CLUSTER_TITLE\}/g, args.title),
+      replaceVariable(/\$\{CLUSTER_TITLE\}/g, args.host.title),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.dns.hostname),
     ];
 
@@ -235,5 +237,40 @@ export class DockgeLxc extends ComponentResource {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return z.map((z) => z.name);
       });
+
+    const dockgeInfo = new OnePasswordItem(`${args.host.name}-dockge`, {
+      category: FullItem.CategoryEnum.SecureNote,
+      title: `DockgeLxc: ${args.host.title}`,
+      sections: {
+        tailscale: getTailscaleSection(this.device),
+        dns: createDnsSection("DNS (the problem)", this.dns),
+        internalDns: createDnsSection("Internal DNS", this.internalDns),
+        dockgeDns: createDnsSection("Dockge Dns", this.dockgeDns),
+        ssh: {
+          label: "SSH Connection",
+          fields: {
+            hostname: { type: TypeEnum.String, label: "Hostname", value: this.tailscaleHostname },
+            username: { type: TypeEnum.String, label: "Username", value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+            password: { type: TypeEnum.Concealed, label: "Password", value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+          },
+        },
+      },
+      fields: {
+        hostname: { type: TypeEnum.String, label: "Hostname", value: this.hostname },
+        ipAddress: { type: TypeEnum.String, label: "IP Address", value: this.ipAddress },
+        tailscaleIpAddress: { type: TypeEnum.String, label: "Tailscale IP Address", value: this.tailscaleIpAddress },
+      },
+    });
   }
+}
+
+export function getDockageProperties(instance: DockgeLxc) {
+  return output({
+    hostname: instance.hostname,
+    ipAddress: instance.ipAddress,
+    dns: instance.dns,
+    dockgeDns: instance.dockgeDns,
+    internalDns: instance.internalDns,
+    remoteConnection: instance.remoteConnection!,
+  });
 }

@@ -29,7 +29,7 @@ export class AuthenticationStages extends SharedComponentResource {
           lastAuthThreshold: "days=7",
           webauthnUserVerification: "preferred",
         },
-        pulumi.mergeOptions(this.parent, { provider:  })
+        this.parent
       );
     }
     return this._mfa;

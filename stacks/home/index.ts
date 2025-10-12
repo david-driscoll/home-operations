@@ -1,8 +1,8 @@
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
-import { ProxmoxHost } from "./ProxmoxHost.js";
-import { DockgeLxc } from "./DockgeLxc.ts";
+import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
+import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import { GetDeviceResult } from "@pulumi/tailscale";
 
@@ -11,9 +11,14 @@ const op = new OPClient();
 
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
+const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia"));
+const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna"));
+const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria"));
+const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command"));
 const gateway = "10.10.0.1";
 
 var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
+  title: "Twilight Sparkle",
   globals: globals,
   isProxmoxBackupServer: false,
   internalIpAddress: "10.10.10.100",
@@ -22,6 +27,7 @@ var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   proxmox: mainProxmoxCredentials,
   remote: false,
 });
+
 const spikeVm = new TruenasVm({
   credential: globals.truenasCredential.apply((z) => z.title!),
   globals: globals,
@@ -29,6 +35,7 @@ const spikeVm = new TruenasVm({
 });
 
 var celestiaHost = new ProxmoxHost("celestia", {
+  title: celestiaCluster.title,
   globals: globals,
   isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
@@ -40,6 +47,7 @@ var celestiaHost = new ProxmoxHost("celestia", {
 });
 
 var lunaHost = new ProxmoxHost("luna", {
+  title: lunaCluster.title,
   globals: globals,
   isProxmoxBackupServer: true,
   tailscaleIpAddress: "100.111.10.104",
@@ -50,6 +58,7 @@ var lunaHost = new ProxmoxHost("luna", {
 });
 
 var alphaSiteHost = new ProxmoxHost("alpha-site", {
+  title: "Alpha Site",
   globals: globals,
   isProxmoxBackupServer: false,
   internalIpAddress: "10.10.10.200",
@@ -71,41 +80,6 @@ var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   host: lunaHost,
   vmId: 400,
 });
-
-function getTailscaleDevice(device: pulumi.Output<GetDeviceResult>) {
-  return {
-    hostname: device.hostname!,
-    name: device.name!,
-    nodeId: device.nodeId!,
-    tags: device.tags!,
-    id: device.id!,
-    addresses: device.addresses!,
-  };
-}
-
-function getDockageProperties(instance: DockgeLxc) {
-  return {
-    tailscale: getTailscaleDevice(instance.device),
-    hostname: instance.hostname,
-    ipAddress: instance.ipAddress,
-    dns: instance.dns,
-    dockgeDns: instance.dockgeDns,
-    internalDns: instance.internalDns,
-    remoteConnection: instance.remoteConnection!,
-  };
-}
-
-function getProxmoxProperties(instance: ProxmoxHost) {
-  return {
-    tailscale: getTailscaleDevice(instance.device),
-    name: instance.name,
-    hostname: instance.hostname,
-    ipAddress: instance.internalIpAddress,
-    macAddress: instance.macAddress,
-    dns: instance.dns,
-    remoteConnection: instance.remoteConnection!,
-  };
-}
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost) };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };

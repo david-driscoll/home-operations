@@ -51,7 +51,7 @@ function exportFields(section: { id: string; label: string }, value: { [key: str
           key,
           {
             label: key,
-            type: FullItemAllOfFields.TypeEnum.String,
+            type: TypeEnum.String,
             value: output,
             section,
           },
@@ -73,8 +73,8 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
   fields: {
     ["notePlain"]: {
       label: "Note",
-      purpose: FullItemAllOfFields.PurposeEnum.Notes,
-      type: FullItemAllOfFields.TypeEnum.String,
+      purpose: PurposeEnum.Notes,
+      type: TypeEnum.String,
       value: "This item contains outputs from the authentik stack.",
     },
   },

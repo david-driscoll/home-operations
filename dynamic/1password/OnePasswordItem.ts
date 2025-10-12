@@ -1,4 +1,4 @@
-import { FullItem } from "@1password/connect";
+import { FullItem, GeneratorRecipe } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { FullItemAllOfSections } from "@1password/connect/dist/model/fullItemAllOfSections.js";
 import { ItemFile } from "@1password/connect/dist/model/itemFile.js";
@@ -10,32 +10,84 @@ import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { DiffResult } from "@pulumi/pulumi/dynamic/index.js";
 import { removeUndefinedProperties } from "../../components/helpers.ts";
 
-export type OnePasswordItemFieldInput = pulumi.Input<FullItemAllOfFields>;
-export type OnePasswordItemFileInput = pulumi.Input<ItemFile>;
+export const TypeEnum = FullItemAllOfFields.TypeEnum;
+export type TypeEnum = FullItemAllOfFields.TypeEnum;
+export const PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export type PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export const CategoryEnum = FullItem.CategoryEnum;
+export type CategoryEnum = FullItem.CategoryEnum;
+
+export interface OnePasswordItemFieldInput {
+  id?: pulumi.Input<string>;
+  type?: pulumi.Input<TypeEnum>;
+  purpose?: pulumi.Input<PurposeEnum>;
+  label?: pulumi.Input<string>;
+  value?: pulumi.Input<string | undefined>;
+  generate?: pulumi.Input<boolean>;
+  recipe?: pulumi.Input<GeneratorRecipe>;
+  entropy?: pulumi.Input<number>;
+  otp?: pulumi.Input<string>;
+}
+export interface OnePasswordItemFileInput {
+  id?: pulumi.Input<string>;
+  name?: pulumi.Input<string>;
+  content_path?: pulumi.Input<string>;
+  content?: pulumi.Input<string>;
+}
 
 export interface OnePasswordItemSectionInput {
-  id: pulumi.Input<string>;
+  id?: pulumi.Input<string>;
   label: pulumi.Input<string>;
-  fields: pulumi.Input<Record<string, OnePasswordItemFieldInput>>;
-  files: pulumi.Input<Record<string, OnePasswordItemFileInput>>;
+  fields?: pulumi.Input<Record<string, pulumi.Input<OnePasswordItemFieldInput>>>;
+  files?: pulumi.Input<Record<string, pulumi.Input<OnePasswordItemFileInput>>>;
 }
 
 export interface OnePasswordItemInputs {
   title: pulumi.Input<string>;
-  category: pulumi.Input<FullItem.CategoryEnum>;
+  category: pulumi.Input<CategoryEnum>;
   urls?: pulumi.Input<ItemUrls[]>;
   tags?: pulumi.Input<pulumi.Input<string>[]>;
-  fields?: pulumi.Input<Record<string, OnePasswordItemFieldInput>>;
-  sections?: pulumi.Input<Record<string, OnePasswordItemSectionInput>>;
-  files?: pulumi.Input<Record<string, OnePasswordItemFileInput>>;
+  fields?: pulumi.Input<Record<string, pulumi.Input<OnePasswordItemFieldInput>>>;
+  sections?: pulumi.Input<Record<string, pulumi.Input<OnePasswordItemSectionInput>>>;
+  files?: pulumi.Input<Record<string, pulumi.Input<OnePasswordItemFileInput>>>;
 }
 
-export type OnePasswordItemFieldOutput = pulumi.Lifted<FullItemAllOfFields>;
-export type OnePasswordItemFileOutput = pulumi.Lifted<ItemFile>;
-export type OnePasswordItemSectionOutput = pulumi.Lifted<OnePasswordItemSectionInput>;
-export interface OnePasswordItemProviderOutputs {
+export interface OnePasswordItemFieldOutput {
   id: pulumi.Output<string>;
+  type: pulumi.Output<TypeEnum>;
+  purpose: pulumi.Output<PurposeEnum>;
+  label: pulumi.Output<string>;
+  value: pulumi.Output<string>;
+  otp: pulumi.Output<string>;
+}
+
+export interface OnePasswordItemFileOutput {
+  id: pulumi.Output<string>;
+  name: pulumi.Output<string>;
+  content_path: pulumi.Output<string>;
+  content: pulumi.Output<string>;
+}
+
+export interface OnePasswordItemSectionOutput {
+  id: pulumi.Output<string>;
+  label: pulumi.Output<string>;
+  fields: pulumi.Output<Record<string, pulumi.Output<OnePasswordItemFieldOutput>>>;
+  files: pulumi.Output<Record<string, pulumi.Output<OnePasswordItemFileOutput>>>;
+}
+
+export interface OnePasswordItemOutputs {
   title: pulumi.Output<string>;
+  category: pulumi.Output<CategoryEnum>;
+  urls: pulumi.Output<ItemUrls[]>;
+  tags: pulumi.Output<pulumi.Output<string>[]>;
+  sections: pulumi.Output<Record<string, pulumi.Output<OnePasswordItemSectionOutput>>>;
+  fields: pulumi.Output<Record<string, pulumi.Output<OnePasswordItemFieldOutput>>>;
+  files: pulumi.Output<Record<string, pulumi.Output<OnePasswordItemFileOutput>>>;
+}
+
+export interface OnePasswordItemProviderOutputs {
+  id: string;
+  title: string;
   category: pulumi.Output<number>;
   urls: pulumi.Output<ItemUrls[]>;
   tags: pulumi.Output<string[]>;
@@ -103,16 +155,9 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
   }
 }
 
-export class OnePasswordItem extends pulumi.dynamic.Resource {
+export class OnePasswordItem extends pulumi.dynamic.Resource implements OnePasswordItemOutputs {
   constructor(name: string, props: OnePasswordItemInputs, opts?: pulumi.CustomResourceOptions) {
     super(new OnePasswordItemProvider(), name, props, opts);
   }
-
-  public readonly title!: pulumi.Output<string>;
-  public readonly category!: pulumi.Output<number>;
-  public readonly urls!: pulumi.Output<ItemUrls[]>;
-  public readonly tags!: pulumi.Output<string[]>;
-  public readonly sections!: pulumi.Output<Record<string, OnePasswordItemSectionOutput>>;
-  public readonly fields!: pulumi.Output<Record<string, OnePasswordItemFieldOutput>>;
-  public readonly files!: pulumi.Output<Record<string, OnePasswordItemFileOutput>>;
 }
+export interface OnePasswordItem extends OnePasswordItemOutputs {}

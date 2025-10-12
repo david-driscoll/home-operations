@@ -51,6 +51,7 @@
     "node-unifi": "^2.5.1",
     "openapi-client-axios": "^7.7.0",
     "vscode-jsonrpc": "^8.2.1",
-    "vscode-ws-jsonrpc": "^3.5.0"
+    "vscode-ws-jsonrpc": "^3.5.0",
+    "yaml": "^2.8.1"
   }
 }
