@@ -127,7 +127,6 @@ export class OPClient {
       fields,
       files,
     };
-    console.log("mapToFullItem:", result);
     return removeUndefinedProperties(result) as any;
   }
 

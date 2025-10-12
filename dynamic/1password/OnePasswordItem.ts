@@ -135,7 +135,6 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
         return true;
       });
-    console.log("OnePasswordItemProvider.diff", { old, newer, patch });
 
     for (const change of patch) {
       if (change.op === "replace" && change.path === "/category") {
