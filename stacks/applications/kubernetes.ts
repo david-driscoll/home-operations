@@ -10,7 +10,7 @@ import { awaitOutput } from "@components/helpers.ts";
 const op = new OPClient();
 
 export async function kubernetesApplications(globals: GlobalResources, clusterDefinition: KubernetesClusterDefinition, applicationManager: AuthentikApplicationManager) {
-  const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.name}-definition-crds`));
+  const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
 
   const kubeConfig = new kubernetes.KubeConfig();
@@ -21,14 +21,11 @@ export async function kubernetesApplications(globals: GlobalResources, clusterDe
   const namespaces = await client.listNamespace({});
   console.log(namespaces);
 
-  const serviceConnection = new authentik.ServiceConnectionKubernetes(
-    clusterDefinition.name,
-    {
-      name: clusterDefinition.name,
-      kubeconfig: kubeConfigJson,
-      verifySsl: true,
-    }
-  );
+  const serviceConnection = new authentik.ServiceConnectionKubernetes(clusterDefinition.key, {
+    name: clusterDefinition.key,
+    kubeconfig: kubeConfigJson,
+    verifySsl: true,
+  });
 
   return { serviceConnectionId: serviceConnection.serviceConnectionKubernetesId };
 }
@@ -40,7 +37,7 @@ function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapIt
   "clusters": [
     {
       "cluster": {
-        "certificate-authority-data": "${credential.fields.certificate.value!.apply((z) => base64encodeOutput({ input: z! }).result)}",
+        "certificate-authority-data": "${credential.fields.certificate.apply((z) => base64encodeOutput({ input: z.value! }).result)}",
         "server": "https://${credential.fields.cluster_api.value}:6443"
       },
       "name": "${credential.fields.cluster.value}"

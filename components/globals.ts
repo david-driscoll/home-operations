@@ -16,7 +16,7 @@ export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
   return {
     type: item.fields.type.value as any,
     authentikDomain: item.fields.authentikDomain.value!,
-    name: item.fields.name.value!,
+    key: item.fields.key.value!,
     rootDomain: item.fields.rootDomain.value!,
     secret: item.fields.secret?.value!,
     title: item.fields.title.value!,
@@ -28,7 +28,7 @@ export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
 
 export interface DockgeClusterDefinition {
   type: "dockge";
-  name: string;
+  key: string;
   title: string;
   rootDomain: string;
   authentikDomain: string;
@@ -39,7 +39,7 @@ export interface DockgeClusterDefinition {
 
 export interface KubernetesClusterDefinition {
   type: "kubernetes";
-  name: string;
+  key: string;
   title: string;
   rootDomain: string;
   authentikDomain: string;
@@ -94,7 +94,7 @@ export class GlobalResources extends ComponentResource {
         insecure: false,
         scheme: "https",
       },
-      cro
+      cro,
     );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
@@ -104,7 +104,7 @@ export class GlobalResources extends ComponentResource {
         apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
         apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro
+      cro,
     );
     this.tailscaleProvider = new TailscaleProvider(
       "tailscale",
@@ -112,7 +112,7 @@ export class GlobalResources extends ComponentResource {
         oauthClientId: this.tailscaleCredential.apply((z) => z.fields["username"].value!),
         oauthClientSecret: this.tailscaleCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro
+      cro,
     );
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
@@ -129,7 +129,7 @@ export class GlobalResources extends ComponentResource {
         tags: ["tag:proxmox", "tag:apps"],
         description: "Proxmox Management Key",
       },
-      mergeOptions(cro, { provider: this.tailscaleProvider })
+      mergeOptions(cro, { provider: this.tailscaleProvider }),
     );
 
     this.truenasMinioProvider = new MinioProvider(
@@ -141,7 +141,7 @@ export class GlobalResources extends ComponentResource {
         minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
         minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["hostname"].value)}:9000`,
       },
-      cro
+      cro,
     );
 
     this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
@@ -151,7 +151,7 @@ export class GlobalResources extends ComponentResource {
         applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
         applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
       },
-      cro
+      cro,
     );
   }
 }

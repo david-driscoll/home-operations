@@ -22,6 +22,7 @@
     "@types/jiff": "^0.7.7",
     "@types/node": "^24.5.2",
     "@types/node-unifi": "^2.5.1",
+    "@types/ssh2": "^1.15.5",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },
@@ -47,9 +48,12 @@
     "@pulumiverse/talos": "^0.6.0",
     "backblaze-b2": "^1.7.1",
     "jiff": "^0.7.3",
+    "json-schema-to-typescript": "^15.0.4",
     "jsondiffpatch": "^0.7.3",
+    "node-ssh": "^13.2.1",
     "node-unifi": "^2.5.1",
     "openapi-client-axios": "^7.7.0",
+    "ssh2": "^1.17.0",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-ws-jsonrpc": "^3.5.0",
     "yaml": "^2.8.1"
