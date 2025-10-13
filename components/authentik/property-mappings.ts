@@ -43,14 +43,16 @@ return groupsDict`,
           description: scopeDef.description,
           expression: scopeDef.expression,
         },
-        { parent: this }
+        { parent: this },
       );
       this.scopeMappings.set(scopeName, mapping);
     }
   }
 
   public get allScopeMappings() {
-    return this.scopeMappings.entries();
+    return Array.from(this.scopeMappings.entries())
+      .map(([key, output]) => [key, output.scopeMappingId] as const)
+      .concat(Array.from(this.defaultScopeMappings.entries()).map(([key, output]) => [key.replace(/\//g, "~1"), output.apply((m) => m.id)] as const));
   }
 
   public getScopeMappingId(scopeName: string): pulumi.Output<string> {

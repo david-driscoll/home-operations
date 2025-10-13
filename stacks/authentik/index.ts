@@ -3,7 +3,6 @@ import * as authentik from "@pulumi/authentik";
 import { OPClient, OPClientItem } from "../../components/op.ts";
 import { AuthentikGroups } from "../../components/authentik/groups.ts";
 import { FlowsManager } from "../../components/authentik/flows.ts";
-import { ApplicationResourcesManager } from "../../components/authentik/application-resources.ts";
 import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemInputs, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/models.js";
@@ -38,28 +37,20 @@ function exportRoles(groups: AuthentikGroups): { [K in keyof AuthentikGroups]: p
 }
 
 function exportScopeMappings(flows: FlowsManager): { [key: string]: pulumi.Output<string> } {
-  return Object.fromEntries(Array.from(flows.propertyMappings.allScopeMappings).map(([key, mapping]) => [key, mapping.scopeMappingId])) as any;
+  return Object.fromEntries(Array.from(flows.propertyMappings.allScopeMappings));
 }
 
-function exportFields(section: { id: string; label: string }, value: { [key: string]: pulumi.Output<string> }): OnePasswordItemSectionInput {
-  return {
-    id: pulumi.output(section.id),
-    label: pulumi.output(section.label),
-    fields: pulumi.output(
-      Object.fromEntries(
-        Object.entries(value).map(([key, output]) => [
-          key,
-          {
-            label: key,
-            type: TypeEnum.String,
-            value: output,
-            section,
-          },
-        ])
-      )
-    ),
-    files: {},
-  };
+function exportFields(value: { [key: string]: pulumi.Output<string> }): OnePasswordItemSectionInput {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, output]) => [
+      key,
+      {
+        label: key,
+        type: TypeEnum.String,
+        value: output,
+      },
+    ]),
+  );
 }
 
 export const groups = exportGroups(authentikGroups);
@@ -72,32 +63,23 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
   title: "Authentik Outputs",
   fields: {
     ["notePlain"]: {
-      label: "Note",
       purpose: PurposeEnum.Notes,
       type: TypeEnum.String,
       value: "This item contains outputs from the authentik stack.",
     },
   },
-  sections: {
-    groups: exportFields({ id: "groups", label: "Groups" }, groups),
-    roles: exportFields({ id: "roles", label: "Roles" }, roles),
-    flows: exportFields({ id: "flows", label: "Flows" }, flows),
-    scopeMappings: exportFields({ id: "scopeMappings", label: "Scope Mappings" }, scopeMappings),
-  },
-});
-
-// Initialize application resources manager
-const applicationResources = new ApplicationResourcesManager(
-  {
-    globals,
-    groups: authentikGroups,
-    propertyMappings: flowsManager.propertyMappings,
-    clusterFlows: {
-      authorizationFlow: authentikFlows.implicitConsentFlow.uuid,
-      authenticationFlow: authentikFlows.authenticationFlow.uuid,
-      invalidationFlow: authentikFlows.providerLogoutFlow.uuid,
+  sections: pulumi.output({
+    groups: {
+      fields: exportFields(groups),
     },
-    opClient,
-  },
-  { parent: undefined }
-);
+    roles: {
+      fields: exportFields(roles),
+    },
+    flows: {
+      fields: exportFields(flows),
+    },
+    scopeMappings: {
+      fields: exportFields(scopeMappings),
+    },
+  }),
+});

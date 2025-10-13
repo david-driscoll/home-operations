@@ -120,14 +120,13 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const allowedProperties = ["title", "category", "urls", "tags", "sections", "fields", "files"];
 
     const differ = jsondiffpatch.create({
-      propertyFilter: (name, context) => allowedProperties.some((prop) => name.startsWith(prop)),
+      propertyFilter(name, context) {
+        if (name === "__provider") return false;
+        if (context.childName === undefined && !allowedProperties.some((p) => p === name)) return false;
+        return true;
+      },
     });
-    const newerInputs = client.mapItem(client.mapToFullItem(newInputs), id);
-    const old = Object.assign({} as any, oldOutputs);
-    delete old["__provider"];
-    const newer = Object.assign({} as any, newerInputs);
-    delete newer["__provider"];
-    const delta = differ.diff(old, newer);
+    const delta = differ.diff(oldOutputs, client.mapItem(client.mapToFullItem(newInputs), id));
     const patch = jsonpatch
       .format(delta)
       .filter((z) => z.op !== "move")
@@ -141,6 +140,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         replaces.push(change.path.substring(1));
       }
     }
+    // console.log("OnePasswordItem diff", { patch });
     const newLocal = {
       replaces: replaces,
       changes: patch.length > 0,
@@ -153,7 +153,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
 
 export class OnePasswordItem extends pulumi.dynamic.Resource implements OnePasswordItemOutputs {
   constructor(name: string, props: OnePasswordItemInputs, opts?: pulumi.CustomResourceOptions) {
-    super(new OnePasswordItemProvider(), name, props, opts);
+    super(new OnePasswordItemProvider(), name, props, { deleteBeforeReplace: true, replaceOnChanges: ["*"], ...opts });
   }
 }
 export interface OnePasswordItem extends OnePasswordItemOutputs {}

@@ -27,9 +27,9 @@ export class AuthentikGroups extends pulumi.ComponentResource {
       const roleResource = new authentik.RbacRole(
         group.groupName,
         {
-          // name: group.groupName,
+          name: group.groupName,
         },
-        { parent: this }
+        { parent: this },
       );
       this.roles.set(group.groupName, roleResource);
 
@@ -38,12 +38,12 @@ export class AuthentikGroups extends pulumi.ComponentResource {
       const groupResource = new authentik.Group(
         group.groupName,
         {
-          // name: group.groupName,
+          name: group.groupName,
           roles: [roleResource.rbacRoleId],
           isSuperuser: group.groupName === Roles.Admins,
           ...(parentGroup && { parent: parentGroup.groupId }),
         },
-        { parent: this }
+        { parent: this },
       );
       this.groups.set(group.groupName, groupResource);
     }

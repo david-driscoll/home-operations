@@ -544,7 +544,7 @@ export interface Oauth2 {
   authorizationFlow?: string;
   clientId?: string;
   clientSecret?: string;
-  clienttype: string;
+  clientType: string;
   encryptionKey?: string;
   includeClaimsInIdToken?: boolean;
   invalidationFlow?: string;
@@ -555,6 +555,7 @@ export interface Oauth2 {
   propertyMappings?: string[];
   providerOauth2Id?: string;
   refreshTokenValidity?: string;
+  backchannelLogoutUri?: string;
   signingKey?: string;
   subMode?: string;
 }

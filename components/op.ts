@@ -4,6 +4,7 @@ import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOf
 import { ItemFile } from "@1password/connect/dist/model/itemFile.js";
 import { zipmap } from "@pulumi/std/zipmap.js";
 import { FullItemAllOfSections, ItemUrls } from "@1password/connect/dist/model/models.js";
+import { input } from "@pulumi/kubernetes/types/index.js";
 
 export interface OPClientItemFields {
   [key: string]: FullItemAllOfFields;
@@ -14,7 +15,7 @@ export interface OPClientItemFiles {
 }
 
 export interface OPClientItemSections {
-  [key: string]: { id: string; fields: OPClientItemFields; files: OPClientItemFiles };
+  [key: string]: { fields: OPClientItemFields; files: OPClientItemFiles };
 }
 
 export interface OPClientItem {
@@ -58,20 +59,23 @@ export class OPClient {
         ...this.mapToFullItem(item),
         vault: { id: vaultUuid },
       } as any),
-      undefined
+      undefined,
     );
   }
 
   public async updateItem(id: string, item: OPClientItemInput) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(
-      await this.client.updateItem(vaultUuid, {
+    try {
+      const result = await this.client.updateItem(vaultUuid, {
         id,
         ...this.mapToFullItem(item),
         vault: { id: vaultUuid },
-      } as any),
-      id
-    );
+      } as any);
+      return this.mapItem(result, id);
+    } catch (e) {
+      console.error("Error updating item", e);
+      throw e;
+    }
   }
 
   public async deleteItem(id: string) {
@@ -89,50 +93,54 @@ export class OPClient {
     return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemId), undefined);
   }
 
-  public mapToFullItem(item: OPClientItemInput & { id?: string }): FullItem {
-    const sections = Object.entries(item.sections ?? []).map(([key, s]) => ({ id: s.id ?? key, label: key }));
-    const fields = [
-      ...Object.entries(item.fields ?? []).map(([fieldKey, field]) => ({
+  public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
+    const sections = Object.entries(item.sections ?? {}).map(([key, s]) => ({ id: key, label: key }));
+    const fields = Object.entries(item.fields ?? {}).map(([fieldKey, field]) => ({
+      id: fieldKey,
+      ...field,
+      label: fieldKey,
+    }));
+    const sectionFields = Object.entries(item.sections ?? {}).flatMap(([sectionKey, section]) =>
+      Object.entries(section.fields ?? {}).map(([fieldKey, field]) => ({
+        id: `${sectionKey}-${fieldKey}`,
         ...field,
+        section: { id: sectionKey },
         label: fieldKey,
       })),
-      ...Object.entries(item.sections ?? []).flatMap(([sectionKey, section]) =>
-        Object.entries(section.fields ?? []).map(([fieldKey, field]) => ({
-          ...field,
-          section: { id: section.id ?? sectionKey, label: sectionKey },
-          label: fieldKey,
-        }))
-      ),
-    ];
-    const files = [
-      ...Object.entries(item.files ?? []).map(([fileKey, file]) => ({
+    );
+
+    const files = Object.entries(item.files ?? {}).map(([fileKey, file]) => ({
+      id: fileKey,
+      ...file,
+      name: fileKey,
+    }));
+
+    const sectionFiles = Object.entries(item.sections ?? {}).flatMap(([sectionKey, section]) =>
+      Object.entries(section.files ?? {}).map(([fileKey, file]) => ({
+        id: `${sectionKey}-${fileKey}`,
         ...file,
+        section: { id: sectionKey },
         name: fileKey,
       })),
-      ...Object.entries(item.sections ?? []).flatMap(([sectionKey, section]) =>
-        Object.entries(section.files ?? []).map(([fileKey, file]) => ({
-          ...file,
-          section: { id: section.id ?? sectionKey, label: sectionKey },
-          name: fileKey,
-        }))
-      ),
-    ];
-    const result = {
+    );
+
+    const result = removeUndefinedProperties({
       id: item.id,
       title: item.title,
       category: item.category,
       urls: item.urls,
       tags: item.tags,
       sections,
-      fields,
-      files,
-    };
-    return removeUndefinedProperties(result) as any;
+      fields: [...sectionFields, ...fields],
+      files: [...sectionFiles, ...files],
+    });
+    // console.log("mapToFullItem", { input: { fields: item.fields, sections: item.sections }, output: result.fields });
+    return result;
   }
 
   public mapItem(
-    item: FullItem,
-    id: string | undefined
+    item: Omit<FullItem, "vault" | "extractOTP">,
+    id: string | undefined,
   ): {
     id: string;
     title: string;
@@ -155,16 +163,12 @@ export class OPClient {
     const rootFields: [string, FullItemAllOfFields][] = [];
     const rootFiles: [string, ItemFile][] = [];
     for (const field of fields) {
-      if (field.value === undefined) {
-        continue;
-      }
-      if (!field.section || !field.section.id || field.section.id === "add more") rootFields.push([field.label!, field] as const);
+      if (field.value === undefined || (field.section && field.section.id !== "add more")) continue;
+      rootFields.push([field.label!, field] as const);
     }
     for (const file of files) {
-      if (file.name === undefined) {
-        continue;
-      }
-      if (!file.section || !file.section.id || file.section.id === "add more") rootFiles.push([file.name!, file] as const);
+      if (file.content === undefined || (file.section && file.section.id !== "add more")) continue;
+      rootFiles.push([file.name!, file] as const);
     }
     const sectionParts: [string, { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } }][] = [];
     for (let section of sections) {
