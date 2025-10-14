@@ -99,7 +99,7 @@ export async function kubernetesApplications(globals: GlobalResources, clusterDe
         authentik_host_insecure: false,
         authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "info",
-        object_naming_template: `outpost`,
+        object_naming_template: `authentik-outpost`,
         kubernetes_replicas: 2,
         kubernetes_namespace: clusterDefinition.key,
         kubernetes_ingress_class_name: "internal",

@@ -24,7 +24,7 @@
     "down:equestria": "op run --no-masking -- pulumi down --yes --skip-preview -s equestria",
     "down:luna": "op run --no-masking -- pulumi down --yes --skip-preview -s luna",
     "down:celestia": "op run --no-masking -- pulumi down --yes --skip-preview -s celestia",
-    "down": "npm run down:sgc && npm run down:equestria && npm run down:luna && npm run down:celestia",
+    "down": "npm run down:luna && npm run down:celestia",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {},
