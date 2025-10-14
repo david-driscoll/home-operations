@@ -5,6 +5,7 @@ import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import { GetDeviceResult } from "@pulumi/tailscale";
+import { tailscale } from "@components/tailscale.ts";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -56,7 +57,7 @@ var lunaHost = new ProxmoxHost("luna", {
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
   remote: true,
-  cluster: lunaCluster
+  cluster: lunaCluster,
 });
 
 var alphaSiteHost = new ProxmoxHost("alpha-site", {
@@ -68,24 +69,27 @@ var alphaSiteHost = new ProxmoxHost("alpha-site", {
   proxmox: alphaSiteProxmoxCredentials,
   installTailscale: false,
   remote: false,
-  cluster:  alphaSiteCluster
+  cluster: alphaSiteCluster,
 });
 
 var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
   host: celestiaHost,
   vmId: 300,
-  cluster: celestiaCluster
+  cluster: celestiaCluster,
 });
 
 var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
   host: lunaHost,
   vmId: 400,
-  cluster: lunaCluster
+  cluster: lunaCluster,
 });
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost) };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
 export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
 export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
+
+// const users = await tailscale.
+// console.log(users);

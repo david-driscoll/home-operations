@@ -15,6 +15,7 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
+    "preinstall": "pushd ../../; npm i; popd",
     "up:sgc": "op run --no-masking -- pulumi up --yes --skip-preview -s sgc",
     "up:equestria": "op run --no-masking -- pulumi up --yes --skip-preview -s equestria",
     "up:luna": "op run --no-masking -- pulumi up --yes --skip-preview -s luna",

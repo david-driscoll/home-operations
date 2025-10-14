@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "main": "index.ts",
+  "scripts": {
+    "preinstall": "pushd ../../; npm i; popd",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "@pulumi/pulumi": "^3.142.0",
     "@pulumi/authentik": "file:../../sdks/authentik",
