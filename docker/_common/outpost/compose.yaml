@@ -10,13 +10,13 @@ services:
     labels:
       traefik.enable: true
       # Outpust
-      traefik.http.routers.ak-outpost.rule: Host(`ak-outpost.${CLUSTER_KEY}.driscoll.tech`)
-      traefik.http.routers.ak-outpost.entrypoints: websecure
-      traefik.http.routers.ak-outpost.service: ak-outpost
-      traefik.http.routers.ak-outpost.tls.certresolver: le
-      traefik.http.services.ak-outpost.loadbalancer.healthcheck.path: "/outpost.goauthentik.io/ping"
-      traefik.http.services.ak-outpost.loadbalancer.healthcheck.port: 9300
-      traefik.http.services.ak-outpost.loadbalancer.server.port: 9000
+      traefik.http.routers.outpostle: Host(`outpostCLUSTER_KEY}.driscoll.tech`)
+      traefik.http.routers.outpost.entrypoints: websecure
+      traefik.http.routers.outpost.service: outpost
+      traefik.http.routers.outpost.tls.certresolver: le
+      traefik.http.services.outpost.loadbalancer.healthcheck.path: "/outpost.goauthentik.io/ping"
+      traefik.http.services.outpost.loadbalancer.healthcheck.port: 9300
+      traefik.http.services.outpost.loadbalancer.server.port: 9000
 
       # The middleware
       traefik.http.middlewares.authentik.forwardauth.address: http://authentik_proxy:9000/outpost.goauthentik.io/auth/traefik
@@ -26,7 +26,7 @@ services:
       - dockge_default
 x-dockge:
   urls:
-    - https://ak-outpost.${CLUSTER_KEY}.driscoll.tech
+    - https://outpost.${CLUSTER_KEY}.driscoll.tech
 networks:
   dockge_default:
     external: true
