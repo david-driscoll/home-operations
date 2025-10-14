@@ -80,9 +80,11 @@ export async function kubernetesApplications(globals: GlobalResources, clusterDe
     applicationManager.createApplication(app);
   }
 
+  const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
+
   const serviceConnection = new authentik.ServiceConnectionKubernetes(clusterDefinition.key, {
     name: clusterDefinition.key,
-    kubeconfig: kubeConfigJson,
+    kubeconfig: generateKubeConfig(outpostCredential),
     verifySsl: true,
   });
 

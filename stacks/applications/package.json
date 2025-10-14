@@ -19,7 +19,7 @@
     "up:equestria": "op run --no-masking -- pulumi up --yes --skip-preview -s equestria",
     "up:luna": "op run --no-masking -- pulumi up --yes --skip-preview -s luna",
     "up:celestia": "op run --no-masking -- pulumi up --yes --skip-preview -s celestia",
-    "up": "npm run up:sgc && npm run up:equestria && npm run up:luna && npm run up:celestia",
+    "up": "npm run up:equestria && npm run up:sgc && npm run up:luna && npm run up:celestia",
     "down:sgc": "op run --no-masking -- pulumi down --yes --skip-preview -s sgc",
     "down:equestria": "op run --no-masking -- pulumi down --yes --skip-preview -s equestria",
     "down:luna": "op run --no-masking -- pulumi down --yes --skip-preview -s luna",

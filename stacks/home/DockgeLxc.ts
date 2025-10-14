@@ -49,6 +49,7 @@ export class DockgeLxc extends ComponentResource {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
+    const cluster = output(args.cluster);
 
     const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
     const ipAddressResource = new remote.Command(
@@ -174,8 +175,9 @@ export class DockgeLxc extends ComponentResource {
         args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!),
       ),
       replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
-      replaceVariable(/\$\{CLUSTER_TITLE\}/g, args.host.title),
-      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, output(args.cluster).rootDomain),
+      replaceVariable(/\$\{CLUSTER_TITLE\}/g, cluster.title),
+      replaceVariable(/\$\{CLUSTER_KEY\}/g, cluster.key),
+      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, cluster.rootDomain),
     ];
 
     this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => createStack(resolve(dockerPath, "_common", f), replacements))))
