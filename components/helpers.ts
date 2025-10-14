@@ -13,14 +13,14 @@ export function removeUndefinedProperties<T>(obj: T): T {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
-        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const)
+        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const),
     ) as T;
   }
   return obj;
 }
 
 export function awaitOutput<T>(output: Output<T>) {
-  return new Promise<T>((r) => output.apply(r));
+  return new Promise<T>((resolve) => output.apply(resolve));
 }
 
 export function getTailscaleDevice(device: Output<GetDeviceResult>) {

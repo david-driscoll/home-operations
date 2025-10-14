@@ -1,11 +1,12 @@
 import * as proxmox from "@muhlba91/pulumi-proxmoxve";
 import { DnsRecord as CloudflareDnsRecord, Tunnel } from "@pulumi/cloudflare";
+import {} from "@pulumi/tailscale";
 import { DnsRecord as UnifiDnsRecord, User, getUserOutput } from "@pulumi/unifi";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, runtime } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, runtime } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { PrivateKey } from "@pulumi/tls";
-import { GlobalResources } from "../../components/globals.ts";
+import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { createDnsRecord, createDnsSection, getContainerHostnames } from "./helper.ts";
 import { CT } from "@muhlba91/pulumi-proxmoxve/types/input.js";
 import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
@@ -15,20 +16,23 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { md5 } from "@pulumi/std";
 import { md5Output } from "@pulumi/std/md5.js";
 import { getContainerOutput } from "@muhlba91/pulumi-proxmoxve/getContainer.js";
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
-
-function fileHash(file: proxmox.storage.File) {
-  return md5Output({ input: file.sourceRaw.apply((z) => z?.data ?? file.id).apply((z) => output(z)) }).result;
-}
+import { fileURLToPath } from "node:url";
+import { OPClient } from "@components/op.ts";
+import { stderr, stdout } from "node:process";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const dockerPath = resolve(__dirname, "../../docker");
 
 export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
+  cluster: Input<ClusterDefinition>;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -53,7 +57,7 @@ export class DockgeLxc extends ComponentResource {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
       },
-      mergeOptions(cro, { dependsOn: [] })
+      mergeOptions(cro, { dependsOn: [] }),
     );
     this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
     const ipAddress = (this.ipAddress = args.host.remote ? ipAddressResource.stdout : this.tailscaleIpAddress);
@@ -67,7 +71,7 @@ export class DockgeLxc extends ComponentResource {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
       },
-      mergeOptions(cro, { dependsOn: [] })
+      mergeOptions(cro, { dependsOn: [] }),
     );
 
     const installTailscale = new remote.Command(
@@ -76,7 +80,7 @@ export class DockgeLxc extends ComponentResource {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
       },
-      mergeOptions(cro, { dependsOn: [ipAddressResource] })
+      mergeOptions(cro, { dependsOn: [ipAddressResource] }),
     );
 
     const tailscaleArgs = interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
@@ -89,7 +93,7 @@ export class DockgeLxc extends ComponentResource {
         create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale up ${tailscaleArgs} --reset`,
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [installTailscale] })
+      mergeOptions(cro, { dependsOn: [installTailscale] }),
     );
 
     const tailscaleSet = new remote.Command(
@@ -99,7 +103,7 @@ export class DockgeLxc extends ComponentResource {
         create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale set ${tailscaleArgs} --auto-update `,
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] })
+      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] }),
     );
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
@@ -110,63 +114,6 @@ export class DockgeLxc extends ComponentResource {
 
     function replaceVariable(key: RegExp, value: Input<string>) {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
-    }
-
-    async function createStack(path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
-      const stackName = basename(path);
-      const files = await readdir(path);
-      const fileAssets = output(
-        files.map(async (file) => {
-          const content = await readFile(resolve(path, file), "utf-8");
-          const items = replacements.reduce((p, r) => r(p), output(content));
-
-          return items.apply(async (content) => {
-            mkdirSync(`./.tmp/`, { recursive: true });
-            await writeFile(`./.tmp/${args.host.name}-${stackName}-${file}`, content);
-            return {
-              id: (await md5({ input: content })).result,
-              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-              source: new asset.FileAsset(`./.tmp/${args.host.name}-${stackName}-${file}`),
-            };
-          });
-        })
-      );
-
-      const mkdir = new remote.Command(
-        `${args.host.name}-${stackName}-mkdir`,
-        {
-          connection: args.host.remoteConnection,
-          create: interpolate`mkdir -p /opt/stacks/${stackName}`,
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleSet] })
-      );
-
-      const copyFiles = fileAssets.apply((assets) => {
-        return assets.map(
-          (item) =>
-            new remote.CopyToRemote(
-              `${args.host.name}-${item.id}-copy-file`,
-              {
-                connection: connection,
-                remotePath: item.remotePath,
-                source: item.source,
-              },
-              mergeOptions(cro, { dependsOn: [mkdir] })
-            )
-        );
-      });
-
-      const compose = new remote.Command(
-        `${args.host.name}-${stackName}-compose`,
-        {
-          connection: connection,
-          triggers: copyFiles.apply((z) => z.map((f) => f.id)),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
-        },
-        mergeOptions(cro, { dependsOn: copyFiles })
-      );
-
-      return { name: stackName, path, compose };
     }
 
     this.dns = createDnsRecord(name, this.hostname, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
@@ -181,7 +128,7 @@ export class DockgeLxc extends ComponentResource {
       async ([tailscaleIpAddress, result]) => {
         await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
         return result;
-      }
+      },
     );
 
     // // Create device tags
@@ -196,7 +143,7 @@ export class DockgeLxc extends ComponentResource {
         parent: this,
         retainOnDelete: true,
         dependsOn: [tailscaleSet],
-      }
+      },
     );
 
     // // Create device key
@@ -210,8 +157,11 @@ export class DockgeLxc extends ComponentResource {
         provider: args.globals.tailscaleProvider,
         parent: this,
         dependsOn: [tailscaleSet],
-      }
+      },
     );
+
+    const op = new OPClient();
+    const authentikToken = output(op.getItemByTitle("Authentik Token"));
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(args.host.name)),
@@ -221,22 +171,80 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
       replaceVariable(
         /\$\{cloudflareApiToken\}/g,
-        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
+        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!),
       ),
       replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, args.host.title),
-      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.dns.hostname),
+      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, output(args.cluster).rootDomain),
     ];
 
-    this.stacks = output(readdir("./docker/_common").then((files) => files.map((f) => createStack(`./docker/_common/${f}`, replacements))))
+    this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => createStack(resolve(dockerPath, "_common", f), replacements))))
       .apply((z) => {
-        const hostStacks = output(readdir(`./docker/${args.host.name}`).then((files) => files.map((f) => createStack(`./docker/${args.host.name}/${f}`, replacements))));
+        const hostStacks = output(readdir(resolve(dockerPath, args.host.name)).then((files) => files.map((f) => createStack(resolve(dockerPath, args.host.name, f), replacements))));
         return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
       })
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return z.map((z) => z.name);
       });
+
+    async function createStack(path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
+      const stackName = basename(path);
+      const files = await readdir(path);
+      const fileAssets = output(
+        files.map(async (file) => {
+          const content = await readFile(resolve(path, file), "utf-8");
+          const items = replacements.reduce((p, r) => r(p), output(content));
+
+          return items.apply(async (content) => {
+            mkdirSync(`./.tmp/`, { recursive: true });
+            const tempFilePath = `./.tmp/${args.host.name}-${stackName}-${file}`;
+            await writeFile(tempFilePath, content);
+            return {
+              id: md5Output({ input: content }).result,
+              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+              source: new asset.FileAsset(tempFilePath),
+            };
+          });
+        }),
+      );
+
+      const mkdir = new remote.Command(
+        `${args.host.name}-${stackName}-mkdir`,
+        {
+          connection: connection,
+          create: interpolate`mkdir -p /opt/stacks/${stackName}/`,
+        },
+        mergeOptions(cro, { dependsOn: [tailscaleSet] }),
+      );
+
+      const copyFiles = fileAssets.apply((assets) => {
+        return assets.map(
+          (item) =>
+            new remote.CopyToRemote(
+              `${args.host.name}-${item.id}-copy-file`,
+              {
+                connection: connection,
+                remotePath: item.remotePath,
+                source: item.source,
+              },
+              mergeOptions(cro, { dependsOn: [mkdir] }),
+            ),
+        );
+      });
+
+      const compose = new remote.Command(
+        `${args.host.name}-${stackName}-compose`,
+        {
+          connection: connection,
+          triggers: copyFiles.apply((z) => z.map((f) => f.id)),
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
+        },
+        mergeOptions(cro, { dependsOn: copyFiles }),
+      );
+
+      return { name: stackName, path, compose };
+    }
 
     const dockgeInfo = new OnePasswordItem(`${args.host.name}-dockge`, {
       category: FullItem.CategoryEnum.SecureNote,

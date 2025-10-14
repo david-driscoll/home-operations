@@ -12,15 +12,15 @@ import { OPClientItem, OPClient } from "./op.ts";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
-import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
+import { ApplicationDefinitionSchema, AuthentikDefinition } from "@openapi/application-definition.js";
 import { removeUndefinedProperties } from "./helpers.ts";
 
 const op = new OPClient();
-type AuthentikDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["authentik"]>;
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
   cluster: ClusterDefinition;
   authentikCredential: pulumi.Input<string>;
+  loadFromResource<T>(application: ApplicationDefinitionSchema, type: "authentik" | "uptime", from: { type: string; name: string }): Promise<T>;
 }
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];
@@ -44,14 +44,14 @@ export class AuthentikOutputs {
 export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
   private readonly applicationsComponent: pulumi.ComponentResource;
-  private readonly outpostsComponent: pulumi.ComponentResource;
-  private readonly proxyProviders: pulumi.Output<number>[] = [];
+  public readonly outpostsComponent: pulumi.ComponentResource;
+  public readonly proxyProviders: pulumi.Output<number>[] = [];
   public readonly cluster: ClusterDefinition;
   private readonly authentik: pulumi.Output<AuthentikOutputs>;
 
   constructor(
     private readonly args: AuthentikResourcesArgs,
-    opts?: pulumi.ComponentResourceOptions,
+    private readonly opts?: pulumi.ComponentResourceOptions,
   ) {
     super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
 
@@ -65,11 +65,18 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", "outposts", {}, { parent: this });
   }
 
-  public createApplication(application: ApplicationDefinitionSchema) {
+  public async createApplication(application: ApplicationDefinitionSchema) {
     let provider: pulumi.CustomResource | undefined;
 
-    if (application.spec.authentik) {
-      const result = this.createProvider(application, application.spec.authentik);
+    let authentik = application.spec.authentik;
+    if (application.spec.authentikFrom) {
+      // for docker this is a file
+      // for kubernetes it's a config map or secret.
+      authentik = await this.args.loadFromResource<AuthentikDefinition>(application, "authentik", application.spec.authentikFrom);
+    }
+
+    if (authentik) {
+      const result = this.createProvider(application, authentik);
       provider = result.provider;
       if (result.isProxy) {
         this.proxyProviders.push(provider.id.apply((id) => parseFloat(id)));
@@ -79,32 +86,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     const app = this.createAuthentikApplication(application, provider);
 
     return { app, provider };
-  }
-
-  public async createOutpost(serviceConnectionId: pulumi.Output<string>) {
-    // Create outpost
-    if (this.proxyProviders.length > 0) {
-      return new authentik.Outpost(
-        this.cluster.key,
-        {
-          serviceConnection: serviceConnectionId,
-          type: "proxy",
-          name: `Outpost for ${this.cluster.title}`,
-          config: JSON.stringify({
-            authentik_host: "https://authentik.driscoll.tech/",
-            authentik_host_insecure: false,
-            authentik_host_browser: this.cluster.authentikDomain,
-            log_level: "info",
-            object_naming_template: `ak-outpost-${this.cluster.key}`,
-            kubernetes_replicas: 2,
-            kubernetes_namespace: this.cluster.key,
-            kubernetes_ingress_class_name: "internal",
-          }),
-          protocolProviders: this.proxyProviders,
-        },
-        { parent: this.outpostsComponent, deleteBeforeReplace: true },
-      );
-    }
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {

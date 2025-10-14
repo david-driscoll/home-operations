@@ -10,12 +10,32 @@ import { NodeSSH } from "node-ssh";
 import { host } from "@pulumi/docker/config/vars.js";
 import { user } from "@muhlba91/pulumi-proxmoxve";
 import type { ApplicationDefinitionSchema } from "@openapi/application-definition.d.ts";
+import * as authentikApi from "@goauthentik/api";
+import { mkdir, writeFile } from "fs/promises";
+import { remote } from "@pulumi/command";
+import { awaitOutput as outToPromise } from "@components/helpers.ts";
 
-type ApplicationDefinition = ApplicationDefinitionSchema["spec"];
-
-export async function dockgeApplications(globals: GlobalResources, clusterDefinition: DockgeClusterDefinition, applicationManager: AuthentikApplicationManager) {
+export async function dockgeApplications(globals: GlobalResources, clusterDefinition: DockgeClusterDefinition) {
   const ssh = new NodeSSH();
   const op = new OPClient();
+
+  const authentikToken = await op.getItemByTitle("Authentik Token");
+
+  const applicationManager = new AuthentikApplicationManager({
+    globals,
+    authentikCredential: "Authentik Outputs",
+    cluster: clusterDefinition,
+    async loadFromResource(application, kind, { name }) {
+      const result = await ssh.execCommand(`cat ${name}`);
+      if (result.stderr) {
+        throw new Error(`Error reading file ${name}: ${result.stderr}`);
+      }
+
+      const parsed = yaml.parse(result.stdout);
+
+      return parsed;
+    },
+  });
 
   const lxcData = await op.getItemByTitle(`DockgeLxc: ${clusterDefinition.title}`);
   await ssh.connect({
@@ -35,6 +55,7 @@ export async function dockgeApplications(globals: GlobalResources, clusterDefini
       .filter((line) => line.length > 0)
       .map((line) => line.trim());
   });
+
   pulumi.log.info(`Found stacks: ${stacks.join(", ")}`);
 
   // Create the main Dockge application
@@ -59,22 +80,81 @@ export async function dockgeApplications(globals: GlobalResources, clusterDefini
     }
     applicationManager.createApplication(definition);
   }
-
-  // const certificate = new ApplicationCertificate(clusterDefinition.key, { globals });
-
-  const serviceConnection = new authentik.ServiceConnectionDocker(
+  const outpost = new authentik.Outpost(
     clusterDefinition.key,
     {
-      name: clusterDefinition.key,
-      url: pulumi.interpolate`ssh://root@${lxcData.sections.ssh.fields.hostname.value}`,
+      // serviceConnection: serviceConnectionId,
+      type: "proxy",
+      name: `Outpost for ${clusterDefinition.title}`,
+      config: pulumi.jsonStringify({
+        authentik_host: "https://authentik.driscoll.tech/",
+        authentik_host_insecure: false,
+        authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
+        log_level: "info",
+        object_naming_template: `ak-outpost`,
+        // docker_network: "dockge_default",
+      }),
+      protocolProviders: applicationManager.proxyProviders,
     },
-    { deleteBeforeReplace: true, parent: applicationManager },
+    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
+  const clientConfig = new authentikApi.Configuration({
+    accessToken: authentikToken.fields.credential.value,
+    basePath: `${authentikToken.fields.url.value}/api/v3/`,
+  });
+
+  const authentikCoreApi = new authentikApi.CoreApi(clientConfig);
+  const outpostId = await outToPromise(outpost.id);
+  const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
+
+  const compose = `services:
+  authentik_proxy:
+    image: ghcr.io/goauthentik/proxy
+    ports:
+      - 9000:9000
+      - 9443:9443
+    environment:
+      - AUTHENTIK_HOST=https://${clusterDefinition.authentikDomain}
+      - AUTHENTIK_INSECURE="false"
+      - AUTHENTIK_TOKEN=${outpostToken.key}
+      - AUTHENTIK_HOST_BROWSER=https://${clusterDefinition.authentikDomain}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ak-outpost.rule=Host(\`ak-outpost.${clusterDefinition.key}.driscoll.tech\`)
+      - traefik.http.routers.ak-outpost.entrypoints=websecure
+      - traefik.http.routers.ak-outpost.service=ak-outpost
+      - traefik.http.routers.ak-outpost.tls.certresolver=le
+      - traefik.http.services.ak-outpost.loadbalancer.healthcheck.path="/outpost.goauthentik.io/ping"
+      - traefik.http.services.ak-outpost.loadbalancer.healthcheck.port=9300
+      - traefik.http.services.ak-outpost.loadbalancer.server.port=9000
+    networks:
+      - dockge_default
+x-dockge:
+  urls:
+    - https://ak-outpost.${clusterDefinition.key}.driscoll.tech
+networks:
+  dockge_default:
+    external: true
+`;
+  await ssh.execCommand("mkdir -p /opt/stacks/ak-outpost/");
+  await mkdir(`./.tmp/`, { recursive: true });
+  await writeFile(`./.tmp/${clusterDefinition.key}-compose.yaml`, compose);
+
+  const composeFile = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
+    connection: {
+      host: lxcData.sections.ssh.fields.hostname.value!,
+      user: "root",
+    },
+    remotePath: `/opt/stacks/ak-outpost/compose.yaml`,
+    source: new pulumi.asset.FileAsset(`./.tmp/${clusterDefinition.key}-compose.yaml`),
+  });
+
+  await outToPromise(composeFile.id);
+  await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/ak-outpost/` });
 
   ssh.dispose();
 
   return {
-    serviceConnectionId: serviceConnection.serviceConnectionDockerId,
     stacks,
   };
 }

@@ -6,7 +6,7 @@ import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
 import { getDeviceOutput, DeviceTags, DeviceKey, DeviceAuthorization, GetDeviceResult, get4Via6 } from "@pulumi/tailscale";
 import { remote, local, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { GlobalResources } from "../../components/globals.ts";
+import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { createDnsRecord, createDnsSection, getHostnames } from "./helper.ts";
@@ -18,7 +18,7 @@ import { FullItem } from "@1password/connect";
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface ProxmoxHostArgs {
-  title: Input<string>;
+  title?: Input<string>;
   globals: GlobalResources;
   proxmox: Input<OPClientItem>;
   tailscaleIpAddress: string;
@@ -28,6 +28,7 @@ export interface ProxmoxHostArgs {
   internalIpAddress?: string;
   installTailscale?: boolean;
   truenas?: TruenasVm;
+  cluster: Input<ClusterDefinition>;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -50,7 +51,8 @@ export class ProxmoxHost extends ComponentResource {
     super("home:proxmox:ProxmoxHost", name, opts);
 
     this.name = name;
-    this.title = output(args.title);
+    const cluster = output(args.cluster);
+    this.title = output(args.title ?? cluster.title);
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
     } else {

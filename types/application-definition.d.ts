@@ -7,6 +7,10 @@
 
 import type { Roles } from "@components/constants.ts";
 
+export type ApplicationDefinition = ApplicationDefinitionSchema["spec"];
+export type AuthentikDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["authentik"]>;
+export type UptimeDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["uptime"]>;
+
 /**
  * Schema for Application Definition Custom Resource
  */
@@ -90,7 +94,7 @@ export interface ApplicationDefinitionSchema {
   };
 }
 export interface Http {
-  type: "http";
+
   url?: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
   accepted_statuscodes?: string[];
@@ -123,7 +127,6 @@ export interface Http {
   oauth_token_url?: string;
 }
 export interface Ping {
-  type: "ping";
   hostname?: string;
   packet_size?: string;
   accepted_statuscodes?: string[];
@@ -135,7 +138,6 @@ export interface Ping {
   upside_down?: boolean;
 }
 export interface Docker {
-  type: "docker";
   docker_container?: string;
   docker_host?: string;
   accepted_statuscodes?: string[];
@@ -147,7 +149,7 @@ export interface Docker {
   upside_down?: boolean;
 }
 export interface Dns {
-  type: "dns";
+
   hostname?: string;
   dns_resolve_server?: string;
   dns_resolve_type: "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "SRV" | "PTR" | "SOA" | "NS";
@@ -161,7 +163,7 @@ export interface Dns {
   upside_down?: boolean;
 }
 export interface Gamedig {
-  type: "gamedig";
+
   game?: string;
   gamedig_given_port_only?: string;
   hostname?: string;
@@ -176,7 +178,7 @@ export interface Gamedig {
   description?: string;
 }
 export interface Group {
-  type: "group";
+
   accepted_statuscodes?: string[];
   active?: boolean;
   interval?: number;
@@ -257,7 +259,7 @@ export interface KafkaProducer {
   upside_down?: boolean;
 }
 export interface Keyword {
-  type: "keyword";
+
   url?: string;
   keyword?: string;
   invert_keyword?: string;
@@ -292,7 +294,7 @@ export interface Keyword {
   upside_down?: boolean;
 }
 export interface Mongodb {
-  type: "mongodb";
+
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -303,7 +305,7 @@ export interface Mongodb {
   upside_down?: boolean;
 }
 export interface Mqtt {
-  type: "mqtt";
+
   mqtt_check_type: "connect" | "publish" | "subscribe";
   mqtt_username?: string;
   mqtt_password?: string;
@@ -320,7 +322,7 @@ export interface Mqtt {
   upside_down?: boolean;
 }
 export interface Mysql {
-  type: "mysql";
+
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -332,7 +334,7 @@ export interface Mysql {
   upside_down?: boolean;
 }
 export interface Port {
-  type: "port";
+
   hostname?: string;
   port?: number;
   accepted_statuscodes?: string[];
@@ -344,7 +346,7 @@ export interface Port {
   upside_down?: boolean;
 }
 export interface Postgres {
-  type: "postgres";
+
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -355,7 +357,7 @@ export interface Postgres {
   upside_down?: boolean;
 }
 export interface Push {
-  type: "push";
+
   push_token?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -366,7 +368,7 @@ export interface Push {
   upside_down?: boolean;
 }
 export interface Radius {
-  type: "radius";
+
   hostname?: string;
   port?: number;
   radius_called_station_id?: string;
@@ -396,7 +398,7 @@ export interface RealBrowser {
   upside_down?: boolean;
 }
 export interface Redis {
-  type: "redis";
+
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -407,7 +409,7 @@ export interface Redis {
   upside_down?: boolean;
 }
 export interface Steam {
-  type: "steam";
+
   hostname?: string;
   port?: number;
   accepted_statuscodes?: string[];
@@ -419,7 +421,7 @@ export interface Steam {
   upside_down?: boolean;
 }
 export interface Sqlserver {
-  type: "sqlserver";
+
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -441,14 +443,14 @@ export interface TailscalePing {
   upside_down?: boolean;
 }
 export interface Ssf {
-  type: "ssf";
+
   eventRetention?: string;
   jwtFederationProviders?: number[];
   providerSsfId?: string;
   signingKey?: string;
 }
 export interface Scim {
-  type: "scim";
+
   compatibilityMode?: string;
   dryRun?: boolean;
   excludeUsersServiceAccount?: boolean;
@@ -460,7 +462,7 @@ export interface Scim {
   url: string;
 }
 export interface Saml {
-  type: "saml";
+
   acsUrl: string;
   assertionValidNotBefore?: string;
   assertionValidNotOnOrAfter?: string;
@@ -490,7 +492,7 @@ export interface Saml {
   verificationKp?: string;
 }
 export interface Radius1 {
-  type: "radius";
+
   authorizationFlow?: string;
   clientNetworks?: string;
   invalidationFlow?: string;
@@ -500,7 +502,7 @@ export interface Radius1 {
   sharedSecret: string;
 }
 export interface Rac {
-  type: "rac";
+
   authenticationFlow?: string;
   authorizationFlow?: string;
   connectionExpiry?: string;
@@ -509,7 +511,7 @@ export interface Rac {
   settings?: string;
 }
 export interface Proxy {
-  type: "proxy";
+
   accessTokenValidity?: string;
   authenticationFlow?: string;
   authorizationFlow?: string;
@@ -533,7 +535,7 @@ export interface Proxy {
   skipPathRegex?: string;
 }
 export interface Oauth2 {
-  type: "oauth2";
+
   accessCodeValidity?: string;
   accessTokenValidity?: string;
   allowedRedirectUris?: {
@@ -560,7 +562,7 @@ export interface Oauth2 {
   subMode?: string;
 }
 export interface MicrosoftEntra {
-  type: "microsoftEntra";
+
   clientId: string;
   clientSecret: string;
   dryRun?: boolean;
@@ -574,7 +576,7 @@ export interface MicrosoftEntra {
   userDeleteAction?: string;
 }
 export interface Ldap {
-  type: "ldap";
+
   baseDn: string;
   bindFlow?: string;
   bindMode?: string;
@@ -588,7 +590,7 @@ export interface Ldap {
   unbindFlow?: string;
 }
 export interface GoogleWorkspace {
-  type: "googleWorkspace";
+
   credentials?: string;
   defaultGroupEmailDomain: string;
   delegatedSubject?: string;

@@ -1,5 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
-import { GlobalResources } from "../../components/globals.ts";
+import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
@@ -11,10 +11,11 @@ const op = new OPClient();
 
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
-const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia"));
-const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna"));
-const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria"));
-const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command"));
+const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
+const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(createClusterDefinition);
+const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
+const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
+const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
 const gateway = "10.10.0.1";
 
 var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
@@ -26,6 +27,7 @@ var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   macAddress: "58:47:ca:7b:a9:9d",
   proxmox: mainProxmoxCredentials,
   remote: false,
+  cluster: celestiaCluster,
 });
 
 const spikeVm = new TruenasVm({
@@ -35,7 +37,6 @@ const spikeVm = new TruenasVm({
 });
 
 var celestiaHost = new ProxmoxHost("celestia", {
-  title: celestiaCluster.fields.title.value!,
   globals: globals,
   isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
@@ -44,10 +45,10 @@ var celestiaHost = new ProxmoxHost("celestia", {
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
   remote: false,
+  cluster: celestiaCluster,
 });
 
 var lunaHost = new ProxmoxHost("luna", {
-  title: lunaCluster.fields.title.value!,
   globals: globals,
   isProxmoxBackupServer: true,
   tailscaleIpAddress: "100.111.10.104",
@@ -55,10 +56,10 @@ var lunaHost = new ProxmoxHost("luna", {
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
   remote: true,
+  cluster: lunaCluster
 });
 
 var alphaSiteHost = new ProxmoxHost("alpha-site", {
-  title: "Alpha Site",
   globals: globals,
   isProxmoxBackupServer: false,
   internalIpAddress: "10.10.10.200",
@@ -67,18 +68,21 @@ var alphaSiteHost = new ProxmoxHost("alpha-site", {
   proxmox: alphaSiteProxmoxCredentials,
   installTailscale: false,
   remote: false,
+  cluster:  alphaSiteCluster
 });
 
 var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
   host: celestiaHost,
   vmId: 300,
+  cluster: celestiaCluster
 });
 
 var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
   host: lunaHost,
   vmId: 400,
+  cluster: lunaCluster
 });
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost) };
