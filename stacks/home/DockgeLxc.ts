@@ -182,7 +182,8 @@ export class DockgeLxc extends ComponentResource {
 
     this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => createStack(resolve(dockerPath, "_common", f), replacements))))
       .apply((z) => {
-        const hostStacks = output(readdir(resolve(dockerPath, args.host.name)).then((files) => files.map((f) => createStack(resolve(dockerPath, args.host.name, f), replacements))));
+        const hostStacks = output(readdir(resolve(dockerPath, args.host.name))
+          .then((files) => files.filter(z => z !== '.keep').map((f) => createStack(resolve(dockerPath, args.host.name, f), replacements))));
         return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
       })
       .apply((z) => {
