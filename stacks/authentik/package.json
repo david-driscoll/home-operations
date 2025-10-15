@@ -7,16 +7,5 @@
   "scripts": {
     "preinstall": "cd ../../; npm i",
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "@pulumi/pulumi": "^3.142.0",
-    "@pulumi/authentik": "file:../../sdks/authentik",
-    "@pulumi/kubernetes": "^4.0.0",
-    "@pulumi/random": "^4.0.0",
-    "@pulumi/tls": "^5.2.1",
-    "@types/node": "^20.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.3.0"
   }
 }
