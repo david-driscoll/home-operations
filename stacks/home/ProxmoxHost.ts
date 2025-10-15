@@ -29,6 +29,7 @@ export interface ProxmoxHostArgs {
   installTailscale?: boolean;
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
+  shortName?: string;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -46,6 +47,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly dns: ReturnType<typeof createDnsRecord>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
+  public readonly shortName?: string;
 
   constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
     super("home:proxmox:ProxmoxHost", name, opts);
@@ -64,6 +66,7 @@ export class ProxmoxHost extends ComponentResource {
     this.tailscaleIpAddress = args.tailscaleIpAddress;
     this.macAddress = args.macAddress;
     this.remote = args.remote;
+    this.shortName = args.shortName;
 
     const { hostname, tailscaleHostname } = getHostnames(name, args.globals);
     this.hostname = hostname;

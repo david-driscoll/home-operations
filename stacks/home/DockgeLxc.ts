@@ -61,7 +61,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: [] }),
     );
     this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
-    const ipAddress = (this.ipAddress = args.host.remote ? ipAddressResource.stdout : this.tailscaleIpAddress);
+    const ipAddress = (this.ipAddress = args.host.remote ? this.tailscaleIpAddress  : ipAddressResource.stdout );
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;

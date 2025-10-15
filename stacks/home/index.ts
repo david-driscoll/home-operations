@@ -70,6 +70,7 @@ var alphaSiteHost = new ProxmoxHost("alpha-site", {
   installTailscale: false,
   remote: false,
   cluster: alphaSiteCluster,
+  shortName: 'as',
 });
 
 var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
@@ -86,10 +87,16 @@ var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   cluster: lunaCluster,
 });
 
-export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost) };
+// var alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
+//   globals,
+//   host: alphaSiteHost,
+//   vmId: 100,
+//   cluster: alphaSiteCluster,
+// });
+
+export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
 export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
 export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
-
 // const users = await tailscale.
 // console.log(users);
