@@ -1,7 +1,7 @@
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
-AWS_ACCESS_KEY_ID = "op://Private/Backblaze home-operations/username"
-AWS_SECRET_ACCESS_KEY = "op://Private/Backblaze home-operations/credential"
+AWS_ACCESS_KEY_ID = "op://Eris/Backblaze home-operations/username"
+AWS_SECRET_ACCESS_KEY = "op://Eris/Backblaze home-operations/credential"
 AWS_REGION = "us-east-005"
 AWS_USE_PATH_STYLE_ENDPOINT = "true"
 PULUMI_CONFIG_PASSPHRASE = "op://Eris/Pulumi Passphrase/password"
