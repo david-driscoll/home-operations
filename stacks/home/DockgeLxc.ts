@@ -254,24 +254,26 @@ export class DockgeLxc extends ComponentResource {
 
   private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
     const stackName = basename(path);
-    const files = await readdir(path);
-    const fileAssets = output(
-      files.map(async (file) => {
-        const content = await readFile(resolve(path, file), "utf-8");
-        const items = replacements.reduce((p, r) => r(p), output(content));
+    const files = output(readdir(path));
+    const fileAssets = files.apply((files) =>
+      output(
+        files.map((file) => {
+          const content = output(readFile(resolve(path, file), "utf-8"));
+          const items = replacements.reduce((p, r) => r(p), content);
 
-        return items.apply(async (content) => {
-          mkdirSync(`./.tmp/`, { recursive: true });
-          const tempFilePath = `./.tmp/${hostname}-${stackName}-${file}`;
-          await writeFile(tempFilePath, content);
-          return {
-            id: md5Output({ input: content }).result,
-            remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-            filePath: tempFilePath,
-            source: new asset.FileAsset(tempFilePath),
-          };
-        });
-      }),
+          return items.apply(async (content) => {
+            mkdirSync(`./.tmp/`, { recursive: true });
+            const tempFilePath = `./.tmp/${hostname}-${stackName}-${file}`;
+            await writeFile(tempFilePath, content);
+            return {
+              id: md5Output({ input: content }).result,
+              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+              filePath: tempFilePath,
+              source: new asset.FileAsset(tempFilePath),
+            };
+          });
+        }),
+      ),
     );
 
     const mkdir = new remote.Command(
@@ -306,6 +308,7 @@ export class DockgeLxc extends ComponentResource {
             );
           }
         }
+
         results.push(
           new remote.CopyToRemote(
             `${hostname}-${asset.id}-copy-file`,
