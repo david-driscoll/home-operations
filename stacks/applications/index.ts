@@ -1,7 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
-import * as authentik from "@pulumi/authentik";
-import { GlobalResources, ClusterDefinition, createClusterDefinition } from "../../components/globals.ts";
-import { AuthentikApplicationManager } from "@components/authentik.ts";
+import { GlobalResources, createClusterDefinition } from "../../components/globals.ts";
 import { dockgeApplications } from "./dockge.ts";
 import { kubernetesApplications } from "./kubernetes.ts";
 import { OPClient } from "../../components/op.ts";

@@ -1,4 +1,4 @@
-import { interpolate, mergeOptions, output } from "@pulumi/pulumi";
+import { interpolate } from "@pulumi/pulumi";
 import { GlobalResources } from "../../components/globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 

@@ -27,6 +27,11 @@
     "down": "npm run down:luna ; npm run down:celestia ; npm run down:equestria ; npm run down:sgc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {
+    "@goauthentik/api": "^2025.6.3-1751754396",
+    "@kubernetes/client-node": "^1.4.0",
+    "node-ssh": "^13.2.1",
+    "rxjs": "^7.8.2",
+    "yaml": "^2.8.1"
+  }
 }

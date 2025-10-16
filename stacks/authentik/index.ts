@@ -1,11 +1,9 @@
 import * as pulumi from "@pulumi/pulumi";
-import * as authentik from "@pulumi/authentik";
-import { OPClient, OPClientItem } from "../../components/op.ts";
+import { OPClient } from "../../components/op.ts";
 import { AuthentikGroups } from "../../components/authentik/groups.ts";
 import { FlowsManager } from "../../components/authentik/flows.ts";
-import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemInputs, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { FullItemAllOfFields } from "@1password/connect/dist/model/models.js";
 import { GlobalResources } from "@components/globals.ts";
 
 // Stack configuration

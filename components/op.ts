@@ -1,10 +1,7 @@
 import { FullItem, OPConnect } from "@1password/connect";
 import { removeUndefinedProperties } from "./helpers.ts";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
-import { ItemFile } from "@1password/connect/dist/model/itemFile.js";
-import { zipmap } from "@pulumi/std/zipmap.js";
-import { FullItemAllOfSections, ItemUrls } from "@1password/connect/dist/model/models.js";
-import { input } from "@pulumi/kubernetes/types/index.js";
+import type { ItemFile, ItemUrls } from "@1password/connect/dist/model/models.js";
 
 export interface OPClientItemFields {
   [key: string]: FullItemAllOfFields;
@@ -59,7 +56,7 @@ export class OPClient {
         ...this.mapToFullItem(item),
         vault: { id: vaultUuid },
       } as any),
-      undefined,
+      undefined
     );
   }
 
@@ -106,7 +103,7 @@ export class OPClient {
         ...field,
         section: { id: sectionKey },
         label: fieldKey,
-      })),
+      }))
     );
 
     const files = Object.entries(item.files ?? {}).map(([fileKey, file]) => ({
@@ -121,7 +118,7 @@ export class OPClient {
         ...file,
         section: { id: sectionKey },
         name: fileKey,
-      })),
+      }))
     );
 
     const result = removeUndefinedProperties({
@@ -140,7 +137,7 @@ export class OPClient {
 
   public mapItem(
     item: Omit<FullItem, "vault" | "extractOTP">,
-    id: string | undefined,
+    id: string | undefined
   ): {
     id: string;
     title: string;

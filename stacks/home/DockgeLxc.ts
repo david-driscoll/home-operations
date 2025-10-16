@@ -1,4 +1,3 @@
-import {} from "@pulumi/tailscale";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { all, asset, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
