@@ -15,7 +15,7 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "preinstall": "cd ../../; pulumi install;",
+    "preinstall": "cd ../../; npm i;",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {},
