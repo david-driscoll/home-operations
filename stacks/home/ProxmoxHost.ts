@@ -43,7 +43,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
-  // public readonly dns: StandardDns;
+  public readonly dns: StandardDns;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
   public readonly shortName?: string;
@@ -77,7 +77,7 @@ export class ProxmoxHost extends ComponentResource {
     const apiCredential = output(args.proxmox);
     this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
-    // this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
 
     // Create ProxmoxVE Provider
     this.pveProvider = new ProxmoxVEProvider(
@@ -101,7 +101,7 @@ export class ProxmoxHost extends ComponentResource {
     }
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.internalIpAddress,
+      host: this.tailscaleHostname,
       user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
     });

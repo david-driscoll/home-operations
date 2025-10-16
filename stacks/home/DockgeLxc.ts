@@ -36,7 +36,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly tailscaleIpAddress: Output<string>;
   public readonly hostname: Output<string>;
   public readonly device: Output<GetDeviceResult>;
-  // public readonly dns: StandardDns;
+  public readonly dns: StandardDns;
   public readonly ipAddress: Output<string>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly stacks: Output<string[]>;
@@ -73,7 +73,7 @@ export class DockgeLxc extends ComponentResource {
     this.credential = output(args.credential);
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: ipAddress,
+      host: tailscaleHostname,
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
@@ -125,7 +125,7 @@ export class DockgeLxc extends ComponentResource {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
     }
 
-    // this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
 
     // Get Tailscale device - this will need to be done after the hook script runs
     // and Tailscale is configured. For now, we'll comment this out as it requires
@@ -261,19 +261,19 @@ export class DockgeLxc extends ComponentResource {
         const regex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
         for (const host of hosts) {
-          // new StandardDns(
-          //   `${stackName}-${host.replace(/\./g, "_")}`,
-          //   {
-          //     hostname: interpolate`${host}`,
-          //     ipAddress: this.ipAddress,
-          //     type: "CNAME",
-          //     record: this.hostname,
-          //   },
-          //   this.args.globals,
-          //   {
-          //     parent: this,
-          //   },
-          // );
+          new StandardDns(
+            `${stackName}-${host.replace(/\./g, "_")}`,
+            {
+              hostname: interpolate`${host}`,
+              ipAddress: this.ipAddress,
+              type: "CNAME",
+              record: this.hostname,
+            },
+            this.args.globals,
+            {
+              parent: this,
+            },
+          );
         }
       }
 
