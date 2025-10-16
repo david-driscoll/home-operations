@@ -33,55 +33,41 @@ export class DnsRecord extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the DNS record is active. Defaults to true. Set to false to temporarily disable resolution without removing the record.
+     * Whether the DNS record is enabled. Defaults to `true`.
      */
-    declare public readonly enabled: pulumi.Output<boolean>;
+    declare public readonly enabled: pulumi.Output<boolean | undefined>;
     /**
-     * DNS record name.
+     * The key of the DNS record.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The port number for SRV records. Valid values are between 1 and 65535. Only used with SRV records.
+     * The port of the DNS record.
      */
     declare public readonly port: pulumi.Output<number>;
     /**
-     * Priority value for MX and SRV records. Lower values indicate higher priority. Required for MX and SRV records, ignored for other types.
+     * The priority of the DNS record.
      */
-    declare public readonly priority: pulumi.Output<number>;
+    declare public readonly priority: pulumi.Output<number | undefined>;
     /**
-     * The content of the DNS record. The expected value depends on the record type:
-     *   * For A records: IPv4 address (e.g., '192.168.1.10')
-     *   * For AAAA records: IPv6 address
-     *   * For CNAME records: Canonical name (e.g., 'server1.example.com')
-     *   * For MX records: Mail server hostname
-     *   * For TXT records: Text content (e.g., 'v=spf1 include:_spf.example.com ~all')
+     * The type of the DNS record.
      */
-    declare public readonly record: pulumi.Output<string>;
+    declare public readonly recordType: pulumi.Output<string | undefined>;
     /**
-     * The name of the UniFi site where this resource should be applied. If not specified, the default site will be used.
+     * The name of the site to associate the DNS record with.
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * Time To Live (TTL) in seconds, determines how long DNS resolvers should cache this record. Set to 0 for automatic TTL. Common values: 300 (5 minutes), 3600 (1 hour), 86400 (1 day).
+     * The TTL of the DNS record.
      */
-    declare public readonly ttl: pulumi.Output<number>;
+    declare public readonly ttl: pulumi.Output<number | undefined>;
     /**
-     * The type of DNS record. Valid values are:
-     *   * `A` - Maps a hostname to IPv4 address
-     *   * `AAAA` - Maps a hostname to IPv6 address
-     *   * `CNAME` - Creates an alias for another domain name
-     *   * `MX` - Specifies mail servers for the domain
-     *   * `NS` - Delegates a subdomain to a set of name servers
-     *   * `PTR` - Creates a pointer to a canonical name (reverse DNS)
-     *   * `SOA` - Specifies authoritative information about the domain
-     *   * `SRV` - Specifies location of services (hostname and port)
-     *   * `TXT` - Holds descriptive text
+     * The value of the DNS record.
      */
-    declare public readonly type: pulumi.Output<string>;
+    declare public readonly value: pulumi.Output<string>;
     /**
-     * A relative weight for SRV records with the same priority. Higher values get proportionally more traffic. Only used with SRV records.
+     * The weight of the DNS record.
      */
-    declare public readonly weight: pulumi.Output<number>;
+    declare public readonly weight: pulumi.Output<number | undefined>;
 
     /**
      * Create a DnsRecord resource with the given unique name, arguments, and options.
@@ -100,27 +86,27 @@ export class DnsRecord extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["port"] = state?.port;
             resourceInputs["priority"] = state?.priority;
-            resourceInputs["record"] = state?.record;
+            resourceInputs["recordType"] = state?.recordType;
             resourceInputs["site"] = state?.site;
             resourceInputs["ttl"] = state?.ttl;
-            resourceInputs["type"] = state?.type;
+            resourceInputs["value"] = state?.value;
             resourceInputs["weight"] = state?.weight;
         } else {
             const args = argsOrState as DnsRecordArgs | undefined;
-            if (args?.record === undefined && !opts.urn) {
-                throw new Error("Missing required property 'record'");
+            if (args?.port === undefined && !opts.urn) {
+                throw new Error("Missing required property 'port'");
             }
-            if (args?.type === undefined && !opts.urn) {
-                throw new Error("Missing required property 'type'");
+            if (args?.value === undefined && !opts.urn) {
+                throw new Error("Missing required property 'value'");
             }
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["name"] = args?.name;
             resourceInputs["port"] = args?.port;
             resourceInputs["priority"] = args?.priority;
-            resourceInputs["record"] = args?.record;
+            resourceInputs["recordType"] = args?.recordType;
             resourceInputs["site"] = args?.site;
             resourceInputs["ttl"] = args?.ttl;
-            resourceInputs["type"] = args?.type;
+            resourceInputs["value"] = args?.value;
             resourceInputs["weight"] = args?.weight;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -133,53 +119,39 @@ export class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is active. Defaults to true. Set to false to temporarily disable resolution without removing the record.
+     * Whether the DNS record is enabled. Defaults to `true`.
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * DNS record name.
+     * The key of the DNS record.
      */
     name?: pulumi.Input<string>;
     /**
-     * The port number for SRV records. Valid values are between 1 and 65535. Only used with SRV records.
+     * The port of the DNS record.
      */
     port?: pulumi.Input<number>;
     /**
-     * Priority value for MX and SRV records. Lower values indicate higher priority. Required for MX and SRV records, ignored for other types.
+     * The priority of the DNS record.
      */
     priority?: pulumi.Input<number>;
     /**
-     * The content of the DNS record. The expected value depends on the record type:
-     *   * For A records: IPv4 address (e.g., '192.168.1.10')
-     *   * For AAAA records: IPv6 address
-     *   * For CNAME records: Canonical name (e.g., 'server1.example.com')
-     *   * For MX records: Mail server hostname
-     *   * For TXT records: Text content (e.g., 'v=spf1 include:_spf.example.com ~all')
+     * The type of the DNS record.
      */
-    record?: pulumi.Input<string>;
+    recordType?: pulumi.Input<string>;
     /**
-     * The name of the UniFi site where this resource should be applied. If not specified, the default site will be used.
+     * The name of the site to associate the DNS record with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Time To Live (TTL) in seconds, determines how long DNS resolvers should cache this record. Set to 0 for automatic TTL. Common values: 300 (5 minutes), 3600 (1 hour), 86400 (1 day).
+     * The TTL of the DNS record.
      */
     ttl?: pulumi.Input<number>;
     /**
-     * The type of DNS record. Valid values are:
-     *   * `A` - Maps a hostname to IPv4 address
-     *   * `AAAA` - Maps a hostname to IPv6 address
-     *   * `CNAME` - Creates an alias for another domain name
-     *   * `MX` - Specifies mail servers for the domain
-     *   * `NS` - Delegates a subdomain to a set of name servers
-     *   * `PTR` - Creates a pointer to a canonical name (reverse DNS)
-     *   * `SOA` - Specifies authoritative information about the domain
-     *   * `SRV` - Specifies location of services (hostname and port)
-     *   * `TXT` - Holds descriptive text
+     * The value of the DNS record.
      */
-    type?: pulumi.Input<string>;
+    value?: pulumi.Input<string>;
     /**
-     * A relative weight for SRV records with the same priority. Higher values get proportionally more traffic. Only used with SRV records.
+     * The weight of the DNS record.
      */
     weight?: pulumi.Input<number>;
 }
@@ -189,53 +161,39 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is active. Defaults to true. Set to false to temporarily disable resolution without removing the record.
+     * Whether the DNS record is enabled. Defaults to `true`.
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * DNS record name.
+     * The key of the DNS record.
      */
     name?: pulumi.Input<string>;
     /**
-     * The port number for SRV records. Valid values are between 1 and 65535. Only used with SRV records.
+     * The port of the DNS record.
      */
-    port?: pulumi.Input<number>;
+    port: pulumi.Input<number>;
     /**
-     * Priority value for MX and SRV records. Lower values indicate higher priority. Required for MX and SRV records, ignored for other types.
+     * The priority of the DNS record.
      */
     priority?: pulumi.Input<number>;
     /**
-     * The content of the DNS record. The expected value depends on the record type:
-     *   * For A records: IPv4 address (e.g., '192.168.1.10')
-     *   * For AAAA records: IPv6 address
-     *   * For CNAME records: Canonical name (e.g., 'server1.example.com')
-     *   * For MX records: Mail server hostname
-     *   * For TXT records: Text content (e.g., 'v=spf1 include:_spf.example.com ~all')
+     * The type of the DNS record.
      */
-    record: pulumi.Input<string>;
+    recordType?: pulumi.Input<string>;
     /**
-     * The name of the UniFi site where this resource should be applied. If not specified, the default site will be used.
+     * The name of the site to associate the DNS record with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Time To Live (TTL) in seconds, determines how long DNS resolvers should cache this record. Set to 0 for automatic TTL. Common values: 300 (5 minutes), 3600 (1 hour), 86400 (1 day).
+     * The TTL of the DNS record.
      */
     ttl?: pulumi.Input<number>;
     /**
-     * The type of DNS record. Valid values are:
-     *   * `A` - Maps a hostname to IPv4 address
-     *   * `AAAA` - Maps a hostname to IPv6 address
-     *   * `CNAME` - Creates an alias for another domain name
-     *   * `MX` - Specifies mail servers for the domain
-     *   * `NS` - Delegates a subdomain to a set of name servers
-     *   * `PTR` - Creates a pointer to a canonical name (reverse DNS)
-     *   * `SOA` - Specifies authoritative information about the domain
-     *   * `SRV` - Specifies location of services (hostname and port)
-     *   * `TXT` - Holds descriptive text
+     * The value of the DNS record.
      */
-    type: pulumi.Input<string>;
+    value: pulumi.Input<string>;
     /**
-     * A relative weight for SRV records with the same priority. Higher values get proportionally more traffic. Only used with SRV records.
+     * The weight of the DNS record.
      */
     weight?: pulumi.Input<number>;
 }

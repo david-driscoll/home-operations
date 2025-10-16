@@ -38,7 +38,6 @@ class PortProfile extends pulumi.CustomResource {
             resourceInputs["dot1xIdleTimeout"] = state?.dot1xIdleTimeout;
             resourceInputs["egressRateLimitKbps"] = state?.egressRateLimitKbps;
             resourceInputs["egressRateLimitKbpsEnabled"] = state?.egressRateLimitKbpsEnabled;
-            resourceInputs["excludedNetworkIds"] = state?.excludedNetworkIds;
             resourceInputs["forward"] = state?.forward;
             resourceInputs["fullDuplex"] = state?.fullDuplex;
             resourceInputs["isolation"] = state?.isolation;
@@ -77,7 +76,6 @@ class PortProfile extends pulumi.CustomResource {
             resourceInputs["dot1xIdleTimeout"] = args?.dot1xIdleTimeout;
             resourceInputs["egressRateLimitKbps"] = args?.egressRateLimitKbps;
             resourceInputs["egressRateLimitKbpsEnabled"] = args?.egressRateLimitKbpsEnabled;
-            resourceInputs["excludedNetworkIds"] = args?.excludedNetworkIds;
             resourceInputs["forward"] = args?.forward;
             resourceInputs["fullDuplex"] = args?.fullDuplex;
             resourceInputs["isolation"] = args?.isolation;

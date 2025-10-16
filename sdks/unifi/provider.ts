@@ -26,7 +26,7 @@ export class Provider extends pulumi.ProviderResource {
     }
 
     /**
-     * API Key for the user accessing the API. Can be specified with the `UNIFI_API_KEY` environment variable. Controller version 9.0.108 or later is required.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
      */
     declare public readonly apiKey: pulumi.Output<string | undefined>;
     /**
@@ -58,15 +58,13 @@ export class Provider extends pulumi.ProviderResource {
         opts = opts || {};
         {
             resourceInputs["allowInsecure"] = pulumi.output(args?.allowInsecure).apply(JSON.stringify);
-            resourceInputs["apiKey"] = args?.apiKey ? pulumi.secret(args.apiKey) : undefined;
+            resourceInputs["apiKey"] = args?.apiKey;
             resourceInputs["apiUrl"] = args?.apiUrl;
-            resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
+            resourceInputs["password"] = args?.password;
             resourceInputs["site"] = args?.site;
             resourceInputs["username"] = args?.username;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["apiKey", "password"] };
-        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Provider.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 
@@ -90,7 +88,7 @@ export interface ProviderArgs {
      */
     allowInsecure?: pulumi.Input<boolean>;
     /**
-     * API Key for the user accessing the API. Can be specified with the `UNIFI_API_KEY` environment variable. Controller version 9.0.108 or later is required.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
      */
     apiKey?: pulumi.Input<string>;
     /**

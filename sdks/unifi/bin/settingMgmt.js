@@ -33,49 +33,19 @@ class SettingMgmt extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState;
-            resourceInputs["advancedFeatureEnabled"] = state?.advancedFeatureEnabled;
-            resourceInputs["alertEnabled"] = state?.alertEnabled;
             resourceInputs["autoUpgrade"] = state?.autoUpgrade;
-            resourceInputs["autoUpgradeHour"] = state?.autoUpgradeHour;
-            resourceInputs["bootSound"] = state?.bootSound;
-            resourceInputs["debugToolsEnabled"] = state?.debugToolsEnabled;
-            resourceInputs["directConnectEnabled"] = state?.directConnectEnabled;
-            resourceInputs["ledEnabled"] = state?.ledEnabled;
-            resourceInputs["outdoorModeEnabled"] = state?.outdoorModeEnabled;
             resourceInputs["site"] = state?.site;
-            resourceInputs["sshAuthPasswordEnabled"] = state?.sshAuthPasswordEnabled;
-            resourceInputs["sshBindWildcard"] = state?.sshBindWildcard;
             resourceInputs["sshEnabled"] = state?.sshEnabled;
             resourceInputs["sshKeys"] = state?.sshKeys;
-            resourceInputs["sshPassword"] = state?.sshPassword;
-            resourceInputs["sshUsername"] = state?.sshUsername;
-            resourceInputs["unifiIdpEnabled"] = state?.unifiIdpEnabled;
-            resourceInputs["wifimanEnabled"] = state?.wifimanEnabled;
         }
         else {
             const args = argsOrState;
-            resourceInputs["advancedFeatureEnabled"] = args?.advancedFeatureEnabled;
-            resourceInputs["alertEnabled"] = args?.alertEnabled;
             resourceInputs["autoUpgrade"] = args?.autoUpgrade;
-            resourceInputs["autoUpgradeHour"] = args?.autoUpgradeHour;
-            resourceInputs["bootSound"] = args?.bootSound;
-            resourceInputs["debugToolsEnabled"] = args?.debugToolsEnabled;
-            resourceInputs["directConnectEnabled"] = args?.directConnectEnabled;
-            resourceInputs["ledEnabled"] = args?.ledEnabled;
-            resourceInputs["outdoorModeEnabled"] = args?.outdoorModeEnabled;
             resourceInputs["site"] = args?.site;
-            resourceInputs["sshAuthPasswordEnabled"] = args?.sshAuthPasswordEnabled;
-            resourceInputs["sshBindWildcard"] = args?.sshBindWildcard;
             resourceInputs["sshEnabled"] = args?.sshEnabled;
             resourceInputs["sshKeys"] = args?.sshKeys;
-            resourceInputs["sshPassword"] = args?.sshPassword ? pulumi.secret(args.sshPassword) : undefined;
-            resourceInputs["sshUsername"] = args?.sshUsername;
-            resourceInputs["unifiIdpEnabled"] = args?.unifiIdpEnabled;
-            resourceInputs["wifimanEnabled"] = args?.wifimanEnabled;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["sshPassword"] };
-        opts = pulumi.mergeOptions(opts, secretOpts);
         super(SettingMgmt.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }

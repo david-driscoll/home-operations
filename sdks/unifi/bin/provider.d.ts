@@ -12,7 +12,7 @@ export declare class Provider extends pulumi.ProviderResource {
      */
     static isInstance(obj: any): obj is Provider;
     /**
-     * API Key for the user accessing the API. Can be specified with the `UNIFI_API_KEY` environment variable. Controller version 9.0.108 or later is required.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
      */
     readonly apiKey: pulumi.Output<string | undefined>;
     /**
@@ -55,7 +55,7 @@ export interface ProviderArgs {
      */
     allowInsecure?: pulumi.Input<boolean>;
     /**
-     * API Key for the user accessing the API. Can be specified with the `UNIFI_API_KEY` environment variable. Controller version 9.0.108 or later is required.
+     * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
      */
     apiKey?: pulumi.Input<string>;
     /**

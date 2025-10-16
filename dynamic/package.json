@@ -1,5 +1,5 @@
 {
-  "name": "home-operations",
+  "name": "dynamic",
   "version": "1.0.0",
   "description": "",
   "homepage": "https://github.com/david-driscoll/home-operations#readme",
@@ -13,21 +13,11 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "workspaces": [
-    "components/",
-    "dynamic/",
-    "stacks/*",
-    "sdks/*"
-  ],
-  "devDependencies": {
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  },
   "dependencies": {
-    "@pulumi/unifi": "^0.41.3"
+    "jsondiffpatch": "^0.7.3"
   }
 }

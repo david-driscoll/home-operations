@@ -20,7 +20,7 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters:
-      - registry.opentofu.org/filipowm/unifi
+      - ubiquiti-community/unifi
   uptimekuma:
     source: terraform-provider
     version: 0.14.0

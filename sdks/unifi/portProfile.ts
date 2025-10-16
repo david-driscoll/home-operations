@@ -33,82 +33,51 @@ export class PortProfile extends pulumi.CustomResource {
     }
 
     /**
-     * Enable automatic negotiation of port speed and duplex settings. When enabled, this overrides manual speed and duplex settings. Recommended for most use cases. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
      */
     declare public readonly autoneg: pulumi.Output<boolean | undefined>;
     /**
-     * 802.1X port-based network access control (PNAC) mode. Valid values are:
-     *   * `force_authorized` - Port allows all traffic, no authentication required (default)
-     *   * `force_unauthorized` - Port blocks all traffic regardless of authentication
-     *   * `auto` - Standard 802.1X authentication required before port access is granted
-     *   * `mac_based` - Authentication based on client MAC address, useful for devices that don't support 802.1X
-     *   * `multi_host` - Allows multiple devices after first successful authentication, common in VoIP phone setups
-     *
-     * Use 'auto' for highest security, 'mac_based' for legacy devices, and 'multi_host' when daisy-chaining devices. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
      */
     declare public readonly dot1xCtrl: pulumi.Output<string | undefined>;
     /**
-     * The number of seconds before an inactive authenticated MAC address is removed when using MAC-based 802.1X control. Range: 0-65535 seconds. Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
      */
     declare public readonly dot1xIdleTimeout: pulumi.Output<number | undefined>;
     /**
-     * The maximum outbound bandwidth allowed on the port in kilobits per second. Range: 64-9999999 kbps. Only applied when egress_rate_limit_kbps_enabled is true.
+     * The egress rate limit, in kpbs, for the port profile. Can be between `64` and `9999999`.
      */
     declare public readonly egressRateLimitKbps: pulumi.Output<number | undefined>;
     /**
-     * Enable outbound bandwidth rate limiting on the port. When enabled, traffic will be limited to the rate specified in egress_rate_limit_kbps. Defaults to `false`.
+     * Enable egress rate limiting for the port profile. Defaults to `false`.
      */
     declare public readonly egressRateLimitKbpsEnabled: pulumi.Output<boolean | undefined>;
     /**
-     * List of network IDs to exclude when forward is set to 'customize'. This allows you to prevent specific networks from being accessible on ports using this profile.
-     */
-    declare public readonly excludedNetworkIds: pulumi.Output<string[] | undefined>;
-    /**
-     * VLAN forwarding mode for the port. Valid values are:
-     *   * `all` - Forward all VLANs (trunk port)
-     *   * `native` - Only forward untagged traffic (access port)
-     *   * `customize` - Forward selected VLANs (use with `excluded_network_ids`)
-     *   * `disabled` - Disable VLAN forwarding
-     *
-     * Examples:
-     *   * Use 'all' for uplink ports or connections to VLAN-aware devices
-     *   * Use 'native' for end-user devices or simple network connections
-     *   * Use 'customize' to create a selective trunk port (e.g., for a server needing access to specific VLANs) Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
      */
     declare public readonly forward: pulumi.Output<string | undefined>;
     /**
-     * Enable full-duplex mode when auto-negotiation is disabled. Full duplex allows simultaneous two-way communication. Defaults to `false`.
+     * Enable full duplex for the port profile. Defaults to `false`.
      */
     declare public readonly fullDuplex: pulumi.Output<boolean | undefined>;
     /**
-     * Enable port isolation. When enabled, devices connected to ports with this profile cannot communicate with each other, providing enhanced security. Defaults to `false`.
+     * Enable port isolation for the port profile. Defaults to `false`.
      */
     declare public readonly isolation: pulumi.Output<boolean | undefined>;
     /**
-     * Enable Link Layer Discovery Protocol-Media Endpoint Discovery (LLDP-MED). This allows for automatic discovery and configuration of devices like VoIP phones. Defaults to `true`.
+     * Enable LLDP-MED for the port profile. Defaults to `true`.
      */
     declare public readonly lldpmedEnabled: pulumi.Output<boolean | undefined>;
     /**
-     * Enable LLDP-MED topology change notifications. When enabled:
-     * * Network devices will be notified of topology changes
-     * * Useful for VoIP phones and other LLDP-MED capable devices
-     * * Helps maintain accurate network topology information
-     * * Facilitates faster device configuration and provisioning
+     * Enable LLDP-MED topology change notifications for the port profile.
      */
     declare public readonly lldpmedNotifyEnabled: pulumi.Output<boolean | undefined>;
     /**
-     * A descriptive name for the port profile. Examples:
-     * * 'AP-Trunk-Port' - For access point uplinks
-     * * 'VoIP-Phone-Port' - For VoIP phone connections
-     * * 'User-Access-Port' - For standard user connections
-     * * 'IoT-Device-Port' - For IoT device connections
+     * The name of the port profile.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The ID of the network to use as the native (untagged) network on ports using this profile. This is typically used for:
-     * * Access ports where devices need untagged access
-     * * Trunk ports to specify the native VLAN
-     * * Management networks for network devices
+     * The ID of network to use as the main network on the port profile.
      */
     declare public readonly nativeNetworkconfId: pulumi.Output<string | undefined>;
     /**
@@ -120,74 +89,39 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly poeMode: pulumi.Output<string | undefined>;
     /**
-     * Enable MAC address-based port security. When enabled:
-     * * Only devices with specified MAC addresses can connect
-     * * Unauthorized devices will be blocked
-     * * Provides protection against unauthorized network access
-     * * Must be used with port_security_mac_address list Defaults to `false`.
+     * Enable port security for the port profile. Defaults to `false`.
      */
     declare public readonly portSecurityEnabled: pulumi.Output<boolean | undefined>;
     /**
-     * List of allowed MAC addresses when port security is enabled. Each address should be:
-     * * In standard format (e.g., 'aa:bb:cc:dd:ee:ff')
-     * * Unique per device
-     * * Verified to belong to authorized devices
-     * Only effective when port_security_enabled is true
+     * The MAC addresses associated with the port security for the port profile.
      */
     declare public readonly portSecurityMacAddresses: pulumi.Output<string[] | undefined>;
     /**
-     * Priority queue 1 level (0-100) for Quality of Service (QoS). Used for:
-     * * Low-priority background traffic
-     * * Bulk data transfers
-     * * Non-time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 1 level for the port profile. Can be between 0 and 100.
      */
     declare public readonly priorityQueue1Level: pulumi.Output<number | undefined>;
     /**
-     * Priority queue 2 level (0-100) for Quality of Service (QoS). Used for:
-     * * Standard user traffic
-     * * Web browsing and email
-     * * General business applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 2 level for the port profile. Can be between 0 and 100.
      */
     declare public readonly priorityQueue2Level: pulumi.Output<number | undefined>;
     /**
-     * Priority queue 3 level (0-100) for Quality of Service (QoS). Used for:
-     * * High-priority traffic
-     * * Voice and video conferencing
-     * * Time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 3 level for the port profile. Can be between 0 and 100.
      */
     declare public readonly priorityQueue3Level: pulumi.Output<number | undefined>;
     /**
-     * Priority queue 4 level (0-100) for Quality of Service (QoS). Used for:
-     * * Highest priority traffic
-     * * Critical real-time applications
-     * * Emergency communications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 4 level for the port profile. Can be between 0 and 100.
      */
     declare public readonly priorityQueue4Level: pulumi.Output<number | undefined>;
     /**
-     * The name of the UniFi site where the port profile should be created. If not specified, the default site will be used.
+     * The name of the site to associate the port profile with.
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * Port speed in Mbps when auto-negotiation is disabled. Common values:
-     * * 10 - 10 Mbps (legacy devices)
-     * * 100 - 100 Mbps (Fast Ethernet)
-     * * 1000 - 1 Gbps (Gigabit Ethernet)
-     * * 2500 - 2.5 Gbps (Multi-Gigabit)
-     * * 5000 - 5 Gbps (Multi-Gigabit)
-     * * 10000 - 10 Gbps (10 Gigabit)
-     * Only used when autoneg is false
+     * The link speed to set for the port profile. Can be one of `10`, `100`, `1000`, `2500`, `5000`, `10000`, `20000`, `25000`, `40000`, `50000` or `100000`
      */
     declare public readonly speed: pulumi.Output<number | undefined>;
     /**
-     * Enable broadcast storm control. When enabled:
-     * * Limits broadcast traffic to prevent network flooding
-     * * Protects against broadcast storms
-     * * Helps maintain network stability
-     * Use with stormctrl_bcast_rate to set threshold Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
      */
     declare public readonly stormctrlBcastEnabled: pulumi.Output<boolean | undefined>;
     /**
@@ -195,19 +129,11 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormctrlBcastLevel: pulumi.Output<number | undefined>;
     /**
-     * Maximum broadcast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control broadcast traffic levels
-     * * Prevent network congestion
-     * * Balance between necessary broadcasts and network protection
-     * Only effective when `stormctrl_bcast_enabled` is true
+     * The broadcast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     declare public readonly stormctrlBcastRate: pulumi.Output<number | undefined>;
     /**
-     * Enable multicast storm control. When enabled:
-     * * Limits multicast traffic to prevent network flooding
-     * * Important for networks with multicast applications
-     * * Helps maintain quality of service
-     * Use with `stormctrl_mcast_rate` to set threshold Defaults to `false`.
+     * Enable multicast Storm Control for the port profile. Defaults to `false`.
      */
     declare public readonly stormctrlMcastEnabled: pulumi.Output<boolean | undefined>;
     /**
@@ -215,11 +141,7 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormctrlMcastLevel: pulumi.Output<number | undefined>;
     /**
-     * Maximum multicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control multicast traffic levels
-     * * Ensure bandwidth for critical multicast services
-     * * Prevent multicast traffic from overwhelming the network
-     * Only effective when stormctrl_mcast_enabled is true
+     * The multicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     declare public readonly stormctrlMcastRate: pulumi.Output<number | undefined>;
     /**
@@ -227,11 +149,7 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormctrlType: pulumi.Output<string | undefined>;
     /**
-     * Enable unknown unicast storm control. When enabled:
-     * * Limits unknown unicast traffic to prevent flooding
-     * * Protects against MAC spoofing attacks
-     * * Helps maintain network performance
-     * Use with stormctrl_ucast_rate to set threshold Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
      */
     declare public readonly stormctrlUcastEnabled: pulumi.Output<boolean | undefined>;
     /**
@@ -239,50 +157,19 @@ export class PortProfile extends pulumi.CustomResource {
      */
     declare public readonly stormctrlUcastLevel: pulumi.Output<number | undefined>;
     /**
-     * Maximum unknown unicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control unknown unicast traffic levels
-     * * Prevent network saturation from unknown destinations
-     * * Balance security with network usability
-     * Only effective when stormctrl_ucast_enabled is true
+     * The unknown unicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     declare public readonly stormctrlUcastRate: pulumi.Output<number | undefined>;
     /**
-     * Spanning Tree Protocol (STP) configuration for the port. When enabled:
-     * * Prevents network loops in switch-to-switch connections
-     * * Provides automatic failover in redundant topologies
-     * * Helps maintain network stability
-     *
-     * Best practices:
-     * * Enable on switch uplink ports
-     * * Enable on ports connecting to other switches
-     * * Can be disabled on end-device ports for faster initialization Defaults to `true`.
+     * Enable spanning tree protocol on the port profile. Defaults to `true`.
      */
     declare public readonly stpPortMode: pulumi.Output<boolean | undefined>;
     /**
-     * VLAN tagging behavior for the port. Valid values are:
-     * * `auto` - Automatically handle VLAN tags (recommended)
-     *     - Intelligently manages tagged and untagged traffic
-     *     - Best for most deployments
-     * * `block_all` - Block all VLAN tagged traffic
-     *     - Use for security-sensitive ports
-     *     - Prevents VLAN hopping attacks
-     * * `custom` - Custom VLAN configuration
-     *     - Manual control over VLAN behavior
-     *     - For specific VLAN requirements
+     * The IDs of networks to tag traffic with for the port profile.
      */
     declare public readonly taggedVlanMgmt: pulumi.Output<string | undefined>;
     /**
-     * The ID of the network to use for Voice over IP (VoIP) traffic. Used for:
-     * * Automatic VoIP VLAN configuration
-     * * Voice traffic prioritization
-     * * QoS settings for voice packets
-     *
-     * Common scenarios:
-     * * IP phone deployments with separate voice VLAN
-     * * Unified communications systems
-     * * Converged voice/data networks
-     *
-     * Works in conjunction with LLDP-MED for automatic phone provisioning.
+     * The ID of network to use as the voice network on the port profile.
      */
     declare public readonly voiceNetworkconfId: pulumi.Output<string | undefined>;
 
@@ -304,7 +191,6 @@ export class PortProfile extends pulumi.CustomResource {
             resourceInputs["dot1xIdleTimeout"] = state?.dot1xIdleTimeout;
             resourceInputs["egressRateLimitKbps"] = state?.egressRateLimitKbps;
             resourceInputs["egressRateLimitKbpsEnabled"] = state?.egressRateLimitKbpsEnabled;
-            resourceInputs["excludedNetworkIds"] = state?.excludedNetworkIds;
             resourceInputs["forward"] = state?.forward;
             resourceInputs["fullDuplex"] = state?.fullDuplex;
             resourceInputs["isolation"] = state?.isolation;
@@ -342,7 +228,6 @@ export class PortProfile extends pulumi.CustomResource {
             resourceInputs["dot1xIdleTimeout"] = args?.dot1xIdleTimeout;
             resourceInputs["egressRateLimitKbps"] = args?.egressRateLimitKbps;
             resourceInputs["egressRateLimitKbpsEnabled"] = args?.egressRateLimitKbpsEnabled;
-            resourceInputs["excludedNetworkIds"] = args?.excludedNetworkIds;
             resourceInputs["forward"] = args?.forward;
             resourceInputs["fullDuplex"] = args?.fullDuplex;
             resourceInputs["isolation"] = args?.isolation;
@@ -384,82 +269,51 @@ export class PortProfile extends pulumi.CustomResource {
  */
 export interface PortProfileState {
     /**
-     * Enable automatic negotiation of port speed and duplex settings. When enabled, this overrides manual speed and duplex settings. Recommended for most use cases. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
      */
     autoneg?: pulumi.Input<boolean>;
     /**
-     * 802.1X port-based network access control (PNAC) mode. Valid values are:
-     *   * `force_authorized` - Port allows all traffic, no authentication required (default)
-     *   * `force_unauthorized` - Port blocks all traffic regardless of authentication
-     *   * `auto` - Standard 802.1X authentication required before port access is granted
-     *   * `mac_based` - Authentication based on client MAC address, useful for devices that don't support 802.1X
-     *   * `multi_host` - Allows multiple devices after first successful authentication, common in VoIP phone setups
-     *
-     * Use 'auto' for highest security, 'mac_based' for legacy devices, and 'multi_host' when daisy-chaining devices. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
      */
     dot1xCtrl?: pulumi.Input<string>;
     /**
-     * The number of seconds before an inactive authenticated MAC address is removed when using MAC-based 802.1X control. Range: 0-65535 seconds. Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
      */
     dot1xIdleTimeout?: pulumi.Input<number>;
     /**
-     * The maximum outbound bandwidth allowed on the port in kilobits per second. Range: 64-9999999 kbps. Only applied when egress_rate_limit_kbps_enabled is true.
+     * The egress rate limit, in kpbs, for the port profile. Can be between `64` and `9999999`.
      */
     egressRateLimitKbps?: pulumi.Input<number>;
     /**
-     * Enable outbound bandwidth rate limiting on the port. When enabled, traffic will be limited to the rate specified in egress_rate_limit_kbps. Defaults to `false`.
+     * Enable egress rate limiting for the port profile. Defaults to `false`.
      */
     egressRateLimitKbpsEnabled?: pulumi.Input<boolean>;
     /**
-     * List of network IDs to exclude when forward is set to 'customize'. This allows you to prevent specific networks from being accessible on ports using this profile.
-     */
-    excludedNetworkIds?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * VLAN forwarding mode for the port. Valid values are:
-     *   * `all` - Forward all VLANs (trunk port)
-     *   * `native` - Only forward untagged traffic (access port)
-     *   * `customize` - Forward selected VLANs (use with `excluded_network_ids`)
-     *   * `disabled` - Disable VLAN forwarding
-     *
-     * Examples:
-     *   * Use 'all' for uplink ports or connections to VLAN-aware devices
-     *   * Use 'native' for end-user devices or simple network connections
-     *   * Use 'customize' to create a selective trunk port (e.g., for a server needing access to specific VLANs) Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
      */
     forward?: pulumi.Input<string>;
     /**
-     * Enable full-duplex mode when auto-negotiation is disabled. Full duplex allows simultaneous two-way communication. Defaults to `false`.
+     * Enable full duplex for the port profile. Defaults to `false`.
      */
     fullDuplex?: pulumi.Input<boolean>;
     /**
-     * Enable port isolation. When enabled, devices connected to ports with this profile cannot communicate with each other, providing enhanced security. Defaults to `false`.
+     * Enable port isolation for the port profile. Defaults to `false`.
      */
     isolation?: pulumi.Input<boolean>;
     /**
-     * Enable Link Layer Discovery Protocol-Media Endpoint Discovery (LLDP-MED). This allows for automatic discovery and configuration of devices like VoIP phones. Defaults to `true`.
+     * Enable LLDP-MED for the port profile. Defaults to `true`.
      */
     lldpmedEnabled?: pulumi.Input<boolean>;
     /**
-     * Enable LLDP-MED topology change notifications. When enabled:
-     * * Network devices will be notified of topology changes
-     * * Useful for VoIP phones and other LLDP-MED capable devices
-     * * Helps maintain accurate network topology information
-     * * Facilitates faster device configuration and provisioning
+     * Enable LLDP-MED topology change notifications for the port profile.
      */
     lldpmedNotifyEnabled?: pulumi.Input<boolean>;
     /**
-     * A descriptive name for the port profile. Examples:
-     * * 'AP-Trunk-Port' - For access point uplinks
-     * * 'VoIP-Phone-Port' - For VoIP phone connections
-     * * 'User-Access-Port' - For standard user connections
-     * * 'IoT-Device-Port' - For IoT device connections
+     * The name of the port profile.
      */
     name?: pulumi.Input<string>;
     /**
-     * The ID of the network to use as the native (untagged) network on ports using this profile. This is typically used for:
-     * * Access ports where devices need untagged access
-     * * Trunk ports to specify the native VLAN
-     * * Management networks for network devices
+     * The ID of network to use as the main network on the port profile.
      */
     nativeNetworkconfId?: pulumi.Input<string>;
     /**
@@ -471,74 +325,39 @@ export interface PortProfileState {
      */
     poeMode?: pulumi.Input<string>;
     /**
-     * Enable MAC address-based port security. When enabled:
-     * * Only devices with specified MAC addresses can connect
-     * * Unauthorized devices will be blocked
-     * * Provides protection against unauthorized network access
-     * * Must be used with port_security_mac_address list Defaults to `false`.
+     * Enable port security for the port profile. Defaults to `false`.
      */
     portSecurityEnabled?: pulumi.Input<boolean>;
     /**
-     * List of allowed MAC addresses when port security is enabled. Each address should be:
-     * * In standard format (e.g., 'aa:bb:cc:dd:ee:ff')
-     * * Unique per device
-     * * Verified to belong to authorized devices
-     * Only effective when port_security_enabled is true
+     * The MAC addresses associated with the port security for the port profile.
      */
     portSecurityMacAddresses?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Priority queue 1 level (0-100) for Quality of Service (QoS). Used for:
-     * * Low-priority background traffic
-     * * Bulk data transfers
-     * * Non-time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 1 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue1Level?: pulumi.Input<number>;
     /**
-     * Priority queue 2 level (0-100) for Quality of Service (QoS). Used for:
-     * * Standard user traffic
-     * * Web browsing and email
-     * * General business applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 2 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue2Level?: pulumi.Input<number>;
     /**
-     * Priority queue 3 level (0-100) for Quality of Service (QoS). Used for:
-     * * High-priority traffic
-     * * Voice and video conferencing
-     * * Time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 3 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue3Level?: pulumi.Input<number>;
     /**
-     * Priority queue 4 level (0-100) for Quality of Service (QoS). Used for:
-     * * Highest priority traffic
-     * * Critical real-time applications
-     * * Emergency communications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 4 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue4Level?: pulumi.Input<number>;
     /**
-     * The name of the UniFi site where the port profile should be created. If not specified, the default site will be used.
+     * The name of the site to associate the port profile with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Port speed in Mbps when auto-negotiation is disabled. Common values:
-     * * 10 - 10 Mbps (legacy devices)
-     * * 100 - 100 Mbps (Fast Ethernet)
-     * * 1000 - 1 Gbps (Gigabit Ethernet)
-     * * 2500 - 2.5 Gbps (Multi-Gigabit)
-     * * 5000 - 5 Gbps (Multi-Gigabit)
-     * * 10000 - 10 Gbps (10 Gigabit)
-     * Only used when autoneg is false
+     * The link speed to set for the port profile. Can be one of `10`, `100`, `1000`, `2500`, `5000`, `10000`, `20000`, `25000`, `40000`, `50000` or `100000`
      */
     speed?: pulumi.Input<number>;
     /**
-     * Enable broadcast storm control. When enabled:
-     * * Limits broadcast traffic to prevent network flooding
-     * * Protects against broadcast storms
-     * * Helps maintain network stability
-     * Use with stormctrl_bcast_rate to set threshold Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlBcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -546,19 +365,11 @@ export interface PortProfileState {
      */
     stormctrlBcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum broadcast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control broadcast traffic levels
-     * * Prevent network congestion
-     * * Balance between necessary broadcasts and network protection
-     * Only effective when `stormctrl_bcast_enabled` is true
+     * The broadcast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlBcastRate?: pulumi.Input<number>;
     /**
-     * Enable multicast storm control. When enabled:
-     * * Limits multicast traffic to prevent network flooding
-     * * Important for networks with multicast applications
-     * * Helps maintain quality of service
-     * Use with `stormctrl_mcast_rate` to set threshold Defaults to `false`.
+     * Enable multicast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlMcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -566,11 +377,7 @@ export interface PortProfileState {
      */
     stormctrlMcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum multicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control multicast traffic levels
-     * * Ensure bandwidth for critical multicast services
-     * * Prevent multicast traffic from overwhelming the network
-     * Only effective when stormctrl_mcast_enabled is true
+     * The multicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlMcastRate?: pulumi.Input<number>;
     /**
@@ -578,11 +385,7 @@ export interface PortProfileState {
      */
     stormctrlType?: pulumi.Input<string>;
     /**
-     * Enable unknown unicast storm control. When enabled:
-     * * Limits unknown unicast traffic to prevent flooding
-     * * Protects against MAC spoofing attacks
-     * * Helps maintain network performance
-     * Use with stormctrl_ucast_rate to set threshold Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlUcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -590,50 +393,19 @@ export interface PortProfileState {
      */
     stormctrlUcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum unknown unicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control unknown unicast traffic levels
-     * * Prevent network saturation from unknown destinations
-     * * Balance security with network usability
-     * Only effective when stormctrl_ucast_enabled is true
+     * The unknown unicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlUcastRate?: pulumi.Input<number>;
     /**
-     * Spanning Tree Protocol (STP) configuration for the port. When enabled:
-     * * Prevents network loops in switch-to-switch connections
-     * * Provides automatic failover in redundant topologies
-     * * Helps maintain network stability
-     *
-     * Best practices:
-     * * Enable on switch uplink ports
-     * * Enable on ports connecting to other switches
-     * * Can be disabled on end-device ports for faster initialization Defaults to `true`.
+     * Enable spanning tree protocol on the port profile. Defaults to `true`.
      */
     stpPortMode?: pulumi.Input<boolean>;
     /**
-     * VLAN tagging behavior for the port. Valid values are:
-     * * `auto` - Automatically handle VLAN tags (recommended)
-     *     - Intelligently manages tagged and untagged traffic
-     *     - Best for most deployments
-     * * `block_all` - Block all VLAN tagged traffic
-     *     - Use for security-sensitive ports
-     *     - Prevents VLAN hopping attacks
-     * * `custom` - Custom VLAN configuration
-     *     - Manual control over VLAN behavior
-     *     - For specific VLAN requirements
+     * The IDs of networks to tag traffic with for the port profile.
      */
     taggedVlanMgmt?: pulumi.Input<string>;
     /**
-     * The ID of the network to use for Voice over IP (VoIP) traffic. Used for:
-     * * Automatic VoIP VLAN configuration
-     * * Voice traffic prioritization
-     * * QoS settings for voice packets
-     *
-     * Common scenarios:
-     * * IP phone deployments with separate voice VLAN
-     * * Unified communications systems
-     * * Converged voice/data networks
-     *
-     * Works in conjunction with LLDP-MED for automatic phone provisioning.
+     * The ID of network to use as the voice network on the port profile.
      */
     voiceNetworkconfId?: pulumi.Input<string>;
 }
@@ -643,82 +415,51 @@ export interface PortProfileState {
  */
 export interface PortProfileArgs {
     /**
-     * Enable automatic negotiation of port speed and duplex settings. When enabled, this overrides manual speed and duplex settings. Recommended for most use cases. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
      */
     autoneg?: pulumi.Input<boolean>;
     /**
-     * 802.1X port-based network access control (PNAC) mode. Valid values are:
-     *   * `force_authorized` - Port allows all traffic, no authentication required (default)
-     *   * `force_unauthorized` - Port blocks all traffic regardless of authentication
-     *   * `auto` - Standard 802.1X authentication required before port access is granted
-     *   * `mac_based` - Authentication based on client MAC address, useful for devices that don't support 802.1X
-     *   * `multi_host` - Allows multiple devices after first successful authentication, common in VoIP phone setups
-     *
-     * Use 'auto' for highest security, 'mac_based' for legacy devices, and 'multi_host' when daisy-chaining devices. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
      */
     dot1xCtrl?: pulumi.Input<string>;
     /**
-     * The number of seconds before an inactive authenticated MAC address is removed when using MAC-based 802.1X control. Range: 0-65535 seconds. Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
      */
     dot1xIdleTimeout?: pulumi.Input<number>;
     /**
-     * The maximum outbound bandwidth allowed on the port in kilobits per second. Range: 64-9999999 kbps. Only applied when egress_rate_limit_kbps_enabled is true.
+     * The egress rate limit, in kpbs, for the port profile. Can be between `64` and `9999999`.
      */
     egressRateLimitKbps?: pulumi.Input<number>;
     /**
-     * Enable outbound bandwidth rate limiting on the port. When enabled, traffic will be limited to the rate specified in egress_rate_limit_kbps. Defaults to `false`.
+     * Enable egress rate limiting for the port profile. Defaults to `false`.
      */
     egressRateLimitKbpsEnabled?: pulumi.Input<boolean>;
     /**
-     * List of network IDs to exclude when forward is set to 'customize'. This allows you to prevent specific networks from being accessible on ports using this profile.
-     */
-    excludedNetworkIds?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * VLAN forwarding mode for the port. Valid values are:
-     *   * `all` - Forward all VLANs (trunk port)
-     *   * `native` - Only forward untagged traffic (access port)
-     *   * `customize` - Forward selected VLANs (use with `excluded_network_ids`)
-     *   * `disabled` - Disable VLAN forwarding
-     *
-     * Examples:
-     *   * Use 'all' for uplink ports or connections to VLAN-aware devices
-     *   * Use 'native' for end-user devices or simple network connections
-     *   * Use 'customize' to create a selective trunk port (e.g., for a server needing access to specific VLANs) Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
      */
     forward?: pulumi.Input<string>;
     /**
-     * Enable full-duplex mode when auto-negotiation is disabled. Full duplex allows simultaneous two-way communication. Defaults to `false`.
+     * Enable full duplex for the port profile. Defaults to `false`.
      */
     fullDuplex?: pulumi.Input<boolean>;
     /**
-     * Enable port isolation. When enabled, devices connected to ports with this profile cannot communicate with each other, providing enhanced security. Defaults to `false`.
+     * Enable port isolation for the port profile. Defaults to `false`.
      */
     isolation?: pulumi.Input<boolean>;
     /**
-     * Enable Link Layer Discovery Protocol-Media Endpoint Discovery (LLDP-MED). This allows for automatic discovery and configuration of devices like VoIP phones. Defaults to `true`.
+     * Enable LLDP-MED for the port profile. Defaults to `true`.
      */
     lldpmedEnabled?: pulumi.Input<boolean>;
     /**
-     * Enable LLDP-MED topology change notifications. When enabled:
-     * * Network devices will be notified of topology changes
-     * * Useful for VoIP phones and other LLDP-MED capable devices
-     * * Helps maintain accurate network topology information
-     * * Facilitates faster device configuration and provisioning
+     * Enable LLDP-MED topology change notifications for the port profile.
      */
     lldpmedNotifyEnabled?: pulumi.Input<boolean>;
     /**
-     * A descriptive name for the port profile. Examples:
-     * * 'AP-Trunk-Port' - For access point uplinks
-     * * 'VoIP-Phone-Port' - For VoIP phone connections
-     * * 'User-Access-Port' - For standard user connections
-     * * 'IoT-Device-Port' - For IoT device connections
+     * The name of the port profile.
      */
     name?: pulumi.Input<string>;
     /**
-     * The ID of the network to use as the native (untagged) network on ports using this profile. This is typically used for:
-     * * Access ports where devices need untagged access
-     * * Trunk ports to specify the native VLAN
-     * * Management networks for network devices
+     * The ID of network to use as the main network on the port profile.
      */
     nativeNetworkconfId?: pulumi.Input<string>;
     /**
@@ -730,74 +471,39 @@ export interface PortProfileArgs {
      */
     poeMode?: pulumi.Input<string>;
     /**
-     * Enable MAC address-based port security. When enabled:
-     * * Only devices with specified MAC addresses can connect
-     * * Unauthorized devices will be blocked
-     * * Provides protection against unauthorized network access
-     * * Must be used with port_security_mac_address list Defaults to `false`.
+     * Enable port security for the port profile. Defaults to `false`.
      */
     portSecurityEnabled?: pulumi.Input<boolean>;
     /**
-     * List of allowed MAC addresses when port security is enabled. Each address should be:
-     * * In standard format (e.g., 'aa:bb:cc:dd:ee:ff')
-     * * Unique per device
-     * * Verified to belong to authorized devices
-     * Only effective when port_security_enabled is true
+     * The MAC addresses associated with the port security for the port profile.
      */
     portSecurityMacAddresses?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Priority queue 1 level (0-100) for Quality of Service (QoS). Used for:
-     * * Low-priority background traffic
-     * * Bulk data transfers
-     * * Non-time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 1 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue1Level?: pulumi.Input<number>;
     /**
-     * Priority queue 2 level (0-100) for Quality of Service (QoS). Used for:
-     * * Standard user traffic
-     * * Web browsing and email
-     * * General business applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 2 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue2Level?: pulumi.Input<number>;
     /**
-     * Priority queue 3 level (0-100) for Quality of Service (QoS). Used for:
-     * * High-priority traffic
-     * * Voice and video conferencing
-     * * Time-sensitive applications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 3 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue3Level?: pulumi.Input<number>;
     /**
-     * Priority queue 4 level (0-100) for Quality of Service (QoS). Used for:
-     * * Highest priority traffic
-     * * Critical real-time applications
-     * * Emergency communications
-     * Higher values give more bandwidth to this queue
+     * The priority queue 4 level for the port profile. Can be between 0 and 100.
      */
     priorityQueue4Level?: pulumi.Input<number>;
     /**
-     * The name of the UniFi site where the port profile should be created. If not specified, the default site will be used.
+     * The name of the site to associate the port profile with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Port speed in Mbps when auto-negotiation is disabled. Common values:
-     * * 10 - 10 Mbps (legacy devices)
-     * * 100 - 100 Mbps (Fast Ethernet)
-     * * 1000 - 1 Gbps (Gigabit Ethernet)
-     * * 2500 - 2.5 Gbps (Multi-Gigabit)
-     * * 5000 - 5 Gbps (Multi-Gigabit)
-     * * 10000 - 10 Gbps (10 Gigabit)
-     * Only used when autoneg is false
+     * The link speed to set for the port profile. Can be one of `10`, `100`, `1000`, `2500`, `5000`, `10000`, `20000`, `25000`, `40000`, `50000` or `100000`
      */
     speed?: pulumi.Input<number>;
     /**
-     * Enable broadcast storm control. When enabled:
-     * * Limits broadcast traffic to prevent network flooding
-     * * Protects against broadcast storms
-     * * Helps maintain network stability
-     * Use with stormctrl_bcast_rate to set threshold Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlBcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -805,19 +511,11 @@ export interface PortProfileArgs {
      */
     stormctrlBcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum broadcast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control broadcast traffic levels
-     * * Prevent network congestion
-     * * Balance between necessary broadcasts and network protection
-     * Only effective when `stormctrl_bcast_enabled` is true
+     * The broadcast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlBcastRate?: pulumi.Input<number>;
     /**
-     * Enable multicast storm control. When enabled:
-     * * Limits multicast traffic to prevent network flooding
-     * * Important for networks with multicast applications
-     * * Helps maintain quality of service
-     * Use with `stormctrl_mcast_rate` to set threshold Defaults to `false`.
+     * Enable multicast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlMcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -825,11 +523,7 @@ export interface PortProfileArgs {
      */
     stormctrlMcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum multicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control multicast traffic levels
-     * * Ensure bandwidth for critical multicast services
-     * * Prevent multicast traffic from overwhelming the network
-     * Only effective when stormctrl_mcast_enabled is true
+     * The multicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlMcastRate?: pulumi.Input<number>;
     /**
@@ -837,11 +531,7 @@ export interface PortProfileArgs {
      */
     stormctrlType?: pulumi.Input<string>;
     /**
-     * Enable unknown unicast storm control. When enabled:
-     * * Limits unknown unicast traffic to prevent flooding
-     * * Protects against MAC spoofing attacks
-     * * Helps maintain network performance
-     * Use with stormctrl_ucast_rate to set threshold Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
      */
     stormctrlUcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -849,50 +539,19 @@ export interface PortProfileArgs {
      */
     stormctrlUcastLevel?: pulumi.Input<number>;
     /**
-     * Maximum unknown unicast traffic rate in packets per second (0 - 14880000). Used to:
-     * * Control unknown unicast traffic levels
-     * * Prevent network saturation from unknown destinations
-     * * Balance security with network usability
-     * Only effective when stormctrl_ucast_enabled is true
+     * The unknown unicast Storm Control rate for the port profile. Can be between 0 and 14880000.
      */
     stormctrlUcastRate?: pulumi.Input<number>;
     /**
-     * Spanning Tree Protocol (STP) configuration for the port. When enabled:
-     * * Prevents network loops in switch-to-switch connections
-     * * Provides automatic failover in redundant topologies
-     * * Helps maintain network stability
-     *
-     * Best practices:
-     * * Enable on switch uplink ports
-     * * Enable on ports connecting to other switches
-     * * Can be disabled on end-device ports for faster initialization Defaults to `true`.
+     * Enable spanning tree protocol on the port profile. Defaults to `true`.
      */
     stpPortMode?: pulumi.Input<boolean>;
     /**
-     * VLAN tagging behavior for the port. Valid values are:
-     * * `auto` - Automatically handle VLAN tags (recommended)
-     *     - Intelligently manages tagged and untagged traffic
-     *     - Best for most deployments
-     * * `block_all` - Block all VLAN tagged traffic
-     *     - Use for security-sensitive ports
-     *     - Prevents VLAN hopping attacks
-     * * `custom` - Custom VLAN configuration
-     *     - Manual control over VLAN behavior
-     *     - For specific VLAN requirements
+     * The IDs of networks to tag traffic with for the port profile.
      */
     taggedVlanMgmt?: pulumi.Input<string>;
     /**
-     * The ID of the network to use for Voice over IP (VoIP) traffic. Used for:
-     * * Automatic VoIP VLAN configuration
-     * * Voice traffic prioritization
-     * * QoS settings for voice packets
-     *
-     * Common scenarios:
-     * * IP phone deployments with separate voice VLAN
-     * * Unified communications systems
-     * * Converged voice/data networks
-     *
-     * Works in conjunction with LLDP-MED for automatic phone provisioning.
+     * The ID of network to use as the voice network on the port profile.
      */
     voiceNetworkconfId?: pulumi.Input<string>;
 }

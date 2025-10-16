@@ -16,25 +16,19 @@ export declare class FirewallGroup extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is FirewallGroup;
     /**
-     * List of members in the group. The format depends on the group type:
-     *   * For address-group: IPv4 addresses or CIDR notation (e.g., ['192.168.1.10', '10.0.0.0/8'])
-     *   * For port-group: Port numbers or ranges (e.g., ['80', '443', '8000-8080'])
-     *   * For ipv6-address-group: IPv6 addresses or CIDR notation
+     * The members of the firewall group.
      */
     readonly members: pulumi.Output<string[]>;
     /**
-     * A friendly name for the firewall group to help identify its purpose (e.g., 'Trusted IPs' or 'Web Server Ports'). Must be unique within the site.
+     * The name of the firewall group.
      */
     readonly name: pulumi.Output<string>;
     /**
-     * The name of the UniFi site where the firewall group should be created. If not specified, the default site will be used.
+     * The name of the site to associate the firewall group with.
      */
     readonly site: pulumi.Output<string>;
     /**
-     * The type of firewall group. Valid values are:
-     *   * `address-group` - Group of IPv4 addresses and/or networks (e.g., '192.168.1.10', '10.0.0.0/8')
-     *   * `port-group` - Group of ports or port ranges (e.g., '80', '443', '8000-8080')
-     *   * `ipv6-address-group` - Group of IPv6 addresses and/or networks
+     * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
     readonly type: pulumi.Output<string>;
     /**
@@ -51,25 +45,19 @@ export declare class FirewallGroup extends pulumi.CustomResource {
  */
 export interface FirewallGroupState {
     /**
-     * List of members in the group. The format depends on the group type:
-     *   * For address-group: IPv4 addresses or CIDR notation (e.g., ['192.168.1.10', '10.0.0.0/8'])
-     *   * For port-group: Port numbers or ranges (e.g., ['80', '443', '8000-8080'])
-     *   * For ipv6-address-group: IPv6 addresses or CIDR notation
+     * The members of the firewall group.
      */
     members?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * A friendly name for the firewall group to help identify its purpose (e.g., 'Trusted IPs' or 'Web Server Ports'). Must be unique within the site.
+     * The name of the firewall group.
      */
     name?: pulumi.Input<string>;
     /**
-     * The name of the UniFi site where the firewall group should be created. If not specified, the default site will be used.
+     * The name of the site to associate the firewall group with.
      */
     site?: pulumi.Input<string>;
     /**
-     * The type of firewall group. Valid values are:
-     *   * `address-group` - Group of IPv4 addresses and/or networks (e.g., '192.168.1.10', '10.0.0.0/8')
-     *   * `port-group` - Group of ports or port ranges (e.g., '80', '443', '8000-8080')
-     *   * `ipv6-address-group` - Group of IPv6 addresses and/or networks
+     * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
     type?: pulumi.Input<string>;
 }
@@ -78,25 +66,19 @@ export interface FirewallGroupState {
  */
 export interface FirewallGroupArgs {
     /**
-     * List of members in the group. The format depends on the group type:
-     *   * For address-group: IPv4 addresses or CIDR notation (e.g., ['192.168.1.10', '10.0.0.0/8'])
-     *   * For port-group: Port numbers or ranges (e.g., ['80', '443', '8000-8080'])
-     *   * For ipv6-address-group: IPv6 addresses or CIDR notation
+     * The members of the firewall group.
      */
     members: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * A friendly name for the firewall group to help identify its purpose (e.g., 'Trusted IPs' or 'Web Server Ports'). Must be unique within the site.
+     * The name of the firewall group.
      */
     name?: pulumi.Input<string>;
     /**
-     * The name of the UniFi site where the firewall group should be created. If not specified, the default site will be used.
+     * The name of the site to associate the firewall group with.
      */
     site?: pulumi.Input<string>;
     /**
-     * The type of firewall group. Valid values are:
-     *   * `address-group` - Group of IPv4 addresses and/or networks (e.g., '192.168.1.10', '10.0.0.0/8')
-     *   * `port-group` - Group of ports or port ranges (e.g., '80', '443', '8000-8080')
-     *   * `ipv6-address-group` - Group of IPv6 addresses and/or networks
+     * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
     type: pulumi.Input<string>;
 }

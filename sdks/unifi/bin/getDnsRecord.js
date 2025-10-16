@@ -10,8 +10,13 @@ function getDnsRecord(args, opts) {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "record": args.record,
+        "port": args.port,
+        "priority": args.priority,
+        "recordType": args.recordType,
         "site": args.site,
+        "ttl": args.ttl,
+        "value": args.value,
+        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 exports.getDnsRecord = getDnsRecord;
@@ -20,8 +25,13 @@ function getDnsRecordOutput(args, opts) {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "record": args.record,
+        "port": args.port,
+        "priority": args.priority,
+        "recordType": args.recordType,
         "site": args.site,
+        "ttl": args.ttl,
+        "value": args.value,
+        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 exports.getDnsRecordOutput = getDnsRecordOutput;

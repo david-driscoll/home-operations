@@ -35,16 +35,6 @@ export type FirewallRule = import("./firewallRule").FirewallRule;
 export const FirewallRule: typeof import("./firewallRule").FirewallRule = null as any;
 utilities.lazyLoad(exports, ["FirewallRule"], () => require("./firewallRule"));
 
-export { FirewallZoneArgs, FirewallZoneState } from "./firewallZone";
-export type FirewallZone = import("./firewallZone").FirewallZone;
-export const FirewallZone: typeof import("./firewallZone").FirewallZone = null as any;
-utilities.lazyLoad(exports, ["FirewallZone"], () => require("./firewallZone"));
-
-export { FirewallZonePolicyArgs, FirewallZonePolicyState } from "./firewallZonePolicy";
-export type FirewallZonePolicy = import("./firewallZonePolicy").FirewallZonePolicy;
-export const FirewallZonePolicy: typeof import("./firewallZonePolicy").FirewallZonePolicy = null as any;
-utilities.lazyLoad(exports, ["FirewallZonePolicy"], () => require("./firewallZonePolicy"));
-
 export { GetAccountArgs, GetAccountResult, GetAccountOutputArgs } from "./getAccount";
 export const getAccount: typeof import("./getAccount").getAccount = null as any;
 export const getAccountOutput: typeof import("./getAccount").getAccountOutput = null as any;
@@ -59,16 +49,6 @@ export { GetDnsRecordArgs, GetDnsRecordResult, GetDnsRecordOutputArgs } from "./
 export const getDnsRecord: typeof import("./getDnsRecord").getDnsRecord = null as any;
 export const getDnsRecordOutput: typeof import("./getDnsRecord").getDnsRecordOutput = null as any;
 utilities.lazyLoad(exports, ["getDnsRecord","getDnsRecordOutput"], () => require("./getDnsRecord"));
-
-export { GetDnsRecordsArgs, GetDnsRecordsResult, GetDnsRecordsOutputArgs } from "./getDnsRecords";
-export const getDnsRecords: typeof import("./getDnsRecords").getDnsRecords = null as any;
-export const getDnsRecordsOutput: typeof import("./getDnsRecords").getDnsRecordsOutput = null as any;
-utilities.lazyLoad(exports, ["getDnsRecords","getDnsRecordsOutput"], () => require("./getDnsRecords"));
-
-export { GetFirewallZoneArgs, GetFirewallZoneResult, GetFirewallZoneOutputArgs } from "./getFirewallZone";
-export const getFirewallZone: typeof import("./getFirewallZone").getFirewallZone = null as any;
-export const getFirewallZoneOutput: typeof import("./getFirewallZone").getFirewallZoneOutput = null as any;
-utilities.lazyLoad(exports, ["getFirewallZone","getFirewallZoneOutput"], () => require("./getFirewallZone"));
 
 export { GetNetworkArgs, GetNetworkResult, GetNetworkOutputArgs } from "./getNetwork";
 export const getNetwork: typeof import("./getNetwork").getNetwork = null as any;
@@ -110,11 +90,6 @@ export type PortProfile = import("./portProfile").PortProfile;
 export const PortProfile: typeof import("./portProfile").PortProfile = null as any;
 utilities.lazyLoad(exports, ["PortProfile"], () => require("./portProfile"));
 
-export { PortalFileArgs, PortalFileState } from "./portalFile";
-export type PortalFile = import("./portalFile").PortalFile;
-export const PortalFile: typeof import("./portalFile").PortalFile = null as any;
-utilities.lazyLoad(exports, ["PortalFile"], () => require("./portalFile"));
-
 export * from "./provider";
 import { Provider } from "./provider";
 
@@ -123,90 +98,20 @@ export type RadiusProfile = import("./radiusProfile").RadiusProfile;
 export const RadiusProfile: typeof import("./radiusProfile").RadiusProfile = null as any;
 utilities.lazyLoad(exports, ["RadiusProfile"], () => require("./radiusProfile"));
 
-export { SettingAutoSpeedtestArgs, SettingAutoSpeedtestState } from "./settingAutoSpeedtest";
-export type SettingAutoSpeedtest = import("./settingAutoSpeedtest").SettingAutoSpeedtest;
-export const SettingAutoSpeedtest: typeof import("./settingAutoSpeedtest").SettingAutoSpeedtest = null as any;
-utilities.lazyLoad(exports, ["SettingAutoSpeedtest"], () => require("./settingAutoSpeedtest"));
-
-export { SettingCountryArgs, SettingCountryState } from "./settingCountry";
-export type SettingCountry = import("./settingCountry").SettingCountry;
-export const SettingCountry: typeof import("./settingCountry").SettingCountry = null as any;
-utilities.lazyLoad(exports, ["SettingCountry"], () => require("./settingCountry"));
-
-export { SettingDpiArgs, SettingDpiState } from "./settingDpi";
-export type SettingDpi = import("./settingDpi").SettingDpi;
-export const SettingDpi: typeof import("./settingDpi").SettingDpi = null as any;
-utilities.lazyLoad(exports, ["SettingDpi"], () => require("./settingDpi"));
-
-export { SettingGuestAccessArgs, SettingGuestAccessState } from "./settingGuestAccess";
-export type SettingGuestAccess = import("./settingGuestAccess").SettingGuestAccess;
-export const SettingGuestAccess: typeof import("./settingGuestAccess").SettingGuestAccess = null as any;
-utilities.lazyLoad(exports, ["SettingGuestAccess"], () => require("./settingGuestAccess"));
-
-export { SettingIpsArgs, SettingIpsState } from "./settingIps";
-export type SettingIps = import("./settingIps").SettingIps;
-export const SettingIps: typeof import("./settingIps").SettingIps = null as any;
-utilities.lazyLoad(exports, ["SettingIps"], () => require("./settingIps"));
-
-export { SettingLcdMonitorArgs, SettingLcdMonitorState } from "./settingLcdMonitor";
-export type SettingLcdMonitor = import("./settingLcdMonitor").SettingLcdMonitor;
-export const SettingLcdMonitor: typeof import("./settingLcdMonitor").SettingLcdMonitor = null as any;
-utilities.lazyLoad(exports, ["SettingLcdMonitor"], () => require("./settingLcdMonitor"));
-
-export { SettingLocaleArgs, SettingLocaleState } from "./settingLocale";
-export type SettingLocale = import("./settingLocale").SettingLocale;
-export const SettingLocale: typeof import("./settingLocale").SettingLocale = null as any;
-utilities.lazyLoad(exports, ["SettingLocale"], () => require("./settingLocale"));
-
-export { SettingMagicSiteToSiteVpnArgs, SettingMagicSiteToSiteVpnState } from "./settingMagicSiteToSiteVpn";
-export type SettingMagicSiteToSiteVpn = import("./settingMagicSiteToSiteVpn").SettingMagicSiteToSiteVpn;
-export const SettingMagicSiteToSiteVpn: typeof import("./settingMagicSiteToSiteVpn").SettingMagicSiteToSiteVpn = null as any;
-utilities.lazyLoad(exports, ["SettingMagicSiteToSiteVpn"], () => require("./settingMagicSiteToSiteVpn"));
-
 export { SettingMgmtArgs, SettingMgmtState } from "./settingMgmt";
 export type SettingMgmt = import("./settingMgmt").SettingMgmt;
 export const SettingMgmt: typeof import("./settingMgmt").SettingMgmt = null as any;
 utilities.lazyLoad(exports, ["SettingMgmt"], () => require("./settingMgmt"));
-
-export { SettingNetworkOptimizationArgs, SettingNetworkOptimizationState } from "./settingNetworkOptimization";
-export type SettingNetworkOptimization = import("./settingNetworkOptimization").SettingNetworkOptimization;
-export const SettingNetworkOptimization: typeof import("./settingNetworkOptimization").SettingNetworkOptimization = null as any;
-utilities.lazyLoad(exports, ["SettingNetworkOptimization"], () => require("./settingNetworkOptimization"));
-
-export { SettingNtpArgs, SettingNtpState } from "./settingNtp";
-export type SettingNtp = import("./settingNtp").SettingNtp;
-export const SettingNtp: typeof import("./settingNtp").SettingNtp = null as any;
-utilities.lazyLoad(exports, ["SettingNtp"], () => require("./settingNtp"));
 
 export { SettingRadiusArgs, SettingRadiusState } from "./settingRadius";
 export type SettingRadius = import("./settingRadius").SettingRadius;
 export const SettingRadius: typeof import("./settingRadius").SettingRadius = null as any;
 utilities.lazyLoad(exports, ["SettingRadius"], () => require("./settingRadius"));
 
-export { SettingRsyslogdArgs, SettingRsyslogdState } from "./settingRsyslogd";
-export type SettingRsyslogd = import("./settingRsyslogd").SettingRsyslogd;
-export const SettingRsyslogd: typeof import("./settingRsyslogd").SettingRsyslogd = null as any;
-utilities.lazyLoad(exports, ["SettingRsyslogd"], () => require("./settingRsyslogd"));
-
-export { SettingSslInspectionArgs, SettingSslInspectionState } from "./settingSslInspection";
-export type SettingSslInspection = import("./settingSslInspection").SettingSslInspection;
-export const SettingSslInspection: typeof import("./settingSslInspection").SettingSslInspection = null as any;
-utilities.lazyLoad(exports, ["SettingSslInspection"], () => require("./settingSslInspection"));
-
-export { SettingTeleportArgs, SettingTeleportState } from "./settingTeleport";
-export type SettingTeleport = import("./settingTeleport").SettingTeleport;
-export const SettingTeleport: typeof import("./settingTeleport").SettingTeleport = null as any;
-utilities.lazyLoad(exports, ["SettingTeleport"], () => require("./settingTeleport"));
-
 export { SettingUsgArgs, SettingUsgState } from "./settingUsg";
 export type SettingUsg = import("./settingUsg").SettingUsg;
 export const SettingUsg: typeof import("./settingUsg").SettingUsg = null as any;
 utilities.lazyLoad(exports, ["SettingUsg"], () => require("./settingUsg"));
-
-export { SettingUswArgs, SettingUswState } from "./settingUsw";
-export type SettingUsw = import("./settingUsw").SettingUsw;
-export const SettingUsw: typeof import("./settingUsw").SettingUsw = null as any;
-utilities.lazyLoad(exports, ["SettingUsw"], () => require("./settingUsw"));
 
 export { SiteArgs, SiteState } from "./site";
 export type Site = import("./site").Site;
@@ -259,54 +164,20 @@ const _module = {
                 return new FirewallGroup(name, <any>undefined, { urn })
             case "unifi:index/firewallRule:FirewallRule":
                 return new FirewallRule(name, <any>undefined, { urn })
-            case "unifi:index/firewallZone:FirewallZone":
-                return new FirewallZone(name, <any>undefined, { urn })
-            case "unifi:index/firewallZonePolicy:FirewallZonePolicy":
-                return new FirewallZonePolicy(name, <any>undefined, { urn })
             case "unifi:index/network:Network":
                 return new Network(name, <any>undefined, { urn })
             case "unifi:index/portForward:PortForward":
                 return new PortForward(name, <any>undefined, { urn })
             case "unifi:index/portProfile:PortProfile":
                 return new PortProfile(name, <any>undefined, { urn })
-            case "unifi:index/portalFile:PortalFile":
-                return new PortalFile(name, <any>undefined, { urn })
             case "unifi:index/radiusProfile:RadiusProfile":
                 return new RadiusProfile(name, <any>undefined, { urn })
-            case "unifi:index/settingAutoSpeedtest:SettingAutoSpeedtest":
-                return new SettingAutoSpeedtest(name, <any>undefined, { urn })
-            case "unifi:index/settingCountry:SettingCountry":
-                return new SettingCountry(name, <any>undefined, { urn })
-            case "unifi:index/settingDpi:SettingDpi":
-                return new SettingDpi(name, <any>undefined, { urn })
-            case "unifi:index/settingGuestAccess:SettingGuestAccess":
-                return new SettingGuestAccess(name, <any>undefined, { urn })
-            case "unifi:index/settingIps:SettingIps":
-                return new SettingIps(name, <any>undefined, { urn })
-            case "unifi:index/settingLcdMonitor:SettingLcdMonitor":
-                return new SettingLcdMonitor(name, <any>undefined, { urn })
-            case "unifi:index/settingLocale:SettingLocale":
-                return new SettingLocale(name, <any>undefined, { urn })
-            case "unifi:index/settingMagicSiteToSiteVpn:SettingMagicSiteToSiteVpn":
-                return new SettingMagicSiteToSiteVpn(name, <any>undefined, { urn })
             case "unifi:index/settingMgmt:SettingMgmt":
                 return new SettingMgmt(name, <any>undefined, { urn })
-            case "unifi:index/settingNetworkOptimization:SettingNetworkOptimization":
-                return new SettingNetworkOptimization(name, <any>undefined, { urn })
-            case "unifi:index/settingNtp:SettingNtp":
-                return new SettingNtp(name, <any>undefined, { urn })
             case "unifi:index/settingRadius:SettingRadius":
                 return new SettingRadius(name, <any>undefined, { urn })
-            case "unifi:index/settingRsyslogd:SettingRsyslogd":
-                return new SettingRsyslogd(name, <any>undefined, { urn })
-            case "unifi:index/settingSslInspection:SettingSslInspection":
-                return new SettingSslInspection(name, <any>undefined, { urn })
-            case "unifi:index/settingTeleport:SettingTeleport":
-                return new SettingTeleport(name, <any>undefined, { urn })
             case "unifi:index/settingUsg:SettingUsg":
                 return new SettingUsg(name, <any>undefined, { urn })
-            case "unifi:index/settingUsw:SettingUsw":
-                return new SettingUsw(name, <any>undefined, { urn })
             case "unifi:index/site:Site":
                 return new Site(name, <any>undefined, { urn })
             case "unifi:index/staticRoute:StaticRoute":
@@ -328,30 +199,13 @@ pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallGroup", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallRule", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/firewallZone", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/firewallZonePolicy", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/network", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portForward", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portProfile", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/portalFile", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingAutoSpeedtest", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingCountry", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingDpi", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingGuestAccess", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingIps", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingLcdMonitor", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingLocale", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingMagicSiteToSiteVpn", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/settingMgmt", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingNetworkOptimization", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingNtp", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/settingRadius", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingRsyslogd", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingSslInspection", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingTeleport", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/settingUsg", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingUsw", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/user", _module)

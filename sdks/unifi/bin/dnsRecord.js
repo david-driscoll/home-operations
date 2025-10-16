@@ -37,28 +37,28 @@ class DnsRecord extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["port"] = state?.port;
             resourceInputs["priority"] = state?.priority;
-            resourceInputs["record"] = state?.record;
+            resourceInputs["recordType"] = state?.recordType;
             resourceInputs["site"] = state?.site;
             resourceInputs["ttl"] = state?.ttl;
-            resourceInputs["type"] = state?.type;
+            resourceInputs["value"] = state?.value;
             resourceInputs["weight"] = state?.weight;
         }
         else {
             const args = argsOrState;
-            if (args?.record === undefined && !opts.urn) {
-                throw new Error("Missing required property 'record'");
+            if (args?.port === undefined && !opts.urn) {
+                throw new Error("Missing required property 'port'");
             }
-            if (args?.type === undefined && !opts.urn) {
-                throw new Error("Missing required property 'type'");
+            if (args?.value === undefined && !opts.urn) {
+                throw new Error("Missing required property 'value'");
             }
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["name"] = args?.name;
             resourceInputs["port"] = args?.port;
             resourceInputs["priority"] = args?.priority;
-            resourceInputs["record"] = args?.record;
+            resourceInputs["recordType"] = args?.recordType;
             resourceInputs["site"] = args?.site;
             resourceInputs["ttl"] = args?.ttl;
-            resourceInputs["type"] = args?.type;
+            resourceInputs["value"] = args?.value;
             resourceInputs["weight"] = args?.weight;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

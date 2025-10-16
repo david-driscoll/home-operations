@@ -1,14 +1,11 @@
 import { FullItem, GeneratorRecipe } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
-import { FullItemAllOfSections } from "@1password/connect/dist/model/fullItemAllOfSections.js";
-import { ItemFile } from "@1password/connect/dist/model/itemFile.js";
 import { ItemUrls } from "@1password/connect/dist/model/itemUrls.js";
 import * as pulumi from "@pulumi/pulumi";
 import { OPClient, OPClientItemInput } from "../../components/op.ts";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { DiffResult } from "@pulumi/pulumi/dynamic/index.js";
-import { removeUndefinedProperties } from "../../components/helpers.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;

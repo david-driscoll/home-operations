@@ -29,8 +29,9 @@ export class StandardDns extends ComponentResource {
       `${name}-unifi`,
       {
         name: args.hostname,
-        type: args.type,
-        record: args.record ?? args.ipAddress,
+        recordType: args.type,
+        value: args.record ?? args.ipAddress,
+        port: 0,
         ttl: 0,
       },
       {

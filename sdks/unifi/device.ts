@@ -35,45 +35,31 @@ export class Device extends pulumi.CustomResource {
     }
 
     /**
-     * Whether to automatically adopt the device when creating this resource. When true:
-     * * The controller will attempt to adopt the device
-     * * Device must be in a pending adoption state
-     * * Device must be accessible on the network
-     * Set to false if you want to manage adoption manually. Defaults to `true`.
+     * Specifies whether this resource should tell the controller to adopt the device on create. Defaults to `true`.
      */
     declare public readonly allowAdoption: pulumi.Output<boolean | undefined>;
     /**
-     * Whether the device is administratively disabled. When true, the device will not forward traffic or provide services.
+     * Specifies whether this device should be disabled.
      */
     declare public /*out*/ readonly disabled: pulumi.Output<boolean>;
+    /**
+     * Specifies whether this resource should tell the controller to forget the device on destroy. Defaults to `true`.
+     */
     declare public readonly forgetOnDestroy: pulumi.Output<boolean | undefined>;
     /**
-     * The MAC address of the device in standard format (e.g., 'aa:bb:cc:dd:ee:ff'). This is used to identify and manage specific devices that have already been adopted by the controller.
+     * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     declare public readonly mac: pulumi.Output<string>;
     /**
-     * A friendly name for the device that will be displayed in the UniFi controller UI. Examples:
-     * * 'Office-AP-1' for an access point
-     * * 'Core-Switch-01' for a switch
-     * * 'Main-Gateway' for a gateway
-     * Choose descriptive names that indicate location and purpose.
+     * The name of the device.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * A list of port-specific configuration overrides for UniFi switches. This allows you to customize individual port settings such as:
-     *   * Port names and labels for easy identification
-     *   * Port profiles for VLAN and security settings
-     *   * Operating modes for special functions
-     *
-     * Common use cases include:
-     *   * Setting up trunk ports for inter-switch connections
-     *   * Configuring PoE settings for powered devices
-     *   * Creating mirrored ports for network monitoring
-     *   * Setting up link aggregation between switches or servers
+     * Settings overrides for specific switch ports.
      */
     declare public readonly portOverrides: pulumi.Output<outputs.DevicePortOverride[] | undefined>;
     /**
-     * The name of the UniFi site where the device is located. If not specified, the default site will be used.
+     * The name of the site to associate the device with.
      */
     declare public readonly site: pulumi.Output<string>;
 
@@ -117,45 +103,31 @@ export class Device extends pulumi.CustomResource {
  */
 export interface DeviceState {
     /**
-     * Whether to automatically adopt the device when creating this resource. When true:
-     * * The controller will attempt to adopt the device
-     * * Device must be in a pending adoption state
-     * * Device must be accessible on the network
-     * Set to false if you want to manage adoption manually. Defaults to `true`.
+     * Specifies whether this resource should tell the controller to adopt the device on create. Defaults to `true`.
      */
     allowAdoption?: pulumi.Input<boolean>;
     /**
-     * Whether the device is administratively disabled. When true, the device will not forward traffic or provide services.
+     * Specifies whether this device should be disabled.
      */
     disabled?: pulumi.Input<boolean>;
+    /**
+     * Specifies whether this resource should tell the controller to forget the device on destroy. Defaults to `true`.
+     */
     forgetOnDestroy?: pulumi.Input<boolean>;
     /**
-     * The MAC address of the device in standard format (e.g., 'aa:bb:cc:dd:ee:ff'). This is used to identify and manage specific devices that have already been adopted by the controller.
+     * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     mac?: pulumi.Input<string>;
     /**
-     * A friendly name for the device that will be displayed in the UniFi controller UI. Examples:
-     * * 'Office-AP-1' for an access point
-     * * 'Core-Switch-01' for a switch
-     * * 'Main-Gateway' for a gateway
-     * Choose descriptive names that indicate location and purpose.
+     * The name of the device.
      */
     name?: pulumi.Input<string>;
     /**
-     * A list of port-specific configuration overrides for UniFi switches. This allows you to customize individual port settings such as:
-     *   * Port names and labels for easy identification
-     *   * Port profiles for VLAN and security settings
-     *   * Operating modes for special functions
-     *
-     * Common use cases include:
-     *   * Setting up trunk ports for inter-switch connections
-     *   * Configuring PoE settings for powered devices
-     *   * Creating mirrored ports for network monitoring
-     *   * Setting up link aggregation between switches or servers
+     * Settings overrides for specific switch ports.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[]>;
     /**
-     * The name of the UniFi site where the device is located. If not specified, the default site will be used.
+     * The name of the site to associate the device with.
      */
     site?: pulumi.Input<string>;
 }
@@ -165,41 +137,27 @@ export interface DeviceState {
  */
 export interface DeviceArgs {
     /**
-     * Whether to automatically adopt the device when creating this resource. When true:
-     * * The controller will attempt to adopt the device
-     * * Device must be in a pending adoption state
-     * * Device must be accessible on the network
-     * Set to false if you want to manage adoption manually. Defaults to `true`.
+     * Specifies whether this resource should tell the controller to adopt the device on create. Defaults to `true`.
      */
     allowAdoption?: pulumi.Input<boolean>;
+    /**
+     * Specifies whether this resource should tell the controller to forget the device on destroy. Defaults to `true`.
+     */
     forgetOnDestroy?: pulumi.Input<boolean>;
     /**
-     * The MAC address of the device in standard format (e.g., 'aa:bb:cc:dd:ee:ff'). This is used to identify and manage specific devices that have already been adopted by the controller.
+     * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     mac?: pulumi.Input<string>;
     /**
-     * A friendly name for the device that will be displayed in the UniFi controller UI. Examples:
-     * * 'Office-AP-1' for an access point
-     * * 'Core-Switch-01' for a switch
-     * * 'Main-Gateway' for a gateway
-     * Choose descriptive names that indicate location and purpose.
+     * The name of the device.
      */
     name?: pulumi.Input<string>;
     /**
-     * A list of port-specific configuration overrides for UniFi switches. This allows you to customize individual port settings such as:
-     *   * Port names and labels for easy identification
-     *   * Port profiles for VLAN and security settings
-     *   * Operating modes for special functions
-     *
-     * Common use cases include:
-     *   * Setting up trunk ports for inter-switch connections
-     *   * Configuring PoE settings for powered devices
-     *   * Creating mirrored ports for network monitoring
-     *   * Setting up link aggregation between switches or servers
+     * Settings overrides for specific switch ports.
      */
     portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[]>;
     /**
-     * The name of the UniFi site where the device is located. If not specified, the default site will be used.
+     * The name of the site to associate the device with.
      */
     site?: pulumi.Input<string>;
 }

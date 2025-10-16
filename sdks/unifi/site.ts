@@ -33,11 +33,11 @@ export class Site extends pulumi.CustomResource {
     }
 
     /**
-     * A human-readable description of the site (e.g., 'Main Office', 'Remote Branch', 'Client A Network'). This is used as the display name in the UniFi controller interface.
+     * The description of the site.
      */
     declare public readonly description: pulumi.Output<string>;
     /**
-     * The site's internal name in the UniFi system. This is automatically generated based on the description and is used in API calls and configurations. It's typically a lowercase, hyphenated version of the description.
+     * The name of the site.
      */
     declare public /*out*/ readonly name: pulumi.Output<string>;
 
@@ -74,11 +74,11 @@ export class Site extends pulumi.CustomResource {
  */
 export interface SiteState {
     /**
-     * A human-readable description of the site (e.g., 'Main Office', 'Remote Branch', 'Client A Network'). This is used as the display name in the UniFi controller interface.
+     * The description of the site.
      */
     description?: pulumi.Input<string>;
     /**
-     * The site's internal name in the UniFi system. This is automatically generated based on the description and is used in API calls and configurations. It's typically a lowercase, hyphenated version of the description.
+     * The name of the site.
      */
     name?: pulumi.Input<string>;
 }
@@ -88,7 +88,7 @@ export interface SiteState {
  */
 export interface SiteArgs {
     /**
-     * A human-readable description of the site (e.g., 'Main Office', 'Remote Branch', 'Client A Network'). This is used as the display name in the UniFi controller interface.
+     * The description of the site.
      */
     description: pulumi.Input<string>;
 }

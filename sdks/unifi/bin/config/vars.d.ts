@@ -3,7 +3,7 @@
  */
 export declare const allowInsecure: boolean | undefined;
 /**
- * API Key for the user accessing the API. Can be specified with the `UNIFI_API_KEY` environment variable. Controller version 9.0.108 or later is required.
+ * API key for the Unifi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If this is set, the `username` and `password` fields are ignored.
  */
 export declare const apiKey: string | undefined;
 /**

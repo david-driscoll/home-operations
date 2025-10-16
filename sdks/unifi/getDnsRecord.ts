@@ -9,8 +9,13 @@ export function getDnsRecord(args?: GetDnsRecordArgs, opts?: pulumi.InvokeOption
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "record": args.record,
+        "port": args.port,
+        "priority": args.priority,
+        "recordType": args.recordType,
         "site": args.site,
+        "ttl": args.ttl,
+        "value": args.value,
+        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 
@@ -19,32 +24,41 @@ export function getDnsRecord(args?: GetDnsRecordArgs, opts?: pulumi.InvokeOption
  */
 export interface GetDnsRecordArgs {
     name?: string;
-    record?: string;
+    port?: number;
+    priority?: number;
+    recordType?: string;
     site?: string;
+    ttl?: number;
+    value?: string;
+    weight?: number;
 }
 
 /**
  * A collection of values returned by getDnsRecord.
  */
 export interface GetDnsRecordResult {
-    readonly enabled: boolean;
     readonly id: string;
-    readonly name: string;
-    readonly port: number;
-    readonly priority: number;
-    readonly record: string;
+    readonly name?: string;
+    readonly port?: number;
+    readonly priority?: number;
+    readonly recordType?: string;
     readonly site: string;
-    readonly ttl: number;
-    readonly type: string;
-    readonly weight: number;
+    readonly ttl?: number;
+    readonly value?: string;
+    readonly weight?: number;
 }
 export function getDnsRecordOutput(args?: GetDnsRecordOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDnsRecordResult> {
     args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "record": args.record,
+        "port": args.port,
+        "priority": args.priority,
+        "recordType": args.recordType,
         "site": args.site,
+        "ttl": args.ttl,
+        "value": args.value,
+        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 
@@ -53,6 +67,11 @@ export function getDnsRecordOutput(args?: GetDnsRecordOutputArgs, opts?: pulumi.
  */
 export interface GetDnsRecordOutputArgs {
     name?: pulumi.Input<string>;
-    record?: pulumi.Input<string>;
+    port?: pulumi.Input<number>;
+    priority?: pulumi.Input<number>;
+    recordType?: pulumi.Input<string>;
     site?: pulumi.Input<string>;
+    ttl?: pulumi.Input<number>;
+    value?: pulumi.Input<string>;
+    weight?: pulumi.Input<number>;
 }

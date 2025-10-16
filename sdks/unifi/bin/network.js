@@ -52,6 +52,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["igmpSnooping"] = state?.igmpSnooping;
             resourceInputs["internetAccessEnabled"] = state?.internetAccessEnabled;
+            resourceInputs["intraNetworkAccessEnabled"] = state?.intraNetworkAccessEnabled;
             resourceInputs["ipv6InterfaceType"] = state?.ipv6InterfaceType;
             resourceInputs["ipv6PdInterface"] = state?.ipv6PdInterface;
             resourceInputs["ipv6PdPrefixid"] = state?.ipv6PdPrefixid;
@@ -65,11 +66,11 @@ class Network extends pulumi.CustomResource {
             resourceInputs["multicastDns"] = state?.multicastDns;
             resourceInputs["name"] = state?.name;
             resourceInputs["networkGroup"] = state?.networkGroup;
-            resourceInputs["networkIsolationEnabled"] = state?.networkIsolationEnabled;
             resourceInputs["purpose"] = state?.purpose;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
             resourceInputs["vlanId"] = state?.vlanId;
+            resourceInputs["vpnType"] = state?.vpnType;
             resourceInputs["wanDhcpV6PdSize"] = state?.wanDhcpV6PdSize;
             resourceInputs["wanDns"] = state?.wanDns;
             resourceInputs["wanEgressQos"] = state?.wanEgressQos;
@@ -83,6 +84,15 @@ class Network extends pulumi.CustomResource {
             resourceInputs["wanType"] = state?.wanType;
             resourceInputs["wanTypeV6"] = state?.wanTypeV6;
             resourceInputs["wanUsername"] = state?.wanUsername;
+            resourceInputs["wireguardClientMode"] = state?.wireguardClientMode;
+            resourceInputs["wireguardClientPeerIp"] = state?.wireguardClientPeerIp;
+            resourceInputs["wireguardClientPeerPort"] = state?.wireguardClientPeerPort;
+            resourceInputs["wireguardClientPeerPublicKey"] = state?.wireguardClientPeerPublicKey;
+            resourceInputs["wireguardClientPresharedKey"] = state?.wireguardClientPresharedKey;
+            resourceInputs["wireguardClientPresharedKeyEnabled"] = state?.wireguardClientPresharedKeyEnabled;
+            resourceInputs["wireguardId"] = state?.wireguardId;
+            resourceInputs["wireguardPrivateKey"] = state?.wireguardPrivateKey;
+            resourceInputs["wireguardPublicKey"] = state?.wireguardPublicKey;
             resourceInputs["xWanPassword"] = state?.xWanPassword;
         }
         else {
@@ -109,6 +119,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["igmpSnooping"] = args?.igmpSnooping;
             resourceInputs["internetAccessEnabled"] = args?.internetAccessEnabled;
+            resourceInputs["intraNetworkAccessEnabled"] = args?.intraNetworkAccessEnabled;
             resourceInputs["ipv6InterfaceType"] = args?.ipv6InterfaceType;
             resourceInputs["ipv6PdInterface"] = args?.ipv6PdInterface;
             resourceInputs["ipv6PdPrefixid"] = args?.ipv6PdPrefixid;
@@ -122,11 +133,11 @@ class Network extends pulumi.CustomResource {
             resourceInputs["multicastDns"] = args?.multicastDns;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkGroup"] = args?.networkGroup;
-            resourceInputs["networkIsolationEnabled"] = args?.networkIsolationEnabled;
             resourceInputs["purpose"] = args?.purpose;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;
             resourceInputs["vlanId"] = args?.vlanId;
+            resourceInputs["vpnType"] = args?.vpnType;
             resourceInputs["wanDhcpV6PdSize"] = args?.wanDhcpV6PdSize;
             resourceInputs["wanDns"] = args?.wanDns;
             resourceInputs["wanEgressQos"] = args?.wanEgressQos;
@@ -140,6 +151,15 @@ class Network extends pulumi.CustomResource {
             resourceInputs["wanType"] = args?.wanType;
             resourceInputs["wanTypeV6"] = args?.wanTypeV6;
             resourceInputs["wanUsername"] = args?.wanUsername;
+            resourceInputs["wireguardClientMode"] = args?.wireguardClientMode;
+            resourceInputs["wireguardClientPeerIp"] = args?.wireguardClientPeerIp;
+            resourceInputs["wireguardClientPeerPort"] = args?.wireguardClientPeerPort;
+            resourceInputs["wireguardClientPeerPublicKey"] = args?.wireguardClientPeerPublicKey;
+            resourceInputs["wireguardClientPresharedKey"] = args?.wireguardClientPresharedKey;
+            resourceInputs["wireguardClientPresharedKeyEnabled"] = args?.wireguardClientPresharedKeyEnabled;
+            resourceInputs["wireguardId"] = args?.wireguardId;
+            resourceInputs["wireguardPrivateKey"] = args?.wireguardPrivateKey;
+            resourceInputs["wireguardPublicKey"] = args?.wireguardPublicKey;
             resourceInputs["xWanPassword"] = args?.xWanPassword;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
