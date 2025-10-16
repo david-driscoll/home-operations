@@ -10,9 +10,3 @@ config:
   pulumi:tags:
     value:
       pulumi:template: typescript
-packages:
-  unifi:
-    source: terraform-provider
-    version: 0.14.0
-    parameters:
-      - registry.opentofu.org/filipowm/unifi
