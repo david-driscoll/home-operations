@@ -5,7 +5,6 @@ import { Provider as UnifiProvider } from "@pulumi/unifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as BackblazeProvider } from "@pulumi/b2";
-import { Provider as AuthentikProvider } from "@pulumi/authentik";
 import { OPClient, OPClientItem } from "./op.ts";
 
 const op = new OPClient();

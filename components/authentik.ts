@@ -1,19 +1,13 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import * as random from "@pulumi/random";
-import * as k8s from "@pulumi/kubernetes";
-import * as tls from "@pulumi/tls";
-import { FullItem } from "@1password/connect";
-import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
-import { Application } from "sdks/authentik/bin/application.js";
-import { OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
+import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
 import { OPClientItem, OPClient } from "./op.ts";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition } from "@openapi/application-definition.js";
-import { removeUndefinedProperties } from "./helpers.ts";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -189,7 +183,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const oidcCredentials = new OnePasswordItem(
         `${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
         {
-          category: FullItem.CategoryEnum.APICredential,
+          category: CategoryEnum.APICredential,
           title: pulumi.interpolate`${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
           fields: pulumi.output({
             client_id: { value: clientId.result, type: TypeEnum.String },
