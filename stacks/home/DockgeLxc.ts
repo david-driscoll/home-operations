@@ -261,7 +261,7 @@ export class DockgeLxc extends ComponentResource {
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
         for (const host of hosts) {
           new StandardDns(
-            `${stackName}@${host}`,
+            `${stackName}-${host.replace(/\./g, "_")}`,
             {
               hostname: interpolate`${host}`,
               ipAddress: this.ipAddress,
