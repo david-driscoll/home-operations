@@ -1,16 +1,16 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
+import * as cloudflare from "@pulumi/cloudflare";
 import { ComponentResource, Output, ComponentResourceOptions } from "@pulumi/pulumi";
-import { Rewrite } from "@pulumi/adguard";
-import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
+import * as adguard from "@pulumi/adguard";
+import * as unifi from "@pulumi/unifi";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly ipAddress: Output<string>;
-  public readonly unifi: UnifiDnsRecord;
-  public readonly cloudflare: CloudflareDnsRecord;
-  public readonly adguard: Rewrite;
+  public readonly unifi: unifi.DnsRecord;
+  public readonly cloudflare: cloudflare.DnsRecord;
+  public readonly adguard: adguard.Rewrite;
 
   constructor(
     name: string,
@@ -21,11 +21,11 @@ export class StandardDns extends ComponentResource {
       record?: Output<string>;
     },
     globals: GlobalResources,
-    cro: ComponentResourceOptions,
+    cro: ComponentResourceOptions
   ) {
     super("custom:resource:StandardDns", name, {}, cro);
 
-    this.unifi = new UnifiDnsRecord(
+    this.unifi = new unifi.DnsRecord(
       `${name}-unifi`,
       {
         name: args.hostname,
@@ -36,11 +36,12 @@ export class StandardDns extends ComponentResource {
       },
       {
         parent: this,
-        provider: globals.adguardProvider,
+        provider: globals.unifiProvider,
         deleteBeforeReplace: true,
-      },
+      }
     );
-    this.cloudflare = new CloudflareDnsRecord(
+
+    this.cloudflare = new cloudflare.DnsRecord(
       `${name}-cloudflare`,
       {
         name: args.hostname,
@@ -51,12 +52,12 @@ export class StandardDns extends ComponentResource {
       },
       {
         parent: this,
-        provider: globals.adguardProvider,
+        provider: globals.cloudflareProvider,
         deleteBeforeReplace: true,
-      },
+      }
     );
-    // TODO: pull this value from unifi later
-    this.adguard = new Rewrite(
+
+    this.adguard = new adguard.Rewrite(
       `${name}-adguard`,
       {
         domain: args.hostname,
@@ -66,7 +67,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.adguardProvider,
         deleteBeforeReplace: true,
-      },
+      }
     );
     this.hostname = args.hostname;
     this.ipAddress = args.ipAddress;
