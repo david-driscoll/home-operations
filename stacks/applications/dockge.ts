@@ -107,16 +107,16 @@ export async function dockgeApplications(globals: GlobalResources, clusterDefini
   const outpostId = await outToPromise(outpost.id);
   const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
 
-  const compose = `AUTHENTIK_HOST=https://${clusterDefinition.authentikDomain}
+  const envValues = `AUTHENTIK_HOST=https://${clusterDefinition.authentikDomain}
 AUTHENTIK_INSECURE="false"
 AUTHENTIK_TOKEN=${outpostToken.key}
 AUTHENTIK_HOST_BROWSER=https://${clusterDefinition.authentikDomain}
 `;
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
-  await writeFile(envPath, compose);
+  await writeFile(envPath, envValues);
 
-  const composeFile = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
+  const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
     connection: {
       host: lxcData.sections.ssh.fields.hostname.value!,
       user: "root",
@@ -125,7 +125,7 @@ AUTHENTIK_HOST_BROWSER=https://${clusterDefinition.authentikDomain}
     source: new pulumi.asset.FileAsset(envPath),
   });
 
-  await outToPromise(composeFile.id);
+  await outToPromise(environmentConfig.id);
   await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/authentik-outpost/` });
 
   ssh.dispose();

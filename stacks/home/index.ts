@@ -12,6 +12,7 @@ const op = new OPClient();
 
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
+const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
 const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
 const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(createClusterDefinition);
 const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
@@ -70,11 +71,12 @@ var alphaSiteHost = new ProxmoxHost("alpha-site", {
   installTailscale: false,
   remote: false,
   cluster: alphaSiteCluster,
-  shortName: 'as',
+  shortName: "as",
 });
 
 var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
+  credential: dockgeCredential,
   host: celestiaHost,
   vmId: 300,
   cluster: celestiaCluster,
@@ -82,21 +84,24 @@ var celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
 
 var lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
+  credential: dockgeCredential,
   host: lunaHost,
   vmId: 400,
   cluster: lunaCluster,
 });
 
-// var alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
-//   globals,
-//   host: alphaSiteHost,
-//   vmId: 100,
-//   cluster: alphaSiteCluster,
-// });
+var alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
+  globals,
+  credential: dockgeCredential,
+  host: alphaSiteHost,
+  vmId: 100,
+  ipAddress: "10.10.10.9",
+  cluster: alphaSiteCluster,
+});
 
-export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
-export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
-export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
-export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
+// export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
+// export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
+// export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
+// export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
 // const users = await tailscale.
 // console.log(users);

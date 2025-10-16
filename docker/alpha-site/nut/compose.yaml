@@ -1,0 +1,24 @@
+services:
+  peanut:
+    image: brandawg93/peanut:latest
+    container_name: PeaNUT
+    restart: unless-stopped
+    volumes:
+      - ./config:/config
+    environment:
+      WEB_PORT: 8909
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.peanut.rule: Host(`peanut.${searchDomain}`)
+      traefik.http.routers.peanut.entrypoints: websecure
+      traefik.http.routers.peanut.tls.certresolver: le
+      traefik.http.routers.peanut.service: peanut
+      traefik.http.services.peanut.loadbalancer.server.port: 8909
+x-dockge:
+  urls:
+    - https://peanut.${searchDomain}
+networks:
+  dockge_default:
+    external: true

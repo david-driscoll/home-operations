@@ -1,0 +1,35 @@
+services:
+  zwave-js-ui:
+    container_name: zwave-js-ui
+    image: zwavejs/zwave-js-ui:latest
+    restart: unless-stopped
+    tty: true
+    stop_signal: SIGINT
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Z-Wave JS UI - HTTPS
+      traefik.http.routers.zwave.rule: Host(`zwave.${searchDomain}`) || Host(`zwave.as.${searchDomain}`)
+      traefik.http.routers.zwave.entrypoints: websecure
+      traefik.http.routers.zwave.tls.certresolver: le
+      traefik.http.routers.zwave.service: zwave
+      traefik.http.services.zwave.loadbalancer.server.port: 8091
+    environment:
+      SESSION_SECRET: someothervaluethatisntonlie131
+      TZ: America/New_York
+    devices:
+      - /dev/serial/by-id/usb-Silicon_Labs_HubZ_Smart_Home_Controller_C1301C21-if00-port0:/dev/zwave
+    volumes:
+      - ./zwave:/usr/src/app/store
+    ports:
+      - 8091:8091
+      - 3000:3000
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://zwave.${searchDomain}

@@ -1,0 +1,59 @@
+services:
+  adguard:
+    restart: unless-stopped
+    image: adguard/adguardhome
+    ports:
+      - '4000:3000'  # Keep direct access for local network
+    environment:
+      TZ: America/New_York
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Web UI routing (HTTPS)
+      traefik.http.routers.adguard.rule: Host(`adguard.${searchDomain}`)
+      traefik.http.routers.adguard.entrypoints: websecure
+      traefik.http.routers.adguard.tls.certresolver: le
+      traefik.http.routers.adguard.service: adguard-web
+      traefik.http.services.adguard-web.loadbalancer.server.port: 3000
+
+      # DNS over UDP (port 53)
+      traefik.udp.routers.adguard-dns.entrypoints: dns
+      traefik.udp.routers.adguard-dns.service: adguard-dns
+      traefik.udp.services.adguard-dns.loadbalancer.server.port: 53
+
+      # DNS over TCP (port 53)
+      traefik.tcp.routers.adguard-dns-tcp.entrypoints: dns_tcp
+      traefik.tcp.routers.adguard-dns-tcp.rule: HostSNI(`*`)
+      traefik.tcp.routers.adguard-dns-tcp.service: adguard-dns-tcp
+      traefik.tcp.services.adguard-dns-tcp.loadbalancer.server.port: 53
+
+      # DNS over TLS (DoT) - port 853
+      traefik.tcp.routers.adguard-dot.entrypoints: dnss
+      traefik.tcp.routers.adguard-dot.rule: HostSNI(`*`)
+      traefik.tcp.routers.adguard-dot.service: adguard-dot
+      traefik.tcp.services.adguard-dot.loadbalancer.server.port: 853
+
+      # DNS over QUIC (DoQ) - port 784
+      traefik.udp.routers.adguard-doq.entrypoints: dns_quic
+      traefik.udp.routers.adguard-doq.service: adguard-doq
+      traefik.udp.services.adguard-doq.loadbalancer.server.port: 784
+
+      # DNS over HTTPS (DoH) - port 443 via HTTPS
+      traefik.http.routers.adguard-doh.rule: Host(`adguard.${searchDomain}`) && Path(`/dns-query`)
+      traefik.http.routers.adguard-doh.entrypoints: websecure
+      traefik.http.routers.adguard-doh.tls.certresolver: le
+      traefik.http.routers.adguard-doh.service: adguard-doh
+      traefik.http.services.adguard-doh.loadbalancer.server.port: 443
+    volumes:
+      - ./workdir:/opt/adguardhome/work
+      - ./confdir:/opt/adguardhome/conf
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://adguard.${searchDomain}

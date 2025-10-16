@@ -9,16 +9,16 @@ services:
       # Enable Traefik for itself
       traefik.enable: true
       # Dashboard configuration
-      traefik.http.routers.dashboard.rule: Host(`internal.${host}.driscoll.tech`)
+      traefik.http.routers.dashboard.rule: Host(`internal.${host}.${searchDomain}`)
       traefik.http.routers.dashboard.entrypoints: websecure
       traefik.http.routers.dashboard.service: api@internal
       traefik.http.routers.dashboard.tls.certresolver: le
       # Dockge
-      traefik.http.routers.dockge.rule: Host(`dockge.${host}.driscoll.tech`)
+      traefik.http.routers.dockge.rule: Host(`dockge.${host}.${searchDomain}`)
       traefik.http.routers.dockge.entrypoints: websecure
       traefik.http.routers.dockge.tls.certresolver: le
       traefik.http.routers.dockge.service: dockge
-      traefik.http.services.dockge.loadbalancer.server.url: http://${host}.driscoll.tech:5001
+      traefik.http.services.dockge.loadbalancer.server.url: http://${host}.${searchDomain}:5001
     environment:
       CLOUDFLARE_DNS_API_TOKEN: ${cloudflareApiToken}
     ports:
@@ -37,7 +37,7 @@ services:
       - dockge_default
 x-dockge:
   urls:
-    - https://internal.${host}.driscoll.tech
+    - https://internal.${host}.${searchDomain}
 networks:
   dockge_default:
     external: true

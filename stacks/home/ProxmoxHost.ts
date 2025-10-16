@@ -78,7 +78,7 @@ export class ProxmoxHost extends ComponentResource {
     const apiCredential = output(args.proxmox);
     this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
-    this.dns = createDnsRecord(name, this.hostname, output(this.internalIpAddress), args.globals, cro);
+    this.dns = createDnsRecord(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
 
     // Create ProxmoxVE Provider
     this.pveProvider = new ProxmoxVEProvider(
@@ -94,7 +94,7 @@ export class ProxmoxHost extends ComponentResource {
           password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
         },
       },
-      cro
+      cro,
     );
 
     if (args.truenas) {
@@ -114,7 +114,7 @@ export class ProxmoxHost extends ComponentResource {
           connection,
           create: `pvesm set local --content images,rootdir,vztmpl,backup,iso,snippets`,
         },
-        cro
+        cro,
       );
       // Configure SSH environment
 
@@ -124,7 +124,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
         },
-        cro
+        cro,
       );
 
       // Install Tailscale
@@ -134,7 +134,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: "curl -fsSL https://tailscale.com/install.sh | sh",
         },
-        mergeOptions(cro, { dependsOn: [configureSshEnv] })
+        mergeOptions(cro, { dependsOn: [configureSshEnv] }),
       );
 
       // Install jq
@@ -144,7 +144,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: "apt-get install -y jq",
         },
-        mergeOptions(cro, { dependsOn: [installTailscale] })
+        mergeOptions(cro, { dependsOn: [installTailscale] }),
       );
 
       const tailscaleArgs = interpolate`--hostname=${name} --accept-dns --accept-routes --advertise-exit-node --ssh --accept-risk=lose-ssh`;
@@ -157,7 +157,7 @@ export class ProxmoxHost extends ComponentResource {
           create: interpolate`tailscale up ${tailscaleArgs} --reset`,
           environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
         },
-        mergeOptions(cro, { dependsOn: [installTailscale] })
+        mergeOptions(cro, { dependsOn: [installTailscale] }),
       );
 
       // Set Tailscale configuration
@@ -168,7 +168,7 @@ export class ProxmoxHost extends ComponentResource {
           create: interpolate`tailscale set ${tailscaleArgs} --auto-update`,
           environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
         },
-        mergeOptions(cro, { dependsOn: [tailscaleUp, installTailscale] })
+        mergeOptions(cro, { dependsOn: [tailscaleUp, installTailscale] }),
       );
 
       // Copy Tailscale cron script
@@ -179,7 +179,7 @@ export class ProxmoxHost extends ComponentResource {
           remotePath: "/etc/cron.weekly/tailscale",
           source: new asset.FileAsset(args.isProxmoxBackupServer ? "scripts/tailscale-pbs.sh" : "scripts/tailscale.sh"),
         },
-        mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] })
+        mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] }),
       );
 
       // Set executable permissions and run cron script
@@ -189,7 +189,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
         },
-        mergeOptions(cro, { dependsOn: [tailscaleCron] })
+        mergeOptions(cro, { dependsOn: [tailscaleCron] }),
       );
     }
 
@@ -211,7 +211,7 @@ export class ProxmoxHost extends ComponentResource {
           provider: args.globals.tailscaleProvider,
           parent: this,
           retainOnDelete: true,
-        }
+        },
       );
 
       // Create device key
@@ -224,31 +224,35 @@ export class ProxmoxHost extends ComponentResource {
         {
           provider: args.globals.tailscaleProvider,
           parent: this,
-        }
+        },
       );
     }
 
-    const proxmoxInfo = new OnePasswordItem(`${this.name}-proxmox`, {
-      category: FullItem.CategoryEnum.SecureNote,
-      title: pulumi.interpolate`ProxmoxHost: ${args.title}`,
-      tags: ["proxmox", "host"],
-      sections: {
-        tailscale: getTailscaleSection(this.device),
-        dns: createDnsSection(this.dns),
-        ssh: {
-          fields: {
-            hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-            username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-            password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+    const proxmoxInfo = new OnePasswordItem(
+      `${this.name}-proxmox`,
+      {
+        category: FullItem.CategoryEnum.SecureNote,
+        title: pulumi.interpolate`ProxmoxHost: ${args.title ?? cluster.title}`,
+        tags: ["proxmox", "host"],
+        sections: {
+          tailscale: getTailscaleSection(this.device),
+          dns: createDnsSection(this.dns),
+          ssh: {
+            fields: {
+              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+            },
           },
         },
+        fields: {
+          hostname: { type: TypeEnum.String, value: this.hostname },
+          ipAddress: { type: TypeEnum.String, value: this.internalIpAddress },
+          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+        },
       },
-      fields: {
-        hostname: { type: TypeEnum.String, value: this.hostname },
-        ipAddress: { type: TypeEnum.String, value: this.internalIpAddress },
-        tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
-      },
-    });
+      cro,
+    );
 
     // Note: The commented-out Hosts resource would need to be implemented
     // if you have a custom Hosts resource or provider for managing /etc/hosts

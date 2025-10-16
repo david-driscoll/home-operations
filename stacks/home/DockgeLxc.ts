@@ -3,7 +3,7 @@ import { DnsRecord as CloudflareDnsRecord, Tunnel } from "@pulumi/cloudflare";
 import {} from "@pulumi/tailscale";
 import { DnsRecord as UnifiDnsRecord, User, getUserOutput } from "@pulumi/unifi";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, runtime } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, runtime, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { PrivateKey } from "@pulumi/tls";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
@@ -24,15 +24,20 @@ import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts"
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { stderr, stdout } from "node:process";
+import { ssh } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
+
+export type OPClientItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
+  ipAddress?: string;
   cluster: Input<ClusterDefinition>;
+  credential: Input<OPClientItem>;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -45,32 +50,49 @@ export class DockgeLxc extends ComponentResource {
   public readonly dockgeDns: ReturnType<typeof createDnsRecord>;
   public readonly internalDns: ReturnType<typeof createDnsRecord>;
   public readonly stacks: Output<string[]>;
-  constructor(name: string, args: DockgeLxcArgs) {
+  public readonly credential: Output<OPClientItem>;
+  constructor(
+    name: string,
+    private readonly args: DockgeLxcArgs,
+  ) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
     const cluster = output(args.cluster);
 
-    const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
-    const ipAddressResource = new remote.Command(
-      `${name}-get-ip-address`,
-      {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
-      },
-      mergeOptions(cro, { dependsOn: [] }),
-    );
-    this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
-    const ipAddress = (this.ipAddress = args.host.remote ? this.tailscaleIpAddress  : ipAddressResource.stdout );
-
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
+
+    const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
+    this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
+
+    const ipAddress = (this.ipAddress = args.ipAddress
+      ? output(args.ipAddress)
+      : args.host.remote
+        ? this.tailscaleIpAddress
+        : new remote.Command(
+            `${name}-get-ip-address`,
+            {
+              connection: args.host.remoteConnection,
+              create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+            },
+            mergeOptions(cro, { dependsOn: [] }),
+          ).stdout);
+
+    this.credential = output(args.credential);
+
+    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
+      host: ipAddress,
+      user: this.credential.apply((z) => z.fields?.username?.value!),
+      password: this.credential.apply((z) => z.fields?.password?.value!),
+    });
+
     const sshConfig = new remote.Command(
       `${name}-ssh-config`,
       {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+        connection,
+        create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
       },
       mergeOptions(cro, { dependsOn: [] }),
     );
@@ -78,10 +100,10 @@ export class DockgeLxc extends ComponentResource {
     const installTailscale = new remote.Command(
       `${name}-tailscale-install`,
       {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
+        connection,
+        create: interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
       },
-      mergeOptions(cro, { dependsOn: [ipAddressResource] }),
+      mergeOptions(cro, { dependsOn: [sshConfig] }),
     );
 
     const tailscaleArgs = interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
@@ -90,8 +112,9 @@ export class DockgeLxc extends ComponentResource {
     const tailscaleUp = new remote.Command(
       `${name}-tailscale-up`,
       {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale up ${tailscaleArgs} --reset`,
+        connection,
+        create: interpolate`tailscale up ${tailscaleArgs} --reset`,
+        triggers: [installTailscale.id, sshConfig.id],
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
       mergeOptions(cro, { dependsOn: [installTailscale] }),
@@ -100,26 +123,31 @@ export class DockgeLxc extends ComponentResource {
     const tailscaleSet = new remote.Command(
       `${name}-tailscale-set`,
       {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} --keep-env -- tailscale set ${tailscaleArgs} --auto-update `,
+        connection,
+        create: interpolate`tailscale set ${tailscaleArgs} --auto-update `,
+        triggers: [installTailscale.id, sshConfig.id, tailscaleUp.id],
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
       mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] }),
     );
 
-    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleHostname,
-      user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
-      password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
-    });
-
     function replaceVariable(key: RegExp, value: Input<string>) {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
     }
 
-    this.dns = createDnsRecord(name, this.hostname, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
-    this.internalDns = createDnsRecord(`${name}-internal`, interpolate`internal.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
-    this.dockgeDns = createDnsRecord(`${name}-dockge`, interpolate`dockge.${this.hostname}`, ipAddress, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.dns = createDnsRecord(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.internalDns = createDnsRecord(
+      `${name}-internal`,
+      { hostname: interpolate`internal.${this.hostname}`, ipAddress, type: "CNAME", record: this.dns.hostname },
+      args.globals,
+      mergeOptions(cro, { dependsOn: [] }),
+    );
+    this.dockgeDns = createDnsRecord(
+      `${name}-dockge`,
+      { hostname: interpolate`dockge.${this.hostname}`, ipAddress, type: "CNAME", record: this.dns.hostname },
+      args.globals,
+      mergeOptions(cro, { dependsOn: [] }),
+    );
 
     // Get Tailscale device - this will need to be done after the hook script runs
     // and Tailscale is configured. For now, we'll comment this out as it requires
@@ -166,6 +194,7 @@ export class DockgeLxc extends ComponentResource {
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(args.host.name)),
+      replaceVariable(/\$\{searchDomain\}/g, args.globals.searchDomain),
       replaceVariable(/\$\{hostname\}/g, hostname),
       replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
       replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
@@ -180,10 +209,13 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, cluster.rootDomain),
     ];
 
-    this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => createStack(resolve(dockerPath, "_common", f), replacements))))
+    this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => this.createStack(args.host.name, resolve(dockerPath, "_common", f), replacements))))
       .apply((z) => {
-        const hostStacks = output(readdir(resolve(dockerPath, args.host.name))
-          .then((files) => files.filter(z => z !== '.keep').map((f) => createStack(resolve(dockerPath, args.host.name, f), replacements))));
+        const hostStacks = output(
+          readdir(resolve(dockerPath, args.host.name)).then((files) =>
+            files.filter((z) => z !== ".keep").map((f) => this.createStack(args.host.name, resolve(dockerPath, args.host.name, f), replacements)),
+          ),
+        );
         return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
       })
       .apply((z) => {
@@ -191,87 +223,115 @@ export class DockgeLxc extends ComponentResource {
         return z.map((z) => z.name);
       });
 
-    async function createStack(path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
-      const stackName = basename(path);
-      const files = await readdir(path);
-      const fileAssets = output(
-        files.map(async (file) => {
-          const content = await readFile(resolve(path, file), "utf-8");
-          const items = replacements.reduce((p, r) => r(p), output(content));
-
-          return items.apply(async (content) => {
-            mkdirSync(`./.tmp/`, { recursive: true });
-            const tempFilePath = `./.tmp/${args.host.name}-${stackName}-${file}`;
-            await writeFile(tempFilePath, content);
-            return {
-              id: md5Output({ input: content }).result,
-              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-              source: new asset.FileAsset(tempFilePath),
-            };
-          });
-        }),
-      );
-
-      const mkdir = new remote.Command(
-        `${args.host.name}-${stackName}-mkdir`,
-        {
-          connection: connection,
-          create: interpolate`mkdir -p /opt/stacks/${stackName}/`,
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleSet] }),
-      );
-
-      const copyFiles = fileAssets.apply((assets) => {
-        return assets.map(
-          (item) =>
-            new remote.CopyToRemote(
-              `${args.host.name}-${item.id}-copy-file`,
-              {
-                connection: connection,
-                remotePath: item.remotePath,
-                source: item.source,
-              },
-              mergeOptions(cro, { dependsOn: [mkdir] }),
-            ),
-        );
-      });
-
-      const compose = new remote.Command(
-        `${args.host.name}-${stackName}-compose`,
-        {
-          connection: connection,
-          triggers: copyFiles.apply((z) => z.map((f) => f.id)),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
-        },
-        mergeOptions(cro, { dependsOn: copyFiles }),
-      );
-
-      return { name: stackName, path, compose };
-    }
-
-    const dockgeInfo = new OnePasswordItem(`${args.host.name}-dockge`, {
-      category: FullItem.CategoryEnum.SecureNote,
-      title: interpolate`DockgeLxc: ${args.host.title}`,
-      tags: ["dockge", "lxc"],
-      sections: {
-        tailscale: getTailscaleSection(this.device),
-        dns: createDnsSection(this.dns),
-        internalDns: createDnsSection(this.internalDns),
-        dockgeDns: createDnsSection(this.dockgeDns),
-        ssh: {
-          fields: {
-            hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-            username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-            password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+    const dockgeInfo = new OnePasswordItem(
+      `${args.host.name}-dockge`,
+      {
+        category: FullItem.CategoryEnum.SecureNote,
+        title: interpolate`DockgeLxc: ${args.host.title}`,
+        tags: ["dockge", "lxc"],
+        sections: {
+          tailscale: getTailscaleSection(this.device),
+          dns: createDnsSection(this.dns),
+          internalDns: createDnsSection(this.internalDns),
+          dockgeDns: createDnsSection(this.dockgeDns),
+          ssh: {
+            fields: {
+              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+            },
           },
         },
+        fields: {
+          hostname: { type: TypeEnum.String, value: this.hostname },
+          ipAddress: { type: TypeEnum.String, value: this.ipAddress },
+          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+        },
       },
-      fields: {
-        hostname: { type: TypeEnum.String, value: this.hostname },
-        ipAddress: { type: TypeEnum.String, value: this.ipAddress },
-        tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+      cro,
+    );
+  }
+
+  private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
+    const stackName = basename(path);
+    const files = await readdir(path);
+    const fileAssets = output(
+      files.map(async (file) => {
+        const content = await readFile(resolve(path, file), "utf-8");
+        const items = replacements.reduce((p, r) => r(p), output(content));
+
+        return items.apply(async (content) => {
+          mkdirSync(`./.tmp/`, { recursive: true });
+          const tempFilePath = `./.tmp/${hostname}-${stackName}-${file}`;
+          await writeFile(tempFilePath, content);
+          return {
+            id: md5Output({ input: content }).result,
+            remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+            filePath: tempFilePath,
+            source: new asset.FileAsset(tempFilePath),
+          };
+        });
+      }),
+    );
+
+    const mkdir = new remote.Command(
+      `${hostname}-${stackName}-mkdir`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`mkdir -p /opt/stacks/${stackName}/`,
       },
+      mergeOptions({ parent: this }, { dependsOn: [] }),
+    );
+
+    const copyFiles = fileAssets.apply(async (assets) => {
+      const results = [];
+      for (const asset of assets) {
+        if (asset.remotePath.endsWith("compose.yaml")) {
+          const content = await readFile(asset.filePath, "utf-8");
+          const regex = /Host\(`(.*?)`\)/g;
+          for (const match of content.matchAll(regex)) {
+            const host = match[1];
+            createDnsRecord(
+              `${stackName}-dns-${host.replace(/\./g, "-")}`,
+              {
+                hostname: interpolate`${host}`,
+                ipAddress: this.ipAddress,
+                type: "CNAME",
+                record: this.hostname,
+              },
+              this.args.globals,
+              {
+                parent: this,
+              },
+            );
+          }
+        }
+        results.push(
+          new remote.CopyToRemote(
+            `${hostname}-${asset.id}-copy-file`,
+            {
+              connection: this.remoteConnection,
+              remotePath: asset.remotePath,
+              source: asset.source,
+            },
+            mergeOptions({ parent: this }, { dependsOn: [mkdir] }),
+          ),
+        );
+      }
+      return results;
     });
+
+    const compose = new remote.Command(
+      `${hostname}-${stackName}-compose`,
+      {
+        connection: this.remoteConnection,
+        triggers: copyFiles.apply((z) => z.map((f) => f.id)),
+        create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
+      },
+      mergeOptions({ parent: this }, { dependsOn: copyFiles }),
+    );
+
+    return { name: stackName, path, compose };
   }
 }
 

@@ -1,0 +1,21 @@
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: adguard
+spec:
+  name: Backup Replica
+  category: DNS
+  url: &url https://adguard.${searchDomain}/index.html
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/adguard-home.svg
+  access_policy:
+    groups:
+      - admins
+  uptime:
+    http:
+      url: *url
+      method: GET
+      accepted_statuscodes: ["200"]
+      parent_name: "adguard-home-group"

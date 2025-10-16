@@ -69,7 +69,7 @@ export class TruenasVm {
     const manager = await promisifyOutput(
       pulumi.output(this.credential).apply(async (credential) => {
         return new TrueNASResourceManager(await getTruenasClient(credential));
-      })
+      }),
     );
 
     let longhorn: Dataset | null = null;
@@ -95,7 +95,7 @@ export class TruenasVm {
       {
         acl: "private",
       },
-      { parent, provider: this.globals.truenasMinioProvider }
+      { parent, provider: this.globals.truenasMinioProvider },
     );
 
     const b2Bucket = new b2.Bucket(
@@ -109,7 +109,7 @@ export class TruenasVm {
           purpose: "backup",
         },
       },
-      { parent, provider: this.globals.backblazeProvider }
+      { parent, provider: this.globals.backblazeProvider },
     );
 
     // b2 buckets, application key, minio buckets
@@ -137,7 +137,7 @@ export class TruenasVm {
           "writeFiles",
         ],
       },
-      { parent, provider: this.globals.backblazeProvider }
+      { parent, provider: this.globals.backblazeProvider },
     );
 
     const b2DatabaseBucket = new b2.Bucket(
@@ -151,7 +151,7 @@ export class TruenasVm {
           purpose: "database-backup",
         },
       },
-      { parent, provider: this.globals.backblazeProvider }
+      { parent, provider: this.globals.backblazeProvider },
     );
 
     // b2 buckets, application key, minio buckets
@@ -179,34 +179,42 @@ export class TruenasVm {
           "writeFiles",
         ],
       },
-      { parent, provider: this.globals.backblazeProvider }
+      { parent, provider: this.globals.backblazeProvider },
     );
 
-    const backupCredential = new OnePasswordItem(`${name}-b2-credential`, {
-      title: pulumi.interpolate`B2 Backup Key ${name}`,
-      category: FullItem.CategoryEnum.APICredential,
-      fields: pulumi.output({
-        username: { value: b2BucketApplicationKey.applicationKeyId, type: TypeEnum.String },
-        credential: { value: b2BucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
-        keyName: { value: b2BucketApplicationKey.keyName, type: TypeEnum.String },
-        bucket: { value: b2Bucket.bucketName, type: TypeEnum.String },
-        hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
-      }),
-      tags: ["backblaze", "backup", name],
-    });
+    const backupCredential = new OnePasswordItem(
+      `${name}-b2-credential`,
+      {
+        title: pulumi.interpolate`B2 Backup Key ${name}`,
+        category: FullItem.CategoryEnum.APICredential,
+        fields: pulumi.output({
+          username: { value: b2BucketApplicationKey.applicationKeyId, type: TypeEnum.String },
+          credential: { value: b2BucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
+          keyName: { value: b2BucketApplicationKey.keyName, type: TypeEnum.String },
+          bucket: { value: b2Bucket.bucketName, type: TypeEnum.String },
+          hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
+        }),
+        tags: ["backblaze", "backup", name],
+      },
+      { parent },
+    );
 
-    const databaseCredential = new OnePasswordItem(`${name}-b2-db-credential`, {
-      title: pulumi.interpolate`B2 Database Key ${name}`,
-      category: FullItem.CategoryEnum.APICredential,
-      fields: pulumi.output({
-        username: { value: b2DatabaseBucketApplicationKey.applicationKeyId, type: TypeEnum.String },
-        credential: { value: b2DatabaseBucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
-        keyName: { value: b2DatabaseBucketApplicationKey.keyName, type: TypeEnum.String },
-        bucket: { value: b2DatabaseBucket.bucketName, type: TypeEnum.String },
-        hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
-      }),
-      tags: ["backblaze", "database", "backup", name],
-    });
+    const databaseCredential = new OnePasswordItem(
+      `${name}-b2-db-credential`,
+      {
+        title: pulumi.interpolate`B2 Database Key ${name}`,
+        category: FullItem.CategoryEnum.APICredential,
+        fields: pulumi.output({
+          username: { value: b2DatabaseBucketApplicationKey.applicationKeyId, type: TypeEnum.String },
+          credential: { value: b2DatabaseBucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
+          keyName: { value: b2DatabaseBucketApplicationKey.keyName, type: TypeEnum.String },
+          bucket: { value: b2DatabaseBucket.bucketName, type: TypeEnum.String },
+          hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
+        }),
+        tags: ["backblaze", "database", "backup", name],
+      },
+      { parent },
+    );
 
     return {
       longhorn: longhorn?.mountpoint ?? `/mnt/${this.backupDatasetId}/${name}/longhorn`,

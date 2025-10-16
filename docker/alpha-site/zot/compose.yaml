@@ -1,0 +1,30 @@
+services:
+  zot:
+    image: ghcr.io/project-zot/zot:latest
+    ports:
+      - 5000:5000
+    restart: unless-stopped
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Zot Registry - HTTPS
+      traefik.http.routers.registry.rule: Host(`registry.${searchDomain}`)
+      traefik.http.routers.registry.entrypoints: websecure
+      traefik.http.routers.registry.tls.certresolver: le
+      traefik.http.routers.registry.service: registry
+      traefik.http.services.registry.loadbalancer.server.port: 5000
+    environment:
+      TZ: America/New_York
+    volumes:
+      - ./config/config.json:/etc/zot/config.json
+      - ./config/credentials.json:/etc/credentials/credentials.json
+      - ./data:/var/lib/registry
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://registry.${searchDomain}

@@ -6,11 +6,12 @@ services:
       - 9443:9443
     # env is set in each app stack for the secret.
     env_file:
-      - .env
+      - path: .env
+        required: false
     labels:
       traefik.enable: true
       # Outpost
-      traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_KEY}.driscoll.tech`)
+      traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_KEY}.${searchDomain}`)
       traefik.http.routers.authentik-outpost.entrypoints: websecure
       traefik.http.routers.authentik-outpost.service: authentik-outpost
       traefik.http.routers.authentik-outpost.tls.certresolver: le
@@ -26,7 +27,7 @@ services:
       - dockge_default
 x-dockge:
   urls:
-    - https://ak-outpost.${CLUSTER_KEY}.driscoll.tech
+    - https://ak-outpost.${CLUSTER_KEY}.${searchDomain}
 networks:
   dockge_default:
     external: true
