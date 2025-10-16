@@ -19,59 +19,74 @@ export function getContainerHostnames(name: string, host: ProxmoxHost, globals: 
   return { hostname, tailscaleName, tailscaleHostname };
 }
 
-export function createDnsRecord(
-  name: string,
-  args: {
-    hostname: Output<string>;
-    ipAddress: Output<string>;
-    type: "A" | "CNAME";
-    record?: Output<string>;
-  },
-  globals: GlobalResources,
-  cro: ComponentResourceOptions,
-) {
-  const unifi = new UnifiDnsRecord(
-    name,
-    {
-      name: args.hostname,
-      type: args.type,
-      record: args.record ?? args.ipAddress,
-      ttl: 0,
+export class StandardDns extends ComponentResource {
+  public readonly hostname: Output<string>;
+  public readonly ipAddress: Output<string>;
+  public readonly unifi: UnifiDnsRecord;
+  public readonly cloudflare: CloudflareDnsRecord;
+  public readonly adguard: Rewrite;
+
+  constructor(
+    name: string,
+    args: {
+      hostname: Output<string>;
+      ipAddress: Output<string>;
+      type: "A" | "CNAME";
+      record?: Output<string>;
     },
-    mergeOptions(cro, {
-      provider: globals.unifiProvider,
-      deleteBeforeReplace: true,
-    }),
-  );
-  const cloudflare = new CloudflareDnsRecord(
-    name,
-    {
-      name: args.hostname,
-      zoneId: globals.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!),
-      content: args.record ?? args.ipAddress,
-      type: args.type,
-      ttl: 1,
-    },
-    mergeOptions(cro, {
-      provider: globals.cloudflareProvider,
-      deleteBeforeReplace: true,
-    }),
-  );
-  const adguard = new Rewrite(
-    name,
-    {
-      domain: args.hostname,
-      answer: args.ipAddress,
-    },
-    mergeOptions(cro, {
-      provider: globals.adguardProvider,
-      deleteBeforeReplace: true,
-    }),
-  );
-  return { hostname: args.hostname, ipAddress: output(args.ipAddress), unifi, cloudflare, adguard };
+    globals: GlobalResources,
+    cro: ComponentResourceOptions,
+  ) {
+    super("custom:resource:StandardDns", name, {}, cro);
+
+    this.unifi = new UnifiDnsRecord(
+      `${name}-unifi`,
+      {
+        name: args.hostname,
+        type: args.type,
+        record: args.record ?? args.ipAddress,
+        ttl: 0,
+      },
+      mergeOptions(cro, {
+        parent: this,
+        provider: globals.unifiProvider,
+        deleteBeforeReplace: true,
+      }),
+    );
+    this.cloudflare = new CloudflareDnsRecord(
+      `${name}-cloudflare`,
+      {
+        name: args.hostname,
+        zoneId: globals.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!),
+        content: args.record ?? args.ipAddress,
+        type: args.type,
+        ttl: 1,
+      },
+      mergeOptions(cro, {
+        parent: this,
+        provider: globals.cloudflareProvider,
+        deleteBeforeReplace: true,
+      }),
+    );
+    // TODO: pull this value from unifi later
+    this.adguard = new Rewrite(
+      `${name}-adguard`,
+      {
+        domain: args.hostname,
+        answer: args.ipAddress,
+      },
+      mergeOptions(cro, {
+        parent: this,
+        provider: globals.adguardProvider,
+        deleteBeforeReplace: true,
+      }),
+    );
+    this.hostname = args.hostname;
+    this.ipAddress = args.ipAddress;
+  }
 }
 
-export function createDnsSection(dns: ReturnType<typeof createDnsRecord>): OnePasswordItemSectionInput {
+export function createDnsSection(dns: StandardDns): OnePasswordItemSectionInput {
   return {
     fields: {
       hostname: {

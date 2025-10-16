@@ -95,7 +95,12 @@ export class TruenasVm {
       {
         acl: "private",
       },
-      { parent, provider: this.globals.truenasMinioProvider },
+      {
+        parent,
+        provider: this.globals.truenasMinioProvider,
+        protect: true,
+        retainOnDelete: true,
+      },
     );
 
     const b2Bucket = new b2.Bucket(
@@ -109,7 +114,12 @@ export class TruenasVm {
           purpose: "backup",
         },
       },
-      { parent, provider: this.globals.backblazeProvider },
+      {
+        parent,
+        provider: this.globals.backblazeProvider,
+        protect: true,
+        retainOnDelete: true,
+      },
     );
 
     // b2 buckets, application key, minio buckets
@@ -151,7 +161,12 @@ export class TruenasVm {
           purpose: "database-backup",
         },
       },
-      { parent, provider: this.globals.backblazeProvider },
+      {
+        parent,
+        provider: this.globals.backblazeProvider,
+        protect: true,
+        retainOnDelete: true,
+      },
     );
 
     // b2 buckets, application key, minio buckets

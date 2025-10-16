@@ -88,11 +88,11 @@ export class GlobalResources extends ComponentResource {
     this.adguardProvider = new AdguardProvider(
       "adguard",
       {
-        host: this.adguardCredential.apply((z) => z.urls.find((z) => z.label === "host")?.href!.substring(8)!),
+        host: this.adguardCredential.apply((z) => z.urls.find((z) => z.label === "ip-host")?.href!.substring(7)!),
         username: this.adguardCredential.apply((z) => z.fields["username"].value!),
         password: this.adguardCredential.apply((z) => z.fields["password"].value!),
-        insecure: false,
-        scheme: "https",
+        insecure: true,
+        scheme: "http",
       },
       cro,
     );

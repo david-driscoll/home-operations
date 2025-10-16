@@ -9,7 +9,7 @@ import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
-import { createDnsRecord, createDnsSection, getHostnames } from "./helper.ts";
+import { StandardDns, createDnsSection, getHostnames } from "./helper.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -44,7 +44,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
-  public readonly dns: ReturnType<typeof createDnsRecord>;
+  public readonly dns: StandardDns;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
   public readonly shortName?: string;
@@ -78,7 +78,7 @@ export class ProxmoxHost extends ComponentResource {
     const apiCredential = output(args.proxmox);
     this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
-    this.dns = createDnsRecord(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
 
     // Create ProxmoxVE Provider
     this.pveProvider = new ProxmoxVEProvider(
@@ -232,7 +232,7 @@ export class ProxmoxHost extends ComponentResource {
       `${this.name}-proxmox`,
       {
         category: FullItem.CategoryEnum.SecureNote,
-        title: pulumi.interpolate`ProxmoxHost: ${args.title ?? cluster.title}`,
+        title: pulumi.interpolate`ProxmoxHost: ${this.title}`,
         tags: ["proxmox", "host"],
         sections: {
           tailscale: getTailscaleSection(this.device),

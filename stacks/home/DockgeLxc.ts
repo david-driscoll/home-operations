@@ -7,7 +7,7 @@ import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpo
 import { remote, types } from "@pulumi/command";
 import { PrivateKey } from "@pulumi/tls";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { createDnsRecord, createDnsSection, getContainerHostnames } from "./helper.ts";
+import { StandardDns, createDnsSection, getContainerHostnames } from "./helper.ts";
 import { CT } from "@muhlba91/pulumi-proxmoxve/types/input.js";
 import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { tailscale } from "@components/tailscale.ts";
@@ -20,11 +20,12 @@ import { basename, dirname, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { awaitOutput, getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { stderr, stdout } from "node:process";
 import { ssh } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
+import { glob } from "glob";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -44,11 +45,9 @@ export class DockgeLxc extends ComponentResource {
   public readonly tailscaleIpAddress: Output<string>;
   public readonly hostname: Output<string>;
   public readonly device: Output<GetDeviceResult>;
-  public readonly dns: ReturnType<typeof createDnsRecord>;
+  public readonly dns: StandardDns;
   public readonly ipAddress: Output<string>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
-  public readonly dockgeDns: ReturnType<typeof createDnsRecord>;
-  public readonly internalDns: ReturnType<typeof createDnsRecord>;
   public readonly stacks: Output<string[]>;
   public readonly credential: Output<OPClientItem>;
   constructor(
@@ -135,19 +134,7 @@ export class DockgeLxc extends ComponentResource {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
     }
 
-    this.dns = createDnsRecord(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
-    this.internalDns = createDnsRecord(
-      `${name}-internal`,
-      { hostname: interpolate`internal.${this.hostname}`, ipAddress, type: "CNAME", record: this.dns.hostname },
-      args.globals,
-      mergeOptions(cro, { dependsOn: [] }),
-    );
-    this.dockgeDns = createDnsRecord(
-      `${name}-dockge`,
-      { hostname: interpolate`dockge.${this.hostname}`, ipAddress, type: "CNAME", record: this.dns.hostname },
-      args.globals,
-      mergeOptions(cro, { dependsOn: [] }),
-    );
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
 
     // Get Tailscale device - this will need to be done after the hook script runs
     // and Tailscale is configured. For now, we'll comment this out as it requires
@@ -232,8 +219,6 @@ export class DockgeLxc extends ComponentResource {
         sections: {
           tailscale: getTailscaleSection(this.device),
           dns: createDnsSection(this.dns),
-          internalDns: createDnsSection(this.internalDns),
-          dockgeDns: createDnsSection(this.dockgeDns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
@@ -254,27 +239,8 @@ export class DockgeLxc extends ComponentResource {
 
   private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
     const stackName = basename(path);
-    const files = output(readdir(path));
-    const fileAssets = files.apply((files) =>
-      output(
-        files.map((file) => {
-          const content = output(readFile(resolve(path, file), "utf-8"));
-          const items = replacements.reduce((p, r) => r(p), content);
-
-          return items.apply(async (content) => {
-            mkdirSync(`./.tmp/`, { recursive: true });
-            const tempFilePath = `./.tmp/${hostname}-${stackName}-${file}`;
-            await writeFile(tempFilePath, content);
-            return {
-              id: md5Output({ input: content }).result,
-              remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-              filePath: tempFilePath,
-              source: new asset.FileAsset(tempFilePath),
-            };
-          });
-        }),
-      ),
-    );
+    const files = await glob("**/*", { cwd: path, absolute: false, nodir: true });
+    const copyFiles = [];
 
     const mkdir = new remote.Command(
       `${hostname}-${stackName}-mkdir`,
@@ -285,50 +251,55 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions({ parent: this }, { dependsOn: [] }),
     );
 
-    const copyFiles = fileAssets.apply(async (assets) => {
-      const results = [];
-      for (const asset of assets) {
-        if (asset.remotePath.endsWith("compose.yaml")) {
-          const content = await readFile(asset.filePath, "utf-8");
-          const regex = /Host\(`(.*?)`\)/g;
-          for (const match of content.matchAll(regex)) {
-            const host = match[1];
-            createDnsRecord(
-              `${stackName}-dns-${host.replace(/\./g, "-")}`,
-              {
-                hostname: interpolate`${host}`,
-                ipAddress: this.ipAddress,
-                type: "CNAME",
-                record: this.hostname,
-              },
-              this.args.globals,
-              {
-                parent: this,
-              },
-            );
-          }
-        }
+    for (const file of files) {
+      const content = await readFile(resolve(path, file), "utf-8");
+      const replacedContent = replacements.reduce((p, r) => r(p), output(content));
+      const tempFilePath = `./.tmp/${hostname}-${stackName}-${file.replace(/\//g, "-")}`;
+      mkdirSync(`./.tmp/`, { recursive: true });
+      await writeFile(tempFilePath, await awaitOutput(replacedContent));
+      const remotePath = interpolate`/opt/stacks/${stackName}/${file}`;
+      const fileAsset = new asset.FileAsset(tempFilePath);
+      const id = (await md5({ input: content })).result;
 
-        results.push(
-          new remote.CopyToRemote(
-            `${hostname}-${asset.id}-copy-file`,
+      if (tempFilePath.endsWith("compose.yaml")) {
+        const content = await readFile(tempFilePath, "utf-8");
+        const regex = /Host\(`(.*?)`\)/g;
+        const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
+        for (const host of hosts) {
+          new StandardDns(
+            `${stackName}@${host}`,
             {
-              connection: this.remoteConnection,
-              remotePath: asset.remotePath,
-              source: asset.source,
+              hostname: interpolate`${host}`,
+              ipAddress: this.ipAddress,
+              type: "CNAME",
+              record: this.hostname,
             },
-            mergeOptions({ parent: this }, { dependsOn: [mkdir] }),
-          ),
-        );
+            this.args.globals,
+            {
+              parent: this,
+            },
+          );
+        }
       }
-      return results;
-    });
+
+      copyFiles.push(
+        new remote.CopyToRemote(
+          `${hostname}-${id}-copy-file`,
+          {
+            connection: this.remoteConnection,
+            remotePath,
+            source: fileAsset,
+          },
+          mergeOptions({ parent: this }, { dependsOn: [mkdir] }),
+        ),
+      );
+    }
 
     const compose = new remote.Command(
       `${hostname}-${stackName}-compose`,
       {
         connection: this.remoteConnection,
-        triggers: copyFiles.apply((z) => z.map((f) => f.id)),
+        triggers: copyFiles.map((f) => f.id),
         create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
       },
       mergeOptions({ parent: this }, { dependsOn: copyFiles }),
@@ -343,8 +314,6 @@ export function getDockageProperties(instance: DockgeLxc) {
     hostname: instance.hostname,
     ipAddress: instance.ipAddress,
     dns: instance.dns,
-    dockgeDns: instance.dockgeDns,
-    internalDns: instance.internalDns,
     remoteConnection: instance.remoteConnection!,
   });
 }
