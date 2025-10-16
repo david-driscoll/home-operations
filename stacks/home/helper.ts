@@ -47,11 +47,11 @@ export class StandardDns extends ComponentResource {
         record: args.record ?? args.ipAddress,
         ttl: 0,
       },
-      mergeOptions(cro, {
+      {
         parent: this,
-        provider: globals.unifiProvider,
+        provider: globals.adguardProvider,
         deleteBeforeReplace: true,
-      }),
+      },
     );
     this.cloudflare = new CloudflareDnsRecord(
       `${name}-cloudflare`,
@@ -62,11 +62,11 @@ export class StandardDns extends ComponentResource {
         type: args.type,
         ttl: 1,
       },
-      mergeOptions(cro, {
+      {
         parent: this,
-        provider: globals.cloudflareProvider,
+        provider: globals.adguardProvider,
         deleteBeforeReplace: true,
-      }),
+      },
     );
     // TODO: pull this value from unifi later
     this.adguard = new Rewrite(
@@ -75,11 +75,11 @@ export class StandardDns extends ComponentResource {
         domain: args.hostname,
         answer: args.ipAddress,
       },
-      mergeOptions(cro, {
+      {
         parent: this,
         provider: globals.adguardProvider,
         deleteBeforeReplace: true,
-      }),
+      },
     );
     this.hostname = args.hostname;
     this.ipAddress = args.ipAddress;

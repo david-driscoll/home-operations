@@ -313,7 +313,6 @@ export function getDockageProperties(instance: DockgeLxc) {
   return output({
     hostname: instance.hostname,
     ipAddress: instance.ipAddress,
-    dns: instance.dns,
     remoteConnection: instance.remoteConnection!,
   });
 }

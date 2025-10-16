@@ -266,7 +266,6 @@ export function getProxmoxProperties(instance: ProxmoxHost) {
     hostname: instance.hostname,
     ipAddress: instance.internalIpAddress,
     macAddress: instance.macAddress,
-    dns: instance.dns,
     remoteConnection: instance.remoteConnection!,
   };
 }
