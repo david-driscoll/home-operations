@@ -33,12 +33,6 @@ class Provider extends pulumi.ProviderResource {
         let resourceInputs = {};
         opts = opts || {};
         {
-            if (args?.token === undefined && !opts.urn) {
-                throw new Error("Missing required property 'token'");
-            }
-            if (args?.url === undefined && !opts.urn) {
-                throw new Error("Missing required property 'url'");
-            }
             resourceInputs["headers"] = pulumi.output(args?.headers ? pulumi.secret(args.headers) : undefined).apply(JSON.stringify);
             resourceInputs["insecure"] = pulumi.output(args?.insecure).apply(JSON.stringify);
             resourceInputs["token"] = args?.token ? pulumi.secret(args.token) : undefined;

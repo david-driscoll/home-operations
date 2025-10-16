@@ -14,11 +14,11 @@ export declare class Provider extends pulumi.ProviderResource {
     /**
      * The authentik API token, can optionally be passed as `AUTHENTIK_TOKEN` environmental variable
      */
-    readonly token: pulumi.Output<string>;
+    readonly token: pulumi.Output<string | undefined>;
     /**
      * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
      */
-    readonly url: pulumi.Output<string>;
+    readonly url: pulumi.Output<string | undefined>;
     /**
      * Create a Provider resource with the given unique name, arguments, and options.
      *
@@ -26,7 +26,7 @@ export declare class Provider extends pulumi.ProviderResource {
      * @param args The arguments to use to populate this resource's properties.
      * @param opts A bag of options that control this resource's behavior.
      */
-    constructor(name: string, args: ProviderArgs, opts?: pulumi.ResourceOptions);
+    constructor(name: string, args?: ProviderArgs, opts?: pulumi.ResourceOptions);
     /**
      * This function returns a Terraform config object with terraform-namecased keys,to be used with the Terraform Module Provider.
      */
@@ -51,11 +51,11 @@ export interface ProviderArgs {
     /**
      * The authentik API token, can optionally be passed as `AUTHENTIK_TOKEN` environmental variable
      */
-    token: pulumi.Input<string>;
+    token?: pulumi.Input<string>;
     /**
      * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
      */
-    url: pulumi.Input<string>;
+    url?: pulumi.Input<string>;
 }
 export declare namespace Provider {
     /**

@@ -15,15 +15,9 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "preinstall": "cd ../../; npm i",
+    "preinstall": "cd ../../; pulumi install;",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {},
-  "dependencies": {
-    "@pulumi/adguard": "file:../../sdks/adguard",
-    "@pulumi/authentik": "file:../../sdks/authentik",
-    "@pulumi/b2": "file:../../sdks/b2",
-    "@pulumi/unifi": "file:../../sdks/unifi",
-    "@pulumi/uptimekuma": "file:../../sdks/uptimekuma"
-  }
+  "dependencies": {}
 }
