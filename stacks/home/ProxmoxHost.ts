@@ -239,7 +239,7 @@ export class ProxmoxHost extends ComponentResource {
         tags: ["proxmox", "host"],
         sections: {
           tailscale: getTailscaleSection(this.device),
-          dns: createDnsSection(this.dns),
+          // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
