@@ -6,18 +6,9 @@ import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } f
 import { FullItem } from "@1password/connect";
 import { GlobalResources } from "@components/globals.ts";
 
-const globals = new GlobalResources({});
-
-// Initialize 1Password client
 const opClient = new OPClient();
-
-// Initialize groups
 const authentikGroups = new AuthentikGroups({});
-
-// Initialize flows manager
 const flowsManager = new FlowsManager({});
-
-// Create all flows
 const authentikFlows = flowsManager.createFlows(opClient);
 
 function exportFlows(flows: ReturnType<FlowsManager["createFlows"]>): { [K in keyof typeof flows]: pulumi.Output<string> } {
