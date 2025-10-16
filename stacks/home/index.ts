@@ -16,7 +16,6 @@ const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(crea
 const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
 const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
 const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
-const gateway = "10.10.0.1";
 
 var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",

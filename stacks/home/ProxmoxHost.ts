@@ -7,7 +7,6 @@ import { ClusterDefinition, GlobalResources } from "../../components/globals.ts"
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
-import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
