@@ -1,10 +1,7 @@
-import { ComponentResource, ComponentResourceOptions, CustomResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
-import { download, Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
-import proxmox from "@muhlba91/pulumi-proxmoxve";
-import { DnsRecord as CloudflareDnsRecord } from "@pulumi/cloudflare";
-import { DnsRecord as UnifiDnsRecord } from "@pulumi/unifi";
-import { getDeviceOutput, DeviceTags, DeviceKey, DeviceAuthorization, GetDeviceResult, get4Via6 } from "@pulumi/tailscale";
-import { remote, local, types } from "@pulumi/command";
+import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
+import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
+import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
+import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { tailscale } from "../../components/tailscale.js";
@@ -195,7 +192,11 @@ export class ProxmoxHost extends ComponentResource {
 
     // Get Tailscale device
     this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
-      await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.id }, { ipv4: args.tailscaleIpAddress });
+      try {
+        await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
+      } catch (e) {
+        pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
+      }
       return result;
     });
 

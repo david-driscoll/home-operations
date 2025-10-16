@@ -1,30 +1,20 @@
-import * as proxmox from "@muhlba91/pulumi-proxmoxve";
-import { DnsRecord as CloudflareDnsRecord, Tunnel } from "@pulumi/cloudflare";
 import {} from "@pulumi/tailscale";
-import { DnsRecord as UnifiDnsRecord, User, getUserOutput } from "@pulumi/unifi";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, runtime, Unwrap } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { PrivateKey } from "@pulumi/tls";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { StandardDns, createDnsSection, getContainerHostnames } from "./helper.ts";
-import { CT } from "@muhlba91/pulumi-proxmoxve/types/input.js";
-import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
+import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { tailscale } from "@components/tailscale.ts";
-import { getUser } from "sdks/unifi/getUser.ts";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { md5 } from "@pulumi/std";
-import { md5Output } from "@pulumi/std/md5.js";
-import { getContainerOutput } from "@muhlba91/pulumi-proxmoxve/getContainer.js";
 import { basename, dirname, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { awaitOutput, getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { awaitOutput, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
-import { stderr, stdout } from "node:process";
-import { ssh } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { glob } from "glob";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -142,7 +132,11 @@ export class DockgeLxc extends ComponentResource {
 
     this.device = all([this.tailscaleIpAddress, getDeviceOutput({ name: tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] })]).apply(
       async ([tailscaleIpAddress, result]) => {
-        await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
+        try {
+          await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
+        } catch (e) {
+          log.error(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
+        }
         return result;
       },
     );

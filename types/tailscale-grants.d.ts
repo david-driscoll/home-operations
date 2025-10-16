@@ -355,7 +355,7 @@ export interface TailscaleSshRule {
 /**
  * Known node attributes
  */
-export type TailscaleNodeAttr =
+export type TailscaleNodeAttrValue =
   | "mullvad" // Mullvad exit node
   | "drive:access" // Tailscale Drive access
   | "drive:share" // Tailscale Drive sharing
@@ -373,7 +373,7 @@ export interface TailscaleNodeAttr {
   /**
    * Attributes to assign
    */
-  attr?: TailscaleNodeAttr[];
+  attr?: TailscaleNodeAttrValue[];
 
   /**
    * Application capabilities to enable on these nodes

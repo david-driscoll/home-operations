@@ -4,8 +4,6 @@ import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
-import { GetDeviceResult } from "@pulumi/tailscale";
-import { tailscale } from "@components/tailscale.ts";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();

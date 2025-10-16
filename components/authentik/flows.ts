@@ -177,8 +177,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         clientId: plexDetails.apply((z) => z.fields["username"].value!),
         plexToken: plexDetails.apply((z) => z.fields["credential"].value!),
         allowedServers: plexDetails.apply((z) =>
-          Object.entries(z.fields)
-            .filter((z) => z[1].section?.id === "servers")
+          Object.entries(z.sections?.servers?.fields || {})
             .map((z) => z[1].value!)
         ),
         allowFriends: true,
