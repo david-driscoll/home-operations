@@ -6,18 +6,16 @@ import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } f
 import { FullItem } from "@1password/connect";
 import { GlobalResources } from "@components/globals.ts";
 
-// Stack configuration
-const config = new pulumi.Config();
-const globals = new GlobalResources({ parent: undefined });
+const globals = new GlobalResources({});
 
 // Initialize 1Password client
 const opClient = new OPClient();
 
 // Initialize groups
-const authentikGroups = new AuthentikGroups({ parent: undefined });
+const authentikGroups = new AuthentikGroups({});
 
 // Initialize flows manager
-const flowsManager = new FlowsManager({ parent: undefined });
+const flowsManager = new FlowsManager({});
 
 // Create all flows
 const authentikFlows = flowsManager.createFlows(opClient);
@@ -47,7 +45,7 @@ function exportFields(value: { [key: string]: pulumi.Output<string> }): OnePassw
         type: TypeEnum.String,
         value: output,
       },
-    ]),
+    ])
   );
 }
 
