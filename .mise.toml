@@ -8,6 +8,8 @@ PULUMI_CONFIG_PASSPHRASE = "op://Eris/Pulumi Passphrase/password"
 CONNECT_HOST = "https://op-connect.equestria.driscoll.tech/"
 CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "op://Eris/OnePassword Connect Token/credential"
+AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
+AUTHENTIK_URL = "op://Eris/Authentik Token/url"
 
 [tools]
 kubectl = "1.33.0"

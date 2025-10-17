@@ -1,11 +1,2 @@
 [env]
-PULUMI_BACKEND_URL = "postgres://postgres.sgc.driscoll.tech"
-PULUMI_CONFIG_PASSPHRASE = "op://Eris/Pulumi Passphrase/password"
-PGUSER = "op://Eris/sgc-pulumi-operator-postgres/username"
-PGPASSWORD = "op://Eris/sgc-pulumi-operator-postgres/password"
-PGHOST = "op://Eris/sgc-pulumi-operator-postgres/public-hostname"
-PGPORT = "op://Eris/sgc-pulumi-operator-postgres/port"
-PGDATABASE = "op://Eris/sgc-pulumi-operator-postgres/database"
-PGSSLMODE = "disable"
-AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
-AUTHENTIK_URL = "op://Eris/Authentik Token/url"
+PULUMI_BACKEND_URL = "s3://home-operations/applications?endpoint=s3.us-east-005.backblazeb2.com"

@@ -19,12 +19,14 @@
     "up:equestria": "op run --no-masking -- pulumi up --yes --skip-preview -s equestria",
     "up:luna": "op run --no-masking -- pulumi up --yes --skip-preview -s luna",
     "up:celestia": "op run --no-masking -- pulumi up --yes --skip-preview -s celestia",
-    "up": "npm run up:equestria && npm run up:sgc && npm run up:luna && npm run up:celestia",
+    "up:alpha-site": "op run --no-masking -- pulumi up --yes --skip-preview -s alpha-site",
+    "up": "npm run up:equestria && npm run up:sgc && npm run up:luna && npm run up:celestia && npm run up:alpha-site",
     "down:sgc": "op run --no-masking -- pulumi down --yes --skip-preview -s sgc",
     "down:equestria": "op run --no-masking -- pulumi down --yes --skip-preview -s equestria",
     "down:luna": "op run --no-masking -- pulumi down --yes --skip-preview -s luna",
     "down:celestia": "op run --no-masking -- pulumi down --yes --skip-preview -s celestia",
-    "down": "npm run down:luna ; npm run down:celestia ; npm run down:equestria ; npm run down:sgc",
+    "down:alpha-site": "op run --no-masking -- pulumi down --yes --skip-preview -s alpha-site",
+    "down": "npm run down:luna ; npm run down:celestia ; npm run down:equestria ; npm run down:sgc ; npm run down:alpha-site",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
