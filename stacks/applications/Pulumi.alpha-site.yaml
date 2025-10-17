@@ -1,1 +1,3 @@
 encryptionsalt: v1:YzdmPTJz/eA=:v1:mvl0MQWHvNq1c/D7:VhhGym03V1svMTda5k2zRDAfCsBdZQ==
+config:
+  applications:clusterCredential: 'Cluster: Alpha Site'
