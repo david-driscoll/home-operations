@@ -28,6 +28,7 @@ export interface DockgeLxcArgs {
   host: ProxmoxHost;
   vmId: number;
   ipAddress?: string;
+  tailscaleIpAddress?: string;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
 }
@@ -41,10 +42,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly stacks: Output<string[]>;
   public readonly credential: Output<OPClientItem>;
-  constructor(
-    name: string,
-    private readonly args: DockgeLxcArgs,
-  ) {
+  constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
@@ -55,20 +53,20 @@ export class DockgeLxc extends ComponentResource {
     this.tailscaleHostname = tailscaleHostname;
 
     const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
-    this.tailscaleIpAddress = output(`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
+    this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
 
     const ipAddress = (this.ipAddress = args.ipAddress
       ? output(args.ipAddress)
       : args.host.remote
-        ? this.tailscaleIpAddress
-        : new remote.Command(
-            `${name}-get-ip-address`,
-            {
-              connection: args.host.remoteConnection,
-              create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
-            },
-            mergeOptions(cro, { dependsOn: [] }),
-          ).stdout);
+      ? this.tailscaleIpAddress
+      : new remote.Command(
+          `${name}-get-ip-address`,
+          {
+            connection: args.host.remoteConnection,
+            create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+          },
+          mergeOptions(cro, { dependsOn: [] })
+        ).stdout);
 
     this.credential = output(args.credential);
 
@@ -84,7 +82,7 @@ export class DockgeLxc extends ComponentResource {
         connection,
         create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { dependsOn: [] })
     );
 
     const installTailscale = new remote.Command(
@@ -93,7 +91,7 @@ export class DockgeLxc extends ComponentResource {
         connection,
         create: interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
       },
-      mergeOptions(cro, { dependsOn: [sshConfig] }),
+      mergeOptions(cro, { dependsOn: [sshConfig] })
     );
 
     const tailscaleArgs = interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
@@ -107,7 +105,7 @@ export class DockgeLxc extends ComponentResource {
         triggers: [installTailscale.id, sshConfig.id],
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [installTailscale] }),
+      mergeOptions(cro, { dependsOn: [installTailscale] })
     );
 
     const tailscaleSet = new remote.Command(
@@ -118,7 +116,7 @@ export class DockgeLxc extends ComponentResource {
         triggers: [installTailscale.id, sshConfig.id, tailscaleUp.id],
         environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
       },
-      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] }),
+      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] })
     );
 
     function replaceVariable(key: RegExp, value: Input<string>) {
@@ -139,7 +137,7 @@ export class DockgeLxc extends ComponentResource {
           log.error(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
         }
         return result;
-      },
+      }
     );
 
     // // Create device tags
@@ -154,7 +152,7 @@ export class DockgeLxc extends ComponentResource {
         parent: this,
         retainOnDelete: true,
         dependsOn: [tailscaleSet],
-      },
+      }
     );
 
     // // Create device key
@@ -168,7 +166,7 @@ export class DockgeLxc extends ComponentResource {
         provider: args.globals.tailscaleProvider,
         parent: this,
         dependsOn: [tailscaleSet],
-      },
+      }
     );
 
     const op = new OPClient();
@@ -183,7 +181,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
       replaceVariable(
         /\$\{cloudflareApiToken\}/g,
-        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!),
+        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
       ),
       replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, cluster.title),
@@ -195,8 +193,8 @@ export class DockgeLxc extends ComponentResource {
       .apply((z) => {
         const hostStacks = output(
           readdir(resolve(dockerPath, args.host.name)).then((files) =>
-            files.filter((z) => z !== ".keep").map((f) => this.createStack(args.host.name, resolve(dockerPath, args.host.name, f), replacements)),
-          ),
+            files.filter((z) => z !== ".keep").map((f) => this.createStack(args.host.name, resolve(dockerPath, args.host.name, f), replacements))
+          )
         );
         return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
       })
@@ -228,7 +226,7 @@ export class DockgeLxc extends ComponentResource {
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
         },
       },
-      cro,
+      cro
     );
   }
 
@@ -243,7 +241,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`mkdir -p /opt/stacks/${stackName}/`,
       },
-      mergeOptions({ parent: this }, { dependsOn: [] }),
+      mergeOptions({ parent: this }, { dependsOn: [] })
     );
 
     for (const file of files) {
@@ -272,7 +270,7 @@ export class DockgeLxc extends ComponentResource {
             this.args.globals,
             {
               parent: this,
-            },
+            }
           );
         }
       }
@@ -285,8 +283,8 @@ export class DockgeLxc extends ComponentResource {
             remotePath,
             source: fileAsset,
           },
-          mergeOptions({ parent: this }, { dependsOn: [mkdir] }),
-        ),
+          mergeOptions({ parent: this }, { dependsOn: [mkdir] })
+        )
       );
     }
 
@@ -297,7 +295,7 @@ export class DockgeLxc extends ComponentResource {
         triggers: copyFiles.map((f) => f.id),
         create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
       },
-      mergeOptions({ parent: this }, { dependsOn: copyFiles }),
+      mergeOptions({ parent: this }, { dependsOn: copyFiles })
     );
 
     return { name: stackName, path, compose };

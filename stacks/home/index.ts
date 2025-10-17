@@ -93,6 +93,7 @@ var alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   host: alphaSiteHost,
   vmId: 100,
   ipAddress: "10.10.10.9",
+  tailscaleIpAddress: "100.111.10.9",
   cluster: alphaSiteCluster,
 });
 

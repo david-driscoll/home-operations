@@ -29,7 +29,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
         {
           name: group.groupName,
         },
-        { parent: this },
+        { parent: this }
       );
       this.roles.set(group.groupName, roleResource);
 
@@ -43,7 +43,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
           isSuperuser: group.groupName === Roles.Admins,
           ...(parentGroup && { parent: parentGroup.groupId }),
         },
-        { parent: this },
+        { parent: this }
       );
       this.groups.set(group.groupName, groupResource);
     }
