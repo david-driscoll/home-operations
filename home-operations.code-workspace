@@ -1,17 +1,26 @@
 {
-  "folders": [
-	{
-		"name": "home-operations",
-		"path": "."
-	},
-	{
-		"name": "stargate-command-cluster",
-		"path": "../stargate-command-cluster"
-	},
-	{
-		"name": "equestria-cluster",
-		"path": "../equestria-cluster"
+	"folders": [
+		{
+			"name": "home-operations",
+			"path": "."
+		},
+		{
+			"name": "stargate-command-cluster",
+			"path": "../stargate-command-cluster"
+		},
+		{
+			"name": "equestria-cluster",
+			"path": "../equestria-cluster"
+		}
+	],
+	"settings": {
+		"editor.bracketPairColorization.enabled": true,
+		"files.trimTrailingWhitespace": true,
+		"sops.defaults.ageKeyFile": "../stargate-command-cluster/age.key",
+		"sops.binPath": "/opt/homebrew/bin/sops",
+		"sops.beta": false,
+		"sops.creationEnabled": true,
+		"path-autocomplete.disableUpOneFolder": false,
+		"path-autocomplete.triggerOutsideStrings": true,
 	}
-],
-  "settings": {}
 }

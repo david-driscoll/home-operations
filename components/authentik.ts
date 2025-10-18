@@ -12,6 +12,7 @@ import { ApplicationDefinitionSchema, AuthentikDefinition } from "@openapi/appli
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
+  outputs: AuthentikOutputs;
   cluster: ClusterDefinition;
   authentikCredential: pulumi.Input<string>;
   loadFromResource<T>(application: ApplicationDefinitionSchema, type: "authentik" | "uptime", from: { type: string; name: string }): Promise<T>;
@@ -41,18 +42,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly proxyProviders: pulumi.Output<number>[] = [];
   public readonly cluster: ClusterDefinition;
-  private readonly authentik: pulumi.Output<AuthentikOutputs>;
+  private readonly authentik: AuthentikOutputs;
 
-  constructor(
-    private readonly args: AuthentikResourcesArgs,
-    private readonly opts?: pulumi.ComponentResourceOptions,
-  ) {
+  constructor(private readonly args: AuthentikResourcesArgs, private readonly opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
 
-    this.authentik = pulumi
-      .output(args.authentikCredential)
-      .apply((title) => op.getItemByTitle(title))
-      .apply((item) => new AuthentikOutputs(item));
+    this.authentik = args.outputs;
     this.cluster = args.cluster;
     this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", "providers", {}, { parent: this });
     this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", "applications", {}, { parent: this });
@@ -83,7 +78,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {
-    return (definition.spec.slug ?? (definition.metadata.namespace ?? this.cluster.key) === this.cluster.key)
+    return definition.spec.slug ?? (definition.metadata.namespace ?? this.cluster.key) === this.cluster.key
       ? `${this.cluster.key}-${definition.metadata.name}`
       : `${this.cluster.key}-${definition.metadata.namespace}-${definition.metadata.name}`;
   }
@@ -120,7 +115,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
             skipPathRegex: authentikDefinition.proxy.skipPathRegex,
             propertyMappings: this.resolvePropertyMappings(authentikDefinition.proxy.propertyMappings),
           },
-          opts,
+          opts
         ),
         isProxy: true,
       };
@@ -136,7 +131,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           upper: false,
           special: false,
         },
-        opts,
+        opts
       );
       const clientSecret = new random.RandomPassword(
         `${resourceName}-client-secret`,
@@ -145,7 +140,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           upper: false,
           special: false,
         },
-        opts,
+        opts
       );
       const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
@@ -177,7 +172,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           subMode: oauth2.subMode,
           propertyMappings: this.resolvePropertyMappings(oauth2.propertyMappings),
         },
-        opts,
+        opts
       );
 
       const oidcCredentials = new OnePasswordItem(
@@ -201,7 +196,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
             },
           }),
         },
-        { parent: provider },
+        { parent: provider }
       );
 
       return { provider, oidcCredentials, isProxy: false };

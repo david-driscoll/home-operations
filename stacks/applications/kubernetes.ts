@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { AuthentikApplicationManager } from "@components/authentik.ts";
+import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
 import { GlobalResources, KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { base64encodeOutput } from "@pulumi/std";
@@ -11,7 +11,7 @@ import { ApplicationDefinitionSchema, AuthentikDefinition } from "@openapi/appli
 
 const op = new OPClient();
 
-export async function kubernetesApplications(globals: GlobalResources, clusterDefinition: KubernetesClusterDefinition) {
+export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: KubernetesClusterDefinition) {
   const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
 
@@ -34,17 +34,18 @@ export async function kubernetesApplications(globals: GlobalResources, clusterDe
             version: "v1",
             namespace: ns,
             plural: "applicationdefinitions",
-          }),
-        ),
+          })
+        )
       ),
       map((res) => res as { items: ApplicationDefinitionSchema[] }),
       concatMap((res) => from(res.items)),
-      toArray(),
-    ),
+      toArray()
+    )
   );
 
   const applicationManager = new AuthentikApplicationManager({
     globals,
+    outputs,
     authentikCredential: "Authentik Outputs",
     cluster: clusterDefinition,
     async loadFromResource(application, kind, from) {
@@ -106,7 +107,7 @@ export async function kubernetesApplications(globals: GlobalResources, clusterDe
       }),
       protocolProviders: applicationManager.proxyProviders,
     },
-    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
+    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
   );
 
   return {};

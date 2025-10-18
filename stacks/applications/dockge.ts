@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { AuthentikApplicationManager } from "../../components/authentik.ts";
+import { AuthentikApplicationManager, AuthentikOutputs } from "../../components/authentik.ts";
 import { GlobalResources, DockgeClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as yaml from "yaml";
@@ -11,7 +11,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { remote } from "@pulumi/command";
 import { awaitOutput as outToPromise } from "@components/helpers.ts";
 
-export async function dockgeApplications(globals: GlobalResources, clusterDefinition: DockgeClusterDefinition) {
+export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
   const ssh = new NodeSSH();
   const op = new OPClient();
 
@@ -19,6 +19,7 @@ export async function dockgeApplications(globals: GlobalResources, clusterDefini
 
   const applicationManager = new AuthentikApplicationManager({
     globals,
+    outputs,
     authentikCredential: "Authentik Outputs",
     cluster: clusterDefinition,
     async loadFromResource(application, kind, { name }) {
@@ -92,7 +93,7 @@ export async function dockgeApplications(globals: GlobalResources, clusterDefini
       }),
       protocolProviders: applicationManager.proxyProviders,
     },
-    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
+    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
   );
   const clientConfig = new authentikApi.Configuration({
     accessToken: authentikToken.fields.credential.value,
