@@ -1,27 +1,11 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: [
-    "config:recommended",
-    "docker:enableMajor",
-    "helpers:pinGitHubActionDigests",
-    ":dependencyDashboard",
-    ":disableRateLimiting",
-    ":semanticCommits",
-  ],
+  extends: ["config:recommended", "docker:enableMajor", "helpers:pinGitHubActionDigests", ":dependencyDashboard", ":disableRateLimiting", ":semanticCommits"],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
   schedule: ["every weekend"],
   ignorePaths: ["**/*.sops.*"],
-  enabledManagers: [
-    "github-actions",
-    "helm-values",
-    "helmfile",
-    "kustomize",
-    "custom.regex",
-    "flux",
-    "kubernetes",
-  ],
   flux: {
     managerFilePatterns: ["/(^|/)kubernetes/.+\\.ya?ml$/"],
     pinDigests: false,
@@ -178,11 +162,7 @@
     {
       description: "Process annotated dependencies",
       customType: "regex",
-      managerFilePatterns: [
-        "/(^|/).+\\.env$/",
-        "/(^|/).+\\.sh$/",
-        "/(^|/).+\\.ya?ml$/",
-      ],
+      managerFilePatterns: ["/(^|/).+\\.env$/", "/(^|/).+\\.sh$/", "/(^|/).+\\.ya?ml$/"],
       matchStrings: [
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n.+(:\\s|=)(&\\S+\\s)?(?<currentValue>\\S+)",
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n.+/(?<currentValue>(v|\\d)[^/]+)",
