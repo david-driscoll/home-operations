@@ -1,5 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import * as purrl from "@pulumiverse/purrl";
 import { PropertyMappings } from "./property-mappings.js";
 import { Policies } from "./policies.js";
 import { ConsentStages } from "./consent-stages.js";
@@ -57,9 +58,12 @@ export class FlowsManager extends pulumi.ComponentResource {
   public readonly invalidationStages: InvalidationStages;
   public readonly authenticatorStages: AuthenticatorStages;
   public readonly authenticationStages: AuthenticationStages;
+  private readonly opClient: OPClient;
 
   constructor(opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:FlowsManager", "flows-manager", {}, opts);
+
+    this.opClient = new OPClient();
 
     this.propertyMappings = new PropertyMappings({ parent: this });
     this.policies = new Policies({ parent: this });
@@ -76,7 +80,7 @@ export class FlowsManager extends pulumi.ComponentResource {
     this.authenticationStages = new AuthenticationStages(this.authenticatorStages, { parent: this.stagesComponent });
   }
 
-  public createFlows(opClient: OPClient): CustomFlows {
+  public createFlows(): CustomFlows {
     const logoutFlow = this.createLogoutFlow();
     const providerLogoutFlow = this.createProviderLogoutFlow();
     const authenticatorBackupCodesFlow = this.createAuthenticatorBackupCodesFlow();
@@ -92,7 +96,7 @@ export class FlowsManager extends pulumi.ComponentResource {
 
     // Create sources
     const tailscaleSource = this.createTailscaleSource(enrollmentFlow, sourceAuthenticationFlow);
-    const plexSource = this.createPlexSource(enrollmentFlow, sourceAuthenticationFlow, opClient);
+    const plexSource = this.createPlexSource(enrollmentFlow, sourceAuthenticationFlow);
 
     // Create source identification stage
     const sourceIdentificationStage = new authentik.StageIdentification(
@@ -148,7 +152,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Driscoll Home",
         title: "Welcome to Driscoll Tech Net!",
-        slug: "authentication-flow-ts",
+        slug: "authentication-flow",
         layout: "sidebar_left",
         designation: "authentication",
         compatibilityMode: true,
@@ -161,14 +165,14 @@ export class FlowsManager extends pulumi.ComponentResource {
     return flow;
   }
 
-  private createPlexSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow, opClient: OPClient): authentik.SourcePlex {
-    const plexDetails = pulumi.output(opClient.getItemByTitle("Authentik Plex Source"));
+  private createPlexSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourcePlex {
+    const plexDetails = pulumi.output(this.opClient.getItemByTitle("Authentik Plex Source"));
 
     return new authentik.SourcePlex(
       "plex",
       {
         name: "Plex",
-        slug: "plex-ts",
+        slug: "plex",
         enabled: true,
         policyEngineMode: "any",
         userPathTemplate: "driscoll.dev/plex/%(slug)s",
@@ -176,10 +180,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         groupMatchingMode: "name_link",
         clientId: plexDetails.apply((z) => z.fields["username"].value!),
         plexToken: plexDetails.apply((z) => z.fields["credential"].value!),
-        allowedServers: plexDetails.apply((z) =>
-          Object.entries(z.sections?.servers?.fields || {})
-            .map((z) => z[1].value!)
-        ),
+        allowedServers: plexDetails.apply((z) => Object.entries(z.sections?.servers?.fields || {}).map((z) => z[1].value!)),
         allowFriends: true,
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
@@ -189,22 +190,65 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
+    const items = pulumi
+      .output(this.opClient.listItemsByTitleContains("Cluster:"))
+      .apply((items) => {
+        return items.filter((z) => z.tags?.includes("cluster-definition") === true);
+      })
+      .apply((items) => {
+        return items.map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`).sort();
+      });
+    const dynamicRegistration = new purrl.Purrl(
+      "tailscale-oauth-dynamic-registration",
+      {
+        name: "Tailscale OAuth Dynamic Registration",
+        responseCodes: ["201"],
+        url: "https://idp.opossum-yo.ts.net/register",
+        method: "POST",
+        body: pulumi.jsonStringify({
+          client_name: "Authentik Tailscale Source",
+          redirect_uris: items,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+      { parent: this.sourcesComponent }
+    );
+
+    const response = pulumi.jsonParse(dynamicRegistration.response).apply((responseBody: { client_name: string; client_id: string; client_secret: string }) => {
+      pulumi.log.info(`Tailscale OAuth Dynamic Registration Response: ${JSON.stringify(responseBody)}`);
+      return responseBody;
+    });
+
+    const propertyMapping = new authentik.PropertyMappingSourceOauth(
+      "tailscale-property-mapping",
+      {
+        name: "Tailscale Property Mapping",
+        expression: pulumi.interpolate`
+ak_logger.info("property mapping data", request=request)
+return {}`,
+      },
+      { parent: this.propertyMappings }
+    );
+
     return new authentik.SourceOauth(
       "tailscale",
       {
         name: "Tailscale",
-        slug: "tailscale-ts",
+        slug: "tailscale",
         providerType: "openidconnect",
         enabled: true,
         policyEngineMode: "any",
         userPathTemplate: "driscoll.dev/tailscale/%(slug)s",
         oidcWellKnownUrl: "https://idp.opossum-yo.ts.net/.well-known/openid-configuration",
-        consumerKey: "unused",
-        consumerSecret: "unused",
+        consumerKey: response.client_id,
+        consumerSecret: response.client_secret,
         userMatchingMode: "email_link",
         groupMatchingMode: "name_link",
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
+        propertyMappings: [propertyMapping.propertyMappingSourceOauthId],
       },
       { parent: this.sourcesComponent }
     );
@@ -216,7 +260,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Welcome back!",
         title: "Welcome back to Driscoll Tech Net!",
-        slug: "source-authentication-flow-ts",
+        slug: "source-authentication-flow",
         layout: "sidebar_left",
         designation: "authentication",
         compatibilityMode: true,
@@ -239,7 +283,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Driscoll Home",
         title: "Welcome to Driscoll Tech Net! Please enter your user details.",
-        slug: "enrollment-flow-ts",
+        slug: "enrollment-flow",
         layout: "sidebar_left",
         designation: "enrollment",
         compatibilityMode: true,
@@ -265,7 +309,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Redirect",
         title: "Redirecting to %(app)s!",
-        slug: "implicit-consent-flow-ts",
+        slug: "implicit-consent-flow",
         layout: "content_right",
         designation: "authorization",
         compatibilityMode: true,
@@ -283,7 +327,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Redirect",
         title: "Redirecting to %(app)s!",
-        slug: "explicit-consent-flow-ts",
+        slug: "explicit-consent-flow",
         layout: "content_right",
         designation: "authorization",
         compatibilityMode: true,
@@ -303,7 +347,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Logout",
         title: "Logout",
-        slug: "logout-flow-ts",
+        slug: "logout-flow",
         layout: "stacked",
         designation: "invalidation",
         compatibilityMode: true,
@@ -324,7 +368,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Logout",
         title: "You've logged out of %(app)s.",
-        slug: "provider-logout-flow-ts",
+        slug: "provider-logout-flow",
         layout: "stacked",
         designation: "invalidation",
         compatibilityMode: true,
@@ -342,7 +386,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "User Settings",
         title: "User Settings",
-        slug: "user-settings-flow-ts",
+        slug: "user-settings-flow",
         layout: "content_left",
         designation: "stage_configuration",
         compatibilityMode: true,
@@ -366,7 +410,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Backup Codes",
         title: "Setup Backup Codes",
-        slug: "authenticator-backup-codes-flow-ts",
+        slug: "authenticator-backup-codes-flow",
         layout: "stacked",
         designation: "stage_configuration",
         compatibilityMode: true,
@@ -387,7 +431,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Passkey",
         title: "Setup Passkey",
-        slug: "authenticator-webauthn-flow-ts",
+        slug: "authenticator-webauthn-flow",
         layout: "stacked",
         designation: "stage_configuration",
         compatibilityMode: true,
@@ -408,7 +452,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "TOTP",
         title: "Setup TOTP Code",
-        slug: "authenticator-totp-flow-ts",
+        slug: "authenticator-totp-flow",
         layout: "stacked",
         designation: "stage_configuration",
         compatibilityMode: true,

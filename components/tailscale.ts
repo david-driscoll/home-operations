@@ -15,9 +15,8 @@ const spec = await readFile(specFilename, "utf-8");
 export const client = new OpenAPIClientAxios({
   definition: JSON.parse(spec),
   axiosConfigDefaults: {
-    headers: {
-      // Authorization: `Bearer ${tailscaleCredential.fields["credential"].value}`,
-    },
+    params: { tailnet: "-" },
+    headers: {},
   },
 });
 export const tailscale = await client.init<Client>();

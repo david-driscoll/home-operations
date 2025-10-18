@@ -28,6 +28,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@pulumi/unifi": "^0.41.3"
+    "@pulumi/unifi": "^0.41.3",
+    "@pulumiverse/purrl": "^0.6.2"
   }
 }

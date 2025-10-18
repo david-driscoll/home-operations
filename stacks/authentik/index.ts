@@ -1,15 +1,12 @@
 import * as pulumi from "@pulumi/pulumi";
-import { OPClient } from "../../components/op.ts";
 import { AuthentikGroups } from "../../components/authentik/groups.ts";
 import { FlowsManager } from "../../components/authentik/flows.ts";
 import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { GlobalResources } from "@components/globals.ts";
 
-const opClient = new OPClient();
 const authentikGroups = new AuthentikGroups({});
 const flowsManager = new FlowsManager({});
-const authentikFlows = flowsManager.createFlows(opClient);
+const authentikFlows = flowsManager.createFlows();
 
 function exportFlows(flows: ReturnType<FlowsManager["createFlows"]>): { [K in keyof typeof flows]: pulumi.Output<string> } {
   return Object.fromEntries(Object.entries(flows).map(([key, flow]) => [key, flow.uuid])) as any;

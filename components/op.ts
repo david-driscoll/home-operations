@@ -87,7 +87,13 @@ export class OPClient {
 
   public async getItemByTitle(itemId: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemId), undefined);
+    return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemId), itemId);
+  }
+
+  public async listItemsByTitleContains(contains: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    const items = await this.client.listItemsByTitleContains(vaultUuid, contains);
+    return items.map((item) => this.mapItem(item, item.id));
   }
 
   public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
