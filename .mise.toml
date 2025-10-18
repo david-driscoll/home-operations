@@ -1,9 +1,8 @@
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
-AWS_ACCESS_KEY_ID = "op://Eris/Backblaze home-operations/username"
-AWS_SECRET_ACCESS_KEY = "op://Eris/Backblaze home-operations/credential"
-AWS_REGION = "us-east-005"
-AWS_USE_PATH_STYLE_ENDPOINT = "true"
+AWS_ACCESS_KEY_ID = "op://Eris/minio root user/username"
+AWS_SECRET_ACCESS_KEY = "op://Eris/minio root user/password"
+AWS_REGION = "home"
 PULUMI_CONFIG_PASSPHRASE = "op://Eris/Pulumi Passphrase/password"
 CONNECT_HOST = "https://op-connect.equestria.driscoll.tech/"
 CONNECT_VAULT = "Eris"

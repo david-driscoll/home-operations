@@ -39,7 +39,8 @@ export interface TruenasVmResult {
     databaseApplicationKey: pulumi.Output<string>;
   };
   truenas: {
-    bucket: pulumi.Output<string>;
+    backup: pulumi.Output<string>;
+    database: pulumi.Output<string>;
   };
 }
 
@@ -69,7 +70,7 @@ export class TruenasVm {
     const manager = await promisifyOutput(
       pulumi.output(this.credential).apply(async (credential) => {
         return new TrueNASResourceManager(await getTruenasClient(credential));
-      }),
+      })
     );
 
     let longhorn: Dataset | null = null;
@@ -94,13 +95,14 @@ export class TruenasVm {
       `${name}-minio-bucket`,
       {
         acl: "private",
+        bucket: pulumi.interpolate`${suffix}-backup`,
       },
       {
         parent,
         provider: this.globals.truenasMinioProvider,
-        protect: true,
+        protect: false,
         retainOnDelete: true,
-      },
+      }
     );
 
     const b2Bucket = new b2.Bucket(
@@ -113,13 +115,19 @@ export class TruenasVm {
           cluster: name,
           purpose: "backup",
         },
+        lifecycleRules: [
+          {
+            fileNamePrefix: "",
+            daysFromHidingToDeleting: 1,
+          },
+        ],
       },
       {
         parent,
         provider: this.globals.backblazeProvider,
         protect: true,
         retainOnDelete: true,
-      },
+      }
     );
 
     // b2 buckets, application key, minio buckets
@@ -147,7 +155,21 @@ export class TruenasVm {
           "writeFiles",
         ],
       },
-      { parent, provider: this.globals.backblazeProvider },
+      { parent, provider: this.globals.backblazeProvider }
+    );
+
+    const minioDbBucket = new minio.S3Bucket(
+      `${name}-minio-db-bucket`,
+      {
+        acl: "private",
+        bucket: pulumi.interpolate`${suffix}-db`,
+      },
+      {
+        parent,
+        provider: this.globals.truenasMinioProvider,
+        protect: true,
+        retainOnDelete: true,
+      }
     );
 
     const b2DatabaseBucket = new b2.Bucket(
@@ -160,13 +182,19 @@ export class TruenasVm {
           cluster: name,
           purpose: "database-backup",
         },
+        lifecycleRules: [
+          {
+            fileNamePrefix: "",
+            daysFromHidingToDeleting: 1,
+          },
+        ],
       },
       {
         parent,
         provider: this.globals.backblazeProvider,
         protect: true,
         retainOnDelete: true,
-      },
+      }
     );
 
     // b2 buckets, application key, minio buckets
@@ -194,7 +222,7 @@ export class TruenasVm {
           "writeFiles",
         ],
       },
-      { parent, provider: this.globals.backblazeProvider },
+      { parent, provider: this.globals.backblazeProvider }
     );
 
     const backupCredential = new OnePasswordItem(
@@ -211,7 +239,7 @@ export class TruenasVm {
         }),
         tags: ["backblaze", "backup", name],
       },
-      { parent },
+      { parent }
     );
 
     const databaseCredential = new OnePasswordItem(
@@ -228,7 +256,7 @@ export class TruenasVm {
         }),
         tags: ["backblaze", "database", "backup", name],
       },
-      { parent },
+      { parent }
     );
 
     return {
@@ -249,7 +277,8 @@ export class TruenasVm {
         databaseApplicationKey: b2DatabaseBucketApplicationKey.applicationKeyId,
       },
       truenas: {
-        bucket: minioBucket.bucket,
+        backup: minioBucket.bucket,
+        database: minioDbBucket.bucket,
       },
     };
   }

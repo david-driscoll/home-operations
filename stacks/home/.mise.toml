@@ -1,3 +1,3 @@
 [env]
 PULUMI_STACK = "home-operations"
-PULUMI_BACKEND_URL = "s3://home-operations/home?endpoint=s3.us-east-005.backblazeb2.com"
+PULUMI_BACKEND_URL = "s3://home-operations/home?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true"

@@ -4,6 +4,8 @@ import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
+import * as minio from "@pulumi/minio";
+import * as b2 from "@pulumi/b2";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -16,6 +18,44 @@ const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(crea
 const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
 const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
 const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
+
+const minioBucket = new minio.S3Bucket(
+  `home-operations-minio-bucket`,
+  {
+    acl: "private",
+    bucket: pulumi.interpolate`home-operations`,
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
+    retainOnDelete: true,
+  }
+);
+
+const b2Bucket = new b2.Bucket(
+  `home-operations-b2-bucket`,
+  {
+    bucketName: pulumi.interpolate`home-operations`,
+    bucketType: "allPrivate",
+
+    bucketInfo: {
+      project: "home-operations",
+      purpose: "pulumi storage",
+    },
+    lifecycleRules: [
+      {
+            fileNamePrefix: "",
+            daysFromHidingToDeleting: 1,
+      },
+    ],
+  },
+  {
+    import: "c83ca19504295afd96930b1b",
+    provider: globals.backblazeProvider,
+    protect: true,
+    retainOnDelete: true,
+  }
+);
 
 var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
