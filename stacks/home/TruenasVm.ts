@@ -96,7 +96,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     );
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.hostname,
+      host: this.ipAddress,
       user: credentialItem.apply((z) => z.fields?.username?.value!),
       password: credentialItem.apply((z) => z.fields?.credential?.value!),
     });
