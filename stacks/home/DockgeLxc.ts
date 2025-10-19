@@ -1,12 +1,12 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
 import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
-import { tailscale } from "@components/tailscale.ts";
+import { installTailscale, tailscale } from "@components/tailscale.ts";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { md5 } from "@pulumi/std";
 import { basename, dirname, resolve } from "node:path";
@@ -75,49 +75,7 @@ export class DockgeLxc extends ComponentResource {
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-
-    const sshConfig = new remote.Command(
-      `${name}-ssh-config`,
-      {
-        connection,
-        create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
-      },
-      mergeOptions(cro, { dependsOn: [] })
-    );
-
-    const installTailscale = new remote.Command(
-      `${name}-tailscale-install`,
-      {
-        connection,
-        create: interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
-      },
-      mergeOptions(cro, { dependsOn: [sshConfig] })
-    );
-
-    const tailscaleArgs = interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
-
-    // Set Tailscale configuration
-    const tailscaleUp = new remote.Command(
-      `${name}-tailscale-up`,
-      {
-        connection,
-        create: interpolate`tailscale up ${tailscaleArgs} --reset`,
-        triggers: [installTailscale.id, sshConfig.id],
-        environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
-      },
-      mergeOptions(cro, { dependsOn: [installTailscale] })
-    );
-
-    const tailscaleSet = new remote.Command(
-      `${name}-tailscale-set`,
-      {
-        connection,
-        create: interpolate`tailscale set ${tailscaleArgs} --auto-update `,
-        triggers: [installTailscale.id, sshConfig.id, tailscaleUp.id],
-        environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
-      },
-      mergeOptions(cro, { dependsOn: [tailscaleUp, sshConfig, installTailscale] })
-    );
+    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals });
 
     function replaceVariable(key: RegExp, value: Input<string>) {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
@@ -211,7 +169,7 @@ export class DockgeLxc extends ComponentResource {
         tags: ["dockge", "lxc"],
         sections: {
           tailscale: getTailscaleSection(this.device),
-          // dns: createDnsSection(this.dns),
+          dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },

@@ -5,6 +5,9 @@ import { OpenAPIClientAxios } from "openapi-client-axios";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
+import { GlobalResources } from "./globals.ts";
+import * as pulumi from "@pulumi/pulumi";
+import { remote, types } from "@pulumi/command";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -33,3 +36,61 @@ await axios
   .then((response) => {
     tailscale.defaults.headers["Authorization"] = `Bearer ${response.data.access_token}`;
   });
+
+export function installTailscale({
+  connection,
+  name,
+  parent,
+  tailscaleName,
+  globals,
+}: {
+  connection: types.input.remote.ConnectionArgs;
+  globals: GlobalResources;
+  name: string;
+  tailscaleName: pulumi.Output<string>;
+  parent: pulumi.Resource;
+}) {
+  const sshConfig = new remote.Command(
+    `${name}-ssh-config`,
+    {
+      connection,
+      create: pulumi.interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+    },
+    { parent, dependsOn: [] }
+  );
+
+  const installTailscale = new remote.Command(
+    `${name}-tailscale-install`,
+    {
+      connection,
+      create: pulumi.interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
+    },
+    { parent, dependsOn: [sshConfig] }
+  );
+
+  const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} --accept-dns --accept-routes --ssh --accept-risk=lose-ssh`;
+
+  // Set Tailscale configuration
+  const tailscaleUp = new remote.Command(
+    `${name}-tailscale-up`,
+    {
+      connection,
+      create: pulumi.interpolate`tailscale up ${tailscaleArgs} --reset`,
+      triggers: [installTailscale.id, sshConfig.id],
+      environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+    },
+    { parent, dependsOn: [installTailscale] }
+  );
+
+  const tailscaleSet = new remote.Command(
+    `${name}-tailscale-set`,
+    {
+      connection,
+      create: pulumi.interpolate`tailscale set ${tailscaleArgs} --auto-update `,
+      triggers: [installTailscale.id, sshConfig.id, tailscaleUp.id],
+      environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+    },
+    { parent, dependsOn: [tailscaleUp, sshConfig, installTailscale] }
+  );
+  return tailscaleSet;
+}

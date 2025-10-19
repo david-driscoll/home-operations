@@ -14,11 +14,20 @@ import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts
 import { FullItem } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Dataset } from "@components/truenas/index.ts";
+import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
+import { remote, types } from "@pulumi/command";
+import { installTailscale, tailscale } from "../../components/tailscale.js";
+import { getHostnames } from "./helper.ts";
+import { createDnsSection, StandardDns } from "./StandardDns.ts";
+import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
   globals: GlobalResources;
   host: ProxmoxHost;
+  ipAddress: string;
+  macAddress: string;
+  tailscaleIpAddress: string;
 }
 
 export interface TruenasVmResult {
@@ -48,11 +57,85 @@ function promisifyOutput<T>(output: pulumi.Output<T>): Promise<T> {
   return new Promise((resolve) => output.apply(resolve));
 }
 
-export class TruenasVm {
-  globals: GlobalResources;
-  constructor(args: TruenasVmArgs) {
+export class TruenasVm extends pulumi.ComponentResource {
+  public readonly name: string;
+  public readonly ipAddress: pulumi.Output<string>;
+  public readonly tailscaleIpAddress: string;
+  public readonly macAddress: string;
+  public readonly device: pulumi.Output<GetDeviceResult>;
+  public readonly remoteConnection: types.input.remote.ConnectionArgs;
+  public readonly globals: GlobalResources;
+  public readonly hostname: pulumi.Output<string>;
+  public readonly dns: StandardDns;
+  constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
+    super("home:truenas:TruenasVM", name, opts);
+    const opClient = new OPClient();
+    const cro = { parent: this };
+    this.name = name;
+    this.ipAddress = pulumi.output(args.ipAddress);
+    this.tailscaleIpAddress = args.tailscaleIpAddress;
+    this.macAddress = args.macAddress;
     this.credential = pulumi.output(args.credential);
+    const credentialItem = this.credential.apply(async (title) => opClient.getItemByTitle(title));
     this.globals = args.globals;
+
+    this.hostname = pulumi.interpolate`${name}.${this.globals.searchDomain}`;
+    const tailscaleHostname = pulumi.interpolate`${name}.${this.globals.tailscaleDomain}`;
+
+    this.dns = new StandardDns(
+      name,
+      {
+        hostname: this.hostname,
+        ipAddress: this.ipAddress,
+        type: "A",
+      },
+      this.globals,
+      {
+        parent: args.host,
+      }
+    );
+
+    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
+      host: this.hostname,
+      user: credentialItem.apply((z) => z.fields?.username?.value!),
+      password: credentialItem.apply((z) => z.fields?.credential?.value!),
+    });
+    // const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName: pulumi.output(name), globals: args.globals });
+
+    // Get Tailscale device
+    // this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] }).apply(async (result) => {
+    //   try {
+    //     await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
+    //   } catch (e) {
+    //     pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
+    //   }
+    //   return result;
+    // });
+
+    const truenasInfo = new OnePasswordItem(
+      `${args.host.name}-truenas`,
+      {
+        category: FullItem.CategoryEnum.SecureNote,
+        title: pulumi.interpolate`Truenas: ${args.host.title}`,
+        tags: ["truenas"],
+        sections: {
+          dns: createDnsSection(this.dns),
+          ssh: {
+            fields: {
+              hostname: { type: TypeEnum.String, value: tailscaleHostname },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+            },
+          },
+        },
+        fields: {
+          hostname: { type: TypeEnum.String, value: this.hostname },
+          ipAddress: { type: TypeEnum.String, value: this.ipAddress },
+          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+        },
+      },
+      { parent: args.host }
+    );
   }
 
   public get backupDatasetId() {

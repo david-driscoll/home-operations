@@ -7,7 +7,7 @@ import { ClusterDefinition, GlobalResources } from "../../components/globals.ts"
 import { tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
-import { StandardDns } from "./StandardDns.ts";
+import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -238,7 +238,7 @@ export class ProxmoxHost extends ComponentResource {
         tags: ["proxmox", "host"],
         sections: {
           tailscale: getTailscaleSection(this.device),
-          // dns: createDnsSection(this.dns),
+          dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
