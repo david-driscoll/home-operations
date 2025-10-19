@@ -62,7 +62,7 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly ipAddress: pulumi.Output<string>;
   public readonly tailscaleIpAddress: string;
   public readonly macAddress: string;
-  public readonly device: pulumi.Output<GetDeviceResult>;
+  // public readonly device: pulumi.Output<GetDeviceResult>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
