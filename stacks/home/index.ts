@@ -58,28 +58,6 @@ const b2Bucket = new b2.Bucket(
   }
 );
 
-const discordDns = new StandardDns(
-  "discord-dns",
-  {
-    hostname: pulumi.interpolate`discord.${globals.searchDomain}`,
-    ipAddress: pulumi.output("10.10.0.1"),
-    type: "A",
-  },
-  globals,
-  {}
-);
-const unifiDns = new StandardDns(
-  "unifi-dns",
-  {
-    hostname: pulumi.interpolate`unifi.${globals.searchDomain}`,
-    ipAddress: discordDns.ipAddress,
-    type: "CNAME",
-    record: discordDns.hostname,
-  },
-  globals,
-  {}
-);
-
 var twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
   globals: globals,
@@ -96,22 +74,10 @@ const spikeVm = new TruenasVm("spike", {
   credential: globals.truenasCredential.apply((z) => z.title!),
   globals: globals,
   host: twilightSparkleHost,
-  ipAddress: "10.10.10.10",
+  ipAddress: pulumi.output("10.10.10.10"),
   tailscaleIpAddress: "100.111.10.10",
   macAddress: "bc:24:11:7c:e5:c5",
 });
-
-const truenasDns = new StandardDns(
-  "truenas-dns",
-  {
-    hostname: pulumi.interpolate`truenas.${globals.searchDomain}`,
-    ipAddress: spikeVm.ipAddress,
-    type: "CNAME",
-    record: spikeVm.dns.hostname,
-  },
-  globals,
-  { parent: spikeVm }
-);
 
 var celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,

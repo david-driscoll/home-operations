@@ -1,7 +1,7 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions, mergeOptions } from "@pulumi/pulumi";
+import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumi/unifi";
 
@@ -15,10 +15,10 @@ export class StandardDns extends ComponentResource {
   constructor(
     name: string,
     args: {
-      hostname: Output<string>;
-      ipAddress: Output<string>;
+      hostname: Input<string>;
+      ipAddress: Input<string>;
       type: "A" | "CNAME";
-      record?: Output<string>;
+      record?: Input<string>;
     },
     globals: GlobalResources,
     cro: ComponentResourceOptions
@@ -69,8 +69,8 @@ export class StandardDns extends ComponentResource {
         deleteBeforeReplace: true,
       }
     );
-    this.hostname = args.hostname;
-    this.ipAddress = args.ipAddress;
+    this.hostname = output(args.hostname);
+    this.ipAddress = output(args.ipAddress);
   }
 }
 export function createDnsSection(dns: StandardDns): OnePasswordItemSectionInput {

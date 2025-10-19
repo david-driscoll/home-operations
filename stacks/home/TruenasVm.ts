@@ -25,7 +25,7 @@ export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
   globals: GlobalResources;
   host: ProxmoxHost;
-  ipAddress: string;
+  ipAddress: pulumi.Input<string>;
   macAddress: string;
   tailscaleIpAddress: string;
 }
@@ -66,7 +66,6 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
-  public readonly dns: StandardDns;
   constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
     super("home:truenas:TruenasVM", name, opts);
     const opClient = new OPClient();
@@ -81,8 +80,6 @@ export class TruenasVm extends pulumi.ComponentResource {
 
     this.hostname = pulumi.interpolate`${name}.${this.globals.searchDomain}`;
     const tailscaleHostname = pulumi.interpolate`${name}.${this.globals.tailscaleDomain}`;
-
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: this.ipAddress, type: "A" }, this.globals, { parent: this });
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.ipAddress,
@@ -108,7 +105,6 @@ export class TruenasVm extends pulumi.ComponentResource {
         title: pulumi.interpolate`Truenas: ${args.host.title}`,
         tags: ["truenas"],
         sections: {
-          dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: tailscaleHostname },
