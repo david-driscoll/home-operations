@@ -82,18 +82,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     this.hostname = pulumi.interpolate`${name}.${this.globals.searchDomain}`;
     const tailscaleHostname = pulumi.interpolate`${name}.${this.globals.tailscaleDomain}`;
 
-    this.dns = new StandardDns(
-      name,
-      {
-        hostname: this.hostname,
-        ipAddress: this.ipAddress,
-        type: "A",
-      },
-      this.globals,
-      {
-        parent: args.host,
-      }
-    );
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: this.ipAddress, type: "A" }, this.globals, { parent: this });
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.ipAddress,
@@ -134,7 +123,7 @@ export class TruenasVm extends pulumi.ComponentResource {
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
         },
       },
-      { parent: args.host }
+      { parent: this }
     );
   }
 

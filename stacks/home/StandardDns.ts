@@ -1,7 +1,7 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions } from "@pulumi/pulumi";
+import { ComponentResource, Output, ComponentResourceOptions, mergeOptions } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumi/unifi";
 
@@ -23,7 +23,7 @@ export class StandardDns extends ComponentResource {
     globals: GlobalResources,
     cro: ComponentResourceOptions
   ) {
-    super("custom:resource:StandardDns", name, {}, cro);
+    super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
     this.unifi = new unifi.DnsRecord(
       `${name}-unifi`,
