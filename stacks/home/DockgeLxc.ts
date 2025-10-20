@@ -169,7 +169,7 @@ export class DockgeLxc extends ComponentResource {
         title: interpolate`DockgeLxc: ${args.host.title}`,
         tags: ["dockge", "lxc"],
         sections: {
-          tailscale: getTailscaleSection(this.device),
+          tailscale: getTailscaleSection(this),
           dns: createDnsSection(this.dns),
           ssh: {
             fields: {
@@ -265,6 +265,10 @@ export class DockgeLxc extends ComponentResource {
 
 export function getDockageProperties(instance: DockgeLxc) {
   return output({
+    tailscale: {
+      ipAddress: instance.tailscaleIpAddress,
+      hostname: instance.tailscaleHostname,
+    },
     hostname: instance.hostname,
     ipAddress: instance.ipAddress,
     remoteConnection: instance.remoteConnection!,

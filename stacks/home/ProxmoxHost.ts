@@ -165,19 +165,16 @@ export class ProxmoxHost extends ComponentResource {
         },
         mergeOptions(cro, { dependsOn: [tailscaleCron] })
       );
-    }
 
-    // Get Tailscale device
-    this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
-      try {
-        await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
-      } catch (e) {
-        pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
-      }
-      return result;
-    });
-
-    if (args.installTailscale) {
+      // Get Tailscale device
+      this.device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
+        try {
+          await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
+        } catch (e) {
+          pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
+        }
+        return result;
+      });
       // Create device tags
       const deviceTags = new DeviceTags(
         `${name}-tags`,
@@ -213,7 +210,7 @@ export class ProxmoxHost extends ComponentResource {
         title: pulumi.interpolate`ProxmoxHost: ${this.title}`,
         tags: ["proxmox", "host"],
         sections: {
-          tailscale: getTailscaleSection(this.device),
+          tailscale: getTailscaleSection(this),
           dns: createDnsSection(this.dns),
           ssh: {
             fields: {
@@ -239,7 +236,10 @@ export class ProxmoxHost extends ComponentResource {
 
 export function getProxmoxProperties(instance: ProxmoxHost) {
   return {
-    tailscale: getTailscaleDevice(instance.device),
+    tailscale: {
+      ipAddress: instance.tailscaleIpAddress,
+      hostname: instance.tailscaleHostname,
+    },
     name: instance.name,
     hostname: instance.hostname,
     ipAddress: instance.internalIpAddress,

@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { Output, output } from "@pulumi/pulumi";
+import { Input, Output, output } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 
 export function removeUndefinedProperties<T>(obj: T): T {
@@ -34,24 +34,16 @@ export function getTailscaleDevice(device: Output<GetDeviceResult>) {
   };
 }
 
-export function getTailscaleSection(device: Output<GetDeviceResult>): OnePasswordItemSectionInput {
+export function getTailscaleSection(obj: { tailscaleHostname: Input<string>; tailscaleIpAddress: Input<string> }): OnePasswordItemSectionInput {
   return {
     fields: {
       hostname: {
         type: TypeEnum.String,
-        value: device.hostname,
+        value: obj.tailscaleHostname,
       },
-      name: {
+      ipAddress: {
         type: TypeEnum.String,
-        value: device.name!,
-      },
-      tags: {
-        type: TypeEnum.String,
-        value: device.tags.apply((z) => z.join(","))!,
-      },
-      addresses: {
-        type: TypeEnum.String,
-        value: device.addresses.apply((z) => z.join(",")),
+        value: obj.tailscaleIpAddress,
       },
     },
   };
