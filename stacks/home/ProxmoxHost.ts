@@ -4,7 +4,7 @@ import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { tailscale } from "../../components/tailscale.js";
+import { installTailscale, tailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
@@ -28,6 +28,7 @@ export interface ProxmoxHostArgs {
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
   shortName?: string;
+  tailscaleArgs?: string;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -92,7 +93,7 @@ export class ProxmoxHost extends ComponentResource {
           password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
         },
       },
-      cro,
+      cro
     );
 
     if (args.truenas) {
@@ -112,9 +113,8 @@ export class ProxmoxHost extends ComponentResource {
           connection,
           create: `pvesm set local --content images,rootdir,vztmpl,backup,iso,snippets`,
         },
-        cro,
+        cro
       );
-      // Configure SSH environment
 
       const configureSshEnv = new remote.Command(
         `${name}-configure-ssh-env`,
@@ -122,17 +122,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
         },
-        cro,
-      );
-
-      // Install Tailscale
-      const installTailscale = new remote.Command(
-        `${name}-install-tailscale`,
-        {
-          connection: connection,
-          create: "curl -fsSL https://tailscale.com/install.sh | sh",
-        },
-        mergeOptions(cro, { dependsOn: [configureSshEnv] }),
+        cro
       );
 
       // Install jq
@@ -142,32 +132,11 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: "apt-get install -y jq",
         },
-        mergeOptions(cro, { dependsOn: [installTailscale] }),
+        mergeOptions(cro, { dependsOn: [configureSshEnv] })
       );
 
-      const tailscaleArgs = interpolate`--hostname=${name} --accept-dns --accept-routes --advertise-exit-node --ssh --accept-risk=lose-ssh`;
-
-      // Set Tailscale configuration
-      const tailscaleUp = new remote.Command(
-        `${name}-tailscale-up`,
-        {
-          connection: connection,
-          create: interpolate`tailscale up ${tailscaleArgs} --reset`,
-          environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
-        },
-        mergeOptions(cro, { dependsOn: [installTailscale] }),
-      );
-
-      // Set Tailscale configuration
-      const tailscaleSet = new remote.Command(
-        `${name}-tailscale-set`,
-        {
-          connection: connection,
-          create: interpolate`tailscale set ${tailscaleArgs} --auto-update`,
-          environment: { TS_AUTHKEY: args.globals.tailscaleAuthKey.key },
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleUp, installTailscale] }),
-      );
+      const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName: this.tailscaleHostname, globals: args.globals, args: args.tailscaleArgs });
+      // Configure SSH environment
 
       // Copy Tailscale cron script
       const tailscaleCron = new remote.CopyToRemote(
@@ -177,7 +146,7 @@ export class ProxmoxHost extends ComponentResource {
           remotePath: "/etc/cron.weekly/tailscale",
           source: new asset.FileAsset(args.isProxmoxBackupServer ? "scripts/tailscale-pbs.sh" : "scripts/tailscale.sh"),
         },
-        mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] }),
+        mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] })
       );
 
       // Set executable permissions and run cron script
@@ -187,7 +156,7 @@ export class ProxmoxHost extends ComponentResource {
           connection: connection,
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
         },
-        mergeOptions(cro, { dependsOn: [tailscaleCron] }),
+        mergeOptions(cro, { dependsOn: [tailscaleCron] })
       );
     }
 
@@ -213,7 +182,7 @@ export class ProxmoxHost extends ComponentResource {
           provider: args.globals.tailscaleProvider,
           parent: this,
           retainOnDelete: true,
-        },
+        }
       );
 
       // Create device key
@@ -226,7 +195,7 @@ export class ProxmoxHost extends ComponentResource {
         {
           provider: args.globals.tailscaleProvider,
           parent: this,
-        },
+        }
       );
     }
 
@@ -253,7 +222,7 @@ export class ProxmoxHost extends ComponentResource {
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
         },
       },
-      cro,
+      cro
     );
 
     // Note: The commented-out Hosts resource would need to be implemented

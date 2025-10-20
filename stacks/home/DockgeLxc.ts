@@ -31,6 +31,7 @@ export interface DockgeLxcArgs {
   tailscaleIpAddress?: string;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
+  tailscaleArgs?: string;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -75,7 +76,7 @@ export class DockgeLxc extends ComponentResource {
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals });
+    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: args.tailscaleArgs });
 
     function replaceVariable(key: RegExp, value: Input<string>) {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
@@ -216,20 +217,22 @@ export class DockgeLxc extends ComponentResource {
         const content = await readFile(tempFilePath, "utf-8");
         const regex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
-        for (const host of hosts) {
-          new StandardDns(
-            `${stackName}-${host.replace(/\./g, "_")}`,
-            {
-              hostname: interpolate`${host}`,
-              ipAddress: this.ipAddress,
-              type: "CNAME",
-              record: this.hostname,
-            },
-            this.args.globals,
-            {
-              parent: this,
-            }
-          );
+        if (stackName !== "adguard") {
+          for (const host of hosts) {
+            new StandardDns(
+              `${stackName}-${host.replace(/\./g, "_")}`,
+              {
+                hostname: interpolate`${host}`,
+                ipAddress: this.ipAddress,
+                type: "CNAME",
+                record: this.hostname,
+              },
+              this.args.globals,
+              {
+                parent: this,
+              }
+            );
+          }
         }
       }
 

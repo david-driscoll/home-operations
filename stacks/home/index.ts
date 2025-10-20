@@ -139,6 +139,7 @@ var alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   ipAddress: "10.10.10.9",
   tailscaleIpAddress: "100.111.10.9",
   cluster: alphaSiteCluster,
+  tailscaleArgs: "--accept-dns --accept-routes=false --ssh",
 });
 
 // TODO: add code to ensure tailscale ips is set for all important services
