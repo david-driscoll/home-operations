@@ -28,7 +28,7 @@ export interface ProxmoxHostArgs {
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
   shortName?: string;
-  tailscaleArgs?: string;
+  tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -135,7 +135,14 @@ export class ProxmoxHost extends ComponentResource {
         mergeOptions(cro, { dependsOn: [configureSshEnv] })
       );
 
-      const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName: this.tailscaleHostname, globals: args.globals, args: args.tailscaleArgs });
+      const tailscaleSet = installTailscale({
+        connection,
+        name,
+        parent: this,
+        tailscaleName: this.tailscaleHostname,
+        globals: args.globals,
+        args: { acceptDns: true, acceptRoutes: true, ssh: true, advertiseExitNode: true, ...args.tailscaleArgs },
+      });
       // Configure SSH environment
 
       // Copy Tailscale cron script

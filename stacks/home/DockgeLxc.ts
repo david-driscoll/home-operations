@@ -31,7 +31,7 @@ export interface DockgeLxcArgs {
   tailscaleIpAddress?: string;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
-  tailscaleArgs?: string;
+  tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -76,7 +76,7 @@ export class DockgeLxc extends ComponentResource {
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: args.tailscaleArgs });
+    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: true, ssh: true, ...args.tailscaleArgs } });
 
     function replaceVariable(key: RegExp, value: Input<string>) {
       return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));

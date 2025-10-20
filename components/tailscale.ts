@@ -43,14 +43,19 @@ export function installTailscale({
   parent,
   tailscaleName,
   globals,
-  args = "--accept-dns --accept-routes --ssh",
+  args = { acceptDns: true, acceptRoutes: true, ssh: true },
 }: {
   connection: types.input.remote.ConnectionArgs;
   globals: GlobalResources;
   name: string;
   tailscaleName: pulumi.Output<string>;
   parent: pulumi.Resource;
-  args?: string;
+  args?: {
+    acceptDns?: boolean;
+    acceptRoutes?: boolean;
+    ssh?: boolean;
+    advertiseExitNode?: boolean;
+  };
 }) {
   const sshConfig = new remote.Command(
     `${name}-ssh-config`,
@@ -70,7 +75,9 @@ export function installTailscale({
     { parent, dependsOn: [sshConfig] }
   );
 
-  const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args} --accept-risk=lose-ssh`;
+  const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
+    args.ssh ? "--ssh" : "--ssh=false"
+  } ${args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
 
   // Set Tailscale configuration
   const tailscaleUp = new remote.Command(
