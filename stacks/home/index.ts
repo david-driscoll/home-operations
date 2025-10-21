@@ -6,7 +6,7 @@ import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 import * as b2 from "@pulumi/b2";
-import { StandardDns } from "./StandardDns.ts";
+import { updateTailscaleAcls } from "./tailscale.ts";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -150,3 +150,22 @@ export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: g
 export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
 // const users = await tailscale.
 // console.log(users);
+
+await updateTailscaleAcls({
+  globals,
+  hosts: {
+    idp: "100.111.209.102",
+    "primary-dns": "100.111.209.201",
+    "secondary-dns": alphaSiteDockgeRuntime.tailscaleIpAddress,
+    "unifi-dns": "100.111.0.1",
+    "alpha-site": alphaSiteHost.tailscaleIpAddress,
+    "alpha-site-dockge": alphaSiteDockgeRuntime.tailscaleIpAddress,
+    celestia: celestiaHost.tailscaleIpAddress,
+    "celestia-dockge": celestiaDockgeRuntime.tailscaleIpAddress,
+    luna: lunaHost.tailscaleIpAddress,
+    "luna-dockge": lunaDockgeRuntime.tailscaleIpAddress,
+    spike: spikeVm.tailscaleIpAddress,
+    "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
+  },
+  dnsServers: ["100.111.209.201", "100.111.0.1", alphaSiteDockgeRuntime.tailscaleIpAddress],
+});
