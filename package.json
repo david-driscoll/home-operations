@@ -29,6 +29,11 @@
   },
   "dependencies": {
     "@pulumi/unifi": "^0.41.3",
-    "@pulumiverse/purrl": "^0.6.2"
+    "@pulumiverse/purrl": "^0.6.2",
+    "confbox": "^0.2.2",
+    "diff": "^8.0.2",
+    "jsonc-morph": "^0.2.1",
+    "jsonc-parser": "^3.3.1",
+    "jsondiffpatch": "^0.7.3"
   }
 }
