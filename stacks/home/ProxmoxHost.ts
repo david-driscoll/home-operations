@@ -36,7 +36,6 @@ export class ProxmoxHost extends ComponentResource {
   public readonly internalIpAddress: string;
   public readonly tailscaleIpAddress: string;
   public readonly macAddress: string;
-  public readonly device: Output<GetDeviceResult>;
   public readonly pveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string }>>;
   public readonly tailscaleHostname: Output<string>;
@@ -167,7 +166,7 @@ export class ProxmoxHost extends ComponentResource {
       );
 
       // Get Tailscale device
-      this.device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
+      const device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
         try {
           await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
         } catch (e) {
@@ -180,7 +179,7 @@ export class ProxmoxHost extends ComponentResource {
         `${name}-tags`,
         {
           tags: ["tag:proxmox", "tag:exit-node"],
-          deviceId: this.device.apply((z) => z.id),
+          deviceId: device.apply((z) => z.id),
         },
         {
           provider: args.globals.tailscaleProvider,
