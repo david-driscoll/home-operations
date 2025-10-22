@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+storage:
+  type: sqlite
+  path: /data/data.db
+
+web:
+  port: 8585
+
+security:
+  oidc:
+    issuer-url: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/issuer"
+    redirect-url: "https://${APP}.${CLUSTER_DOMAIN}/authorization-code/callback"
+    client-id: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/client_id"
+    client-secret: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/client_secret"
+
+alerting:
+  pushover:
+    application-token: "op://Eris/Pushover/credential"
+    user-key: "op://Eris/Pushover/username"
+
+endpoints:
+  - name: Traefik Dashboard
+    url: "https://internal.${host}.${searchDomain}"
+    conditions:
+      - "[STATUS] == 200"
+  - name: Dockge
+    url: "https://dockge.${host}.${searchDomain}"
+    conditions:
+      - "[STATUS] == 200"
+  - name: Authentik Outpost
+    url: "https://authentik-outpost.${host}.${searchDomain}"
+    conditions:
+      - "[STATUS] == 200"

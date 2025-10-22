@@ -1,0 +1,25 @@
+services:
+  gatus:
+    container_name: gatus
+    image: ghcr.io/twin/gatus:stable
+    restart: unless-stopped
+    environment:
+      GATUS_CONFIG_PATH: /config
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.gatus.rule: Host(`gatus.${CLUSTER_KEY}.${searchDomain}`)
+      traefik.http.routers.gatus.entrypoints: websecure
+      traefik.http.routers.gatus.service: gatus
+      traefik.http.routers.gatus.tls.certresolver: le
+      traefik.http.services.gatus.loadbalancer.server.port: 8585
+    volumes:
+      - ./config/:/config/
+      - ./data/:/data/
+x-dockge:
+  urls:
+    - https://gatus.${host}.${searchDomain}
+networks:
+  dockge_default:
+    external: true

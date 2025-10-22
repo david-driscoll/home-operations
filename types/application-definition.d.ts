@@ -9,6 +9,7 @@ import type { Roles } from "@components/constants.ts";
 
 export type ApplicationDefinition = ApplicationDefinitionSchema["spec"];
 export type AuthentikDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["authentik"]>;
+export type GatusDefinition = Omit<NonNullable<ApplicationDefinitionSchema["spec"]["gatus"]>[number], "enabled" | "name">;
 export type UptimeDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["uptime"]>;
 
 /**
@@ -16,6 +17,9 @@ export type UptimeDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["
  */
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];
+/**
+ * Schema for Application Definition Custom Resource
+ */
 export interface ApplicationDefinitionSchema {
   /**
    * APIVersion defines the versioned schema of this representation of an object.
@@ -91,10 +95,14 @@ export interface ApplicationDefinitionSchema {
       type: "configMap" | "secret";
       name: string;
     };
+    gatus?: Endpoint[];
+    gatusFrom?: {
+      type: "configMap" | "secret";
+      name: string;
+    };
   };
 }
 export interface Http {
-
   url?: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
   accepted_statuscodes?: string[];
@@ -149,7 +157,6 @@ export interface Docker {
   upside_down?: boolean;
 }
 export interface Dns {
-
   hostname?: string;
   dns_resolve_server?: string;
   dns_resolve_type: "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "SRV" | "PTR" | "SOA" | "NS";
@@ -163,7 +170,6 @@ export interface Dns {
   upside_down?: boolean;
 }
 export interface Gamedig {
-
   game?: string;
   gamedig_given_port_only?: string;
   hostname?: string;
@@ -178,7 +184,6 @@ export interface Gamedig {
   description?: string;
 }
 export interface Group {
-
   accepted_statuscodes?: string[];
   active?: boolean;
   interval?: number;
@@ -188,7 +193,6 @@ export interface Group {
   upside_down?: boolean;
 }
 export interface GrpcKeyword {
-  type: "grpc-keyword";
   grpc_body?: string;
   grpc_enable_tls?: string;
   grpc_metadata?: string;
@@ -209,7 +213,6 @@ export interface GrpcKeyword {
   description?: string;
 }
 export interface JsonQuery {
-  type: "json-query";
   url?: string;
   json_path?: string;
   expected_value?: string;
@@ -244,7 +247,6 @@ export interface JsonQuery {
   upside_down?: boolean;
 }
 export interface KafkaProducer {
-  type: "kafka-producer";
   kafka_producer_sasl_options_mechanism?: "plain" | "scram-sha-256" | "scram-sha-512";
   kafka_producer_ssl?: string;
   kafka_producer_brokers?: string;
@@ -259,7 +261,6 @@ export interface KafkaProducer {
   upside_down?: boolean;
 }
 export interface Keyword {
-
   url?: string;
   keyword?: string;
   invert_keyword?: string;
@@ -294,7 +295,6 @@ export interface Keyword {
   upside_down?: boolean;
 }
 export interface Mongodb {
-
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -305,7 +305,6 @@ export interface Mongodb {
   upside_down?: boolean;
 }
 export interface Mqtt {
-
   mqtt_check_type: "connect" | "publish" | "subscribe";
   mqtt_username?: string;
   mqtt_password?: string;
@@ -322,7 +321,6 @@ export interface Mqtt {
   upside_down?: boolean;
 }
 export interface Mysql {
-
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -334,7 +332,6 @@ export interface Mysql {
   upside_down?: boolean;
 }
 export interface Port {
-
   hostname?: string;
   port?: number;
   accepted_statuscodes?: string[];
@@ -346,7 +343,6 @@ export interface Port {
   upside_down?: boolean;
 }
 export interface Postgres {
-
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -357,7 +353,6 @@ export interface Postgres {
   upside_down?: boolean;
 }
 export interface Push {
-
   push_token?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -368,7 +363,6 @@ export interface Push {
   upside_down?: boolean;
 }
 export interface Radius {
-
   hostname?: string;
   port?: number;
   radius_called_station_id?: string;
@@ -385,7 +379,6 @@ export interface Radius {
   upside_down?: boolean;
 }
 export interface RealBrowser {
-  type: "real-browser";
   remote_browser?: string;
   remote_browsers_toggle?: string;
   url?: string;
@@ -398,7 +391,6 @@ export interface RealBrowser {
   upside_down?: boolean;
 }
 export interface Redis {
-
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -409,7 +401,6 @@ export interface Redis {
   upside_down?: boolean;
 }
 export interface Steam {
-
   hostname?: string;
   port?: number;
   accepted_statuscodes?: string[];
@@ -421,7 +412,6 @@ export interface Steam {
   upside_down?: boolean;
 }
 export interface Sqlserver {
-
   database_connection_string?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -432,7 +422,6 @@ export interface Sqlserver {
   upside_down?: boolean;
 }
 export interface TailscalePing {
-  type: "tailscale-ping";
   hostname?: string;
   accepted_statuscodes?: string[];
   active?: boolean;
@@ -443,14 +432,12 @@ export interface TailscalePing {
   upside_down?: boolean;
 }
 export interface Ssf {
-
   eventRetention?: string;
   jwtFederationProviders?: number[];
   providerSsfId?: string;
   signingKey?: string;
 }
 export interface Scim {
-
   compatibilityMode?: string;
   dryRun?: boolean;
   excludeUsersServiceAccount?: boolean;
@@ -462,7 +449,6 @@ export interface Scim {
   url: string;
 }
 export interface Saml {
-
   acsUrl: string;
   assertionValidNotBefore?: string;
   assertionValidNotOnOrAfter?: string;
@@ -492,7 +478,6 @@ export interface Saml {
   verificationKp?: string;
 }
 export interface Radius1 {
-
   authorizationFlow?: string;
   clientNetworks?: string;
   invalidationFlow?: string;
@@ -502,7 +487,6 @@ export interface Radius1 {
   sharedSecret: string;
 }
 export interface Rac {
-
   authenticationFlow?: string;
   authorizationFlow?: string;
   connectionExpiry?: string;
@@ -511,7 +495,6 @@ export interface Rac {
   settings?: string;
 }
 export interface Proxy {
-
   accessTokenValidity?: string;
   authenticationFlow?: string;
   authorizationFlow?: string;
@@ -532,10 +515,10 @@ export interface Proxy {
   propertyMappings?: string[];
   providerProxyId?: string;
   refreshTokenValidity?: string;
+  backchannelLogoutUri?: string;
   skipPathRegex?: string;
 }
 export interface Oauth2 {
-
   accessCodeValidity?: string;
   accessTokenValidity?: string;
   allowedRedirectUris?: {
@@ -562,7 +545,6 @@ export interface Oauth2 {
   subMode?: string;
 }
 export interface MicrosoftEntra {
-
   clientId: string;
   clientSecret: string;
   dryRun?: boolean;
@@ -576,7 +558,6 @@ export interface MicrosoftEntra {
   userDeleteAction?: string;
 }
 export interface Ldap {
-
   baseDn: string;
   bindFlow?: string;
   bindMode?: string;
@@ -590,7 +571,6 @@ export interface Ldap {
   unbindFlow?: string;
 }
 export interface GoogleWorkspace {
-
   credentials?: string;
   defaultGroupEmailDomain: string;
   delegatedSubject?: string;
@@ -602,4 +582,256 @@ export interface GoogleWorkspace {
   propertyMappingsGroups?: string[];
   providerGoogleWorkspaceId?: string;
   userDeleteAction?: string;
+}
+/**
+ * Configuration for a monitored endpoint
+ */
+export interface Endpoint {
+  /**
+   * Whether the endpoint is enabled
+   */
+  enabled?: boolean;
+  /**
+   * Name of the endpoint
+   */
+  name: string;
+  /**
+   * Group to which the endpoint belongs
+   */
+  group?: string;
+  /**
+   * URL to monitor (supports http, https, tcp, udp, sctp, icmp, ws, wss, ssh, dns, starttls)
+   */
+  url: string;
+  /**
+   * HTTP method to use
+   */
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+  /**
+   * List of conditions to evaluate
+   *
+   * @minItems 1
+   */
+  conditions?: [string, ...string[]];
+  /**
+   * Duration between each check
+   */
+  interval?: string;
+  /**
+   * Maximum duration before timing out
+   */
+  timeout?: string;
+  client?: Client;
+  /**
+   * Alerts to trigger on failure
+   */
+  alerts?: Alert[];
+  /**
+   * Request body
+   */
+  body?: string;
+  /**
+   * HTTP headers to send
+   */
+  headers?: {
+    [k: string]: string;
+  };
+  /**
+   * Whether this is a GraphQL query
+   */
+  graphql?: boolean;
+  dns?: Dns1;
+  ssh?: Ssh;
+  /**
+   * UI-specific configuration
+   */
+  ui?: {
+    /**
+     * Whether to hide the hostname in the UI
+     */
+    "hide-hostname"?: boolean;
+    /**
+     * Whether to hide the URL in the UI
+     */
+    "hide-url"?: boolean;
+    /**
+     * Whether to hide conditions in the UI
+     */
+    "hide-conditions"?: boolean;
+    /**
+     * Whether to not resolve failed conditions
+     */
+    "dont-resolve-failed-conditions"?: boolean;
+    badge?: {
+      /**
+       * Thresholds for response time badge
+       *
+       * @minItems 5
+       * @maxItems 5
+       */
+      "response-time"?: [number, number, number, number, number];
+    };
+  };
+  /**
+   * Whether to disable the monitoring lock for this endpoint
+   */
+  "disable-monitoring-lock"?: boolean;
+}
+/**
+ * Client configuration for HTTP requests
+ */
+export interface Client {
+  /**
+   * Whether to skip TLS verification
+   */
+  insecure?: boolean;
+  /**
+   * Whether to ignore redirects
+   */
+  "ignore-redirect"?: boolean;
+  /**
+   * Client timeout
+   */
+  timeout?: string;
+  /**
+   * DNS resolver to use (e.g., tcp://8.8.8.8:53)
+   */
+  "dns-resolver"?: string;
+  /**
+   * OAuth2 configuration
+   */
+  oauth2?: {
+    /**
+     * OAuth2 token URL
+     */
+    "token-url": string;
+    /**
+     * OAuth2 client ID
+     */
+    "client-id": string;
+    /**
+     * OAuth2 client secret
+     */
+    "client-secret": string;
+    /**
+     * OAuth2 scopes
+     */
+    scopes?: string[];
+  };
+  /**
+   * GCP Identity-Aware Proxy configuration
+   */
+  "identity-aware-proxy"?: {
+    /**
+     * IAP audience
+     */
+    audience: string;
+  };
+  /**
+   * Proxy URL for requests
+   */
+  "proxy-url"?: string;
+  /**
+   * Network to use (tcp4 or tcp6)
+   */
+  network?: "tcp4" | "tcp6";
+}
+/**
+ * Alert configuration
+ */
+export interface Alert {
+  /**
+   * Type of alert provider
+   */
+  type:
+    | "slack"
+    | "discord"
+    | "telegram"
+    | "mattermost"
+    | "teams"
+    | "teams-workflow"
+    | "pagerduty"
+    | "twilio"
+    | "email"
+    | "gotify"
+    | "ntfy"
+    | "pushover"
+    | "opsgenie"
+    | "matrix"
+    | "custom"
+    | "github"
+    | "gitlab"
+    | "googlechat"
+    | "aws-ses"
+    | "datadog"
+    | "gitea"
+    | "messagebird"
+    | "vonage"
+    | "rocketchat"
+    | "webex"
+    | "zulip"
+    | "ifttt"
+    | "signl4"
+    | "ilert"
+    | "incident"
+    | "line"
+    | "sendgrid"
+    | "splunk"
+    | "squadcast"
+    | "zapier"
+    | "n8n"
+    | "newrelic"
+    | "homeassistant"
+    | "plivo"
+    | "signal";
+  /**
+   * Whether the alert is enabled
+   */
+  enabled?: boolean;
+  /**
+   * Number of failures before triggering
+   */
+  "failure-threshold"?: number;
+  /**
+   * Number of successes before resolving
+   */
+  "success-threshold"?: number;
+  /**
+   * Whether to send an alert when resolved
+   */
+  "send-on-resolved"?: boolean;
+  /**
+   * Custom alert description
+   */
+  description?: string;
+}
+/**
+ * DNS query configuration
+ */
+export interface Dns1 {
+  /**
+   * DNS query type
+   */
+  "query-type": "A" | "AAAA" | "CNAME" | "MX" | "NS" | "TXT" | "SOA" | "PTR" | "SRV" | "CAA";
+  /**
+   * DNS query name
+   */
+  "query-name": string;
+}
+/**
+ * SSH configuration
+ */
+export interface Ssh {
+  /**
+   * SSH username
+   */
+  username: string;
+  /**
+   * SSH password
+   */
+  password?: string;
+  /**
+   * SSH private key
+   */
+  "private-key"?: string;
 }

@@ -193,7 +193,7 @@ export class ProxmoxHost extends ComponentResource {
         `${name}-key`,
         {
           keyExpiryDisabled: true,
-          deviceId: this.device.apply((z) => z.id),
+          deviceId: device.apply((z) => z.id),
         },
         {
           provider: args.globals.tailscaleProvider,

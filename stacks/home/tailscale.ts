@@ -23,7 +23,7 @@ export async function updateTailscaleAcls(args: { globals: GlobalResources; host
   );
 
   new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers }, { provider: args.globals.tailscaleProvider });
-  new tailscale.DnsSearchPaths("dns-search-paths", { searchPaths: [args.globals.searchDomain] }, { provider: args.globals.tailscaleProvider });
+  // new tailscale.DnsSearchPaths("dns-search-paths", { searchPaths: [args.globals.searchDomain] }, { provider: args.globals.tailscaleProvider });
 }
 
 function applyAllEdits(json: pulumi.Output<string>, path: string[], value: pulumi.Input<any>): pulumi.Output<string> {

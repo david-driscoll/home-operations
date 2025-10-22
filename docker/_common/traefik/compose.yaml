@@ -1,5 +1,6 @@
 services:
   traefik:
+    container_name: traefik
     image: traefik:v3
     restart: unless-stopped
     command:
@@ -19,8 +20,8 @@ services:
       traefik.http.routers.dockge.tls.certresolver: le
       traefik.http.routers.dockge.service: dockge
       traefik.http.services.dockge.loadbalancer.server.url: http://${host}.${searchDomain}:5001
-    environment:
-      CLOUDFLARE_DNS_API_TOKEN: ${cloudflareApiToken}
+    env_file:
+      - path: .env
     ports:
       - 80:80
       - 443:443

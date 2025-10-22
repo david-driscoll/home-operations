@@ -27,6 +27,12 @@
     "down:celestia": "op run --no-masking -- pulumi down --yes --skip-preview -s celestia",
     "down:alpha-site": "op run --no-masking -- pulumi down --yes --skip-preview -s alpha-site",
     "down": "npm run down:luna ; npm run down:celestia ; npm run down:equestria ; npm run down:sgc ; npm run down:alpha-site",
+    "cancel:sgc": "op run --no-masking -- pulumi cancel --yes -s sgc",
+    "cancel:equestria": "op run --no-masking -- pulumi cancel --yes  -s equestria",
+    "cancel:luna": "op run --no-masking -- pulumi cancel --yes  -s luna",
+    "cancel:celestia": "op run --no-masking -- pulumi cancel --yes  -s celestia",
+    "cancel:alpha-site": "op run --no-masking -- pulumi cancel --yes  -s alpha-site",
+    "cancel": "npm run cancel:luna ; npm run cancel:celestia ; npm run cancel:equestria ; npm run cancel:sgc ; npm run cancel:alpha-site",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

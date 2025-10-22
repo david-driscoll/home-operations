@@ -10,6 +10,21 @@ api:
   dashboard: true
   insecure: false
 
+log:
+  level: INFO
+  format: common
+accessLog:
+  format: common
+  # Filter on status codes, retry attempts and minimal duration
+  filters:
+    statusCodes:
+      - "200"
+      - "300-302"
+    retryAttempts: true
+    minDuration: "10ms"
+
+
+
 # Entry points configuration
 entryPoints:
   web:

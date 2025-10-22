@@ -6,6 +6,7 @@ import { getContainerHostnames } from "./helper.ts";
 import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
+import { RandomPet, RandomPassword, RandomString } from "@pulumi/random";
 import { installTailscale, tailscale } from "@components/tailscale.ts";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { md5 } from "@pulumi/std";
@@ -17,6 +18,8 @@ import { awaitOutput, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
+import * as yaml from "yaml";
+import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -43,11 +46,13 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly stacks: Output<string[]>;
   public readonly credential: Output<OPClientItem>;
+  public readonly cluster: Output<ClusterDefinition>;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
     const cluster = output(args.cluster);
+    this.cluster = cluster;
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
@@ -77,10 +82,6 @@ export class DockgeLxc extends ComponentResource {
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
     const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs } });
-
-    function replaceVariable(key: RegExp, value: Input<string>) {
-      return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
-    }
 
     this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
 
@@ -130,6 +131,7 @@ export class DockgeLxc extends ComponentResource {
 
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
+    const vaultRegex = /op\:\/\/Eris\/(\w+)\/(\w+)/g;
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(args.host.name)),
@@ -138,14 +140,28 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
       replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
       replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
-      replaceVariable(
-        /\$\{cloudflareApiToken\}/g,
-        args.globals.cloudflareCredential.apply((c) => c.fields["credential"].value!)
-      ),
       replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, cluster.title),
       replaceVariable(/\$\{CLUSTER_KEY\}/g, cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, cluster.rootDomain),
+      replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, cluster.authentikDomain),
+      (input: Input<string>) => {
+        return output(input).apply(async (str) => {
+          const matches = str.matchAll(vaultRegex);
+          const items = new Map();
+          for (const [, itemTitle, fieldName] of matches) {
+            if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
+              continue;
+            }
+            const item = await op.getItemByTitle(itemTitle);
+            items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
+          }
+
+          return str.replace(vaultRegex, (fullMatch) => {
+            return items.get(fullMatch) || fullMatch;
+          });
+        });
+      },
     ];
 
     this.stacks = output(readdir(resolve(dockerPath, "_common")).then((files) => files.map((f) => this.createStack(args.host.name, resolve(dockerPath, "_common", f), replacements))))
@@ -191,8 +207,11 @@ export class DockgeLxc extends ComponentResource {
 
   private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
     const stackName = basename(path);
-    const files = await glob("**/*", { cwd: path, absolute: false, nodir: true });
+    const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
+    const cluster = await awaitOutput(this.cluster);
+
+    replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
     const mkdir = new remote.Command(
       `${hostname}-${stackName}-mkdir`,
@@ -205,13 +224,8 @@ export class DockgeLxc extends ComponentResource {
 
     for (const file of files) {
       const content = await readFile(resolve(path, file), "utf-8");
-      const replacedContent = replacements.reduce((p, r) => r(p), output(content));
+      let replacedContent = replacements.reduce((p, r) => r(p), output(content));
       const tempFilePath = `./.tmp/${hostname}-${stackName}-${file.replace(/\//g, "-")}`;
-      mkdirSync(`./.tmp/`, { recursive: true });
-      await writeFile(tempFilePath, await awaitOutput(replacedContent));
-      const remotePath = interpolate`/opt/stacks/${stackName}/${file}`;
-      const fileAsset = new asset.FileAsset(tempFilePath);
-      const id = (await md5({ input: content })).result;
 
       if (tempFilePath.endsWith("compose.yaml")) {
         const content = await readFile(tempFilePath, "utf-8");
@@ -234,7 +248,31 @@ export class DockgeLxc extends ComponentResource {
             );
           }
         }
+      } else if (file === "definition.yaml") {
+        // intercept definition file and create the client id / client secret and inject that into the yaml.
+        const parsed = yaml.parse(await awaitOutput(replacedContent)) as ApplicationDefinitionSchema;
+        const oauth2 = parsed.spec.authentik?.oauth2;
+        if (oauth2) {
+          const clientId = new RandomString(`${cluster.key}-${stackName}-client-id`,
+        {
+          length: 16,
+          upper: false,
+          special: false,
+        }, { parent: this });
+          const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this });
+          const [clientIdResult, clientSecretResult] = await awaitOutput(all([clientId.id, clientSecret.result]));
+
+          oauth2.clientId = clientIdResult;
+          oauth2.clientSecret = clientSecretResult;
+          replacedContent = output(yaml.stringify(parsed));
+        }
       }
+
+      mkdirSync(`./.tmp/`, { recursive: true });
+      await writeFile(tempFilePath, await awaitOutput(replacedContent));
+      const remotePath = interpolate`/opt/stacks/${stackName}/${file}`;
+      const fileAsset = new asset.FileAsset(tempFilePath);
+      const id = (await md5({ input: content })).result;
 
       copyFiles.push(
         new remote.CopyToRemote(
@@ -262,6 +300,10 @@ export class DockgeLxc extends ComponentResource {
     return { name: stackName, path, compose };
   }
 }
+
+    function replaceVariable(key: RegExp, value: Input<string>) {
+      return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
+    }
 
 export function getDockageProperties(instance: DockgeLxc) {
   return output({

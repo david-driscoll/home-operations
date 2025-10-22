@@ -1,15 +1,18 @@
 services:
   authentik_proxy:
+    container_name: authentik-outpost
     image: ghcr.io/goauthentik/proxy:2025.8.4
-    ports:
-      - 9000:9000
-      - 9443:9443
+    restart: unless-stopped
     # env is set in each app stack for the secret.
     env_file:
       - path: .env
+        required: true
+      - path: .env-token
         required: false
     labels:
+      # Enable Traefik
       traefik.enable: true
+
       # Outpost
       traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_KEY}.${searchDomain}`)
       traefik.http.routers.authentik-outpost.entrypoints: websecure

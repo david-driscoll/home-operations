@@ -7,7 +7,10 @@ import { base64encodeOutput } from "@pulumi/std";
 import * as kubernetes from "@kubernetes/client-node";
 import { awaitOutput } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
-import { ApplicationDefinitionSchema, AuthentikDefinition } from "@openapi/application-definition.js";
+import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
+import * as yaml from "yaml";
+import * as jsondiffpatch from "jsondiffpatch";
+import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 
 const op = new OPClient();
 
@@ -19,6 +22,18 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   kubeConfig.loadFromString(kubeConfigJson);
 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
+
+  let currentGatusValues: Record<string, string> = {};
+  let initialGatusValues: Record<string, string> = {};
+  try {
+    const gatusSecret = await coreApi.readNamespacedSecret({ name: "gatus-secret", namespace: "observability" });
+    currentGatusValues = Object.fromEntries(Object.entries(gatusSecret.data ?? {}).map(([key, value]) => [key, Buffer.from(value, "base64").toString("utf-8")]));
+    initialGatusValues = { ...currentGatusValues };
+  } catch (e) {
+    pulumi.log.info("Gatus secret not found, assuming no current Gatus values");
+  }
+
+  // TODO: clear out old keys that are no longer used
   const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
   const namespaceList = await coreApi.listNamespace();
   const namespaceNames = namespaceList.items.map((ns) => ns.metadata!.name!);
@@ -65,8 +80,8 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
       if (kind === "authentik") {
         return mapAuthentikResource(data.type as any, data);
-      } else if (kind === "uptime") {
-        throw new Error(`Uptime not implemented`);
+      } else if (kind === "gatus") {
+        return Object.values(data).map(mapGatusResource);
       } else {
         throw new Error(`Unknown application kind ${kind}`);
       }
@@ -75,10 +90,13 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         [data.type]: data,
       };
     },
+    async createGatus(name, definition, gatusDefinitions) {
+      currentGatusValues[`${name}.yaml`] = yaml.stringify({ endpoints: gatusDefinitions });
+    },
   });
 
   for (const app of applications) {
-    applicationManager.createApplication(app);
+    await applicationManager.createApplication(app);
   }
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
@@ -109,6 +127,20 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
   );
+
+  try {
+    const differ = jsondiffpatch.create({});
+    const updateData = Object.fromEntries(Object.entries(currentGatusValues).map(([key, value]) => [key, Buffer.from(value, "utf-8").toString("base64")]));
+    const diffResult = differ.diff(initialGatusValues, currentGatusValues);
+    await coreApi.patchNamespacedSecret({
+      name: "gatus-secret",
+      namespace: "observability",
+      body: jsonpatch.format(diffResult),
+    });
+    pulumi.log.info("Successfully updated Gatus secret");
+  } catch (error) {
+    pulumi.log.error(`Failed to update Gatus secret: ${error}`);
+  }
 
   return {};
 }
@@ -208,4 +240,25 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
   }
 
   throw new Error(`Unknown authentik resource type ${type}`);
+}
+
+function mapGatusResource(rawResource: string): GatusDefinition {
+  const resource = yaml.parse(Buffer.from(rawResource, "base64").toString("utf-8"));
+  return {
+    url: resource.url,
+    "disable-monitoring-lock": resource["disable-monitoring-lock"] === "true",
+    alerts: resource.alerts ? JSON.parse(resource.alerts) : [],
+    body: resource.body,
+    client: resource.client ? JSON.parse(resource.client) : {},
+    conditions: resource.conditions ? JSON.parse(resource.conditions) : [],
+    dns: resource.dns ? JSON.parse(resource.dns) : {},
+    graphql: resource.graphql ? JSON.parse(resource.graphql) : {},
+    group: resource.group,
+    headers: resource.headers ? JSON.parse(resource.headers) : {},
+    interval: resource.interval,
+    method: resource.method as GatusDefinition["method"],
+    ssh: resource.ssh ? JSON.parse(resource.ssh) : {},
+    timeout: resource.timeout,
+    ui: resource.ui ? JSON.parse(resource.ui) : {},
+  };
 }

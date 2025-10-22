@@ -13,9 +13,10 @@ spec:
   access_policy:
     groups:
       - admins
-  uptime:
-    http:
-      url: *url
-      method: GET
-      accepted_statuscodes: ["200"]
-      parent_name: "adguard-home-group"
+  gatus:
+  - url: *url
+    method: GET
+    group: "AdGuard Home"
+    conditions:
+      - "[STATUS] == 200"
+

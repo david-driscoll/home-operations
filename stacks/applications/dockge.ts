@@ -32,6 +32,13 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
 
       return parsed;
     },
+    async createGatus(name, definition, gatusDefinitions) {
+      await mkdir(`./.tmp/`, { recursive: true });
+      const gatusConfigPath = `./.tmp/${clusterDefinition.key}-gatus-${name}.yaml`;
+      await writeFile(gatusConfigPath, yaml.stringify({ endpoints: gatusDefinitions }));
+      await ssh.execCommand(`mkdir -p /opt/stacks/gatus/config/applications/`);
+      await ssh.putFile(gatusConfigPath, `/opt/stacks/gatus/config/applications/${name}.yaml`);
+    },
   });
 
   const lxcData = await op.getItemByTitle(`DockgeLxc: ${clusterDefinition.title}`);
@@ -56,7 +63,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   pulumi.log.info(`Found stacks: ${stacks.join(", ")}`);
 
   // Create the main Dockge application
-  applicationManager.createApplication({
+  await applicationManager.createApplication({
     metadata: {
       name: "dockge",
       namespace: clusterDefinition.key,
@@ -75,7 +82,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     if (!definition) {
       continue;
     }
-    applicationManager.createApplication(definition);
+    await applicationManager.createApplication(definition);
   }
   const outpost = new authentik.Outpost(
     clusterDefinition.key,
@@ -104,25 +111,38 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const outpostId = await outToPromise(outpost.id);
   const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
 
-  const envValues = `AUTHENTIK_HOST=https://${clusterDefinition.authentikDomain}
-AUTHENTIK_INSECURE="false"
-AUTHENTIK_TOKEN=${outpostToken.key}
-AUTHENTIK_HOST_BROWSER=https://${clusterDefinition.authentikDomain}
-`;
+  const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
   await writeFile(envPath, envValues);
+  await writeFile(`./.tmp/${clusterDefinition.key}-gatus-env`, `
+security:
+  oidc:
+    issuer-url: "https://${clusterDefinition.authentikDomain}/application/o/${clusterDefinition.key}-gatus/"
+    redirect-url: "https://gatus.${clusterDefinition.rootDomain}/authorization-code/callback"
+    client-id: "op://Eris/${clusterDefinition.key}-gatus-oidc-credentials/client_id"
+    client-secret: "op://Eris/${clusterDefinition.key}-gatus-oidc-credentials/client_secret"
+`);
 
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
     connection: {
       host: lxcData.sections.ssh.fields.hostname.value!,
       user: "root",
     },
-    remotePath: `/opt/stacks/authentik-outpost/.env`,
+    remotePath: `/opt/stacks/authentik-outpost/.env-token`,
+    source: new pulumi.asset.FileAsset(envPath),
+  });
+  const gatusSecurityConfig = new remote.CopyToRemote(`${clusterDefinition.key}-gatus-security`, {
+    connection: {
+      host: lxcData.sections.ssh.fields.hostname.value!,
+      user: "root",
+    },
+    remotePath: `/opt/stacks/gatus/config/security.yaml`,
     source: new pulumi.asset.FileAsset(envPath),
   });
 
   await outToPromise(environmentConfig.id);
+  await outToPromise(gatusSecurityConfig.id);
   await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/authentik-outpost/` });
 
   ssh.dispose();

@@ -85,9 +85,13 @@ export class OPClient {
     return this.mapItem(await this.client.getItemById(vaultUuid, itemId), itemId);
   }
 
-  public async getItemByTitle(itemId: string) {
+  public async getItemByTitle(itemTitle: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemId), itemId);
+    try {
+      return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemTitle), undefined);
+    } catch (e) {
+      return this.mapItem(await this.client.getItemById(vaultUuid, itemTitle), undefined);
+    }
   }
 
   public async listItemsByTitleContains(contains: string) {
