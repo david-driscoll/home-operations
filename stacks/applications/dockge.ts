@@ -44,6 +44,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const lxcData = await op.getItemByTitle(`DockgeLxc: ${clusterDefinition.title}`);
   try {
     await ssh.connect({
+      debug: (msg) => pulumi.log.debug(`SSH: ${msg}`),
       host: lxcData.sections.ssh.fields.hostname.value,
       username: "root",
       // should be fine, tailscale does the auth between nodes.
