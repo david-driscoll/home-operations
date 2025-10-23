@@ -77,7 +77,7 @@ export class DockgeLxc extends ComponentResource {
     this.credential = output(args.credential);
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleIpAddress,
+      host: this.tailscaleHostname,
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
