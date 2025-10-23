@@ -229,7 +229,7 @@ export class DockgeLxc extends ComponentResource {
       const tempFilePath = `./.tmp/${hostname}-${stackName}-${file.replace(/\//g, "-")}`;
 
       if (tempFilePath.endsWith("compose.yaml")) {
-        const content = await readFile(tempFilePath, "utf-8");
+        const content = await awaitOutput(replacedContent);
         const regex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
         if (stackName !== "adguard") {
