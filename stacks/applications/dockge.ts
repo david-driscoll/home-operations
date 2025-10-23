@@ -42,16 +42,21 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   });
 
   const lxcData = await op.getItemByTitle(`DockgeLxc: ${clusterDefinition.title}`);
-  await ssh.connect({
-    host: lxcData.sections.ssh.fields.hostname.value,
-    username: "root",
-    // should be fine, tailscale does the auth between nodes.
-    // password: lxcData.sections.ssh.fields.password.value,
-  });
+  try {
+    await ssh.connect({
+      host: lxcData.sections.ssh.fields.hostname.value,
+      username: "root",
+      // should be fine, tailscale does the auth between nodes.
+      // password: lxcData.sections.ssh.fields.password.value,
+    });
+  } catch (error) {
+    pulumi.log.error(`Failed to connect to LXC ${lxcData.sections.ssh.fields.hostname.value} via SSH: ${error}`);
+    throw error;
+  }
 
   const stacks = await ssh.execCommand("ls -1 /opt/stacks").then((result) => {
     if (result.stderr) {
-      console.error(`Error listing stacks: ${result.stderr}`);
+      pulumi.log.error(`Error listing stacks: ${result.stderr}`);
       return [];
     }
     return result.stdout
@@ -117,7 +122,9 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await writeFile(envPath, envValues);
   const gatusDefinition = yaml.parse((await ssh.execCommand(`cat /opt/stacks/gatus/definition.yaml`)).stdout) as ApplicationDefinitionSchema;
   const gatusSecurityPath = `./.tmp/${clusterDefinition.key}-gatus-security.yaml`;
-  await writeFile(gatusSecurityPath, `
+  await writeFile(
+    gatusSecurityPath,
+    `
 security:
   oidc:
     issuer-url: "https://authentik.${await outToPromise(globals.searchDomain)}/application/o/${clusterDefinition.key}-gatus/"
@@ -128,7 +135,8 @@ security:
       - openid
       - email
       - profile
-`);
+`
+  );
 
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
     connection: {
