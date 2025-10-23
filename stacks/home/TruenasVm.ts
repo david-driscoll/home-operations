@@ -149,11 +149,11 @@ export class TruenasVm extends pulumi.ComponentResource {
       volsync = await manager.ensureDataset(`${this.backupDatasetId}/${name}/volsync`, { type: "FILESYSTEM" });
       await manager.ensureNFSShare(longhorn.mountpoint!, {
         mapall_user: "apps",
-        mapall_group: "Applications",
+        mapall_group: "apps",
       });
       await manager.ensureNFSShare(volsync.mountpoint!, {
         mapall_user: "apps",
-        mapall_group: "Applications",
+        mapall_group: "apps",
       });
     }
 
