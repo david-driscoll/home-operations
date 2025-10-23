@@ -19,7 +19,7 @@ services:
       traefik.http.routers.dockge.entrypoints: websecure
       traefik.http.routers.dockge.tls.certresolver: le
       traefik.http.routers.dockge.service: dockge
-      traefik.http.services.dockge.loadbalancer.server.url: http://${host}.${searchDomain}:5001
+      traefik.http.services.dockge.loadbalancer.server.url: http://host.docker.internal:5001
     env_file:
       - path: .env
     ports:
