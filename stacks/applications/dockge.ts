@@ -120,7 +120,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await writeFile(gatusSecurityPath, `
 security:
   oidc:
-    issuer-url: "https://${clusterDefinition.authentikDomain}/application/o/${clusterDefinition.key}-gatus/"
+    issuer-url: "https://authentik.${await outToPromise(globals.searchDomain)}/application/o/${clusterDefinition.key}-gatus/"
     redirect-url: "https://gatus.${clusterDefinition.rootDomain}/authorization-code/callback"
     client-id: "${gatusDefinition.spec.authentik?.oauth2?.clientId}"
     client-secret: "${gatusDefinition.spec.authentik?.oauth2?.clientSecret}"

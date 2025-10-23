@@ -6,7 +6,7 @@ kind: ApplicationDefinition
 metadata:
   name: peanut
 spec:
-  name: Netboot.xyz
+  name: PeaNUT
   category: DNS
   url: &url https://peanut.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/peanut.svg
