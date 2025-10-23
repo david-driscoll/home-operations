@@ -9,7 +9,7 @@ import type { Roles } from "@components/constants.ts";
 
 export type ApplicationDefinition = ApplicationDefinitionSchema["spec"];
 export type AuthentikDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["authentik"]>;
-export type GatusDefinition = Omit<NonNullable<ApplicationDefinitionSchema["spec"]["gatus"]>[number], "enabled" | "name">;
+export type GatusDefinition = Omit<NonNullable<ApplicationDefinitionSchema["spec"]["gatus"]>[number], "enabled">;
 export type UptimeDefinition = NonNullable<ApplicationDefinitionSchema["spec"]["uptime"]>;
 
 /**

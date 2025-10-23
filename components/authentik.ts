@@ -137,24 +137,28 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // OAuth2 Provider
     if (authentikDefinition.oauth2) {
       const oauth2 = authentikDefinition.oauth2;
-      const clientId = oauth2.clientId ? pulumi.output(oauth2.clientId) : new random.RandomString(
-        `${resourceName}-client-id`,
-        {
-          length: 16,
-          upper: false,
-          special: false,
-        },
-        opts
-      ).result;
-      const clientSecret = oauth2.clientSecret ? pulumi.output(oauth2.clientSecret) : new random.RandomPassword(
-        `${resourceName}-client-secret`,
-        {
-          length: 32,
-          upper: false,
-          special: false,
-        },
-        opts
-      ).result;
+      const clientId = oauth2.clientId
+        ? pulumi.output(oauth2.clientId)
+        : new random.RandomString(
+            `${resourceName}-client-id`,
+            {
+              length: 16,
+              upper: false,
+              special: false,
+            },
+            opts
+          ).result;
+      const clientSecret = oauth2.clientSecret
+        ? pulumi.output(oauth2.clientSecret)
+        : new random.RandomPassword(
+            `${resourceName}-client-secret`,
+            {
+              length: 32,
+              upper: false,
+              special: false,
+            },
+            opts
+          ).result;
       const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(
@@ -414,6 +418,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
   private createGatus(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
     const resourceName = this.resolveResourceName(definition);
+    for (let i = 0; i < gatusDefinitions.length; i++) {
+      const endpoint = gatusDefinitions[i];
+      endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+    }
     return this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
 }
