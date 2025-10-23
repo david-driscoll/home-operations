@@ -115,14 +115,19 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
   await writeFile(envPath, envValues);
+  const gatusDefinition = yaml.parse((await ssh.execCommand(`cat /opt/stacks/gatus/definition.yaml`)).stdout) as ApplicationDefinitionSchema;
   const gatusSecurityPath = `./.tmp/${clusterDefinition.key}-gatus-security.yaml`;
   await writeFile(gatusSecurityPath, `
 security:
   oidc:
     issuer-url: "https://${clusterDefinition.authentikDomain}/application/o/${clusterDefinition.key}-gatus/"
     redirect-url: "https://gatus.${clusterDefinition.rootDomain}/authorization-code/callback"
-    client-id: "op://Eris/${clusterDefinition.key}-gatus-oidc-credentials/client_id"
-    client-secret: "op://Eris/${clusterDefinition.key}-gatus-oidc-credentials/client_secret"
+    client-id: "${gatusDefinition.spec.authentik?.oauth2?.clientId}"
+    client-secret: "${gatusDefinition.spec.authentik?.oauth2?.clientSecret}"
+    scopes:
+      - openid
+      - email
+      - profile
 `);
 
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
