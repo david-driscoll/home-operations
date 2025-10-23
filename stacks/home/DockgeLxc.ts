@@ -210,6 +210,7 @@ export class DockgeLxc extends ComponentResource {
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
+    mkdirSync(`./.tmp/`, { recursive: true });
 
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
@@ -253,12 +254,15 @@ export class DockgeLxc extends ComponentResource {
         const parsed = yaml.parse(await awaitOutput(replacedContent)) as ApplicationDefinitionSchema;
         const oauth2 = parsed.spec.authentik?.oauth2;
         if (oauth2) {
-          const clientId = new RandomString(`${cluster.key}-${stackName}-client-id`,
-        {
-          length: 16,
-          upper: false,
-          special: false,
-        }, { parent: this });
+          const clientId = new RandomString(
+            `${cluster.key}-${stackName}-client-id`,
+            {
+              length: 16,
+              upper: false,
+              special: false,
+            },
+            { parent: this }
+          );
           const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this });
           const [clientIdResult, clientSecretResult] = await awaitOutput(all([clientId.id, clientSecret.result]));
 
@@ -268,7 +272,6 @@ export class DockgeLxc extends ComponentResource {
         }
       }
 
-      mkdirSync(`./.tmp/`, { recursive: true });
       await writeFile(tempFilePath, await awaitOutput(replacedContent));
       const remotePath = interpolate`/opt/stacks/${stackName}/${file}`;
       const fileAsset = new asset.FileAsset(tempFilePath);
@@ -301,9 +304,9 @@ export class DockgeLxc extends ComponentResource {
   }
 }
 
-    function replaceVariable(key: RegExp, value: Input<string>) {
-      return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
-    }
+function replaceVariable(key: RegExp, value: Input<string>) {
+  return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
+}
 
 export function getDockageProperties(instance: DockgeLxc) {
   return output({
