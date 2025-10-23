@@ -115,7 +115,8 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
   await writeFile(envPath, envValues);
-  await writeFile(`./.tmp/${clusterDefinition.key}-gatus-env`, `
+  const gatusSecurityPath = `./.tmp/${clusterDefinition.key}-gatus-security.yaml`;
+  await writeFile(gatusSecurityPath, `
 security:
   oidc:
     issuer-url: "https://${clusterDefinition.authentikDomain}/application/o/${clusterDefinition.key}-gatus/"
@@ -138,7 +139,7 @@ security:
       user: "root",
     },
     remotePath: `/opt/stacks/gatus/config/security.yaml`,
-    source: new pulumi.asset.FileAsset(envPath),
+    source: new pulumi.asset.FileAsset(gatusSecurityPath),
   });
 
   await outToPromise(environmentConfig.id);

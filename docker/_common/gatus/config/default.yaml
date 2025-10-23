@@ -6,13 +6,6 @@ storage:
 web:
   port: 8585
 
-security:
-  oidc:
-    issuer-url: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/issuer"
-    redirect-url: "https://${APP}.${CLUSTER_DOMAIN}/authorization-code/callback"
-    client-id: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/client_id"
-    client-secret: "op://Eris/${CLUSTER_KEY}-gatus-oidc-credentials/client_secret"
-
 alerting:
   pushover:
     application-token: "op://Eris/Pushover/credential"
