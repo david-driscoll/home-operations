@@ -196,7 +196,8 @@ export class FlowsManager extends pulumi.ComponentResource {
         return Array.from(new Set(items
           .filter((z) => z.tags?.includes("cluster-definition") === true)
           .map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`))
-          .values());
+          .values())
+          .concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`]);
       });
     const dynamicRegistration = new purrl.Purrl(
       "tailscale-oauth-dynamic-registration",
