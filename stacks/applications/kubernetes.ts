@@ -25,8 +25,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   let currentGatusValues: Record<string, string> = {};
   let initialGatusValues: Record<string, string> = {};
+  let gatusSecret: kubernetes.V1Secret = {};
   try {
-    const gatusSecret = await coreApi.readNamespacedSecret({ name: "gatus-secret", namespace: "observability" });
+    gatusSecret = await coreApi.readNamespacedSecret({ name: "gatus-secret", namespace: "observability" });
     currentGatusValues = Object.fromEntries(Object.entries(gatusSecret.data ?? {}).map(([key, value]) => [key, Buffer.from(value, "base64").toString("utf-8")]));
     initialGatusValues = { ...currentGatusValues };
   } catch (e) {
@@ -130,12 +131,17 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   try {
     const differ = jsondiffpatch.create({});
-    const updateData = Object.fromEntries(Object.entries(currentGatusValues).map(([key, value]) => [key, Buffer.from(value, "utf-8").toString("base64")]));
-    const diffResult = differ.diff(initialGatusValues, currentGatusValues);
-    await coreApi.patchNamespacedSecret({
+    function convertToBase64Object(obj: Record<string, string>) {
+      return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, Buffer.from(value, "utf-8").toString("base64")]));
+    }
+    const updateData = convertToBase64Object(currentGatusValues);
+    await coreApi.replaceNamespacedSecret({
       name: "gatus-secret",
       namespace: "observability",
-      body: jsonpatch.format(diffResult),
+      body: {
+        ...gatusSecret,
+        data: updateData,
+      },
     });
     pulumi.log.info("Successfully updated Gatus secret");
   } catch (error) {
