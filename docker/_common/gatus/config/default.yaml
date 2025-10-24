@@ -9,15 +9,7 @@ alerting:
     user-key: "op://Eris/Pushover/username"
 
 endpoints:
-  - name: Traefik Dashboard
-    url: "https://internal.${CLUSTER_DOMAIN}"
-    conditions:
-      - "[STATUS] == 200"
-  - name: Dockge
-    url: "https://dockge.${CLUSTER_DOMAIN}"
-    conditions:
-      - "[STATUS] == 200"
   - name: Authentik Outpost
     url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
-      - "[STATUS] == 200"
+      - "[STATUS] == 404"
