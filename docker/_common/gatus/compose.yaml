@@ -13,10 +13,12 @@ services:
       traefik.http.routers.gatus.entrypoints: websecure
       traefik.http.routers.gatus.service: gatus
       traefik.http.routers.gatus.tls.certresolver: le
-      traefik.http.services.gatus.loadbalancer.server.port: 8585
+      traefik.http.services.gatus.loadbalancer.server.port: 8080
     volumes:
       - ./config/:/config/
       - ./data/:/data/
+    ports:
+      - "8585:8080"
 x-dockge:
   urls:
     - https://gatus.${CLUSTER_DOMAIN}

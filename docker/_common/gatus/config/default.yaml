@@ -3,9 +3,6 @@ storage:
   type: sqlite
   path: /data/data.db
 
-web:
-  port: 8585
-
 alerting:
   pushover:
     application-token: "op://Eris/Pushover/credential"
