@@ -17,8 +17,6 @@ services:
     volumes:
       - ./config/:/config/
       - ./data/:/data/
-    ports:
-      - "8585:8080"
     networks:
       - dockge_default
 x-dockge:
