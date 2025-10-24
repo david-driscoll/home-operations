@@ -19,6 +19,8 @@ services:
       - ./data/:/data/
     ports:
       - "8585:8080"
+    networks:
+      - dockge_default
 x-dockge:
   urls:
     - https://gatus.${CLUSTER_DOMAIN}

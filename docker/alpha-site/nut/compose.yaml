@@ -16,6 +16,8 @@ services:
       traefik.http.routers.peanut.tls.certresolver: le
       traefik.http.routers.peanut.service: peanut
       traefik.http.services.peanut.loadbalancer.server.port: 8909
+    networks:
+      - dockge_default
 x-dockge:
   urls:
     - https://peanut.${searchDomain}
