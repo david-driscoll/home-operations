@@ -130,7 +130,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
 
   try {
-    const differ = jsondiffpatch.create({});
     function convertToBase64Object(obj: Record<string, string>) {
       return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, Buffer.from(value, "utf-8").toString("base64")]));
     }
