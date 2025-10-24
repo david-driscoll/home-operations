@@ -9,7 +9,7 @@ services:
       # Enable Traefik
       traefik.enable: true
 
-      traefik.http.routers.gatus.rule: Host(`gatus.${CLUSTER_KEY}.${searchDomain}`)
+      traefik.http.routers.gatus.rule: Host(`gatus.${CLUSTER_DOMAIN}`)
       traefik.http.routers.gatus.entrypoints: websecure
       traefik.http.routers.gatus.service: gatus
       traefik.http.routers.gatus.tls.certresolver: le
@@ -19,7 +19,7 @@ services:
       - ./data/:/data/
 x-dockge:
   urls:
-    - https://gatus.${host}.${searchDomain}
+    - https://gatus.${CLUSTER_DOMAIN}
 networks:
   dockge_default:
     external: true

@@ -13,14 +13,14 @@ alerting:
 
 endpoints:
   - name: Traefik Dashboard
-    url: "https://internal.${host}.${searchDomain}"
+    url: "https://internal.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 200"
   - name: Dockge
-    url: "https://dockge.${host}.${searchDomain}"
+    url: "https://dockge.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 200"
   - name: Authentik Outpost
-    url: "https://authentik-outpost.${host}.${searchDomain}"
+    url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 200"

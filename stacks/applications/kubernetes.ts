@@ -245,6 +245,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
 function mapGatusResource(rawResource: string): GatusDefinition {
   const resource = yaml.parse(Buffer.from(rawResource, "base64").toString("utf-8"));
   return {
+    name: resource.name,
     url: resource.url,
     "disable-monitoring-lock": resource["disable-monitoring-lock"] === "true",
     alerts: resource.alerts ? JSON.parse(resource.alerts) : [],

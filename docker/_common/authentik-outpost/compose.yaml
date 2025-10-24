@@ -14,7 +14,7 @@ services:
       traefik.enable: true
 
       # Outpost
-      traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_KEY}.${searchDomain}`)
+      traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_DOMAIN}`)
       traefik.http.routers.authentik-outpost.entrypoints: websecure
       traefik.http.routers.authentik-outpost.service: authentik-outpost
       traefik.http.routers.authentik-outpost.tls.certresolver: le
@@ -30,7 +30,7 @@ services:
       - dockge_default
 x-dockge:
   urls:
-    - https://ak-outpost.${CLUSTER_KEY}.${searchDomain}
+    - https://authentik-outpost.${CLUSTER_DOMAIN}
 networks:
   dockge_default:
     external: true
