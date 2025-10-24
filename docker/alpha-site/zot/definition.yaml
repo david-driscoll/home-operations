@@ -18,4 +18,4 @@ spec:
       url: https://registry.${searchDomain}/livez
       method: GET
       conditions:
-        - "status == 200"
+        - "[STATUS] == 200"
