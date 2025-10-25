@@ -8,6 +8,7 @@ services:
       - --providers.file.watch=true
     labels:
       tsdproxy.enable: true
+      tsdproxy.ephemeral: true
       tsdproxy.name: internal-${CLUSTER_KEY}
 
       # Enable Traefik for itself

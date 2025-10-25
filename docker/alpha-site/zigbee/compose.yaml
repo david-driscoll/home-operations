@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     labels:
       tsdproxy.enable: true
+      tsdproxy.ephemeral: true
       tsdproxy.name: ${APP}-${CLUSTER_KEY}
 
       # Enable Traefik

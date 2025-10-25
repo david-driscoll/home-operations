@@ -9,6 +9,7 @@ services:
       WEB_PORT: 8909
     labels:
       tsdproxy.enable: true
+      tsdproxy.ephemeral: true
       tsdproxy.name: ${APP}-${CLUSTER_KEY}
 
       # Enable Traefik
