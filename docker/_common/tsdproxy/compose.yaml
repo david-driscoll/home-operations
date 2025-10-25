@@ -1,6 +1,6 @@
 services:
   tsdproxy:
-    image: almeidapaulopt/tsdproxy:1
+    image: almeidapaulopt/tsdproxy:2
     labels:
       tsdproxy.enable: true
       tsdproxy.ephemeral: true
