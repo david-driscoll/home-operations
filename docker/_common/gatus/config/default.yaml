@@ -13,3 +13,6 @@ endpoints:
     url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 404"
+
+web:
+  port: 8585
