@@ -1,5 +1,5 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Unwrap, jsonStringify } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
@@ -204,6 +204,21 @@ export class DockgeLxc extends ComponentResource {
         },
       },
       cro
+    );
+
+    const json = jsonStringify({ dns: this.ipAddress.apply((z) => ["100.100.100.100", ...(z.startsWith("100.") ? [] : ["10.10.10.9", "10.10.0.1", "10.10.209.201"])]) }).apply(async (json) => {
+      const path = `./.tmp/${name}-docker-daemon.json`;
+      await writeFile(path, json);
+      return path;
+    });
+    new remote.CopyToRemote(
+      `${name}-docker-daemon`,
+      {
+        connection: this.remoteConnection,
+        remotePath: "/etc/docker/daemon.json",
+        source: new asset.FileAsset(awaitOutput(json)),
+      },
+      mergeOptions({ parent: this }, { dependsOn: [] })
     );
   }
 
