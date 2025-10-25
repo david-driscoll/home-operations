@@ -108,7 +108,6 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const outpost = new authentik.Outpost(
     clusterDefinition.key,
     {
-      // serviceConnection: serviceConnectionId,
       type: "proxy",
       name: `Outpost for ${clusterDefinition.title}`,
       config: pulumi.jsonStringify({
@@ -117,7 +116,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
         authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "info",
         object_naming_template: `authentik-outpost`,
-        // docker_network: "dockge_default",
+        docker_network: "dockge_default",
       }),
       protocolProviders: applicationManager.proxyProviders,
     },
@@ -136,7 +135,6 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
   await writeFile(envPath, envValues);
-  const gatusDefinition = yaml.parse((await ssh.execCommand(`cat /opt/stacks/gatus/definition.yaml`)).stdout) as ApplicationDefinitionSchema;
   const gatusSecurityPath = `./.tmp/${clusterDefinition.key}-gatus-security.yaml`;
   await writeFile(gatusSecurityPath, ``);
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
