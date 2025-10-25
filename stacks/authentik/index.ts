@@ -3,7 +3,11 @@ import { AuthentikGroups } from "../../components/authentik/groups.ts";
 import { FlowsManager } from "../../components/authentik/flows.ts";
 import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
+import { Brand } from "@pulumi/authentik";
+import { createClusterDefinition, GlobalResources } from "@components/globals.ts";
+import { OPClient } from "@components/op.ts";
 
+const globals = new GlobalResources({}, {});
 const authentikGroups = new AuthentikGroups({});
 const flowsManager = new FlowsManager({});
 const authentikFlows = flowsManager.createFlows();
@@ -67,3 +71,19 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
     },
   }),
 });
+
+const clusterDefinition = await new OPClient().getItemByTitle("Cluster: Stargate Command").then(createClusterDefinition);
+const tailscaleBrand = new Brand(
+  "tailscale",
+  {
+    domain: pulumi.interpolate`authentik.${globals.tailscaleDomain}`,
+    brandingLogo: clusterDefinition.icon,
+    brandingTitle: clusterDefinition.key,
+    brandingFavicon: clusterDefinition.favicon ?? "",
+    brandingDefaultFlowBackground: clusterDefinition.background ?? "/static/dist/assets/images/flow_background.jpg",
+    flowAuthentication: authentikFlows.authenticationFlow.uuid,
+    flowInvalidation: authentikFlows.providerLogoutFlow.uuid,
+    flowUserSettings: authentikFlows.userSettingsFlow.uuid,
+  },
+  { deleteBeforeReplace: true }
+);
