@@ -89,7 +89,12 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
           conditions: ["[STATUS] == 200"],
         },
       ],
-      // authentik?
+      authentik: {
+        proxy: {
+          mode: "forward_single",
+          externalHost: `https://dockge.${clusterDefinition.rootDomain}`,
+        },
+      },
     },
   });
 
