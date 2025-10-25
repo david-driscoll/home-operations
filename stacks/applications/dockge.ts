@@ -112,7 +112,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       type: "proxy",
       name: `Outpost for ${clusterDefinition.title}`,
       config: pulumi.jsonStringify({
-        authentik_host: pulumi.interpolate`https://authentik.${globals.searchDomain}/`,
+        authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
         authentik_host_insecure: false,
         authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "info",
