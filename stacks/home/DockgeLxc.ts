@@ -206,20 +206,10 @@ export class DockgeLxc extends ComponentResource {
       cro
     );
 
-    const json = jsonStringify({ dns: this.ipAddress.apply((z) => ["100.100.100.100", ...(z.startsWith("100.") ? [] : ["10.10.10.9", "10.10.0.1", "10.10.209.201"])]) }).apply(async (json) => {
-      const path = `./.tmp/${name}-docker-daemon.json`;
-      await writeFile(path, json);
-      return path;
+    new remote.Command(`${name}-delete-docker-daemon`, {
+      connection: this.remoteConnection,
+      create: interpolate`rm -f /etc/docker/daemon.json`,
     });
-    new remote.CopyToRemote(
-      `${name}-docker-daemon`,
-      {
-        connection: this.remoteConnection,
-        remotePath: "/etc/docker/daemon.json",
-        source: new asset.FileAsset(awaitOutput(json)),
-      },
-      mergeOptions({ parent: this }, { dependsOn: [] })
-    );
   }
 
   private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
