@@ -4,11 +4,14 @@ services:
     image: ghcr.io/koenkk/zigbee2mqtt
     restart: unless-stopped
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
       # Zigbee2MQTT - HTTPS
-      traefik.http.routers.zigbee.rule: Host(`zigbee.${searchDomain}`) || Host(`zigbee.as.${searchDomain}`)
+      traefik.http.routers.zigbee.rule: Host(`${APP}.${searchDomain}`) || Host(`${APP}.as.${searchDomain}`)
       traefik.http.routers.zigbee.entrypoints: websecure
       traefik.http.routers.zigbee.tls.certresolver: le
       traefik.http.routers.zigbee.service: zigbee
@@ -29,4 +32,5 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://zigbee.${searchDomain}
+    - https://${APP}.${searchDomain}
+    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}

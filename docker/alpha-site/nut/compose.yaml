@@ -8,10 +8,13 @@ services:
     environment:
       WEB_PORT: 8909
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
-      traefik.http.routers.peanut.rule: Host(`peanut.${searchDomain}`)
+      traefik.http.routers.peanut.rule: Host(`${APP}.${searchDomain}`)
       traefik.http.routers.peanut.entrypoints: websecure
       traefik.http.routers.peanut.tls.certresolver: le
       traefik.http.routers.peanut.service: peanut
@@ -20,7 +23,8 @@ services:
       - dockge_default
 x-dockge:
   urls:
-    - https://peanut.${searchDomain}
+    - https://${APP}.${searchDomain}
+    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

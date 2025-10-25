@@ -5,6 +5,9 @@ services:
       - 5000:5000
     restart: unless-stopped
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
@@ -28,3 +31,4 @@ networks:
 x-dockge:
   urls:
     - https://registry.${searchDomain}
+    - https://registry-${CLUSTER_KEY}.${tailscaleDomain}

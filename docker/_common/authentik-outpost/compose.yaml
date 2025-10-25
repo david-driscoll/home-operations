@@ -10,11 +10,13 @@ services:
       - path: .env-token
         required: false
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
       # Enable Traefik
       traefik.enable: true
 
       # Outpost
-      traefik.http.routers.authentik-outpost.rule: Host(`authentik-outpost.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.authentik-outpost.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
       traefik.http.routers.authentik-outpost.entrypoints: websecure
       traefik.http.routers.authentik-outpost.service: authentik-outpost
       traefik.http.routers.authentik-outpost.tls.certresolver: le
@@ -32,7 +34,7 @@ services:
       - 9000:9000
 x-dockge:
   urls:
-    - https://authentik-outpost.${CLUSTER_DOMAIN}
+    - https://${APP}.${CLUSTER_DOMAIN}
 networks:
   dockge_default:
     external: true

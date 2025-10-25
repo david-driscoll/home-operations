@@ -6,6 +6,9 @@ services:
     tty: true
     stop_signal: SIGINT
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
@@ -32,4 +35,5 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://zwave.${searchDomain}
+    - https://${APP}.${searchDomain}
+    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}

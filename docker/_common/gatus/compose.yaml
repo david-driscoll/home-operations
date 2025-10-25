@@ -6,10 +6,13 @@ services:
     environment:
       GATUS_CONFIG_PATH: /config
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
-      traefik.http.routers.gatus.rule: Host(`gatus.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.gatus.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
       traefik.http.routers.gatus.entrypoints: websecure
       traefik.http.routers.gatus.service: gatus
       traefik.http.routers.gatus.tls.certresolver: le
@@ -23,7 +26,8 @@ services:
       - 8585:8585
 x-dockge:
   urls:
-    - https://gatus.${CLUSTER_DOMAIN}
+    - https://${APP}.${CLUSTER_DOMAIN}
+    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

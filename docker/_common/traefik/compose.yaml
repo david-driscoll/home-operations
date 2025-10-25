@@ -7,6 +7,9 @@ services:
       - --configfile=/config/config.yaml
       - --providers.file.watch=true
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: internal-${CLUSTER_KEY}
+
       # Enable Traefik for itself
       traefik.enable: true
       # Dashboard configuration
@@ -39,6 +42,7 @@ services:
 x-dockge:
   urls:
     - https://internal.${CLUSTER_DOMAIN}
+    - https://internal-${CLUSTER_KEY}.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

@@ -3,15 +3,18 @@ services:
     restart: unless-stopped
     image: adguard/adguardhome
     ports:
-      - '4000:3000'  # Keep direct access for local network
+      - "4000:3000" # Keep direct access for local network
     environment:
       TZ: America/New_York
     labels:
+      tsdproxy.enable: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
       # Enable Traefik
       traefik.enable: true
 
       # Web UI routing (HTTPS)
-      traefik.http.routers.adguard.rule: Host(`adguard.${searchDomain}`)
+      traefik.http.routers.adguard.rule: Host(`${APP}.${searchDomain}`)
       traefik.http.routers.adguard.entrypoints: websecure
       traefik.http.routers.adguard.tls.certresolver: le
       traefik.http.routers.adguard.service: adguard-web
@@ -56,4 +59,5 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://adguard.${searchDomain}
+    - https://${APP}.${searchDomain}
+    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}

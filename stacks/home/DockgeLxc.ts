@@ -136,6 +136,7 @@ export class DockgeLxc extends ComponentResource {
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(args.host.name)),
       replaceVariable(/\$\{searchDomain\}/g, args.globals.searchDomain),
+      replaceVariable(/\$\{tailscaleDomain\}/g, args.globals.tailscaleDomain),
       replaceVariable(/\$\{hostname\}/g, hostname),
       replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
       replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
