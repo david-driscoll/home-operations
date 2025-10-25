@@ -51,7 +51,6 @@ const b2Bucket = new b2.Bucket(
     ],
   },
   {
-    import: "c83ca19504295afd96930b1b",
     provider: globals.backblazeProvider,
     protect: true,
     retainOnDelete: true,
