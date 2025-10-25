@@ -7,7 +7,7 @@ services:
       - --configfile=/config/config.yaml
       - --providers.file.watch=true
     labels:
-      tsdproxy.enable: true
+      tsdproxy.enable: false
       tsdproxy.ephemeral: true
       tsdproxy.name: internal-${CLUSTER_KEY}
 

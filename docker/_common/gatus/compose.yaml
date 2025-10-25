@@ -6,7 +6,7 @@ services:
     environment:
       GATUS_CONFIG_PATH: /config
     labels:
-      tsdproxy.enable: true
+      tsdproxy.enable: false
       tsdproxy.ephemeral: true
       tsdproxy.name: ${APP}-${CLUSTER_KEY}
 

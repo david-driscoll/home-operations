@@ -10,7 +10,7 @@ services:
       - path: .env-token
         required: false
     labels:
-      tsdproxy.enable: true
+      tsdproxy.enable: false
       tsdproxy.ephemeral: true
       tsdproxy.name: ${APP}-${CLUSTER_KEY}
       # Enable Traefik
