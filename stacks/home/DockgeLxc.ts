@@ -176,7 +176,7 @@ export class DockgeLxc extends ComponentResource {
         return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
       })
       .apply((z) => {
-        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path} (${z.map((z) => z.name).join(", ")})`));
+        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return z.map((z) => z.name);
       });
 
