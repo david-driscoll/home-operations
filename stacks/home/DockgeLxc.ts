@@ -134,7 +134,7 @@ export class DockgeLxc extends ComponentResource {
     const vaultRegex = /op\:\/\/Eris\/(\w+)\/(\w+)/g;
 
     const replacements = [
-      replaceVariable(/\$\{host\}/g, output(args.host.name)),
+      replaceVariable(/\$\{host\}/g, output(args.host.shortName ?? args.host.name)),
       replaceVariable(/\$\{searchDomain\}/g, args.globals.searchDomain),
       replaceVariable(/\$\{tailscaleDomain\}/g, args.globals.tailscaleDomain),
       replaceVariable(/\$\{hostname\}/g, hostname),
