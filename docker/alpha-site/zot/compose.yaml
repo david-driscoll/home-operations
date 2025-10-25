@@ -2,7 +2,7 @@ services:
   zot:
     image: ghcr.io/project-zot/zot:latest
     ports:
-      - 5000:5000
+      - 6785:6785
     restart: unless-stopped
     labels:
       tsdproxy.enable: false
@@ -17,7 +17,7 @@ services:
       traefik.http.routers.registry.entrypoints: websecure
       traefik.http.routers.registry.tls.certresolver: le
       traefik.http.routers.registry.service: registry
-      traefik.http.services.registry.loadbalancer.server.port: 5000
+      traefik.http.services.registry.loadbalancer.server.port: 6785
     environment:
       TZ: America/New_York
     volumes:
