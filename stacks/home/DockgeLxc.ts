@@ -81,7 +81,7 @@ export class DockgeLxc extends ComponentResource {
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: true, ssh: true, ...args.tailscaleArgs } });
+    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs } });
 
     this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
 

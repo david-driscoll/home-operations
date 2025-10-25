@@ -8,7 +8,7 @@ metadata:
 spec:
   name: PeaNUT
   category: DNS
-  url: &url https://peanut.${searchDomain}
+  url: &url https://${APP}.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/peanut.svg
   access_policy:
     groups:
