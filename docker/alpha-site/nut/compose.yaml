@@ -25,7 +25,6 @@ services:
 x-dockge:
   urls:
     - https://${APP}.${searchDomain}
-    - https://${APP}-${CLUSTER_KEY}.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

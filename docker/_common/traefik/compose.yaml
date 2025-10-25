@@ -43,7 +43,6 @@ services:
 x-dockge:
   urls:
     - https://internal.${CLUSTER_DOMAIN}
-    - https://internal-${CLUSTER_KEY}.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

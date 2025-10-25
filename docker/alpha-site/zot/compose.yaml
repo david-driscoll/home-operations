@@ -32,4 +32,3 @@ networks:
 x-dockge:
   urls:
     - https://registry.${searchDomain}
-    - https://registry-${CLUSTER_KEY}.${tailscaleDomain}
