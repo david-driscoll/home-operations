@@ -1,0 +1,33 @@
+services:
+  uptime:
+    container_name: uptime
+    image: ghcr.io/twin/gatus:stable
+    restart: unless-stopped
+    environment:
+      GATUS_CONFIG_PATH: /config
+    labels:
+      tsdproxy.enable: false
+      tsdproxy.ephemeral: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.uptime.rule: Host(`uptime.${searchDomain}`)
+      traefik.http.routers.uptime.entrypoints: websecure
+      traefik.http.routers.uptime.service: uptime
+      traefik.http.routers.uptime.tls.certresolver: le
+      traefik.http.services.uptime.loadbalancer.server.port: 9595
+    volumes:
+      - ./config/:/config/
+      - ./data/:/data/
+    networks:
+      - dockge_default
+    ports:
+      - 9595:9595
+x-dockge:
+  urls:
+    - https://uptime.${CLUSTER_DOMAIN}
+networks:
+  dockge_default:
+    external: true

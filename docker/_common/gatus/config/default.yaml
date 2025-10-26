@@ -16,3 +16,6 @@ endpoints:
 
 web:
   port: 8585
+
+ui:
+  default-sort-by: group

@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+storage:
+  type: sqlite
+  path: /data/data.db
+
+alerting:
+  pushover:
+    application-token: "op://Eris/Pushover/credential"
+    user-key: "op://Eris/Pushover/username"
+
+remote:
+  instances:
+    - endpoint-prefix: "Alpha Site"
+      url: "https://gatus.as.${searchDomain}/api/v1/endpoints/statuses"
+    - endpoint-prefix: "Stargate Command"
+      url: "https://gatus.sgc.${searchDomain}/api/v1/endpoints/statuses"
+    - endpoint-prefix: "Equestria"
+      url: "https://gatus.equestria.${searchDomain}/api/v1/endpoints/statuses"
+    - endpoint-prefix: "Celestia"
+      url: "https://gatus.celestia.${searchDomain}/api/v1/endpoints/statuses"
+    - endpoint-prefix: "Luna"
+      url: "https://gatus.luna.${searchDomain}/api/v1/endpoints/statuses"
+
+ui:
+  default-sort-by: group
+  title: Status | Gatus
+  header: Status
+
+web:
+  port: 9595
