@@ -107,7 +107,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         provider: new authentik.ProviderProxy(
           resourceName,
           {
-            name: providerName,
+            // name: providerName,
             authorizationFlow: authentikDefinition.proxy.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
             authenticationFlow: authentikDefinition.proxy.authenticationFlow ?? this.authentik.flows.authenticationFlow,
             invalidationFlow: authentikDefinition.proxy.invalidationFlow ?? this.authentik.flows.providerLogoutFlow,
@@ -164,7 +164,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const provider = new authentik.ProviderOauth2(
         resourceName,
         {
-          name: providerName,
+          // name: providerName,
           authorizationFlow: oauth2.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
           authenticationFlow: oauth2.authenticationFlow || this.authentik.flows.authenticationFlow,
           invalidationFlow: oauth2.invalidationFlow || this.authentik.flows.providerLogoutFlow,
