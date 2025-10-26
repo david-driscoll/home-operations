@@ -112,7 +112,7 @@ function addGatusDnsRecord(
           "query-name": args.hostname,
           "query-type": args.type,
         },
-        conditions: [interpolate`[BODY] == ${args.type === "A" ? args.ipAddress : args.record}`, "[DNS_RCODE] == NOERROR"],
+        conditions: [interpolate`[BODY] == ${args.type === "A" ? args.ipAddress : ""}`, "[DNS_RCODE] == NOERROR"],
       })
     );
   }
