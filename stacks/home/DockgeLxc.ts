@@ -285,7 +285,7 @@ export class DockgeLxc extends ComponentResource {
       const id = (await md5({ input: content })).result;
 
       const mkdir2 = new remote.Command(
-        `${hostname}-${stackName}-mkdir`,
+        `${hostname}-${id}-mkdir`,
         {
           connection: this.remoteConnection,
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
