@@ -14,6 +14,12 @@ endpoints:
     url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 404"
+  - name: AdGuard Alpha Site
+    group: "AdGuard Home"
+    url: "https://adguard.${searchDomain}"
+    method: GET
+    conditions:
+      - "[STATUS] == 200"
 
 web:
   port: 8585

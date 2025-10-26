@@ -14,6 +14,7 @@ services:
       traefik.enable: true
 
       traefik.http.routers.gatus.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.gatus.middlewares: authentik-outpost@docker
       traefik.http.routers.gatus.entrypoints: websecure
       traefik.http.routers.gatus.service: gatus
       traefik.http.routers.gatus.tls.certresolver: le
