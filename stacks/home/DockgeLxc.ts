@@ -230,6 +230,20 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions({ parent: this }, { dependsOn: [] })
     );
 
+    const allDirectories = [mkdir];
+
+    for (const dir of new Set(files.map(dirname))) {
+      const mkdir2 = new remote.Command(
+        `${hostname}-${dir}-mkdir`,
+        {
+          connection: this.remoteConnection,
+          create: interpolate`mkdir -p ${dir}`,
+        },
+        mergeOptions({ parent: this }, { dependsOn: [mkdir] })
+      );
+      allDirectories.push(mkdir2);
+    }
+
     for (const file of files) {
       const content = await readFile(resolve(path, file), "utf-8");
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
@@ -284,15 +298,6 @@ export class DockgeLxc extends ComponentResource {
       const fileAsset = new asset.FileAsset(tempFilePath);
       const id = (await md5({ input: content })).result;
 
-      const mkdir2 = new remote.Command(
-        `${hostname}-${id}-mkdir`,
-        {
-          connection: this.remoteConnection,
-          create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
-        },
-        mergeOptions({ parent: this }, { dependsOn: [mkdir] })
-      );
-
       copyFiles.push(
         new remote.CopyToRemote(
           `${hostname}-${id}-copy-file`,
@@ -301,7 +306,7 @@ export class DockgeLxc extends ComponentResource {
             remotePath,
             source: fileAsset,
           },
-          mergeOptions({ parent: this }, { dependsOn: [mkdir2] })
+          mergeOptions({ parent: this }, { dependsOn: allDirectories })
         )
       );
     }
