@@ -103,9 +103,19 @@ function addGatusDnsRecord(
 ) {
   const records: Input<GatusDefinition>[] = [];
   for (const [ip, server] of Object.entries(dnsServers)) {
-    const bodyConfig = output(args.hostname).apply((hostname) =>
-      args.type === "A" ? args.ipAddress : (ip.startsWith("10.") && ip !== "10.10.0.1") || hostname.split(".").length === 3 ? "" : interpolate`${args.record}.`
-    );
+    const bodyConfig = output(args.hostname).apply((hostname) => {
+      if (args.type === "A") return args.ipAddress;
+      if (ip.startsWith("10.") && ip !== "10.10.0.1") {
+        return "";
+      }
+      if (hostname.startsWith("uptime.") || hostname.startsWith("registry.")) {
+        return interpolate`${args.record}.`;
+      }
+      if (hostname.split(".").length === 3) {
+        if (ip.startsWith("10.")) return "";
+      }
+      return interpolate`${args.record}.`;
+    });
     records.push(
       output({
         name: args.hostname,
