@@ -8,7 +8,7 @@ spec:
   name: Uptime
   category: ${CLUSTER_TITLE}
   description: Gatus is an open-source status monitoring service.  This is a overall gatus instance.
-  url: &url https://${APP}.${CLUSTER_DOMAIN}
+  url: &url https://uptime.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/gatus.svg
   access_policy:
     groups:

@@ -28,7 +28,7 @@ services:
       - 9595:9595
 x-dockge:
   urls:
-    - https://uptime.${CLUSTER_DOMAIN}
+    - https://uptime.${searchDomain}
 networks:
   dockge_default:
     external: true
