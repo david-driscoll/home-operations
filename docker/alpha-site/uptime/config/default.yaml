@@ -8,6 +8,17 @@ alerting:
     application-token: "op://Eris/Pushover/credential"
     user-key: "op://Eris/Pushover/username"
 
+endpoints:
+  - name: Internal DNS Check
+    group: "System"
+    url: "100.111.209.201"
+    dns:
+      query-type: CNAME
+      query-name: gatus.${CLUSTER_DOMAIN}
+    conditions:
+      - "[BODY] == ${INTERNAL_DOMAIN}"
+      - "[DNS_RCODE] == NOERROR"
+
 remote:
   instances:
     - endpoint-prefix: "Alpha Site"
