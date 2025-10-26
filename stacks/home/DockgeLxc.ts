@@ -232,9 +232,9 @@ export class DockgeLxc extends ComponentResource {
 
     const allDirectories = [mkdir];
 
-    for (const dir of new Set(files.map(dirname))) {
+    for (const dir of new Set(files.map(dirname).filter((z) => z !== "."))) {
       const mkdir2 = new remote.Command(
-        `${hostname}-${dir}-mkdir`,
+        `${hostname}-${stackName}-${dir}-mkdir`,
         {
           connection: this.remoteConnection,
           create: interpolate`mkdir -p ${dir}`,
@@ -300,7 +300,7 @@ export class DockgeLxc extends ComponentResource {
 
       copyFiles.push(
         new remote.CopyToRemote(
-          `${hostname}-${id}-copy-file`,
+          `${hostname}-${stackName}-${id}-copy-file`,
           {
             connection: this.remoteConnection,
             remotePath,
