@@ -284,6 +284,15 @@ export class DockgeLxc extends ComponentResource {
       const fileAsset = new asset.FileAsset(tempFilePath);
       const id = (await md5({ input: content })).result;
 
+      const mkdir2 = new remote.Command(
+        `${hostname}-${stackName}-mkdir`,
+        {
+          connection: this.remoteConnection,
+          create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
+        },
+        mergeOptions({ parent: this }, { dependsOn: [mkdir] })
+      );
+
       copyFiles.push(
         new remote.CopyToRemote(
           `${hostname}-${id}-copy-file`,
@@ -292,7 +301,7 @@ export class DockgeLxc extends ComponentResource {
             remotePath,
             source: fileAsset,
           },
-          mergeOptions({ parent: this }, { dependsOn: [mkdir] })
+          mergeOptions({ parent: this }, { dependsOn: [mkdir2] })
         )
       );
     }
