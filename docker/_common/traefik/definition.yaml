@@ -19,7 +19,7 @@ spec:
       externalHost: *url
   gatus:
     - url: *url
-      group: "System"
+      group: "${CLUSTER_TITLE}"
       method: GET
       conditions:
         - "[STATUS] == 200"

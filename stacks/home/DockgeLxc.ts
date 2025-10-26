@@ -300,11 +300,12 @@ export class DockgeLxc extends ComponentResource {
 
       copyFiles.push(
         new remote.CopyToRemote(
-          `${hostname}-${stackName}-${id}-copy-file`,
+          `${hostname}-${stackName}-${file.replace(/\//g, "-")}-copy-file`,
           {
             connection: this.remoteConnection,
             remotePath,
             source: fileAsset,
+            triggers: [id],
           },
           mergeOptions({ parent: this }, { dependsOn: allDirectories })
         )

@@ -24,12 +24,14 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 
   let currentGatusValues: Record<string, string> = {};
-  let initialGatusValues: Record<string, string> = {};
   let gatusSecret: kubernetes.V1Secret = {};
   try {
     gatusSecret = await coreApi.readNamespacedSecret({ name: "gatus-secret", namespace: "observability" });
-    currentGatusValues = Object.fromEntries(Object.entries(gatusSecret.data ?? {}).map(([key, value]) => [key, Buffer.from(value, "base64").toString("utf-8")]));
-    initialGatusValues = { ...currentGatusValues };
+    currentGatusValues = Object.fromEntries(
+      Object.entries(gatusSecret.data ?? {})
+        .filter((z) => !z[0].startsWith(`${clusterDefinition.key}-`))
+        .map(([key, value]) => [key, Buffer.from(value, "base64").toString("utf-8")])
+    );
   } catch (e) {
     pulumi.log.info("Gatus secret not found, assuming no current Gatus values");
   }

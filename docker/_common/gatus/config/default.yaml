@@ -10,6 +10,7 @@ alerting:
 
 endpoints:
   - name: Authentik Outpost
+    group: "${CLUSTER_TITLE}"
     url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 404"

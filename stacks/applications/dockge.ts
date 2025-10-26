@@ -10,6 +10,7 @@ import * as authentikApi from "@goauthentik/api";
 import { mkdir, writeFile } from "fs/promises";
 import { remote } from "@pulumi/command";
 import { awaitOutput as outToPromise } from "@components/helpers.ts";
+import { md5Output } from "@pulumi/std";
 
 export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
   const ssh = new NodeSSH();
@@ -135,8 +136,6 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   await mkdir(`./.tmp/`, { recursive: true });
   const envPath = `./.tmp/${clusterDefinition.key}-env`;
   await writeFile(envPath, envValues);
-  const gatusSecurityPath = `./.tmp/${clusterDefinition.key}-gatus-security.yaml`;
-  await writeFile(gatusSecurityPath, ``);
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
     connection: {
       host: lxcData.sections.ssh.fields.hostname.value!,
@@ -144,18 +143,10 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
     remotePath: `/opt/stacks/authentik-outpost/.env-token`,
     source: new pulumi.asset.FileAsset(envPath),
-  });
-  const gatusSecurityConfig = new remote.CopyToRemote(`${clusterDefinition.key}-gatus-security`, {
-    connection: {
-      host: lxcData.sections.ssh.fields.hostname.value!,
-      user: "root",
-    },
-    remotePath: `/opt/stacks/gatus/config/security.yaml`,
-    source: new pulumi.asset.FileAsset(gatusSecurityPath),
+    triggers: [md5Output({ input: envValues }).result],
   });
 
   await outToPromise(environmentConfig.id);
-  await outToPromise(gatusSecurityConfig.id);
   await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/authentik-outpost/` });
 
   ssh.dispose();
