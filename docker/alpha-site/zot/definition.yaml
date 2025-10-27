@@ -14,7 +14,7 @@ spec:
     groups:
       - admins
   gatus:
-    - group: "${CLUSTER_TITLE}"
+    - group: "Dockge: ${CLUSTER_TITLE}"
       url: https://registry.${searchDomain}/livez
       method: GET
       conditions:

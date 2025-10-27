@@ -19,7 +19,7 @@ spec:
       externalHost: *url
   gatus:
     - url: *url
-      group: "${CLUSTER_TITLE}"
+      group: "Dockge: ${CLUSTER_TITLE}"
       method: GET
       conditions:
         - "[STATUS] == 200"

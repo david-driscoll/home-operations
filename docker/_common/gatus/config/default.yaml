@@ -11,7 +11,7 @@ alerting:
 endpoints:
   - name: Authentik Outpost
     enabled: false
-    group: "${CLUSTER_TITLE}"
+    group: "Dockge: ${CLUSTER_TITLE}"
     url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
     conditions:
       - "[STATUS] == 404"
