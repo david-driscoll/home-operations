@@ -6,11 +6,6 @@ import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumi/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { mkdirSync, write } from "fs";
-import { writeFile } from "fs/promises";
-import * as yaml from "yaml";
-import { awaitOutput } from "@components/helpers.ts";
-import { remote } from "@pulumi/command";
-import { md5 } from "@pulumi/std";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -123,23 +118,7 @@ function addGatusDnsRecord(
   }
   mkdirSync(`./.tmp/`, { recursive: true });
   output(records).apply(async (endpoints) => {
-    const content = yaml.stringify({ endpoints });
-    const id = (await md5({ input: content })).result;
-    await writeFile(`./.tmp/dnsrecord-${name}.yaml`, content);
-
-    new remote.CopyToRemote(
-      `${name}-dns-records`,
-      {
-        connection: {
-          host: interpolate`dockge-as.${globals.tailscaleDomain}`,
-          user: "root",
-        },
-        source: new asset.FileAsset(`./.tmp/dnsrecord-${name}.yaml`),
-        remotePath: `/opt/stacks/uptime/config/dns-${name}.yaml`,
-        triggers: [id],
-      },
-      { parent }
-    );
+    e.group = cluster.title
   });
 }
 

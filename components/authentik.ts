@@ -10,6 +10,7 @@ import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts"
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
+import { addUptimeGatus } from "./helpers.ts";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -422,6 +423,17 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
       gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
+    await addUptimeGatus(
+      definition.metadata.name,
+      this.args.globals,
+      gatusDefinitions
+        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+        .map((e) => {
+          e.group = this.cluster.title;
+          return e;
+        }),
+      this
+    );
     return await this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
 }

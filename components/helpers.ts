@@ -1,6 +1,12 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { Input, Output, output } from "@pulumi/pulumi";
+import { asset, Input, interpolate, Output, output, Resource } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
+import { writeFile } from "fs/promises";
+import * as yaml from "yaml";
+import { remote } from "@pulumi/command";
+import { md5 } from "@pulumi/std";
+import { GatusDefinition } from "@openapi/application-definition.js";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
 
 export function removeUndefinedProperties<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -17,6 +23,27 @@ export function removeUndefinedProperties<T>(obj: T): T {
     ) as T;
   }
   return obj;
+}
+
+export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: GatusDefinition[], parent: Resource) {
+
+    const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
+    const id = (await md5({ input: content })).result;
+    await writeFile(`./.tmp/dnsrecord-${name}.yaml`, content);
+
+    new remote.CopyToRemote(
+      `${name}-dns-records`,
+      {
+        connection: {
+          host: interpolate`dockge-as.${globals.tailscaleDomain}`,
+          user: "root",
+        },
+        source: new asset.FileAsset(`./.tmp/dnsrecord-${name}.yaml`),
+        remotePath: `/opt/stacks/uptime/config/dns-${name}.yaml`,
+        triggers: [id],
+      },
+      { parent }
+    );
 }
 
 export function awaitOutput<T>(output: Output<T>) {

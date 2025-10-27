@@ -8,18 +8,18 @@ alerting:
     application-token: "op://Eris/Pushover/credential"
     user-key: "op://Eris/Pushover/username"
 
-remote:
-  instances:
-    - url: "https://gatus.as.${searchDomain}/api/v1/endpoints/statuses"
-      #endpoint-prefix: "Alpha Site"
-    - url: "https://gatus.sgc.${searchDomain}/api/v1/endpoints/statuses"
-      #endpoint-prefix: "Stargate Command"
-    - url: "https://gatus.equestria.${searchDomain}/api/v1/endpoints/statuses"
-      #endpoint-prefix: "Equestria"
-    - url: "https://gatus.celestia.${searchDomain}/api/v1/endpoints/statuses"
-      #endpoint-prefix: "Celestia"
-    - url: "https://gatus.luna.${searchDomain}/api/v1/endpoints/statuses"
-      #endpoint-prefix: "Luna"
+# remote:
+#   instances:
+#     - url: "https://gatus.as.${searchDomain}/api/v1/endpoints/statuses"
+#       #endpoint-prefix: "Alpha Site"
+#     - url: "https://gatus.sgc.${searchDomain}/api/v1/endpoints/statuses"
+#       #endpoint-prefix: "Stargate Command"
+#     - url: "https://gatus.equestria.${searchDomain}/api/v1/endpoints/statuses"
+#       #endpoint-prefix: "Equestria"
+#     - url: "https://gatus.celestia.${searchDomain}/api/v1/endpoints/statuses"
+#       #endpoint-prefix: "Celestia"
+#     - url: "https://gatus.luna.${searchDomain}/api/v1/endpoints/statuses"
+#       #endpoint-prefix: "Luna"
 
 ui:
   default-sort-by: group
