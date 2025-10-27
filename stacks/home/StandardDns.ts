@@ -6,6 +6,7 @@ import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumi/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { mkdirSync, write } from "fs";
+import { addUptimeGatus } from "@components/helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -118,7 +119,7 @@ function addGatusDnsRecord(
   }
   mkdirSync(`./.tmp/`, { recursive: true });
   output(records).apply(async (endpoints) => {
-    e.group = cluster.title
+    await addUptimeGatus(name, globals, endpoints, parent);
   });
 }
 
