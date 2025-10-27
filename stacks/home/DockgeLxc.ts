@@ -131,7 +131,7 @@ export class DockgeLxc extends ComponentResource {
 
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
-    const vaultRegex = /op\:\/\/Eris\/(.*?)\/(.*?)/g;
+    const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(args.host.shortName ?? args.host.name)),

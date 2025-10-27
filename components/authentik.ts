@@ -419,14 +419,14 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     for (let i = 0; i < gatusDefinitions.length; i++) {
       const endpoint = gatusDefinitions[i];
       endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
-      const yamlString = yaml.stringify(endpoint);
+      const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
       gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
     return await this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
 }
 
-const vaultRegex = /op\:\/\/Eris\/(.*?)\/(.*?)/g;
+const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
 async function replaceOnePasswordPlaceholders(op: OPClient, value: string): Promise<string> {
   const matches = value.matchAll(vaultRegex);
   const items = new Map();
