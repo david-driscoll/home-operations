@@ -14,7 +14,7 @@ import { basename, dirname, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { awaitOutput, getTailscaleSection } from "@components/helpers.ts";
+import { awaitOutput, getTailscaleSection, getTempFilePath } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { glob } from "glob";

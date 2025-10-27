@@ -9,7 +9,7 @@ import type { ApplicationDefinitionSchema } from "@openapi/application-definitio
 import * as authentikApi from "@goauthentik/api";
 import { mkdir, writeFile } from "fs/promises";
 import { remote } from "@pulumi/command";
-import { awaitOutput as outToPromise } from "@components/helpers.ts";
+import { getTempFilePath, awaitOutput as outToPromise } from "@components/helpers.ts";
 import { md5Output } from "@pulumi/std";
 
 export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
