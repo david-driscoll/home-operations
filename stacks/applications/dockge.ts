@@ -78,14 +78,14 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     spec: {
       name: "Dockge",
       category: clusterDefinition.title,
-      description: "Access to Dockge",
+      description: `Access to ${clusterDefinition.title} Dockge`,
       url: `https://dockge.${clusterDefinition.rootDomain}`,
       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dockge.svg",
       gatus: [
         {
-          name: "Dockge",
+          name: "Dockgge",
           url: `https://dockge.${clusterDefinition.rootDomain}/health`,
-          group: "Applications",
+          group: "System",
           method: "GET",
           conditions: ["[STATUS] == 200"],
         },
