@@ -32,7 +32,7 @@ export async function addUptimeGatus(name: string, globals: GlobalResources, end
     await writeFile(`./.tmp/dnsrecord-${name}.yaml`, content);
 
     new remote.CopyToRemote(
-      `${name}-dns-records`,
+      name,
       {
         connection: {
           host: interpolate`dockge-as.${globals.tailscaleDomain}`,
