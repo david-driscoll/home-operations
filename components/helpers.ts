@@ -7,6 +7,7 @@ import { remote } from "@pulumi/command";
 import { md5 } from "@pulumi/std";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { mkdirSync } from "fs";
 
 export function removeUndefinedProperties<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -19,31 +20,31 @@ export function removeUndefinedProperties<T>(obj: T): T {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
-        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const),
+        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const)
     ) as T;
   }
   return obj;
 }
 
 export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: GatusDefinition[], parent: Resource) {
+  mkdirSync(`./.tmp/`, { recursive: true });
+  const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
+  const id = (await md5({ input: content })).result;
+  await writeFile(`./.tmp/${name}.yaml`, content);
 
-    const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
-    const id = (await md5({ input: content })).result;
-    await writeFile(`./.tmp/dnsrecord-${name}.yaml`, content);
-
-    new remote.CopyToRemote(
-      name,
-      {
-        connection: {
-          host: interpolate`dockge-as.${globals.tailscaleDomain}`,
-          user: "root",
-        },
-        source: new asset.FileAsset(`./.tmp/dnsrecord-${name}.yaml`),
-        remotePath: `/opt/stacks/uptime/config/dns-${name}.yaml`,
-        triggers: [id],
+  new remote.CopyToRemote(
+    name,
+    {
+      connection: {
+        host: interpolate`dockge-as.${globals.tailscaleDomain}`,
+        user: "root",
       },
-      { parent }
-    );
+      source: new asset.FileAsset(`./.tmp/${name}.yaml`),
+      remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
+      triggers: [id],
+    },
+    { parent }
+  );
 }
 
 export function awaitOutput<T>(output: Output<T>) {
