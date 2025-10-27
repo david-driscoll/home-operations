@@ -426,7 +426,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 }
 
-const vaultRegex = /op\:\/\/Eris\/(\w+)\/(\w+)/g;
+const vaultRegex = /op\:\/\/Eris\/(.*?)\/(.*?)/g;
 async function replaceOnePasswordPlaceholders(op: OPClient, value: string): Promise<string> {
   const matches = value.matchAll(vaultRegex);
   const items = new Map();
