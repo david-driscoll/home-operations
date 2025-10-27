@@ -430,7 +430,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       gatusDefinitions
         .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
         .map((e) => {
-          e.group = this.cluster.title;
+          e.group = e.group === "System" ? this.cluster.title : e.group;
           return e;
         }),
       this
