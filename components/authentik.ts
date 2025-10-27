@@ -424,7 +424,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
     await addUptimeGatus(
-      definition.metadata.name,
+      `${this.cluster.key}-${definition.metadata.name}`,
       this.args.globals,
       gatusDefinitions
         .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
