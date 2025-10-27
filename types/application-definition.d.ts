@@ -96,10 +96,6 @@ export interface ApplicationDefinitionSchema {
       name: string;
     };
     gatus?: Endpoint[];
-    gatusFrom?: {
-      type: "configMap" | "secret";
-      name: string;
-    };
   };
 }
 export interface Http {

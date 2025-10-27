@@ -9,6 +9,7 @@ import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
+import * as yaml from "yaml";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -77,12 +78,9 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     const app = this.createAuthentikApplication(application, provider);
 
     let gatus = application.spec.gatus;
-    if (application.spec.gatusFrom) {
-      gatus = await this.args.loadFromResource<Endpoint[]>(application, "gatus", application.spec.gatusFrom);
-    }
 
     if (gatus) {
-      const instance = this.createGatus(application, gatus);
+      const instance = await this.createGatus(application, gatus);
       // we have to save to k8s secret
       // that secret needs to be mounted as a directory for gatus
     }
@@ -416,12 +414,31 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     return app;
   }
 
-  private createGatus(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
+  private async createGatus(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
     const resourceName = this.resolveResourceName(definition);
     for (let i = 0; i < gatusDefinitions.length; i++) {
       const endpoint = gatusDefinitions[i];
       endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+      const yamlString = yaml.stringify(endpoint);
+      gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
-    return this.args.createGatus(resourceName, definition, gatusDefinitions);
+    return await this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
+}
+
+const vaultRegex = /op\:\/\/Eris\/(\w+)\/(\w+)/g;
+async function replaceOnePasswordPlaceholders(op: OPClient, value: string): Promise<string> {
+  const matches = value.matchAll(vaultRegex);
+  const items = new Map();
+  for (const [, itemTitle, fieldName] of matches) {
+    if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
+      continue;
+    }
+    const item = await op.getItemByTitle(itemTitle);
+    items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
+  }
+
+  return value.replace(vaultRegex, (fullMatch) => {
+    return items.get(fullMatch) || fullMatch;
+  });
 }
