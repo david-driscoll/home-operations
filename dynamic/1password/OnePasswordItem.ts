@@ -89,15 +89,30 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
   async create(inputs: OPClientItemInput) {
     const client = new OPClient();
 
-    const item = await client.createItem(inputs);
-    return { id: item.id!, outs: { ...item, id: item.id! } };
+    const item = await this.retry(() => client.createItem(inputs));
+    return { id: item?.id!, outs: { ...item, id: item?.id! } };
   }
 
   async update(id: string, inputs: OPClientItemInput) {
     const client = new OPClient();
 
-    const item = await client.updateItem(id, inputs);
+    const item = await this.retry(() => client.updateItem(id, inputs));
     return { outs: { ...item, id } };
+  }
+
+  async retry<T>(action: () => Promise<NonNullable<T>>) {
+    const maxRetries = 3;
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        return await action();
+      } catch (error) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          throw error;
+        }
+      }
+    }
   }
 
   async delete(id: string) {
