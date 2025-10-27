@@ -83,7 +83,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dockge.svg",
       gatus: [
         {
-          name: "Dockgge",
+          name: "Dockge",
           url: `https://dockge.${clusterDefinition.rootDomain}/health`,
           group: "System",
           method: "GET",
