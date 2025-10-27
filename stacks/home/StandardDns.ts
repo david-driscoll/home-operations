@@ -117,7 +117,6 @@ function addGatusDnsRecord(
       })
     );
   }
-  mkdirSync(`./.tmp/`, { recursive: true });
   output(records).apply(async (endpoints) => {
     await addUptimeGatus(`dns-${name}`, globals, endpoints, parent);
   });

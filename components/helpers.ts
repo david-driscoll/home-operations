@@ -8,6 +8,14 @@ import { md5 } from "@pulumi/std";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
+import { tmpdir } from "os";
+import { join } from 'path'
+
+export const tempDir = join(tmpdir(), 'home-operations-pulumi');
+mkdirSync(tempDir, { recursive: true });
+export function getTempFilePath(fileName: string) {
+  return join(tempDir, fileName);
+}
 
 export function removeUndefinedProperties<T>(obj: T): T {
   if (obj === null || obj === undefined) {
@@ -27,10 +35,9 @@ export function removeUndefinedProperties<T>(obj: T): T {
 }
 
 export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: GatusDefinition[], parent: Resource) {
-  mkdirSync(`./.tmp/`, { recursive: true });
   const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
   const id = (await md5({ input: content })).result;
-  await writeFile(`./.tmp/${name}.yaml`, content);
+  await writeFile(getTempFilePath(`${name}.yaml`), content);
 
   new remote.CopyToRemote(
     name,
@@ -39,7 +46,7 @@ export async function addUptimeGatus(name: string, globals: GlobalResources, end
         host: interpolate`dockge-as.${globals.tailscaleDomain}`,
         user: "root",
       },
-      source: new asset.FileAsset(`./.tmp/${name}.yaml`),
+      source: new asset.FileAsset(getTempFilePath(`${name}.yaml`)),
       remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
       triggers: [id],
     },

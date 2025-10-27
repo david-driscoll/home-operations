@@ -217,8 +217,6 @@ export class DockgeLxc extends ComponentResource {
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
-    mkdirSync(`./.tmp/`, { recursive: true });
-
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
     const mkdir = new remote.Command(
@@ -247,7 +245,7 @@ export class DockgeLxc extends ComponentResource {
     for (const file of files) {
       const content = await readFile(resolve(path, file), "utf-8");
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
-      const tempFilePath = `./.tmp/${hostname}-${stackName}-${file.replace(/\//g, "-")}`;
+      const tempFilePath = getTempFilePath(`${hostname}-${stackName}-${file.replace(/\//g, "-")}`);
 
       if (tempFilePath.endsWith("compose.yaml")) {
         const content = await awaitOutput(replacedContent);

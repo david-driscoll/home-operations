@@ -34,8 +34,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       return parsed;
     },
     async createGatus(name, definition, gatusDefinitions) {
-      await mkdir(`./.tmp/`, { recursive: true });
-      const gatusConfigPath = `./.tmp/${clusterDefinition.key}-gatus-${name}.yaml`;
+      const gatusConfigPath = getTempFilePath(`${clusterDefinition.key}-gatus-${name}.yaml`);
       await writeFile(gatusConfigPath, yaml.stringify({ endpoints: gatusDefinitions }));
       await ssh.execCommand(`mkdir -p /opt/stacks/gatus/config/applications/`);
       await ssh.putFile(gatusConfigPath, `/opt/stacks/gatus/config/applications/${name}.yaml`);
@@ -133,8 +132,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
 
   const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
-  await mkdir(`./.tmp/`, { recursive: true });
-  const envPath = `./.tmp/${clusterDefinition.key}-env`;
+  const envPath = getTempFilePath(`${clusterDefinition.key}-env`);
   await writeFile(envPath, envValues);
   const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
     connection: {
