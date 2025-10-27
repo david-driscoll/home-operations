@@ -8,11 +8,15 @@ metadata:
 spec:
   name: PeaNUT
   category: DNS
-  url: &url https://${APP}.${searchDomain}
+  url: &url https://nut.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/peanut.svg
   access_policy:
     groups:
       - admins
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
   gatus:
     - group: "Applications"
       url: *url
