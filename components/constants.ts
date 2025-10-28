@@ -55,9 +55,10 @@ export const Tailscale = {
     },
 
     services: {
-      "tag:ingress": [tags.apps, tags.sgc, tags.equestria],
-      "tag:egress": [tags.apps, tags.sgc, tags.equestria],
-      "tag:ssh": [tags.sgc, tags.equestria],
+      // "tag:ingress": [tags.apps, tags.sgc, tags.equestria, tags.operator],
+      // "tag:egress": [tags.apps, tags.sgc, tags.equestria, tags.operator],
+      // "tag:ssh": [tags.sgc, tags.equestria, tags.operator],
+      "tag:apps": [tags.sgc, tags.equestria, tags.operator],
     },
   },
 };
