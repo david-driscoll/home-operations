@@ -146,6 +146,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
 
   await outToPromise(environmentConfig.id);
   await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/authentik-outpost/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/uptime/` });
 
   ssh.dispose();
 

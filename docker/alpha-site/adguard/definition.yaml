@@ -14,8 +14,9 @@ spec:
     groups:
       - admins
   gatus:
-  - url: https://10.10.10.9/index.html
+  - url: *url
     method: GET
+    enabled: false
     client:
       insecure: true
     group: "AdGuard Home"
