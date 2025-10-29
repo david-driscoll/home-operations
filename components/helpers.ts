@@ -9,9 +9,9 @@ import { GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
 import { tmpdir } from "os";
-import { join } from 'path'
+import { join } from "path";
 
-export const tempDir = join(tmpdir(), 'home-operations-pulumi');
+export const tempDir = join(tmpdir(), "home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
 export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
@@ -34,10 +34,13 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: GatusDefinition[], parent: Resource) {
-  const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
-  const id = (await md5({ input: content })).result;
-  await writeFile(getTempFilePath(`${name}.yaml`), content);
+export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent: Resource) {
+  const id = output(endpoints).apply(async (endpoints) => {
+    const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
+    const id = (await md5({ input: content })).result;
+    await writeFile(getTempFilePath(`${name}.yaml`), content);
+    return id;
+  });
 
   new remote.CopyToRemote(
     name,

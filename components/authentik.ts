@@ -45,6 +45,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly applicationsComponent: pulumi.ComponentResource;
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly proxyProviders: pulumi.Output<number>[] = [];
+  public readonly uptimeInstances: pulumi.Output<pulumi.Input<GatusDefinition>>[] = [];
   public readonly cluster: ClusterDefinition;
   private readonly authentik: AuthentikOutputs;
 
@@ -424,17 +425,8 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
       gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
-    await addUptimeGatus(
-      `${this.cluster.key}-${definition.metadata.name}`,
-      this.args.globals,
-      gatusDefinitions
-        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-        .map((e) => {
-          e.group = e.group === "System" ? `Cluster: ${this.cluster.title}` : e.group;
-          return e;
-        }),
-      this
-    );
+
+    this.uptimeInstances.push(...gatusDefinitions.map((e) => pulumi.output(e)));
     return await this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
 }

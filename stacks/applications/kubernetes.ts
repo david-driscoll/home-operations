@@ -5,7 +5,7 @@ import { GlobalResources, KubernetesClusterDefinition } from "@components/global
 import { OPClient } from "../../components/op.ts";
 import { base64encodeOutput } from "@pulumi/std";
 import * as kubernetes from "@kubernetes/client-node";
-import { awaitOutput } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
 import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
@@ -101,6 +101,20 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   for (const app of applications) {
     await applicationManager.createApplication(app);
   }
+
+  await addUptimeGatus(
+    `${clusterDefinition.key}`,
+    globals,
+    pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+      instances
+        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+        .map((e) => {
+          e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+          return e;
+        })
+    ),
+    applicationManager
+  );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
 

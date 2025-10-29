@@ -5,11 +5,11 @@ import { GlobalResources, DockgeClusterDefinition } from "@components/globals.ts
 import { OPClient } from "../../components/op.ts";
 import * as yaml from "yaml";
 import { NodeSSH } from "node-ssh";
-import type { ApplicationDefinitionSchema } from "@openapi/application-definition.d.ts";
+import type { ApplicationDefinitionSchema, GatusDefinition } from "@openapi/application-definition.d.ts";
 import * as authentikApi from "@goauthentik/api";
 import { mkdir, writeFile } from "fs/promises";
 import { remote } from "@pulumi/command";
-import { getTempFilePath, awaitOutput as outToPromise } from "@components/helpers.ts";
+import { addUptimeGatus, getTempFilePath, awaitOutput as outToPromise } from "@components/helpers.ts";
 import { md5Output } from "@pulumi/std";
 
 export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
@@ -105,6 +105,21 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     }
     await applicationManager.createApplication(definition);
   }
+
+  await addUptimeGatus(
+    `${clusterDefinition.key}`,
+    globals,
+    pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+      instances
+        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+        .map((e) => {
+          e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+          return e;
+        })
+    ),
+    applicationManager
+  );
+
   const outpost = new authentik.Outpost(
     clusterDefinition.key,
     {
