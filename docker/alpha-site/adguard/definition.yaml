@@ -14,8 +14,10 @@ spec:
     groups:
       - admins
   gatus:
-  - url: *url
+  - url: https://10.10.10.9/index.html
     method: GET
+    client:
+      insecure: true
     group: "AdGuard Home"
     conditions:
       - "[STATUS] == 200"
