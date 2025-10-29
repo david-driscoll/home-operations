@@ -8,6 +8,8 @@ import * as minio from "@pulumi/minio";
 import * as b2 from "@pulumi/b2";
 import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
+import { gatusDnsRecords } from "./StandardDns.ts";
+import { addUptimeGatus } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -173,8 +175,7 @@ await updateTailscaleAcls({
   dnsServers: ["100.111.209.201", "100.111.0.1", alphaSiteDockgeRuntime.tailscaleIpAddress],
 });
 
-await configureAdGuard({
-  clients: [{
-    
-  }]
-})
+const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
+pulumi.output(gatusDnsRecords).apply(async (endpoints) => {
+  await addUptimeGatus(`dns`, globals, endpoints, dnsParent);
+});

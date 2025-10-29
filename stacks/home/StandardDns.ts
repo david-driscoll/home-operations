@@ -74,7 +74,7 @@ export class StandardDns extends ComponentResource {
     );
     this.hostname = output(args.hostname);
     this.ipAddress = output(args.ipAddress);
-    addGatusDnsRecord(name, args, globals, this);
+    addGatusDnsRecord(name, args);
   }
 }
 
@@ -86,6 +86,8 @@ const dnsServers = {
   "1.1.1.1": "CloudFlare",
 };
 
+export const gatusDnsRecords: Output<GatusDefinition>[] = [];
+
 function addGatusDnsRecord(
   name: string,
   args: {
@@ -93,17 +95,14 @@ function addGatusDnsRecord(
     ipAddress: Input<string>;
     type: "A" | "CNAME";
     record?: Input<string>;
-  },
-  globals: GlobalResources,
-  parent: ComponentResource
+  }
 ) {
-  const records: Input<GatusDefinition>[] = [];
   for (const [ip, server] of Object.entries(dnsServers)) {
     const bodyConfig = output(args.hostname).apply((hostname) => {
       if (args.type === "A") return args.ipAddress;
       return interpolate`${args.record}., ${args.record},`;
     });
-    records.push(
+    gatusDnsRecords.push(
       output({
         name: args.hostname,
         url: ip,
@@ -117,9 +116,6 @@ function addGatusDnsRecord(
       })
     );
   }
-  output(records).apply(async (endpoints) => {
-    await addUptimeGatus(`dns-${name}`, globals, endpoints, parent);
-  });
 }
 
 export function createDnsSection(dns: StandardDns): OnePasswordItemSectionInput {
