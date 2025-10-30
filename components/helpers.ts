@@ -36,7 +36,7 @@ export function removeUndefinedProperties<T>(obj: T): T {
 
 export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent: Resource) {
   const id = output(endpoints).apply(async (endpoints) => {
-    const content = yaml.stringify({ endpoints }, { lineWidth: 0 });
+    const content = yaml.stringify({ endpoints: endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
     const id = (await md5({ input: content })).result;
     await writeFile(getTempFilePath(`${name}.yaml`), content);
     return id;

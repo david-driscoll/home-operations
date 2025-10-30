@@ -138,28 +138,51 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         return true;
       },
     });
-    const delta = differ.diff(oldOutputs, client.mapItem(client.mapToFullItem(newInputs), id));
+
+    const fullNewInputs = client.mapItem(client.mapToFullItem(newInputs), id);
+
+    const compareOlds = Object.fromEntries(
+      Object.keys(fullNewInputs)
+        .filter((z) => !z.startsWith("_"))
+        .map((key) => [key, (oldOutputs as any)[key]] as const)
+    );
+    const compareNews = Object.fromEntries(
+      Object.keys(fullNewInputs)
+        .filter((z) => !z.startsWith("_"))
+        .map((key) => [key, (fullNewInputs as any)[key]] as const)
+    );
+    const delta = differ.diff(compareOlds, compareNews);
     const patch = jsonpatch
       .format(delta)
       .filter((z) => z.op !== "move")
       .filter((change) => {
+        if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
         if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
+        if (change.path.endsWith("/label")) return false;
         return true;
       });
+
+    if (patch.length > 0) {
+      pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
+    }
 
     for (const change of patch) {
       if (change.op === "replace" && change.path === "/category") {
         replaces.push(change.path.substring(1));
       }
     }
-    // console.log("OnePasswordItem diff", { patch });
-    const newLocal = {
+    if (patch.length === 0) {
+      pulumi.log.info(`OnePasswordItem no changes detected for item ${id}`);
+      return {};
+    }
+
+    pulumi.log.info(`OnePasswordItem changes detected for item ${id}: ${JSON.stringify(patch, null, 2)}`);
+    return {
       replaces: replaces,
       changes: patch.length > 0,
       stables: [],
       deleteBeforeReplace: true,
-    } as DiffResult;
-    return newLocal;
+    };
   }
 }
 
