@@ -1,6 +1,6 @@
 services:
   zot:
-    image: ghcr.io/project-zot/zot:v2.1.10
+    image: ghcr.io/project-zot/zot:v2.1.10@sha256:5d8fb04dd0592f7d7edf42d3cbe925478e75e1cb7b3d9d96f2a596e68f7c1a50
     ports:
       - 6785:6785
     restart: unless-stopped

@@ -1,7 +1,7 @@
 services:
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: ghcr.io/koenkk/zigbee2mqtt:2.6.2
+    image: ghcr.io/koenkk/zigbee2mqtt:2.6.2@sha256:ffabf256f4550175278fbeebdbc3f174f2ffa005175e755324c5f06020af3e68
     restart: unless-stopped
     labels:
       tsdproxy.enable: false
