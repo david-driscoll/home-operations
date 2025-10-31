@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@pulumi/github": "^6.8.0",
+    "@pulumi/http": "^0.1.2",
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/pbs": "^0.1.0",
     "@pulumi/unifi": "^0.41.3",

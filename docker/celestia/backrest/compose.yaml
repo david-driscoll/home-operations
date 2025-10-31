@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+  backrest:
+    image: garethgeorge/backrest:latest
+    container_name: backrest
+    hostname: backrest
+    tmpfs: /tmp
+    labels:
+      tsdproxy.enable: false
+      tsdproxy.ephemeral: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.backrest.rule: Host(`backrest.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.backrest.middlewares: authentik-outpost@docker
+      traefik.http.routers.backrest.entrypoints: websecure
+      traefik.http.routers.backrest.service: backrest
+      traefik.http.routers.backrest.tls.certresolver: le
+      traefik.http.services.backrest.loadbalancer.server.port: 9898
+    volumes:
+      - ./data:/data
+      - ./config:/config
+      - ./cache:/cache
+      - ./rclone:/root/.config/rclone
+      - /data/backup:/backup
+      - /data/restic:/repos
+    environment:
+      - BACKREST_DATA=/data
+      - BACKREST_CONFIG=/config/config.json
+      - XDG_CACHE_HOME=/cache
+      - TMPDIR=/tmp
+      - TZ=${TZ}
+    networks:
+      - dockge_default
+    restart: unless-stopped
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://backrest.${CLUSTER_DOMAIN}

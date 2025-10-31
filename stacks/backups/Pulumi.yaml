@@ -1,0 +1,12 @@
+name: backups
+description: Configure backups homelab services, and services.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+    nodeargs: "--import tsx/esm"
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript

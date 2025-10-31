@@ -1,8 +1,9 @@
-import { ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, Output, output } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output } from "@pulumi/pulumi";
 import { Provider as PbsProvider, Datastore, S3Endpoint } from "@pulumi/pbs";
 import { RandomString, RandomPet } from "@pulumi/random";
 import { Purrl } from "@pulumiverse/purrl";
 import * as b2 from "@pulumi/b2";
+import * as http from "@pulumi/http";
 import { OPClient } from "@components/op.ts";
 import { ClusterDefinition, GlobalResources } from "@components/globals.ts";
 import { awaitOutput } from "@components/helpers.ts";
@@ -65,20 +66,20 @@ export async function createBackupDatastores(
     {
       provider: args.sourceServer.provider,
       parent: args.sourceServer,
-      // retainOnDelete: true,
-      // protect: true,
+      retainOnDelete: true,
+      protect: true,
     }
   );
 
-  const sourcePruneJob = createPruneJob(`${name}-src`, {
-    server: args.sourceServer,
-    schedule: "daily",
-    store: sourceDatastore.name,
-    keepDaily: 7,
-    keepWeekly: 4,
-    keepLast: 10,
-    keepMonthly: 3,
-  });
+  // const sourcePruneJob = createPruneJob(`${name}-src`, {
+  //   server: args.sourceServer,
+  //   schedule: "daily",
+  //   store: sourceDatastore.name,
+  //   keepDaily: 7,
+  //   keepWeekly: 4,
+  //   keepLast: 10,
+  //   keepMonthly: 3,
+  // });
 
   const destinationDatastore = new Datastore(
     `${name}-dst`,
@@ -94,20 +95,20 @@ export async function createBackupDatastores(
       provider: args.destinationServer.provider,
       parent: args.destinationServer,
       dependsOn: [sourceDatastore],
-      // retainOnDelete: true,
-      // protect: true,
+      retainOnDelete: true,
+      protect: true,
     }
   );
 
-  const destinationPruneJob = createPruneJob(`${name}-dst`, {
-    server: args.destinationServer,
-    schedule: "weekly",
-    store: destinationDatastore.name,
-    keepDaily: 7,
-    keepWeekly: 4,
-    keepLast: 10,
-    keepMonthly: 3,
-  });
+  // const destinationPruneJob = createPruneJob(`${name}-dst`, {
+  //   server: args.destinationServer,
+  //   schedule: "weekly",
+  //   store: destinationDatastore.name,
+  //   keepDaily: 7,
+  //   keepWeekly: 4,
+  //   keepLast: 10,
+  //   keepMonthly: 3,
+  // });
 
   const bucketName = new RandomPet(`${name}-bucket-name`, {
     length: 2,
@@ -133,8 +134,8 @@ export async function createBackupDatastores(
     {
       parent: args.sourceServer,
       provider: args.globals.backblazeProvider,
-      protect: true,
       retainOnDelete: true,
+      protect: true,
     }
   );
 
@@ -179,8 +180,8 @@ export async function createBackupDatastores(
     {
       provider: args.sourceServer.provider,
       parent: args.sourceServer,
-      // retainOnDelete: true,
-      // protect: true,
+      retainOnDelete: true,
+      protect: true,
     }
   );
 
@@ -193,49 +194,51 @@ export async function createBackupDatastores(
       s3Client: s3Endpoint.s3EndpointId,
       gcSchedule: "weekly",
       pruneSchedule: "weekly",
+      path: interpolate`/data/cache/${s3Endpoint.s3EndpointId}`,
+      createBasePath: true,
     },
     {
-      provider: args.destinationServer.provider,
-      parent: args.destinationServer,
+      provider: args.sourceServer.provider,
+      parent: args.sourceServer,
       dependsOn: [destinationDatastore],
 
-      // retainOnDelete: true,
-      // protect: true,
+      retainOnDelete: true,
+      protect: true,
     }
   );
 
-  const b2PruneJob = createPruneJob(`${name}-b2`, {
-    server: args.sourceServer,
-    schedule: "weekly",
-    store: destinationBackblazeBucket.name,
-    keepDaily: 7,
-    keepWeekly: 4,
-    keepLast: 10,
-    keepMonthly: 3,
-  });
+  // const b2PruneJob = createPruneJob(`${name}-b2`, {
+  //   server: args.sourceServer,
+  //   schedule: "weekly",
+  //   store: destinationBackblazeBucket.name,
+  //   keepDaily: 7,
+  //   keepWeekly: 4,
+  //   keepLast: 10,
+  //   keepMonthly: 3,
+  // });
 
-  const pullFromSource = createSyncJob(`${name}-pull-src`, {
-    sourceServer: args.destinationServer,
-    destinationServer: args.sourceServer,
-    syncDirection: "pull",
-    schedule: "daily",
-    store: destinationDatastore.name,
-    remoteStore: sourceDatastore.name,
-    removeVanished: true,
-    comment: interpolate`Pull from ${args.sourceServer.name}`,
-  });
+  // const pullFromSource = createSyncJob(`${name}-pull-src`, {
+  //   sourceServer: args.destinationServer,
+  //   destinationServer: args.sourceServer,
+  //   syncDirection: "pull",
+  //   schedule: "daily",
+  //   store: destinationDatastore.name,
+  //   remoteStore: sourceDatastore.name,
+  //   removeVanished: true,
+  //   comment: interpolate`Pull from ${args.sourceServer.name}`,
+  // });
 
-  const pushToS3 = createSyncJob(`${name}-push-s3`, {
-    sourceServer: args.sourceServer,
-    destinationServer: args.destinationServer,
-    syncDirection: "push",
-    schedule: "daily",
-    store: sourceDatastore.name,
-    comment: interpolate`Sync to Backblaze ${args.destinationServer.name}`,
-    remoteStore: destinationBackblazeBucket.name,
-    removeVanished: true,
-    maxDepth: 1,
-  });
+  // const pushToS3 = createSyncJob(`${name}-push-s3`, {
+  //   sourceServer: args.sourceServer,
+  //   destinationServer: args.destinationServer,
+  //   syncDirection: "push",
+  //   schedule: "daily",
+  //   store: sourceDatastore.name,
+  //   comment: interpolate`Sync to Backblaze ${args.destinationServer.name}`,
+  //   remoteStore: destinationBackblazeBucket.name,
+  //   removeVanished: true,
+  //   maxDepth: 1,
+  // });
 
   await awaitOutput(destinationBackblazeBucket.id);
 
@@ -298,7 +301,7 @@ function createPruneJob(name: string, args: PruneJobArgs) {
         "keep-monthly": args.keepMonthly,
         "keep-yearly": args.keepYearly,
       }).apply((data) => jsonStringify(Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined && v !== null)))),
-      responseCodes: ["200"],
+      responseCodes: ["200", "201", "202", "203", "204"],
 
       deleteMethod: "DELETE",
       deleteUrl: interpolate`${endpoint}/api2/json/config/prune/${jobId}`,
@@ -344,6 +347,8 @@ function createSyncJob(name: string, args: SyncJobArgs) {
   const jobId = interpolate`${name}-${suffix.result}`;
   const endpoint = args.sourceServer.provider.endpoint;
 
+  all([args.sourceServer.name, jobId, args.destinationServer.name]).apply(([name, jobID, remote]) => log.info(`Creating PBS sync job ${jobID} on server ${name} for remote ${remote}`));
+
   const job = new Purrl(
     `${name}-pbs-sync-job`,
     {
@@ -357,6 +362,7 @@ function createSyncJob(name: string, args: SyncJobArgs) {
         id: jobId,
         store: args.store,
         "remote-store": args.remoteStore,
+        remote: args.destinationServer.name,
         schedule: args.schedule,
         comment: args.comment,
         owner: args.owner,
@@ -368,7 +374,7 @@ function createSyncJob(name: string, args: SyncJobArgs) {
         "transfer-last": args.transferLast,
         "sync-direction": args.syncDirection,
       }).apply((data) => jsonStringify(Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined && v !== null)))),
-      responseCodes: ["200"],
+      responseCodes: ["200", "201"],
 
       deleteMethod: "DELETE",
       deleteUrl: interpolate`${endpoint}/api2/json/config/sync/${jobId}`,
@@ -377,6 +383,10 @@ function createSyncJob(name: string, args: SyncJobArgs) {
     },
     { parent: args.sourceServer }
   );
+
+  // celestia.opossum-yo.ts.net
+  // celestia@pbs!celestia
+  // 72:6a:08:b0:27:ea:96:13:dc:1a:b4:44:94:c3:1a:db:07:9d:f9:4b:bb:e3:8e:e0:45:c1:59:d5:c0:8a:f1:d4
 
   return job;
 }
