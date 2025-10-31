@@ -1,7 +1,7 @@
 services:
   authentik_proxy:
     container_name: authentik-outpost
-    image: ghcr.io/goauthentik/proxy:2025.8.4
+    image: ghcr.io/goauthentik/proxy:2025.8.4@sha256:71487efccf78d27cec7b00b1644a951d92b08de2cefe6bd708644b35f15a4547
     restart: unless-stopped
     # env is set in each app stack for the secret.
     env_file:
