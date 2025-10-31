@@ -5,6 +5,7 @@ import { Provider as UnifiProvider } from "@pulumi/unifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as BackblazeProvider } from "@pulumi/b2";
+import { Provider as PbsProvider } from "@pulumi/pbs";
 import { OPClient, OPClientItem } from "./op.ts";
 
 const op = new OPClient();
@@ -93,7 +94,7 @@ export class GlobalResources extends ComponentResource {
         insecure: true,
         scheme: "http",
       },
-      cro,
+      cro
     );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
@@ -103,7 +104,7 @@ export class GlobalResources extends ComponentResource {
         apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
         apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro,
+      cro
     );
     this.tailscaleProvider = new TailscaleProvider(
       "tailscale",
@@ -111,7 +112,7 @@ export class GlobalResources extends ComponentResource {
         oauthClientId: this.tailscaleCredential.apply((z) => z.fields["username"].value!),
         oauthClientSecret: this.tailscaleCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro,
+      cro
     );
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
@@ -128,7 +129,7 @@ export class GlobalResources extends ComponentResource {
         tags: ["tag:proxmox", "tag:apps"],
         description: "Proxmox Management Key",
       },
-      mergeOptions(cro, { provider: this.tailscaleProvider }),
+      mergeOptions(cro, { provider: this.tailscaleProvider })
     );
 
     this.truenasMinioProvider = new MinioProvider(
@@ -140,7 +141,7 @@ export class GlobalResources extends ComponentResource {
         minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
         minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["hostname"].value)}:9000`,
       },
-      cro,
+      cro
     );
 
     this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
@@ -150,7 +151,7 @@ export class GlobalResources extends ComponentResource {
         applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
         applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
       },
-      cro,
+      cro
     );
   }
 }

@@ -36,3 +36,8 @@ packages:
     version: 0.14.0
     parameters:
       - gmichels/adguard
+  pbs:
+    source: terraform-provider
+    version: 0.14.0
+    parameters:
+      - registry.terraform.io/mcfitz2/pbs

@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as pbs from "@pulumi/pbs";
+import * as random from "@pulumi/random";
 import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
@@ -10,6 +12,9 @@ import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
 import { gatusDnsRecords } from "./StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
+import { createBackupDatastores, ProxmoxBackupServer } from "./ProxmoxBackupServer.ts";
+import { S3Bucket } from "@pulumi/minio/s3bucket.js";
+import { Bucket } from "sdks/b2/bin/bucket.js";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -146,6 +151,30 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
 });
+
+const celestiaPbs = new ProxmoxBackupServer("celestia-pbs", {
+  hostname: celestiaHost.tailscaleHostname,
+  credential: "Celestia PBS backup user",
+  globals,
+});
+
+const lunaPbs = new ProxmoxBackupServer("luna-pbs", {
+  hostname: lunaHost.tailscaleHostname,
+  credential: "Luna PBS backup user",
+  globals,
+});
+
+// const celestiaDatastore = await createBackupDatastores("celestia", {
+//   sourceServer: celestiaPbs,
+//   destinationServer: lunaPbs,
+//   globals,
+// });
+
+// const lunaDatastore = await createBackupDatastores("luna", {
+//   sourceServer: lunaPbs,
+//   destinationServer: celestiaPbs,
+//   globals,
+// });
 
 // TODO: add code to ensure tailscale ips is set for all important services
 
