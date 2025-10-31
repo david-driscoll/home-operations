@@ -26,6 +26,7 @@ services:
       - ./rclone:/root/.config/rclone
       - /data/backup:/backup
       - /data/restic:/repos
+      - spike-backup:/spike/backup:rw
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
@@ -41,3 +42,10 @@ networks:
 x-dockge:
   urls:
     - https://backrest.${CLUSTER_DOMAIN}
+volumes:
+  spike-backup:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.10,rw,nfsvers=4"
+      device: ":/mnt/stash/backup/"
