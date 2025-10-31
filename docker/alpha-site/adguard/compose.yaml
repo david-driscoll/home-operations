@@ -1,7 +1,7 @@
 services:
   adguard:
     restart: unless-stopped
-    image: adguard/adguardhome
+    image: adguard/adguardhome:v0.107.69
     ports:
       - "4000:3000" # Keep direct access for local network
     environment:

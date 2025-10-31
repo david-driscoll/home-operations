@@ -1,6 +1,6 @@
 services:
   netbootxyz:
-    image: ghcr.io/netbootxyz/netbootxyz
+    image: ghcr.io/netbootxyz/netbootxyz:0.7.6-nbxyz10
     container_name: netbootxyz
     environment:
       - MENU_VERSION=2.0.84 # optional

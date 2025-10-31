@@ -1,7 +1,7 @@
 services:
   traefik:
     container_name: traefik
-    image: traefik:v3
+    image: ghcr.io/traefik/traefik:v3.5.4
     restart: unless-stopped
     command:
       - --configfile=/config/config.yaml

@@ -1,7 +1,7 @@
 services:
   uptime:
     container_name: uptime
-    image: ghcr.io/twin/gatus:stable
+    image: ghcr.io/twin/gatus:v5.30.0
     restart: unless-stopped
     environment:
       GATUS_CONFIG_PATH: /config
