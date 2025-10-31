@@ -151,31 +151,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
 });
-
-const celestiaPbs = new ProxmoxBackupServer("celestia-pbs", {
-  hostname: celestiaHost.tailscaleHostname,
-  credential: "Celestia PBS backup user",
-  globals,
-});
-
-const lunaPbs = new ProxmoxBackupServer("luna-pbs", {
-  hostname: lunaHost.tailscaleHostname,
-  credential: "Luna PBS backup user",
-  globals,
-});
-
-// const celestiaDatastore = await createBackupDatastores("celestia", {
-//   sourceServer: celestiaPbs,
-//   destinationServer: lunaPbs,
-//   globals,
-// });
-
-// const lunaDatastore = await createBackupDatastores("luna", {
-//   sourceServer: lunaPbs,
-//   destinationServer: celestiaPbs,
-//   globals,
-// });
-
 // TODO: add code to ensure tailscale ips is set for all important services
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
