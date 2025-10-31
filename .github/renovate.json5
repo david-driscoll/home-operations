@@ -33,6 +33,12 @@
     managerFilePatterns: ["/(^|/)kustomization\\.ya?ml$/"],
     pinDigests: true,
   },
+  "docker-compose": {
+    "managerFilePatterns": [
+      "/(^|/)(?:docker-)?compose[^/]*\\.ya?ml$/"
+    ],
+    pinDigests: true
+  },
   packageRules: [
     {
       description: "Auto-merge GitHub Actions",
