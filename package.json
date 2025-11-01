@@ -29,11 +29,15 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@pulumi/adguard": "^1.6.2",
+    "@pulumi/authentik": "^2025.8.1",
+    "@pulumi/b2": "^0.10.0",
     "@pulumi/github": "^6.8.0",
     "@pulumi/http": "^0.1.2",
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/pbs": "^0.1.0",
     "@pulumi/unifi": "^0.41.3",
+    "@pulumi/uptimekuma": "^0.0.12",
     "@pulumiverse/purrl": "^0.6.2",
     "confbox": "^0.2.2",
     "diff": "^8.0.2",
