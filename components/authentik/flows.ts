@@ -190,15 +190,11 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
-    const items = pulumi
-      .output(this.opClient.listItemsByTitleContains("Cluster:"))
-      .apply((items) => {
-        return Array.from(new Set(items
-          .filter((z) => z.tags?.includes("cluster-definition") === true)
-          .map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`))
-          .values())
-          .concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`]);
-      });
+    const items = pulumi.output(this.opClient.listItemsByTitleContains("Cluster:")).apply((items) => {
+      return Array.from(
+        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values()
+      ).concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`]);
+    });
     const dynamicRegistration = new purrl.Purrl(
       "tailscale-oauth-dynamic-registration",
       {
@@ -207,7 +203,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         url: "https://idp.opossum-yo.ts.net/register",
         method: "POST",
         body: pulumi.jsonStringify({
-          client_name: "Authentik Tailscale Source",
+          client_name: "Authentik Tailscale Client",
           redirect_uris: items,
         }),
         headers: {
