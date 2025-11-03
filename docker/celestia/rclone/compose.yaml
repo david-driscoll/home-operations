@@ -1,7 +1,6 @@
-version: "3.8"
 services:
   rclone:
-    image: master@sha256:0701d73d006e6987beb4450edea7089a4b92a45849b153845a2b3d9cb9ee7525
+    image: rclone/rclone:master@sha256:0701d73d006e6987beb4450edea7089a4b92a45849b153845a2b3d9cb9ee7525
     container_name: rclone
     hostname: rclone
     tmpfs: /tmp
