@@ -5,18 +5,14 @@ kind: ApplicationDefinition
 metadata:
   name: ${APP}
 spec:
-  name: Backrest
+  name: Restic Rest Server
   category: ${CLUSTER_TITLE}
-  description: Backrest is a self-hosted backup UI for Restic repositories and schedules.
-  url: &url https://backrest.${CLUSTER_DOMAIN}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/backrest.svg
+  description: Restic Backup Server for being a restic source
+  url: &url https://restic.${CLUSTER_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/restic.svg
   access_policy:
     groups:
       - admins
-  authentik:
-    proxy:
-      mode: "forward_single"
-      externalHost: *url
   gatus:
     - group: "System"
       url: *url
