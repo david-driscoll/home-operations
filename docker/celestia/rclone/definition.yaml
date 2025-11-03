@@ -17,6 +17,9 @@ spec:
     proxy:
       mode: "forward_single"
       externalHost: *url
+      basicAuthEnabled: true
+      basicAuthUsernameAttribute: "rclone_username"
+      basicAuthPasswordAttribute: "rclone_password"
   gatus:
     - group: "System"
       url: *url

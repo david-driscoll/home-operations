@@ -1,19 +1,30 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import { Roles, Groups } from "../constants.ts";
+import { OPClient } from "@components/op.ts";
 
 interface GroupDef {
   groupName: string;
   parentName?: string;
+  attributes?: { [name: string]: { [title: string]: string[] } };
 }
 
 export class AuthentikGroups extends pulumi.ComponentResource {
   private readonly groups = new Map<string, authentik.Group>();
   private readonly roles = new Map<string, authentik.RbacRole>();
+  private readonly client = new OPClient();
 
   private readonly initialGroups: GroupDef[] = [
     { groupName: Roles.Users },
-    { groupName: Roles.Admins, parentName: Roles.Users },
+    {
+      groupName: Roles.Admins,
+      parentName: Roles.Users,
+      attributes: {
+        rclone: {
+          "RClone Web UI": ["username", "password"],
+        },
+      },
+    },
     { groupName: Roles.Editors, parentName: Roles.Users },
     { groupName: Roles.Family, parentName: Roles.Users },
     { groupName: Roles.Friends, parentName: Roles.Users },
@@ -41,12 +52,33 @@ export class AuthentikGroups extends pulumi.ComponentResource {
           name: group.groupName,
           roles: [roleResource.rbacRoleId],
           isSuperuser: group.groupName === Roles.Admins,
+          attributes: this.resolveAttributes(group),
           ...(parentGroup && { parent: parentGroup.groupId }),
         },
         { parent: this }
       );
       this.groups.set(group.groupName, groupResource);
     }
+  }
+
+  private resolveAttributes(group: GroupDef): pulumi.Output<string> {
+    const resolvedAttributes: Record<string, pulumi.Output<string>> = {};
+    const cache = new Map<string, ReturnType<typeof this.client.getItemByTitle>>();
+    for (const [attrName, titles] of Object.entries(group.attributes || {})) {
+      for (const [title, fields] of Object.entries(titles)) {
+        if (!cache.has(`${attrName}:${title}`)) {
+          const item = this.client.getItemByTitle(title);
+          cache.set(`${attrName}:${title}`, item);
+        }
+        const item = cache.get(`${attrName}:${title}`);
+
+        for (const field of fields) {
+          resolvedAttributes[`${attrName}_${field}`] = pulumi.output(item).apply((itemData) => itemData?.fields[field as keyof typeof itemData.fields]?.value || "");
+        }
+      }
+    }
+
+    return pulumi.jsonStringify(resolvedAttributes);
   }
 
   public get allRoles() {
