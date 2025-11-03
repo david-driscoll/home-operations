@@ -1,20 +1,18 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Unwrap, jsonStringify } from "@pulumi/pulumi";
+import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
 import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
-import { RandomPet, RandomPassword, RandomString } from "@pulumi/random";
+import { RandomPassword, RandomString } from "@pulumi/random";
 import { installTailscale, tailscale } from "@components/tailscale.ts";
-import { readFile, readdir, writeFile } from "node:fs/promises";
-import { md5 } from "@pulumi/std";
+import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
-import { mkdirSync } from "node:fs";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { awaitOutput, getTailscaleSection, getTempFilePath } from "@components/helpers.ts";
+import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
@@ -100,7 +98,7 @@ export class DockgeLxc extends ComponentResource {
       }
     );
 
-    // // Create device tags
+    // Create device tags
     const deviceTags = new DeviceTags(
       `${name}-tags`,
       {
@@ -115,7 +113,7 @@ export class DockgeLxc extends ComponentResource {
       }
     );
 
-    // // Create device key
+    // Create device key
     const deviceKey = new DeviceKey(
       `${name}-key`,
       {
@@ -221,35 +219,11 @@ export class DockgeLxc extends ComponentResource {
     const cluster = await awaitOutput(this.cluster);
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
-    const mkdir = new remote.Command(
-      `${hostname}-${stackName}-mkdir`,
-      {
-        connection: this.remoteConnection,
-        create: interpolate`mkdir -p /opt/stacks/${stackName}/`,
-      },
-      mergeOptions({ parent: this }, { dependsOn: [] })
-    );
-
-    const allDirectories = [mkdir];
-
-    for (const dir of new Set(files.map(dirname).filter((z) => z !== "."))) {
-      const mkdir2 = new remote.Command(
-        `${hostname}-${stackName}-${dir}-mkdir`,
-        {
-          connection: this.remoteConnection,
-          create: interpolate`mkdir -p ${dir}`,
-        },
-        mergeOptions({ parent: this }, { dependsOn: [mkdir] })
-      );
-      allDirectories.push(mkdir2);
-    }
-
     for (const file of files) {
       const content = await readFile(resolve(path, file), "utf-8");
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
-      const tempFilePath = getTempFilePath(`${hostname}-${stackName}-${file.replace(/\//g, "-")}`);
 
-      if (tempFilePath.endsWith("compose.yaml")) {
+      if (file === "compose.yaml") {
         const content = await awaitOutput(replacedContent);
         const regex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
@@ -293,21 +267,16 @@ export class DockgeLxc extends ComponentResource {
         }
       }
 
-      await writeFile(tempFilePath, await awaitOutput(replacedContent));
-      const remotePath = interpolate`/opt/stacks/${stackName}/${file}`;
-      const fileAsset = new asset.FileAsset(tempFilePath);
-      const id = (await md5({ input: content })).result;
-
       copyFiles.push(
-        new remote.CopyToRemote(
+        copyFileToRemote(
           `${hostname}-${stackName}-${file.replace(/\//g, "-")}-copy-file`,
           {
             connection: this.remoteConnection,
-            remotePath,
-            source: fileAsset,
-            triggers: [id],
-          },
-          mergeOptions({ parent: this }, { dependsOn: allDirectories })
+            remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+            content: replacedContent,
+            parent: this,
+            dependsOn: [],
+          }
         )
       );
     }

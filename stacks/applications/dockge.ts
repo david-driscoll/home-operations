@@ -7,10 +7,7 @@ import * as yaml from "yaml";
 import { NodeSSH } from "node-ssh";
 import type { ApplicationDefinitionSchema, GatusDefinition } from "@openapi/application-definition.d.ts";
 import * as authentikApi from "@goauthentik/api";
-import { mkdir, writeFile } from "fs/promises";
-import { remote } from "@pulumi/command";
-import { addUptimeGatus, getTempFilePath, awaitOutput as outToPromise } from "@components/helpers.ts";
-import { md5Output } from "@pulumi/std";
+import { addUptimeGatus, copyFileToRemote, awaitOutput as outToPromise, writeTempFile } from "@components/helpers.ts";
 
 export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
   const ssh = new NodeSSH();
@@ -34,10 +31,9 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       return parsed;
     },
     async createGatus(name, definition, gatusDefinitions) {
-      const gatusConfigPath = getTempFilePath(`${clusterDefinition.key}-gatus-${name}.yaml`);
-      await writeFile(gatusConfigPath, yaml.stringify({ endpoints: gatusDefinitions }));
+      const gatusConfigPath = writeTempFile(`${clusterDefinition.key}-gatus-${name}.yaml`, yaml.stringify({ endpoints: gatusDefinitions }));
       await ssh.execCommand(`mkdir -p /opt/stacks/gatus/config/applications/`);
-      await ssh.putFile(gatusConfigPath, `/opt/stacks/gatus/config/applications/${name}.yaml`);
+      await ssh.putFile(await outToPromise(gatusConfigPath), `/opt/stacks/gatus/config/applications/${name}.yaml`);
     },
   });
 
@@ -106,7 +102,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     await applicationManager.createApplication(definition);
   }
 
-  await addUptimeGatus(
+  addUptimeGatus(
     `${clusterDefinition.key}`,
     globals,
     pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
@@ -147,16 +143,13 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
 
   const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
-  const envPath = getTempFilePath(`${clusterDefinition.key}-env`);
-  await writeFile(envPath, envValues);
-  const environmentConfig = new remote.CopyToRemote(`${clusterDefinition.key}-dockge-compose`, {
+  const environmentConfig = copyFileToRemote(`${clusterDefinition.key}-authentik-outpost-env-token`, {
     connection: {
       host: lxcData.sections.ssh.fields.hostname.value!,
       user: "root",
     },
     remotePath: `/opt/stacks/authentik-outpost/.env-token`,
-    source: new pulumi.asset.FileAsset(envPath),
-    triggers: [md5Output({ input: envValues }).result],
+    content: envValues,
   });
 
   await outToPromise(environmentConfig.id);

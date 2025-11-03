@@ -102,7 +102,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     await applicationManager.createApplication(app);
   }
 
-  await addUptimeGatus(
+  addUptimeGatus(
     `${clusterDefinition.key}`,
     globals,
     pulumi.output(applicationManager.uptimeInstances).apply((instances) =>

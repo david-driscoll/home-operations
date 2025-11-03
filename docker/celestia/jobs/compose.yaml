@@ -1,0 +1,37 @@
+services:
+  jobs:
+    build: .
+    container_name: jobs
+    hostname: jobs
+    volumes:
+      - ./tasks:/scripts/tasks:ro
+      - ./logs:/var/log/jobs
+      - ./rclone:/root/.config/rclone:ro
+      - /data/backup:/backup
+      - /data/restic:/repos
+      - spike-backup:/spike/backup:ro
+      - spike-data:/spike/data:ro
+    environment:
+      - TZ=${TZ}
+      - GATUS_URL=https://uptime.${searchDomain}
+    networks:
+      - dockge_default
+    restart: unless-stopped
+
+networks:
+  dockge_default:
+    external: true
+
+volumes:
+  spike-backup:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.10,rw,nfsvers=4"
+      device: ":/mnt/stash/backup/"
+  spike-data:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.10,rw,nfsvers=4"
+      device: ":/mnt/stash/data/"

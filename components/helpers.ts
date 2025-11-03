@@ -1,20 +1,64 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { asset, Input, interpolate, Output, output, Resource } from "@pulumi/pulumi";
+import { asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile } from "fs/promises";
 import * as yaml from "yaml";
-import { remote } from "@pulumi/command";
+import { remote, types } from "@pulumi/command";
 import { md5 } from "@pulumi/std";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { basename, dirname, join } from "path";
+import { md5Output } from "@pulumi/std/md5.js";
+import { dir } from "console";
 
 export const tempDir = join(tmpdir(), "home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
 export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
+}
+
+export function writeTempFile(fileName: string, content: Input<string>) {
+  const filePath = getTempFilePath(fileName);
+  return output(content)
+    .apply(async (content) => writeFile(filePath, content))
+    .apply(() => filePath);
+}
+
+export function copyFileToRemote(
+  name: string,
+  args: {
+    content: Input<string>;
+    remotePath: Input<string>;
+    connection: types.input.remote.ConnectionArgs;
+    parent?: Resource;
+    dependsOn?: Resource[];
+  }
+) {
+  const tempFilePath = writeTempFile(name, args.content);
+  const remotePath = output(args.remotePath);
+  const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
+  const id = md5Output({ input: args.content }).result;
+  const mkdir = new remote.Command(
+    `${name}-mkdir`,
+    {
+      connection: args.connection,
+      create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
+    },
+    mergeOptions({ parent: args.parent }, {})
+  );
+
+  return new remote.CopyToRemote(
+    name,
+    {
+      connection: args.connection,
+      remotePath,
+      source: fileAsset,
+      triggers: [id],
+    },
+    mergeOptions({ parent: args.parent }, { dependsOn: [...(args.dependsOn ?? []), mkdir] })
+  );
 }
 
 export function removeUndefinedProperties<T>(obj: T): T {
@@ -34,27 +78,20 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export async function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent: Resource) {
-  const id = output(endpoints).apply(async (endpoints) => {
-    const content = yaml.stringify({ endpoints: endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
-    const id = (await md5({ input: content })).result;
-    await writeFile(getTempFilePath(`${name}.yaml`), content);
-    return id;
+export function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent: Resource) {
+  const content = output(endpoints).apply(async (endpoints) => {
+    return yaml.stringify({ endpoints: endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
   });
 
-  new remote.CopyToRemote(
-    name,
-    {
-      connection: {
-        host: interpolate`dockge-as.${globals.tailscaleDomain}`,
-        user: "root",
-      },
-      source: new asset.FileAsset(getTempFilePath(`${name}.yaml`)),
-      remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
-      triggers: [id],
+  return copyFileToRemote(name, {
+    connection: {
+      host: interpolate`dockge-as.${globals.tailscaleDomain}`,
+      user: "root",
     },
-    { parent }
-  );
+    remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
+    content,
+    parent,
+  });
 }
 
 export function awaitOutput<T>(output: Output<T>) {

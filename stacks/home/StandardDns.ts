@@ -1,12 +1,10 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate, asset } from "@pulumi/pulumi";
+import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumi/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
-import { mkdirSync, write } from "fs";
-import { addUptimeGatus } from "@components/helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;

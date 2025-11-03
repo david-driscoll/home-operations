@@ -28,10 +28,11 @@ services:
       - rcd
       - --rc-web-gui
       - --rc-web-gui-no-open-browser
-      - --rc-baseurl rclone.${CLUSTER_DOMAIN}
       - --rc-addr=:9898
-      - --rc-user "op://Eris/RClone Web UI/username"
-      - --rc-pass "op://Eris/RClone Web UI/password"
+      - --rc-user
+      - "op://Eris/RClone Web UI/username"
+      - --rc-pass
+      - "op://Eris/RClone Web UI/password"
     networks:
       - dockge_default
     restart: unless-stopped
