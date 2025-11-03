@@ -1,11 +1,9 @@
 ---
 services:
   duplicati:
-    image: lscr.io/linuxserver/duplicati:latest
+    image: duplicati/duplicati:2.2.0.0-stable
     container_name: duplicati
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TIMEZONE}
     volumes:
       - ./config:/config
