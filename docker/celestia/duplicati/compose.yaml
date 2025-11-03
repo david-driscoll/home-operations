@@ -1,0 +1,37 @@
+# cspell:ignore duplicati lscr PUID PGID dockge nfsvers
+---
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE}
+    volumes:
+      - ./config:/config
+      - spike-backup:/backups/spike:rw
+    restart: unless-stopped
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.duplicati.rule: Host(`duplicati.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.duplicati.middlewares: authentik-outpost@docker
+      traefik.http.routers.duplicati.entrypoints: websecure
+      traefik.http.routers.duplicati.service: duplicati
+      traefik.http.routers.duplicati.tls.certresolver: le
+      traefik.http.services.duplicati.loadbalancer.server.port: 8200
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://duplicati.${CLUSTER_DOMAIN}
+volumes:
+  spike-backup:
+    driver: local
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.10,rw,nfsvers=4"
+      device: ":/mnt/stash/backup/"
