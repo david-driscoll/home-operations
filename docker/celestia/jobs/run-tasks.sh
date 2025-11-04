@@ -50,7 +50,7 @@ run_task() {
 
     # First attempt
     log "Attempt 1/$((MAX_RETRIES + 1))" | tee -a "$task_log"
-    if timeout "$TIMEOUT_SECONDS" bash "$task_file" >> "$task_log" 2>&1; then
+    if timeout "$TIMEOUT_SECONDS" bash "$task_file" 2>&1 | tee -a "$task_log"; then
         exit_code=0
     else
         exit_code=$?
@@ -67,7 +67,7 @@ run_task() {
             attempt=2
             log "Attempt 2/$((MAX_RETRIES + 1))" | tee -a "$task_log"
 
-            if timeout "$TIMEOUT_SECONDS" bash "$task_file" >> "$task_log" 2>&1; then
+            if timeout "$TIMEOUT_SECONDS" bash "$task_file" 2>&1 | tee -a "$task_log"; then
                 exit_code=0
             else
                 exit_code=$?
