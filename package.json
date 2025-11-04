@@ -43,6 +43,7 @@
     "diff": "^8.0.2",
     "jsonc-morph": "^0.2.1",
     "jsonc-parser": "^3.3.1",
-    "jsondiffpatch": "^0.7.3"
+    "jsondiffpatch": "^0.7.3",
+    "moderndash": "^4.0.0"
   }
 }

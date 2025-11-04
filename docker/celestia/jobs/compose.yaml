@@ -13,7 +13,7 @@ services:
       - spike-data:/spike/data:ro
     environment:
       - TZ=${TZ}
-      - GATUS_URL=https://uptime.${searchDomain}
+      - GATUS_URL=http://uptime.${searchDomain}:9595
     networks:
       - dockge_default
     restart: unless-stopped

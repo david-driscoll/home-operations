@@ -673,6 +673,41 @@ export interface Endpoint {
    */
   "disable-monitoring-lock"?: boolean;
 }
+
+/**
+ * Configuration for a  external endpoint
+ */
+export interface ExternalEndpoint {
+  /**
+   * Whether the endpoint is enabled
+   */
+  enabled?: boolean;
+  /**
+   * Name of the endpoint
+   */
+  name: string;
+  /**
+   * Group to which the endpoint belongs
+   */
+  group?: string;
+  /**
+   * The token for authenticating with the external Gatus instance
+   */
+  token: string;
+  /**
+   * Alerts to trigger on failure
+   */
+  alerts?: Alert[];
+  /**
+   * Heartbeat configuration
+   */
+  heartbeat?: {
+    /**
+     * Duration between each heartbeat
+     */
+    interval?: string;
+  };
+}
 /**
  * Client configuration for HTTP requests
  */

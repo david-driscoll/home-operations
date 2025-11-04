@@ -5,7 +5,7 @@ import { writeFile } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
 import { md5 } from "@pulumi/std";
-import { GatusDefinition } from "@openapi/application-definition.js";
+import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
 import { tmpdir } from "os";
@@ -78,9 +78,26 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent: Resource) {
+export function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent?: Resource) {
   const content = output(endpoints).apply(async (endpoints) => {
     return yaml.stringify({ endpoints: endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
+  });
+
+  return copyFileToRemote(name, {
+    connection: {
+      host: interpolate`dockge-as.${globals.tailscaleDomain}`,
+      user: "root",
+    },
+    remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
+    content,
+    parent,
+  });
+}
+
+
+export function addExternalGatus(name: string, globals: GlobalResources, endpoints: Input<ExternalEndpoint[]>, parent?: Resource) {
+  const content = output(endpoints).apply(async (endpoints) => {
+    return yaml.stringify({ 'external-endpoints': endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
   });
 
   return copyFileToRemote(name, {

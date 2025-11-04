@@ -1,10 +1,11 @@
 #!/bin/bash
 
-set -euo pipefail
+# set -euo pipefail
 
 TASKS_DIR="/scripts/tasks"
 LOG_DIR="/var/log/jobs"
 GATUS_URL="${GATUS_URL:-}"
+GATUS_TOKEN="${GATUS_TOKEN:-}"
 TIMEOUT_SECONDS=21600  # 6 hours
 MAX_RETRIES=1
 
@@ -15,16 +16,20 @@ log() {
 report_to_gatus() {
     local task_key="$1"
     local status="$2"  # "up" or "down"
+    local duration_ms="${3:-0}"  # duration in milliseconds
 
     if [[ -z "$GATUS_URL" ]]; then
         log "GATUS_URL not set, skipping Gatus report for $task_key"
         return 0
     fi
 
-    local endpoint="${GATUS_URL}/api/v1/endpoints/jobs_${task_key}/health?status=${status}"
+    # Gatus external endpoint API: POST /api/v1/endpoints/{key}/external?success={success}&duration={duration}
+    # {key} format: <GROUP_NAME>_<ENDPOINT_NAME> with special chars replaced by -
+    local success=$([[ "$status" == "up" ]] && echo "true" || echo "false")
+    local endpoint="${GATUS_URL}/api/v1/endpoints/jobs_${task_key}/external?success=${success}&duration=${duration_ms}"
 
-    if curl -sf -X POST "$endpoint" > /dev/null 2>&1; then
-        log "Successfully reported $status to Gatus for $task_key"
+    if curl -sf -X POST -H "Authorization: Bearer ${task_key}" "$endpoint" > /dev/null 2>&1; then
+        log "Successfully reported $status to Gatus for $task_key (duration: ${duration_ms}ms)"
     else
         log "WARNING: Failed to report to Gatus for $task_key (endpoint: $endpoint)"
     fi
@@ -80,13 +85,14 @@ run_task() {
     local end_time
     end_time=$(date +%s)
     local duration=$((end_time - start_time))
+    local duration_ms=$((duration * 1000))
 
     if [[ $exit_code -eq 0 ]]; then
         log "Task completed successfully in ${duration}s (attempt $attempt)" | tee -a "$task_log"
-        report_to_gatus "$task_name" "up"
+        report_to_gatus "$task_name" "up" "$duration_ms"
     else
         log "Task failed after ${duration}s (attempt $attempt, exit code $exit_code)" | tee -a "$task_log"
-        report_to_gatus "$task_name" "down"
+        report_to_gatus "$task_name" "down" "$duration_ms"
     fi
 
     log "========================================" | tee -a "$task_log"
