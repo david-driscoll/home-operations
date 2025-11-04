@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# set -euo pipefail
-
 TASKS_DIR="/scripts/tasks"
 LOG_DIR="/var/log/jobs"
 GATUS_URL="${GATUS_URL:-}"
