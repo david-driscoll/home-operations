@@ -103,14 +103,23 @@ main() {
     fi
 
     # Create log directory if it doesn't exist
-    mkdir -p "$LOG_DIR"
+    mkdir -p "$LOG_DIR" || { log "ERROR: Failed to create log directory $LOG_DIR"; exit 1; }
 
     # Find all .sh files in tasks directory
     local task_count=0
+    local find_output
+    local find_status=0
+
+    find_output=$(find "$TASKS_DIR" -maxdepth 1 -name "*.sh" -type f -print0 2>&1) || find_status=$?
+    if [[ $find_status -ne 0 ]]; then
+        log "ERROR: Failed to find tasks in $TASKS_DIR: $find_output"
+        exit 1
+    fi
+
     while IFS= read -r -d '' task_file; do
         ((task_count++))
         run_task "$task_file"
-    done < <(find "$TASKS_DIR" -maxdepth 1 -name "*.sh" -type f -print0 | sort -z)
+    done < <(printf '%s' "$find_output" | sort -z)
 
     if [[ $task_count -eq 0 ]]; then
         log "No tasks found in $TASKS_DIR"

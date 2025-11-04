@@ -52,7 +52,7 @@ function createBackupJob(
 
   return copyFileToRemote(`${cluster.title}-backup-${args.jobName}.sh`, {
     connection: args.connection,
-    remotePath: interpolate`/opt/stacks/dockge/jobs/tasks/${args.jobName}.sh`,
+    remotePath: interpolate`/opt/stacks/jobs/tasks/${args.jobName}.sh`,
     content: interpolate`#!/bin/bash
 ${sourceConfig}
 ${destinationConfig}
