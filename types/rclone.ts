@@ -15,27 +15,20 @@ export interface LocalBackend {
 
 export interface B2Backend {
   type: "b2";
-  /** Name of the rclone remote to use (defaults to "b2") */
-  remote?: string;
-  /** Bucket name */
   bucket: string;
-  /** Optional key prefix within the bucket (no leading slash) */
-  prefix?: string;
+    prefix?: string;
+    applicationKeyId: string;
+    applicationKey: string;
 }
 
 export interface S3Backend {
   type: "s3";
-  /** Name of the rclone remote to use (defaults to "s3") */
-  remote?: string;
-  /** Bucket name */
+  accessKeyId: string;
+  secretAccessKey: string;
   bucket: string;
-  /** Optional key prefix within the bucket (no leading slash) */
   prefix?: string;
-  /** Optional hints about the remote; informational unless the remote is created dynamically */
   region?: string;
   endpoint?: string; // e.g., https://s3.us-west-2.amazonaws.com or custom S3-compatible
-  profile?: string; // if using AWS shared credentials
-  storageClass?: string; // e.g., STANDARD_IA, GLACIER, etc.
 }
 
 export function isLocal(b: RcloneBackend): b is LocalBackend {

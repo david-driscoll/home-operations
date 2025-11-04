@@ -12,9 +12,6 @@ import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
 import { gatusDnsRecords } from "./StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
-import { createBackupDatastores, ProxmoxBackupServer } from "./ProxmoxBackupServer.ts";
-import { S3Bucket } from "@pulumi/minio/s3bucket.js";
-import { Bucket } from "sdks/b2/bin/bucket.js";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
