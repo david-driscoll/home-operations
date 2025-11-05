@@ -22,8 +22,8 @@ var client = new OnePasswordConnectClient(
 );
 
 var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
-var lunaDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Luna");
-var alphaSiteDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Alpha Site");
+// var lunaDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Luna");
+// var alphaSiteDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Alpha Site");
 
 static async Task RunJobs()
 {
@@ -130,7 +130,7 @@ static async Task Rclone(string name, RCloneBackend source, string sourcePath, R
 
 static async Task<OnePassword.Connect.Sdk.Models.Item> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
 {
-    var items = await client.GetVaultItemsAsync(vaultId, $"title eq '{title}'");
+    var items = await client.GetVaultItemsAsync(vaultId, $"title eq \"{title}\"");
     return items.Single();
 }
 

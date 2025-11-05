@@ -3,6 +3,8 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     volumes:
       - ./:/workspace
+      - /data/backup:/data/backup:rw
+      - /data/restic:/data/restic:rw
       - spike-backup:/spike/backup:ro
       - spike-data:/spike/data:ro
     working_dir: /workspace
