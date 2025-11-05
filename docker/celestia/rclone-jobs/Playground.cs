@@ -146,6 +146,8 @@ record SshBackend(string Remote, string Host, string User) : RCloneBackend(Remot
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_TYPE", "sftp");
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_HOST", Host);
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USER", User);
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PASS", "");
+
     }
     public override string GetRemotePath(string path) => $"{Remote}:{path}";
 }
