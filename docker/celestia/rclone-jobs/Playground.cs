@@ -147,7 +147,7 @@ record SshBackend(string Remote, string Host, string User) : RCloneBackend(Remot
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_HOST", Host);
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USER", User);
     }
-    public override string GetRemotePath(string path) => throw new NotImplementedException();
+    public override string GetRemotePath(string path) => $"{Remote}:{path}";
 }
 record B2Backend(string Remote, string Bucket, string KeyID, string KeySecret) : RCloneBackend(Remote)
 {
