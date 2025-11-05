@@ -31,6 +31,8 @@
     "./*.ts",
     "../../components/**/*.ts",
     "../../dynamic/**/*.ts",
-    "../../types/**/*.ts"
+    "../../types/**/*.ts",
+    "../home/jobs.ts",
+    "../home/backup-jobs.ts"
   ]
 }

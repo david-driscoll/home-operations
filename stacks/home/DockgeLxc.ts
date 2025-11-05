@@ -1,5 +1,5 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
@@ -42,7 +42,6 @@ export class DockgeLxc extends ComponentResource {
   public readonly dns: StandardDns;
   public readonly ipAddress: Output<string>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
-  public readonly stacks: Output<string[]>;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
@@ -127,59 +126,6 @@ export class DockgeLxc extends ComponentResource {
       }
     );
 
-    const op = new OPClient();
-    const authentikToken = output(op.getItemByTitle("Authentik Token"));
-    const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
-
-    const replacements = [
-      replaceVariable(/\$\{host\}/g, output(args.host.shortName ?? args.host.name)),
-      replaceVariable(/\$\{searchDomain\}/g, args.globals.searchDomain),
-      replaceVariable(/\$\{TZ\}/g, "America/New_York"),
-      replaceVariable(/\$\{TIMEZONE\}/g, "America/New_York"),
-      replaceVariable(/\$\{tailscaleDomain\}/g, args.globals.tailscaleDomain),
-      replaceVariable(/\$\{hostname\}/g, hostname),
-      replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
-      replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
-      replaceVariable(/\$\{tailscaleHostname\}/g, tailscaleHostname),
-      replaceVariable(/\$\{tailscaleAuthKey\}/g, args.globals.tailscaleAuthKey.key),
-      replaceVariable(/\$\{CLUSTER_TITLE\}/g, cluster.title),
-      replaceVariable(/\$\{CLUSTER_KEY\}/g, cluster.key),
-      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, cluster.rootDomain),
-      replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, cluster.authentikDomain),
-      (input: Input<string>) => {
-        return output(input).apply(async (str) => {
-          const matches = str.matchAll(vaultRegex);
-          const items = new Map();
-          for (const [, itemTitle, fieldName] of matches) {
-            if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
-              continue;
-            }
-            const item = await op.getItemByTitle(itemTitle);
-            items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
-          }
-
-          return str.replace(vaultRegex, (fullMatch) => {
-            return items.get(fullMatch) || fullMatch;
-          });
-        });
-      },
-    ];
-
-    this.stacks = output(readdir(resolve(dockerPath, "_common")))
-      .apply((files) => files.map((f) => this.createStack(args.host.name, resolve(dockerPath, "_common", f), replacements)))
-      .apply((z) => {
-        const hostStacks = output(
-          readdir(resolve(dockerPath, args.host.name)).then((files) =>
-            files.filter((z) => z !== ".keep").map((f) => this.createStack(args.host.name, resolve(dockerPath, args.host.name, f), replacements))
-          )
-        );
-        return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
-      })
-      .apply((z) => {
-        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
-        return z.map((z) => z.name);
-      });
-
     const dockgeInfo = new OnePasswordItem(
       `${args.host.name}-dockge`,
       {
@@ -212,7 +158,63 @@ export class DockgeLxc extends ComponentResource {
     });
   }
 
-  private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[]) {
+  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<string[]> {
+    const op = new OPClient();
+    const authentikToken = output(op.getItemByTitle("Authentik Token"));
+    const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
+
+    const replacements = [
+      replaceVariable(/\$\{host\}/g, output(this.args.host.shortName ?? this.args.host.name)),
+      replaceVariable(/\$\{searchDomain\}/g, this.args.globals.searchDomain),
+      replaceVariable(/\$\{TZ\}/g, "America/New_York"),
+      replaceVariable(/\$\{TIMEZONE\}/g, "America/New_York"),
+      replaceVariable(/\$\{tailscaleDomain\}/g, this.args.globals.tailscaleDomain),
+      replaceVariable(/\$\{hostname\}/g, this.hostname),
+      replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
+      replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
+      replaceVariable(/\$\{tailscaleHostname\}/g, this.tailscaleHostname),
+      replaceVariable(/\$\{tailscaleAuthKey\}/g, this.args.globals.tailscaleAuthKey.key),
+      replaceVariable(/\$\{CLUSTER_TITLE\}/g, this.cluster.title),
+      replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
+      replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
+      replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
+      (input: Input<string>) => {
+        return output(input).apply(async (str) => {
+          const matches = str.matchAll(vaultRegex);
+          const items = new Map();
+          for (const [, itemTitle, fieldName] of matches) {
+            if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
+              continue;
+            }
+            const item = await op.getItemByTitle(itemTitle);
+            items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
+          }
+
+          return str.replace(vaultRegex, (fullMatch) => {
+            return items.get(fullMatch) || fullMatch;
+          });
+        });
+      },
+    ];
+
+    return output(readdir(resolve(dockerPath, "_common")))
+      .apply((files) => files.map((f) => this.createStack(this.args.host.name, resolve(dockerPath, "_common", f), replacements, args.dependsOn)))
+      .apply((z) => {
+        const hostStacks = output(
+          readdir(resolve(dockerPath, this.args.host.name)).then((files) =>
+            files.filter((z) => z !== ".keep").map((f) => this.createStack(this.args.host.name, resolve(dockerPath, this.args.host.name, f), replacements, args.dependsOn))
+          )
+        );
+        return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
+      })
+      .apply((z) => {
+        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
+        return z.map((z) => z.name);
+      });
+
+  }
+
+  private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[], dependsOn: Input<Resource[]>): Promise<{ name: string; path: string; compose: remote.Command }> {
     const stackName = basename(path);
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
@@ -223,7 +225,7 @@ export class DockgeLxc extends ComponentResource {
       const content = await readFile(resolve(path, file), "utf-8");
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
 
-      if (file === "compose.yaml") {
+      if (file.endsWith("compose.yaml")) {
         const content = await awaitOutput(replacedContent);
         const regex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
@@ -239,6 +241,7 @@ export class DockgeLxc extends ComponentResource {
               },
               this.args.globals,
               {
+                dependsOn: dependsOn,
                 parent: this,
               }
             );
@@ -256,9 +259,9 @@ export class DockgeLxc extends ComponentResource {
               upper: false,
               special: false,
             },
-            { parent: this }
+            { parent: this, dependsOn: dependsOn }
           );
-          const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this });
+          const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this, dependsOn: dependsOn });
           const [clientIdResult, clientSecretResult] = await awaitOutput(all([clientId.id, clientSecret.result]));
 
           oauth2.clientId = clientIdResult;
@@ -275,7 +278,7 @@ export class DockgeLxc extends ComponentResource {
             remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
             content: replacedContent,
             parent: this,
-            dependsOn: [],
+            dependsOn: dependsOn,
           }
         )
       );

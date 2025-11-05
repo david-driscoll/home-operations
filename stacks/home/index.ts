@@ -12,6 +12,9 @@ import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
 import { gatusDnsRecords } from "./StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
+import { createBackupJobs } from "./backup-jobs.ts";
+import { createRcloneBucketBackend } from "./jobs.ts";
+import { OnePasswordItem } from "@openapi/aliases.js";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -129,6 +132,24 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   tailscaleArgs: { acceptRoutes: false },
 });
 
+const celestiaBackupCredential = celestiaHost.backupVolumes!.backblaze.backupCredential!;
+
+// const celestiaBackups = createBackupJobs({
+//   cluster: celestiaDockgeRuntime,
+//   globals,
+//   jobs: [{
+//     jobName: "Immich sync to B2",
+//     rclone: "sync",
+//     destination: createRcloneBucketBackend(celestiaBackupCredential, "immich"),
+//     source: {
+//       type: "local",
+//       path: "/data/backup/immich/",
+//     },
+//   }]
+// });
+
+celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
+
 const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
   credential: dockgeCredential,
@@ -137,6 +158,8 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
 });
+
+lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
@@ -148,6 +171,8 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
 });
+
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 // TODO: add code to ensure tailscale ips is set for all important services
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };

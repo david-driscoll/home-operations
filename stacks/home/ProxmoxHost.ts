@@ -37,7 +37,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly tailscaleIpAddress: string;
   public readonly macAddress: string;
   public readonly pveProvider: ProxmoxVEProvider;
-  public readonly backupVolumes?: Output<pulumi.UnwrappedObject<{ longhorn: string; volsync: string }>>;
+  public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
   public readonly tailscaleHostname: Output<string>;
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;

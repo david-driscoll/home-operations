@@ -1,26 +1,18 @@
 services:
-  jobs:
-    build: .
-    container_name: jobs
-    hostname: jobs
+  playground:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
     volumes:
-      - ./tasks:/scripts/tasks:ro
-      - ./logs:/var/log/jobs
-      - ./rclone:/root/.config/rclone:ro
-      - /data/backup:/backup
-      - /data/restic:/repos
+      - ./:/workspace
       - spike-backup:/spike/backup:ro
       - spike-data:/spike/data:ro
+    working_dir: /workspace
+    command: dotnet run Playground.cs
     environment:
-      - TZ=${TZ}
-      - GATUS_URL=http://uptime.${searchDomain}:9595
-    networks:
-      - dockge_default
-    restart: unless-stopped
-
-networks:
-  dockge_default:
-    external: true
+      - DOTNET_CLI_TELEMETRY_OPTOUT=1
+      - DOTNET_NOLOGO=1
+    env_file:
+      - .env
+    cpus: 2
 
 volumes:
   spike-backup:

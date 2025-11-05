@@ -33,7 +33,7 @@ export function copyFileToRemote(
     remotePath: Input<string>;
     connection: types.input.remote.ConnectionArgs;
     parent?: Resource;
-    dependsOn?: Resource[];
+    dependsOn?: Input<Resource[]>;
   }
 ) {
   const tempFilePath = writeTempFile(name, args.content);
@@ -46,7 +46,7 @@ export function copyFileToRemote(
       connection: args.connection,
       create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
     },
-    mergeOptions({ parent: args.parent }, {})
+    mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply(d => d ?? []) })
   );
 
   return new remote.CopyToRemote(
@@ -57,7 +57,7 @@ export function copyFileToRemote(
       source: fileAsset,
       triggers: [id],
     },
-    mergeOptions({ parent: args.parent }, { dependsOn: [...(args.dependsOn ?? []), mkdir] })
+    mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply(d => d ?? []).apply(d => [...d, mkdir]) })
   );
 }
 
