@@ -152,7 +152,7 @@ record SftpBackend(string Remote, string Host) : RCloneBackend(Remote)
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PORT", "2022");
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USER", "sftp");
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KEY_FILE", "/keys/id_ed25519");
-        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KNOWN_HOSTS_FILE", "/keys/known_hosts");
+        // yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KNOWN_HOSTS_FILE", "/keys/known_hosts");
     }
     public override string GetRemotePath(string path) => $"{Remote}:{path}";
 }
