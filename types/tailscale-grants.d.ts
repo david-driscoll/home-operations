@@ -180,6 +180,12 @@ export interface TailscaleTsidpCapability {
    */
   includeInUserInfo?: boolean;
 
+  allow_admin_ui?: boolean;
+  allow_dcr?: boolean;
+
+  resources?: string[];
+  users?: string[];
+
   /**
    * Additional claims to include
    */
@@ -256,6 +262,11 @@ export type TailscaleAppCapabilities = {
   "tailscale.com/app-connectors"?: TailscaleAppConnectorsCapability[];
 
   /**
+   * The name as managed by home-operations
+   */
+  "driscoll.dev/name"?: string[];
+
+  /**
    * Custom application capabilities
    * Use your own domain to avoid conflicts: <your-domain>/<capability-name>
    */
@@ -279,9 +290,8 @@ export interface TailscaleGrant {
 
   /**
    * Destination selectors - what resources can be accessed
-   * REQUIRED field
    */
-  dst: TailscaleSelector[];
+  dst?: TailscaleSelector[];
 
   /**
    * Network layer capabilities - ports and protocols

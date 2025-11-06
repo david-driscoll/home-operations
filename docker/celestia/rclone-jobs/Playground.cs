@@ -65,7 +65,8 @@ Directory.EnumerateDirectories("/spike/backup/equestria/volsync")
                 localBackend,
                 $"/data/backup/{item.key}/volsync/{Path.GetFileName(item.path)}",
                 lunaSftpBackend,
-                $"/data/backup/{item.key}/volsync/{Path.GetFileName(item.path)}"
+                // destination here is already mapped by sftp
+                $"/{item.key}/volsync/{Path.GetFileName(item.path)}"
             );
         }
         catch (Exception ex)
