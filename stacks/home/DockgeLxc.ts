@@ -34,13 +34,7 @@ export interface DockgeLxcArgs {
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
   tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
-  // SFTP (rclone serve sftp) keys to provision on the host
-  // Public key content for authorized access (single line OpenSSH public key)
-  sftpAuthorizedKey: Input<string>;
-  // Server host private key (PEM/OpenSSH private key) used by rclone's SFTP server
-  sftpHostKeyPem: Input<string>;
-  // Client private key (PEM/OpenSSH private key) used by rclone-jobs client
-  sftpClientPrivateKeyPem: Input<string>;
+  sftpKey: tls.PrivateKey;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -109,7 +103,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-sftp-authorized-keys`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/authorized_keys`,
-        content: output(args.sftpAuthorizedKey).apply((k) => `${k.trim()}\n`),
+        content: output(args.sftpKey.publicKeyOpenssh).apply((k) => `${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
       })
@@ -119,21 +113,32 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-sftp-host-key`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/host_key`,
-        content: output(args.sftpHostKeyPem).apply((k) => k.trim() + "\n"),
+        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
       })
     );
 
     // Derive server public key (OpenSSH) for clients
-    const sftpHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: args.sftpHostKeyPem }).publicKeyOpenssh;
+    const sftpHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: args.sftpKey.privateKeyPem }).publicKeyOpenssh;
 
     // Write client private key for rclone-jobs client
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-client-key`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519`,
-        content: output(args.sftpClientPrivateKeyPem).apply((k) => k.trim() + "\n"),
+        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    // Write client private key for rclone-jobs client
+    keyWrites.push(
+      copyFileToRemote(`${name}-jobs-client-pub`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${jobsKeysDir}/id_ed25519.pub`,
+        content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
       })
@@ -167,7 +172,7 @@ export class DockgeLxc extends ComponentResource {
       {
         connection: this.remoteConnection,
         triggers: keyWrites.map((k) => k.id),
-        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub || true`,
+        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub || true`,
       },
       mergeOptions(cro, { dependsOn: keyWrites })
     );

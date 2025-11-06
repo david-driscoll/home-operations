@@ -136,9 +136,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   vmId: 300,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
-  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpClientKey.privateKeyPem,
-  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
+  sftpKey: sftpClientKey,
 });
 
 const celestiaBackupCredential = celestiaHost.backupVolumes!.backblaze.backupCredential!;
@@ -166,9 +164,7 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   vmId: 400,
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
-  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpClientKey.privateKeyPem,
-  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
+  sftpKey: sftpClientKey,
 });
 
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
@@ -182,9 +178,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   tailscaleIpAddress: "100.111.10.9",
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
-  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpClientKey.privateKeyPem,
-  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
+  sftpKey: sftpClientKey,
 });
 
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
