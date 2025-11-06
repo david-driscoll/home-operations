@@ -15,8 +15,16 @@ import { addUptimeGatus } from "@components/helpers.ts";
 import { createBackupJobs } from "./backup-jobs.ts";
 import { createRcloneBucketBackend } from "./jobs.ts";
 import { OnePasswordItem } from "@openapi/aliases.js";
+import * as tls from "@pulumi/tls";
 
 const globals = new GlobalResources({}, {});
+// Generate SFTP server host key and a single client key (authorized key)
+const sftpServerHostKey = new tls.PrivateKey("rclone-sftp-host", { algorithm: "ED25519" });
+const sftpClientKey = new tls.PrivateKey("rclone-sftp-client", { algorithm: "ED25519" });
+// Export for client usage (e.g., rclone-jobs)
+export const sftpServerHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpServerHostKey.privateKeyPem }).publicKeyOpenssh;
+export const sftpClientPrivateKey = sftpClientKey.privateKeyPem;
+
 const op = new OPClient();
 
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
@@ -130,6 +138,9 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   vmId: 300,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
+  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
+  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
 const celestiaBackupCredential = celestiaHost.backupVolumes!.backblaze.backupCredential!;
@@ -157,6 +168,9 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   vmId: 400,
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
+  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
+  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
@@ -170,6 +184,9 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   tailscaleIpAddress: "100.111.10.9",
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
+  sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
+  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });

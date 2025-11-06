@@ -1,5 +1,6 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
+import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
@@ -33,6 +34,13 @@ export interface DockgeLxcArgs {
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
   tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
+  // SFTP (rclone serve sftp) keys to provision on the host
+  // Public key content for authorized access (single line OpenSSH public key)
+  sftpAuthorizedKey: Input<string>;
+  // Server host private key (PEM/OpenSSH private key) used by rclone's SFTP server
+  sftpHostKeyPem: Input<string>;
+  // Client private key (PEM/OpenSSH private key) used by rclone-jobs client
+  sftpClientPrivateKeyPem: Input<string>;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -81,6 +89,88 @@ export class DockgeLxc extends ComponentResource {
     const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs } });
 
     this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
+
+    // Seed SFTP keys into the rclone-sftp stack path on the remote host
+    const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
+    const jobsKeysDir = "/opt/stacks/rclone-jobs/keys";
+
+    const ensureKeysDir = new remote.Command(
+      `${name}-ensure-sftp-keys-dir`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
+      },
+      mergeOptions(cro, { dependsOn: [] })
+    );
+
+    const keyWrites: any[] = [];
+
+    keyWrites.push(
+      copyFileToRemote(`${name}-sftp-authorized-keys`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${sftpKeysDir}/authorized_keys`,
+        content: output(args.sftpAuthorizedKey).apply((k) => `${k.trim()}\n`),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    keyWrites.push(
+      copyFileToRemote(`${name}-sftp-host-key`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${sftpKeysDir}/host_key`,
+        content: output(args.sftpHostKeyPem).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    // Derive server public key (OpenSSH) for clients
+    const sftpHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: args.sftpHostKeyPem }).publicKeyOpenssh;
+
+    // Write client private key for rclone-jobs client
+    keyWrites.push(
+      copyFileToRemote(`${name}-jobs-client-key`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${jobsKeysDir}/id_ed25519`,
+        content: output(args.sftpClientPrivateKeyPem).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    // Write server public key for known_hosts usage by clients
+    keyWrites.push(
+      copyFileToRemote(`${name}-jobs-server-pub`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${jobsKeysDir}/server_host_key.pub`,
+        content: output(sftpHostPublicKey).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    // Also generate a convenience known_hosts entry using tailscale hostname
+    keyWrites.push(
+      copyFileToRemote(`${name}-jobs-known-hosts`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${jobsKeysDir}/known_hosts`,
+        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `${h} ${k.trim()}\n`),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
+    // Set restrictive permissions on the keys
+    new remote.Command(
+      `${name}-sftp-keys-perms`,
+      {
+        connection: this.remoteConnection,
+        triggers: keyWrites.map((k) => k.id),
+        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub || true`,
+      },
+      mergeOptions(cro, { dependsOn: keyWrites })
+    );
 
     // Get Tailscale device - this will need to be done after the hook script runs
     // and Tailscale is configured. For now, we'll comment this out as it requires
@@ -211,10 +301,14 @@ export class DockgeLxc extends ComponentResource {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return z.map((z) => z.name);
       });
-
   }
 
-  private async createStack(hostname: string, path: string, replacements: ((input: Output<string>) => Output<string>)[], dependsOn: Input<Resource[]>): Promise<{ name: string; path: string; compose: remote.Command }> {
+  private async createStack(
+    hostname: string,
+    path: string,
+    replacements: ((input: Output<string>) => Output<string>)[],
+    dependsOn: Input<Resource[]>
+  ): Promise<{ name: string; path: string; compose: remote.Command }> {
     const stackName = basename(path);
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
@@ -271,16 +365,13 @@ export class DockgeLxc extends ComponentResource {
       }
 
       copyFiles.push(
-        copyFileToRemote(
-          `${hostname}-${stackName}-${file.replace(/\//g, "-")}-copy-file`,
-          {
-            connection: this.remoteConnection,
-            remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-            content: replacedContent,
-            parent: this,
-            dependsOn: dependsOn,
-          }
-        )
+        copyFileToRemote(`${hostname}-${stackName}-${file.replace(/\//g, "-")}-copy-file`, {
+          connection: this.remoteConnection,
+          remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+          content: replacedContent,
+          parent: this,
+          dependsOn: dependsOn,
+        })
       );
     }
 
