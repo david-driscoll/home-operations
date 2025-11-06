@@ -20,9 +20,11 @@ services:
     networks:
       - dockge_default
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
 networks:
   dockge_default:
     external: true
 x-dockge:
   urls:
-    - https://backrest.${CLUSTER_DOMAIN}
+    - https://restic.${CLUSTER_DOMAIN}

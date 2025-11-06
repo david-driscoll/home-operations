@@ -36,6 +36,8 @@ services:
     networks:
       - dockge_default
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
 networks:
   dockge_default:
     external: true

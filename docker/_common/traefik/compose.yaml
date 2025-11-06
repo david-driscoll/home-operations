@@ -3,6 +3,8 @@ services:
     container_name: traefik
     image: ghcr.io/traefik/traefik:v3.5.4@sha256:fa528d4565c8c279328c12d466325ee0f65804a75bcdbef737290664ad971d68
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     command:
       - --configfile=/config/config.yaml
       - --providers.file.watch=true
@@ -36,6 +38,7 @@ services:
       - 853:853
       - 784:784/udp
       - 5443:5443
+      - 2022:2022/tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt

@@ -3,6 +3,8 @@ services:
     container_name: uptime
     image: ghcr.io/twin/gatus:v5.30.0@sha256:bab5a31cb3cfde7fd9913a5ff97652883e4db08f3b429a62a7a188c746df4219
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     environment:
       GATUS_CONFIG_PATH: /config
     labels:

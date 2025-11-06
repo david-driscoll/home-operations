@@ -31,6 +31,8 @@ services:
       - 69:69/udp
       # Removed 80:80 mapping - Traefik will handle HTTP routing
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     networks:
       - dockge_default
 x-dockge:

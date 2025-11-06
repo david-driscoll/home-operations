@@ -3,6 +3,8 @@ services:
     container_name: zwave-js-ui
     image: zwavejs/zwave-js-ui:11.6.1@sha256:8cc2c1868129f9b8e3ffbd695b50668b845d8eb63e9c159b94cddca2e6d96e09
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     tty: true
     stop_signal: SIGINT
     labels:

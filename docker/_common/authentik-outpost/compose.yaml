@@ -3,6 +3,8 @@ services:
     container_name: authentik-outpost
     image: ghcr.io/goauthentik/proxy:2025.10.0@sha256:db9d498357e174851bb1d9f67a2f3428b50560684b9ca5cd753cea40b33b726b
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     # env is set in each app stack for the secret.
     env_file:
       - path: .env

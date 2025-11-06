@@ -4,6 +4,8 @@ services:
     ports:
       - 6785:6785
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     labels:
       tsdproxy.enable: false
       tsdproxy.ephemeral: true

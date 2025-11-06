@@ -34,7 +34,7 @@ Directory.EnumerateDirectories("/spike/backup/sgc/volsync")
 Directory.EnumerateDirectories("/spike/backup/equestria/volsync")
 .Select(path => (key: "equestria", path));
     var localBackend = new LocalBackend("local");
-    var lunaSshBackend = new SshBackend("luna", "dockge-luna.${tailscaleDomain}", "root");
+    var lunaSftpBackend = new SftpBackend("luna", "dockge-luna.${tailscaleDomain}");
 
     foreach (var item in sgcVolsyncFolders.Concat(equestriaVolsyncFolders))
     {
@@ -64,7 +64,7 @@ Directory.EnumerateDirectories("/spike/backup/equestria/volsync")
                 $"{item.key}-{Path.GetFileName(item.path)}",
                 localBackend,
                 $"/data/backup/{item.key}/volsync/{Path.GetFileName(item.path)}",
-                lunaSshBackend,
+                lunaSftpBackend,
                 $"/data/backup/{item.key}/volsync/{Path.GetFileName(item.path)}"
             );
         }
@@ -76,6 +76,7 @@ Directory.EnumerateDirectories("/spike/backup/equestria/volsync")
 }
 
 await DownloadRclone();
+// ssh-agent not required; rclone uses key_file directly
 await RunJobs();
 
 JobManager.Initialize();
@@ -112,16 +113,19 @@ static async Task Rclone(string name, RCloneBackend source, string sourcePath, R
     var item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
     .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
     .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
-    .WithEnvironmentVariables(source.GetEnvironmentVariables()
-    .Concat(destination.GetEnvironmentVariables())
-    .DistinctBy(kv => kv.Key)
-    .ToDictionary())
-        .WithArguments(args => args
+    .WithEnvironmentVariables(
+        source.GetEnvironmentVariables()
+        .Concat(destination.GetEnvironmentVariables())
+        .DistinctBy(kv => kv.Key)
+        .ToDictionary(kv => kv.Key, kv => (string?)kv.Value)
+    )
+        .WithArguments(args =>
+        args
         .Add("sync")
         .Add(source.GetRemotePath(sourcePath))
         .Add(destination.GetRemotePath(destinationPath))
         .Add("--progress")
-        )
+    )
         .ExecuteAsync();
 
 
@@ -139,14 +143,15 @@ abstract record RCloneBackend(string Remote)
     public abstract IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables();
     public abstract string GetRemotePath(string path);
 }
-record SshBackend(string Remote, string Host, string User) : RCloneBackend(Remote)
+record SftpBackend(string Remote, string Host) : RCloneBackend(Remote)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_TYPE", "sftp");
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_HOST", Host);
-        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USER", User);
-        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PASS", "notused");
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PORT", "2022");
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KEY_FILE", "/keys/id_ed25519");
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KNOWN_HOSTS_FILE", "/keys/known_hosts");
 
     }
     public override string GetRemotePath(string path) => $"{Remote}:{path}";
