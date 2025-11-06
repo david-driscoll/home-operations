@@ -150,12 +150,12 @@ export class DockgeLxc extends ComponentResource {
       })
     );
 
-    // Also generate a convenience known_hosts entry using tailscale hostname
+    // Also generate a convenience known_hosts entry using tailscale hostname with port
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `${h} ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
       })

@@ -19,11 +19,9 @@ import * as tls from "@pulumi/tls";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
-const sftpServerHostKey = new tls.PrivateKey("rclone-sftp-host", { algorithm: "ED25519" });
 const sftpClientKey = new tls.PrivateKey("rclone-sftp-client", { algorithm: "ED25519" });
 // Export for client usage (e.g., rclone-jobs)
-export const sftpServerHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpServerHostKey.privateKeyPem }).publicKeyOpenssh;
-export const sftpClientPrivateKey = sftpClientKey.privateKeyPem;
+export const sftpClientPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpClientKey.privateKeyPem }).publicKeyOpenssh;
 
 const op = new OPClient();
 
@@ -139,7 +137,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpHostKeyPem: sftpClientKey.privateKeyPem,
   sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
@@ -169,7 +167,7 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpHostKeyPem: sftpClientKey.privateKeyPem,
   sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
@@ -185,7 +183,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpAuthorizedKey: sftpClientKey.publicKeyOpenssh,
-  sftpHostKeyPem: sftpServerHostKey.privateKeyPem,
+  sftpHostKeyPem: sftpClientKey.privateKeyPem,
   sftpClientPrivateKeyPem: sftpClientKey.privateKeyPem,
 });
 
