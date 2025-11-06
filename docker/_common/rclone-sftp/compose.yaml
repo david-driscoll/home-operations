@@ -11,7 +11,6 @@ services:
       serve sftp ${DATA_ROOT}
       --addr :${SFTP_PORT}
       --authorized-keys /config/ssh/authorized_keys
-      --key /config/ssh/host_key
     volumes:
       - ${DATA_ROOT}:${DATA_ROOT}:rw
       - ./keys:/config/ssh:ro
