@@ -76,15 +76,14 @@ Directory.EnumerateDirectories("/spike/backup/equestria/volsync")
     }
 }
 
-await DownloadRclone();
-await RunJobs();
-
 JobManager.Initialize();
 
 JobManager.AddJob(async () =>
 {
-    // await DownloadRclone();
+    Console.WriteLine("Starting Rclone Jobs");
+    await DownloadRclone();
     await RunJobs();
+    Console.WriteLine("Rclone Jobs Completed");
 }, a => a.ToRunEvery(5).Days().At(10, 00));
 
 JobManager.Start();
