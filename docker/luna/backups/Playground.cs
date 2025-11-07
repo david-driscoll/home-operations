@@ -162,7 +162,7 @@ static async Task Rclone(RCloneJob job)
         var success = item?.ExitCode == 0;
         var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external?success={success.ToString().ToLower()}&error={( success ? "" : $"Rclone job {job.Name} failed with exit code {item?.ExitCode}" )}&duration={item?.RunTime.Humanize()}")
         {
-            Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Key) }
+            Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Token) }
         };
         var response = await httpClient.SendAsync(request);
         response.Dump();
