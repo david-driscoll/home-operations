@@ -174,9 +174,9 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/stargate-command-db/`,
+  sourceSecret: 'minio access key',
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/stargate-command-db/`,
-  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
 celestiaDockgeRuntime.createBackupJob({
@@ -184,9 +184,9 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/equestria-db/`,
+  sourceSecret: 'minio access key',
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/equestria-db/`,
-  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
 lunaDockgeRuntime.createBackupJob({

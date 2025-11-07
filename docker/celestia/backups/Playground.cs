@@ -45,6 +45,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
 
     foreach (var job in jobs)
     {
+        job.Dump(job.Value.Name);
         var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.Source, job.Value.SourceSecret);
         var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.Destination, job.Value.DestinationSecret);
 
@@ -64,6 +65,7 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     if (secret is { Length: > 0 })
     {
         secretItem = await GetItemByTitle(client, vault.Id, secret);
+        secretItem.Dump("Secret Item");
     }
     return type switch
     {
@@ -179,7 +181,9 @@ static async Task Rclone(RCloneJob job)
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
 {
     var items = await client.GetVaultItemsAsync(vaultId, $"title eq \"{title}\"");
+    items.Dump($"Items with title {title}");
     var item = await client.GetVaultItemByIdAsync(vaultId, items.Single().Id);
+    item.Dump($"Item with title {title}");
     return item;
 }
 
@@ -248,7 +252,7 @@ static class RCloneBackendExtensions
 {
     public static Field GetField(this FullItem item, string key)
     {
-        return item.Fields.First(z => z.Label == key);
+        return item.Dump().Fields.First(z => z.Label == key);
     }
 
 }
