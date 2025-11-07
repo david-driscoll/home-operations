@@ -151,11 +151,31 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
 
 celestiaDockgeRuntime.createBackupJob({
   name: "Backup Immich to B2",
-  schedule: "0 12 * * *",
+  schedule: "0 10 * * *",
   sourceType: "local",
   source: "/data/backup/immich/",
   destinationType: "b2",
   destination: "immich",
+  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+});
+
+celestiaDockgeRuntime.createBackupJob({
+  name: "Backup Stargate Command Postgres to Celestia",
+  schedule: "0 10 * * *",
+  sourceType: "s3",
+  source: "truenas.driscoll.tech:9000/stargate-command-db/",
+  destinationType: "local",
+  destination: "/data/backup/spike/stargate-command-db/",
+  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+});
+
+celestiaDockgeRuntime.createBackupJob({
+  name: "Backup Equestria Postgres to Celestia",
+  schedule: "0 10 * * *",
+  sourceType: "s3",
+  source: "truenas.driscoll.tech:9000/equestria-db/",
+  destinationType: "local",
+  destination: "/data/backup/spike/equestria-db/",
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
@@ -166,6 +186,24 @@ lunaDockgeRuntime.createBackupJob({
   source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
   destinationType: "local",
   destination: "/data/backup/immich/",
+});
+
+lunaDockgeRuntime.createBackupJob({
+  name: "Backup Stargate Command Postgres from Celestia",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/stargate-command-db/`,
+  destinationType: "local",
+  destination: "/data/backup/spike/stargate-command-db/",
+});
+
+lunaDockgeRuntime.createBackupJob({
+  name: "Backup Equestria Postgres from Celestia",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/equestria-db/`,
+  destinationType: "local",
+  destination: "/data/backup/spike/equestria-db/",
 });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
