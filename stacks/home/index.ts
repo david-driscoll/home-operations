@@ -164,6 +164,7 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/${minioBucket.bucket}/`,
+  sourceSecret: 'minio access key',
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/${minioBucket.bucket}/`,
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
