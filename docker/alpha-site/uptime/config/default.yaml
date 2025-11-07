@@ -7,8 +7,6 @@ alerting:
   pushover:
     application-token: "op://Eris/Pushover/credential"
     user-key: "op://Eris/Pushover/username"
-debug: true
-
 
 # remote:
 #   instances:
