@@ -87,25 +87,12 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export function addUptimeGatus(name: string, globals: GlobalResources, endpoints: Input<GatusDefinition[]>, parent?: Resource) {
-  const content = output(endpoints).apply(async (endpoints) => {
-    return yaml.stringify({ endpoints: endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
-  });
-
-  return copyFileToRemote(name, {
-    connection: {
-      host: interpolate`dockge-as.${globals.tailscaleDomain}`,
-      user: "root",
-    },
-    remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
-    content,
-    parent,
-  });
-}
-
-export function addExternalGatus(name: Input<string>, globals: GlobalResources, endpoints: Input<ExternalEndpoint[]>, parent?: Resource) {
-  const content = output(endpoints).apply(async (endpoints) => {
-    return yaml.stringify({ "external-endpoints": endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
+export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; 'external-endpoints'?: Input<ExternalEndpoint[]> }, parent?: Resource) {
+  const content = output(args).apply(async (a) => {
+    return yaml.stringify({
+      endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+      "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+    }, { lineWidth: 0 });
   });
 
   return copyFileToRemote(name, {

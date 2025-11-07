@@ -272,5 +272,5 @@ await updateTailscaleAcls({
 
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
 pulumi.output(gatusDnsRecords).apply(async (endpoints) => {
-  addUptimeGatus(`dns`, globals, endpoints, dnsParent);
+  addUptimeGatus(`dns`, globals, { endpoints }, dnsParent);
 });

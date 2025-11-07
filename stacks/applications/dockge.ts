@@ -105,14 +105,16 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   addUptimeGatus(
     `${clusterDefinition.key}`,
     globals,
-    pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-      instances
-        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-        .map((e) => {
-          e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
-          return e;
-        })
-    ),
+    {
+      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+        instances
+          .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+          .map((e) => {
+            e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+            return e;
+          })
+      ),
+    },
     applicationManager
   );
 

@@ -5,7 +5,7 @@ import { GlobalResources, KubernetesClusterDefinition } from "@components/global
 import { OPClient } from "../../components/op.ts";
 import { base64encodeOutput } from "@pulumi/std";
 import * as kubernetes from "@kubernetes/client-node";
-import { addExternalGatus, addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
 import { ApplicationDefinitionSchema, AuthentikDefinition, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
@@ -103,20 +103,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     await applicationManager.createApplication(app);
   }
 
-  addUptimeGatus(
-    `${clusterDefinition.key}`,
-    globals,
-    pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-      instances
-        .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-        .map((e) => {
-          e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
-          return e;
-        })
-    ),
-    applicationManager
-  );
-
   const volsyncBackupJobs = pulumi
     .output(
       lastValueFrom(
@@ -141,10 +127,20 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`);
       return jobs;
     });
-  addExternalGatus(
-    `${clusterDefinition.key}-volsync-jobs`,
+
+  addUptimeGatus(
+    `${clusterDefinition.key}`,
     globals,
-    volsyncBackupJobs.apply((jobs) =>
+    {
+      endpoints:  pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+          instances
+            .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+            .map((e) => {
+              e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+              return e;
+            })
+        ),
+        "external-endpoints": volsyncBackupJobs.apply((jobs) =>
       jobs.map((job) => ({
             enabled: true,
         token: job,
@@ -154,7 +150,8 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           interval: "30h",
         },
       }))
-    ),
+    )
+    },
     applicationManager
   );
 
