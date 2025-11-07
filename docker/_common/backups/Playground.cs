@@ -53,9 +53,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
             job.Value.Name,
             job.Value.Schedule,
             sourceBackend,
-            job.Value.Source,
-            destinationBackend,
-            job.Value.Destination
+            destinationBackend
         );
     }
 }
@@ -69,10 +67,10 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     }
     return type switch
     {
-        "local" => new LocalBackend(name),
-        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')]),
-        "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
-        "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
+        "local" => new LocalBackend(name, path),
+        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[( path.IndexOf('/') + 1 )..]),
+        "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, path, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
+        "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], string.Join('/', parts.Skip(2)), secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
     };
 }
@@ -141,8 +139,8 @@ static async Task Rclone(RCloneJob job)
         .WithArguments(args =>
         args
         .Add("sync")
-        .Add(job.Source.GetRemotePath(job.SourcePath))
-        .Add(job.Destination.GetRemotePath(job.DestinationPath))
+        .Add(job.Source.GetRemotePath())
+        .Add(job.Destination.GetRemotePath())
     )
         .ExecuteAsync();
 
@@ -176,12 +174,12 @@ static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, stri
     return item;
 }
 
-abstract record RCloneBackend(string Remote)
+abstract record RCloneBackend(string Remote, string Path)
 {
     public abstract IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables();
-    public abstract string GetRemotePath(string path);
+    public abstract string GetRemotePath();
 }
-record SftpBackend(string Remote, string Host) : RCloneBackend(Remote)
+record SftpBackend(string Remote, string Host, string Path) : RCloneBackend(Remote, Path)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
@@ -191,9 +189,9 @@ record SftpBackend(string Remote, string Host) : RCloneBackend(Remote)
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USER", "sftp");
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_KEY_FILE", "/keys/id_ed25519");
     }
-    public override string GetRemotePath(string path) => $"{Remote}:{path}";
+    public override string GetRemotePath() => $"{Remote}:{Path}";
 }
-record B2Backend(string Remote, string Bucket, string KeyID, string KeySecret) : RCloneBackend(Remote)
+record B2Backend(string Remote, string Bucket, string Path, string KeyID, string KeySecret) : RCloneBackend(Remote, Path)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
@@ -203,10 +201,10 @@ record B2Backend(string Remote, string Bucket, string KeyID, string KeySecret) :
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_HARD_DELETE", "true");
     }
 
-    public override string GetRemotePath(string path) => $"{Remote}:{Bucket}/{path}";
+    public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path}";
 }
 
-record S3Backend(string Remote, string Endpoint, string Bucket, string AccessKeyID, string SecretAccessKey) : RCloneBackend(Remote)
+record S3Backend(string Remote, string Endpoint, string Bucket, string Path, string AccessKeyID, string SecretAccessKey) : RCloneBackend(Remote, Path)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
@@ -218,24 +216,24 @@ record S3Backend(string Remote, string Endpoint, string Bucket, string AccessKey
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USE_MULTIPART_UPLOADS", "false");
     }
 
-    public override string GetRemotePath(string path) => $"{Remote}:{Bucket}/{path}";
+    public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path}";
 }
 
-record LocalBackend(string Remote) : RCloneBackend(Remote)
+record LocalBackend(string Remote, string Path) : RCloneBackend(Remote, Path)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_TYPE", "local");
     }
 
-    public override string GetRemotePath(string path) => path;
+    public override string GetRemotePath() => Path;
 }
 
 [JsonSerializable(typeof(BackupTask))]
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 partial class LocalContext : JsonSerializerContext { }
 record BackupTask(string Name, string Schedule, string SourceType, string Source, string? SourceSecret, string DestinationType, string Destination, string? DestinationSecret);
-record RCloneJob(string Key, string Name, string Schedule, RCloneBackend Source, string SourcePath, RCloneBackend Destination, string DestinationPath);
+record RCloneJob(string Key, string Name, string Schedule, RCloneBackend Source, RCloneBackend Destination);
 
 static class RCloneBackendExtensions
 {
