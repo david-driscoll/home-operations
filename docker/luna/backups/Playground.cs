@@ -52,6 +52,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
             job.Key,
             job.Value.Name,
             job.Value.Schedule,
+            job.Value.Token,
             sourceBackend,
             destinationBackend
         );
@@ -159,7 +160,7 @@ static async Task Rclone(RCloneJob job)
     {
         using var httpClient = new HttpClient();
         var success = item?.ExitCode == 0;
-        var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Key}/external?success={success.ToString().ToLower()}&error={( success ? "" : $"Rclone job {job.Name} failed with exit code {item?.ExitCode}" )}&duration={item?.RunTime.Humanize()}")
+        var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external?success={success.ToString().ToLower()}&error={( success ? "" : $"Rclone job {job.Name} failed with exit code {item?.ExitCode}" )}&duration={item?.RunTime.Humanize()}")
         {
             Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Key) }
         };
@@ -241,8 +242,8 @@ record LocalBackend(string Remote, string Path) : RCloneBackend(Remote, Path)
 [JsonSerializable(typeof(BackupTask))]
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 partial class LocalContext : JsonSerializerContext { }
-record BackupTask(string Name, string Schedule, string SourceType, string Source, string? SourceSecret, string DestinationType, string Destination, string? DestinationSecret);
-record RCloneJob(string Key, string Name, string Schedule, RCloneBackend Source, RCloneBackend Destination);
+record BackupTask(string Name, string Schedule, string SourceType, string Source, string? SourceSecret, string DestinationType, string Destination, string? DestinationSecret, string Token);
+record RCloneJob(string Key, string Name, string Schedule, string Token, RCloneBackend Source, RCloneBackend Destination);
 
 static class RCloneBackendExtensions
 {
