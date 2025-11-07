@@ -1,9 +1,10 @@
 services:
-  playground:
+  backups:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     volumes:
       - ./:/workspace
       - ./keys:/keys:ro
+      - ./jobs:/jobs:ro
       - /data/backup:/data/backup:rw
       - /data/restic:/data/restic:rw
       - spike-backup:/spike/backup:ro
