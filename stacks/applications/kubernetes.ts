@@ -5,7 +5,7 @@ import { GlobalResources, KubernetesClusterDefinition } from "@components/global
 import { OPClient } from "../../components/op.ts";
 import { base64encodeOutput } from "@pulumi/std";
 import * as kubernetes from "@kubernetes/client-node";
-import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
 import { ApplicationDefinitionSchema, AuthentikDefinition, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
@@ -158,7 +158,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Sync ${job} from ${clusterDefinition.title}`;
-      const token = kebabCase(`Jobs: ${clusterDefinition.title}_${job}`);
+      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, job);
       return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
@@ -179,7 +179,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
-      const token = kebabCase(`Jobs: ${clusterDefinition.title}_${job}`);
+      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, title);
       return copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
         content: pulumi.jsonStringify({
           name: title,

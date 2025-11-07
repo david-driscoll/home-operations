@@ -5,7 +5,7 @@ import { createBackupDatastores, ProxmoxBackupServer } from "../backups/ProxmoxB
 import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, Output, output, Unwrap } from "@pulumi/pulumi";
 import { B2Backend, RcloneBackend, RcloneOperation } from "../../types/rclone.ts";
 import { remote, types } from "@pulumi/command";
-import { addUptimeGatus, BackupTask, copyFileToRemote } from "@components/helpers.ts";
+import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
@@ -51,9 +51,9 @@ export class BackupJobManager extends ComponentResource {
   public createBackupJob(args: BackupTask) {
     this.jobs = this.jobs.apply((jobs) => [...jobs, args]);
     return all([args, this.cluster]).apply(([job, cluster]) => {
-      const token = `Jobs: ${cluster.title}_${kebabCase(job.name)}`;
+      const token = toGatusKey(`Jobs: ${cluster.title}`, job.name);
       return copyFileToRemote(`${cluster.key}-backup-job-${kebabCase(job.name)}`, {
-        content: jsonStringify({...job, token }),
+        content: jsonStringify({ ...job, token }),
         parent: this,
         connection: this.connection,
         remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}.json`,
@@ -70,7 +70,7 @@ export class BackupJobManager extends ComponentResource {
         "external-endpoints": jobs.map((job) => ({
           enabled: true,
           name: job.name,
-          token: `${groupName}_${kebabCase(job.name)}`,
+          token: toGatusKey(groupName, job.name),
           group: groupName,
           heartbeat: {
             interval: "30h",

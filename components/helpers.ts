@@ -149,3 +149,7 @@ export type BackupTask = {
   destination: Input<string>;
   destinationSecret?: Input<string>;
 };
+
+export function toGatusKey(group: string, name: string) {
+  return `${group}-${name}`.replace(/\s+/g, "-").toLowerCase();
+}
