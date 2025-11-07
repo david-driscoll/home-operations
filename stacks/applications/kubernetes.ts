@@ -117,24 +117,30 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     applicationManager
   );
 
-  const volsyncBackupJobs = pulumi.output(
-    lastValueFrom(
-      from(namespaceNames).pipe(
-        concatMap((ns) =>
-          from(
-            coreApi.listNamespacedSecret({
-              namespace: ns,
-              labelSelector: "volsync=true",
-            })
-          )
-        ),
-        map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
-        mergeMap((lists) => from(lists)),
-        map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
-        toArray()
+  const volsyncBackupJobs = pulumi
+    .output(
+      lastValueFrom(
+        from(namespaceNames).pipe(
+          concatMap((ns) =>
+            from(
+              coreApi.listNamespacedSecret({
+                namespace: ns,
+                labelSelector: "volsync=true",
+              })
+            )
+          ),
+          map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
+          mergeMap((lists) => from(lists)),
+          map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
+          toArray()
+        )
       )
     )
-  );
+    .apply((jobs) => Array.from(new Set(jobs)))
+    .apply((jobs) => {
+      pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`);
+      return jobs;
+    });
   addExternalGatus(
     `${clusterDefinition.key}-jobs`,
     globals,
@@ -151,41 +157,41 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     applicationManager
   );
 
-  // volsyncBackupJobs.apply((jobs) =>
-  //   jobs.map((job) =>
-  //     copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
-  //       content: pulumi.jsonStringify({
-  //         name: `Sync ${job} from ${clusterDefinition.title}`,
-  //         schedule: "0 10 * * *", // 10 am daily
-  //         sourceType: "local",
-  //         source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
-  //         destinationType: "local",
-  //         destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-  //       } as BackupTask),
-  //       remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
-  //       connection: globals.localBackupServerConnection,
-  //       parent: applicationManager,
-  //     })
-  //   )
-  // );
+  volsyncBackupJobs.apply((jobs) =>
+    jobs.map((job) =>
+      copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
+        content: pulumi.jsonStringify({
+          name: `Sync ${job} from ${clusterDefinition.title}`,
+          schedule: "0 10 * * *", // 10 am daily
+          sourceType: "local",
+          source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
+          destinationType: "local",
+          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
+        } as BackupTask),
+        remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
+        connection: globals.localBackupServerConnection,
+        parent: applicationManager,
+      })
+    )
+  );
 
-  // volsyncBackupJobs.apply((jobs) =>
-  //   jobs.map((job) =>
-  //     copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
-  //       content: pulumi.jsonStringify({
-  //         name: `Replicate ${job} from ${clusterDefinition.title} via Celestia`,
-  //         schedule: "0 3 * * *", // 3 am daily
-  //         sourceType: "sftp",
-  //         source: pulumi.interpolate`${globals.localBackupServerConnection.host}/${clusterDefinition.key}/volsync/${job}`,
-  //         destinationType: "local",
-  //         destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-  //       }),
-  //       remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-replica.json`,
-  //       connection: globals.remoteBackupServerConnection,
-  //       parent: applicationManager,
-  //     })
-  //   )
-  // );
+  volsyncBackupJobs.apply((jobs) =>
+    jobs.map((job) =>
+      copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
+        content: pulumi.jsonStringify({
+          name: `Replicate ${job} from ${clusterDefinition.title} via Celestia`,
+          schedule: "0 3 * * *", // 3 am daily
+          sourceType: "sftp",
+          source: pulumi.interpolate`${globals.localBackupServerConnection.host}/${clusterDefinition.key}/volsync/${job}`,
+          destinationType: "local",
+          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
+        }),
+        remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-replica.json`,
+        connection: globals.remoteBackupServerConnection,
+        parent: applicationManager,
+      })
+    )
+  );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
 
