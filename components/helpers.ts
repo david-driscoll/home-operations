@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
+import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile } from "fs/promises";
 import * as yaml from "yaml";
@@ -19,15 +19,15 @@ export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
 }
 
-export function writeTempFile(fileName: string, content: Input<string>) {
-  const filePath = getTempFilePath(fileName);
-  return output(content)
-    .apply(async (content) => writeFile(filePath, content))
+export function writeTempFile(fileName: Input<string>, content: Input<string>) {
+  const filePath = output(fileName).apply((name) => getTempFilePath(name));
+  return all([filePath, content])
+    .apply(async ([filePath, content]) => writeFile(filePath, content))
     .apply(() => filePath);
 }
 
 export function copyFileToRemote(
-  name: string,
+  name: Input<string>,
   args: {
     content: Input<string>;
     remotePath: Input<string>;
@@ -36,29 +36,38 @@ export function copyFileToRemote(
     dependsOn?: Input<Resource[]>;
   }
 ) {
-  const tempFilePath = writeTempFile(name, args.content);
-  const remotePath = output(args.remotePath);
-  const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-  const id = md5Output({ input: args.content }).result;
-  const mkdir = new remote.Command(
-    `${name}-mkdir`,
-    {
-      connection: args.connection,
-      create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
-    },
-    mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply(d => d ?? []) })
-  );
+  return output(name).apply((name) => {
+    const tempFilePath = writeTempFile(name, args.content);
+    const remotePath = output(args.remotePath);
+    const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
+    const id = md5Output({ input: args.content }).result;
+    const mkdir = new remote.Command(
+      `${name}-mkdir`,
+      {
+        connection: args.connection,
+        create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
+      },
+      mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) })
+    );
 
-  return new remote.CopyToRemote(
-    name,
-    {
-      connection: args.connection,
-      remotePath,
-      source: fileAsset,
-      triggers: [id],
-    },
-    mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply(d => d ?? []).apply(d => [...d, mkdir]) })
-  );
+    return new remote.CopyToRemote(
+      name,
+      {
+        connection: args.connection,
+        remotePath,
+        source: fileAsset,
+        triggers: [id, args.remotePath],
+      },
+      mergeOptions(
+        { parent: args.parent },
+        {
+          dependsOn: output(args.dependsOn)
+            .apply((d) => d ?? [])
+            .apply((d) => [...d, mkdir]),
+        }
+      )
+    );
+  });
 }
 
 export function removeUndefinedProperties<T>(obj: T): T {
@@ -94,10 +103,9 @@ export function addUptimeGatus(name: string, globals: GlobalResources, endpoints
   });
 }
 
-
-export function addExternalGatus(name: string, globals: GlobalResources, endpoints: Input<ExternalEndpoint[]>, parent?: Resource) {
+export function addExternalGatus(name: Input<string>, globals: GlobalResources, endpoints: Input<ExternalEndpoint[]>, parent?: Resource) {
   const content = output(endpoints).apply(async (endpoints) => {
-    return yaml.stringify({ 'external-endpoints': endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
+    return yaml.stringify({ "external-endpoints": endpoints.sort((a, b) => a.name.localeCompare(b.name)) }, { lineWidth: 0 });
   });
 
   return copyFileToRemote(name, {
@@ -140,3 +148,14 @@ export function getTailscaleSection(obj: { tailscaleHostname: Input<string>; tai
     },
   };
 }
+
+export type BackupTask = {
+  name: Input<string>;
+  schedule?: Input<string>;
+  sourceType: Input<"b2" | "s3" | "local" | "sftp">;
+  source: Input<string>;
+  sourceSecret?: Input<string>;
+  destinationType: Input<"b2" | "s3" | "local" | "sftp">;
+  destination: Input<string>;
+  destinationSecret?: Input<string>;
+};

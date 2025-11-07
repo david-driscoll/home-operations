@@ -1,21 +1,24 @@
+#:sdk Microsoft.NET.Sdk
 #:package SSH.NET@2025.1.0
-#:package FluentScheduler@5.5.3
 #:package CliWrap@3.9.0
 #:package Dumpify@0.6.6
 #:package 1Password.Connect.Sdk@1.0.4
-#:package Blobject.NFS@5.0.14
+#:package Microsoft.Extensions.Hosting@10.0.0-rc.2.25502.107
+#:package NCronJob@4.6.0
+#:package Humanizer.Core@*
 
-
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
-using Blobject.NFS;
+using System.Text;
+using System.Text.Json.Serialization;
 using CliWrap;
-using CliWrap.Buffered;
 using Dumpify;
-using FluentScheduler;
+using Humanizer;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NCronJob;
 using OnePassword.Connect.Sdk;
 using OnePassword.Connect.Sdk.Models;
+using Renci.SshNet.Common;
 
 var httpClient = new HttpClient();
 
@@ -32,21 +35,24 @@ var jobs = Directory.EnumerateFiles("/jobs", "*.json")
 .Select(path =>
 {
     var content = System.IO.File.ReadAllText(path);
-    return System.Text.Json.JsonSerializer.Deserialize<BackupTask>(content)!;
+    var key = Path.GetFileNameWithoutExtension(path);
+    return (key, value: System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!);
 })
-.ToArray();
+.ToDictionary(kv => kv.key, kv => kv.value);
 
 var rcloneJobs = await Task.WhenAll(jobs.Select(async job =>
 {
-    var sourceBackend = await CreateBackend("source", job.SourceType, job.SourcePath, job.SourceSecret);
-    var destinationBackend = await CreateBackend("destination", job.DestinationType, job.DestinationPath, job.DestinationSecret);
+    var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.SourcePath, job.Value.SourceSecret);
+    var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.DestinationPath, job.Value.DestinationSecret);
 
     return new RCloneJob(
-        job.Name,
+job.Key,
+        job.Value.Name,
+job.Value.Schedule,
         sourceBackend,
-        job.SourcePath,
+        job.Value.SourcePath,
         destinationBackend,
-        job.DestinationPath
+        job.Value.DestinationPath
     );
 }));
 
@@ -60,41 +66,35 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     return type switch
     {
         "local" => new LocalBackend(name),
-        "sftp" => new SftpBackend(name, path),
+        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')]),
         "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
-        // "s3" => new S3Backend(name, ),
+        "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
     };
 }
 
-static async Task RunJobs(RCloneJob[] jobs)
+var builder = Host.CreateApplicationBuilder(args);
+foreach (var grouping in rcloneJobs.GroupBy(z => z.Schedule))
 {
-    foreach (var job in jobs)
+    builder.Services.AddNCronJob(CreateJobDelegate(grouping), grouping.Key);
+}
+
+Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
+{
+    return async () =>
     {
-        try
+        foreach (var job in jobs)
         {
-            Console.WriteLine($"Starting job {job.Name}");
             await Rclone(job);
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error running job {job.Name}: {ex.Message}");
-        }
-    }
+    };
 }
 
 await DownloadRclone();
-await RunJobs(rcloneJobs);
-JobManager.Initialize();
 
-JobManager.AddJob(async () =>
-{
-    Console.WriteLine("Starting Rclone Jobs");
-    await RunJobs(rcloneJobs);
-    Console.WriteLine("Rclone Jobs Completed");
-}, a => a.ToRunEvery(5).Days().At(10, 00));
-
-JobManager.Start();
+var app = builder.Build();
+await app.UseNCronJobAsync();
+app.Run();
 
 static async Task DownloadRclone()
 {
@@ -120,9 +120,11 @@ static async Task DownloadRclone()
 static async Task Rclone(RCloneJob job)
 {
     using var httpClient = new HttpClient();
+    var output = new StringBuilder();
+    var error = new StringBuilder();
     var item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
-    .WithStandardOutputPipe(PipeTarget.ToStream(Console.OpenStandardOutput()))
-    .WithStandardErrorPipe(PipeTarget.ToStream(Console.OpenStandardError()))
+    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
     .WithEnvironmentVariables(
         job.Source.GetEnvironmentVariables()
         .Concat(job.Destination.GetEnvironmentVariables())
@@ -134,7 +136,6 @@ static async Task Rclone(RCloneJob job)
         .Add("sync")
         .Add(job.Source.GetRemotePath(job.SourcePath))
         .Add(job.Destination.GetRemotePath(job.DestinationPath))
-        .Add("--progress")
     )
         .ExecuteAsync();
 
@@ -198,7 +199,7 @@ record B2Backend(string Remote, string Bucket, string KeyID, string KeySecret) :
     public override string GetRemotePath(string path) => $"{Remote}:{Bucket}/{path}";
 }
 
-record S3Backend(string Remote, string Bucket, string AccessKeyID, string SecretAccessKey, string Endpoint) : RCloneBackend(Remote)
+record S3Backend(string Remote, string Endpoint, string Bucket, string AccessKeyID, string SecretAccessKey) : RCloneBackend(Remote)
 {
     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
     {
@@ -223,8 +224,11 @@ record LocalBackend(string Remote) : RCloneBackend(Remote)
     public override string GetRemotePath(string path) => path;
 }
 
-record BackupTask(string Name, string SourceType, string SourcePath, string? SourceSecret, string DestinationType, string DestinationPath, string? DestinationSecret);
-record RCloneJob(string Name, RCloneBackend Source, string SourcePath, RCloneBackend Destination, string DestinationPath);
+[JsonSerializable(typeof(BackupTask))]
+[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+partial class LocalContext : JsonSerializerContext { }
+record BackupTask(string Name, string Schedule, string SourceType, string SourcePath, string? SourceSecret, string DestinationType, string DestinationPath, string? DestinationSecret);
+record RCloneJob(string Key, string Name, string Schedule, RCloneBackend Source, string SourcePath, RCloneBackend Destination, string DestinationPath);
 
 static class RCloneBackendExtensions
 {

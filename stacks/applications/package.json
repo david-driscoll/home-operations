@@ -33,6 +33,12 @@
     "cancel:celestia": "op run --no-masking -- pulumi cancel --yes  -s celestia",
     "cancel:alpha-site": "op run --no-masking -- pulumi cancel --yes  -s alpha-site",
     "cancel": "npm run cancel:luna ; npm run cancel:celestia ; npm run cancel:equestria ; npm run cancel:sgc ; npm run cancel:alpha-site",
+    "refresh:sgc": "op run --no-masking -- pulumi refresh --yes -s sgc",
+    "refresh:equestria": "op run --no-masking -- pulumi refresh --yes  -s equestria",
+    "refresh:luna": "op run --no-masking -- pulumi refresh --yes  -s luna",
+    "refresh:celestia": "op run --no-masking -- pulumi refresh --yes  -s celestia",
+    "refresh:alpha-site": "op run --no-masking -- pulumi refresh --yes  -s alpha-site",
+    "refresh": "npm run refresh:luna ; npm run refresh:celestia ; npm run refresh:equestria ; npm run refresh:sgc ; npm run refresh:alpha-site",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

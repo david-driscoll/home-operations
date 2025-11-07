@@ -13,12 +13,13 @@ import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
+import { awaitOutput, BackupTask, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
 import * as yaml from "yaml";
 import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
+import { BackupJobManager } from "./jobs.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -46,6 +47,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
+  private backupJobManager: BackupJobManager;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
@@ -251,6 +253,14 @@ export class DockgeLxc extends ComponentResource {
       connection: this.remoteConnection,
       create: interpolate`rm -f /etc/docker/daemon.json`,
     });
+
+    this.backupJobManager = new BackupJobManager(`${name}-backup-job-manager`, {
+      cluster: this,
+      globals: this.args.globals,
+    });
+  }
+  public createBackupJob(job: BackupTask) {
+    return this.backupJobManager.createBackupJob(job);
   }
 
   public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<string[]> {
@@ -273,6 +283,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
+      replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.cluster.rootDomain}:9595`),
       (input: Input<string>) => {
         return output(input).apply(async (str) => {
           const matches = str.matchAll(vaultRegex);
@@ -291,6 +302,8 @@ export class DockgeLxc extends ComponentResource {
         });
       },
     ];
+
+    this.backupJobManager.createUptime();
 
     return output(readdir(resolve(dockerPath, "_common")))
       .apply((files) => files.map((f) => this.createStack(this.args.host.name, resolve(dockerPath, "_common", f), replacements, args.dependsOn)))

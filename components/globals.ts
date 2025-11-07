@@ -7,6 +7,7 @@ import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as BackblazeProvider } from "@pulumi/b2";
 import { Provider as PbsProvider } from "@pulumi/pbs";
 import { OPClient, OPClientItem } from "./op.ts";
+import { remote, types } from "@pulumi/command";
 
 const op = new OPClient();
 
@@ -72,6 +73,8 @@ export class GlobalResources extends ComponentResource {
   public readonly adguardCredential: Output<OnePasswordItem>;
   public readonly adguardProvider: AdguardProvider;
   public readonly backblazeProvider: BackblazeProvider;
+  public readonly localBackupServerConnection: types.input.remote.ConnectionArgs;
+  public readonly remoteBackupServerConnection: types.input.remote.ConnectionArgs;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -117,6 +120,14 @@ export class GlobalResources extends ComponentResource {
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
     this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.fields["hostname"].value!);
+    this.localBackupServerConnection = {
+      host: interpolate`dockge-celestia.${this.tailscaleDomain}`,
+      user: "root",
+    };
+    this.remoteBackupServerConnection = {
+      host: interpolate`dockge-luna.${this.tailscaleDomain}`,
+      user: "root",
+    };
 
     this.tailscaleAuthKey = new TailnetKey(
       "tailnetkey",

@@ -1,7 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pbs from "@pulumi/pbs";
 import * as random from "@pulumi/random";
-import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { ClusterDefinition, createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
@@ -11,11 +11,10 @@ import * as b2 from "@pulumi/b2";
 import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
 import { gatusDnsRecords } from "./StandardDns.ts";
-import { addUptimeGatus } from "@components/helpers.ts";
-import { createBackupJobs } from "./backup-jobs.ts";
-import { createRcloneBucketBackend } from "./jobs.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem } from "@openapi/aliases.js";
 import * as tls from "@pulumi/tls";
+import { NodeSSH } from "node-ssh";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -90,6 +89,7 @@ const spikeVm = new TruenasVm("spike", {
   tailscaleIpAddress: "100.111.10.10",
   macAddress: "bc:24:11:7c:e5:c5",
 });
+
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,
   isProxmoxBackupServer: true,
@@ -139,24 +139,6 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   sftpKey: sftpClientKey,
 });
 
-const celestiaBackupCredential = celestiaHost.backupVolumes!.backblaze.backupCredential!;
-
-// const celestiaBackups = createBackupJobs({
-//   cluster: celestiaDockgeRuntime,
-//   globals,
-//   jobs: [{
-//     jobName: "Immich sync to B2",
-//     rclone: "sync",
-//     destination: createRcloneBucketBackend(celestiaBackupCredential, "immich"),
-//     source: {
-//       type: "local",
-//       path: "/data/backup/immich/",
-//     },
-//   }]
-// });
-
-celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-
 const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
   credential: dockgeCredential,
@@ -167,7 +149,24 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   sftpKey: sftpClientKey,
 });
 
-lunaDockgeRuntime.deployStacks({ dependsOn: [] });
+lunaDockgeRuntime.createBackupJob({
+  name: "Backup Immich from Celestia",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
+  destinationType: "local",
+  destination: "/data/backup/immich/",
+});
+
+celestiaDockgeRuntime.createBackupJob({
+  name: "Backup Immich to B2",
+  schedule: "0 12 * * *",
+  sourceType: "local",
+  source: "/data/backup/immich/",
+  destinationType: "b2",
+  destination: "immich",
+  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+});
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
@@ -181,7 +180,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   sftpKey: sftpClientKey,
 });
 
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 // TODO: add code to ensure tailscale ips is set for all important services
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
@@ -190,6 +188,10 @@ export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: g
 export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
 // const users = await tailscale.
 // console.log(users);
+
+celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
+lunaDockgeRuntime.deployStacks({ dependsOn: [] });
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
 await updateTailscaleAcls({
   globals,
