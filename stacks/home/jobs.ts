@@ -32,7 +32,7 @@ export class BackupJobManager extends ComponentResource {
   cluster: Output<ClusterDefinition>;
   globals: GlobalResources;
   connection: types.input.remote.ConnectionArgs;
-  jobs: Unwrap<BackupTask>[] = [];
+  jobs: Output<BackupTask[]> = output([]);
   constructor(
     name: string,
     args: {
@@ -48,8 +48,8 @@ export class BackupJobManager extends ComponentResource {
   }
 
   public createBackupJob(args: BackupTask) {
+    this.jobs = this.jobs.apply((jobs) => [...jobs, args]);
     return all([args, this.cluster.key]).apply(([args, clusterKey]) => {
-      this.jobs.push(args);
       return copyFileToRemote(`${clusterKey}-backup-job-${kebabCase(args.name)}`, {
         content: jsonStringify(args),
         parent: this,
@@ -61,21 +61,19 @@ export class BackupJobManager extends ComponentResource {
   }
 
   public createUptime() {
-    return this.cluster.key.apply((clusterKey) => {
+    return all([this.jobs, this.cluster]).apply(([jobs, cluster]) => {
       return addExternalGatus(
-        `${clusterKey}-backup-jobs`,
+        `${cluster.key}-backup-jobs`,
         this.globals,
-        all([this.jobs, this.cluster.title]).apply(([jobs, clusterTitle]) =>
-          jobs.map((job) => ({
-            enabled: true,
-            name: job.name,
-            group: `${clusterTitle}: Jobs`,
-            token: kebabCase(job.name),
-            heartbeat: {
-              interval: "30h",
-            },
-          }))
-        )
+        jobs.map((job) => ({
+          enabled: true,
+          name: job.name,
+          token: kebabCase(job.name),
+          group: `Jobs: ${cluster.title}`,
+          heartbeat: {
+            interval: "30h",
+          },
+        }))
       );
     });
   }

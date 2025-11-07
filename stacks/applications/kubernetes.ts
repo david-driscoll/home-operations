@@ -142,13 +142,14 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       return jobs;
     });
   addExternalGatus(
-    `${clusterDefinition.key}-jobs`,
+    `${clusterDefinition.key}-volsync-jobs`,
     globals,
     volsyncBackupJobs.apply((jobs) =>
       jobs.map((job) => ({
-        name: `Sync ${job} from ${clusterDefinition.title}`,
-        group: `${clusterDefinition.title}: Jobs`,
+            enabled: true,
         token: job,
+        name: `Sync ${job} from ${clusterDefinition.title}`,
+        group: `Jobs: ${clusterDefinition.title}`,
         heartbeat: {
           interval: "30h",
         },

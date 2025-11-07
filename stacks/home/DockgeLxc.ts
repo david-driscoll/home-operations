@@ -20,6 +20,7 @@ import { glob } from "glob";
 import * as yaml from "yaml";
 import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import { BackupJobManager } from "./jobs.ts";
+import { Command, CopyToRemote } from "@pulumi/command/remote/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -263,7 +264,7 @@ export class DockgeLxc extends ComponentResource {
     return this.backupJobManager.createBackupJob(job);
   }
 
-  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<string[]> {
+  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<(CopyToRemote | Command)[]> {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
@@ -303,8 +304,6 @@ export class DockgeLxc extends ComponentResource {
       },
     ];
 
-    this.backupJobManager.createUptime();
-
     return output(readdir(resolve(dockerPath, "_common")))
       .apply((files) => files.map((f) => this.createStack(this.args.host.name, resolve(dockerPath, "_common", f), replacements, args.dependsOn)))
       .apply((z) => {
@@ -317,7 +316,10 @@ export class DockgeLxc extends ComponentResource {
       })
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
-        return z.map((z) => z.name);
+        return output([
+          ...z.map(z => z.compose),
+          this.backupJobManager.createUptime(),
+        ]);
       });
   }
 
