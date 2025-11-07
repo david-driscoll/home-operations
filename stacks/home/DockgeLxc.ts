@@ -264,7 +264,11 @@ export class DockgeLxc extends ComponentResource {
     return this.backupJobManager.createBackupJob(job);
   }
 
-  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<{ 'external-endpoints': ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
+  public createBackupUptime(): Output<{ "external-endpoints": ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
+    return this.backupJobManager.createUptime();
+  }
+
+  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<string[]> {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
@@ -316,7 +320,7 @@ export class DockgeLxc extends ComponentResource {
       })
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
-        return output(z.map(z => z.compose)).apply((_) => this.backupJobManager.createUptime());
+        return output(z.map(z => z.compose));
       });
   }
 

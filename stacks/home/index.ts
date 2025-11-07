@@ -248,17 +248,18 @@ export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockag
 // const users = await tailscale.
 // console.log(users);
 
-const otherEndpoints = pulumi
-  .output([celestiaDockgeRuntime.deployStacks({ dependsOn: [] }), lunaDockgeRuntime.deployStacks({ dependsOn: [] }), alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] })])
-  .apply((stacks) =>
-    stacks.reduce(
-      (prev, curr) => ({
-        endpoints: [...prev.endpoints, ...curr.endpoints],
-        "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
-      }),
-      { endpoints: [], "external-endpoints": [] }
-    )
-  );
+celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
+lunaDockgeRuntime.deployStacks({ dependsOn: [] });
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
+const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+  stacks.reduce(
+    (prev, curr) => ({
+      endpoints: [...prev.endpoints, ...curr.endpoints],
+      "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
+    }),
+    { endpoints: [], "external-endpoints": [] }
+  )
+);
 
 await updateTailscaleAcls({
   globals,
@@ -280,7 +281,7 @@ await updateTailscaleAcls({
 });
 
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
-pulumi.all([otherEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]) => {
+pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]) => {
   return addUptimeGatus(
     `dns`,
     globals,
