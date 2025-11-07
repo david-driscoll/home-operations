@@ -31,30 +31,34 @@ var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
 // var lunaDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Luna");
 // var alphaSiteDockge = await GetItemByTitle(client, vault.Id, "DockgeLxc: Alpha Site");
 
-var jobs = Directory.EnumerateFiles("/jobs", "*.json")
-.Select(path =>
+async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
 {
-    var content = System.IO.File.ReadAllText(path);
-    var key = Path.GetFileNameWithoutExtension(path);
-    return (key, value: System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!);
-})
-.ToDictionary(kv => kv.key, kv => kv.value);
+    var jobs = Directory.EnumerateFiles("/jobs", "*.json")
+    .Select(path =>
+    {
+        var content = System.IO.File.ReadAllText(path);
+        var key = Path.GetFileNameWithoutExtension(path);
+        return (key, value: System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!);
+    })
+    .Dump("Loaded Jobs")
+    .ToDictionary(kv => kv.key, kv => kv.value);
 
-var rcloneJobs = await Task.WhenAll(jobs.Select(async job =>
-{
-    var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.SourcePath, job.Value.SourceSecret);
-    var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.DestinationPath, job.Value.DestinationSecret);
+    foreach (var job in jobs)
+    {
+        var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.Source, job.Value.SourceSecret);
+        var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.Destination, job.Value.DestinationSecret);
 
-    return new RCloneJob(
-job.Key,
-        job.Value.Name,
-job.Value.Schedule,
-        sourceBackend,
-        job.Value.SourcePath,
-        destinationBackend,
-        job.Value.DestinationPath
-    );
-}));
+        yield return new RCloneJob(
+            job.Key,
+            job.Value.Name,
+            job.Value.Schedule,
+            sourceBackend,
+            job.Value.Source,
+            destinationBackend,
+            job.Value.Destination
+        );
+    }
+}
 
 async Task<RCloneBackend> CreateBackend(string name, string type, string path, string? secret)
 {
@@ -74,9 +78,12 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
 }
 
 var builder = Host.CreateApplicationBuilder(args);
-foreach (var grouping in rcloneJobs.GroupBy(z => z.Schedule))
+await foreach (var grouping in GetRCloneJobs().GroupBy(z => z.Schedule))
 {
-    builder.Services.AddNCronJob(CreateJobDelegate(grouping), grouping.Key);
+    var dele = CreateJobDelegate(grouping);
+    // instant run for now.
+    await dele();
+    builder.Services.AddNCronJob(dele, grouping.Key);
 }
 
 Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
@@ -227,7 +234,7 @@ record LocalBackend(string Remote) : RCloneBackend(Remote)
 [JsonSerializable(typeof(BackupTask))]
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 partial class LocalContext : JsonSerializerContext { }
-record BackupTask(string Name, string Schedule, string SourceType, string SourcePath, string? SourceSecret, string DestinationType, string DestinationPath, string? DestinationSecret);
+record BackupTask(string Name, string Schedule, string SourceType, string Source, string? SourceSecret, string DestinationType, string Destination, string? DestinationSecret);
 record RCloneJob(string Key, string Name, string Schedule, RCloneBackend Source, string SourcePath, RCloneBackend Destination, string DestinationPath);
 
 static class RCloneBackendExtensions
