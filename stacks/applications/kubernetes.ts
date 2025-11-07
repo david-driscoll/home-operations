@@ -132,25 +132,25 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     `${clusterDefinition.key}`,
     globals,
     {
-      endpoints:  pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-          instances
-            .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-            .map((e) => {
-              e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
-              return e;
-            })
-        ),
-        "external-endpoints": volsyncBackupJobs.apply((jobs) =>
-      jobs.map((job) => ({
-            enabled: true,
-        token: job,
-        name: `Sync ${job} from ${clusterDefinition.title}`,
-        group: `Jobs: ${clusterDefinition.title}`,
-        heartbeat: {
-          interval: "30h",
-        },
-      }))
-    )
+      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+        instances
+          .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+          .map((e) => {
+            e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+            return e;
+          })
+      ),
+      "external-endpoints": volsyncBackupJobs.apply((jobs) =>
+        jobs.map((job) => ({
+          enabled: true,
+          token: job,
+          name: `Sync ${job} from ${clusterDefinition.title}`,
+          group: `Jobs: ${clusterDefinition.title}`,
+          heartbeat: {
+            interval: "30h",
+          },
+        }))
+      ),
     },
     applicationManager
   );

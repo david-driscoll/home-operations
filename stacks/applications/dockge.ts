@@ -104,7 +104,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
 
   addUptimeGatus(
     `${clusterDefinition.key}`,
-    globals,
+    globals,  
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
         instances
