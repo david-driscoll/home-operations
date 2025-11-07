@@ -11,6 +11,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Serialization;
 using CliWrap;
+using CliWrap.Buffered;
 using Dumpify;
 using Humanizer;
 using Microsoft.Extensions.Hosting;
@@ -40,7 +41,6 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
         var key = Path.GetFileNameWithoutExtension(path);
         return (key, value: System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!);
     })
-    .Dump("Loaded Jobs")
     .ToDictionary(kv => kv.key, kv => kv.value);
 
     foreach (var job in jobs)
@@ -68,9 +68,9 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     return type switch
     {
         "local" => new LocalBackend(name, path),
-        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[( path.IndexOf('/') + 1 )..]),
+        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[path.IndexOf('/')..]),
         "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, path, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
-        "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], string.Join('/', parts.Skip(2)), secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
+        "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], "/" + string.Join('/', parts.Skip(2)), secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
     };
 }
@@ -124,36 +124,44 @@ static async Task DownloadRclone()
 
 static async Task Rclone(RCloneJob job)
 {
-    using var httpClient = new HttpClient();
     var output = new StringBuilder();
     var error = new StringBuilder();
-    var item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
-    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
-    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
-    .WithEnvironmentVariables(
-        job.Source.GetEnvironmentVariables()
-        .Concat(job.Destination.GetEnvironmentVariables())
-        .DistinctBy(kv => kv.Key)
-        .ToDictionary(kv => kv.Key, kv => (string?)kv.Value)
-    )
-        .WithArguments(args =>
-        args
-        .Add("sync")
-        .Add(job.Source.GetRemotePath())
-        .Add(job.Destination.GetRemotePath())
-    )
-        .ExecuteAsync();
-
-
-    if (item.ExitCode != 0)
-    {
-        Console.WriteLine($"Rclone job {job.Name} failed with exit code {item.ExitCode}");
-    }
+    BufferedCommandResult? item = null;
     try
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Name}/external?success={( item.ExitCode == 0 ).ToString().ToLower()}&error={( item.ExitCode == 0 ? "" : $"Rclone job {job.Name} failed with exit code {item.ExitCode}" )}&duration={item.RunTime:c}")
+        item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
+        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+        .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
+        .WithEnvironmentVariables(
+            job.Source.GetEnvironmentVariables()
+            .Concat(job.Destination.GetEnvironmentVariables())
+            .DistinctBy(kv => kv.Key)
+            .ToDictionary(kv => kv.Key, kv => (string?)kv.Value)
+        )
+
+            .WithArguments(args =>
+            args
+            .Add("sync")
+            .Add(job.Source.GetRemotePath())
+            .Add(job.Destination.GetRemotePath())
+        ).ExecuteBufferedAsync();
+    }
+    catch (Exception ex)
+    {
+        ex.Dump();
+        Console.WriteLine(output.ToString());
+        Console.WriteLine(error.ToString());
+    }
+
+    Console.WriteLine($"{job.Name} exited with code {item?.ExitCode} in {item?.RunTime.Humanize()}");
+
+    try
+    {
+        using var httpClient = new HttpClient();
+        var success = item?.ExitCode == 0;
+        var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Key}/external?success={success.ToString().ToLower()}&error={( success ? "" : $"Rclone job {job.Name} failed with exit code {item?.ExitCode}" )}&duration={item?.RunTime.Humanize()}")
         {
-            Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Name) }
+            Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Key) }
         };
         var response = await httpClient.SendAsync(request);
         response.Dump();
@@ -161,10 +169,11 @@ static async Task Rclone(RCloneJob job)
     }
     catch (Exception ex)
     {
+        Console.WriteLine(output.ToString());
+        Console.WriteLine(error.ToString());
         Console.WriteLine($"Error reporting to Uptime API: {ex.Message}");
         ex.Dump();
     }
-    Console.WriteLine($"{job.Name} exited with code {item.ExitCode} in {item.RunTime:c}");
 }
 
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)

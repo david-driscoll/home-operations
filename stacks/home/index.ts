@@ -149,15 +149,6 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   sftpKey: sftpClientKey,
 });
 
-lunaDockgeRuntime.createBackupJob({
-  name: "Backup Immich from Celestia",
-  schedule: "0 3 * * *",
-  sourceType: "sftp",
-  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
-  destinationType: "local",
-  destination: "/data/backup/immich/",
-});
-
 celestiaDockgeRuntime.createBackupJob({
   name: "Backup Immich to B2",
   schedule: "0 12 * * *",
@@ -166,6 +157,15 @@ celestiaDockgeRuntime.createBackupJob({
   destinationType: "b2",
   destination: "immich",
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+});
+
+lunaDockgeRuntime.createBackupJob({
+  name: "Backup Immich from Celestia",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
+  destinationType: "local",
+  destination: "/data/backup/immich/",
 });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
