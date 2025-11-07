@@ -15,6 +15,7 @@ import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem } from "@openapi/aliases.js";
 import * as tls from "@pulumi/tls";
 import { NodeSSH } from "node-ssh";
+import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -164,7 +165,7 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/${minioBucket.bucket}/`,
-  sourceSecret: 'minio access key',
+  sourceSecret: "minio access key",
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/${minioBucket.bucket}/`,
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
@@ -175,7 +176,7 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/stargate-command-db/`,
-  sourceSecret: 'minio access key',
+  sourceSecret: "minio access key",
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/stargate-command-db/`,
 });
@@ -185,7 +186,7 @@ celestiaDockgeRuntime.createBackupJob({
   schedule: "0 10 * * *",
   sourceType: "s3",
   source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/equestria-db/`,
-  sourceSecret: 'minio access key',
+  sourceSecret: "minio access key",
   destinationType: "local",
   destination: pulumi.interpolate`/data/backup/spike/equestria-db/`,
 });
@@ -247,9 +248,17 @@ export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockag
 // const users = await tailscale.
 // console.log(users);
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-lunaDockgeRuntime.deployStacks({ dependsOn: [] });
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
+const otherEndpoints = pulumi
+  .output([celestiaDockgeRuntime.deployStacks({ dependsOn: [] }), lunaDockgeRuntime.deployStacks({ dependsOn: [] }), alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] })])
+  .apply((stacks) =>
+    stacks.reduce(
+      (prev, curr) => ({
+        endpoints: [...prev.endpoints, ...curr.endpoints],
+        "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
+      }),
+      { endpoints: [], "external-endpoints": [] }
+    )
+  );
 
 await updateTailscaleAcls({
   globals,
@@ -271,6 +280,14 @@ await updateTailscaleAcls({
 });
 
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
-pulumi.output(gatusDnsRecords).apply(async (endpoints) => {
-  addUptimeGatus(`dns`, globals, { endpoints }, dnsParent);
+pulumi.all([otherEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]) => {
+  return addUptimeGatus(
+    `dns`,
+    globals,
+    {
+      endpoints: [...endpoints, ...other.endpoints],
+      "external-endpoints": [...other["external-endpoints"]],
+    },
+    dnsParent
+  );
 });

@@ -8,6 +8,7 @@ import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, BackupTask, copyFileToRemote } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "./DockgeLxc.ts";
+import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 
 function* createCronExpressionGenerator() {
   let currentMinute = 60 * 11; // Start at 11am (660 minutes)
@@ -60,9 +61,10 @@ export class BackupJobManager extends ComponentResource {
     });
   }
 
-  public createUptime() {
+  public createUptime(): Output<{ 'external-endpoints': ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
     return all([this.jobs, this.cluster]).apply(([jobs, cluster]) => {
-      return addUptimeGatus(`${cluster.key}-backup-jobs`, this.globals, {
+      return {
+        endpoints: [],
         "external-endpoints": jobs.map((job) => ({
           enabled: true,
           name: job.name,
@@ -72,7 +74,7 @@ export class BackupJobManager extends ComponentResource {
             interval: "30h",
           },
         })),
-      });
+      };
     });
   }
 }
