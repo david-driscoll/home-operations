@@ -50,26 +50,28 @@ export class BackupJobManager extends ComponentResource {
 
   public createBackupJob(args: BackupTask) {
     this.jobs = this.jobs.apply((jobs) => [...jobs, args]);
-    return all([args, this.cluster.key]).apply(([args, clusterKey]) => {
-      return copyFileToRemote(`${clusterKey}-backup-job-${kebabCase(args.name)}`, {
-        content: jsonStringify(args),
+    return all([args, this.cluster]).apply(([job, cluster]) => {
+      const token = `Jobs: ${cluster.title}_${kebabCase(job.name)}`;
+      return copyFileToRemote(`${cluster.key}-backup-job-${kebabCase(job.name)}`, {
+        content: jsonStringify({...job, token }),
         parent: this,
         connection: this.connection,
-        remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(args.name)}.json`,
+        remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}.json`,
         dependsOn: [],
       });
     });
   }
 
-  public createUptime(): Output<{ 'external-endpoints': ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
+  public createUptime(): Output<{ "external-endpoints": ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
     return all([this.jobs, this.cluster]).apply(([jobs, cluster]) => {
+      const groupName = `Jobs: ${cluster.title}`;
       return {
         endpoints: [],
         "external-endpoints": jobs.map((job) => ({
           enabled: true,
           name: job.name,
-          token: kebabCase(job.name),
-          group: `Jobs: ${cluster.title}`,
+          token: `${groupName}_${kebabCase(job.name)}`,
+          group: groupName,
           heartbeat: {
             interval: "30h",
           },

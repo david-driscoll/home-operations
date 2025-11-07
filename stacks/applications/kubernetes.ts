@@ -11,7 +11,7 @@ import { ApplicationDefinitionSchema, AuthentikDefinition, ExternalEndpoint, Gat
 import * as yaml from "yaml";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
-import { group } from "moderndash";
+import { group, kebabCase } from "moderndash";
 
 const op = new OPClient();
 
@@ -156,39 +156,45 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
 
   volsyncBackupJobs.apply((jobs) =>
-    jobs.map((job) =>
-      copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
+    jobs.map((job) => {
+      const title = `Sync ${job} from ${clusterDefinition.title}`;
+      const token = kebabCase(`Jobs: ${clusterDefinition.title}_${job}`);
+      return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
         content: pulumi.jsonStringify({
-          name: `Sync ${job} from ${clusterDefinition.title}`,
+          name: title,
           schedule: "0 10 * * *", // 10 am daily
           sourceType: "local",
           source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
+          token: token,
         } as BackupTask),
         remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
         connection: globals.localBackupServerConnection,
         parent: applicationManager,
-      })
-    )
+      });
+    })
   );
 
   volsyncBackupJobs.apply((jobs) =>
-    jobs.map((job) =>
-      copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
+    jobs.map((job) => {
+      const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
+      const token = kebabCase(`Jobs: ${clusterDefinition.title}_${job}`);
+      return copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
         content: pulumi.jsonStringify({
-          name: `Replicate ${job} from ${clusterDefinition.title} via Celestia`,
+          name: title,
           schedule: "0 3 * * *", // 3 am daily
           sourceType: "sftp",
           source: pulumi.interpolate`${globals.localBackupServerConnection.host}/${clusterDefinition.key}/volsync/${job}`,
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
+          token: token,
         }),
         remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-replica.json`,
         connection: globals.remoteBackupServerConnection,
         parent: applicationManager,
-      })
-    )
+      });
+    })
   );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));

@@ -87,12 +87,15 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; 'external-endpoints'?: Input<ExternalEndpoint[]> }, parent?: Resource) {
+export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; "external-endpoints"?: Input<ExternalEndpoint[]> }, parent?: Resource) {
   const content = output(args).apply(async (a) => {
-    return yaml.stringify({
-      endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-      "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-    }, { lineWidth: 0 });
+    return yaml.stringify(
+      {
+        endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+        "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+      },
+      { lineWidth: 0 }
+    );
   });
 
   return copyFileToRemote(name, {

@@ -268,7 +268,7 @@ export class DockgeLxc extends ComponentResource {
     return this.backupJobManager.createUptime();
   }
 
-  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<string[]> {
+  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<Command[]> {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
