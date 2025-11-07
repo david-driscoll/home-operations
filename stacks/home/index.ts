@@ -160,12 +160,22 @@ celestiaDockgeRuntime.createBackupJob({
 });
 
 celestiaDockgeRuntime.createBackupJob({
+  name: "Backup Home Operations to Celestia",
+  schedule: "0 10 * * *",
+  sourceType: "s3",
+  source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/${minioBucket.bucket}/`,
+  destinationType: "local",
+  destination: pulumi.interpolate`/data/backup/spike/${minioBucket.bucket}/`,
+  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+});
+
+celestiaDockgeRuntime.createBackupJob({
   name: "Backup Stargate Command Postgres to Celestia",
   schedule: "0 10 * * *",
   sourceType: "s3",
-  source: "truenas.driscoll.tech:9000/stargate-command-db/",
+  source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/stargate-command-db/`,
   destinationType: "local",
-  destination: "/data/backup/spike/stargate-command-db/",
+  destination: pulumi.interpolate`/data/backup/spike/stargate-command-db/`,
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
@@ -173,9 +183,9 @@ celestiaDockgeRuntime.createBackupJob({
   name: "Backup Equestria Postgres to Celestia",
   schedule: "0 10 * * *",
   sourceType: "s3",
-  source: "truenas.driscoll.tech:9000/equestria-db/",
+  source: pulumi.interpolate`truenas.${globals.searchDomain}:9000/equestria-db/`,
   destinationType: "local",
-  destination: "/data/backup/spike/equestria-db/",
+  destination: pulumi.interpolate`/data/backup/spike/equestria-db/`,
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
@@ -186,6 +196,15 @@ lunaDockgeRuntime.createBackupJob({
   source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
   destinationType: "local",
   destination: "/data/backup/immich/",
+});
+
+lunaDockgeRuntime.createBackupJob({
+  name: "Backup Home Operations from Celestia",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/${minioBucket.bucket}/`,
+  destinationType: "local",
+  destination: pulumi.interpolate`/data/backup/spike/${minioBucket.bucket}/`,
 });
 
 lunaDockgeRuntime.createBackupJob({
