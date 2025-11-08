@@ -57,7 +57,7 @@ export class BackupJobManager extends ComponentResource {
         content: jsonStringify({ ...job, token }),
         parent: this,
         connection: this.connection,
-        remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}.json`,
+        remotePath: interpolate`/opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
         dependsOn: [],
       });
     });
