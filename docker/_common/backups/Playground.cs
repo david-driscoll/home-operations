@@ -91,9 +91,9 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
 {
     return async () =>
     {
-        foreach (var job in jobs)
+        foreach (var job in jobs.Chunk(4))
         {
-            await Rclone(job);
+            await Task.WhenAll(job.Select(Rclone));
         }
     };
 }
@@ -130,6 +130,7 @@ static async Task Rclone(RCloneJob job)
     var output = new StringBuilder();
     var error = new StringBuilder();
     BufferedCommandResult? item = null;
+    Console.WriteLine($"Starting Rclone job {job.Name}");
     try
     {
         item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
@@ -171,7 +172,7 @@ static async Task Rclone(RCloneJob job)
         }
         else
         {
-            uriBuilder.Query = $"success=false&error={WebUtility.UrlEncode($"Rclone job {job.Name} failed with exit code {item?.ExitCode}.\n{output}\n{error}")}";
+            uriBuilder.Query = $"success=false&error={WebUtility.UrlEncode($"Rclone job {job.Name} failed with exit code {item?.ExitCode}.\nrclone sync {job.Source.GetRemotePath()} {job.Destination.GetRemotePath()}\n{output}\n{error}")}";
         }
         Console.WriteLine($"Reporting to Uptime API at {uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)

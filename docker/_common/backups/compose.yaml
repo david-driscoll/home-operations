@@ -19,7 +19,7 @@ services:
       - DOTNET_NOLOGO=1
     env_file:
       - .env
-    cpus: 2
+    cpus: 1
 
 volumes:
   spike-backup:
