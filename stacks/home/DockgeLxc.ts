@@ -418,7 +418,7 @@ export class DockgeLxc extends ComponentResource {
 
     if (hasCompose) {
       const compose = new remote.Command(
-        `${hostname}-${stackParent}-${stackName}-compose`,
+        `${hostname}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),

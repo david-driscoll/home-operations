@@ -151,7 +151,7 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
 });
 
 celestiaDockgeRuntime.createBackupJob({
-  name: "Backup Immich to B2",
+  name: "Backup Immich",
   schedule: "0 10 * * *",
   sourceType: "local",
   source: "/data/backup/immich/",
@@ -160,23 +160,23 @@ celestiaDockgeRuntime.createBackupJob({
   destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
 });
 
+lunaDockgeRuntime.createBackupJob({
+  name: "Replicate Immich",
+  schedule: "0 3 * * *",
+  sourceType: "sftp",
+  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
+  destinationType: "local",
+  destination: "/data/backup/immich/",
+});
+
 celestiaDockgeRuntime.createBackupJob({
-  name: pulumi.interpolate`Backup Home Operations to B2`,
+  name: pulumi.interpolate`Home Operations to B2`,
   schedule: "0 10 * * *",
   sourceType: "local",
   source: pulumi.interpolate`/spike/data/minio/home-operations/`,
   destinationType: "b2",
   destination: pulumi.interpolate`/`,
   destinationSecret: "Backblaze home-operations",
-});
-
-lunaDockgeRuntime.createBackupJob({
-  name: "Backup Immich from Celestia",
-  schedule: "0 3 * * *",
-  sourceType: "sftp",
-  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
-  destinationType: "local",
-  destination: "/data/backup/immich/",
 });
 
 createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations" });
@@ -251,7 +251,7 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
 
 function createMinioBucketBackupJob({ title, bucket }: { title: string; bucket: string }) {
   celestiaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Backup ${title} to Celestia`,
+    name: pulumi.interpolate`Backup ${title}`,
     schedule: "0 10 * * *",
     sourceType: "local",
     source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
@@ -261,7 +261,7 @@ function createMinioBucketBackupJob({ title, bucket }: { title: string; bucket: 
   });
 
   lunaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Replicate ${title} from Celestia`,
+    name: pulumi.interpolate`Replicate ${title}`,
     schedule: "0 3 * * *",
     sourceType: "sftp",
     source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/spike/${bucket}/`,

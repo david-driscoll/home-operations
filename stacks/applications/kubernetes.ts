@@ -130,7 +130,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
-      const title = `Sync ${job} from ${clusterDefinition.title}`;
+      const title = `Backup ${clusterDefinition.title} Volsync ${job}`;
       const groupName = `Jobs: Celestia`;
       const token = toGatusKey(groupName, title);
       return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
@@ -163,7 +163,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   const lunaJobs = volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
-      const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
+      const title = `Replicate ${clusterDefinition.title} Volsync ${job}`;
       const groupName = `Jobs: Luna`;
       const token = toGatusKey(groupName, title);
       return copyFileToRemote(`${clusterDefinition.key}-luna-replica-${job}`, {
