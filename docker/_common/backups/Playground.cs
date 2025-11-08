@@ -177,6 +177,10 @@ static async Task Rclone(RCloneJob job)
         {
             uriBuilder.Query = $"success=false&error={WebUtility.UrlEncode($"Rclone job {job.Name} failed with exit code {item?.ExitCode}.\nrclone sync {job.Source.GetRemotePath()} {job.Destination.GetRemotePath()}\n{output}\n{error}")}";
         }
+        if (item?.RunTime is { } runTime)
+        {
+            uriBuilder.Query += $"&duration={runTime.TotalMilliseconds:c)}ms";
+        }
         Console.WriteLine($"Reporting to Uptime API at {uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
         {
