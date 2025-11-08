@@ -12,9 +12,6 @@ services:
       - path: .env-token
         required: false
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
       # Enable Traefik
       traefik.enable: true
 
@@ -23,6 +20,11 @@ services:
       traefik.http.routers.authentik-outpost.entrypoints: websecure
       traefik.http.routers.authentik-outpost.service: authentik-outpost
       traefik.http.routers.authentik-outpost.tls.certresolver: le
+
+      traefik.http.routers.authentik-outpost-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.http.routers.authentik-outpost-tailscale.entrypoints: tailscale
+      traefik.http.routers.authentik-outpost-tailscale.service: authentik-outpost
+
       traefik.http.services.authentik-outpost.loadbalancer.healthcheck.path: "/outpost.goauthentik.io/ping"
       traefik.http.services.authentik-outpost.loadbalancer.healthcheck.port: 9300
       traefik.http.services.authentik-outpost.loadbalancer.server.port: 9000

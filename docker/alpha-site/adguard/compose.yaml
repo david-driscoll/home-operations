@@ -9,10 +9,6 @@ services:
     environment:
       TZ: America/New_York
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -21,6 +17,11 @@ services:
       traefik.http.routers.adguard.entrypoints: websecure
       traefik.http.routers.adguard.tls.certresolver: le
       traefik.http.routers.adguard.service: adguard-web
+
+      traefik.http.routers.adguard-tailscale.rule: Host(`adguard-${host}.${tailscaleDomain}`)
+      traefik.http.routers.adguard-tailscale.entrypoints: tailscale
+      traefik.http.routers.adguard-tailscale.service: adguard-web
+
       traefik.http.services.adguard-web.loadbalancer.server.port: 3000
 
       # DNS over UDP (port 53)
@@ -63,3 +64,4 @@ networks:
 x-dockge:
   urls:
     - https://${APP}.${searchDomain}
+    - https://adguard.${tailscaleDomain}

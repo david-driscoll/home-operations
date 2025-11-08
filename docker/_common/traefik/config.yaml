@@ -32,6 +32,8 @@ entryPoints:
     http:
       tls:
         certResolver: le
+  tailscale:
+    address: ":8443"
   sftp:
     address: ":2022"
   dns:

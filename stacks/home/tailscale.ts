@@ -47,10 +47,7 @@ const autoApprovers: TailscaleAutoApprovers = {
   },
 
   services: {
-    // "tag:ingress": [tags.apps, tags.sgc, tags.equestria, tags.operator],
-    // "tag:egress": [tags.apps, tags.sgc, tags.equestria, tags.operator],
-    // "tag:ssh": [tags.sgc, tags.equestria, tags.operator],
-    "tag:apps": [tags.sgc, tags.equestria, tags.operator, tags.ingress],
+    "tag:apps": [tags.sgc, tags.equestria, tags.operator, tags.ingress, tags.dockge],
   },
 };
 

@@ -8,10 +8,6 @@ services:
     environment:
       GATUS_CONFIG_PATH: /config
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -20,6 +16,11 @@ services:
       traefik.http.routers.uptime.entrypoints: websecure
       traefik.http.routers.uptime.service: uptime
       traefik.http.routers.uptime.tls.certresolver: le
+
+      traefik.http.routers.uptime-tailscale.rule: Host(`uptime.${tailscaleDomain}`)
+      traefik.http.routers.uptime-tailscale.entrypoints: tailscale
+      traefik.http.routers.uptime-tailscale.service: uptime
+
       traefik.http.services.uptime.loadbalancer.server.port: 9595
     volumes:
       - ./config/:/config/
@@ -29,6 +30,7 @@ services:
 x-dockge:
   urls:
     - https://uptime.${searchDomain}
+    - https://uptime.${tailscaleDomain}
 networks:
   dockge_default:
     external: true

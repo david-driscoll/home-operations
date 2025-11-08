@@ -94,6 +94,8 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
+  
+
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
     if (!definition) {
@@ -104,7 +106,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
 
   addUptimeGatus(
     `${clusterDefinition.key}`,
-    globals,  
+    globals,
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
         instances

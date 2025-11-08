@@ -6,10 +6,6 @@ services:
     dns:
       - 100.100.100.100
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -18,6 +14,11 @@ services:
       traefik.http.routers.zigbee.entrypoints: websecure
       traefik.http.routers.zigbee.tls.certresolver: le
       traefik.http.routers.zigbee.service: zigbee
+
+      traefik.http.routers.zigbee-tailscale.rule: Host(`zigbee.${tailscaleDomain}`)
+      traefik.http.routers.zigbee-tailscale.entrypoints: tailscale
+      traefik.http.routers.zigbee-tailscale.service: zigbee
+
       traefik.http.services.zigbee.loadbalancer.server.port: 8080
     volumes:
       - ./zigbee:/app/data
@@ -36,3 +37,5 @@ networks:
 x-dockge:
   urls:
     - https://${APP}.${searchDomain}
+    - https://${APP}.as.${searchDomain}
+    - https://zigbee.${tailscaleDomain}

@@ -8,10 +8,6 @@ services:
     tty: true
     stop_signal: SIGINT
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -20,6 +16,11 @@ services:
       traefik.http.routers.zwave.entrypoints: websecure
       traefik.http.routers.zwave.tls.certresolver: le
       traefik.http.routers.zwave.service: zwave
+
+      traefik.http.routers.zwave-tailscale.rule: Host(`zwave.${tailscaleDomain}`)
+      traefik.http.routers.zwave-tailscale.entrypoints: tailscale
+      traefik.http.routers.zwave-tailscale.service: zwave
+
       traefik.http.services.zwave.loadbalancer.server.port: 8091
     environment:
       SESSION_SECRET: someothervaluethatisntonlie131
@@ -39,3 +40,5 @@ networks:
 x-dockge:
   urls:
     - https://${APP}.${searchDomain}
+    - https://${APP}.as.${searchDomain}
+    - https://zwave.${tailscaleDomain}

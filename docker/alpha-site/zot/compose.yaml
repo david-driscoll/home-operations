@@ -7,10 +7,6 @@ services:
     dns:
       - 100.100.100.100
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -19,6 +15,11 @@ services:
       traefik.http.routers.registry.entrypoints: websecure
       traefik.http.routers.registry.tls.certresolver: le
       traefik.http.routers.registry.service: registry
+
+      traefik.http.routers.registry-tailscale.rule: Host(`registry.${tailscaleDomain}`)
+      traefik.http.routers.registry-tailscale.entrypoints: tailscale
+      traefik.http.routers.registry-tailscale.service: registry
+
       traefik.http.services.registry.loadbalancer.server.port: 6785
     environment:
       TZ: America/New_York
@@ -34,3 +35,4 @@ networks:
 x-dockge:
   urls:
     - https://registry.${searchDomain}
+    - https://registry.${tailscaleDomain}

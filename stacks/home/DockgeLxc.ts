@@ -49,12 +49,14 @@ export class DockgeLxc extends ComponentResource {
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
   private backupJobManager: BackupJobManager;
+  shortName: string | undefined;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
     const cluster = output(args.cluster);
     this.cluster = cluster;
+    this.shortName = args.host.shortName ?? name;
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
@@ -334,6 +336,7 @@ export class DockgeLxc extends ComponentResource {
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
+    const tailscaleDomain = await awaitOutput(this.args.globals.tailscaleDomain);
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
     for (const file of files) {
@@ -342,10 +345,23 @@ export class DockgeLxc extends ComponentResource {
 
       if (file.endsWith("compose.yaml")) {
         const content = await awaitOutput(replacedContent);
-        const regex = /Host\(`(.*?)`\)/g;
-        const hosts = new Set<string>(Array.from(content.matchAll(regex)).map((z) => z[1]));
+        const hostRegex = /Host\(`(.*?)`\)/g;
+        const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
         if (stackName !== "adguard") {
           for (const host of hosts) {
+            if (host.indexOf(tailscaleDomain) > -1) {
+              // this is a service domain
+              const service = host.replace(`.${tailscaleDomain}`, "");
+              console.log(`Creating Tailscale DNS entry for service ${service}`);
+
+              new remote.Command(`${stackName}-tailscale-service-${service}`, {
+                connection: this.remoteConnection,
+                create: interpolate`tailscale serve --https=443 --service=svc:${service} --yes 127.0.0.1:8443`,
+              });
+
+              continue;
+            }
+
             new StandardDns(
               `${stackName}-${host.replace(/\./g, "_")}`,
               {

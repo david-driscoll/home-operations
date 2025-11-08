@@ -5,10 +5,6 @@ services:
     hostname: backrest
     tmpfs: /tmp
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: ${APP}-${CLUSTER_KEY}
-
       # Enable Traefik
       traefik.enable: true
 
@@ -17,6 +13,12 @@ services:
       traefik.http.routers.backrest.entrypoints: websecure
       traefik.http.routers.backrest.service: backrest
       traefik.http.routers.backrest.tls.certresolver: le
+
+      traefik.http.routers.backrest-tailscale.rule: Host(`backrest-${host}.${tailscaleDomain}`)
+      traefik.http.routers.backrest-tailscale.middlewares: authentik-outpost@docker
+      traefik.http.routers.backrest-tailscale.entrypoints: tailscale
+      traefik.http.routers.backrest-tailscale.service: backrest
+
       traefik.http.services.backrest.loadbalancer.server.port: 9898
     volumes:
       - ./data:/data
@@ -44,6 +46,7 @@ networks:
 x-dockge:
   urls:
     - https://backrest.${CLUSTER_DOMAIN}
+    - https://backrest-${host}.${tailscaleDomain}
 volumes:
   spike-backup:
     driver: local
