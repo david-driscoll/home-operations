@@ -133,7 +133,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       const title = `Sync ${job} from ${clusterDefinition.title}`;
       const groupName = `Jobs: Celestia`;
       const token = toGatusKey(groupName, title);
-      return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
+      return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
           schedule: "0 10 * * *", // 10 am daily
@@ -166,7 +166,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
       const groupName = `Jobs: Luna`;
       const token = toGatusKey(groupName, title);
-      return copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
+      return copyFileToRemote(`${clusterDefinition.key}-luna-replica-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
           schedule: "0 3 * * *", // 3 am daily
