@@ -162,7 +162,6 @@ static async Task Rclone(RCloneJob job)
     {
         using var httpClient = new HttpClient();
         var success = item?.ExitCode == 0;
-        Console.WriteLine($"Reporting to Uptime API at $UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
         var uriBuilder = new UriBuilder($"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
         if (success)
         {
@@ -172,6 +171,7 @@ static async Task Rclone(RCloneJob job)
         {
             uriBuilder.Query = $"success=false&error=Rclone job {job.Name} failed with exit code {item?.ExitCode}&duration={item?.RunTime.TotalSeconds}s";
         }
+        Console.WriteLine($"Reporting to Uptime API at ${uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
         {
             Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Token) }

@@ -158,7 +158,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Sync ${job} from ${clusterDefinition.title}`;
-      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, job);
+      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, title);
       return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
