@@ -16,7 +16,6 @@ alerting:
       "failure-threshold": 4
       "success-threshold": 2
       description: "Notify via Pushover"
-      send-on-resolved: true
 
 ui:
   default-sort-by: group
