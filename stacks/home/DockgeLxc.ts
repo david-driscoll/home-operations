@@ -300,7 +300,11 @@ export class DockgeLxc extends ComponentResource {
               continue;
             }
             const item = await op.getItemByTitle(itemTitle);
-            items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
+            const fieldValue = item.fields?.[fieldName]?.value;
+            if (!fieldValue) {
+              console.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
+            }
+            items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
           }
 
           return str.replace(vaultRegex, (fullMatch) => {

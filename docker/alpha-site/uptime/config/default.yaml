@@ -23,5 +23,19 @@ ui:
   title: Status | Uptime
   header: Status
 
+endpoints:
+  - name: External-DNS Helm Repository
+    enabled: true
+    group: "Flux Helm Repositories"
+    url: "https://kubernetes-sigs.github.io/external-dns/index.yaml"
+    interval: 5m
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: pushover
+        enabled: true
+        failure-threshold: 3
+        success-threshold: 1
+
 web:
   port: 9595

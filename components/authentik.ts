@@ -425,7 +425,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       endpoint.alerts ??= [];
       endpoint.alerts.push({
         enabled: true,
-        type: 'pushover',
+        type: "pushover",
       });
 
       const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
@@ -446,7 +446,11 @@ async function replaceOnePasswordPlaceholders(op: OPClient, value: string): Prom
       continue;
     }
     const item = await op.getItemByTitle(itemTitle);
-    items.set(`op://Eris/${itemTitle}/${fieldName}`, item.fields?.[fieldName].value);
+    const fieldValue = item.fields?.[fieldName]?.value;
+    if (!fieldValue) {
+      console.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
+    }
+    items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
   }
 
   return value.replace(vaultRegex, (fullMatch) => {
