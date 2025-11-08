@@ -8,6 +8,7 @@
 #:package Humanizer.Core@*
 
 using System.IO.Compression;
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 using CliWrap;
@@ -45,7 +46,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
 
     foreach (var job in jobs)
     {
-        job.Dump(job.Value.Name);
+        // job.Dump(job.Value.Name);
         var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.Source, job.Value.SourceSecret);
         var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.Destination, job.Value.DestinationSecret);
 
@@ -66,7 +67,6 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     if (secret is { Length: > 0 })
     {
         secretItem = await GetItemByTitle(client, vault.Id, secret);
-        secretItem.Dump("Secret Item");
     }
     return type switch
     {
@@ -148,6 +148,8 @@ static async Task Rclone(RCloneJob job)
             .Add(job.Source.GetRemotePath())
             .Add(job.Destination.GetRemotePath())
         ).ExecuteBufferedAsync();
+        Console.WriteLine(output.ToString());
+        Console.WriteLine(error.ToString());
     }
     catch (Exception ex)
     {
@@ -165,11 +167,11 @@ static async Task Rclone(RCloneJob job)
         var uriBuilder = new UriBuilder($"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
         if (success)
         {
-            uriBuilder.Query = $"success=true&duration={item?.RunTime.Humanize()}&duration={item?.RunTime.TotalSeconds}s";
+            uriBuilder.Query = $"success=true";
         }
         else
         {
-            uriBuilder.Query = $"success=false&error=Rclone job {job.Name} failed with exit code {item?.ExitCode}&duration={item?.RunTime.TotalSeconds}s";
+            uriBuilder.Query = $"success=false&error={WebUtility.UrlEncode($"Rclone job {job.Name} failed with exit code {item?.ExitCode}.\n{output}\n{error}")}";
         }
         Console.WriteLine($"Reporting to Uptime API at {uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
@@ -177,12 +179,10 @@ static async Task Rclone(RCloneJob job)
             Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Token) }
         };
         var response = await httpClient.SendAsync(request);
-        await response.Content.ReadAsStringAsync().Dump();
+        ( await response.Content.ReadAsStringAsync() ).Dump();
     }
     catch (Exception ex)
     {
-        Console.WriteLine(output.ToString());
-        Console.WriteLine(error.ToString());
         Console.WriteLine($"Error reporting to Uptime API: {ex.Message}");
     }
 }
@@ -190,9 +190,7 @@ static async Task Rclone(RCloneJob job)
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
 {
     var items = await client.GetVaultItemsAsync(vaultId, $"title eq \"{title}\"");
-    items.Dump($"Items with title {title}");
     var item = await client.GetVaultItemByIdAsync(vaultId, items.Single().Id);
-    item.Dump($"Item with title {title}");
     return item;
 }
 
@@ -261,7 +259,7 @@ static class RCloneBackendExtensions
 {
     public static Field GetField(this FullItem item, string key)
     {
-        return item.Dump().Fields.First(z => z.Label == key);
+        return item.Fields.First(z => z.Label == key);
     }
 
 }

@@ -51,7 +51,8 @@ export class BackupJobManager extends ComponentResource {
   public createBackupJob(args: BackupTask) {
     this.jobs = this.jobs.apply((jobs) => [...jobs, args]);
     return all([args, this.cluster]).apply(([job, cluster]) => {
-      const token = toGatusKey(`Jobs: ${cluster.title}`, job.name);
+      const groupName = `Jobs: ${cluster.title}`;
+      const token = toGatusKey(groupName, job.name);
       return copyFileToRemote(`${cluster.key}-backup-job-${kebabCase(job.name)}`, {
         content: jsonStringify({ ...job, token }),
         parent: this,
@@ -73,7 +74,7 @@ export class BackupJobManager extends ComponentResource {
           token: toGatusKey(groupName, job.name),
           group: groupName,
           heartbeat: {
-            interval: "30h",
+            interval: "25h",
           },
         })),
       };

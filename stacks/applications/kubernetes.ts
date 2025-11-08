@@ -128,37 +128,11 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       return jobs;
     });
 
-  addUptimeGatus(
-    `${clusterDefinition.key}`,
-    globals,
-    {
-      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-        instances
-          .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-          .map((e) => {
-            e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
-            return e;
-          })
-      ),
-      "external-endpoints": volsyncBackupJobs.apply((jobs) =>
-        jobs.map((job) => ({
-          enabled: true,
-          token: job,
-          name: `Sync ${job} from ${clusterDefinition.title}`,
-          group: `Jobs: ${clusterDefinition.title}`,
-          heartbeat: {
-            interval: "30h",
-          },
-        }))
-      ),
-    },
-    applicationManager
-  );
-
-  volsyncBackupJobs.apply((jobs) =>
+  const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Sync ${job} from ${clusterDefinition.title}`;
-      const token = toGatusKey(`Jobs: Celestia`, title);
+      const groupName = `Jobs: Celestia`;
+      const token = toGatusKey(groupName, title);
       return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
@@ -172,14 +146,26 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
         connection: globals.localBackupServerConnection,
         parent: applicationManager,
-      });
+      }).apply(
+        (r) =>
+          ({
+            enabled: true,
+            token: token,
+            name: title,
+            group: groupName,
+            heartbeat: {
+              interval: "25h",
+            },
+          } as ExternalEndpoint)
+      );
     })
   );
 
-  volsyncBackupJobs.apply((jobs) =>
+  const lunaJobs = volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
-      const token = toGatusKey(`Jobs: Luna`, title);
+      const groupName = `Jobs: Luna`;
+      const token = toGatusKey(groupName, title);
       return copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
@@ -193,8 +179,36 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-replica.json`,
         connection: globals.remoteBackupServerConnection,
         parent: applicationManager,
-      });
+      }).apply(
+        (r) =>
+          ({
+            enabled: true,
+            token: token,
+            name: title,
+            group: groupName,
+            heartbeat: {
+              interval: "25h",
+            },
+          } as ExternalEndpoint)
+      );
     })
+  );
+
+  addUptimeGatus(
+    `${clusterDefinition.key}`,
+    globals,
+    {
+      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
+        instances
+          .map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
+          .map((e) => {
+            e.group = e.group === "System" ? `Cluster: ${clusterDefinition.title}` : e.group;
+            return e;
+          })
+      ),
+      "external-endpoints": pulumi.all([celestiaJobs, lunaJobs]).apply((jobs) => jobs.flat()),
+    },
+    applicationManager
   );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
