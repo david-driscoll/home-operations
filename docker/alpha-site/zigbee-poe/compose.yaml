@@ -1,0 +1,39 @@
+services:
+  zigbee2mqtt-poe:
+    container_name: zigbee2mqtt-poe
+    image: ghcr.io/koenkk/zigbee2mqtt:2.6.2@sha256:ffabf256f4550175278fbeebdbc3f174f2ffa005175e755324c5f06020af3e68
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Zigbee2MQTT - HTTPS
+      traefik.http.routers.zigbee-poe.rule: Host(`${APP}.${searchDomain}`) || Host(`${APP}.as.${searchDomain}`)
+      traefik.http.routers.zigbee-poe.entrypoints: websecure
+      traefik.http.routers.zigbee-poe.tls.certresolver: le
+      traefik.http.routers.zigbee-poe.service: zigbee-poe
+
+      traefik.http.routers.zigbee-poe-tailscale.rule: Host(`zigbee.${tailscaleDomain}`)
+      traefik.http.routers.zigbee-poe-tailscale.entrypoints: tailscale
+      traefik.http.routers.zigbee-poe-tailscale.service: zigbee-poe
+
+      traefik.http.services.zigbee-poe.loadbalancer.server.port: 8080
+    volumes:
+      - ./data:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      - 8080:8080
+    environment:
+      TZ: America/New_York
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://${APP}.${searchDomain}
+    - https://${APP}.as.${searchDomain}
+    - https://zigbee.${tailscaleDomain}
