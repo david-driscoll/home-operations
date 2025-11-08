@@ -6,9 +6,12 @@
 #:package Microsoft.Extensions.Hosting@10.0.0-rc.2.25502.107
 #:package NCronJob@4.6.0
 #:package Humanizer.Core@*
+#:package System.Reactive@6.1.0
 
 using System.IO.Compression;
 using System.Net;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Text;
 using System.Text.Json.Serialization;
 using CliWrap;
@@ -89,12 +92,12 @@ await foreach (var grouping in GetRCloneJobs().GroupBy(z => z.Schedule))
 
 Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
 {
-    return async () =>
+    return () =>
     {
-        foreach (var job in jobs.Chunk(4))
-        {
-            await Task.WhenAll(job.Select(Rclone));
-        }
+        return jobs.ToObservable()
+            .Select(job => Observable.FromAsync(() => Rclone(job)))
+            .Merge(2)
+            .ToTask();
     };
 }
 
@@ -237,7 +240,7 @@ record S3Backend(string Remote, string Endpoint, string Bucket, string Path, str
         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USE_MULTIPART_UPLOADS", "false");
     }
 
-    public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path}";
+    public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path.TrimStart('/')}";
 }
 
 record LocalBackend(string Remote, string Path) : RCloneBackend(Remote, Path)
