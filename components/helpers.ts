@@ -151,5 +151,5 @@ export type BackupTask = {
 };
 
 export function toGatusKey(group: string, name: string) {
-  return `${group}_${name}`.replace(/\s+/g, "-").toLowerCase();
+  return `${group}_${name}`.replace(/[\s\/_,.#+&]+/g, "-").toLowerCase();
 }
