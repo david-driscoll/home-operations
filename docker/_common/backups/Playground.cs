@@ -162,12 +162,21 @@ static async Task Rclone(RCloneJob job)
     {
         using var httpClient = new HttpClient();
         var success = item?.ExitCode == 0;
-        var request = new HttpRequestMessage(HttpMethod.Post, $"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external?success={success.ToString().ToLower()}&error={( success ? "" : $"Rclone job {job.Name} failed with exit code {item?.ExitCode}" )}&duration={item?.RunTime.Humanize()}")
+        Console.WriteLine($"Reporting to Uptime API at $UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
+        var uriBuilder = new UriBuilder($"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
+        if (success)
+        {
+            uriBuilder.Query = $"success=true&duration={item?.RunTime.Humanize()}&duration={item?.RunTime.TotalSeconds}s";
+        }
+        else
+        {
+            uriBuilder.Query = $"success=false&error=Rclone job {job.Name} failed with exit code {item?.ExitCode}&duration={item?.RunTime.TotalSeconds}s";
+        }
+        var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
         {
             Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Token) }
         };
         var response = await httpClient.SendAsync(request);
-        response.Dump();
         await response.Content.ReadAsStringAsync().Dump();
     }
     catch (Exception ex)
@@ -175,7 +184,6 @@ static async Task Rclone(RCloneJob job)
         Console.WriteLine(output.ToString());
         Console.WriteLine(error.ToString());
         Console.WriteLine($"Error reporting to Uptime API: {ex.Message}");
-        ex.Dump();
     }
 }
 
