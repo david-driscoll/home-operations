@@ -5,8 +5,18 @@ storage:
 
 alerting:
   pushover:
-    application-token: "op://Eris/Pushover/credential"
-    user-key: "op://Eris/Pushover/username"
+    application-token: "op://Eris/Gatus Pushover Key/credential"
+    user-key: "op://Eris/Gatus Pushover Key/username"
+    priority: 1
+    resolved-priority: -1
+    default-alert:
+      type: pushover
+      enabled: true
+      "send-on-resolved": true
+      "failure-threshold": 4
+      "success-threshold": 2
+      description: "Notify via Pushover"
+      send-on-resolved: true
 
 ui:
   default-sort-by: group

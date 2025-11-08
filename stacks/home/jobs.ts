@@ -68,15 +68,27 @@ export class BackupJobManager extends ComponentResource {
       const groupName = `Jobs: ${cluster.title}`;
       return {
         endpoints: [],
-        "external-endpoints": jobs.map((job) => ({
-          enabled: true,
-          name: job.name,
-          token: toGatusKey(groupName, job.name),
-          group: groupName,
-          heartbeat: {
-            interval: "25h",
-          },
-        })),
+        "external-endpoints": jobs.map(
+          (job) =>
+            ({
+              enabled: true,
+              name: job.name,
+              token: toGatusKey(groupName, job.name),
+              group: groupName,
+              heartbeat: {
+                interval: "25h",
+              },
+              alerts: [
+                {
+                  type: "pushover",
+                  enabled: true,
+                  "success-threshold": 1,
+                  "failure-threshold": 1,
+                  "minimum-reminder-interval": "24h",
+                },
+              ],
+            } as ExternalEndpoint)
+        ),
       };
     });
   }

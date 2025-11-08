@@ -832,9 +832,17 @@ export interface Alert {
    */
   "send-on-resolved"?: boolean;
   /**
+   * Minimum time interval between alert reminders. E.g. "30m", "1h45m30s" or "24h". If empty or 0, reminders are disabled. Cannot be lower than 5m.
+   */
+  "minimum-reminder-interval"?: string;
+  /**
    * Custom alert description
    */
   description?: string;
+  /**
+   * Alerting provider configuration override for the given alert type
+   */
+  "provider-override"?: any;
 }
 /**
  * DNS query configuration

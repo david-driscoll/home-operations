@@ -111,6 +111,13 @@ function addGatusDnsRecord(
         },
         interval: "5m",
         conditions: [interpolate`[BODY] == any(${bodyConfig})`, "[DNS_RCODE] == NOERROR"],
+        alerts: [
+          {
+            type: "pushover",
+            enabled: true,
+            "minimum-reminder-interval": "2h",
+          },
+        ],
       })
     );
   }

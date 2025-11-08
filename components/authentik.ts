@@ -422,6 +422,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const endpoint = gatusDefinitions[i];
       endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
       endpoint.interval ??= "1m";
+      endpoint.alerts ??= [];
+      endpoint.alerts.push({
+        enabled: true,
+        type: 'pushover',
+      });
+
       const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
       gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
     }
