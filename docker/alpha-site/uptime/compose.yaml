@@ -12,7 +12,6 @@ services:
       traefik.enable: true
 
       traefik.http.routers.uptime.rule: Host(`uptime.${searchDomain}`)
-      traefik.http.routers.uptime.middlewares: authentik-outpost@docker
       traefik.http.routers.uptime.entrypoints: websecure
       traefik.http.routers.uptime.service: uptime
       traefik.http.routers.uptime.tls.certresolver: le
