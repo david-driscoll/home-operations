@@ -322,7 +322,7 @@ export class DockgeLxc extends ComponentResource {
       })
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
-        return output(z.map((z) => z.compose));
+        return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       });
   }
 
@@ -331,19 +331,23 @@ export class DockgeLxc extends ComponentResource {
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>
-  ): Promise<{ name: string; path: string; compose: remote.Command }> {
+  ): Promise<{ name: string; path: string; compose?: remote.Command }> {
     const stackName = basename(path);
+    const stackParent = basename(dirname(path));
     const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
     const tailscaleDomain = await awaitOutput(this.args.globals.tailscaleDomain);
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
+    let hasCompose = false;
+
     for (const file of files) {
       const content = await readFile(resolve(path, file), "utf-8");
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
 
       if (file.endsWith("compose.yaml")) {
+        hasCompose = true;
         const content = await awaitOutput(replacedContent);
         const hostRegex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
@@ -412,17 +416,20 @@ export class DockgeLxc extends ComponentResource {
       );
     }
 
-    const compose = new remote.Command(
-      `${hostname}-${stackName}-compose`,
-      {
-        connection: this.remoteConnection,
-        triggers: copyFiles.map((f) => f.id),
-        create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
-      },
-      mergeOptions({ parent: this }, { dependsOn: copyFiles })
-    );
+    if (hasCompose) {
+      const compose = new remote.Command(
+        `${hostname}-${stackParent}-${stackName}-compose`,
+        {
+          connection: this.remoteConnection,
+          triggers: copyFiles.map((f) => f.id),
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
+        },
+        mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true })
+      );
 
-    return { name: stackName, path, compose };
+      return { name: stackName, path, compose };
+    }
+    return { name: stackName, path };
   }
 }
 

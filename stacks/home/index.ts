@@ -261,7 +261,7 @@ function createMinioBucketBackupJob({ title, bucket }: { title: string; bucket: 
   });
 
   lunaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Backup ${title} from Celestia`,
+    name: pulumi.interpolate`Replicate ${title} from Celestia`,
     schedule: "0 3 * * *",
     sourceType: "sftp",
     source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/spike/${bucket}/`,
