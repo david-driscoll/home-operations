@@ -158,7 +158,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Sync ${job} from ${clusterDefinition.title}`;
-      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, title);
+      const token = toGatusKey(`Jobs: Celestia`, title);
       return copyFileToRemote(`${clusterDefinition.key}-backup-${job}`, {
         content: pulumi.jsonStringify({
           name: title,
@@ -179,7 +179,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   volsyncBackupJobs.apply((jobs) =>
     jobs.map((job) => {
       const title = `Replicate ${job} from ${clusterDefinition.title} via Celestia`;
-      const token = toGatusKey(`Jobs: ${clusterDefinition.title}`, title);
+      const token = toGatusKey(`Jobs: Luna`, title);
       return copyFileToRemote(`${clusterDefinition.key}-replica-${job}`, {
         content: pulumi.jsonStringify({
           name: title,

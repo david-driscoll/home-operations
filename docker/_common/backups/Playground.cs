@@ -171,7 +171,7 @@ static async Task Rclone(RCloneJob job)
         {
             uriBuilder.Query = $"success=false&error=Rclone job {job.Name} failed with exit code {item?.ExitCode}&duration={item?.RunTime.TotalSeconds}s";
         }
-        Console.WriteLine($"Reporting to Uptime API at ${uriBuilder.Uri}");
+        Console.WriteLine($"Reporting to Uptime API at {uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
         {
             Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", job.Token) }
