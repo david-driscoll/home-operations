@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+
+remote:
+  instances:
+    - url: "https://gatus.as.${searchDomain}/api/v1/endpoints/statuses"
+      #endpoint-prefix: "Alpha Site"
+    - url: "https://gatus.sgc.${searchDomain}/api/v1/endpoints/statuses"
+      #endpoint-prefix: "Stargate Command"
+    - url: "https://gatus.equestria.${searchDomain}/api/v1/endpoints/statuses"
+      #endpoint-prefix: "Equestria"
+    - url: "https://gatus.celestia.${searchDomain}/api/v1/endpoints/statuses"
+      #endpoint-prefix: "Celestia"
+    - url: "https://gatus.luna.${searchDomain}/api/v1/endpoints/statuses"
+      #endpoint-prefix: "Luna"

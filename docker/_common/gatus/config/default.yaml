@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+storage:
+  type: sqlite
+  path: /data/data.db
+
+alerting:
+  pushover:
+    application-token: "op://Eris/Pushover/credential"
+    user-key: "op://Eris/Pushover/username"
+
+endpoints:
+  - name: Authentik Outpost
+    enabled: false
+    group: "System"
+    url: "https://authentik-outpost.${CLUSTER_DOMAIN}"
+    conditions:
+      - "[STATUS] == 404"
+
+web:
+  port: 8585
+
+ui:
+  default-sort-by: group

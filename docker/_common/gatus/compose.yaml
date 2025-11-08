@@ -1,0 +1,36 @@
+services:
+  gatus:
+    container_name: gatus
+    image: ghcr.io/twin/gatus:v5.30.0@sha256:bab5a31cb3cfde7fd9913a5ff97652883e4db08f3b429a62a7a188c746df4219
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      GATUS_CONFIG_PATH: /config
+    labels:
+      tsdproxy.enable: false
+      tsdproxy.ephemeral: true
+      tsdproxy.name: ${APP}-${CLUSTER_KEY}
+
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.gatus.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.gatus.middlewares: authentik-outpost@docker
+      traefik.http.routers.gatus.entrypoints: websecure
+      traefik.http.routers.gatus.service: gatus
+      traefik.http.routers.gatus.tls.certresolver: le
+      traefik.http.services.gatus.loadbalancer.server.port: 8585
+    volumes:
+      - ./config/:/config/
+      - ./data/:/data/
+    networks:
+      - dockge_default
+    ports:
+      - 8585:8585
+x-dockge:
+  urls:
+    - https://${APP}.${CLUSTER_DOMAIN}
+networks:
+  dockge_default:
+    external: true
