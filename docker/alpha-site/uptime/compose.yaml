@@ -26,8 +26,6 @@ services:
       - ./data/:/data/
     networks:
       - dockge_default
-    ports:
-      - 9595:9595
 x-dockge:
   urls:
     - https://uptime.${searchDomain}

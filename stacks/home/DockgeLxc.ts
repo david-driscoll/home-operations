@@ -288,7 +288,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
-      replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.args.globals.searchDomain}:9595`),
+      replaceVariable(/\$UPTIME_API_URL/g, interpolate`https://uptime.${this.args.globals.searchDomain}`),
       (input: Input<string>) => {
         return output(input).apply(async (str) => {
           const matches = str.matchAll(vaultRegex);
@@ -320,7 +320,7 @@ export class DockgeLxc extends ComponentResource {
       })
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
-        return output(z.map(z => z.compose));
+        return output(z.map((z) => z.compose));
       });
   }
 
