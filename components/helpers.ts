@@ -91,7 +91,12 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
   const content = output(args).apply(async (a) => {
     return yaml.stringify(
       {
-        endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+        endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)).map(e => {
+          return {
+            interval: '2m',
+            ...e
+          }
+        }),
         "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
       },
       { lineWidth: 0 }
