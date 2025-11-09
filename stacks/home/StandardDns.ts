@@ -77,7 +77,7 @@ export class StandardDns extends ComponentResource {
 }
 
 const dnsServers = {
-  "10.10.10.9": "Alpha Site",
+  // "10.10.10.9": "Alpha Site",
   "10.10.0.1": "Discord",
   "10.10.209.201": "Stargate Command",
   "9.9.9.9": "Quad9",
@@ -110,6 +110,7 @@ function addGatusDnsRecord(
           "query-type": args.type,
         },
         interval: "5m",
+        timeout: '1m',
         conditions: [interpolate`[BODY] == any(${bodyConfig})`, "[DNS_RCODE] == NOERROR"],
         alerts: [
           {
