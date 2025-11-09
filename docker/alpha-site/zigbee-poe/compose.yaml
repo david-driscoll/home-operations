@@ -10,7 +10,7 @@ services:
       traefik.enable: true
 
       # Zigbee2MQTT - HTTPS
-      traefik.http.routers.zigbee-poe.rule: Host(`${APP}.${searchDomain}`) || Host(`${APP}.as.${searchDomain}`)
+      traefik.http.routers.zigbee-poe.rule: Host(`${APP}.${searchDomain}`) || Host(`${APP}.as.${searchDomain}`) || Host(`zigbee.${searchDomain}`) || Host(`zigbee.as.${searchDomain}`)
       traefik.http.routers.zigbee-poe.entrypoints: websecure
       traefik.http.routers.zigbee-poe.tls.certresolver: le
       traefik.http.routers.zigbee-poe.service: zigbee-poe
@@ -32,6 +32,6 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://${APP}.${searchDomain}
-    - https://${APP}.as.${searchDomain}
+    - https://zigbee.${searchDomain}
+    - https://zigbee.as.${searchDomain}
     - https://zigbee.${tailscaleDomain}
