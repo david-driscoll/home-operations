@@ -94,7 +94,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
-  
+
 
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
@@ -128,7 +128,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       config: pulumi.jsonStringify({
         authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
         authentik_host_insecure: false,
-        authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
+        // authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "info",
         object_naming_template: `authentik-outpost`,
         docker_network: "dockge_default",
