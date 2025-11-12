@@ -117,7 +117,7 @@ services:
     command:
       - sidecar
       - --tsdb.path=/prometheus
-      - --prometheus.url=http://prometheus.${CLUSTER_KEY}.${searchDomain}:9090
+      - --prometheus.url=http://prometheus:9090
       - --grpc-address=0.0.0.0:10901
       - --http-address=0.0.0.0:10902
       - --objstore.config-file=/etc/thanos/bucket.yml
