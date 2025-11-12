@@ -1,0 +1,41 @@
+services:
+  nut-exporter:
+    container_name: nut-exporter
+    image: hon95/prometheus-nut-exporter:1.3.0@sha256:a4c3e8a3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3
+    restart: unless-stopped
+    environment:
+      - NUT_SERVERS=nut@localhost:3493
+    ports:
+      - "9199:9199"
+    labels:
+      traefik.enable: false
+    networks:
+      - dockge_default
+
+  adguard-exporter:
+    container_name: adguard-exporter
+    image: ebrianne/adguard-exporter:v1.11@sha256:b1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1
+    restart: unless-stopped
+    environment:
+      - ADGUARD_PROTOCOL=http
+      - ADGUARD_HOSTNAME=adguard
+      - ADGUARD_PORT=3000
+      - ADGUARD_USERNAME=${ADGUARD_USERNAME}
+      - ADGUARD_PASSWORD=${ADGUARD_PASSWORD}
+      - INTERVAL=30s
+      - SERVER_PORT=9617
+    env_file:
+      - path: .env
+    ports:
+      - "9617:9617"
+    labels:
+      traefik.enable: false
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true
+
+x-dockge:
+  notes: "Alpha-site specific exporters: NUT (UPS) and AdGuard (DNS)"

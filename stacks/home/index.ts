@@ -16,6 +16,7 @@ import { OnePasswordItem } from "@openapi/aliases.js";
 import * as tls from "@pulumi/tls";
 import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
+import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -249,7 +250,7 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
   );
 });
 
-function createMinioBucketBackupJob({ title, bucket }: { title: string; bucket: string }) {
+function createMinioBucketBackupJob({ title, bucket }: { title: pulumi.Input<string>; bucket: pulumi.Input<string> }) {
   celestiaDockgeRuntime.createBackupJob({
     name: pulumi.interpolate`Backup ${title}`,
     schedule: "0 10 * * *",
@@ -269,3 +270,29 @@ function createMinioBucketBackupJob({ title, bucket }: { title: string; bucket: 
     destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
   });
 }
+
+const thanosStorage = new minio.S3Bucket(
+  `thanos-storage`,
+  {
+    acl: "private",
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
+    retainOnDelete: true,
+  }
+);
+
+const thanosMinioSecret = new OPI("thanos-minio-secret", {
+  title: "Thanos S3 Storage",
+  category: CategoryEnum.APICredential,
+  fields: {
+    username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
+    password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
+    bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
+    endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
+  },
+});
+
+// Backup Thanos bucket to Celestia and Luna
+createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket });

@@ -44,6 +44,22 @@ entryPoints:
     address: ":784/udp"
   dnss:
     address: ":853"
+  metrics:
+    address: ":8082"
+
+# Metrics configuration
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.0
+      - 3.0
+      - 5.0
+    entryPoint: metrics
 
 # Providers configuration
 providers:

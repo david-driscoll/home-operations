@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: prometheus
+spec:
+  name: Prometheus Metrics
+  category: ${CLUSTER_TITLE}
+  description: Prometheus time-series metrics storage and querying.
+  url: &url https://prometheus.${CLUSTER_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prometheus.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    - url: *url
+      group: "System"
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
