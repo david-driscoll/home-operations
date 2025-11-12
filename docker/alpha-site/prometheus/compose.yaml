@@ -8,7 +8,7 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION}
+      - --storage.tsdb.retention.time=14d
       - --web.enable-lifecycle
     env_file:
       - path: .env
