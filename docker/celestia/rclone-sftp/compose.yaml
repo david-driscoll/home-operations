@@ -1,7 +1,7 @@
 services:
   rclone-sftp:
     container_name: rclone-sftp
-    image: rclone/rclone:latest
+    image: rclone/rclone:latest@sha256:3103526c506266a9ecdf064efe99bf3677d92ef6407af124d8c56b4f49cbaa51
     restart: unless-stopped
     dns:
       - 100.100.100.100

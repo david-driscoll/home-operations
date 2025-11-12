@@ -1,7 +1,7 @@
 services:
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v2.55.0
+    image: prom/prometheus:v2.55.0@sha256:378f4e03703557d1c6419e6caccf922f96e6d88a530f7431d66a4c4f4b1000fe
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -36,7 +36,7 @@ services:
 
   docker-socket-proxy:
     container_name: docker-socket-proxy
-    image: tecnativa/docker-socket-proxy:latest
+    image: tecnativa/docker-socket-proxy:latest@sha256:3400c429c5f9e1b21d62130fb93b16e2e772d4fb7695bd52fc2b743800b9fe9e
     restart: unless-stopped
     environment:
       - CONTAINERS=1
@@ -53,7 +53,7 @@ services:
 
   blackbox-exporter:
     container_name: blackbox-exporter
-    image: prom/blackbox-exporter:v0.25.0
+    image: prom/blackbox-exporter:v0.25.0@sha256:b04a9fef4fa086a02fc7fcd8dcdbc4b7b35cc30cdee860fdc6a19dd8b208d63e
     restart: unless-stopped
     command:
       - --config.file=/config/blackbox.yml
@@ -66,7 +66,7 @@ services:
 
   node-exporter:
     container_name: node-exporter
-    image: prom/node-exporter:v1.8.2
+    image: prom/node-exporter:v1.8.2@sha256:4032c6d5bfd752342c3e631c2f1de93ba6b86c41db6b167b9a35372c139e7706
     restart: unless-stopped
     command:
       - "--path.rootfs=/host"
@@ -87,7 +87,7 @@ services:
 
   cadvisor:
     container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:3cde6faf0791ebf7b41d6f8ae7145466fed712ea6f252c935294d2608b1af388
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -111,7 +111,7 @@ services:
   thanos-sidecar:
     container_name: thanos-sidecar
     restart: unless-stopped
-    image: quay.io/thanos/thanos:v0.37.2
+    image: quay.io/thanos/thanos:v0.37.2@sha256:4ec6df40fdb921de162677b321057caa8fb8324c65f4cfae9568ed55c4469e2c
     dns:
       - 100.100.100.100
     command:
