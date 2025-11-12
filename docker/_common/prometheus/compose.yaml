@@ -23,7 +23,7 @@ services:
       traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
       traefik.http.routers.prometheus-tailscale.service: prometheus
     volumes:
-      - ./data:/prometheus
+      - ./data:/prometheus:rw
       - ./config/:/etc/prometheus:ro
     networks:
       - dockge_default

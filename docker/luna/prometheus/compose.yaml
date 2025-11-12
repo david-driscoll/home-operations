@@ -1,24 +1,21 @@
 services:
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v2.55.0@sha256:8ad6e6fa6e1a6a36fd63d21cce956dd2d83b32950887ae6de84a65c0defc1a2d
+    image: prom/prometheus:v2.55.0
     restart: unless-stopped
     dns:
       - 100.100.100.100
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=15d
-      - --storage.tsdb.min-block-duration=2h
-      - --storage.tsdb.max-block-duration=2h
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION}
       - --web.enable-lifecycle
-      - --web.enable-admin-api
     env_file:
-      - ../../_common/prometheus/.env
+      - path: .env
     labels:
       traefik.enable: true
-      traefik.http.routers.prometheus.rule: Host(`prometheus.${searchDomain}`)
-      traefik.http.routers.prometheus.entrypoints: websecure
+      traefik.http.routers.prometheus.rule: Host(`prometheus.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.prometheus.entrypoints: websecure,tailscale
       traefik.http.routers.prometheus.tls.certresolver: le
       traefik.http.routers.prometheus.service: prometheus
       traefik.http.services.prometheus.loadbalancer.server.port: 9090
@@ -26,8 +23,8 @@ services:
       traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
       traefik.http.routers.prometheus-tailscale.service: prometheus
     volumes:
-      - prometheus-data:/prometheus
-      - ../../_common/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data:/prometheus:rw
+      - ./config/:/etc/prometheus:ro
     networks:
       - dockge_default
     ports:
@@ -37,9 +34,39 @@ services:
       - cadvisor
       - blackbox-exporter
 
+  docker-socket-proxy:
+    container_name: docker-socket-proxy
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+      - INFO=1
+      - IMAGES=1
+      - NETWORKS=1
+      - VOLUMES=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      traefik.enable: false
+    networks:
+      - dockge_default
+
+  blackbox-exporter:
+    container_name: blackbox-exporter
+    image: prom/blackbox-exporter:v0.25.0
+    restart: unless-stopped
+    command:
+      - --config.file=/config/blackbox.yml
+    volumes:
+      - ./config/blackbox.yml:/config/blackbox.yml:ro
+    labels:
+      traefik.enable: false
+    networks:
+      - dockge_default
+
   node-exporter:
     container_name: node-exporter
-    image: prom/node-exporter:v1.8.2@sha256:f4db7d72ef8a0e23e8c9f8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8
+    image: prom/node-exporter:v1.8.2
     restart: unless-stopped
     command:
       - "--path.rootfs=/host"
@@ -60,7 +87,7 @@ services:
 
   cadvisor:
     container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:9a84a4d0f0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -81,37 +108,6 @@ services:
       - dockge_default
     depends_on:
       - docker-socket-proxy
-
-  docker-socket-proxy:
-    container_name: docker-socket-proxy
-    image: tecnativa/docker-socket-proxy:latest@sha256:de138ea600c21a3085d41c5cc16a61fce8aeb6627b015c6b0fde80e6c42d822c
-    restart: unless-stopped
-    environment:
-      - CONTAINERS=1
-      - INFO=1
-      - IMAGES=1
-      - NETWORKS=1
-      - VOLUMES=1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    labels:
-      traefik.enable: false
-    networks:
-      - dockge_default
-
-  blackbox-exporter:
-    container_name: blackbox-exporter
-    image: prom/blackbox-exporter:v0.25.0@sha256:1e7139e9e1b603f47200df567475b087e155a39c9c4a2c8f6e6b7c1c69e1c0e8
-    restart: unless-stopped
-    command:
-      - --config.file=/config/blackbox.yml
-    volumes:
-      - ../../_common/prometheus/config/blackbox.yml:/config/blackbox.yml:ro
-    labels:
-      traefik.enable: false
-    networks:
-      - dockge_default
-
   thanos-sidecar:
     container_name: thanos-sidecar
     restart: unless-stopped
@@ -121,14 +117,12 @@ services:
     command:
       - sidecar
       - --tsdb.path=/prometheus
-      - --prometheus.url=http://prometheus:9090
+      - --prometheus.url=http://prometheus.${CLUSTER_KEY}.${searchDomain}:9090
       - --grpc-address=0.0.0.0:10901
       - --http-address=0.0.0.0:10902
       - --objstore.config-file=/etc/thanos/bucket.yml
-    env_file:
-      - path: .env
     volumes:
-      - prometheus-data:/prometheus:ro
+      - ../prometheus/data:/prometheus:ro
       - ./config/bucket.yml:/etc/thanos/bucket.yml:ro
     networks:
       - dockge_default
@@ -138,8 +132,10 @@ services:
     depends_on:
       - prometheus
 
-volumes:
-  prometheus-data:
+x-dockge:
+  urls:
+    - https://prometheus.${CLUSTER_DOMAIN}
+    - https://prometheus-${host}.${tailscaleDomain}
 
 networks:
   dockge_default:
