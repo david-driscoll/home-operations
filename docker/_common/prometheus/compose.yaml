@@ -1,7 +1,7 @@
 services:
   prometheus:
     container_name: prometheus
-    image: prom/prometheus:v2.55.0@sha256:8ad6e6fa6e1a6a36fd63d21cce956dd2d83b32950887ae6de84a65c0defc1a2d
+    image: prom/prometheus:v2.55.0
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -36,7 +36,7 @@ services:
 
   docker-socket-proxy:
     container_name: docker-socket-proxy
-    image: tecnativa/docker-socket-proxy:latest@sha256:de138ea600c21a3085d41c5cc16a61fce8aeb6627b015c6b0fde80e6c42d822c
+    image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     environment:
       - CONTAINERS=1
@@ -53,7 +53,7 @@ services:
 
   blackbox-exporter:
     container_name: blackbox-exporter
-    image: prom/blackbox-exporter:v0.25.0@sha256:1e7139e9e1b603f47200df567475b087e155a39c9c4a2c8f6e6b7c1c69e1c0e8
+    image: prom/blackbox-exporter:v0.25.0
     restart: unless-stopped
     command:
       - --config.file=/config/blackbox.yml
@@ -66,7 +66,7 @@ services:
 
   node-exporter:
     container_name: node-exporter
-    image: prom/node-exporter:v1.8.2@sha256:f4db7d72ef8a0e23e8c9f8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8
+    image: prom/node-exporter:v1.8.2
     restart: unless-stopped
     command:
       - "--path.rootfs=/host"
@@ -87,7 +87,7 @@ services:
 
   cadvisor:
     container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:9a84a4d0f0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     restart: unless-stopped
     dns:
       - 100.100.100.100
