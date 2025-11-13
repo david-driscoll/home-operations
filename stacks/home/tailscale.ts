@@ -15,7 +15,7 @@ const tags = {
   egress: "tag:egress" as TailscaleSelector,
   ingress: "tag:ingress" as TailscaleSelector,
   ssh: "tag:ssh" as TailscaleSelector,
-  metrics: "tag:metrics" as TailscaleSelector,
+  observability: "tag:observability" as TailscaleSelector,
 };
 
 const tagOwners: TailscaleTagOwners = {
@@ -26,7 +26,7 @@ const tagOwners: TailscaleTagOwners = {
   [tags.ingress]: [tags.operator],
   [tags.egress]: [tags.operator],
   [tags.apps]: [tags.operator, tags.proxmox, tags.dockge, tags.ingress],
-  [tags.metrics]: [tags.operator, tags.proxmox, tags.dockge, tags.ingress],
+  [tags.observability]: [tags.operator, tags.proxmox, tags.dockge, tags.ingress],
   // Devices that really don't need much network access, except to things like plex.
   "tag:media-device": [],
   "tag:exit-node": [tags.operator, tags.proxmox],
