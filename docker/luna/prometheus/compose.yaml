@@ -111,7 +111,7 @@ services:
   thanos-sidecar:
     container_name: thanos-sidecar
     restart: unless-stopped
-    image: quay.io/thanos/thanos:v0.37.2
+    image: quay.io/thanos/thanos:v0.40.1@sha256:aae7b2b030ed00d88abd8c5a357d08b46f22151ca0d50d9c796223fa332389c8
     dns:
       - 100.100.100.100
     command:
