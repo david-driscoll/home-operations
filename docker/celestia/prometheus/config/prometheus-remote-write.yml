@@ -1,6 +1,6 @@
 # Remote write to Stargate Command Thanos
 remote_write:
-  - url: http://thanos-receive.${tailscaleDomain}:19291/api/v1/receive
+  - url: http://thanos-write.${tailscaleDomain}:19291/api/v1/receive
     queue_config:
       capacity: 10000
       max_shards: 5

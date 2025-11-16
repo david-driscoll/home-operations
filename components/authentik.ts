@@ -421,6 +421,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     for (let i = 0; i < gatusDefinitions.length; i++) {
       const endpoint = gatusDefinitions[i];
       endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+      endpoint.group ??= definition.spec.category;
       endpoint.interval ??= "1m";
       endpoint.alerts ??= [];
       endpoint.alerts.push({
