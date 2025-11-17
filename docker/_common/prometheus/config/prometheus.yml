@@ -5,6 +5,14 @@ global:
     cluster: "${CLUSTER_KEY}"
     environment: "homelab"
 
+remote_write:
+  - url: 'https://thanos-write.opossum-yo.ts.net/api/v1/receive'
+    queue_config:
+      max_samples_per_send: 10000
+      batch_send_deadline: 5s
+      min_shards: 1
+      max_shards: 4
+
 scrape_configs:
   # Prometheus itself
   - job_name: 'prometheus'
