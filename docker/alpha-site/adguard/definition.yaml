@@ -13,13 +13,13 @@ spec:
   access_policy:
     groups:
       - admins
-  gatus:
-  - url: *url
-    method: GET
-    enabled: false
-    client:
-      insecure: true
-    group: "AdGuard Home"
-    conditions:
-      - "[STATUS] == 200"
+  gatus: []
+  # - url: *url
+  #   method: GET
+  #   enabled: false
+  #   client:
+  #     insecure: true
+  #   group: "AdGuard Home"
+  #   conditions:
+  #     - "[STATUS] == 200"
 

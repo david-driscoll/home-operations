@@ -1,0 +1,75 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp"},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"pwsh"},{"name":"value"}]}}
+
+#!pwsh
+
+$cluster = "admin@equestria"
+$namespace = "observability"
+$podName = "net-debug"
+
+kubectl config use-context $cluster
+
+#!pwsh
+
+$debugPodYaml = @"
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $podName
+  namespace: $namespace
+  labels:
+    app: net-debug
+spec:
+  restartPolicy: Never
+  containers:
+  - name: toolbox
+    image: alpine/curl:latest
+    command: ["/bin/sh"]
+    args:
+      - -c
+      - |
+        echo "💤 Keeping pod alive. Use 'kubectl exec' to access."
+        trap : TERM INT; sleep infinity & wait
+    securityContext:
+      allowPrivilegeEscalation: true
+"@
+
+Write-Host "🚀 Creating debug pod..." -ForegroundColor Cyan
+$debugPodYaml | kubectl apply -f -
+
+Write-Host "`n⏳ Waiting for pod to be ready..."
+kubectl wait --for=condition=Ready pod/$podName -n $namespace --timeout=120s
+
+Write-Host "`n✅ Debug pod ready!" -ForegroundColor Green
+kubectl get pod $podName -n $namespace
+
+Write-Host "🔧 Opening shell in debug pod..." -ForegroundColor Cyan
+Write-Host "Plex config is at: /config" -ForegroundColor Yellow
+
+#!pwsh
+
+$urls = @(
+'https://thanos-receive-service.opossum-yo.ts.net/api/v1/receive',
+'https://kube-prometheus-stack-receive-service.opossum-yo.ts.net/api/v1/receive',
+'https://thanos-receive-ingress.opossum-yo.ts.net:10901/api/v1/receive',
+'https://kube-prometheus-stack-receive-ingress.opossum-yo.ts.net:10901/api/v1/receive',
+###
+'http://thanos-receive-service.observability.svc.cluster.local:10901/api/v1/receive',
+'http://kube-prometheus-stack-receive-service.observability.svc.cluster.local:10901/api/v1/receive',
+'http://thanos-receive-ingress.observability.svc.cluster.local:10901/api/v1/receive',
+'http://kube-prometheus-stack-receive-ingress.observability.svc.cluster.local:10901/api/v1/receive'
+);
+
+# foreach ($url in $urls) {
+#     Write-Host "Posting to $url"
+#     curl -X POST $url
+#     kubectl exec $podName -n $namespace -- curl $url -X POST
+# }
+
+#!pwsh
+
+Write-Host "🧹 Cleaning up debug pod..." -ForegroundColor Yellow
+kubectl delete pod $podName -n $namespace --wait=true
+
+Write-Host "✅ Debug pod deleted" -ForegroundColor Green
