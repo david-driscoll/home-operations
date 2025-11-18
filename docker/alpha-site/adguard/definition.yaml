@@ -16,6 +16,7 @@ spec:
   gatus:
   - url: *url
     method: GET
+    enabled: false
     client:
       insecure: true
     group: "AdGuard Home"
