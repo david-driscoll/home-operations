@@ -25,17 +25,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 
   let currentGatusValues: Record<string, string> = {};
-  let gatusSecret: kubernetes.V1Secret = {};
-  try {
-    gatusSecret = await coreApi.readNamespacedSecret({ name: "gatus-secret", namespace: "observability" });
-    currentGatusValues = Object.fromEntries(
-      Object.entries(gatusSecret.data ?? {})
-        .filter((z) => !z[0].startsWith(`${clusterDefinition.key}-`))
-        .map(([key, value]) => [key, Buffer.from(value, "base64").toString("utf-8")])
-    );
-  } catch (e) {
-    pulumi.log.info("Gatus secret not found, assuming no current Gatus values");
-  }
 
   // TODO: clear out old keys that are no longer used
   const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
@@ -89,10 +78,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       } else {
         throw new Error(`Unknown application kind ${kind}`);
       }
-
-      return {
-        [data.type]: data,
-      };
     },
     async createGatus(name, definition, gatusDefinitions) {
       currentGatusValues[`${name}.yaml`] = yaml.stringify({ endpoints: gatusDefinitions });
@@ -239,24 +224,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
   );
-
-  try {
-    function convertToBase64Object(obj: Record<string, string>) {
-      return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, Buffer.from(value, "utf-8").toString("base64")]));
-    }
-    const updateData = convertToBase64Object(currentGatusValues);
-    await coreApi.replaceNamespacedSecret({
-      name: "gatus-secret",
-      namespace: "observability",
-      body: {
-        ...gatusSecret,
-        data: updateData,
-      },
-    });
-    pulumi.log.info("Successfully updated Gatus secret");
-  } catch (error) {
-    pulumi.log.error(`Failed to update Gatus secret: ${error}`);
-  }
 
   return {};
 }
