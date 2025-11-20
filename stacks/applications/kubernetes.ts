@@ -214,7 +214,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
         authentik_host_insecure: false,
         // authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
-        log_level: "info",
+        log_level: "debug",
         object_naming_template: `authentik-outpost-%(name)s`,
         kubernetes_replicas: 2,
         kubernetes_namespace: clusterDefinition.key,
