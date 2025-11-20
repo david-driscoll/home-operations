@@ -1,7 +1,7 @@
 services:
   traefik:
     container_name: traefik
-    image: ghcr.io/traefik/traefik:v3.6.0@sha256:e4153c8abbeaf88bfae33796b1860c584fb937ce31c53d0137012e9bfc3af99b
+    image: ghcr.io/traefik/traefik:v3.6.2@sha256:c025135278d10f0fb6e54cb2b2dbadb3c3f0381a2c508cd74c06a74cb5a0e828
     restart: unless-stopped
     dns:
       - 100.100.100.100
