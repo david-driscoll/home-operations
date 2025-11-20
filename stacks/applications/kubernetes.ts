@@ -219,6 +219,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         kubernetes_replicas: 2,
         kubernetes_namespace: clusterDefinition.key,
         kubernetes_ingress_class_name: "internal",
+        kubernetes_httproute_parent_refs: "internal"
       }),
       protocolProviders: applicationManager.proxyProviders,
     },
