@@ -94,8 +94,6 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
-
-
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
     if (!definition) {
@@ -130,7 +128,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
         authentik_host_insecure: false,
         // authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "info",
-        object_naming_template: `authentik-outpost`,
+        object_naming_template: `authentik-outpost-%(name)s`,
         docker_network: "dockge_default",
       }),
       protocolProviders: applicationManager.proxyProviders,
