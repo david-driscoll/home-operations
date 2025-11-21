@@ -179,7 +179,7 @@ static async Task Rclone(RCloneJob job)
         }
         if (item?.RunTime is { } runTime)
         {
-            uriBuilder.Query += $"&duration={runTime.TotalMilliseconds:f0}ms";
+            uriBuilder.Query += $"&duration={Convert.ToInt32(runTime.TotalSeconds):d}ms";
         }
         Console.WriteLine($"Reporting to Uptime API at {uriBuilder.Uri}");
         var request = new HttpRequestMessage(HttpMethod.Post, uriBuilder.Uri)
