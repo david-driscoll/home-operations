@@ -10,7 +10,7 @@ import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi
 import { RandomPassword, RandomString } from "@pulumi/random";
 import { installTailscale, tailscale } from "@components/tailscale.ts";
 import { readFile, readdir } from "node:fs/promises";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { awaitOutput, BackupTask, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
@@ -20,6 +20,7 @@ import { glob } from "glob";
 import * as yaml from "yaml";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { BackupJobManager } from "./jobs.ts";
+import { unique } from "moderndash";
 import { Command, CopyToRemote } from "@pulumi/command/remote/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -314,31 +315,46 @@ export class DockgeLxc extends ComponentResource {
       },
     ];
 
-    return output(readdir(resolve(dockerPath, "_common")))
-      .apply((files) => files.map((f) => this.createStack(this.args.host.name, resolve(dockerPath, "_common", f), replacements, args.dependsOn)))
-      .apply((z) => {
-        const hostStacks = output(
-          readdir(resolve(dockerPath, this.args.host.name)).then((files) =>
-            files.filter((z) => z !== ".keep").map((f) => this.createStack(this.args.host.name, resolve(dockerPath, this.args.host.name, f), replacements, args.dependsOn))
-          )
-        );
-        return all([z, hostStacks]).apply(([a, b]) => [...a, ...b]);
-      })
+    const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
+      unique([...hostFiles, ...commonFiles].filter((z) => z !== ".keep"))
+    );
+
+    return stacks
+      .apply((stacks) => output(stacks.map((s) => this.createStack(this.args.host.name, s, dockerPath, replacements, args.dependsOn))))
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       });
   }
 
+  private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string>> {
+    const commonFiles = await glob("**/*", { cwd: commonPath, absolute: true, nodir: true, dot: true });
+    const files = await glob("**/*", { cwd: path, absolute: true, nodir: true, dot: true });
+
+    const filesMap = new Map<string, string>();
+    for (const file of files) {
+      const relativePath = relative(path, file);
+      filesMap.set(relativePath, file);
+    }
+    for (const file of commonFiles) {
+      const relativePath = relative(commonPath, file);
+      if (!filesMap.has(relativePath)) {
+        filesMap.set(relativePath, file);
+      }
+    }
+
+    return filesMap;
+  }
+
   private async createStack(
     hostname: string,
-    path: string,
+    stackName: string,
+    dockerPath: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>
   ): Promise<{ name: string; path: string; compose?: remote.Command }> {
-    const stackName = basename(path);
-    const stackParent = basename(dirname(path));
-    const files = await glob("**/*", { cwd: path, absolute: false, nodir: true, dot: true });
+    const path = resolve(dockerPath, this.args.host.name, stackName);
+    const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
     const tailscaleDomain = await awaitOutput(this.args.globals.tailscaleDomain);
@@ -346,8 +362,9 @@ export class DockgeLxc extends ComponentResource {
 
     let hasCompose = false;
 
-    for (const file of files) {
-      const content = await readFile(resolve(path, file), "utf-8");
+    for (const [relativeFilePath, absoluteFilePath] of files) {
+      const content = await readFile(absoluteFilePath, "utf-8");
+      const file = relativeFilePath;
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
 
       if (file.endsWith("compose.yaml")) {
