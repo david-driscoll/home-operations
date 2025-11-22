@@ -7,7 +7,7 @@ metadata:
   name: peanut
 spec:
   name: PeaNUT
-  category: DNS
+  category: Applications
   url: &url https://nut.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/peanut.svg
   access_policy:
@@ -18,8 +18,7 @@ spec:
       mode: "forward_single"
       externalHost: *url
   gatus:
-    - group: "Applications"
-      url: *url
+    - url: *url
       method: GET
       conditions:
         - "[STATUS] == 200"

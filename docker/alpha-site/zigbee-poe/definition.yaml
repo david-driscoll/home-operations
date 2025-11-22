@@ -7,15 +7,14 @@ metadata:
   name: zigbee
 spec:
   name: Zigbee
-  category: DNS
+  category: Applications
   url: &url https://zigbee.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/zigbee.svg
   access_policy:
     groups:
       - admins
   gatus:
-    - group: "Applications"
-      url: *url
+    - url: *url
       method: GET
       conditions:
         - "[STATUS] == 200"

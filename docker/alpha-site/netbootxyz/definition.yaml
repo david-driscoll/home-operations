@@ -7,15 +7,14 @@ metadata:
   name: netbootxyz
 spec:
   name: Netboot.xyz
-  category: DNS
+  category: Applications
   url: &url https://netbootxyz.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/netbootxyz.svg
   access_policy:
     groups:
       - admins
   gatus:
-    - group: "Applications"
-      url: *url
+    - url: *url
       method: GET
       conditions:
         - "[STATUS] == 200"

@@ -15,7 +15,6 @@ spec:
       - admins
   gatus:
     - url: *url
-      group: "System"
       method: GET
       conditions:
         - "[STATUS] == 200"

@@ -19,7 +19,6 @@ spec:
       externalHost: *url
   gatus:
     - url: *url
-      group: "System"
       method: GET
       conditions:
         - "[STATUS] == 200"
