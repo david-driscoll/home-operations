@@ -1,7 +1,7 @@
 services:
   nut-exporter:
     container_name: nut-exporter
-    image: hon95/prometheus-nut-exporter:1.2.1
+    image: hon95/prometheus-nut-exporter:1.2.1@sha256:a9bfbbae3b12a6486e6e4b933a69a79d01342db27346d6b4cd5512f4eef6b111
     restart: unless-stopped
     environment:
       - NUT_SERVERS=nut@localhost:3493
@@ -14,7 +14,7 @@ services:
 
   adguard-exporter:
     container_name: adguard-exporter
-    image: ebrianne/adguard-exporter:v1.14
+    image: ebrianne/adguard-exporter:v1.14@sha256:44bb9e0e98f490e7e40c84461a38a59a41e03a21837b70105e048121e7962cb6
     restart: unless-stopped
     environment:
       - ADGUARD_PROTOCOL=http
