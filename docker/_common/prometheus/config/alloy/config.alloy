@@ -19,7 +19,7 @@ loki.process "container_logs" {
     values = {
         cluster = "${CLUSTER_KEY}",
         environment = "homelab",
-        region = "home"
+        region = "home",
       }
     }
   forward_to = [loki.write.default.receiver]
