@@ -96,7 +96,7 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
     {
         return jobs.ToObservable()
             .Select(job => Observable.FromAsync(() => Rclone(job)))
-            .Merge(2)
+            .Merge(4)
             .ToTask();
     };
 }
