@@ -170,9 +170,9 @@ lunaDockgeRuntime.createBackupJob({
   destination: "/data/backup/immich/",
 });
 
-createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", b2: true });
-createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", b2: true });
-createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", b2: true });
+createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", backblazeSecret: 'Backblaze home-operations' });
+createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", backblazeSecret: 'Backblaze S3 Stargate Command Database' });
+createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", backblazeSecret: 'Backblaze S3 Equestria Database' });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
@@ -240,7 +240,7 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
   );
 });
 
-function createMinioBucketBackupJob({ title, bucket, b2 }: { title: pulumi.Input<string>; bucket: pulumi.Input<string>; b2?: boolean }) {
+function createMinioBucketBackupJob({ title, bucket, backblazeSecret }: { title: pulumi.Input<string>; bucket: pulumi.Input<string>; backblazeSecret?: pulumi.Input<string> }) {
   celestiaDockgeRuntime.createBackupJob({
     name: pulumi.interpolate`Backup ${title}`,
     schedule: "0 10 * * *",
@@ -251,7 +251,7 @@ function createMinioBucketBackupJob({ title, bucket, b2 }: { title: pulumi.Input
     destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
   });
 
-  if (b2) {
+  if (backblazeSecret) {
     celestiaDockgeRuntime.createBackupJob({
       name: pulumi.interpolate`Replicate ${title} to B2`,
       schedule: "*/10 * * * *",
@@ -259,7 +259,7 @@ function createMinioBucketBackupJob({ title, bucket, b2 }: { title: pulumi.Input
       source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
       destinationType: "b2",
       destination: pulumi.interpolate`/`,
-      destinationSecret: `Backblaze ${bucket}`,
+      destinationSecret: backblazeSecret,
     });
   }
 
