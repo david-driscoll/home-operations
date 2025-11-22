@@ -128,8 +128,6 @@ services:
       - /etc/alloy/config.alloy
     environment:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - LOKI_URL=http://loki.${tailscaleDomain}:3100/loki/api/v1/push
-      - CLUSTER_NAME=${CLUSTER_KEY}
     labels:
       traefik.enable: true
       traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)

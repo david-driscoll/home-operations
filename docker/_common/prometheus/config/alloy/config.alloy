@@ -12,13 +12,12 @@ loki.source.docker "docker_logs" {
 }
 
 loki.process "container_logs" {
-  stage.static_labels { values = { cluster = sys.env("CLUSTER_NAME") } }
+  stage.static_labels { values = { cluster = "${CLUSTER_KEY}" } }
   forward_to = [loki.write.default.receiver]
 }
 
 loki.write "default" {
   endpoint {
-    url = sys.env("LOKI_URL")
-    basic_auth { username = sys.env("LOKI_USERNAME") password = sys.env("LOKI_PASSWORD") }
+    url = "http://loki.${tailscaleDomain}:3100/loki/api/v1/push"
   }
 }
