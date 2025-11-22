@@ -170,9 +170,9 @@ lunaDockgeRuntime.createBackupJob({
   destination: "/data/backup/immich/",
 });
 
-createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", backblazeSecret: 'Backblaze home-operations' });
-createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", backblazeSecret: 'Backblaze S3 Stargate Command Database' });
-createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", backblazeSecret: 'Backblaze S3 Equestria Database' });
+createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", backblazeSecret: "Backblaze home-operations" });
+createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", backblazeSecret: "Backblaze S3 Stargate Command Database" });
+createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", backblazeSecret: "Backblaze S3 Equestria Database" });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
@@ -248,7 +248,6 @@ function createMinioBucketBackupJob({ title, bucket, backblazeSecret }: { title:
     source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
     destinationType: "local",
     destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
-    destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
   });
 
   if (backblazeSecret) {

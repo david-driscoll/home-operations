@@ -69,6 +69,7 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     FullItem? secretItem = null;
     if (secret is { Length: > 0 })
     {
+        Console.WriteLine($"Fetching secret item '{secret}' for {name} backend");
         secretItem = await GetItemByTitle(client, vault.Id, secret);
     }
     return type switch
