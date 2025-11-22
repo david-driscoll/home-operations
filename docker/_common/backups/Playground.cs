@@ -82,6 +82,8 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     };
 }
 
+await DownloadRclone();
+
 var builder = Host.CreateApplicationBuilder(args);
 await foreach (var grouping in GetRCloneJobs().GroupBy(z => z.Schedule))
 {
@@ -101,8 +103,6 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
             .ToTask();
     };
 }
-
-await DownloadRclone();
 
 var app = builder.Build();
 await app.UseNCronJobAsync();
@@ -124,6 +124,7 @@ static async Task DownloadRclone()
     using var archive = ZipFile.OpenRead(rcloneItem);
     var entry = archive.Entries.Where(z => z.Name == "rclone").Single();
     entry.ExtractToFile(Path.Combine(Path.GetTempPath(), "rclone"), true);
+    Console.WriteLine($"Extracted rclone to {Path.Combine(Path.GetTempPath(), "rclone")}");
     await Cli.Wrap("chmod")
         .WithArguments($"+x {Path.Combine(Path.GetTempPath(), "rclone")}")
         .ExecuteAsync();
