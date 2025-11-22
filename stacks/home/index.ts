@@ -170,9 +170,9 @@ lunaDockgeRuntime.createBackupJob({
   destination: "/data/backup/immich/",
 });
 
-createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations" });
-createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db" });
-createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db" });
+createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", b2: true });
+createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", b2: true });
+createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", b2: true });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
@@ -240,7 +240,7 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
   );
 });
 
-function createMinioBucketBackupJob({ title, bucket }: { title: pulumi.Input<string>; bucket: pulumi.Input<string> }) {
+function createMinioBucketBackupJob({ title, bucket, b2 }: { title: pulumi.Input<string>; bucket: pulumi.Input<string>; b2?: boolean }) {
   celestiaDockgeRuntime.createBackupJob({
     name: pulumi.interpolate`Backup ${title}`,
     schedule: "0 10 * * *",
@@ -251,15 +251,17 @@ function createMinioBucketBackupJob({ title, bucket }: { title: pulumi.Input<str
     destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
   });
 
-  celestiaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Replicate ${title} to B2`,
-    schedule: "*/10 * * * *",
-    sourceType: "local",
-    source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-    destinationType: "b2",
-    destination: pulumi.interpolate`/`,
-    destinationSecret: `Backblaze ${bucket}`,
-  });
+  if (b2) {
+    celestiaDockgeRuntime.createBackupJob({
+      name: pulumi.interpolate`Replicate ${title} to B2`,
+      schedule: "*/10 * * * *",
+      sourceType: "local",
+      source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+      destinationType: "b2",
+      destination: pulumi.interpolate`/`,
+      destinationSecret: `Backblaze ${bucket}`,
+    });
+  }
 
   lunaDockgeRuntime.createBackupJob({
     name: pulumi.interpolate`Replicate ${title}`,
