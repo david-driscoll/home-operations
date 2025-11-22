@@ -5,10 +5,7 @@ logging {
 }
 
 discovery.docker "containers" {
-  endpoint {
-    host = "tcp://docker-socket-proxy:2375"
-  }
-  scan_interval = "10s"
+  host = "tcp://docker-socket-proxy:2375"
 }
 
 loki.source.docker "docker_logs" {
