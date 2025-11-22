@@ -8,10 +8,21 @@ discovery.docker "containers" {
   host = "tcp://docker-socket-proxy:2375"
 }
 
+discovery.relabel "logs_integrations_docker" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "service_name"
+  }
+}
+
 loki.source.docker "docker_logs" {
   host = "tcp://docker-socket-proxy:2375"
   targets = discovery.docker.containers.targets
   forward_to = [loki.process.container_logs.receiver]
+  relabel_rules = [discovery.relabel.logs_integrations_docker.rules]
 }
 
 loki.process "container_logs" {
@@ -27,12 +38,6 @@ loki.process "container_logs" {
   stage.match {
     selector = "{__meta_docker_container_name=\"/docker-socket-proxy\"}"
     action   = "drop"
-  }
-
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex = "/(.*)"
-    target_label = "service_name"
   }
 }
 
