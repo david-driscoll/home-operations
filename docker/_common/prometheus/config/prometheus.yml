@@ -4,6 +4,7 @@ global:
   external_labels:
     cluster: "${CLUSTER_KEY}"
     environment: "homelab"
+    region: "home"
 
 remote_write:
   - url: http://thanos-write.${tailscaleDomain}:19291/api/v1/receive
@@ -12,6 +13,16 @@ remote_write:
       batch_send_deadline: 5s
       min_shards: 1
       max_shards: 4
+
+alerting:
+  alertmanagers:
+    - scheme: http
+      api_version: v2
+      path_prefix: /
+      timeout: 10s
+      static_configs:
+        - targets:
+            - alertmanager.${tailscaleDomain}:9093
 
 scrape_configs:
   # Prometheus itself
@@ -62,19 +73,3 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
-
-  # NUT Exporter - UPS metrics (alpha-site only)
-  - job_name: 'nut-exporter'
-    static_configs:
-      - targets: ['nut-exporter:9199']
-        labels:
-          host: 'alpha-site'
-          service: 'ups'
-
-  # AdGuard Exporter - DNS metrics (alpha-site only)
-  - job_name: 'adguard'
-    static_configs:
-      - targets: ['adguard-exporter:9617']
-        labels:
-          host: 'alpha-site'
-          service: 'dns'

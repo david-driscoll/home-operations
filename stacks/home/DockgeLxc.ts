@@ -320,16 +320,30 @@ export class DockgeLxc extends ComponentResource {
     );
 
     return stacks
-      .apply((stacks) => output(stacks.map((s) => this.createStack(this.args.host.name, s, dockerPath, replacements, args.dependsOn))))
+      .apply((stacks) =>
+        output(
+          stacks.map(async (stackName) => {
+            const path = resolve(dockerPath, this.args.host.name, stackName);
+            const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
+            if (!files) { return null; }
+            return this.createStack(this.args.host.name, stackName, files, path, replacements, args.dependsOn);
+          })
+        )
+    )
+      .apply(z => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       });
   }
 
-  private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string>> {
+  private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
     const commonFiles = await glob("**/*", { cwd: commonPath, absolute: true, nodir: true, dot: true });
     const files = await glob("**/*", { cwd: path, absolute: true, nodir: true, dot: true });
+
+    if (commonFiles.some((z) => z.endsWith(".ignore")) || files.some((z) => z.endsWith(".ignore"))) {
+      return null;
+    }
 
     const filesMap = new Map<string, string>();
     for (const file of files) {
@@ -349,12 +363,11 @@ export class DockgeLxc extends ComponentResource {
   private async createStack(
     hostname: string,
     stackName: string,
-    dockerPath: string,
+    files: Map<string, string>,
+    path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>
   ): Promise<{ name: string; path: string; compose?: remote.Command }> {
-    const path = resolve(dockerPath, this.args.host.name, stackName);
-    const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
     const tailscaleDomain = await awaitOutput(this.args.globals.tailscaleDomain);
