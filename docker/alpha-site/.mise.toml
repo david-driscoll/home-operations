@@ -1,0 +1,2 @@
+[env]
+DOCKER_HOST="tcp://dockge.as.driscoll.tech:2375"

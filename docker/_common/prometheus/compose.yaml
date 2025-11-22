@@ -38,14 +38,18 @@ services:
     container_name: docker-socket-proxy
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
+    privileged: true
     environment:
       - CONTAINERS=1
       - INFO=1
       - IMAGES=1
       - NETWORKS=1
       - VOLUMES=1
+    ports:
+      - 2375:2375
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./haproxy:/var/lib/haproxy/
     labels:
       traefik.enable: false
     networks:
