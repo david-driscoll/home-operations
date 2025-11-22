@@ -22,7 +22,7 @@ loki.source.docker "docker_logs" {
   host = "tcp://docker-socket-proxy:2375"
   targets = discovery.docker.containers.targets
   forward_to = [loki.process.container_logs.receiver]
-  relabel_rules = [discovery.relabel.logs_integrations_docker.rules]
+  relabel_rules = discovery.relabel.logs_integrations_docker.rules
 }
 
 loki.process "container_logs" {
