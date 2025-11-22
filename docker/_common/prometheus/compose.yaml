@@ -122,6 +122,7 @@ services:
     env_file:
       - path: .env
     command:
+      - run
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy
       - --config.file=/etc/alloy/config.alloy
