@@ -23,6 +23,6 @@
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/tls": "^5.2.2",
     "@pulumi/std": "^2.2.0",
-    "glob": "^11.0.3"
+    "glob": "^13.0.0"
   }
 }
