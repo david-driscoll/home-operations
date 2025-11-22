@@ -170,16 +170,6 @@ lunaDockgeRuntime.createBackupJob({
   destination: "/data/backup/immich/",
 });
 
-celestiaDockgeRuntime.createBackupJob({
-  name: pulumi.interpolate`Home Operations to B2`,
-  schedule: "0 10 * * *",
-  sourceType: "local",
-  source: pulumi.interpolate`/spike/data/minio/home-operations/`,
-  destinationType: "b2",
-  destination: pulumi.interpolate`/`,
-  destinationSecret: "Backblaze home-operations",
-});
-
 createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations" });
 createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db" });
 createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db" });
@@ -259,6 +249,16 @@ function createMinioBucketBackupJob({ title, bucket }: { title: pulumi.Input<str
     destinationType: "local",
     destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
     destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+  });
+
+  celestiaDockgeRuntime.createBackupJob({
+    name: pulumi.interpolate`Replicate ${title} to B2`,
+    schedule: "*/10 * * * *",
+    sourceType: "local",
+    source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+    destinationType: "b2",
+    destination: pulumi.interpolate`/`,
+    destinationSecret: `Backblaze ${bucket}`,
   });
 
   lunaDockgeRuntime.createBackupJob({

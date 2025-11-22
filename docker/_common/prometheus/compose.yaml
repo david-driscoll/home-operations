@@ -113,6 +113,38 @@ services:
     depends_on:
       - docker-socket-proxy
 
+  alloy:
+    container_name: alloy
+    image: grafana/alloy:1.11.3
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    env_file:
+      - path: .env
+    command:
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy
+      - --config.file=/etc/alloy/config.alloy
+    environment:
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+      - LOKI_URL
+      - LOKI_USERNAME
+      - LOKI_PASSWORD
+      - CLUSTER_NAME
+    labels:
+      traefik.enable: true
+      traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.alloy.entrypoints: websecure,tailscale
+      traefik.http.routers.alloy.tls.certresolver: le
+      traefik.http.services.alloy.loadbalancer.server.port: 12345
+    volumes:
+      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./data/alloy:/var/lib/alloy:rw
+    networks:
+      - dockge_default
+    depends_on:
+      - docker-socket-proxy
+
 x-dockge:
   urls:
     - https://prometheus.${CLUSTER_DOMAIN}
