@@ -15,8 +15,25 @@ loki.source.docker "docker_logs" {
 }
 
 loki.process "container_logs" {
-  stage.static_labels { values = { cluster = "${CLUSTER_KEY}" } }
+  stage.static_labels {
+    values = {
+        cluster = "${CLUSTER_KEY}",
+        environment = "homelab",
+        region = "home"
+      }
+    }
   forward_to = [loki.write.default.receiver]
+
+  stage.match {
+    selector = "{__meta_docker_container_name=\"/docker-socket-proxy\"}"
+    action   = "drop"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "service_name"
+  }
 }
 
 loki.write "default" {
