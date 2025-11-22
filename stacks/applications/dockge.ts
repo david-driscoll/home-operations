@@ -106,9 +106,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     `${clusterDefinition.key}`,
     globals,
     {
-      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-        instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-      ),
+      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
     },
     applicationManager
   );
@@ -150,9 +148,9 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   });
 
   await outToPromise(environmentConfig.id);
-  await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/authentik-outpost/` });
-  await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/uptime/` });
-  await ssh.execCommand(`docker compose -f compose.yaml up -d`, { cwd: `/opt/stacks/backups/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/authentik-outpost/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/uptime/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backups/` });
 
   ssh.dispose();
 

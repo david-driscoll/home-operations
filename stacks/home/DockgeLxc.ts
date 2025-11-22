@@ -325,12 +325,14 @@ export class DockgeLxc extends ComponentResource {
           stacks.map(async (stackName) => {
             const path = resolve(dockerPath, this.args.host.name, stackName);
             const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
-            if (!files) { return null; }
+            if (!files) {
+              return null;
+            }
             return this.createStack(this.args.host.name, stackName, files, path, replacements, args.dependsOn);
           })
         )
-    )
-      .apply(z => z.filter((z) => z !== null).map((z) => z!))
+      )
+      .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
         z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
@@ -456,7 +458,7 @@ export class DockgeLxc extends ComponentResource {
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d`,
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`,
         },
         mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true })
       );
