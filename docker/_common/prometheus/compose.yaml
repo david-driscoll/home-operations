@@ -115,7 +115,7 @@ services:
 
   alloy:
     container_name: alloy
-    image: grafana/alloy:1.11.3
+    image: grafana/alloy:v1.11.3
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -128,7 +128,7 @@ services:
     environment:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - LOKI_URL=http://loki.${tailscaleDomain}:3100/loki/api/v1/push
-      - CLUSTER_NAME=${CLUSTER_CNAME}
+      - CLUSTER_NAME=${CLUSTER_KEY}
     labels:
       traefik.enable: true
       traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
