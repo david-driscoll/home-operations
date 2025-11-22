@@ -1,14 +1,20 @@
-logging { level = "info" format = "json" }
+logging {
+	level    = "warn"
+	format   = "json"
+	write_to = [loki.write.default.receiver]
+}
 
 discovery.docker "containers" {
-  endpoint { url = "http://docker-socket-proxy:2375" }
+  endpoint {
+    host = "tcp://docker-socket-proxy:2375"
+  }
   scan_interval = "10s"
 }
 
 loki.source.docker "docker_logs" {
+  host = "tcp://docker-socket-proxy:2375"
   targets = discovery.docker.containers.targets
   forward_to = [loki.process.container_logs.receiver]
-  tail_from_end = true
 }
 
 loki.process "container_logs" {
