@@ -149,6 +149,8 @@ x-dockge:
   urls:
     - https://prometheus.${CLUSTER_DOMAIN}
     - https://prometheus-${host}.${tailscaleDomain}
+    - https://alloy.${CLUSTER_DOMAIN}
+    - https://alloy-${host}.${tailscaleDomain}
 
 networks:
   dockge_default:
