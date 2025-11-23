@@ -10,9 +10,10 @@ data:
     enable_cors = true
     
     [cors]
-    # SECURITY: Update these origins to match your actual domains
-    # Example: origins = https://app.obsidian.md, app://obsidian.md
-    origins = *
+    # SECURITY: Restrict origins to your specific domains in production
+    # For Obsidian apps, use: origins = https://app.obsidian.md, app://obsidian.md
+    # For development/testing only, you can use: origins = *
+    origins = https://app.obsidian.md, app://obsidian.md, capacitor://localhost, http://localhost
     credentials = true
     methods = GET, PUT, POST, HEAD, DELETE
     headers = accept, authorization, content-type, origin, referer

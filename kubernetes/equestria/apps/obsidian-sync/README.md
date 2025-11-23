@@ -66,21 +66,21 @@ Replace the following placeholder domains with your actual domains:
   - `httproute.yaml`
   - `applicationdefinition.yaml`
 
-### CORS Security ⚠️
-For production use, restrict CORS origins to specific domains instead of wildcards:
+### CORS Security ✅
+The deployment is pre-configured with secure CORS settings for Obsidian apps:
 
-1. In `configmap.yaml`, update the `origins` field:
-   ```ini
-   origins = https://app.obsidian.md, app://obsidian.md
-   ```
+**ConfigMap** (`configmap.yaml`):
+```ini
+origins = https://app.obsidian.md, app://obsidian.md, capacitor://localhost, http://localhost
+```
 
-2. In `httproute.yaml`, the middleware is pre-configured with Obsidian-specific origins:
-   - `https://app.obsidian.md` (web app)
-   - `app://obsidian.md` (desktop app)
-   - `capacitor://localhost` (mobile app)
-   - `http://localhost` (local development)
+**Traefik Middleware** (`httproute.yaml`):
+- `https://app.obsidian.md` (web app)
+- `app://obsidian.md` (desktop app)
+- `capacitor://localhost` (mobile app)
+- `http://localhost` (local development)
 
-Add additional origins as needed for your use case.
+These origins cover all official Obsidian clients. If you need to add custom origins (e.g., for a custom domain or additional apps), update both the ConfigMap and Middleware.
 
 ### Access Control
 Customize the Authentik access policy in `applicationdefinition.yaml`:
