@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: obsidian-sync-config
+  namespace: obsidian-sync
+data:
+  cors.ini: |
+    [httpd]
+    enable_cors = true
+    
+    [cors]
+    origins = *
+    credentials = true
+    methods = GET, PUT, POST, HEAD, DELETE
+    headers = accept, authorization, content-type, origin, referer
+    max_age = 3600

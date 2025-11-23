@@ -1,0 +1,33 @@
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: obsidian-sync-data
+  namespace: obsidian-sync
+spec:
+  sourcePVC: obsidian-sync-data
+  trigger:
+    schedule: "0 2 * * *"  # Daily at 2 AM
+  restic:
+    pruneIntervalDays: 7
+    repository: obsidian-sync-restic-secret
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 6
+    copyMethod: Snapshot
+    cacheCapacity: 2Gi
+    volumeSnapshotClassName: csi-ceph-blockpool
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: obsidian-sync-data
+  namespace: obsidian-sync
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: ceph-block

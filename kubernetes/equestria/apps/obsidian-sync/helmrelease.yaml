@@ -1,0 +1,109 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: obsidian-sync
+  namespace: obsidian-sync
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.5.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      obsidian-sync:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        
+        containers:
+          app:
+            image:
+              repository: ghcr.io/vrtmrz/obsidian-livesync
+              tag: latest
+              pullPolicy: Always
+            
+            env:
+              TZ: America/New_York
+              COUCHDB_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: obsidian-sync-secret
+                    key: couchdb-user
+              COUCHDB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: obsidian-sync-secret
+                    key: couchdb-password
+            
+            probes:
+              liveness:
+                enabled: true
+              readiness:
+                enabled: true
+              startup:
+                enabled: true
+                spec:
+                  failureThreshold: 30
+                  periodSeconds: 5
+            
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 512Mi
+          
+          # Tailscale sidecar for secure access
+          tailscale:
+            image:
+              repository: ghcr.io/tailscale/tailscale
+              tag: latest
+            env:
+              TS_KUBE_SECRET: obsidian-sync-tailscale
+              TS_USERSPACE: "true"
+              TS_AUTHKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: obsidian-sync-tailscale-auth
+                    key: authkey
+            
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 1000
+    
+    service:
+      app:
+        controller: obsidian-sync
+        ports:
+          http:
+            port: 5984
+    
+    persistence:
+      data:
+        enabled: true
+        existingClaim: obsidian-sync-data
+        globalMounts:
+          - path: /opt/couchdb/data
+      
+      config:
+        enabled: true
+        type: configMap
+        name: obsidian-sync-config
+        globalMounts:
+          - path: /opt/couchdb/etc/local.d/cors.ini
+            subPath: cors.ini
+            readOnly: true
