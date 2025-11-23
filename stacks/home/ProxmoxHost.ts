@@ -9,9 +9,11 @@ import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { TruenasVm } from "./TruenasVm.ts";
-import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { getTailscaleDevice, getTailscaleSection, writeTempFile } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
+import { Purrl } from "@pulumiverse/purrl";
+import { Logging } from "@pulumi/command/remote/index.js";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -133,6 +135,32 @@ export class ProxmoxHost extends ComponentResource {
         },
         mergeOptions(cro, { dependsOn: [configureSshEnv] })
       );
+
+      // TODO: make work at somepoint
+      // const script = new Purrl(`${name}-alloy-script`, {
+      //   name: "install-alloystack.sh",
+      //   url: "https://raw.githubusercontent.com/IT-BAER/alloy-aio/main/alloy_setup.sh",
+      //   method: "GET",
+      //   responseCodes: ["200"],
+      // });
+
+      // const filePath = writeTempFile(`${name}-alloystack-script`, script.response);
+
+      // const alloyScriptOnServer = new remote.CopyToRemote(`${name}-copy-alloystack-script`, {
+      //   connection: connection,
+      //   remotePath: "/tmp/install-alloystack.sh",
+      //   source: filePath.apply((path) => new asset.FileAsset(path)),
+      // });
+
+      // const installAlloyStack = new remote.Command(
+      //   `${name}-install-alloystack`,
+      //   {
+      //     connection: connection,
+      //     create: interpolate`chmod +x /tmp/install-alloystack.sh && /tmp/install-alloystack.sh --loki-url "http://loki.${args.globals.tailscaleDomain}:3100/loki/api/v1/push" --prometheus-url "http://thanos-write.${args.globals.tailscaleDomain}:19291/api/v1/receive"`,
+      //     logging: Logging.StdoutAndStderr,
+      //   },
+      //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
+      // );
 
       const tailscaleSet = installTailscale({
         connection,
