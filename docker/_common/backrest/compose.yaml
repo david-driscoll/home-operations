@@ -27,6 +27,7 @@ services:
       - ./rclone:/root/.config/rclone
       - /data/backup:/backup
       - /data/restic:/repos
+      - ./ssh:/root/.ssh:ro
       - spike-backup:/spike/backup:ro
       - spike-data:/spike/data:ro
     environment:

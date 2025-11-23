@@ -103,6 +103,7 @@ export class DockgeLxc extends ComponentResource {
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
     const jobsKeysDir = "/opt/stacks/backups/keys";
+    const backrestSshDir = "/opt/stacks/backrest/ssh";
 
     const ensureKeysDir = new remote.Command(
       `${name}-ensure-sftp-keys-dir`,
@@ -148,12 +149,30 @@ export class DockgeLxc extends ComponentResource {
         dependsOn: [ensureKeysDir],
       })
     );
+    keyWrites.push(
+      copyFileToRemote(`${name}-backrest-client-key`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${backrestSshDir}/id_ed25519`,
+        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
 
     // Write client private key for rclone-jobs client
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-client-pub`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519.pub`,
+        content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+    keyWrites.push(
+      copyFileToRemote(`${name}-backrest-client-pub`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${backrestSshDir}/id_ed25519.pub`,
         content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
@@ -182,13 +201,24 @@ export class DockgeLxc extends ComponentResource {
       })
     );
 
+    // Also generate a convenience known_hosts entry using tailscale hostname with port
+    keyWrites.push(
+      copyFileToRemote(`${name}-backrest-known-hosts`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${backrestSshDir}/known_hosts`,
+        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+        parent: this,
+        dependsOn: [ensureKeysDir],
+      })
+    );
+
     // Set restrictive permissions on the keys
     new remote.Command(
       `${name}-sftp-keys-perms`,
       {
         connection: this.remoteConnection,
         triggers: keyWrites.map((k) => k.id),
-        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub || true`,
+        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts || true`,
       },
       mergeOptions(cro, { dependsOn: keyWrites })
     );
@@ -207,6 +237,11 @@ export class DockgeLxc extends ComponentResource {
         return result;
       }
     );
+
+    new remote.Command(`${name}-install-tools`, {
+      connection: this.remoteConnection,
+      create: interpolate`apt-get update && apt-get install -y restic`,
+    });
 
     // Create device tags
     const deviceTags = new DeviceTags(

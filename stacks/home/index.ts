@@ -177,7 +177,7 @@ celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
-createBackupJobs({
+await createBackupJobs({
   celestiaDockgeRuntime,
   lunaDockgeRuntime,
   alphaSiteDockgeRuntime,

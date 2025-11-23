@@ -12,12 +12,16 @@ import * as yaml from "yaml";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { group, kebabCase } from "moderndash";
+import { NodeSSH } from "node-ssh";
+import { BackrestRepository } from "@openapi/backrest.js";
+import { remote, types } from "@pulumi/command";
 
 const op = new OPClient();
 
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: KubernetesClusterDefinition) {
   const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
+  const volsyncPassword = await op.getItemByTitle(`Volsync Password`);
 
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(kubeConfigJson);
@@ -114,81 +118,54 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     });
 
   const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
-    jobs.map((job) => {
-      const title = `Backup ${clusterDefinition.title} Volsync ${job}`;
-      const groupName = `Jobs: Celestia`;
-      const token = toGatusKey(groupName, title);
-      return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
-        content: pulumi.jsonStringify({
-          name: title,
+    pulumi.all(
+      jobs.map((job) => {
+        return createBackupTask(job, {
           schedule: "0 10 * * *", // 10 am daily
           sourceType: "local",
           source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-          token: token,
-        } as BackupTask),
-        remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
-        connection: globals.localBackupServerConnection,
-        parent: applicationManager,
-      }).apply(
-        (r) =>
-          ({
-            enabled: true,
-            token: token,
-            name: title,
-            group: groupName,
-            heartbeat: {
-              interval: "25h",
-            },
-          } as ExternalEndpoint)
-      );
-    })
+        });
+      })
+    )
   );
 
   const lunaJobs = volsyncBackupJobs.apply((jobs) =>
-    jobs.map((job) => {
-      const title = `Replicate ${clusterDefinition.title} Volsync ${job}`;
-      const groupName = `Jobs: Luna`;
-      const token = toGatusKey(groupName, title);
-      return copyFileToRemote(`${clusterDefinition.key}-luna-replica-${job}`, {
-        content: pulumi.jsonStringify({
-          name: title,
+    pulumi.all(
+      jobs.map((job) => {
+        return createBackupTask(job, {
           schedule: "0 3 * * *", // 3 am daily
           sourceType: "sftp",
           source: pulumi.interpolate`${globals.localBackupServerConnection.host}/${clusterDefinition.key}/volsync/${job}`,
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-          token: token,
-        }),
-        remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-replica.json`,
-        connection: globals.remoteBackupServerConnection,
-        parent: applicationManager,
-      }).apply(
-        (r) =>
-          ({
-            enabled: true,
-            token: token,
-            name: title,
-            group: groupName,
-            heartbeat: {
-              interval: "25h",
-            },
-          } as ExternalEndpoint)
-      );
-    })
+        });
+      })
+    )
   );
 
   addUptimeGatus(
     `${clusterDefinition.key}`,
     globals,
     {
-      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) =>
-        instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)
-      ),
-      "external-endpoints": pulumi.all([celestiaJobs, lunaJobs]).apply((jobs) => jobs.flat()),
+      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+      "external-endpoints": pulumi.all([celestiaJobs, lunaJobs]).apply((jobs) => jobs.flat().map((z) => z.externalEndpoint)),
     },
     applicationManager
+  );
+
+  celestiaJobs.apply((jobs) =>
+    insertVolsyncRepos(
+      globals.localBackupServerConnection,
+      jobs.map((j) => j.volsyncRepo)
+    )
+  );
+  lunaJobs.apply((jobs) =>
+    insertVolsyncRepos(
+      globals.remoteBackupServerConnection,
+      jobs.map((j) => j.volsyncRepo)
+    )
   );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
@@ -229,6 +206,87 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
 
   return {};
+
+  async function insertVolsyncRepos(connection: types.input.remote.ConnectionArgs, repos: Omit<BackrestRepository, "guid">[]) {
+    const ssh = new NodeSSH();
+    const localBackupServerHost = await awaitOutput(pulumi.output(connection.host))!;
+    await ssh.connect({
+      host: localBackupServerHost,
+      username: "root",
+    });
+
+    var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+    var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
+    for (const repo of repos) {
+      const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+      const guid = await ssh.execCommand(`RESTIC_PASSWORD='${volsyncPassword.fields.password.value!}' restic cat config --json -r ${repo.uri}`).then((r) => JSON.parse(r.stdout).id as string);
+      if (jobIndex >= 0) {
+        updatedConfig.repos[jobIndex] = { ...repo, guid };
+      } else {
+        updatedConfig.repos.push({ ...repo, guid });
+      }
+    }
+    await ssh.execCommand(`echo '${JSON.stringify(updatedConfig)}' > /opt/stacks/backrest/config/config.json`);
+
+    ssh.dispose();
+  }
+
+  function getVolsyncRepo(job: string, password: string): Omit<BackrestRepository, "guid"> {
+    return {
+      id: `volsync-${clusterDefinition.key}-${job}`,
+      uri: `/backup/${clusterDefinition.key}/volsync/${job}`,
+      password: password,
+      prunePolicy: {
+        schedule: {
+          maxFrequencyDays: 30,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        maxUnusedPercent: 10,
+      },
+      checkPolicy: {
+        schedule: {
+          maxFrequencyDays: 30,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        readDataSubsetPercent: 10,
+      },
+      autoUnlock: true,
+      commandPrefix: {
+        ioNice: "IO_BEST_EFFORT_LOW",
+        cpuNice: "CPU_LOW",
+      },
+    };
+  }
+
+  function createBackupTask(job: string, task: Omit<BackupTask, "name" | "token">) {
+    const title = `Backup ${clusterDefinition.title} Volsync ${job}`;
+    const groupName = `Jobs: Celestia`;
+    const token = toGatusKey(groupName, title);
+    const backupTask: BackupTask = {
+      ...task,
+      name: title,
+      token: token,
+    };
+    return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
+      content: pulumi.jsonStringify(backupTask),
+      remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
+      connection: globals.localBackupServerConnection,
+      parent: applicationManager,
+    }).apply((r) => ({
+      file: r,
+      backupTask,
+      volsyncRepo: getVolsyncRepo(job, volsyncPassword.fields.password.value!),
+      externalEndpoint: {
+        enabled: true,
+        token: token,
+        name: title,
+        group: groupName,
+        heartbeat: {
+          interval: "25h",
+        },
+      } as ExternalEndpoint,
+    }));
+  }
 }
 
 function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {

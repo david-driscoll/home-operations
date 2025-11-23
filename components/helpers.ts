@@ -153,6 +153,7 @@ export type BackupTask = {
   destinationType: Input<"b2" | "s3" | "local" | "sftp">;
   destination: Input<string>;
   destinationSecret?: Input<string>;
+  token?: Input<string>;
 };
 
 export function toGatusKey(group: string, name: string) {

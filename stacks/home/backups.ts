@@ -4,8 +4,9 @@ import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
+import { BackupPlanManager } from "./jobs.ts";
 
-export function createBackupJobs({
+export async function createBackupJobs({
   celestiaDockgeRuntime,
   lunaDockgeRuntime,
   alphaSiteDockgeRuntime,
@@ -20,21 +21,40 @@ export function createBackupJobs({
   alphaSiteHost: ProxmoxHost;
   globals: GlobalResources;
 }) {
-  createResticBackupJob({
-    title: "Immich",
-    bucket: "immich",
+  const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {
+    globals: globals,
     source: celestiaDockgeRuntime,
-    sourceHost: celestiaHost,
-    destination: lunaDockgeRuntime,
+    localBackup: celestiaDockgeRuntime,
+    remoteBackup: lunaDockgeRuntime,
   });
-  // TODO: make restic backup work with all dockge instances
-  // createResticBackupJob({
-  //     title: "Immich",
-  //     bucket: "immich",
-  //     source: celestiaDockgeRuntime,
-  //     sourceHost: celestiaHost,
-  //     destination: lunaDockgeRuntime,
-  // });
+  const alphaSiteBackupManager = new BackupPlanManager("alpha-site-backup-plan-manager", {
+    globals: globals,
+    source: alphaSiteDockgeRuntime,
+    localBackup: celestiaDockgeRuntime,
+    remoteBackup: lunaDockgeRuntime,
+  });
+
+  await alphaSiteBackupManager.createBackrestPlan("adguard", {
+    title: "AdGuard Home",
+    paths: ["/opt/stacks/adguard"],
+    repository: "adguard",
+  });
+
+  await alphaSiteBackupManager.createBackrestPlan("zigbee", {
+    title: "ZigBee",
+    paths: ["/opt/stacks/zigbee-poe"],
+    repository: "zigbee",
+  });
+
+  await celestiaBackupManager.createBackrestPlan("immich", {
+    title: "Immich",
+    paths: ["/spike/data/immich/"],
+    repository: "immich",
+    planConfig: {
+      excludes: ["/spike/data/immich/backups", "/spike/data/immich/encoded-video"],
+    },
+    backblazeSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+  });
 
   createMinioBucketBackupJob({
     title: "Home Operations",
@@ -83,41 +103,9 @@ export function createBackupJobs({
 
   // Backup Thanos bucket to Celestia and Luna
   createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime });
-}
 
-function createResticBackupJob({
-  title,
-  bucket,
-
-  source,
-  sourceHost,
-  destination,
-}: {
-  source: DockgeLxc;
-  sourceHost: ProxmoxHost;
-  destination: DockgeLxc;
-  title: pulumi.Input<string>;
-  bucket: pulumi.Input<string>;
-  backblazeSecret?: pulumi.Input<string>;
-}) {
-  source.createBackupJob({
-    name: pulumi.interpolate`Backup ${title}`,
-    schedule: "0 10 * * *",
-    sourceType: "local",
-    source: pulumi.interpolate`/data/backup/${bucket}/`,
-    destinationType: "b2",
-    destination: pulumi.interpolate`${bucket}`,
-    destinationSecret: sourceHost.backupVolumes!.backblaze.backupCredential.title!,
-  });
-
-  destination.createBackupJob({
-    name: pulumi.interpolate`Replicate ${title}`,
-    schedule: "0 3 * * *",
-    sourceType: "sftp",
-    source: pulumi.interpolate`${source.tailscaleHostname}/${bucket}`,
-    destinationType: "local",
-    destination: pulumi.interpolate`/data/backup/${bucket}/`,
-  });
+  await alphaSiteBackupManager.updateBackrestConfig();
+  await celestiaBackupManager.updateBackrestConfig();
 }
 
 function createMinioBucketBackupJob({
