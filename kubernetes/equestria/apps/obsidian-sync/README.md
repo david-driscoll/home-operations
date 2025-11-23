@@ -66,6 +66,22 @@ Replace the following placeholder domains with your actual domains:
   - `httproute.yaml`
   - `applicationdefinition.yaml`
 
+### CORS Security ⚠️
+For production use, restrict CORS origins to specific domains instead of wildcards:
+
+1. In `configmap.yaml`, update the `origins` field:
+   ```ini
+   origins = https://app.obsidian.md, app://obsidian.md
+   ```
+
+2. In `httproute.yaml`, the middleware is pre-configured with Obsidian-specific origins:
+   - `https://app.obsidian.md` (web app)
+   - `app://obsidian.md` (desktop app)
+   - `capacitor://localhost` (mobile app)
+   - `http://localhost` (local development)
+
+Add additional origins as needed for your use case.
+
 ### Access Control
 Customize the Authentik access policy in `applicationdefinition.yaml`:
 ```yaml
@@ -81,6 +97,13 @@ Modify the Volsync schedule in `volsync.yaml`:
 trigger:
   schedule: "0 2 * * *"  # Daily at 2 AM
 ```
+
+### Container Versions
+The deployment uses pinned container versions for stability:
+- **obsidian-livesync**: v0.23.18
+- **tailscale**: v1.76.6
+
+Update these versions in `helmrelease.yaml` as needed.
 
 ## Deployment
 

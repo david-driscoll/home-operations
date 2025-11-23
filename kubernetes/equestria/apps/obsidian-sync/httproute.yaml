@@ -48,7 +48,13 @@ spec:
       - DELETE
       - HEAD
       - OPTIONS
+    # SECURITY: Update this list to match your actual domains
+    # Obsidian desktop app uses app://obsidian.md
+    # Obsidian web uses https://app.obsidian.md
     accessControlAllowOriginList:
-      - "*"
+      - "https://app.obsidian.md"
+      - "app://obsidian.md"
+      - "capacitor://localhost"
+      - "http://localhost"
     accessControlMaxAge: 100
     addVaryHeader: true

@@ -10,6 +10,8 @@ data:
     enable_cors = true
     
     [cors]
+    # SECURITY: Update these origins to match your actual domains
+    # Example: origins = https://app.obsidian.md, app://obsidian.md
     origins = *
     credentials = true
     methods = GET, PUT, POST, HEAD, DELETE
