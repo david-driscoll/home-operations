@@ -17,6 +17,7 @@ import * as tls from "@pulumi/tls";
 import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { createBackupJobs } from "./backups.ts";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -151,29 +152,6 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   sftpKey: sftpClientKey,
 });
 
-celestiaDockgeRuntime.createBackupJob({
-  name: "Backup Immich",
-  schedule: "0 10 * * *",
-  sourceType: "local",
-  source: "/data/backup/immich/",
-  destinationType: "b2",
-  destination: "immich",
-  destinationSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
-});
-
-lunaDockgeRuntime.createBackupJob({
-  name: "Replicate Immich",
-  schedule: "0 3 * * *",
-  sourceType: "sftp",
-  source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/immich`,
-  destinationType: "local",
-  destination: "/data/backup/immich/",
-});
-
-createMinioBucketBackupJob({ title: "Home Operations", bucket: "home-operations", backblazeSecret: "Backblaze home-operations" });
-createMinioBucketBackupJob({ title: "Stargate Command Postgres", bucket: "stargate-command-db", backblazeSecret: "Backblaze S3 Stargate Command Database" });
-createMinioBucketBackupJob({ title: "Equestria Postgres", bucket: "equestria-db", backblazeSecret: "Backblaze S3 Equestria Database" });
-
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
   credential: dockgeCredential,
@@ -198,15 +176,16 @@ export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockag
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
-  stacks.reduce(
-    (prev, curr) => ({
-      endpoints: [...prev.endpoints, ...curr.endpoints],
-      "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
-    }),
-    { endpoints: [], "external-endpoints": [] }
-  )
-);
+
+createBackupJobs({
+  celestiaDockgeRuntime,
+  lunaDockgeRuntime,
+  alphaSiteDockgeRuntime,
+  celestiaHost,
+  lunaHost,
+  alphaSiteHost,
+  globals,
+});
 
 await updateTailscaleAcls({
   globals,
@@ -227,6 +206,16 @@ await updateTailscaleAcls({
   dnsServers: ["100.111.209.201", "100.111.0.1", alphaSiteDockgeRuntime.tailscaleIpAddress],
 });
 
+const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+  stacks.reduce(
+    (prev, curr) => ({
+      endpoints: [...prev.endpoints, ...curr.endpoints],
+      "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
+    }),
+    { endpoints: [], "external-endpoints": [] }
+  )
+);
+
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
 pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]) => {
   return addUptimeGatus(
@@ -239,61 +228,3 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
     dnsParent
   );
 });
-
-function createMinioBucketBackupJob({ title, bucket, backblazeSecret }: { title: pulumi.Input<string>; bucket: pulumi.Input<string>; backblazeSecret?: pulumi.Input<string> }) {
-  celestiaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Backup ${title}`,
-    schedule: "0 10 * * *",
-    sourceType: "local",
-    source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-    destinationType: "local",
-    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
-  });
-
-  if (backblazeSecret) {
-    celestiaDockgeRuntime.createBackupJob({
-      name: pulumi.interpolate`Replicate ${title} to B2`,
-      schedule: "*/10 * * * *",
-      sourceType: "local",
-      source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-      destinationType: "b2",
-      destination: pulumi.interpolate`/`,
-      destinationSecret: backblazeSecret,
-    });
-  }
-
-  lunaDockgeRuntime.createBackupJob({
-    name: pulumi.interpolate`Replicate ${title}`,
-    schedule: "0 3 * * *",
-    sourceType: "sftp",
-    source: pulumi.interpolate`${celestiaDockgeRuntime.tailscaleHostname}/spike/${bucket}/`,
-    destinationType: "local",
-    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
-  });
-}
-
-const thanosStorage = new minio.S3Bucket(
-  `thanos-storage`,
-  {
-    acl: "private",
-  },
-  {
-    provider: globals.truenasMinioProvider,
-    protect: true,
-    retainOnDelete: true,
-  }
-);
-
-const thanosMinioSecret = new OPI("thanos-minio-secret", {
-  title: "Thanos S3 Storage",
-  category: CategoryEnum.APICredential,
-  fields: {
-    username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
-    password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
-    bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
-    endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
-  },
-});
-
-// Backup Thanos bucket to Celestia and Luna
-createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket });

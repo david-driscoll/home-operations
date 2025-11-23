@@ -66,6 +66,16 @@ export class DockgeLxc extends ComponentResource {
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
     this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
 
+    // update hostname on machine
+    const setHostname = new remote.Command(
+      `${name}-set-hostname`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
+      },
+      mergeOptions(cro, { dependsOn: [] })
+    );
+
     const ipAddress = (this.ipAddress = args.ipAddress
       ? output(args.ipAddress)
       : args.host.remote
@@ -76,7 +86,7 @@ export class DockgeLxc extends ComponentResource {
             connection: args.host.remoteConnection,
             create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
           },
-          mergeOptions(cro, { dependsOn: [] })
+          mergeOptions(cro, { dependsOn: [setHostname] })
         ).stdout);
 
     this.credential = output(args.credential);
@@ -88,7 +98,7 @@ export class DockgeLxc extends ComponentResource {
     });
     const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs } });
 
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [] }));
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [setHostname] }));
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
@@ -100,7 +110,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
       },
-      mergeOptions(cro, { dependsOn: [] })
+      mergeOptions(cro, { dependsOn: [setHostname] })
     );
 
     const keyWrites: any[] = [];
@@ -458,7 +468,7 @@ export class DockgeLxc extends ComponentResource {
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`,
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true })
       );

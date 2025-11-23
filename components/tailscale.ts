@@ -57,14 +57,14 @@ export function installTailscale({
     advertiseExitNode?: boolean;
   };
 }) {
-  const sshConfig = new remote.Command(
-    `${name}-ssh-config`,
-    {
-      connection,
-      create: pulumi.interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
-    },
-    { parent, dependsOn: [] }
-  );
+  // const sshConfig = new remote.Command(
+  //   `${name}-ssh-config`,
+  //   {
+  //     connection,
+  //     create: pulumi.interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+  //   },
+  //   { parent, dependsOn: [] }
+  // );
 
   const installTailscale = new remote.Command(
     `${name}-tailscale-install`,
@@ -72,7 +72,7 @@ export function installTailscale({
       connection,
       create: pulumi.interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
     },
-    { parent, dependsOn: [sshConfig] }
+    { parent, dependsOn: [] }
   );
 
   const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
@@ -85,7 +85,7 @@ export function installTailscale({
     {
       connection,
       create: pulumi.interpolate`tailscale up ${tailscaleArgs} --reset`,
-      triggers: [installTailscale.id, sshConfig.id],
+      triggers: [installTailscale.id],
       environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
     { parent, dependsOn: [installTailscale] }
@@ -96,10 +96,10 @@ export function installTailscale({
     {
       connection,
       create: pulumi.interpolate`tailscale set ${tailscaleArgs} --auto-update `,
-      triggers: [installTailscale.id, sshConfig.id, tailscaleUp.id],
+      triggers: [installTailscale.id, tailscaleUp.id],
       environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
-    { parent, dependsOn: [tailscaleUp, sshConfig, installTailscale] }
+    { parent, dependsOn: [tailscaleUp, installTailscale] }
   );
   return tailscaleSet;
 }

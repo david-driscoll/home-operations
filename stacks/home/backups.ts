@@ -1,0 +1,165 @@
+import { DockgeLxc } from "./DockgeLxc.ts";
+import * as pulumi from "@pulumi/pulumi";
+import { ProxmoxHost } from "./ProxmoxHost.ts";
+import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { GlobalResources } from "@components/globals.ts";
+import * as minio from "@pulumi/minio";
+
+export function createBackupJobs({
+  celestiaDockgeRuntime,
+  lunaDockgeRuntime,
+  alphaSiteDockgeRuntime,
+  celestiaHost,
+  globals,
+}: {
+  celestiaDockgeRuntime: DockgeLxc;
+  lunaDockgeRuntime: DockgeLxc;
+  alphaSiteDockgeRuntime: DockgeLxc;
+  celestiaHost: ProxmoxHost;
+  lunaHost: ProxmoxHost;
+  alphaSiteHost: ProxmoxHost;
+  globals: GlobalResources;
+}) {
+  createResticBackupJob({
+    title: "Immich",
+    bucket: "immich",
+    source: celestiaDockgeRuntime,
+    sourceHost: celestiaHost,
+    destination: lunaDockgeRuntime,
+  });
+  // TODO: make restic backup work with all dockge instances
+  // createResticBackupJob({
+  //     title: "Immich",
+  //     bucket: "immich",
+  //     source: celestiaDockgeRuntime,
+  //     sourceHost: celestiaHost,
+  //     destination: lunaDockgeRuntime,
+  // });
+
+  createMinioBucketBackupJob({
+    title: "Home Operations",
+    bucket: "home-operations",
+    backblazeSecret: "Backblaze home-operations",
+    source: celestiaDockgeRuntime,
+    destination: lunaDockgeRuntime,
+  });
+  createMinioBucketBackupJob({
+    title: "Stargate Command Postgres",
+    bucket: "stargate-command-db",
+    backblazeSecret: "Backblaze S3 Stargate Command Database",
+    source: celestiaDockgeRuntime,
+    destination: lunaDockgeRuntime,
+  });
+  createMinioBucketBackupJob({
+    title: "Equestria Postgres",
+    bucket: "equestria-db",
+    backblazeSecret: "Backblaze S3 Equestria Database",
+    source: celestiaDockgeRuntime,
+    destination: lunaDockgeRuntime,
+  });
+
+  const thanosStorage = new minio.S3Bucket(
+    `thanos-storage`,
+    {
+      acl: "private",
+    },
+    {
+      provider: globals.truenasMinioProvider,
+      protect: true,
+      retainOnDelete: true,
+    }
+  );
+
+  const thanosMinioSecret = new OPI("thanos-minio-secret", {
+    title: "Thanos S3 Storage",
+    category: CategoryEnum.APICredential,
+    fields: {
+      username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
+      password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
+      bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
+      endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
+    },
+  });
+
+  // Backup Thanos bucket to Celestia and Luna
+  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime });
+}
+
+function createResticBackupJob({
+  title,
+  bucket,
+
+  source,
+  sourceHost,
+  destination,
+}: {
+  source: DockgeLxc;
+  sourceHost: ProxmoxHost;
+  destination: DockgeLxc;
+  title: pulumi.Input<string>;
+  bucket: pulumi.Input<string>;
+  backblazeSecret?: pulumi.Input<string>;
+}) {
+  source.createBackupJob({
+    name: pulumi.interpolate`Backup ${title}`,
+    schedule: "0 10 * * *",
+    sourceType: "local",
+    source: pulumi.interpolate`/data/backup/${bucket}/`,
+    destinationType: "b2",
+    destination: pulumi.interpolate`${bucket}`,
+    destinationSecret: sourceHost.backupVolumes!.backblaze.backupCredential.title!,
+  });
+
+  destination.createBackupJob({
+    name: pulumi.interpolate`Replicate ${title}`,
+    schedule: "0 3 * * *",
+    sourceType: "sftp",
+    source: pulumi.interpolate`${source.tailscaleHostname}/${bucket}`,
+    destinationType: "local",
+    destination: pulumi.interpolate`/data/backup/${bucket}/`,
+  });
+}
+
+function createMinioBucketBackupJob({
+  title,
+  bucket,
+  backblazeSecret,
+  source,
+  destination,
+}: {
+  source: DockgeLxc;
+  destination: DockgeLxc;
+  title: pulumi.Input<string>;
+  bucket: pulumi.Input<string>;
+  backblazeSecret?: pulumi.Input<string>;
+}) {
+  source.createBackupJob({
+    name: pulumi.interpolate`Backup ${title}`,
+    schedule: "0 10 * * *",
+    sourceType: "local",
+    source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+    destinationType: "local",
+    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
+  });
+
+  if (backblazeSecret) {
+    source.createBackupJob({
+      name: pulumi.interpolate`Replicate ${title} to B2`,
+      schedule: "*/10 * * * *",
+      sourceType: "local",
+      source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+      destinationType: "b2",
+      destination: pulumi.interpolate`/`,
+      destinationSecret: backblazeSecret,
+    });
+  }
+
+  destination.createBackupJob({
+    name: pulumi.interpolate`Replicate ${title}`,
+    schedule: "0 3 * * *",
+    sourceType: "sftp",
+    source: pulumi.interpolate`${source.tailscaleHostname}/spike/${bucket}/`,
+    destinationType: "local",
+    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
+  });
+}

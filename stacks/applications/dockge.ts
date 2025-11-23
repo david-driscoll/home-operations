@@ -138,7 +138,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
 
   const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
-  const environmentConfig = copyFileToRemote(`${clusterDefinition.key}-authentik-outpost-env-token`, {
+  const environmentConfig = copyFileToRemote(`${clusterDefinition.key}-authentik-outpost-token`, {
     connection: {
       host: lxcData.sections.ssh.fields.hostname.value!,
       user: "root",
@@ -148,9 +148,9 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
   });
 
   await outToPromise(environmentConfig.id);
-  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/authentik-outpost/` });
-  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/uptime/` });
-  await ssh.execCommand(`docker compose -f compose.yaml up -d; docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backups/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/authentik-outpost/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/uptime/` });
+  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backups/` });
 
   ssh.dispose();
 
