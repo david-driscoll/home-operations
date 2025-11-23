@@ -146,7 +146,7 @@ export class BackupPlanManager extends ComponentResource {
       },
       ...repositoryConfig,
       id: name,
-      uri: isLocalBackupSameAsSource ? `/backup/${repository}/` : `sftp://${localTailscaleHostname}:2022/${repository}/`,
+      uri: isLocalBackupSameAsSource ? `/backup/${repository}/` : `sftp:celestia:/${repository}/`,
       password,
       autoUnlock: true,
     });
@@ -237,6 +237,7 @@ export class BackupPlanManager extends ComponentResource {
       if (jobIndex >= 0) {
         updatedConfig.repos[jobIndex] = {
           ...updatedConfig.repos[jobIndex],
+          uri: repo.uri,
           password: repo.password,
           env: repo.env,
           flags: repo.flags,
