@@ -27,24 +27,24 @@ export async function createBackupJobs({
     localBackup: celestiaDockgeRuntime,
     remoteBackup: lunaDockgeRuntime,
   });
-  const alphaSiteBackupManager = new BackupPlanManager("alpha-site-backup-plan-manager", {
-    globals: globals,
-    source: alphaSiteDockgeRuntime,
-    localBackup: celestiaDockgeRuntime,
-    remoteBackup: lunaDockgeRuntime,
-  });
+  // const alphaSiteBackupManager = new BackupPlanManager("alpha-site-backup-plan-manager", {
+  //   globals: globals,
+  //   source: alphaSiteDockgeRuntime,
+  //   localBackup: celestiaDockgeRuntime,
+  //   remoteBackup: lunaDockgeRuntime,
+  // });
 
-  await alphaSiteBackupManager.createBackrestPlan("adguard", {
-    title: "AdGuard Home",
-    paths: ["/opt/stacks/adguard"],
-    repository: "adguard",
-  });
+  // await alphaSiteBackupManager.createBackrestPlan("adguard", {
+  //   title: "AdGuard Home",
+  //   paths: ["/opt/stacks/adguard"],
+  //   repository: "adguard",
+  // });
 
-  await alphaSiteBackupManager.createBackrestPlan("zigbee", {
-    title: "ZigBee",
-    paths: ["/opt/stacks/zigbee-poe"],
-    repository: "zigbee",
-  });
+  // await alphaSiteBackupManager.createBackrestPlan("zigbee", {
+  //   title: "ZigBee",
+  //   paths: ["/opt/stacks/zigbee-poe"],
+  //   repository: "zigbee",
+  // });
 
   await celestiaBackupManager.createBackrestPlan("immich", {
     title: "Immich",

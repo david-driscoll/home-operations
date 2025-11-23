@@ -1,4 +1,4 @@
 Host celestia
-    HostName celestia.${tailscaleDomain}
+    HostName celestia.${searchDomain}
     IdentityFile /root/.ssh/id_ed25519
     Port 2022
