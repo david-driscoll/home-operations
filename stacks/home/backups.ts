@@ -104,7 +104,7 @@ export async function createBackupJobs({
   // Backup Thanos bucket to Celestia and Luna
   createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime });
 
-  await alphaSiteBackupManager.updateBackrestConfig();
+  // await alphaSiteBackupManager.updateBackrestConfig();
   await celestiaBackupManager.updateBackrestConfig();
 }
 
