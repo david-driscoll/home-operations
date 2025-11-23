@@ -39,8 +39,14 @@ metadata:
 spec:
   headers:
     accessControlAllowCredentials: true
+    # Explicitly list required headers for security
     accessControlAllowHeaders:
-      - "*"
+      - "Authorization"
+      - "Content-Type"
+      - "Accept"
+      - "Origin"
+      - "X-Requested-With"
+      - "X-Auth-Token"
     accessControlAllowMethods:
       - GET
       - POST
@@ -48,7 +54,7 @@ spec:
       - DELETE
       - HEAD
       - OPTIONS
-    # SECURITY: Update this list to match your actual domains
+    # SECURITY: Pre-configured with Obsidian-specific origins
     # Obsidian desktop app uses app://obsidian.md
     # Obsidian web uses https://app.obsidian.md
     accessControlAllowOriginList:

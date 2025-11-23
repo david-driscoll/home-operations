@@ -10,7 +10,7 @@ spec:
     schedule: "0 2 * * *"  # Daily at 2 AM
   restic:
     pruneIntervalDays: 7
-    repository: obsidian-sync-restic-secret
+    repository: obsidian-sync-restic-secret  # Secret containing RESTIC_REPOSITORY
     retain:
       daily: 7
       weekly: 4
