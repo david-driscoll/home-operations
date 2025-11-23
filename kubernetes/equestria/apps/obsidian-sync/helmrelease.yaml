@@ -73,7 +73,7 @@ spec:
               repository: ghcr.io/tailscale/tailscale
               tag: v1.76.6  # Update to latest stable version
             env:
-              TS_KUBE_SECRET: obsidian-sync-tailscale
+              TS_KUBE_SECRET: obsidian-sync-tailscale-state
               TS_USERSPACE: "true"
               TS_AUTHKEY:
                 valueFrom:
@@ -84,6 +84,18 @@ spec:
             securityContext:
               runAsUser: 1000
               runAsGroup: 1000
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+            
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 256Mi
     
     service:
       app:

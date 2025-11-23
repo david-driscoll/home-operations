@@ -7,3 +7,11 @@ metadata:
     name: obsidian-sync
     goldilocks.fairwinds.com/enabled: "true"
     kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: obsidian-sync-tailscale-state
+  namespace: obsidian-sync
+type: Opaque
+# Empty secret - Tailscale will populate this with state data
