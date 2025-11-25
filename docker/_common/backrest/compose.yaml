@@ -35,7 +35,7 @@ services:
       - BACKREST_CONFIG=/config/config.json
       - XDG_CACHE_HOME=/cache
       - TMPDIR=/tmp
-      - TZ=${TZ}
+      - TZ=${TIMEZONE}
     networks:
       - dockge_default
     restart: unless-stopped
