@@ -36,13 +36,14 @@ export function copyFileToRemote(
     dependsOn?: Input<Resource[]>;
   }
 ) {
-  return output(name).apply((name) => {
+  return output(name)
+    .apply(name => output({ name, id: md5Output({ input: args.content }).result }))
+    .apply(({name, id}) => {
     const tempFilePath = writeTempFile(name, args.content);
     const remotePath = output(args.remotePath);
     const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-    const id = md5Output({ input: args.content }).result;
     const mkdir = new remote.Command(
-      `${name}-mkdir`,
+      `${name}-${id}-mkdir`,
       {
         connection: args.connection,
         create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
@@ -51,7 +52,7 @@ export function copyFileToRemote(
     );
 
     return new remote.CopyToRemote(
-      name,
+      `${name}-${id}`,
       {
         connection: args.connection,
         remotePath,

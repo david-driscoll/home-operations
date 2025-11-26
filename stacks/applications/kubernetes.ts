@@ -21,7 +21,7 @@ const op = new OPClient();
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: KubernetesClusterDefinition) {
   const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
-  const volsyncPassword = await op.getItemByTitle(`Volsync Password`);
+  const volsyncPassword = await op.getItemByTitle(`Volsync Password`).then((z) => z.fields.credential.value!);
 
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(kubeConfigJson);
@@ -217,13 +217,27 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
     var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
     var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
+    updatedConfig.repos = updatedConfig.repos || [];
     for (const repo of repos) {
       const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-      const guid = await ssh.execCommand(`RESTIC_PASSWORD='${volsyncPassword.fields.password.value!}' restic cat config --json -r ${repo.uri}`).then((r) => JSON.parse(r.stdout).id as string);
       if (jobIndex >= 0) {
-        updatedConfig.repos[jobIndex] = { ...repo, guid };
+        updatedConfig.repos[jobIndex] = {
+          ...updatedConfig.repos[jobIndex],
+          uri: repo.uri,
+          password: repo.password,
+          env: repo.env,
+          flags: repo.flags,
+          prunePolicy: repo.prunePolicy,
+          checkPolicy: repo.checkPolicy,
+          hooks: repo.hooks,
+          commandPrefix: repo.commandPrefix,
+          autoUnlock: repo.autoUnlock,
+        };
       } else {
-        updatedConfig.repos.push({ ...repo, guid });
+        updatedConfig.repos.push({
+          ...repo,
+          autoInitialize: true,
+        }); 
       }
     }
     await ssh.execCommand(`echo '${JSON.stringify(updatedConfig)}' > /opt/stacks/backrest/config/config.json`);
@@ -275,7 +289,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     }).apply((r) => ({
       file: r,
       backupTask,
-      volsyncRepo: getVolsyncRepo(job, volsyncPassword.fields.password.value!),
+      volsyncRepo: getVolsyncRepo(job, volsyncPassword),
       externalEndpoint: {
         enabled: true,
         token: token,
