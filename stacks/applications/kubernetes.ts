@@ -191,6 +191,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         kubernetes_replicas: 2,
         kubernetes_namespace: clusterDefinition.key,
         kubernetes_ingress_class_name: "internal",
+        kubernetes_ingress_annotations: {
+          "traefik.ingress.kubernetes.io/router.middlewares": "network-authenticated-user@kubernetescrd",
+        },
         kubernetes_httproute_parent_refs: [
           {
             name: "internal",
@@ -198,6 +201,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
             kind: "Gateway",
           },
         ],
+        kubernetes_httproute_annotations: {
+          "traefik.ingress.kubernetes.io/router.middlewares": "network-authenticated-user@kubernetescrd",
+        },
         kubernetes_ingress_secret_name: "",
       }),
       protocolProviders: applicationManager.proxyProviders,
@@ -237,7 +243,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         updatedConfig.repos.push({
           ...repo,
           autoInitialize: true,
-        }); 
+        });
       }
     }
     await ssh.execCommand(`echo '${JSON.stringify(updatedConfig)}' > /opt/stacks/backrest/config/config.json`);
