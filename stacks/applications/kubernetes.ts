@@ -192,7 +192,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         kubernetes_namespace: clusterDefinition.key,
         kubernetes_ingress_class_name: "internal",
         kubernetes_ingress_annotations: {
-          "traefik.ingress.kubernetes.io/router.middlewares": "network-authenticated-user@kubernetescrd",
+          "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
         },
         kubernetes_httproute_parent_refs: [
           {
@@ -202,7 +202,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           },
         ],
         kubernetes_httproute_annotations: {
-          "traefik.ingress.kubernetes.io/router.middlewares": "network-authenticated-user@kubernetescrd",
+          "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
         },
         kubernetes_ingress_secret_name: "",
       }),
