@@ -119,6 +119,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
       config: pulumi.jsonStringify({
         authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
         authentik_host_insecure: false,
+        container_image: "ghcr.io/goauthentik/outpost-proxy:2025.8.4",
         // authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
         log_level: "trace",
         object_naming_template: `authentik-outpost`,
