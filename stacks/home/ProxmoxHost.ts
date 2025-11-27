@@ -4,7 +4,7 @@ import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { installTailscale, tailscale } from "../../components/tailscale.js";
+import { getTailscaleClient, installTailscale } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
@@ -196,7 +196,8 @@ export class ProxmoxHost extends ComponentResource {
       // Get Tailscale device
       const device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
         try {
-          await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
+          const client = await getTailscaleClient();
+          await client.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
         } catch (e) {
           pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
         }

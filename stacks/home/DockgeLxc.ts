@@ -8,7 +8,7 @@ import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { RandomPassword, RandomString } from "@pulumi/random";
-import { installTailscale, tailscale } from "@components/tailscale.ts";
+import { getTailscaleClient, installTailscale } from "@components/tailscale.ts";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -230,7 +230,8 @@ export class DockgeLxc extends ComponentResource {
     this.device = all([this.tailscaleIpAddress, getDeviceOutput({ name: tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] })]).apply(
       async ([tailscaleIpAddress, result]) => {
         try {
-          await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
+          const client = await getTailscaleClient();
+          await client.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
         } catch (e) {
           log.error(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
         }

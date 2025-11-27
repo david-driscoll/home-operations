@@ -12,14 +12,8 @@ import { getTruenasClient } from "../../components/truenas.ts";
 import TrueNASResourceManager from "../../components/truenas/truenas-manager.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import { Dataset } from "@components/truenas/index.ts";
-import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
-import { remote, types } from "@pulumi/command";
-import { installTailscale, tailscale } from "../../components/tailscale.js";
-import { getHostnames } from "./helper.ts";
-import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { types } from "@pulumi/command";
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;

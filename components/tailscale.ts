@@ -8,34 +8,38 @@ import axios from "axios";
 import { GlobalResources } from "./globals.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
-const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");
-const specFilename = path.join(__dirname, "tailscale.json");
-const spec = await readFile(specFilename, "utf-8");
+export async function getTailscaleClient(): Promise<Client> {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
 
-export const client = new OpenAPIClientAxios({
-  definition: JSON.parse(spec),
-  axiosConfigDefaults: {
-    params: { tailnet: "-" },
-    headers: {},
-  },
-});
-export const tailscale = await client.init<Client>();
+  const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");
+  const specFilename = path.join(__dirname, "tailscale.json");
+  const spec = await readFile(specFilename, "utf-8");
 
-await axios
-  .post(
-    "https://api.tailscale.com/api/v2/oauth/token",
-    axios.toFormData({
-      client_id: tailscaleCredential.fields["username"].value!,
-      client_secret: tailscaleCredential.fields["credential"].value!,
-      grant_type: "client_credentials",
-    })
-  )
-  .then((response) => {
-    tailscale.defaults.headers["Authorization"] = `Bearer ${response.data.access_token}`;
+  const client = new OpenAPIClientAxios({
+    definition: JSON.parse(spec),
+    axiosConfigDefaults: {
+      params: { tailnet: "-" },
+      headers: {},
+    },
   });
+  const tailscale = await client.init<Client>();
+
+  await axios
+    .post(
+      "https://api.tailscale.com/api/v2/oauth/token",
+      axios.toFormData({
+        client_id: tailscaleCredential.fields["username"].value!,
+        client_secret: tailscaleCredential.fields["credential"].value!,
+        grant_type: "client_credentials",
+      })
+    )
+    .then((response) => {
+      tailscale.defaults.headers["Authorization"] = `Bearer ${response.data.access_token}`;
+    });
+  return tailscale;
+}
 
 export function installTailscale({
   connection,
