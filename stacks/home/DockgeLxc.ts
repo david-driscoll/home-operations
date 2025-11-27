@@ -21,7 +21,7 @@ import * as yaml from "yaml";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { BackupJobManager } from "./jobs.ts";
 import { unique } from "moderndash";
-import { Command, CopyToRemote } from "@pulumi/command/remote/index.js";
+import { Command } from "@pulumi/command/remote/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");

@@ -8,12 +8,10 @@ import { md5 } from "@pulumi/std";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
-import { tmpdir } from "os";
 import { basename, dirname, join } from "path";
 import { md5Output } from "@pulumi/std/md5.js";
-import { dir } from "console";
 
-export const tempDir = join(tmpdir(), "home-operations-pulumi");
+export const tempDir = join("_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
 export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
@@ -37,38 +35,38 @@ export function copyFileToRemote(
   }
 ) {
   return output(name)
-    .apply(name => output({ name, id: md5Output({ input: args.content }).result }))
-    .apply(({name, id}) => {
-    const tempFilePath = writeTempFile(name, args.content);
-    const remotePath = output(args.remotePath);
-    const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-    const mkdir = new remote.Command(
-      `${name}-${id}-mkdir`,
-      {
-        connection: args.connection,
-        create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
-      },
-      mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) })
-    );
-
-    return new remote.CopyToRemote(
-      `${name}-${id}`,
-      {
-        connection: args.connection,
-        remotePath,
-        source: fileAsset,
-        triggers: [id, args.remotePath],
-      },
-      mergeOptions(
-        { parent: args.parent },
+    .apply((name) => output({ name, id: md5Output({ input: args.content }).result }))
+    .apply(({ name, id }) => {
+      const tempFilePath = writeTempFile(name, args.content);
+      const remotePath = output(args.remotePath);
+      const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
+      const mkdir = new remote.Command(
+        `${name}-${id}-mkdir`,
         {
-          dependsOn: output(args.dependsOn)
-            .apply((d) => d ?? [])
-            .apply((d) => [...d, mkdir]),
-        }
-      )
-    );
-  });
+          connection: args.connection,
+          create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
+        },
+        mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) })
+      );
+
+      return new remote.CopyToRemote(
+        `${name}-${id}`,
+        {
+          connection: args.connection,
+          remotePath,
+          source: fileAsset,
+          triggers: [id, args.remotePath],
+        },
+        mergeOptions(
+          { parent: args.parent },
+          {
+            dependsOn: output(args.dependsOn)
+              .apply((d) => d ?? [])
+              .apply((d) => [...d, mkdir]),
+          }
+        )
+      );
+    });
 }
 
 export function removeUndefinedProperties<T>(obj: T): T {
@@ -92,12 +90,14 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
   const content = output(args).apply(async (a) => {
     return yaml.stringify(
       {
-        endpoints: (a.endpoints ?? []).sort((a, b) => a.name.localeCompare(b.name)).map(e => {
-          return {
-            interval: '2m',
-            ...e
-          }
-        }),
+        endpoints: (a.endpoints ?? [])
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((e) => {
+            return {
+              interval: "2m",
+              ...e,
+            };
+          }),
         "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
       },
       { lineWidth: 0 }
