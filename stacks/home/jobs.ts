@@ -37,7 +37,7 @@ export class BackupJobManager extends ComponentResource {
       const groupName = `Jobs: ${cluster.title}`;
       const token = toGatusKey(groupName, job.name);
       return copyFileToRemote(`${cluster.key}-backup-job-${kebabCase(job.name)}`, {
-        content: jsonStringify({ ...job, token }),
+        content: jsonStringify({ ...job, token }, undefined, 2),
         parent: this,
         connection: this.connection,
         remotePath: interpolate`/opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
