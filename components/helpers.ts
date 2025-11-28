@@ -1,7 +1,7 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
-import { writeFile } from "fs/promises";
+import { writeFile, truncate } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
 import { md5 } from "@pulumi/std";
@@ -21,7 +21,12 @@ export function getTempFilePath(fileName: string) {
 export function writeTempFile(fileName: Input<string>, content: Input<string>) {
   const filePath = output(fileName).apply((name) => getTempFilePath(name));
   return all([filePath, content])
-    .apply(async ([filePath, content]) => writeFile(filePath, content))
+    .apply(async ([filePath, content]) => {
+      try {
+        await truncate(filePath, 0);
+      } catch (_) { }
+      return writeFile(filePath, content, {  });
+    })
     .apply(() => filePath);
 }
 
@@ -46,6 +51,7 @@ export function copyFileToRemote(
         {
           connection: args.connection,
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
+          triggers: [id, remotePath],
         },
         mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) })
       );

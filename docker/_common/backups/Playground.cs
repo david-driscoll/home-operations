@@ -170,7 +170,18 @@ static async Task Rclone(RCloneJob job)
     }
 
     Console.WriteLine($"{job.Name} exited with code {item?.ExitCode} in {item?.RunTime.Humanize()}");
+    ReportUptime(job, output, error, item);
+}
 
+static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
+{
+    var items = await client.GetVaultItemsAsync(vaultId, $"title eq \"{title}\"");
+    var item = await client.GetVaultItemByIdAsync(vaultId, items.Single().Id);
+    return item;
+}
+
+static async Task ReportUptime(RCloneJob job, StringBuilder output, StringBuilder error, BufferedCommandResult? item)
+{
     try
     {
         using var httpClient = new HttpClient();
@@ -200,13 +211,6 @@ static async Task Rclone(RCloneJob job)
     {
         Console.WriteLine($"Error reporting to Uptime API: {ex.Message}");
     }
-}
-
-static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
-{
-    var items = await client.GetVaultItemsAsync(vaultId, $"title eq \"{title}\"");
-    var item = await client.GetVaultItemByIdAsync(vaultId, items.Single().Id);
-    return item;
 }
 
 abstract record RCloneBackend(string Remote, string Path)
