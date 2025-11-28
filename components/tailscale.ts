@@ -81,7 +81,7 @@ export function installTailscale({
 
   const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
     args.ssh ? "--ssh" : "--ssh=false"
-  } ${args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"}   --accept-risk=lose-ssh`;
+  } ${args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
 
   // Set Tailscale configuration
   const tailscaleUp = new remote.Command(
