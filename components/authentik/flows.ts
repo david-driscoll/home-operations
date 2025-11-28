@@ -205,7 +205,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         body: pulumi.jsonStringify({
           client_name: "Authentik Tailscale Client",
           redirect_uris: items,
-        }),
+        }, undefined, 2),
         headers: {
           "Content-Type": "application/json",
         },

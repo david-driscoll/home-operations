@@ -124,7 +124,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
         log_level: "trace",
         object_naming_template: `authentik-outpost`,
         docker_network: "dockge_default",
-      }),
+      }, undefined, 2),
       protocolProviders: applicationManager.proxyProviders,
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }

@@ -206,7 +206,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
         },
         kubernetes_ingress_secret_name: "",
-      }),
+      }, undefined, 2),
       protocolProviders: applicationManager.proxyProviders,
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
@@ -289,7 +289,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       token: token,
     };
     return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
-      content: pulumi.jsonStringify(backupTask),
+      content: pulumi.jsonStringify(backupTask, undefined, 2),
       remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
       connection: globals.localBackupServerConnection,
       parent: applicationManager,

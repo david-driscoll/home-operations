@@ -78,7 +78,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
       }
     }
 
-    return pulumi.jsonStringify(resolvedAttributes);
+    return pulumi.jsonStringify(resolvedAttributes, undefined, 2);
   }
 
   public get allRoles() {
