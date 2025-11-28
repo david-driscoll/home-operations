@@ -38,29 +38,34 @@ var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
 
 async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
 {
-    var jobs = Directory.EnumerateFiles("/jobs", "*.json")
-    .Select(path =>
+    foreach (var path in Directory.EnumerateFiles("/jobs", "*.json"))
     {
-        var content = System.IO.File.ReadAllText(path);
-        var key = Path.GetFileNameWithoutExtension(path);
-        return (key, value: System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!);
-    })
-    .ToDictionary(kv => kv.key, kv => kv.value);
+        RCloneJob result;
+        try
+        {
+            var content = System.IO.File.ReadAllText(path);
+            var key = Path.GetFileNameWithoutExtension(path);
+            var value = System.Text.Json.JsonSerializer.Deserialize<BackupTask>(content, LocalContext.Default.BackupTask)!;
 
-    foreach (var job in jobs)
-    {
-        // job.Dump(job.Value.Name);
-        var sourceBackend = await CreateBackend("source", job.Value.SourceType, job.Value.Source, job.Value.SourceSecret);
-        var destinationBackend = await CreateBackend("destination", job.Value.DestinationType, job.Value.Destination, job.Value.DestinationSecret);
+            // job.Dump(job.Value.Name);
+            var sourceBackend = await CreateBackend("source", value.SourceType, value.Source, value.SourceSecret);
+            var destinationBackend = await CreateBackend("destination", value.DestinationType, value.Destination, value.DestinationSecret);
 
-        yield return new RCloneJob(
-            job.Key,
-            job.Value.Name,
-            job.Value.Schedule,
-        job.Value.Token,
-            sourceBackend,
-            destinationBackend
-        );
+            result = new RCloneJob(
+                key,
+                value.Name,
+                value.Schedule,
+                value.Token,
+                sourceBackend,
+                destinationBackend
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing job file {path}: {ex.Message}");
+            continue;
+        }
+        yield return result;
     }
 }
 
