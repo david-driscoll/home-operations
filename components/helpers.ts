@@ -10,6 +10,7 @@ import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
 import { basename, dirname, join } from "path";
 import { md5Output } from "@pulumi/std/md5.js";
+import { unique } from "moderndash";
 
 export const tempDir = join("_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
@@ -90,15 +91,15 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
   const content = output(args).apply(async (a) => {
     return yaml.stringify(
       {
-        endpoints: (a.endpoints ?? [])
+        endpoints: unique((a.endpoints ?? [])
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((e) => {
             return {
               interval: "2m",
               ...e,
             };
-          }),
-        "external-endpoints": (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+          }), (a, b) => a.name === b.name),
+        "external-endpoints": unique((a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)), (a, b) => a.name === b.name),
       },
       { lineWidth: 0 }
     );
