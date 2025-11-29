@@ -1,7 +1,7 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
-import { writeFile, truncate } from "fs/promises";
+import { writeFile, truncate, rm } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
 import { md5 } from "@pulumi/std";
@@ -25,7 +25,7 @@ export function writeTempFile(fileName: Input<string>, content: Input<string>) {
   return all([filePath, content])
     .apply(async ([filePath, content]) => {
       try {
-        await truncate(filePath, 0);
+        await rm(filePath, { force: true });
       } catch (_) {}
       return writeFile(filePath, content, {});
     })
