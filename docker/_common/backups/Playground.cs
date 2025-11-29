@@ -155,7 +155,7 @@ static async Task Rclone(RCloneJob job)
 
             .WithArguments(args =>
             args
-            .Add("sync")
+            .Add(DateTime.Now.Day % 10 == 0 ? "sync" : "copy")
             .Add(job.Source.GetRemotePath())
             .Add(job.Destination.GetRemotePath())
         ).ExecuteBufferedAsync();
@@ -170,7 +170,7 @@ static async Task Rclone(RCloneJob job)
     }
 
     Console.WriteLine($"{job.Name} exited with code {item?.ExitCode} in {item?.RunTime.Humanize()}");
-    ReportUptime(job, output, error, item);
+    await ReportUptime(job, output, error, item);
 }
 
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)

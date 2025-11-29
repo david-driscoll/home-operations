@@ -182,31 +182,35 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       serviceConnection: serviceConnection.serviceConnectionKubernetesId,
       type: "proxy",
       name: `Outpost for ${clusterDefinition.title}`,
-      config: pulumi.jsonStringify({
-        authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
-        authentik_host_insecure: false,
-        authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
-        // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
-        log_level: "trace",
-        object_naming_template: `authentik-outpost`,
-        kubernetes_replicas: 2,
-        kubernetes_namespace: clusterDefinition.key,
-        kubernetes_ingress_class_name: "internal",
-        kubernetes_ingress_annotations: {
-          "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
-        },
-        kubernetes_httproute_parent_refs: [
-          {
-            name: "internal",
-            namespace: "network",
-            kind: "Gateway",
+      config: pulumi.jsonStringify(
+        {
+          authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
+          authentik_host_insecure: false,
+          authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
+          // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
+          log_level: "trace",
+          object_naming_template: `authentik-outpost`,
+          kubernetes_replicas: 2,
+          kubernetes_namespace: clusterDefinition.key,
+          kubernetes_ingress_class_name: "internal",
+          kubernetes_ingress_annotations: {
+            "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
           },
-        ],
-        kubernetes_httproute_annotations: {
-          "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
+          kubernetes_httproute_parent_refs: [
+            {
+              name: "internal",
+              namespace: "network",
+              kind: "Gateway",
+            },
+          ],
+          kubernetes_httproute_annotations: {
+            "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
+          },
+          kubernetes_ingress_secret_name: "",
         },
-        kubernetes_ingress_secret_name: "",
-      }, undefined, 2),
+        undefined,
+        2
+      ),
       protocolProviders: applicationManager.proxyProviders,
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
@@ -288,25 +292,39 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       name: title,
       token: token,
     };
-    return copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
-      content: pulumi.jsonStringify(backupTask, undefined, 2),
-      remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
-      connection: globals.localBackupServerConnection,
-      parent: applicationManager,
-    }).apply((r) => ({
-      file: r,
-      backupTask,
-      volsyncRepo: getVolsyncRepo(job, volsyncPassword),
-      externalEndpoint: {
-        enabled: true,
-        token: token,
-        name: title,
-        group: groupName,
-        heartbeat: {
-          interval: "25h",
-        },
-      } as ExternalEndpoint,
-    }));
+    return pulumi
+      .all([
+        backupTask,
+        copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
+          content: pulumi.jsonStringify(backupTask, undefined, 2),
+          remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
+          connection: globals.localBackupServerConnection,
+          parent: applicationManager,
+        }),
+      ])
+      .apply(([task, r]) => {
+        let intervalDays = 1;
+        if (task.schedule) {
+          const parts = task.schedule.split(" ");
+          if (parts[2]?.indexOf("/") > -1) {
+            intervalDays = parseInt(parts[2].split("/")[1], 10);
+          }
+        }
+        return {
+          file: r,
+          backupTask,
+          volsyncRepo: getVolsyncRepo(job, volsyncPassword),
+          externalEndpoint: {
+            enabled: true,
+            token: token,
+            name: title,
+            group: groupName,
+            heartbeat: {
+              interval: `${intervalDays * 24 + 1}h`,
+            },
+          } as ExternalEndpoint,
+        };
+      });
   }
 }
 
