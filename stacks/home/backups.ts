@@ -133,7 +133,7 @@ function createMinioBucketBackupJob({
   if (backblazeSecret) {
     source.createBackupJob({
       name: pulumi.interpolate`Replicate ${title} to B2`,
-      schedule: "*/10 * * * *",
+      schedule: "0 8 */3 * *",
       sourceType: "local",
       source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
       destinationType: "b2",

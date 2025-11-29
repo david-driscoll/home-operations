@@ -177,7 +177,7 @@ export class BackupPlanManager extends ComponentResource {
     if (backblazeSecret) {
       this.localBackup.createBackupJob({
         name: interpolate`Backup ${title}`,
-        schedule: "0 10 * * *",
+        schedule: "0 10 */3 * *",
         sourceType: "local",
         source: `/data/backup/${repository}/`,
         destinationType: "b2",
