@@ -62,20 +62,25 @@ export async function createBackupJobs({
     backblazeSecret: "Backblaze home-operations",
     source: celestiaDockgeRuntime,
     destination: lunaDockgeRuntime,
+    globals,
   });
   createMinioBucketBackupJob({
     title: "Stargate Command Postgres",
     bucket: "stargate-command-db",
+    restoreBucket: "stargate-command-db-restore",
     backblazeSecret: "Backblaze S3 Stargate Command Database",
     source: celestiaDockgeRuntime,
     destination: lunaDockgeRuntime,
+    globals,
   });
   createMinioBucketBackupJob({
     title: "Equestria Postgres",
     bucket: "equestria-db",
+    restoreBucket: "equestria-db-restore",
     backblazeSecret: "Backblaze S3 Equestria Database",
     source: celestiaDockgeRuntime,
     destination: lunaDockgeRuntime,
+    globals,
   });
 
   const thanosStorage = new minio.S3Bucket(
@@ -102,7 +107,7 @@ export async function createBackupJobs({
   });
 
   // Backup Thanos bucket to Celestia and Luna
-  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime });
+  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime, globals });
 
   // await alphaSiteBackupManager.updateBackrestConfig();
   await celestiaBackupManager.updateBackrestConfig();
@@ -115,7 +120,7 @@ function createMinioBucketBackupJob({
   source,
   destination,
   globals,
-  minioRestoreBucket,
+  restoreBucket: restoreBucket,
 }: {
   source: DockgeLxc;
   destination: DockgeLxc;
@@ -123,7 +128,7 @@ function createMinioBucketBackupJob({
   bucket: pulumi.Input<string>;
   globals: GlobalResources;
   backblazeSecret?: pulumi.Input<string>;
-  minioRestoreBucket?: pulumi.Input<string>;
+  restoreBucket?: pulumi.Input<string>;
 }) {
   source.createBackupJob({
     name: pulumi.interpolate`Backup ${title}`,
@@ -155,13 +160,13 @@ function createMinioBucketBackupJob({
     destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
   });
 
-  if (minioRestoreBucket) {
-    pulumi.all([bucket, minioRestoreBucket]).apply(([bucket, restoreBucket]) => {
+  if (restoreBucket) {
+    pulumi.all([bucket, restoreBucket]).apply(([bucket, restoreBucket]) => {
       const minioBucket = new minio.S3Bucket(
         `${restoreBucket}-minio-bucket`,
         {
           acl: "private",
-          bucket: pulumi.interpolate`${bucket}`,
+          bucket: pulumi.interpolate`${restoreBucket}`,
         },
         {
           provider: globals.truenasMinioProvider,
