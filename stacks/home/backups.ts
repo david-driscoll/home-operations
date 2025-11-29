@@ -176,11 +176,13 @@ function createMinioBucketBackupJob({
       );
       source.createBackupJob({
         name: pulumi.interpolate`Sync ${bucket} from ${restoreBucket}`,
-        schedule: "0 */10 * * *",
+        schedule: "*/10 * * * *",
         sourceType: "s3",
-        source: pulumi.interpolate`/${bucket}/`,
+        source: pulumi.interpolate`${bucket}/`,
+        sourceSecret: globals.truenasMinioCredential.title!,
         destinationType: "s3",
-        destination: pulumi.interpolate`/${minioBucket.bucket}/`,
+        destination: pulumi.interpolate`${minioBucket.bucket}/`,
+        destinationSecret: globals.truenasMinioCredential.title!,
       });
     });
   }

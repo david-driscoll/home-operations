@@ -82,7 +82,7 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
         "local" => new LocalBackend(name, path),
         "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[path.IndexOf('/')..]),
         "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, path, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
-        // "s3" => path.Split('/') is { } parts ? new S3Backend(name, parts[0], parts[1], "/" + string.Join('/', parts.Skip(2)), secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
+        "s3" => path.Split('/') is { } parts ? new S3Backend(name, secretItem!.GetField("endpoint").Value!, parts[0], "/" + string.Join('/', parts.Skip(1)), secretItem!.GetField("username").Value!, secretItem!.GetField("password").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
     };
 }
@@ -243,20 +243,20 @@ record B2Backend(string Remote, string Bucket, string Path, string KeyID, string
     public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path}";
 }
 
-// record S3Backend(string Remote, string Endpoint, string Bucket, string Path, string AccessKeyID, string SecretAccessKey) : RCloneBackend(Remote, Path)
-// {
-//     public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
-//     {
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_TYPE", "s3");
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PROVIDER", "Rclone");
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_ENDPOINT", Endpoint);
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_ACCESS_KEY_ID", AccessKeyID);
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_SECRET_ACCESS_KEY", SecretAccessKey);
-//         yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USE_MULTIPART_UPLOADS", "false");
-//     }
+record S3Backend(string Remote, string Endpoint, string Bucket, string Path, string AccessKeyID, string SecretAccessKey) : RCloneBackend(Remote, Path)
+{
+    public override IEnumerable<KeyValuePair<string, string>> GetEnvironmentVariables()
+    {
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_TYPE", "s3");
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_PROVIDER", "Rclone");
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_ENDPOINT", Endpoint);
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_ACCESS_KEY_ID", AccessKeyID);
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_SECRET_ACCESS_KEY", SecretAccessKey);
+        yield return new KeyValuePair<string, string>($"RCLONE_CONFIG_{Remote.ToUpper()}_USE_MULTIPART_UPLOADS", "false");
+    }
 
-//     public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path.Trim('/')}";
-// }
+    public override string GetRemotePath() => $"{Remote}:{Bucket}/{Path.Trim('/')}";
+}
 
 record LocalBackend(string Remote, string Path) : RCloneBackend(Remote, Path)
 {
@@ -278,7 +278,7 @@ static class RCloneBackendExtensions
 {
     public static Field GetField(this FullItem item, string key)
     {
-        return item.Fields.First(z => z.Label == key);
+        return item.Fields.FirstOrDefault(z => z.Label == key) ?? throw new InvalidOperationException($"Field '{key}' not found in item '{item.Title}'");
     }
 
 }
