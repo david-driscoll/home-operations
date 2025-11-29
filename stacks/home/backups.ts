@@ -114,12 +114,16 @@ function createMinioBucketBackupJob({
   backblazeSecret,
   source,
   destination,
+  globals,
+  minioRestoreBucket,
 }: {
   source: DockgeLxc;
   destination: DockgeLxc;
   title: pulumi.Input<string>;
   bucket: pulumi.Input<string>;
+  globals: GlobalResources;
   backblazeSecret?: pulumi.Input<string>;
+  minioRestoreBucket?: pulumi.Input<string>;
 }) {
   source.createBackupJob({
     name: pulumi.interpolate`Backup ${title}`,
@@ -133,7 +137,7 @@ function createMinioBucketBackupJob({
   if (backblazeSecret) {
     source.createBackupJob({
       name: pulumi.interpolate`Replicate ${title} to B2`,
-      schedule: "0 8 */3 * *",
+      schedule: "0 8 */4 * *",
       sourceType: "local",
       source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
       destinationType: "b2",
@@ -150,4 +154,29 @@ function createMinioBucketBackupJob({
     destinationType: "local",
     destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
   });
+
+  if (minioRestoreBucket) {
+    pulumi.all([bucket, minioRestoreBucket]).apply(([bucket, restoreBucket]) => {
+      const minioBucket = new minio.S3Bucket(
+        `${restoreBucket}-minio-bucket`,
+        {
+          acl: "private",
+          bucket: pulumi.interpolate`${bucket}`,
+        },
+        {
+          provider: globals.truenasMinioProvider,
+          protect: true,
+          retainOnDelete: true,
+        }
+      );
+      source.createBackupJob({
+        name: pulumi.interpolate`Sync ${bucket} from ${restoreBucket}`,
+        schedule: "0 */10 * * *",
+        sourceType: "s3",
+        source: pulumi.interpolate`/${bucket}/`,
+        destinationType: "s3",
+        destination: pulumi.interpolate`/${minioBucket.bucket}/`,
+      });
+    });
+  }
 }

@@ -54,7 +54,6 @@ const b2Bucket = new b2.Bucket(
   {
     bucketName: pulumi.interpolate`home-operations`,
     bucketType: "allPrivate",
-
     bucketInfo: {
       project: "home-operations",
       purpose: "pulumi storage",
