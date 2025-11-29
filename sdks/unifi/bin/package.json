@@ -21,7 +21,7 @@
         "parameterization": {
             "name": "unifi",
             "version": "0.41.3",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjMifX0="
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjMifX0="
         }
     }
 }

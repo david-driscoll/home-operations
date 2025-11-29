@@ -111,7 +111,7 @@ export async function getPackage() : Promise<string | undefined> {
 			const params = new resproto.Parameterization();
 			params.setName("unifi");
 			params.setVersion("0.41.3");
-			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjMifX0="), c => c.charCodeAt(0)));
+			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjMifX0="), c => c.charCodeAt(0)));
 
 			const req = new resproto.RegisterPackageRequest();
 			req.setName("terraform-provider");

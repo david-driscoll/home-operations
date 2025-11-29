@@ -21,11 +21,6 @@ packages:
     version: 0.14.0
     parameters:
       - registry.terraform.io/ubiquiti-community/unifi
-  uptimekuma:
-    source: terraform-provider
-    version: 0.14.0
-    parameters:
-      - registry.terraform.io/kill3r-queen/uptimekuma
   b2:
     source: terraform-provider
     version: 0.14.0
