@@ -56,6 +56,13 @@ export async function createBackupJobs({
     backblazeSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
   });
 
+  await celestiaBackupManager.createBackrestPlan("pgdump", {
+    title: "Postgres Dumps",
+    paths: ["/spike/data/pgdump/"],
+    repository: "pgdump",
+    backblazeSecret: celestiaHost.backupVolumes!.backblaze.backupCredential.title!,
+  });
+
   createMinioBucketBackupJob({
     title: "Home Operations",
     bucket: "home-operations",
