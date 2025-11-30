@@ -224,9 +224,20 @@ export class BackupPlanManager extends ComponentResource {
     updatedConfig.plans = updatedConfig.plans || [];
 
     for (const plan of this.plans.values()) {
-      const jobIndex = updatedConfig.repos.findIndex((r) => r.id === plan.id);
+      const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
       if (jobIndex >= 0) {
-        updatedConfig.plans[jobIndex] = { ...updatedConfig.plans[jobIndex], ...plan };
+        updatedConfig.plans[jobIndex] = {
+          ...updatedConfig.plans[jobIndex],
+          paths: plan.paths,
+          excludes: plan.excludes,
+          iexcludes: plan.iexcludes,
+          schedule: plan.schedule,
+          retention: plan.retention,
+          hooks: plan.hooks,
+          backupFlags: plan.backupFlags,
+          skipIfUnchanged: plan.skipIfUnchanged,
+          repo: plan.repo,
+        };
       } else {
         updatedConfig.plans.push(plan);
       }
