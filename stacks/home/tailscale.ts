@@ -148,36 +148,78 @@ export async function updateTailscaleAcls(args: {
   );
 
   manager.setGrant(
-  'tsidp',
+    "member-tsidp-defaults",
     {
-      src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
-      dst: ["idp"],
+      src: [autogroups.member, autogroups.tagged],
       app: {
         "tailscale.com/cap/tsidp": [
           {
-            allow_admin_ui: false,
-            allow_dcr: false,
             includeInUserInfo: true,
+
+            // STS
+            resources: ["*"],
+            users: ["*"],
+
+            extraClaims: {
+              groups: [Roles.Users],
+              entitlements: [Roles.Users],
+            },
           },
         ],
-      }
+      },
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+    "family-tsidp-defaults",
+    {
+      src: [groups.family],
+      app: {
+        "tailscale.com/cap/tsidp": [
+          {
+            extraClaims: {
+              groups: [Roles.Family],
+              entitlements: [Roles.Family],
+            },
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+    "friends-tsidp-defaults",
+    {
+      src: [groups.friends],
+      app: {
+        "tailscale.com/cap/tsidp": [
+          {
+            extraClaims: {
+              groups: [Roles.Friends],
+              entitlements: [Roles.Friends],
+            },
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
   );
 
   manager.setGrant(
     "tsidp-admin",
     {
       src: [autogroups.admin, groups.admins],
-      dst: ["idp", tag.apps],
+      dst: ["idp"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
             allow_admin_ui: true,
             allow_dcr: true,
             extraClaims: {
-              entitlements: [groups.admins],
-              groups: [groups.admins],
+              entitlements: [Roles.Admins],
+              groups: [Roles.Admins],
             },
             includeInUserInfo: true,
           },
@@ -279,7 +321,10 @@ function configureKubernetesAccess(manager: TailscaleAclManager) {
     { accept: [groups.family, groups.friends] }
   );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.ssh }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.web }, { accept: [...clusterTags, tag.egress, ...testData.knownNormalUsers, ...testData.knownAdminUsers] });
+  manager.setGrant(
+    { src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.web },
+    { accept: [...clusterTags, tag.egress, ...testData.knownNormalUsers, ...testData.knownAdminUsers] }
+  );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [tag.observability], ip: ports.any }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
 
