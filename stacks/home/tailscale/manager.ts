@@ -30,7 +30,7 @@ type TailscaleSshTestInput = Record<TailscaleSshUser, TailscaleSshTestInputItem>
 
 export const ports = {
   any: ["*"] as TailscaleNetworkCapability[],
-  web: ["tcp:443"] as TailscaleNetworkCapability[],
+  web: ["tcp:443", "tcp:80", "udp:443", "udp:80"] as TailscaleNetworkCapability[],
   dns: ["tcp:53", "udp:53", "tcp:853", "udp:853", "udp:784", "tcp:443"] as TailscaleNetworkCapability[],
   ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
   dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],

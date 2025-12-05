@@ -1,11 +1,9 @@
 import * as tailscale from "@pulumi/tailscale";
 import * as pulumi from "@pulumi/pulumi";
-import { TailscaleSelector, TailscaleSshUser, TailscaleTest, TailscaleTestSelector, PolicyFile } from "@openapi/tailscale-grants.js";
 import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
 import { applyAllEdits, autogroups, groups, ports, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
 import { awaitOutput } from "@components/helpers.ts";
-import * as parser from "jsonc-parser";
 
 type TestsData = {
   taggedDevices: pulumi.Input<string>[];
