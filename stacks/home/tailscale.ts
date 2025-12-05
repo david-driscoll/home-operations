@@ -2,8 +2,9 @@ import * as tailscale from "@pulumi/tailscale";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
-import { applyAllEdits, autogroups, groups, ports, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
+import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
 import { awaitOutput } from "@components/helpers.ts";
+import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleTags } from "@openapi/tailscale-grants.js";
 
 type TestsData = {
   taggedDevices: pulumi.Input<string>[];
@@ -47,7 +48,19 @@ export async function updateTailscaleAcls(args: {
 
   configureProxmoxAccess(manager);
   configureDockgeAccess(manager);
-  configureKubernetesAccess(manager);
+  configureKubernetesAccess(manager, [
+    {
+      tag: tag.equestria,
+      clusterNetwork: "10.206.0.0/16",
+      serviceNetwork: "10.196.0.0/16",
+    },
+    {
+      tag: tag.sgc,
+      clusterNetwork: "10.209.0.0/16",
+      serviceNetwork: "10.199.0.0/16",
+    },
+  ]);
+  
   createGroupGrants(manager);
 
   manager.setGrant(
@@ -95,6 +108,16 @@ export async function updateTailscaleAcls(args: {
       src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
       dst: ["primary-dns", "secondary-dns", "unifi-dns"],
       ip: ports.dns,
+    },
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+  );
+
+  manager.setGrant(
+    "member-home-subnet-access",
+    {
+      src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+      dst: [subnets.internal],
+      ip: ["*"],
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
   );
@@ -260,7 +283,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
   manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge]);
   manager.setExitNode(tag.proxmox);
-  manager.setRoute("10.10.0.0/16", [tag.proxmox]);
+  manager.setRoute(subnets.internal, [tag.proxmox]);
 
   manager.setGrant({ src: [tag.proxmox], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
@@ -292,9 +315,9 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setSshRule({ src: [tag.dockge], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
 
-function configureKubernetesAccess(manager: TailscaleAclManager) {
+function configureKubernetesAccess(manager: TailscaleAclManager, clusters: { tag: TailscaleTags; serviceNetwork: TailscaleCidr; clusterNetwork: TailscaleCidr }[]) {
   const testData = manager.testData;
-  const clusterTags = [tag.sgc, tag.equestria];
+  const clusterTags = clusters.map((z) => z.tag);
 
   manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
@@ -305,11 +328,11 @@ function configureKubernetesAccess(manager: TailscaleAclManager) {
   manager.setService(tag.apps, [...clusterTags, tag.operator, tag.ingress]);
   manager.setService(tag.observability, [...clusterTags, tag.operator, tag.ingress]);
 
-  manager.setRoute("10.10.0.0/16", [tag.sgc, tag.equestria]);
-  manager.setRoute("10.196.0.0/16", [tag.equestria]);
-  manager.setRoute("10.206.0.0/16", [tag.equestria]);
-  manager.setRoute("10.199.0.0/16", [tag.sgc]);
-  manager.setRoute("10.209.0.0/16", [tag.sgc]);
+  manager.setRoute(subnets.internal, clusterTags);
+  for (const cluster of clusters) {
+    manager.setRoute(cluster.serviceNetwork, [cluster.tag]);
+    manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
+  }
 
   manager.setGrant({ src: [groups.admins], dst: [tag.k8s], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } }, { accept: [groups.admins] });
   manager.setGrant(
@@ -327,6 +350,10 @@ function configureKubernetesAccess(manager: TailscaleAclManager) {
   manager.setGrant({ src: [tag.ssh], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.ssh], dst: [tag.dockge, tag.proxmox], ip: ports.ssh }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
+
+  for (const cluster of clusters) {
+    manager.setGrant({ src: [groups.admins, autogroups.admin], dst: [cluster.serviceNetwork, cluster.clusterNetwork] }, { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers });
+  }
 
   const rules = Object.fromEntries(
     testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const))

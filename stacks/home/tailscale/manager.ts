@@ -28,6 +28,9 @@ export type TailscaleSshTestInputItem =
   | { accept?: pulumi.Input<TailscaleSshUser[]>; deny?: pulumi.Input<TailscaleSshUser[]>; check: pulumi.Input<TailscaleSshUser[]> };
 type TailscaleSshTestInput = Record<TailscaleSshUser, TailscaleSshTestInputItem>;
 
+export const subnets = {
+  internal: "10.10.0.0/16" as TailscaleSelector,
+};
 export const ports = {
   any: ["*"] as TailscaleNetworkCapability[],
   web: ["tcp:443", "tcp:80", "udp:443", "udp:80"] as TailscaleNetworkCapability[],

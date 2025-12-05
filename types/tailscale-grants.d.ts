@@ -92,6 +92,12 @@ export type TailscaleIpSet = `ipset:${string}`;
 // Source Selectors
 // ============================================================================
 
+export type TailscaleIp =
+  | `${number}.${number}.${number}.${number}` // Single IP
+
+export type TailscaleCidr =
+  | `${number}.${number}.${number}.${number}/${number}`; // CIDR range
+
 /**
  * Valid source selectors for grants
  * Sources define the network entities that initiate connections
@@ -102,10 +108,10 @@ export type TailscaleSelector =
   | TailscaleTags
   | TailscaleHostAliases
   | TailscaleIpSet
-  | `${number}.${number}.${number}.${number}` // Single IP
-  | `${number}.${number}.${number}.${number}/${number}`; // CIDR range
+  | TailscaleIp
+  | TailscaleCidr
 
-export type TailscaleTestSelector = TailscaleGroups | TailscaleTags | TailscaleHostAliases | `${string}@${string}` | `${number}.${number}.${number}.${number}`; // Single IP
+export type TailscaleTestSelector = TailscaleGroups | TailscaleTags | TailscaleHostAliases | `${string}@${string}` | TailscaleIp; // Single IP
 
 export type TailscaleTestAcceptSelector = `${TailscaleTestSelector}:${number | string}`;
 
