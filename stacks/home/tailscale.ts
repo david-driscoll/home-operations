@@ -55,7 +55,7 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     "nut-exporter-access",
     {
-      src: [tag.sgc, tag.equestria, tag.egress, tag.observability],
+      src: [tag.ssh],
       dst: ["alpha-site"],
       ip: ["tcp:3493", "udp:3493"],
     },
