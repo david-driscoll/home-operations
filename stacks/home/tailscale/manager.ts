@@ -35,6 +35,7 @@ export const ports = {
   ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
   dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
   dockgeManagement: ["tcp:5001", "tcp:9595"] as TailscaleNetworkCapability[],
+  observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100"] as TailscaleNetworkCapability[],
   proxmox: ["tcp:80", "tcp:443", "tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
 };
 export const autogroups = {

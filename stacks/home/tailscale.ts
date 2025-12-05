@@ -255,7 +255,9 @@ function configureKubernetesAccess(manager: TailscaleAclManager) {
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [tag.observability], ip: ports.any }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
 
+  manager.setGrant({ src: [tag.ssh], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.ssh], dst: [tag.dockge, tag.proxmox], ip: ports.ssh }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
 
   const rules = Object.fromEntries(
     testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const))
