@@ -27,7 +27,7 @@ export function writeTempFile(fileName: Input<string>, content: Input<string>) {
       try {
         await rm(filePath, { force: true });
       } catch (_) {}
-      return writeFile(filePath, content, {});
+      return writeFile(filePath, content.padEnd(1024), {});
     })
     .apply(() => filePath);
 }
