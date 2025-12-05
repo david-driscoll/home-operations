@@ -29,28 +29,6 @@ services:
 
       traefik.http.services.adguard-web.loadbalancer.server.port: 3000
 
-      # DNS over UDP (port 53)
-      traefik.udp.routers.adguard-dns.entrypoints: dns
-      traefik.udp.routers.adguard-dns.service: adguard-dns
-      traefik.udp.services.adguard-dns.loadbalancer.server.port: 53
-
-      # DNS over TCP (port 53)
-      traefik.tcp.routers.adguard-dns-tcp.entrypoints: dns_tcp
-      traefik.tcp.routers.adguard-dns-tcp.rule: HostSNI(`*`)
-      traefik.tcp.routers.adguard-dns-tcp.service: adguard-dns-tcp
-      traefik.tcp.services.adguard-dns-tcp.loadbalancer.server.port: 53
-
-      # DNS over TLS (DoT) - port 853
-      traefik.tcp.routers.adguard-dot.entrypoints: dnss
-      traefik.tcp.routers.adguard-dot.rule: HostSNI(`*`)
-      traefik.tcp.routers.adguard-dot.service: adguard-dot
-      traefik.tcp.services.adguard-dot.loadbalancer.server.port: 853
-
-      # DNS over QUIC (DoQ) - port 784
-      traefik.udp.routers.adguard-doq.entrypoints: dns_quic
-      traefik.udp.routers.adguard-doq.service: adguard-doq
-      traefik.udp.services.adguard-doq.loadbalancer.server.port: 784
-
       # DNS over HTTPS (DoH) - port 443 via HTTPS
       traefik.http.routers.adguard-doh.rule: Host(`adguard.${searchDomain}`) && Path(`/dns-query`)
       traefik.http.routers.adguard-doh.entrypoints: websecure
