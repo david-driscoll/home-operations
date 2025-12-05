@@ -1,5 +1,6 @@
 services:
   adguard:
+    cpus: 2
     restart: unless-stopped
     dns:
       - 100.100.100.100
