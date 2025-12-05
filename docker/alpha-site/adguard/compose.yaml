@@ -2,6 +2,8 @@ services:
   adguard:
     cpus: 2
     restart: unless-stopped
+    dns:
+      - 100.100.100.100
     image: adguard/adguardhome:v0.107.69@sha256:8a4107ec812023842ccab9e04600c5d39d3be6b15e907c34a36339c184c8fccf
     ports:
       - "4000:3000" # Keep direct access for local network
