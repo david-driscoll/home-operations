@@ -215,7 +215,7 @@ export class BackupPlanManager extends ComponentResource {
     const sourceKey = await awaitOutput(output(this.source.cluster.key))!;
     await ssh.connect({
       host: localBackupServerHost,
-      username: "root",
+      username: "root", 
     });
 
     var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;

@@ -53,6 +53,16 @@ export async function updateTailscaleAcls(args: {
   createGroupGrants(manager);
 
   manager.setGrant(
+    "nut-exporter-access",
+    {
+      src: [tag.sgc, tag.equestria, tag.egress, tag.observability],
+      dst: ["alpha-site"],
+      ip: ["tcp:3493", "udp:3493"],
+    },
+    { accept: [tag.equestria] }
+  );
+
+  manager.setGrant(
     "default-apps-access",
     {
       src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
@@ -60,6 +70,15 @@ export async function updateTailscaleAcls(args: {
       ip: ports.web,
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+  );
+
+  manager.setGrant(
+    {
+      src: [groups.admins, autogroups.admin],
+      dst: [tag.proxmox, tag.dockge],
+      ip: ports.ssh,
+    },
+    { accept: testData.knownAdminUsers }
   );
 
   manager.setSshRule(

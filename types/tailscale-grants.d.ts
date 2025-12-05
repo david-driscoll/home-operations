@@ -67,7 +67,7 @@ export type TailscaleAllGroups = TailscaleGroups | TailscaleAutogroups;
 /**
  * Known host aliases defined in the hosts section
  */
-export type TailscaleHostAliases = "idp" | "primary-dns" | "secondary-dns" | "unifi-dns";
+export type TailscaleHostAliases = "idp" | "primary-dns" | "secondary-dns" | "unifi-dns" | "alpha-site" | "celestia" | "luna" | "spike" | "twilight-sparkle"; // Any other custom host alias
 
 // ============================================================================
 // Postures (based on your configuration)
@@ -105,12 +105,7 @@ export type TailscaleSelector =
   | `${number}.${number}.${number}.${number}` // Single IP
   | `${number}.${number}.${number}.${number}/${number}`; // CIDR range
 
-export type TailscaleTestSelector =
-  | TailscaleGroups
-  | TailscaleTags
-  | TailscaleHostAliases
-  | `${string}@${string}`
-  | `${number}.${number}.${number}.${number}` // Single IP
+export type TailscaleTestSelector = TailscaleGroups | TailscaleTags | TailscaleHostAliases | `${string}@${string}` | `${number}.${number}.${number}.${number}`; // Single IP
 
 export type TailscaleTestAcceptSelector = `${TailscaleTestSelector}:${number | string}`;
 
@@ -465,8 +460,6 @@ export interface TailscaleTest {
    * Format: "destination:port" or just "destination"
    */
   deny?: TailscaleTestAcceptSelector[];
-
-
 }
 
 /**
