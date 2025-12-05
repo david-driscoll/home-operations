@@ -105,6 +105,15 @@ export type TailscaleSelector =
   | `${number}.${number}.${number}.${number}` // Single IP
   | `${number}.${number}.${number}.${number}/${number}`; // CIDR range
 
+export type TailscaleTestSelector =
+  | TailscaleGroups
+  | TailscaleTags
+  | TailscaleHostAliases
+  | `${string}@${string}`
+  | `${number}.${number}.${number}.${number}` // Single IP
+
+export type TailscaleTestAcceptSelector = `${TailscaleTestSelector}:${number | string}`;
+
 // ============================================================================
 // Network Layer Capabilities (IP)
 // ============================================================================
@@ -436,18 +445,28 @@ export interface TailscaleTest {
   /**
    * Source selector
    */
-  src: TailscaleSelector;
+  src: TailscaleTestSelector;
 
-  /**
-   * Expected accessible destinations with ports
-   * Format: "destination:port" or just "destination"
-   */
-  accept: string[];
+  srcPostureAttrs?: Record<string, string>;
 
   /**
    * Protocol to test
    */
   proto: TailscaleTestProtocol;
+
+  /**
+   * Expected accessible destinations with ports
+   * Format: "destination:port" or just "destination"
+   */
+  accept?: TailscaleTestAcceptSelector[];
+
+  /**
+   * Expected accessible destinations with ports
+   * Format: "destination:port" or just "destination"
+   */
+  deny?: TailscaleTestAcceptSelector[];
+
+
 }
 
 /**
@@ -457,7 +476,7 @@ export interface TailscaleSshTest {
   /**
    * Source selector
    */
-  src: TailscaleSelector;
+  src: TailscaleTestSelector;
 
   /**
    * Destination selectors
@@ -468,6 +487,11 @@ export interface TailscaleSshTest {
    * Expected accessible SSH users
    */
   accept?: TailscaleSshUser[];
+
+  /**
+   * Expected accessible SSH users
+   */
+  check?: TailscaleSshUser[];
 
   /**
    * Expected denied SSH users

@@ -22,7 +22,7 @@ services:
 
       traefik.http.services.registry.loadbalancer.server.port: 6785
     environment:
-      TZ: America/New_York
+      TZ: ${TIMEZONE}
     volumes:
       - ./config/config.json:/etc/zot/config.json
       - ./config/credentials.json:/etc/credentials/credentials.json

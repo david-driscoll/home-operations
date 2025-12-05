@@ -186,6 +186,7 @@ await createBackupJobs({
   globals,
 });
 
+  try {
 await updateTailscaleAcls({
   globals,
   hosts: {
@@ -194,16 +195,25 @@ await updateTailscaleAcls({
     "secondary-dns": alphaSiteDockgeRuntime.tailscaleIpAddress,
     "unifi-dns": "100.111.0.1",
     "alpha-site": alphaSiteHost.tailscaleIpAddress,
-    "alpha-site-dockge": alphaSiteDockgeRuntime.tailscaleIpAddress,
+    [await awaitOutput(alphaSiteDockgeRuntime.tailscaleName)]: alphaSiteDockgeRuntime.tailscaleIpAddress,
     celestia: celestiaHost.tailscaleIpAddress,
-    "celestia-dockge": celestiaDockgeRuntime.tailscaleIpAddress,
+    [await awaitOutput(celestiaDockgeRuntime.tailscaleName)]: celestiaDockgeRuntime.tailscaleIpAddress,
     luna: lunaHost.tailscaleIpAddress,
-    "luna-dockge": lunaDockgeRuntime.tailscaleIpAddress,
+    [await awaitOutput(lunaDockgeRuntime.tailscaleName)]: lunaDockgeRuntime.tailscaleIpAddress,
     spike: spikeVm.tailscaleIpAddress,
     "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
   },
+  tests: {
+    dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
+    proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
+    taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
+    kubernetesDevices: ["sgc", "equestria"],
+  },
   dnsServers: ["100.111.209.201", "100.111.0.1", alphaSiteDockgeRuntime.tailscaleIpAddress],
 });
+  } catch (error) {
+    console.error("Error updating Tailscale ACLs:", error);
+  }
 
 const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(

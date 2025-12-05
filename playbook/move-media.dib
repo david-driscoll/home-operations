@@ -1,0 +1,63 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"pwsh","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"pwsh"},{"name":"value"}]}}
+
+#!pwsh
+
+ssh root@truenas.driscoll.tech 'ls /mnt/stash/media/'
+
+#!pwsh
+
+$target = "movies";
+$children = ssh root@truenas.driscoll.tech "ls /mnt/stash/media/$target"
+# ssh root@truenas.driscoll.tech "mkdir -p /mnt/stash/media/$target-new/ && chown -R apps:apps /mnt/stash/media/$target-new/"
+#ssh root@truenas.driscoll.tech "zfs rename stash/media/$target stash/media/$target-old && mkdir -p /mnt/stash/media/$target/ && chown -R apps:apps /mnt/stash/media/$target/"
+#ssh root@truenas.driscoll.tech "mv $(($children | foreach { "'/mnt/stash/media/$target-old/$($_)'" }) -join ' ') '/mnt/stash/media/$target'"
+"zfs rename stash/media/$target stash/media/$target-old && mkdir -p /mnt/stash/media/$target/ && chown -R apps:apps /mnt/stash/media/$target/"
+"nohup mv $(($children | foreach { "'/mnt/stash/media/$target-old/$($_)'" }) -join ' ') '/mnt/stash/media/$target' >$target-output.log 2&>1 &"
+
+#!markdown
+
+* remove the old dataset
+* run the below script
+* create the nfs share (with apps permissions)
+
+scale down
+
+zfs rename stash/media/tv stash/media/tv-old && mkdir -p /mnt/stash/media/tv/ && chown -R apps:apps /mnt/stash/media/tv/
+zfs rename stash/media/movies stash/media/movies-old && mkdir -p /mnt/stash/media/movies/ && chown -R apps:apps /mnt/stash/media/movies/
+
+scale up
+kubectl scale deployment plex -n $namespace --replicas=1
+nohup mv '/mnt/stash/media/tv-old/Abbie' '/mnt/stash/media/tv-old/Anime' '/mnt/stash/media/tv-old/Archive' '/mnt/stash/media/tv-old/Current' '/mnt/stash/media/tv-old/Kids' '/mnt/stash/media/tv-old/Nat' '/mnt/stash/media/tv-old/Tami' '/mnt/stash/media/tv' >tv-output.log 2&>1 &
+
+nohup mv '/mnt/stash/media/movies-old/Abbie' '/mnt/stash/media/movies-old/Archive' '/mnt/stash/media/movies-old/Automated' '/mnt/stash/media/movies-old/Current' '/mnt/stash/media/movies-old/Family' '/mnt/stash/media/movies-old/Kids' '/mnt/stash/media/movies-old/Nat' '/mnt/stash/media/movies-old/Tami' '/mnt/stash/media/movies' >movies-output.log 2&>1 &
+
+#!pwsh
+
+mv $target-new $target
+chown -R apps:apps $target
+
+#!pwsh
+
+kubectl scale deployment plex -n equestria --replicas=0
+kubectl scale deployment tautulli -n equestria --replicas=0
+kubectl scale deployment bazarr -n equestria --replicas=0
+kubectl scale deployment radarr -n equestria --replicas=0
+kubectl scale deployment sonarr -n equestria --replicas=0
+kubectl scale deployment prowlarr -n equestria --replicas=0
+kubectl scale deployment sabnzbd -n equestria --replicas=0
+
+ssh root@truenas.driscoll.tech "zfs rename stash/media/tv stash/media/tv-old && mkdir -p /mnt/stash/media/tv/ && chown -R apps:apps /mnt/stash/media/tv/"
+ssh root@truenas.driscoll.tech "zfs rename stash/media/movies stash/media/movies-old && mkdir -p /mnt/stash/media/movies/ && chown -R apps:apps /mnt/stash/media/movies/"
+
+kubectl scale deployment sabnzbd -n equestria --replicas=1
+kubectl scale deployment prowlarr -n equestria --replicas=1
+kubectl scale deployment sonarr -n equestria --replicas=1
+kubectl scale deployment radarr -n equestria --replicas=1
+kubectl scale deployment bazarr -n equestria --replicas=1
+kubectl scale deployment plex -n equestria --replicas=1
+kubectl scale deployment tautulli -n equestria --replicas=1
+
+ssh root@truenas.driscoll.tech "nohup mv '/mnt/stash/media/tv-old/Abbie' '/mnt/stash/media/tv-old/Anime' '/mnt/stash/media/tv-old/Archive' '/mnt/stash/media/tv-old/Current' '/mnt/stash/media/tv-old/Kids' '/mnt/stash/media/tv-old/Nat' '/mnt/stash/media/tv-old/Tami' '/mnt/stash/media/tv' >tv-output.log 2&>1 &"
+ssh root@truenas.driscoll.tech "nohup mv '/mnt/stash/media/movies-old/Abbie' '/mnt/stash/media/movies-old/Archive' '/mnt/stash/media/movies-old/Automated' '/mnt/stash/media/movies-old/Current' '/mnt/stash/media/movies-old/Family' '/mnt/stash/media/movies-old/Kids' '/mnt/stash/media/movies-old/Nat' '/mnt/stash/media/movies-old/Tami' '/mnt/stash/media/movies' >movies-output.log 2&>1 &"

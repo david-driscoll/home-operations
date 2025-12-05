@@ -1,0 +1,12 @@
+groups:
+  - name: watchdog
+    interval: 30s
+    rules:
+      # Watchdog alert - always firing to verify alerting pipeline
+      - alert: Watchdog
+        annotations:
+          description: "This is a watchdog alert for testing the alerting pipeline."
+          summary: "Watchdog alert is firing"
+        expr: vector(1)
+        labels:
+          severity: info

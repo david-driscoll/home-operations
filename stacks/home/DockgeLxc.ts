@@ -50,7 +50,8 @@ export class DockgeLxc extends ComponentResource {
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
   private backupJobManager: BackupJobManager;
-  shortName: string | undefined;
+  public readonly shortName: string | undefined;
+  public readonly tailscaleName: Output<string>;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
@@ -62,6 +63,7 @@ export class DockgeLxc extends ComponentResource {
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
+    this.tailscaleName = tailscaleName;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
     this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);

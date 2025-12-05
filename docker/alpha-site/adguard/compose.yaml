@@ -7,7 +7,7 @@ services:
     ports:
       - "4000:3000" # Keep direct access for local network
     environment:
-      TZ: America/New_York
+      TZ: ${TIMEZONE}
     labels:
       # Enable Traefik
       traefik.enable: true

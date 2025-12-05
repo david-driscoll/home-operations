@@ -6,6 +6,9 @@ global:
     environment: "homelab"
     region: "home"
 
+rule_files:
+  - /etc/prometheus/watchdog.yml
+
 remote_write:
   - url: http://thanos-write.${tailscaleDomain}:19291/api/v1/receive
     queue_config:

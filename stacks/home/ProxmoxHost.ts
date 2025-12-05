@@ -41,6 +41,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly pveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
   public readonly tailscaleHostname: Output<string>;
+  public readonly tailscaleName: Output<string>;
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
@@ -71,6 +72,7 @@ export class ProxmoxHost extends ComponentResource {
     const { hostname, tailscaleHostname } = getHostnames(name, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
+    this.tailscaleName = output(name);
 
     const cro = { parent: this };
     args.installTailscale ??= true;
