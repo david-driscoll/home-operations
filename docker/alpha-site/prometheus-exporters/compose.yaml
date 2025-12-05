@@ -9,7 +9,7 @@ services:
       - ADGUARD_PORT=3000
       - ADGUARD_USERNAME=${ADGUARD_USERNAME}
       - ADGUARD_PASSWORD=${ADGUARD_PASSWORD}
-      - INTERVAL=30s
+      - INTERVAL=5m
       - SERVER_PORT=9617
     env_file:
       - path: .env
