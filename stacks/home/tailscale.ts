@@ -76,7 +76,7 @@ export async function updateTailscaleAcls(args: {
     {
       src: [groups.admins, autogroups.admin],
       dst: [tag.proxmox, tag.dockge],
-      ip: ports.ssh,
+      ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement],
     },
     { accept: testData.knownAdminUsers }
   );
