@@ -36,14 +36,6 @@ entryPoints:
     address: ":8443"
   sftp:
     address: ":2022"
-  dns:
-    address: ":53/udp"
-  dns_tcp:
-    address: ":53/tcp"
-  dns_quic:
-    address: ":784/udp"
-  dnss:
-    address: ":853"
   metrics:
     address: ":8082"
 
