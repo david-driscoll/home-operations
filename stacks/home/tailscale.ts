@@ -104,7 +104,16 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     {
       src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
-      dst: ["idp", tag.exitNode, autogroups.internet, tag.sgc, tag.equestria],
+      dst: [tag.exitNode, autogroups.internet],
+      ip: ["*"],
+    },
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+  );
+
+  manager.setGrant(
+    {
+      src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+      dst: ["idp"],
       ip: ["tcp:443"],
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
@@ -136,6 +145,24 @@ export async function updateTailscaleAcls(args: {
       },
     },
     { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+  'tsidp',
+    {
+      src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
+      dst: ["idp"],
+      app: {
+        "tailscale.com/cap/tsidp": [
+          {
+            allow_admin_ui: false,
+            allow_dcr: false,
+            includeInUserInfo: true,
+          },
+        ],
+      }
+    },
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
   );
 
   manager.setGrant(
@@ -217,7 +244,7 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
 
   manager.setGrant({ src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [autogroups.member, autogroups.tagged], dst: [tag.dockge], ip: ports.web }, { accept: [autogroups.member, autogroups.tagged] });
+  manager.setGrant({ src: [autogroups.member, autogroups.tagged], dst: [tag.dockge], ip: ports.web }, { accept: testData.knownNormalUsers.concat(testData.knownAdminUsers) });
   manager.setGrant({ src: [tag.dockge], dst: [tag.observability], ip: ports.any }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.dockge] });
 
@@ -252,7 +279,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager) {
     { accept: [groups.family, groups.friends] }
   );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.ssh }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.web }, { accept: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress] });
+  manager.setGrant({ src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.web }, { accept: [...clusterTags, tag.egress, ...testData.knownNormalUsers, ...testData.knownAdminUsers] });
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [tag.observability], ip: ports.any }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
 
