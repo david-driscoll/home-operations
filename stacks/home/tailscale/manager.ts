@@ -34,7 +34,7 @@ export const ports = {
   dns: ["tcp:53", "udp:53", "tcp:853", "udp:853", "udp:784", "tcp:443"] as TailscaleNetworkCapability[],
   ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
   dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
-  dockgeManagement: ["tcp:5001", "tcp:9595"] as TailscaleNetworkCapability[],
+  dockgeManagement: ["tcp:5001", "tcp:9595", "tcp:2022", "udp:2022"] as TailscaleNetworkCapability[],
   observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100"] as TailscaleNetworkCapability[],
   proxmox: ["tcp:80", "tcp:443", "tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
 };
