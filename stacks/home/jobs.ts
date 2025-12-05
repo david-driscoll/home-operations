@@ -42,7 +42,14 @@ export class BackupJobManager extends ComponentResource {
         parent: this,
         connection: this.connection,
         remotePath: interpolate`/opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
-        dependsOn: [],
+        dependsOn: [new remote.Command(
+          `${cluster.key}-backup-job-${kebabCase(job.name)}-remove`,
+
+          {
+            connection: this.connection,
+            delete: interpolate`rm -f /opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
+          },
+          { parent: this })],
       });
     });
   }
