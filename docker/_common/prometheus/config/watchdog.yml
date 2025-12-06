@@ -9,4 +9,4 @@ groups:
           summary: "Watchdog alert is firing"
         expr: vector(1)
         labels:
-          severity: info
+          severity: none
