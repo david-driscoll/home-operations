@@ -423,7 +423,8 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
       endpoint.group ??= definition.spec.category;
       endpoint.group = endpoint.group === "System" || endpoint.group === this.cluster.title ? `Cluster: ${this.cluster.title}` : endpoint.group;
-      endpoint.interval ??= "1m";
+      endpoint.interval ??= "2m";
+      endpoint.timeout ??= "60s";
       endpoint.alerts ??= [];
       endpoint.alerts.push({
         enabled: true,
