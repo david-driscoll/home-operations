@@ -22,7 +22,7 @@ alerting:
     - scheme: http
       api_version: v2
       path_prefix: /
-      timeout: 10s
+      timeout: 30s
       static_configs:
         - targets:
             - alertmanager.${tailscaleDomain}:9093
@@ -35,6 +35,7 @@ scrape_configs:
 
   # Node Exporter - host system metrics (local container)
   - job_name: 'node-exporter'
+    scrape_interval: 30s
     static_configs:
       - targets: ['node-exporter:9100']
         labels:
@@ -42,6 +43,7 @@ scrape_configs:
 
   # cAdvisor - Docker container metrics (local container)
   - job_name: 'cadvisor'
+    scrape_interval: 30s
     static_configs:
       - targets: ['cadvisor:8080']
         labels:
@@ -56,12 +58,14 @@ scrape_configs:
 
   # Blackbox Exporter - HTTP/TCP/ICMP probes
   - job_name: 'blackbox'
+    scrape_interval: 2m
     metrics_path: /metrics
     static_configs:
       - targets: ['blackbox-exporter:9115']
 
   # Blackbox probes for key services
   - job_name: 'blackbox-http'
+    scrape_interval: 2m
     metrics_path: /probe
     params:
       module: [http_2xx]
@@ -69,6 +73,7 @@ scrape_configs:
       - targets:
           - https://prometheus.${CLUSTER_DOMAIN}
           - https://internal.${CLUSTER_DOMAIN}
+          - https://alloy.${CLUSTER_DOMAIN}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
