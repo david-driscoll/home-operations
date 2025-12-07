@@ -8,10 +8,9 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION}
+      - --storage.tsdb.retention.time=2d
+      - --storage.tsdb.retention.size=20GB
       - --web.enable-lifecycle
-    env_file:
-      - path: .env
     labels:
       traefik.enable: true
       traefik.http.routers.prometheus.rule: Host(`prometheus.${CLUSTER_DOMAIN}`)
