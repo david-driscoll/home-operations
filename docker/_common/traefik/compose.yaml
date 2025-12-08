@@ -17,7 +17,7 @@ services:
       traefik.enable: true
       # Dashboard configuration
       traefik.http.routers.dashboard.rule: Host(`internal.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.dashboard.middlewares: authentik-outpost@docker
+      # traefik.http.routers.dashboard.middlewares: authentik-outpost@docker
       traefik.http.routers.dashboard.entrypoints: websecure,tailscale
       traefik.http.routers.dashboard.service: api@internal
       traefik.http.routers.dashboard.tls.certresolver: le
@@ -27,7 +27,7 @@ services:
       traefik.http.routers.dashboard-tailscale.service: api@internal
       # Dockge
       traefik.http.routers.dockge.rule: Host(`dockge.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.dockge.middlewares: authentik-outpost@docker
+      # traefik.http.routers.dockge.middlewares: authentik-outpost@docker
       traefik.http.routers.dockge.entrypoints: websecure
       traefik.http.routers.dockge.tls.certresolver: le
       traefik.http.routers.dockge.service: dockge

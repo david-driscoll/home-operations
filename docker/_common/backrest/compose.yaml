@@ -9,13 +9,13 @@ services:
       traefik.enable: true
 
       traefik.http.routers.backrest.rule: Host(`backrest.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.backrest.middlewares: authentik-outpost@docker
+      # traefik.http.routers.backrest.middlewares: authentik-outpost@docker
       traefik.http.routers.backrest.entrypoints: websecure
       traefik.http.routers.backrest.service: backrest
       traefik.http.routers.backrest.tls.certresolver: le
 
       traefik.http.routers.backrest-tailscale.rule: Host(`backrest-${host}.${tailscaleDomain}`)
-      traefik.http.routers.backrest-tailscale.middlewares: authentik-outpost@docker
+      # traefik.http.routers.backrest-tailscale.middlewares: authentik-outpost@docker
       traefik.http.routers.backrest-tailscale.entrypoints: tailscale
       traefik.http.routers.backrest-tailscale.service: backrest
 
