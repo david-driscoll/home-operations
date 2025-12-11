@@ -20,13 +20,13 @@ type TestsDataPopulated = TestsData & {
 
 export async function updateTailscaleAcls(args: {
   globals: GlobalResources;
-  hosts: pulumi.Input<{
+  hosts: {
     idp: pulumi.Input<string>;
     "primary-dns": pulumi.Input<string>;
     "secondary-dns": pulumi.Input<string>;
     "unifi-dns": pulumi.Input<string>;
     [key: string]: pulumi.Input<string>;
-  }>;
+  };
   internalIps: pulumi.Input<TailscaleIp>[];
   tests: TestsData;
   dnsServers: pulumi.Input<string>[];
@@ -337,7 +337,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const testData = manager.testData;
   const clusterTags = clusters.map((z) => z.tag);
 
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.secureServer, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
   manager.setExitNode(tag.sgc);
