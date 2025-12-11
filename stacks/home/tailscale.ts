@@ -20,17 +20,18 @@ type TestsDataPopulated = TestsData & {
 
 export async function updateTailscaleAcls(args: {
   globals: GlobalResources;
-  hosts: {
+  hosts: pulumi.Input<{
     idp: pulumi.Input<string>;
     "primary-dns": pulumi.Input<string>;
     "secondary-dns": pulumi.Input<string>;
     "unifi-dns": pulumi.Input<string>;
     [key: string]: pulumi.Input<string>;
-  };
+  }>;
+  internalIps: pulumi.Input<TailscaleIp>[];
   tests: TestsData;
   dnsServers: pulumi.Input<string>[];
 }) {
-  const { tests } = await awaitOutput(pulumi.output(args));
+  const { tests, internalIps } = await awaitOutput(pulumi.output(args));
   const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:TailscaleAcls", "tailscale-acls", {});
   const cro = { parent: tailscaleParent, provider: args.globals.tailscaleProvider };
   const currentAcl = await tailscale.getAcl({ provider: args.globals.tailscaleProvider });
@@ -46,21 +47,30 @@ export async function updateTailscaleAcls(args: {
   Object.values(tag).forEach((t) => manager.setTagOwner(t));
   Object.values(groups).forEach((t) => manager.setGroup(t));
 
-  configureProxmoxAccess(manager);
-  configureDockgeAccess(manager);
-  configureKubernetesAccess(manager, [
-    {
-      tag: tag.equestria,
-      clusterNetwork: "10.206.0.0/16",
-      serviceNetwork: "10.196.0.0/16",
-    },
+  const clusters : KubernetesCluster[] = [
     {
       tag: tag.sgc,
       clusterNetwork: "10.209.0.0/16",
       serviceNetwork: "10.199.0.0/16",
+      kubeApiIp: "10.10.209.201",
+      publicIps: ["10.199.0.10", "10.10.209.100", "10.10.209.101", "10.10.209.202"],
     },
-  ]);
-  
+    {
+      tag: tag.equestria,
+      clusterNetwork: "10.206.0.0/16",
+      serviceNetwork: "10.196.0.0/16",
+      kubeApiIp: "10.10.206.201",
+      publicIps: ["10.196.0.10", "10.10.206.100", "10.10.206.101", "10.10.206.202"],
+    },
+  ];
+
+  const allowedIps = clusters.flatMap(z => z.publicIps)
+    .concat(internalIps);
+
+  configureProxmoxAccess(manager);
+  configureDockgeAccess(manager);
+  configureKubernetesAccess(manager, clusters);
+
   createGroupGrants(manager);
 
   manager.setGrant(
@@ -116,7 +126,7 @@ export async function updateTailscaleAcls(args: {
     "member-home-subnet-access",
     {
       src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
-      dst: [subnets.internal],
+      dst: allowedIps,
       ip: ["*"],
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
@@ -315,11 +325,19 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setSshRule({ src: [tag.dockge], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
 
-function configureKubernetesAccess(manager: TailscaleAclManager, clusters: { tag: TailscaleTags; serviceNetwork: TailscaleCidr; clusterNetwork: TailscaleCidr }[]) {
+interface KubernetesCluster {
+  tag: TailscaleTags;
+  serviceNetwork: TailscaleCidr;
+  clusterNetwork: TailscaleCidr;
+  publicIps: TailscaleIp[];
+  kubeApiIp: TailscaleIp;
+}
+
+function configureKubernetesAccess(manager: TailscaleAclManager, clusters: KubernetesCluster[]) {
   const testData = manager.testData;
   const clusterTags = clusters.map((z) => z.tag);
 
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.secureServer, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
   manager.setExitNode(tag.sgc);
@@ -352,7 +370,10 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: { tag
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
 
   for (const cluster of clusters) {
-    manager.setGrant({ src: [groups.admins, autogroups.admin], dst: [cluster.serviceNetwork, cluster.clusterNetwork] }, { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers });
+    manager.setGrant(
+      { src: [groups.admins, autogroups.admin], dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp] },
+      { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers }
+    );
   }
 
   const rules = Object.fromEntries(

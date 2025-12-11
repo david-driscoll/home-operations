@@ -22,6 +22,7 @@ import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "
 import { BackupJobManager } from "./jobs.ts";
 import { unique } from "moderndash";
 import { Command } from "@pulumi/command/remote/index.js";
+import { TailscaleIp } from "@openapi/tailscale-grants.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -32,8 +33,8 @@ export interface DockgeLxcArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
-  ipAddress?: string;
-  tailscaleIpAddress?: string;
+  ipAddress?: TailscaleIp;
+  tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
   tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
@@ -41,11 +42,11 @@ export interface DockgeLxcArgs {
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
-  public readonly tailscaleIpAddress: Output<string>;
+  public readonly tailscaleIpAddress: Output<TailscaleIp>;
   public readonly hostname: Output<string>;
   public readonly device: Output<GetDeviceResult>;
   public readonly dns: StandardDns;
-  public readonly ipAddress: Output<string>;
+  public readonly ipAddress: Output<TailscaleIp>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
@@ -66,7 +67,7 @@ export class DockgeLxc extends ComponentResource {
     this.tailscaleName = tailscaleName;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
-    this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100`);
+    this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp);
 
     // update hostname on machine
     const setHostname = new remote.Command(
@@ -89,7 +90,7 @@ export class DockgeLxc extends ComponentResource {
             create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
           },
           mergeOptions(cro, { dependsOn: [setHostname] })
-        ).stdout);
+        ).stdout as Output<TailscaleIp>);
 
     this.credential = output(args.credential);
 

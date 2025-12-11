@@ -14,6 +14,7 @@ import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts
 import { FullItem } from "@1password/connect";
 import { Purrl } from "@pulumiverse/purrl";
 import { Logging } from "@pulumi/command/remote/index.js";
+import { TailscaleIp } from "@openapi/tailscale-grants.js";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -21,11 +22,11 @@ export interface ProxmoxHostArgs {
   title?: Input<string>;
   globals: GlobalResources;
   proxmox: Input<OPClientItem>;
-  tailscaleIpAddress: string;
+  tailscaleIpAddress: TailscaleIp;
   macAddress: string;
   isProxmoxBackupServer: boolean;
   remote: boolean;
-  internalIpAddress?: string;
+  internalIpAddress?: TailscaleIp;
   installTailscale?: boolean;
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
@@ -35,8 +36,8 @@ export interface ProxmoxHostArgs {
 
 export class ProxmoxHost extends ComponentResource {
   public readonly name: string;
-  public readonly internalIpAddress: string;
-  public readonly tailscaleIpAddress: string;
+  public readonly internalIpAddress: TailscaleIp;
+  public readonly tailscaleIpAddress: TailscaleIp;
   public readonly macAddress: string;
   public readonly pveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;

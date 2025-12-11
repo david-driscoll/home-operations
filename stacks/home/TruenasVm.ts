@@ -14,14 +14,15 @@ import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts
 import { FullItem } from "@1password/connect";
 import { Dataset } from "@components/truenas/index.ts";
 import { types } from "@pulumi/command";
+import { TailscaleIp } from "@openapi/tailscale-grants.js";
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
   globals: GlobalResources;
   host: ProxmoxHost;
-  ipAddress: pulumi.Input<string>;
+  ipAddress: pulumi.Input<TailscaleIp>;
   macAddress: string;
-  tailscaleIpAddress: string;
+  tailscaleIpAddress: TailscaleIp;
 }
 
 export interface TruenasVmResult {
@@ -47,8 +48,8 @@ function promisifyOutput<T>(output: pulumi.Output<T>): Promise<T> {
 
 export class TruenasVm extends pulumi.ComponentResource {
   public readonly name: string;
-  public readonly ipAddress: pulumi.Output<string>;
-  public readonly tailscaleIpAddress: string;
+  public readonly ipAddress: pulumi.Output<TailscaleIp>;
+  public readonly tailscaleIpAddress: TailscaleIp;
   public readonly macAddress: string;
   // public readonly device: pulumi.Output<GetDeviceResult>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
