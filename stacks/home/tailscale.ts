@@ -352,7 +352,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
 
     manager.setGrant({
-      src: clusterTags.concat([tag.ingress, tag.egress, tag.observability, tag.ssh, tag.k8s]),
+      src: clusterTags.concat([tag.ingress, tag.egress, tag.operator, tag.observability, tag.ssh, tag.k8s]),
       dst: [cluster.serviceNetwork, cluster.clusterNetwork],
       ip: ["*"],
     }, { accept: clusterTags, deny: testData.knownNormalUsers });
