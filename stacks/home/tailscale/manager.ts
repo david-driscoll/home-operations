@@ -40,7 +40,8 @@ export const ports = {
   dockgeManagement: ["tcp:5001", "tcp:9595", "tcp:2022", "udp:2022"] as TailscaleNetworkCapability[],
   observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100"] as TailscaleNetworkCapability[],
   nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
-  proxmox: ["tcp:80", "tcp:443", "tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
+  proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
+  proxmoxManagement: ["tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
 };
 export const autogroups = {
   member: "autogroup:member" as TailscaleAutogroups,

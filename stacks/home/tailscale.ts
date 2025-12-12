@@ -87,7 +87,7 @@ export async function updateTailscaleAcls(args: {
     {
       src: [groups.admins, autogroups.admin],
       dst: [tag.proxmox, tag.dockge],
-      ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement],
+      ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.proxmoxManagement],
     },
     { accept: testData.knownAdminUsers }
   );
@@ -285,7 +285,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   manager.setExitNode(tag.proxmox);
   manager.setRoute(subnets.internal, [tag.proxmox]);
 
-  manager.setGrant({ src: [tag.proxmox], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.proxmox], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [tag.observability], ip: ports.observability }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.proxmox] });
@@ -303,7 +303,7 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
 
   manager.setService(tag.apps, [tag.dockge]);
 
-  manager.setGrant({ src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [autogroups.member, autogroups.tagged], dst: [tag.dockge], ip: ports.web }, { accept: testData.knownNormalUsers.concat(testData.knownAdminUsers) });
   manager.setGrant({ src: [tag.dockge], dst: [tag.observability], ip: ports.observability }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
@@ -362,6 +362,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
 
   manager.setGrant({ src: [tag.ssh], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.ssh], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.ssh], dst: [tag.dockge, tag.proxmox], ip: [...ports.ssh, ...ports.nut] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
 
