@@ -13,7 +13,7 @@ spec:
   access_policy:
     groups:
       - admins
-  # authentik:
+  authentik:
     proxy:
       mode: "forward_single"
       externalHost: *url
