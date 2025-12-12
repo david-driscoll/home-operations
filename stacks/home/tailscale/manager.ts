@@ -76,7 +76,7 @@ export const tag = {
   apps: "tag:apps" as TailscaleTags,
   egress: "tag:egress" as TailscaleTags,
   ingress: "tag:ingress" as TailscaleTags,
-  ssh: "tag:ssh" as TailscaleTags,
+  management: "tag:management" as TailscaleTags,
   observability: "tag:observability" as TailscaleTags,
 };
 

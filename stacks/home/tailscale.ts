@@ -47,7 +47,7 @@ export async function updateTailscaleAcls(args: {
   Object.values(tag).forEach((t) => manager.setTagOwner(t));
   Object.values(groups).forEach((t) => manager.setGroup(t));
 
-  const clusters : KubernetesCluster[] = [
+  const clusters: KubernetesCluster[] = [
     {
       tag: tag.sgc,
       clusterNetwork: "10.209.0.0/16",
@@ -64,8 +64,7 @@ export async function updateTailscaleAcls(args: {
     },
   ];
 
-  const allowedIps = clusters.flatMap(z => z.publicIps)
-    .concat(internalIps);
+  const allowedIps = clusters.flatMap((z) => z.publicIps).concat(internalIps);
 
   configureProxmoxAccess(manager);
   configureDockgeAccess(manager);
@@ -327,7 +326,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const testData = manager.testData;
   const clusterTags = clusters.map((z) => z.tag);
 
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.ssh, tag.k8s]);
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
   manager.setExitNode(tag.sgc);
@@ -341,14 +340,20 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     manager.setRoute(cluster.serviceNetwork, [cluster.tag]);
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
 
-    manager.setGrant({
-      src: clusterTags.concat([tag.ingress, tag.egress, tag.operator, tag.observability, tag.ssh, tag.k8s]),
-      dst: [cluster.serviceNetwork, cluster.clusterNetwork],
-      ip: ["*"],
-    }, { accept: clusterTags, deny: testData.knownNormalUsers });
+    manager.setGrant(
+      {
+        src: clusterTags.concat([tag.ingress, tag.egress, tag.operator, tag.observability, tag.management, tag.k8s]),
+        dst: [cluster.serviceNetwork, cluster.clusterNetwork],
+        ip: ["*"],
+      },
+      { accept: clusterTags, deny: testData.knownNormalUsers }
+    );
   }
 
-  manager.setGrant({ src: [autogroups.admin, groups.admins, tag.sgc], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } }, { accept: [groups.admins] });
+  manager.setGrant(
+    { src: [autogroups.admin, groups.admins, tag.sgc], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } },
+    { accept: [groups.admins] }
+  );
   manager.setGrant(
     { src: [groups.family, groups.friends], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-readers"] } }] } },
     { accept: [groups.family, groups.friends] }
@@ -361,9 +366,9 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [tag.observability], ip: ports.observability }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
 
-  manager.setGrant({ src: [tag.ssh], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.ssh], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.ssh], dst: [tag.dockge, tag.proxmox], ip: [...ports.ssh, ...ports.nut] }, { accept: [tag.ssh], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.management], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.management], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.management], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement] }, { accept: [tag.management], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.management], dst: [tag.dockge, tag.proxmox], ip: [...ports.ssh, ...ports.nut] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
 
   for (const cluster of clusters) {
@@ -376,7 +381,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const rules = Object.fromEntries(
     testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const))
   );
-  manager.setSshRule({ src: [tag.ssh], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
+  manager.setSshRule({ src: [tag.management], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
 
 function createGroupGrants(manager: TailscaleAclManager) {
