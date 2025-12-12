@@ -22,6 +22,10 @@ for group in request.user.ak_groups.all():
   groupsDict["vikunja_groups"].append({"name": group.name, "oidcID": group.num_pk})
 return groupsDict`,
     },
+    grafana_role: {
+      description: "Enable better grafana support in authentik",
+      expression: `return {"grafana_role": "GrafanaAdmin" if request.user.is_superuser else "Editor"}`,
+    }
   };
 
   constructor(opts?: pulumi.ComponentResourceOptions) {
