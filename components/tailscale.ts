@@ -90,7 +90,7 @@ export function installTailscale({
       connection,
       create: pulumi.interpolate`tailscale up ${tailscaleArgs} --reset`,
       triggers: [installTailscale.id],
-      environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+      // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
     { parent, dependsOn: [installTailscale] }
   );
@@ -101,7 +101,7 @@ export function installTailscale({
       connection,
       create: pulumi.interpolate`tailscale set ${tailscaleArgs} --auto-update `,
       triggers: [installTailscale.id, tailscaleUp.id],
-      environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+      // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
     { parent, dependsOn: [tailscaleUp, installTailscale] }
   );

@@ -334,7 +334,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
       replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
       replaceVariable(/\$\{tailscaleHostname\}/g, this.tailscaleHostname),
-      replaceVariable(/\$\{tailscaleAuthKey\}/g, this.args.globals.tailscaleAuthKey.key),
+      // replaceVariable(/\$\{tailscaleAuthKey\}/g, this.args.globals.tailscaleAuthKey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, this.cluster.title),
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),

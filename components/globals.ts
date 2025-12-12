@@ -65,7 +65,7 @@ export class GlobalResources extends ComponentResource {
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
-  public readonly tailscaleAuthKey: TailnetKey;
+  // public readonly tailscaleAuthKey: TailnetKey;
   public readonly truenasCredential: Output<OnePasswordItem>;
   public readonly truenasMinioCredential: Output<OnePasswordItem>;
   public readonly truenasMinioProvider: MinioProvider;
@@ -129,19 +129,19 @@ export class GlobalResources extends ComponentResource {
       user: "root",
     };
 
-    this.tailscaleAuthKey = new TailnetKey(
-      "tailnetkey",
-      {
-        reusable: true,
-        preauthorized: true,
-        ephemeral: true,
-        // expiry: Math.floor(60 * 60), // 1 hour in seconds
-        recreateIfInvalid: "always",
-        tags: ["tag:proxmox", "tag:apps"],
-        description: "Proxmox Management Key",
-      },
-      mergeOptions(cro, { provider: this.tailscaleProvider })
-    );
+    // this.tailscaleAuthKey = new TailnetKey(
+    //   "tailnetkey",
+    //   {
+    //     reusable: true,
+    //     preauthorized: true,
+    //     ephemeral: true,
+    //     // expiry: Math.floor(60 * 60), // 1 hour in seconds
+    //     recreateIfInvalid: "always",
+    //     tags: ["tag:proxmox", "tag:apps"],
+    //     description: "Proxmox Management Key",
+    //   },
+    //   mergeOptions(cro, { provider: this.tailscaleProvider })
+    // );
 
     this.truenasMinioProvider = new MinioProvider(
       "truenas-minio",
