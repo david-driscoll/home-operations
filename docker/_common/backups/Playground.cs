@@ -104,7 +104,8 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
     {
         return jobs.ToObservable()
             .Select(job => Observable.FromAsync(() => Rclone(job)))
-            .Merge(4)
+            .Delay(TimeSpan.FromSeconds(2))
+            .Merge(2)
             .ToTask();
     };
 }
@@ -139,7 +140,7 @@ static async Task Rclone(RCloneJob job)
 {
     var output = new StringBuilder();
     var error = new StringBuilder();
-    BufferedCommandResult? item = null;
+    CommandResult? item = null;
     Console.WriteLine($"Starting Rclone job {job.Name}");
     try
     {
@@ -152,18 +153,18 @@ static async Task Rclone(RCloneJob job)
             .DistinctBy(kv => kv.Key)
             .ToDictionary(kv => kv.Key, kv => (string?)kv.Value)
         )
-
             .WithArguments(args =>
             args
-            .Add(DateTime.Now.Day % 10 == 0 ? "sync" : "copy")
+            .Add("sync")
             .Add(job.Source.GetRemotePath())
             .Add(job.Destination.GetRemotePath())
-        ).ExecuteBufferedAsync();
+        ).ExecuteAsync();
         Console.WriteLine(output.ToString());
         Console.WriteLine(error.ToString());
     }
     catch (Exception ex)
     {
+        ex.Dump($"Error running Rclone job {job.Name}");
         // ex.Dump();
         Console.WriteLine(output.ToString());
         Console.WriteLine(error.ToString());
@@ -180,7 +181,7 @@ static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, stri
     return item;
 }
 
-static async Task ReportUptime(RCloneJob job, StringBuilder output, StringBuilder error, BufferedCommandResult? item)
+static async Task ReportUptime(RCloneJob job, StringBuilder output, StringBuilder error, CommandResult? item)
 {
     try
     {
