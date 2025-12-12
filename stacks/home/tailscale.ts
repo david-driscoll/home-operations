@@ -74,16 +74,6 @@ export async function updateTailscaleAcls(args: {
   createGroupGrants(manager);
 
   manager.setGrant(
-    "nut-exporter-access",
-    {
-      src: [tag.ssh],
-      dst: ["alpha-site"],
-      ip: ["tcp:3493", "udp:3493"],
-    },
-    { accept: [tag.ssh] }
-  );
-
-  manager.setGrant(
     "default-apps-access",
     {
       src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
