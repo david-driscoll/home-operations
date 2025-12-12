@@ -164,7 +164,7 @@ static async Task Rclone(RCloneJob job)
     }
     catch (Exception ex)
     {
-        ex.Dump();
+        // ex.Dump();
         Console.WriteLine(output.ToString());
         Console.WriteLine(error.ToString());
     }
