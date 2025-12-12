@@ -350,6 +350,12 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   for (const cluster of clusters) {
     manager.setRoute(cluster.serviceNetwork, [cluster.tag]);
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
+
+    manager.setGrant({
+      src: clusterTags,
+      dst: [cluster.serviceNetwork, cluster.clusterNetwork],
+      ip: ["*"],
+    }, { accept: clusterTags, deny: testData.knownNormalUsers });
   }
 
   manager.setGrant({ src: [autogroups.admin, groups.admins, tag.sgc], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } }, { accept: [groups.admins] });
