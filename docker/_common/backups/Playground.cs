@@ -120,7 +120,9 @@ static async Task DownloadRclone()
 
     {
         var client = new HttpClient();
-        using var rcloneStream = await client.GetStreamAsync("https://downloads.rclone.org/rclone-current-linux-amd64.zip");
+        var rcloneUrl = "https://downloads.rclone.org/v1.72.0/rclone-v1.72.0-linux-amd64.zip";
+        Console.WriteLine($"Downloading rclone from {rcloneUrl} to {rcloneItem}");
+        using var rcloneStream = await client.GetStreamAsync(rcloneUrl);
         using var writeStream = System.IO.File.OpenWrite(rcloneItem);
         await rcloneStream.CopyToAsync(writeStream);
         await rcloneStream.FlushAsync();
@@ -171,7 +173,11 @@ static async Task Rclone(RCloneJob job)
     }
 
     Console.WriteLine($"{job.Name} exited with code {item?.ExitCode} in {item?.RunTime.Humanize()}");
-    await ReportUptime(job, output, error, item);
+    if (( item?.ExitCode ).HasValue)
+    {
+        // sometimes this is exit code 139 (seg fault)
+        await ReportUptime(job, output, error, item);
+    }
 }
 
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
