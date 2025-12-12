@@ -352,9 +352,9 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
   }
 
-  manager.setGrant({ src: [groups.admins], dst: [tag.k8s], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } }, { accept: [groups.admins] });
+  manager.setGrant({ src: [autogroups.admin, groups.admins, tag.sgc], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } }, { accept: [groups.admins] });
   manager.setGrant(
-    { src: [groups.family, groups.friends], dst: [tag.k8s], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-readers"] } }] } },
+    { src: [groups.family, groups.friends], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-readers"] } }] } },
     { accept: [groups.family, groups.friends] }
   );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.ssh }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
