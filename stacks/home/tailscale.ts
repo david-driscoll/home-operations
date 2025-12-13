@@ -373,7 +373,11 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   for (const cluster of clusters) {
     manager.setGrant(
-      { src: [groups.admins, autogroups.admin], dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp] },
+      {
+        src: [groups.admins, autogroups.admin],
+        dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp],
+        ip: ["*"],
+      },
       { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers }
     );
   }
