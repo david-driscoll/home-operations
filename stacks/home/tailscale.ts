@@ -397,6 +397,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   manager.setService(tag.apps, [...clusterTags, tag.operator, tag.ingress]);
   manager.setService(tag.observability, [...clusterTags, tag.operator, tag.ingress]);
+  manager.setService(tag.k8s, [tag.k8s]);
 
   manager.setRoute(subnets.internal, clusterTags);
   for (const cluster of clusters) {
