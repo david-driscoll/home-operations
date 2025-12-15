@@ -7,9 +7,9 @@ metadata:
   name: zwave
 spec:
   name: Z-Wave
-  category: DNS
+  category: Automation
   url: &url https://zwave.${searchDomain}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/zwave.svg
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/zwavejs2mqtt.png
   access_policy:
     groups:
       - admins

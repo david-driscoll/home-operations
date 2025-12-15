@@ -7,9 +7,9 @@ metadata:
   name: zigbee
 spec:
   name: Zigbee
-  category: Applications
+  category: Automation
   url: &url https://zigbee.${searchDomain}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/zigbee.svg
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/zigbee2mqtt.svg
   access_policy:
     groups:
       - admins
