@@ -388,7 +388,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     const args: authentik.ApplicationArgs = {
       name: definition.spec.name,
       slug: resourceName,
-      group: definition.spec.category,
+      group: definition.spec.category === "System" || this.cluster.title === definition.spec.category ? 'Cluster: ' + this.cluster.title : definition.spec.category,
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",

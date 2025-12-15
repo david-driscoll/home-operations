@@ -22,7 +22,7 @@ if (clusterDefinition.key === "sgc" || clusterDefinition.key === "equestria") {
     {
       domain: clusterDefinition.authentikDomain,
       brandingLogo: clusterDefinition.icon,
-      brandingTitle: clusterDefinition.key,
+      brandingTitle: clusterDefinition.title,
       brandingFavicon: clusterDefinition.favicon ?? "",
       brandingDefaultFlowBackground: clusterDefinition.background ?? "/static/dist/assets/images/flow_background.jpg",
       flowAuthentication: outputs.flows.authenticationFlow,
