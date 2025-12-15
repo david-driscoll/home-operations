@@ -7,6 +7,7 @@ import {
   TailscaleGrant,
   TailscaleGroups,
   TailscaleNetworkCapability,
+  TailscaleNodeAttr,
   TailscalePolicyFile,
   TailscaleSelector,
   TailscaleSshRule,
@@ -74,6 +75,7 @@ export const tag = {
   proxmox: "tag:proxmox" as TailscaleTags,
   dockge: "tag:dockge" as TailscaleTags,
   apps: "tag:apps" as TailscaleTags,
+  sharedDrive: "tag:shared-drive" as TailscaleTags,
   egress: "tag:egress" as TailscaleTags,
   ingress: "tag:ingress" as TailscaleTags,
   management: "tag:management" as TailscaleTags,
@@ -200,6 +202,11 @@ export class TailscaleAclManager {
     return this;
   }
 
+  public setNodeAttr(value: TailscaleNodeAttr) {
+    this.updates.push((context) => pulumi.output(setNodeAttr(context, value)));
+    return this;
+  }
+
   public setGroup(owner: TailscaleGroups, tags: TailscaleSelector[]): TailscaleAclManager;
   public setGroup(owner: TailscaleGroups): TailscaleAclManager;
   public setGroup(owner: TailscaleGroups, tags?: TailscaleSelector[]) {
@@ -302,6 +309,17 @@ function setTagOwner({ acls, policy }: TailscaleAclContext, owner: TailscaleSele
   }
   return acls;
 }
+function setNodeAttr({ acls, policy }: TailscaleAclContext, value: TailscaleNodeAttr) {
+  const current = policy.nodeAttrs ?? [];
+  const name = getNodeAttrName(value);
+  const index = current.findIndex((tt) => getNodeAttrName(tt) === name);
+  const existing = index > -1 ? current[index] : undefined;
+  return applyAllEdits(acls, ["nodeAttrs", index === -1 ? current.length : index], {
+    target: value.target,
+    app: { ...(existing?.app ?? {}), ...(value.app ?? {}) },
+    attr: Array.from(new Set([...(existing?.attr ?? []), ...(value.attr ?? [])])),
+  });
+}
 
 function setGroup({ acls, policy }: TailscaleAclContext, group: TailscaleGroups, members: TailscaleSelector[]) {
   let current = policy.groups ?? {};
@@ -388,6 +406,13 @@ function getTestName(rule: TailscaleTest) {
   const nameParts = [];
   nameParts.push("test");
   nameParts.push(...rule.src);
+  return nameParts.join("-");
+}
+
+function getNodeAttrName(rule: TailscaleNodeAttr) {
+  const nameParts = [];
+  nameParts.push("nodeAttr");
+  nameParts.push(...rule.target);
   return nameParts.join("-");
 }
 

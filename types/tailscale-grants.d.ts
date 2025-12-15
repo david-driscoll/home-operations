@@ -67,7 +67,7 @@ export type TailscaleAllGroups = TailscaleGroups | TailscaleAutogroups;
 /**
  * Known host aliases defined in the hosts section
  */
-export type TailscaleHostAliases = "idp" | "primary-dns" | "secondary-dns" | "unifi-dns" | "alpha-site" | "celestia" | "luna" | "spike" | "twilight-sparkle"; // Any other custom host alias
+export type TailscaleHostAliases = "host:idp" | "host:primary-dns" | "host:secondary-dns" | "host:unifi-dns" | "host:alpha-site" | "host:celestia" | "host:luna" | "host:spike" | "host:twilight-sparkle" | `host:${string}`; // Any other custom host alias
 
 // ============================================================================
 // Postures (based on your configuration)

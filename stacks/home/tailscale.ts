@@ -40,6 +40,7 @@ export async function updateTailscaleAcls(args: {
   aclsJson = applyAllEdits(aclsJson, ["tests"], []);
   aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
   aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
+  // aclsJson = applyAllEdits(aclsJson, ["nodeAttrs"], []);
   aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
 
   const manager = new TailscaleAclManager(aclsJson, args.hosts, tests);
@@ -105,7 +106,7 @@ export async function updateTailscaleAcls(args: {
     "default-dns",
     {
       src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
-      dst: ["primary-dns", "secondary-dns", "unifi-dns"],
+      dst: ["host:primary-dns", "host:secondary-dns", "host:unifi-dns"],
       ip: ports.dns,
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
@@ -133,7 +134,7 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     {
       src: [autogroups.member, autogroups.tagged, tag.mediaDevice],
-      dst: ["idp"],
+      dst: ["host:idp"],
       ip: ["tcp:443"],
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
@@ -155,6 +156,54 @@ export async function updateTailscaleAcls(args: {
     },
     { accept: testData.knownNormalUsers }
   );
+
+  manager.setNodeAttr({
+    target: ["*"],
+    attr: ["drive:access"],
+  });
+
+  manager.setGrant(
+    "shared-drive-access",
+    {
+      src: [tag.sharedDrive],
+      dst: [groups.family, groups.friends],
+      app: {
+        "tailscale.com/cap/drive": [
+          {
+            access: "rw",
+            shares: ["shared"],
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+    "family-drive-access",
+    {
+      src: [tag.sharedDrive],
+      dst: [groups.family],
+      app: {
+        "tailscale.com/cap/drive": [
+          {
+            access: "r",
+            shares: ["*"],
+          },
+          {
+            access: "rw",
+            shares: ["family"],
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setNodeAttr({
+    target: [tag.sharedDrive],
+    attr: ["drive:share", "drive:access"],
+  });
 
   manager.setGrant(
     "member-golink-defaults",
@@ -227,10 +276,16 @@ export async function updateTailscaleAcls(args: {
     { accept: testData.knownNormalUsers }
   );
 
+  manager.setNodeAttr({
+    target: [groups.admins],
+    attr: ["drive:share", "drive:access"],
+  });
+
   manager.setGrant(
     "tsidp-admin",
     {
       src: [autogroups.admin, groups.admins],
+      dst: ["host:idp"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -252,6 +307,7 @@ export async function updateTailscaleAcls(args: {
     "tsidp-egress",
     {
       src: [tag.egress],
+      dst: ["host:idp"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -280,7 +336,7 @@ export async function updateTailscaleAcls(args: {
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
-  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge]);
+  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.sharedDrive]);
   manager.setExitNode(tag.proxmox);
   manager.setRoute(subnets.internal, [tag.proxmox]);
 
@@ -326,7 +382,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const testData = manager.testData;
   const clusterTags = clusters.map((z) => z.tag);
 
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s]);
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive]);
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
   manager.setExitNode(tag.sgc);
@@ -394,7 +450,7 @@ function createGroupGrants(manager: TailscaleAclManager) {
       `tsidp-${role}-access`,
       {
         src: [`group:${role}`],
-        dst: ["*"],
+        dst: ["host:idp"],
 
         app: {
           "tailscale.com/cap/tsidp": [
