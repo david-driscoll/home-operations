@@ -4,7 +4,7 @@ import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
 import { awaitOutput } from "@components/helpers.ts";
-import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleTags } from "@openapi/tailscale-grants.js";
+import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 
 type TestsData = {
   taggedDevices: pulumi.Input<string>[];
@@ -20,6 +20,7 @@ type TestsDataPopulated = TestsData & {
 
 export async function updateTailscaleAcls(args: {
   globals: GlobalResources;
+  services: pulumi.Input<TailscaleService>[];
   hosts: {
     idp: pulumi.Input<string>;
     "primary-dns": pulumi.Input<string>;
@@ -31,7 +32,7 @@ export async function updateTailscaleAcls(args: {
   tests: TestsData;
   dnsServers: pulumi.Input<string>[];
 }) {
-  const { tests, internalIps } = await awaitOutput(pulumi.output(args));
+  const { tests, internalIps, services } = await awaitOutput(pulumi.output(args));
   const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:TailscaleAcls", "tailscale-acls", {});
   const cro = { parent: tailscaleParent, provider: args.globals.tailscaleProvider };
   const currentAcl = await tailscale.getAcl({ provider: args.globals.tailscaleProvider });
@@ -64,6 +65,10 @@ export async function updateTailscaleAcls(args: {
       publicIps: ["10.196.0.10", "10.10.206.100", "10.10.206.101", "10.10.206.202"],
     },
   ];
+
+  for (const service of services) {
+    manager.setService(service, [tag.dockge, tag.proxmox, tag.operator]);
+  }
 
   const allowedIps = clusters.flatMap((z) => z.publicIps).concat(internalIps);
 
@@ -187,7 +192,7 @@ export async function updateTailscaleAcls(args: {
       app: {
         "tailscale.com/cap/drive": [
           {
-            access: "r",
+            access: "ro",
             shares: ["*"],
           },
           {
@@ -332,6 +337,8 @@ export async function updateTailscaleAcls(args: {
 
   new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers }, cro);
   // new tailscale.DnsSearchPaths("dns-search-paths", { searchPaths: [args.globals.searchDomain] }, { provider: args.globals.tailscaleProvider });
+
+  return manager;
 }
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {

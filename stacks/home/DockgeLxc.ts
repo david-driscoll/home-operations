@@ -39,6 +39,7 @@ export interface DockgeLxcArgs {
   credential: Input<OPClientItem>;
   tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
   sftpKey: tls.PrivateKey;
+  registerTailscaleService(service: string): void;
 }
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
@@ -53,6 +54,7 @@ export class DockgeLxc extends ComponentResource {
   private backupJobManager: BackupJobManager;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
+  registerTailscaleService: (service: string) => void;
   constructor(name: string, private readonly args: DockgeLxcArgs) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
@@ -60,6 +62,7 @@ export class DockgeLxc extends ComponentResource {
     const cluster = output(args.cluster);
     this.cluster = cluster;
     this.shortName = args.host.shortName ?? name;
+    this.registerTailscaleService = args.registerTailscaleService;
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
@@ -444,8 +447,11 @@ export class DockgeLxc extends ComponentResource {
 
               new remote.Command(`${stackName}-tailscale-service-${service}`, {
                 connection: this.remoteConnection,
-                create: interpolate`tailscale serve --https=443 --service=svc:${service} --yes 127.0.0.1:8443`,
+                create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
+                delete: interpolate`tailscale serve clear svc:${service}`,
               });
+
+              this.registerTailscaleService(service);
 
               continue;
             }

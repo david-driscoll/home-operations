@@ -4,12 +4,14 @@ import {
   PolicyFile,
   TailscaleAutoApprovers,
   TailscaleAutogroups,
+  TailscaleCidr,
   TailscaleGrant,
   TailscaleGroups,
   TailscaleNetworkCapability,
   TailscaleNodeAttr,
   TailscalePolicyFile,
   TailscaleSelector,
+  TailscaleService,
   TailscaleSshRule,
   TailscaleSshTest,
   TailscaleSshUser,
@@ -30,7 +32,7 @@ export type TailscaleSshTestInputItem =
 type TailscaleSshTestInput = Record<TailscaleSshUser, TailscaleSshTestInputItem>;
 
 export const subnets = {
-  internal: "10.10.0.0/16" as TailscaleSelector,
+  internal: "10.10.0.0/16" as TailscaleCidr,
 };
 export const ports = {
   any: ["*"] as TailscaleNetworkCapability[],
@@ -164,30 +166,37 @@ export class TailscaleAclManager {
           const { dst, ip } = grant;
 
           const destinations = (p: string, user: string | undefined) => {
-            return dst.filter((dest) => dest !== autogroups.internet).map((d) => (d === autogroups.internet ? d : `${d}:${p ?? "443"}`));
+            return dst
+              .map((u) => u.replace(/^host\:/, ""))
+              .filter((dest) => dest !== autogroups.internet)
+              .map((d) => (d === autogroups.internet ? d : `${d}:${p ?? "443"}`));
           };
 
           return [
-            ...(testSources.accept ?? []).flatMap((user) =>
-              ip.map((port) => {
-                const [proto, p] = port.toString().split(":");
-                return {
-                  src: user,
-                  proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
-                  accept: destinations(p, user),
-                } as TailscaleTest;
-              })
-            ),
-            ...(testSources.deny ?? []).flatMap((user) =>
-              ip.map((port) => {
-                const [proto, p] = port.toString().split(":");
-                return {
-                  src: user,
-                  proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
-                  deny: destinations(p, user),
-                } as TailscaleTest;
-              })
-            ),
+            ...(testSources.accept ?? [])
+              .map((u) => u.replace(/^host\:/, ""))
+              .flatMap((user) =>
+                ip.map((port) => {
+                  const [proto, p] = port.toString().split(":");
+                  return {
+                    src: user,
+                    proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
+                    accept: destinations(p, user),
+                  } as TailscaleTest;
+                })
+              ),
+            ...(testSources.deny ?? [])
+              .map((u) => u.replace(/^host\:/, ""))
+              .flatMap((user) =>
+                ip.map((port) => {
+                  const [proto, p] = port.toString().split(":");
+                  return {
+                    src: user,
+                    proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
+                    deny: destinations(p, user),
+                  } as TailscaleTest;
+                })
+              ),
           ].filter((z) => (z.accept?.length ?? 0) + (z.deny?.length ?? 0) > 0);
         };
       }
@@ -236,17 +245,17 @@ export class TailscaleAclManager {
     return this;
   }
 
-  public setExitNode(tag: TailscaleSelector) {
+  public setExitNode(tag: TailscaleTags) {
     this.updates.push((context) => pulumi.output(setExitNode(context, tag)));
     return this;
   }
 
-  public setRoute(cidr: string, approvers: TailscaleSelector[]) {
+  public setRoute(cidr: TailscaleCidr, approvers: TailscaleTags[]) {
     this.updates.push((context) => pulumi.output(setRoute(context, cidr, approvers)));
     return this;
   }
 
-  public setService(service: string, approvers: TailscaleSelector[]) {
+  public setService(service: TailscaleTags | TailscaleService, approvers: TailscaleTags[]) {
     this.updates.push((context) => pulumi.output(setService(context, service, approvers)));
     return this;
   }
@@ -282,14 +291,14 @@ function setSshRule({ acls, policy }: TailscaleAclContext, rule: TailscaleSshRul
   return acls;
 }
 
-function setRoute({ acls, policy }: TailscaleAclContext, cidr: string, approvers: TailscaleSelector[]) {
+function setRoute({ acls, policy }: TailscaleAclContext, cidr: TailscaleCidr, approvers: TailscaleTags[]) {
   let current = policy.autoApprovers?.routes?.[cidr] || [];
   current.push(...approvers);
   current = Array.from(new Set(current));
   return applyAllEdits(acls, ["autoApprovers", "routes", cidr], current);
 }
 
-function setExitNode({ acls, policy }: TailscaleAclContext, tag: TailscaleSelector) {
+function setExitNode({ acls, policy }: TailscaleAclContext, tag: TailscaleTags) {
   let current = policy.autoApprovers?.exitNode || [];
   current.push(tag);
   current = Array.from(new Set(current));
@@ -348,7 +357,7 @@ function setGrant({ acls, policy }: TailscaleAclContext, name: string | undefine
   return acls;
 }
 
-function setService({ acls, policy }: TailscaleAclContext, service: string, approvers: TailscaleSelector[]) {
+function setService({ acls, policy }: TailscaleAclContext, service: TailscaleTags | TailscaleService, approvers: TailscaleTags[]) {
   let current = policy.autoApprovers?.services?.[service] || [];
   current.push(...approvers);
   current = Array.from(new Set(current));

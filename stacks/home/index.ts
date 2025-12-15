@@ -18,6 +18,8 @@ import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { createBackupJobs } from "./backups.ts";
+import { TailscaleAclManager } from "./tailscale/manager.ts";
+import { TailscaleService } from "@openapi/tailscale-grants.js";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -131,6 +133,9 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   tailscaleArgs: { acceptRoutes: false },
 });
 
+const tailscaleServices: TailscaleService[] = [];
+const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}` as TailscaleService);
+
 const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
   credential: dockgeCredential,
@@ -139,6 +144,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  registerTailscaleService,
 });
 
 const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
@@ -149,6 +155,7 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  registerTailscaleService,
 });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
@@ -161,11 +168,13 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  registerTailscaleService,
 });
 
 try {
-  await updateTailscaleAcls({
+  const tailscaleManager = await updateTailscaleAcls({
     globals,
+    services: tailscaleServices,
     hosts: {
       idp: "100.111.209.102",
       "primary-dns": "100.111.209.201",

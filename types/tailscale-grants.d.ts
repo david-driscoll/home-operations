@@ -109,7 +109,9 @@ export type TailscaleSelector =
   | TailscaleHostAliases
   | TailscaleIpSet
   | TailscaleIp
-  | TailscaleCidr
+  | TailscaleCidr;
+
+export type TailscaleService = `svc:${string}`; // Service tag
 
 export type TailscaleTestSelector = TailscaleGroups | TailscaleTags | TailscaleHostAliases | `${string}@${string}` | TailscaleIp; // Single IP
 
@@ -161,9 +163,9 @@ export type TailscaleNetworkCapability =
  */
 export interface TailscaleDriveCapability {
   /**
-   * Access level: read-only (r) or read-write (rw)
+   * Access level: read-only (ro) or read-write (rw)
    */
-  access: "r" | "rw";
+  access: "ro" | "rw";
 
   /**
    * Share names or wildcard
@@ -411,14 +413,14 @@ export interface TailscaleAutoApprovers {
   /**
    * Auto-approve exit node advertisements
    */
-  exitNode?: TailscaleSelector[];
+  exitNode?: TailscaleTags[];
 
   /**
    * Auto-approve subnet route advertisements
    * Keys are CIDR ranges, values are approver selectors
    */
   routes?: {
-    [cidr: string]: TailscaleSelector[];
+    [cidr: TailscaleCidr]: TailscaleTags[];
   };
 
   /**
@@ -426,7 +428,7 @@ export interface TailscaleAutoApprovers {
    * Keys are service tags, values are approver selectors
    */
   services?: {
-    [service: string]: TailscaleSelector[];
+    [service: TailscaleTags | TailscaleService]: TailscaleTags[];
   };
 }
 
