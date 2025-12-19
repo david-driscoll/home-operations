@@ -70,7 +70,9 @@ export class DockgeLxc extends ComponentResource {
     this.tailscaleName = tailscaleName;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
-    this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? `${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp);
+    this.tailscaleIpAddress = output(
+      args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp)
+    );
 
     // update hostname on machine
     const setHostname = new remote.Command(
@@ -86,14 +88,14 @@ export class DockgeLxc extends ComponentResource {
       ? output(args.ipAddress)
       : args.host.remote
       ? this.tailscaleIpAddress
-      : new remote.Command(
+      : (new remote.Command(
           `${name}-get-ip-address`,
           {
             connection: args.host.remoteConnection,
             create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
           },
           mergeOptions(cro, { dependsOn: [setHostname] })
-        ).stdout as Output<TailscaleIp>);
+        ).stdout as Output<TailscaleIp>));
 
     this.credential = output(args.credential);
 
@@ -438,39 +440,38 @@ export class DockgeLxc extends ComponentResource {
         const content = await awaitOutput(replacedContent);
         const hostRegex = /Host\(`(.*?)`\)/g;
         const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
-        if (stackName !== "adguard") {
-          for (const host of hosts) {
-            if (host.indexOf(tailscaleDomain) > -1) {
-              // this is a service domain
-              const service = host.replace(`.${tailscaleDomain}`, "");
-              console.log(`Creating Tailscale DNS entry for service ${service}`);
+        for (const host of hosts) {
+          if (host.indexOf(tailscaleDomain) > -1) {
+            // this is a service domain
+            const service = host.replace(`.${tailscaleDomain}`, "");
+            console.log(`Creating Tailscale DNS entry for service ${service}`);
 
-              new remote.Command(`${stackName}-tailscale-service-${service}`, {
-                connection: this.remoteConnection,
-                create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
-                delete: interpolate`tailscale serve clear svc:${service}`,
-              });
+            new remote.Command(`${stackName}-tailscale-service-${service}`, {
+              connection: this.remoteConnection,
+              create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
+              delete: interpolate`tailscale serve clear svc:${service}`,
+            });
 
-              this.registerTailscaleService(service);
+            this.registerTailscaleService(service);
 
-              continue;
-            }
-
-            new StandardDns(
-              `${stackName}-${host.replace(/\./g, "_")}`,
-              {
-                hostname: interpolate`${host}`,
-                ipAddress: this.ipAddress,
-                type: "CNAME",
-                record: this.hostname,
-              },
-              this.args.globals,
-              {
-                dependsOn: dependsOn,
-                parent: this,
-              }
-            );
+            continue;
           }
+
+          new StandardDns(
+            `${stackName}-${host.replace(/\./g, "_")}`,
+            {
+              hostname: interpolate`${host}`,
+              ipAddress: this.ipAddress,
+              type: "CNAME",
+              record: this.hostname,
+            },
+            this.args.globals,
+            {
+              dependsOn: dependsOn,
+              parent: this,
+              protect: stackName === "adguard",
+            }
+          );
         }
       } else if (file === "definition.yaml") {
         // intercept definition file and create the client id / client secret and inject that into the yaml.
