@@ -23,7 +23,7 @@ services:
 
       traefik.http.services.${APP}.loadbalancer.server.port: 4005
     volumes:
-      - ./postgresus-data:./postgresus-data
+      - ./postgresus-data:/postgresus-data
     networks:
       - dockge_default
 networks:
