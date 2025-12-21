@@ -95,8 +95,6 @@ services:
     restart: unless-stopped
     dns:
       - 100.100.100.100
-    env_file:
-      - path: .env
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
