@@ -1,0 +1,25 @@
+services:
+  docker-socket-proxy:
+    container_name: docker-socket-proxy
+    image: tecnativa/docker-socket-proxy:v0.4.2@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - CONTAINERS=1
+      - INFO=1
+      - IMAGES=1
+      - NETWORKS=1
+      - VOLUMES=1
+    ports:
+      - 2375:2375
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./haproxy:/var/lib/haproxy/
+    labels:
+      traefik.enable: false
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true
