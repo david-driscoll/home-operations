@@ -1,0 +1,34 @@
+services:
+  adguard:
+    cpus: 2
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    image: rostislavdugin/postgresus:v2.11.0
+    environment:
+      TZ: ${TIMEZONE}
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Web UI routing (HTTPS)
+      traefik.http.routers.${APP}.rule: Host(`${APP}.${searchDomain}`)
+      traefik.http.routers.${APP}.entrypoints: websecure
+      traefik.http.routers.${APP}.tls.certresolver: le
+      traefik.http.routers.${APP}.service: ${APP}
+
+      traefik.http.routers.${APP}-tailscale.rule: Host(`${APP}.${tailscaleDomain}`)
+      traefik.http.routers.${APP}-tailscale.entrypoints: tailscale
+      traefik.http.routers.${APP}-tailscale.service: ${APP}
+
+      traefik.http.services.${APP}.loadbalancer.server.port: 4005
+    volumes:
+      - ./postgresus-data:./postgresus-data
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://${APP}.${searchDomain}

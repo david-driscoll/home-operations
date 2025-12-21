@@ -4,12 +4,12 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: adguard
+  name: postgresus
 spec:
-  name: Backup Replica
-  category: DNS
-  url: &url https://adguard.${searchDomain}/index.html
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/adguard-home.svg
+  name: Postgresus
+  category: Applications
+  url: &url https://postgresus.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postgresus.svg
   access_policy:
     groups:
       - admins
