@@ -1,4 +1,33 @@
 services:
+
+  alloy:
+    container_name: alloy
+    image: grafana/alloy:v1.12.1@sha256:c311595156fca7b1131683d383dae1acfd29e8879d347161d2a6f714ebac0c0b
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy
+      - /etc/alloy/config.alloy
+    environment:
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    labels:
+      traefik.enable: true
+      traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.alloy.entrypoints: websecure
+      traefik.http.routers.alloy.tls.certresolver: le
+      traefik.http.services.alloy.loadbalancer.server.port: 12345
+      traefik.http.routers.alloy-tailscale.rule: Host(`alloy-${host}.${tailscaleDomain}`)
+      traefik.http.routers.alloy-tailscale.entrypoints: tailscale
+      traefik.http.routers.alloy-tailscale.service: alloy
+    volumes:
+      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./data/alloy:/var/lib/alloy:rw
+    networks:
+      - dockge_default
+
   prometheus:
     container_name: prometheus
     image: prom/prometheus:v3.8.1@sha256:2b6f734e372c1b4717008f7d0a0152316aedd4d13ae17ef1e3268dbfaf68041b
@@ -86,34 +115,6 @@ services:
       - /dev/disk/:/dev/disk:ro
     labels:
       traefik.enable: false
-    networks:
-      - dockge_default
-
-  alloy:
-    container_name: alloy
-    image: grafana/alloy:v1.12.1@sha256:c311595156fca7b1131683d383dae1acfd29e8879d347161d2a6f714ebac0c0b
-    restart: unless-stopped
-    dns:
-      - 100.100.100.100
-    command:
-      - run
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy
-      - /etc/alloy/config.alloy
-    environment:
-      - DOCKER_HOST=tcp://docker-socket-proxy:2375
-    labels:
-      traefik.enable: true
-      traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.alloy.entrypoints: websecure
-      traefik.http.routers.alloy.tls.certresolver: le
-      traefik.http.services.alloy.loadbalancer.server.port: 12345
-      traefik.http.routers.alloy-tailscale.rule: Host(`alloy-${host}.${tailscaleDomain}`)
-      traefik.http.routers.alloy-tailscale.entrypoints: tailscale
-      traefik.http.routers.alloy-tailscale.service: alloy
-    volumes:
-      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - ./data/alloy:/var/lib/alloy:rw
     networks:
       - dockge_default
 
