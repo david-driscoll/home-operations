@@ -1,9 +1,7 @@
 services:
 
   alloy:
-    user: "1000"
-    group_add:
-      - "568"
+    user: "65534:65534"
     container_name: alloy
     image: grafana/alloy:v1.12.1@sha256:c311595156fca7b1131683d383dae1acfd29e8879d347161d2a6f714ebac0c0b
     restart: unless-stopped
@@ -32,9 +30,7 @@ services:
       - dockge_default
 
   prometheus:
-    user: "65534"
-    group_add:
-      - "568"
+    user: "65534:65534"
     container_name: prometheus
     image: prom/prometheus:v3.8.1@sha256:2b6f734e372c1b4717008f7d0a0152316aedd4d13ae17ef1e3268dbfaf68041b
     restart: unless-stopped
@@ -69,9 +65,7 @@ services:
       - blackbox-exporter
 
   blackbox-exporter:
-    user: "1000"
-    group_add:
-      - "568"
+    user: "65534:65534"
     container_name: blackbox-exporter
     image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
     restart: unless-stopped
@@ -85,9 +79,7 @@ services:
       - dockge_default
 
   node-exporter:
-    user: "1000"
-    group_add:
-      - "568"
+    user: "65534:65534"
     container_name: node-exporter
     image: prom/node-exporter:v1.10.2@sha256:3ac34ce007accad95afed72149e0d2b927b7e42fd1c866149b945b84737c62c3
     restart: unless-stopped
@@ -109,9 +101,7 @@ services:
       traefik.enable: false
 
   cadvisor:
-    user: "1000"
-    group_add:
-      - "568"
+    user: "65534:65534"
     container_name: cadvisor
     image: gcr.io/cadvisor/cadvisor:v0.52.1@sha256:f40e65878e25c2e78ea037f73a449527a0fb994e303dc3e34cb6b187b4b91435
     restart: unless-stopped
