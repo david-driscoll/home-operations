@@ -100,7 +100,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         {
           metadata: {
             name: `${app.metadata!.name!}-oidc-credentials`,
-            namespace: clusterDefinition.key,
+            namespace: app.metadata.namespace ?? clusterDefinition.key,
           },
           stringData: result.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
         },
