@@ -10,7 +10,7 @@ import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts"
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
-import { addUptimeGatus } from "./helpers.ts";
+import { addUptimeGatus, awaitOutput } from "./helpers.ts";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -60,7 +60,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   public async createApplication(application: ApplicationDefinitionSchema) {
-    let provider: pulumi.CustomResource | undefined;
 
     let authentik = application.spec.authentik;
     if (application.spec.authentikFrom) {
@@ -69,25 +68,25 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       authentik = await this.args.loadFromResource<AuthentikDefinition>(application, "authentik", application.spec.authentikFrom);
     }
 
+    let result: Partial<pulumi.Unwrap<ReturnType<AuthentikApplicationManager["createProvider"]>>> = {};
     if (authentik) {
-      const result = this.createProvider(application, authentik);
-      provider = result.provider;
-      if (result.isProxy) {
-        this.proxyProviders.push(provider.id.apply((id) => parseFloat(id)));
+      result = await awaitOutput(pulumi.output(this.createProvider(application, authentik)));
+      if (result.isProxy && result.provider) {
+        this.proxyProviders.push(result.provider.id.apply((id) => parseFloat(id)));
       }
     }
 
-    const app = this.createAuthentikApplication(application, provider);
+    const app = this.createAuthentikApplication(application, result?.provider);
 
     let gatus = application.spec.gatus;
 
     if (gatus) {
-      const instance = await this.createGatus(application, gatus);
+      await this.createGatus(application, gatus);
       // we have to save to k8s secret
       // that secret needs to be mounted as a directory for gatus
     }
 
-    return { app, provider };
+    return { app, ...result };
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {

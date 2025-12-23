@@ -1,5 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import * as pk8s from "@pulumi/kubernetes";
 import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
 import { GlobalResources, KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
@@ -22,6 +23,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
   const volsyncPassword = await op.getItemByTitle(`Volsync Password`).then((z) => z.fields.credential.value!);
+  const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
+    kubeconfig: kubeConfigJson,
+  });
 
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(kubeConfigJson);
@@ -89,7 +93,23 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   });
 
   for (const app of applications) {
-    await applicationManager.createApplication(app);
+    const result = await applicationManager.createApplication(app);
+    if (result.oidcCredentials) {
+      new pk8s.core.v1.Secret(
+        `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+        {
+          metadata: {
+            name: `${app.metadata!.name!}-oidc-credentials`,
+            namespace: clusterDefinition.key,
+          },
+          stringData: result.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+        },
+        {
+          parent: applicationManager,
+          provider,
+        }
+      );
+    }
   }
 
   const volsyncBackupJobs = pulumi
