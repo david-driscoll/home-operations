@@ -159,7 +159,7 @@ export class ProxmoxHost extends ComponentResource {
       //   `${name}-install-alloystack`,
       //   {
       //     connection: connection,
-      //     create: interpolate`chmod +x /tmp/install-alloystack.sh && /tmp/install-alloystack.sh --loki-url "http://loki.${args.globals.tailscaleDomain}:3100/loki/api/v1/push" --prometheus-url "http://thanos-write.${args.globals.tailscaleDomain}:19291/api/v1/receive"`,
+      //     create: interpolate`chmod +x /tmp/install-alloystack.sh && /tmp/install-alloystack.sh --loki-url "http://loki.${args.globals.tailscaleDomain}:3100/loki/api/v1/push" --prometheus-url "http://thanos-receive.${args.globals.tailscaleDomain}:19291/api/v1/receive"`,
       //     logging: Logging.StdoutAndStderr,
       //   },
       //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
