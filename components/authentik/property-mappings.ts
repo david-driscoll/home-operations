@@ -25,7 +25,16 @@ return groupsDict`,
     grafana_role: {
       description: "Enable better grafana support in authentik",
       expression: `return {"grafana_role": "GrafanaAdmin" if request.user.is_superuser else "Editor"}`,
-    }
+    },
+    ggrequestz_role: {
+      description: "GGRequestz role mapping based on user groups",
+      expression: `if ak_is_group_member(request.user, name="admins"):
+    return {"ggrequestz_role": "admin"}
+elif ak_is_group_member(request.user, name="media-managers"):
+    return {"ggrequestz_role": "manager"}
+else:
+    return {"ggrequestz_role": "user"}`,
+    },
   };
 
   constructor(opts?: pulumi.ComponentResourceOptions) {
@@ -47,7 +56,7 @@ return groupsDict`,
           description: scopeDef.description,
           expression: scopeDef.expression,
         },
-        { parent: this },
+        { parent: this }
       );
       this.scopeMappings.set(scopeName, mapping);
     }
