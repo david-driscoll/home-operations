@@ -12,6 +12,7 @@ foreach ($item in gci "/Users/david/Downloads/spike/data/pgdump/*.sql") {
 
     $dbName = "$($item.Name.Replace('.sql', ''))"
     # Write-Output "Creating database: $dbName"
+    $suConnectionString = op read "op://Eris/equestria-postgres-superuser/public-uri"
     $connectionString = op read "op://Eris/equestria-$($dbName)-postgres/public-uri"
     # $replicas = kubectl get deployment -n equestria $dbName -o custom-columns=replicas:.spec.replicas
     # write-output "Scaling down deployment: $dbName to 0 replicas from $replicas"
@@ -22,18 +23,20 @@ foreach ($item in gci "/Users/david/Downloads/spike/data/pgdump/*.sql") {
 
     # sleep -seconds 10
 
-    # Remove-Item -Path $logPath -ErrorAction SilentlyContinue
+    Remove-Item -Path $logPath -ErrorAction SilentlyContinue
 
     # Write-Output "Dropping database: $dbName if exists"
     # Write-Output "DROP DATABASE IF EXISTS $dbName WITH (FORCE);"
     # Write-Output "CREATE DATABASE $dbName;"
-    # psql -d "$connectionString" -c "DROP DATABASE IF EXISTS $dbName WITH (FORCE);"
 
-    # Write-Output "Creating database: $dbName"
-    # # psql -d "$connectionString" -c "CREATE DATABASE $dbName;" | out-file -Append -FilePath $logPath
+    Write-Output "
+DROP DATABASE IF EXISTS $dbName WITH (FORCE);
+CREATE ROLE $dbName;
+CREATE USER $dbName WITH ROLE $dbName;
+CREATE DATABASE $dbName WITH OWNER $dbName;"
 
-    # Write-Output "Restoring database: $dbName from file: $($item.Name) [$connectionString]"
-    pg_restore -d "$connectionString" "$($item.FullName)" | out-file -Append -FilePath $logPath
+    Write-Output "Restoring database: $dbName from file: $($item.Name) [$connectionString]"
+    pg_restore -d "$connectionString" "$($item.FullName)" | out-null | out-file -filepath $logPath -append
 
     # # kubectl scale deployment -n equestria $dbName --replicas=$replicas
     # write-output "Scaled deployment: $dbName back to $replicas replicas"
