@@ -26,6 +26,11 @@ return groupsDict`,
       description: "Enable better grafana support in authentik",
       expression: `return {"grafana_role": "GrafanaAdmin" if request.user.is_superuser else "Editor"}`,
     },
+    romm: {
+      description: "Romm role mapping based on user groups",
+      expression: `
+      return { email_verified: True, }`
+    },
     ggrequestz_role: {
       description: "GGRequestz role mapping based on user groups",
       expression: `if ak_is_group_member(request.user, name="admins"):

@@ -167,9 +167,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     }
 
     for (const change of patch) {
-      if (change.op === "replace" && change.path === "/category") {
-        replaces.push(change.path.substring(1));
-      }
+      replaces.push(change.path.substring(1));
     }
     if (patch.length === 0) {
       pulumi.log.info(`OnePasswordItem no changes detected for item ${id}`);
