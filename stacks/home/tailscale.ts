@@ -225,6 +225,7 @@ export async function updateTailscaleAcls(args: {
     "member-tsidp-defaults",
     {
       src: [autogroups.member, autogroups.tagged],
+      dst: ["*"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -249,6 +250,7 @@ export async function updateTailscaleAcls(args: {
     "family-tsidp-defaults",
     {
       src: [groups.family],
+      dst: ["*"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -267,6 +269,7 @@ export async function updateTailscaleAcls(args: {
     "friends-tsidp-defaults",
     {
       src: [groups.friends],
+      dst: ["*"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -290,7 +293,7 @@ export async function updateTailscaleAcls(args: {
     "tsidp-admin",
     {
       src: [autogroups.admin, groups.admins],
-      dst: ["host:idp"],
+      dst: ["*"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -312,7 +315,7 @@ export async function updateTailscaleAcls(args: {
     "tsidp-egress",
     {
       src: [tag.egress],
-      dst: ["host:idp"],
+      dst: ["*"],
       app: {
         "tailscale.com/cap/tsidp": [
           {
@@ -458,7 +461,7 @@ function createGroupGrants(manager: TailscaleAclManager) {
       `tsidp-${role}-access`,
       {
         src: [`group:${role}`],
-        dst: ["host:idp"],
+        dst: ["*"],
 
         app: {
           "tailscale.com/cap/tsidp": [
