@@ -170,8 +170,8 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     "shared-drive-access",
     {
-      src: [tag.sharedDrive],
-      dst: [groups.family, groups.friends],
+      src: [groups.family, groups.friends],
+      dst: [tag.sharedDrive],
       app: {
         "tailscale.com/cap/drive": [
           {
@@ -187,8 +187,8 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     "family-drive-access",
     {
-      src: [tag.sharedDrive],
-      dst: [groups.family],
+      src: [groups.family],
+      dst: [tag.sharedDrive],
       app: {
         "tailscale.com/cap/drive": [
           {
@@ -198,6 +198,52 @@ export async function updateTailscaleAcls(args: {
           {
             access: "rw",
             shares: ["family"],
+          },
+          {
+            access: "rw",
+            shares: ["opencloud"],
+          },
+          {
+            access: "ro",
+            shares: ["media"],
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+    "admin-drive-access",
+    {
+      src: [groups.admins],
+      dst: [tag.sharedDrive],
+      app: {
+        "tailscale.com/cap/drive": [
+          {
+            access: "rw",
+            shares: ["backup"],
+          },
+          {
+            access: "rw",
+            shares: ["media"],
+          },
+        ],
+      },
+    },
+    { accept: testData.knownNormalUsers }
+  );
+
+  manager.setGrant(
+    "media-manager-drive-access",
+    {
+      src: [groups.mediaManagers],
+      dst: [tag.sharedDrive],
+      app: {
+        "tailscale.com/cap/drive": [
+          {
+            access: "rw",
+            shares: ["media"],
           },
         ],
       },
