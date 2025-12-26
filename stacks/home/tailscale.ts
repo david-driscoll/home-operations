@@ -222,12 +222,12 @@ export async function updateTailscaleAcls(args: {
         "tailscale.com/cap/drive": [
           {
             access: "rw",
-            shares: ["backup"],
+            shares: ["*"],
           },
-          {
-            access: "rw",
-            shares: ["media"],
-          },
+          // {
+          //   access: "rw",
+          //   shares: ["backup", "media"],
+          // },
         ],
       },
     },
