@@ -1,4 +1,5 @@
 import * as tailscale from "@pulumi/tailscale";
+import * as kubernetes from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
@@ -70,8 +71,6 @@ export async function updateTailscaleAcls(args: {
     manager.setService(service, [tag.dockge, tag.proxmox, tag.operator]);
   }
 
-  const allowedIps = clusters.flatMap((z) => z.publicIps).concat(internalIps);
-
   configureProxmoxAccess(manager);
   configureDockgeAccess(manager);
   configureKubernetesAccess(manager, clusters);
@@ -117,6 +116,8 @@ export async function updateTailscaleAcls(args: {
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
   );
 
+  const allowedIps = clusters.flatMap((z) => z.publicIps).concat(internalIps);
+
   manager.setGrant(
     "member-home-subnet-access",
     {
@@ -125,6 +126,16 @@ export async function updateTailscaleAcls(args: {
       ip: ["*"],
     },
     { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+  );
+
+  manager.setGrant(
+    "admins-home-subnet-access",
+    {
+      src: [autogroups.admin, groups.admins],
+      dst: [subnets.internal],
+      ip: ["*"],
+    },
+    { accept: [], deny: testData.knownNormalUsers }
   );
 
   manager.setGrant(
