@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     dns:
       - 100.100.100.100
-    image: rostislavdugin/postgresus:v2.13.0@sha256:7b274cc7314b0e48770938367c8ddc5c576b84ad32ac215a26bcf05520a2588b
+    image: rostislavdugin/postgresus:v2.15.3@sha256:cabf722849a193be5351fe0d189f5baef40fa3b01ddd73d6083600a68a392672
     environment:
       TZ: ${TIMEZONE}
     labels:
