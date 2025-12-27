@@ -178,7 +178,15 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   celestiaJobs.apply((jobs) =>
     insertVolsyncRepos(
       globals.localBackupServerConnection,
-      jobs.map((j) => j.volsyncRepo)
+      jobs
+        .map((j) => j.volsyncRepo)
+        .concat(
+          jobs.map((j) => ({
+            ...j.volsyncRepo,
+            id: j.volsyncRepo.id.replace("volsync", "spike"),
+            uri: j.volsyncRepo.uri.replace("/backup/", "/spike/backup/"),
+          }))
+        )
     )
   );
   lunaJobs.apply((jobs) =>
