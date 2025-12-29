@@ -178,15 +178,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   celestiaJobs.apply((jobs) =>
     insertVolsyncRepos(
       globals.localBackupServerConnection,
-      jobs
-        .map((j) => j.volsyncRepo)
-        .concat(
-          jobs.map((j) => ({
-            ...j.volsyncRepo,
-            id: j.volsyncRepo.id.replace("volsync", "spike"),
-            uri: j.volsyncRepo.uri.replace("/backup/", "/spike/backup/"),
-          }))
-        )
+      jobs.map((j) => j.volsyncRepo)
     )
   );
   lunaJobs.apply((jobs) =>
@@ -257,6 +249,11 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
     var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
     updatedConfig.repos = updatedConfig.repos || [];
+    for (let i = updatedConfig.repos.length - 1; i >= 0; i--) {
+      if (!updatedConfig.repos[i].id.startsWith("spike-")) {
+        updatedConfig.repos.splice(i, 1);
+      }
+    }
     for (const repo of repos) {
       const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
       if (jobIndex >= 0) {
