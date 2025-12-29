@@ -250,7 +250,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
     updatedConfig.repos = updatedConfig.repos || [];
     for (let i = updatedConfig.repos.length - 1; i >= 0; i--) {
-      if (!updatedConfig.repos[i].id.startsWith("spike-")) {
+      if (updatedConfig.repos[i].id.startsWith("spike-")) {
         updatedConfig.repos.splice(i, 1);
       }
     }
