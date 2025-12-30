@@ -162,9 +162,9 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         return true;
       });
 
-    if (patch.length > 0) {
-      pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
-    }
+    // if (patch.length > 0) {
+    //   pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
+    // }
 
     for (const change of patch) {
       replaces.push(change.path.substring(1));
