@@ -7,15 +7,14 @@ metadata:
   name: zwave
 spec:
   name: Z-Wave
-  category: Automation
+  category: ${CLUSTER_TITLE}
   url: &url https://zwave.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/zwavejs2mqtt.png
   access_policy:
     groups:
       - admins
   gatus:
-    - group: "Applications"
-      url: *url
+    - url: *url
       method: GET
       conditions:
         - "[STATUS] == 200"
