@@ -450,6 +450,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const clusterTags = clusters.map((z) => z.tag);
 
   manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive]);
+  manager.setNodeAttr({ target: [tag.operator], attr: ["funnel"] });
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
   manager.setExitNode(tag.sgc);
