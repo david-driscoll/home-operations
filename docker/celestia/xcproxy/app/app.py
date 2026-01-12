@@ -21,7 +21,6 @@ M3U_URL_FALLBACK  = os.getenv("M3U_URL", "").strip()
 XC_USER           = os.getenv("XC_USER", "U")
 XC_PASS           = os.getenv("XC_PASS", "P")
 CACHE_TTL         = int(os.getenv("CACHE_TTL", "900"))
-HOST_IP           = os.getenv("HOST_IP", "127.0.0.1")
 
 MOVIE_CAT_ID      = os.getenv("MOVIE_CAT_ID", "4292684328")
 SERIES_CAT_ID     = os.getenv("SERIES_CAT_ID", "4292684329")
@@ -868,7 +867,7 @@ def series_proxy(username: str, password: str, episode_id: int, ext: str = "mp4"
 def get_php(username: str, password: str, type: str = "m3u", output: str = "m3u8"):
     if username != XC_USER or password != XC_PASS:
         return PlainTextResponse("# Unauthorized\n", media_type="audio/x-mpegurl")
-    host = f"http://{HOST_IP}:9000"
+    host = f"https://xcproxy.${CLUSTER_DOMAIN}"
     lines = ["#EXTM3U"]
     # Movie entries
     for it in load_movies():
