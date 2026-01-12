@@ -32,6 +32,9 @@ entryPoints:
     http:
       tls:
         certResolver: le
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   tailscale:
     address: ":8443"
   sftp:
