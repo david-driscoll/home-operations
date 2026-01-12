@@ -1,0 +1,42 @@
+services:
+  xcproxy:
+    build: ./app         # builds image using ./app/Dockerfile
+    container_name: xcproxy
+    restart: unless-stopped    # auto-start on reboot or crash
+    dns:
+      - 100.100.100.100
+
+    # Load all secrets & settings from .env file in this folder
+    env_file:
+      - .env
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.xcproxy.rule: Host(`xcproxy.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.xcproxy.middlewares: authentik-outpost@docker
+      traefik.http.routers.xcproxy.entrypoints: websecure
+      traefik.http.routers.xcproxy.service: xcproxy
+      traefik.http.routers.xcproxy.tls.certresolver: le
+
+      traefik.http.services.xcproxy.loadbalancer.server.port: 9000
+    # Map a local folder for TMDb metadata cache
+    volumes:
+      - ./xcproxy_cache:/cache
+
+    # Healthcheck keeps container marked healthy in Docker Desktop / Portainer
+    healthcheck:
+      # Uses Python (already in image) to call /health
+      test: ["CMD", "python", "-c", "import requests,sys; sys.exit(0 if requests.get('https://localhost:9000/health', timeout=3).ok else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://${APP}.${CLUSTER_DOMAIN}
