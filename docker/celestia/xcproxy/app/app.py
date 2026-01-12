@@ -634,6 +634,8 @@ def player_api(
     if not action:
         server = _server_info(request.headers.get("host",""), request.client.host if request.client else None)
         return _json({"user_info": _user_info(), "server_info": server})
+    if action == "get_live_categories" or action == "get_live_streams":
+        return _json([])
 
     if action == "get_vod_categories":
         if CATEGORY_MODE != "genre":
