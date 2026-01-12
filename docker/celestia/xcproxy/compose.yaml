@@ -14,7 +14,6 @@ services:
       traefik.enable: true
 
       traefik.http.routers.xcproxy.rule: Host(`xcproxy.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.xcproxy.middlewares: authentik-outpost@docker
       traefik.http.routers.xcproxy.entrypoints: websecure
       traefik.http.routers.xcproxy.service: xcproxy
       traefik.http.routers.xcproxy.tls.certresolver: le
