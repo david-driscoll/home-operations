@@ -123,8 +123,8 @@ def _user_info() -> Dict[str, Any]:
             "active_cons":0,"max_connections":1,"is_trial":0,"exp_date":"2147483647","message":""}
 
 def _server_info(host_header: str, client_host: Optional[str]) -> Dict[str, Any]:
-    host = (client_host + ":9000") if client_host else (host_header or "localhost:9000")
-    return {"url":host,"port":"9000","https_port":"9000","server_protocol":"http",
+    host = (client_host + ":9000") if client_host else (host_header or "xcproxy.${CLUSTER_DOMAIN}")
+    return {"url":host,"port":"443","https_port":"443","server_protocol":"https",
             "rtmp_port":"0","timezone":"UTC","timestamp_now":now_ts(),
             "time_now":time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
             "process":True,"api_version":2,
