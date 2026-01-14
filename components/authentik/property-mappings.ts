@@ -31,6 +31,18 @@ return groupsDict`,
       expression: `
       return { email_verified: True, }`
     },
+    remote_user: {
+      description: "Set remote-user based on the username",
+      expression: `return {
+    "ak_proxy": {
+        "user_attributes": {
+            "additionalHeaders": {
+                "Remote-User": request.user.username
+            }
+        }
+    }
+}`
+    },
     ggrequestz_role: {
       description: "GGRequestz role mapping based on user groups",
       expression: `if ak_is_group_member(request.user, name="admins"):
