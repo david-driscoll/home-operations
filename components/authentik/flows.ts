@@ -11,6 +11,7 @@ import { AuthenticatorStages } from "./authenticator-stages.js";
 import { AuthenticationStages } from "./authentication-stages.js";
 import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
 import { OPClient } from "../op.ts";
+import { clientIdPair } from "@components/helpers.ts";
 
 interface PlexServerField {
   value?: string;
@@ -195,6 +196,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values()
       ).concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`]);
     });
+    const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });
     const dynamicRegistration = new purrl.Purrl(
       "tailscale-oauth-dynamic-registration",
       {
@@ -204,6 +206,8 @@ export class FlowsManager extends pulumi.ComponentResource {
         method: "POST",
         body: pulumi.jsonStringify({
           client_name: "Authentik Tailscale Client",
+          client_id: clientId,
+          client_secret: clientSecret,
           redirect_uris: items,
         }, undefined, 2),
         headers: {

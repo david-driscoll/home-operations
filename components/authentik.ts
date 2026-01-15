@@ -10,7 +10,7 @@ import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts"
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
-import { addUptimeGatus, awaitOutput } from "./helpers.ts";
+import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -136,28 +136,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // OAuth2 Provider
     if (authentikDefinition.oauth2) {
       const oauth2 = authentikDefinition.oauth2;
-      const clientId = oauth2.clientId
-        ? pulumi.output(oauth2.clientId)
-        : new random.RandomString(
-            `${resourceName}-client-id`,
-            {
-              length: 16,
-              upper: false,
-              special: false,
-            },
-            opts
-          ).result;
-      const clientSecret = oauth2.clientSecret
-        ? pulumi.output(oauth2.clientSecret)
-        : new random.RandomPassword(
-            `${resourceName}-client-secret`,
-            {
-              length: 32,
-              upper: false,
-              special: false,
-            },
-            opts
-          ).result;
+      const { clientId, clientSecret } = clientIdPair(resourceName, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
       const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(

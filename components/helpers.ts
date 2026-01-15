@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
+import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, truncate, rm } from "fs/promises";
 import * as yaml from "yaml";
@@ -12,6 +12,7 @@ import { basename, dirname, join } from "path";
 import { md5Output } from "@pulumi/std/md5.js";
 import { unique } from "moderndash";
 import { tmpdir } from "os";
+import { RandomPassword, RandomString } from "@pulumi/random";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
@@ -174,4 +175,36 @@ export type BackupTask = {
 
 export function toGatusKey(group: string, name: string) {
   return `${group.replace(/[\s\/_,.#+&]+/g, "-")}_${name.replace(/[\s\/_,.#+&]+/g, "-")}`.toLowerCase();
+}
+
+export function clientIdPair(resourceName: string, options: {
+  clientId?: Input<string>;
+  clientSecret?: Input<string>;
+  options: ResourceOptions
+}) {
+
+        const clientId = options.clientId
+          ? output(options.clientId)
+          : new RandomString(
+              `${resourceName}-client-id`,
+              {
+                length: 16,
+                upper: false,
+                special: false,
+              },
+              options.options
+            ).result;
+        const clientSecret = options.clientSecret
+          ? output(options.clientSecret)
+          : new RandomPassword(
+              `${resourceName}-client-secret`,
+              {
+                length: 32,
+                upper: false,
+                special: false,
+              },
+              options.options
+          ).result;
+
+  return { clientId, clientSecret };
 }
