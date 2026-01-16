@@ -127,13 +127,11 @@ export class TruenasVm extends pulumi.ComponentResource {
 
 const backupDatasetId = "stash/backup";
 
-export async function addClusterBackup(
-  name: string,
-  { globals, credential, parent }: { globals: GlobalResources; credential: pulumi.Input<string>; parent: pulumi.Resource }
-): Promise<TruenasVmResult> {
+export async function addClusterBackup(name: string, { globals, parent }: { globals: GlobalResources; parent: pulumi.Resource }): Promise<TruenasVmResult> {
+  const credential = globals.truenasCredential;
   const manager = await promisifyOutput(
     pulumi.output(credential).apply(async (credential) => {
-      return new TrueNASResourceManager(await getTruenasClient(credential));
+      return new TrueNASResourceManager(await getTruenasClient(credential.title));
     })
   );
 

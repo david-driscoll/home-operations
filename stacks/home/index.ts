@@ -17,8 +17,8 @@ import * as tls from "@pulumi/tls";
 import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { createBackupJobs } from "./backups.ts";
-import { TailscaleAclManager } from "./tailscale/manager.ts";
+import { createBackupJobs } from "../../components/createBackupJobs.ts";
+import { TailscaleAclManager } from "../../components/tailscale/manager.ts";
 import { TailscaleService } from "@openapi/tailscale-grants.js";
 
 const globals = new GlobalResources({}, {});
@@ -163,15 +163,13 @@ try {
       [await awaitOutput(alphaSiteDockgeRuntime.tailscaleName)]: alphaSiteDockgeRuntime.tailscaleIpAddress,
       celestia: celestiaHost.tailscaleIpAddress,
       [await awaitOutput(celestiaDockgeRuntime.tailscaleName)]: celestiaDockgeRuntime.tailscaleIpAddress,
-      luna: lunaHost.tailscaleIpAddress,
-      [await awaitOutput(lunaDockgeRuntime.tailscaleName)]: lunaDockgeRuntime.tailscaleIpAddress,
       spike: spikeVm.tailscaleIpAddress,
       "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
+    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
     tests: {
-      dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
-      proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
+      dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName],
+      proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
       taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
       kubernetesDevices: ["sgc", "equestria"],
     },
@@ -186,12 +184,10 @@ try {
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
 export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
-export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
 // const users = await tailscale.
 // console.log(users);
 
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
 await createBackupJobs({
@@ -204,7 +200,7 @@ await createBackupJobs({
   globals,
 });
 
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(
     (prev, curr) => ({
       endpoints: [...prev.endpoints, ...curr.endpoints],

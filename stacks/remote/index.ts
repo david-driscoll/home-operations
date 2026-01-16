@@ -8,8 +8,7 @@ import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 import * as b2 from "@pulumi/b2";
-import { updateTailscaleAcls } from "./tailscale.ts";
-import { configureAdGuard } from "./adguard.ts";
+import { updateTailscaleAcls } from "../../components/tailscale.ts";
 import { gatusDnsRecords } from "../../components/StandardDns.ts";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem } from "@openapi/aliases.js";
@@ -17,8 +16,7 @@ import * as tls from "@pulumi/tls";
 import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { createBackupJobs } from "./backups.ts";
-import { TailscaleAclManager } from "./tailscale/manager.ts";
+import { createBackupJobs } from "../../components/createBackupJobs.ts";
 import { TailscaleService } from "@openapi/tailscale-grants.js";
 
 const globals = new GlobalResources({}, {});
@@ -64,27 +62,15 @@ try {
     globals,
     services: tailscaleServices,
     hosts: {
-      idp: "100.111.209.102",
-      "primary-dns": "100.111.209.201",
-      "secondary-dns": alphaSiteDockgeRuntime.tailscaleIpAddress,
-      "unifi-dns": "100.111.0.1",
-      "alpha-site": alphaSiteHost.tailscaleIpAddress,
-      [await awaitOutput(alphaSiteDockgeRuntime.tailscaleName)]: alphaSiteDockgeRuntime.tailscaleIpAddress,
-      celestia: celestiaHost.tailscaleIpAddress,
-      [await awaitOutput(celestiaDockgeRuntime.tailscaleName)]: celestiaDockgeRuntime.tailscaleIpAddress,
       luna: lunaHost.tailscaleIpAddress,
       [await awaitOutput(lunaDockgeRuntime.tailscaleName)]: lunaDockgeRuntime.tailscaleIpAddress,
-      spike: spikeVm.tailscaleIpAddress,
-      "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
+    internalIps: [lunaDockgeRuntime.ipAddress],
     tests: {
-      dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
-      proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
-      taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
-      kubernetesDevices: ["sgc", "equestria"],
+      dockgeDevices: [lunaDockgeRuntime.tailscaleName],
+      proxmoxDevices: [lunaHost.tailscaleName],
+      taggedDevices: [],
     },
-    dnsServers: ["100.111.209.201", "100.111.0.1", alphaSiteDockgeRuntime.tailscaleIpAddress],
   });
 } catch (error) {
   console.error("Error updating Tailscale ACLs:", error);
@@ -92,16 +78,11 @@ try {
 
 // TODO: add code to ensure tailscale ips is set for all important services
 
-export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
-export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
-export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
 export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
 // const users = await tailscale.
 // console.log(users);
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
 await createBackupJobs({
   celestiaDockgeRuntime,
@@ -113,7 +94,7 @@ await createBackupJobs({
   globals,
 });
 
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+const externalEndpoints = pulumi.all([lunaDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(
     (prev, curr) => ({
       endpoints: [...prev.endpoints, ...curr.endpoints],

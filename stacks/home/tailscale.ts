@@ -3,7 +3,7 @@ import * as kubernetes from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
-import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
+import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "../../components/tailscale/manager.ts";
 import { awaitOutput } from "@components/helpers.ts";
 import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 
@@ -37,15 +37,15 @@ export async function updateTailscaleAcls(args: {
   const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:TailscaleAcls", "tailscale-acls", {});
   const cro = { parent: tailscaleParent, provider: args.globals.tailscaleProvider };
   const currentAcl = await tailscale.getAcl({ provider: args.globals.tailscaleProvider });
-  let aclsJson = applyAllEdits(currentAcl.hujson, ["tagOwners"], {});
-  aclsJson = applyAllEdits(aclsJson, ["grants"], []);
-  aclsJson = applyAllEdits(aclsJson, ["tests"], []);
-  aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
-  aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
+  // let aclsJson = applyAllEdits(currentAcl.hujson, ["tagOwners"], {});
+  // aclsJson = applyAllEdits(aclsJson, ["grants"], []);
+  // aclsJson = applyAllEdits(aclsJson, ["tests"], []);
+  // aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
+  // aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
   // aclsJson = applyAllEdits(aclsJson, ["nodeAttrs"], []);
-  aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
+  // aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
 
-  const manager = new TailscaleAclManager(aclsJson, args.hosts, tests);
+  const manager = new TailscaleAclManager(currentAcl.hujson, args.hosts, tests);
   const testData = manager.testData;
   Object.values(tag).forEach((t) => manager.setTagOwner(t));
   Object.values(groups).forEach((t) => manager.setGroup(t));

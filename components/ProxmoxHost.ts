@@ -101,7 +101,7 @@ export class ProxmoxHost extends ComponentResource {
     );
 
     if (args.enableClusterBackup) {
-      this.backupVolumes = pulumi.output(addClusterBackup(name, { globals: args.globals, credential: args.truenas.credential, parent: this }));
+      this.backupVolumes = pulumi.output(addClusterBackup(name, { globals: args.globals, parent: this }));
     }
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
