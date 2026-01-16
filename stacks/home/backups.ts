@@ -1,6 +1,6 @@
-import { DockgeLxc } from "./DockgeLxc.ts";
+import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import * as pulumi from "@pulumi/pulumi";
-import { ProxmoxHost } from "./ProxmoxHost.ts";
+import { ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";

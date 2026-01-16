@@ -30,82 +30,8 @@ export const sftpClientPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpC
 const op = new OPClient();
 
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
-const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
 const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
-const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
 const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(createClusterDefinition);
-const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
-const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
-const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
-
-const minioBucket = new minio.S3Bucket(
-  `home-operations-minio-bucket`,
-  {
-    acl: "private",
-    bucket: pulumi.interpolate`home-operations`,
-  },
-  {
-    provider: globals.truenasMinioProvider,
-    protect: true,
-    retainOnDelete: true,
-  }
-);
-
-const b2Bucket = new b2.Bucket(
-  `home-operations-b2-bucket`,
-  {
-    bucketName: pulumi.interpolate`home-operations`,
-    bucketType: "allPrivate",
-    bucketInfo: {
-      project: "home-operations",
-      purpose: "pulumi storage",
-    },
-    lifecycleRules: [
-      {
-        fileNamePrefix: "",
-        daysFromHidingToDeleting: 1,
-      },
-    ],
-  },
-  {
-    provider: globals.backblazeProvider,
-    protect: true,
-    retainOnDelete: true,
-  }
-);
-const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
-  title: "Twilight Sparkle",
-  globals: globals,
-  isProxmoxBackupServer: false,
-  internalIpAddress: "10.10.10.100",
-  tailscaleIpAddress: "100.111.10.100",
-  macAddress: "58:47:ca:7b:a9:9d",
-  proxmox: mainProxmoxCredentials,
-  remote: false,
-  cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-});
-const spikeVm = new TruenasVm("spike", {
-  credential: globals.truenasCredential.apply((z) => z.title!),
-  globals: globals,
-  host: twilightSparkleHost,
-  ipAddress: pulumi.output("10.10.10.10"),
-  tailscaleIpAddress: "100.111.10.10",
-  macAddress: "bc:24:11:7c:e5:c5",
-});
-
-const celestiaHost = new ProxmoxHost("celestia", {
-  globals: globals,
-  isProxmoxBackupServer: true,
-  internalIpAddress: "10.10.10.103",
-  tailscaleIpAddress: "100.111.10.103",
-  macAddress: "c8:ff:bf:03:cc:4c",
-  proxmox: mainProxmoxCredentials,
-  truenas: spikeVm,
-  remote: false,
-  cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-});
 
 const lunaHost = new ProxmoxHost("luna", {
   globals: globals,
@@ -119,33 +45,8 @@ const lunaHost = new ProxmoxHost("luna", {
   tailscaleArgs: { acceptRoutes: false },
 });
 
-const alphaSiteHost = new ProxmoxHost("alpha-site", {
-  globals: globals,
-  isProxmoxBackupServer: false,
-  internalIpAddress: "10.10.10.200",
-  tailscaleIpAddress: "100.111.10.200",
-  macAddress: "e4:5f:01:90:36:22",
-  proxmox: alphaSiteProxmoxCredentials,
-  installTailscale: false,
-  remote: false,
-  cluster: alphaSiteCluster,
-  shortName: "as",
-  tailscaleArgs: { acceptRoutes: false },
-});
-
 const tailscaleServices: TailscaleService[] = [];
 const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}` as TailscaleService);
-
-const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: celestiaHost,
-  vmId: 300,
-  cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  registerTailscaleService,
-});
 
 const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
@@ -153,19 +54,6 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   host: lunaHost,
   vmId: 400,
   cluster: lunaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  registerTailscaleService,
-});
-
-const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: alphaSiteHost,
-  vmId: 100,
-  ipAddress: "10.10.10.9",
-  tailscaleIpAddress: "100.111.10.9",
-  cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   registerTailscaleService,

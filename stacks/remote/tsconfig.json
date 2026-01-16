@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": "../..",
+    "rootDir": "../..",
+    "outDir": "../../bin",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "pretty": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@components/*": [
+        "./components/*"
+      ],
+      "@openapi/*": [
+        "./types/*"
+      ],
+      "@dynamic/*": [
+        "./dynamic/*"
+      ]
+    }
+  },
+  "include": [
+    "./*.ts",
+    "../../components/**/*.ts",
+    "../../dynamic/**/*.ts",
+    "../../types/**/*.ts"
+  ]
+}

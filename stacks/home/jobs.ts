@@ -7,7 +7,7 @@ import { B2Backend, RcloneBackend, RcloneOperation } from "../../types/rclone.ts
 import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
-import { DockgeLxc } from "./DockgeLxc.ts";
+import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
 import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
@@ -42,14 +42,17 @@ export class BackupJobManager extends ComponentResource {
         parent: this,
         connection: this.connection,
         remotePath: interpolate`/opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
-        dependsOn: [new remote.Command(
-          `${cluster.key}-backup-job-${kebabCase(job.name)}-remove`,
+        dependsOn: [
+          new remote.Command(
+            `${cluster.key}-backup-job-${kebabCase(job.name)}-remove`,
 
-          {
-            connection: this.connection,
-            delete: interpolate`rm -f /opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
-          },
-          { parent: this })],
+            {
+              connection: this.connection,
+              delete: interpolate`rm -f /opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
+            },
+            { parent: this }
+          ),
+        ],
       });
     });
   }
