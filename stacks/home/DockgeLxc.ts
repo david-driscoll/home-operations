@@ -342,6 +342,7 @@ export class DockgeLxc extends ComponentResource {
       // replaceVariable(/\$\{tailscaleAuthKey\}/g, this.args.globals.tailscaleAuthKey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, this.cluster.title),
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
+      replaceVariable(/\$\{CLUSTER_CNAME\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.args.globals.searchDomain}:9595`),
