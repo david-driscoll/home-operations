@@ -3,7 +3,7 @@ import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, 
 import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
-import { getContainerHostnames } from "../stacks/home/helper.ts";
+import { getContainerHostnames } from "./hostname-helpers.ts";
 import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
@@ -19,7 +19,7 @@ import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
 import * as yaml from "yaml";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { BackupJobManager } from "../stacks/home/jobs.ts";
+import { BackupJobManager } from "./BackupJobManager.ts";
 import { unique } from "moderndash";
 import { Command } from "@pulumi/command/remote/index.js";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";

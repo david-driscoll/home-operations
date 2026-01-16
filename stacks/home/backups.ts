@@ -4,7 +4,7 @@ import { ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
-import { BackupPlanManager } from "./jobs.ts";
+import { BackupPlanManager } from "../../components/BackupJobManager.ts";
 
 export async function createBackupJobs({
   celestiaDockgeRuntime,

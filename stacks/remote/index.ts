@@ -39,7 +39,7 @@ const lunaHost = new ProxmoxHost("luna", {
   tailscaleIpAddress: "100.111.10.104",
   macAddress: "c8:ff:bf:03:c9:1e",
   proxmox: mainProxmoxCredentials,
-  truenas: spikeVm,
+  enableClusterBackup: true,
   remote: true,
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },

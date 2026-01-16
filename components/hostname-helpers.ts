@@ -1,6 +1,6 @@
 import { interpolate } from "@pulumi/pulumi";
-import { GlobalResources } from "../../components/globals.ts";
-import { ProxmoxHost } from "../../components/ProxmoxHost.ts";
+import { GlobalResources } from "./globals.ts";
+import { ProxmoxHost } from "./ProxmoxHost.ts";
 
 export function getHostnames(name: string, globals: GlobalResources) {
   const hostname = interpolate`${name}.host.${globals.searchDomain}`;

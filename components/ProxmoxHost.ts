@@ -6,9 +6,9 @@ import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { getTailscaleClient, installTailscale } from "./tailscale.ts";
 import { OPClient } from "./op.ts";
-import { getHostnames } from "../stacks/home/helper.ts";
+import { getHostnames } from "./hostname-helpers.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { TruenasVm } from "./TruenasVm.ts";
+import { addClusterBackup, TruenasVm } from "./TruenasVm.ts";
 import { getTailscaleDevice, getTailscaleSection, writeTempFile } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
@@ -28,9 +28,9 @@ export interface ProxmoxHostArgs {
   remote: boolean;
   internalIpAddress?: TailscaleIp;
   installTailscale?: boolean;
-  truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
   shortName?: string;
+  enableClusterBackup: boolean;
   tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
 }
 
@@ -40,7 +40,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly tailscaleIpAddress: TailscaleIp;
   public readonly macAddress: string;
   public readonly pveProvider: ProxmoxVEProvider;
-  public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
+  public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<typeof addClusterBackup>>>;
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleName: Output<string>;
   public readonly hostname: Output<string>;
@@ -100,8 +100,8 @@ export class ProxmoxHost extends ComponentResource {
       cro
     );
 
-    if (args.truenas) {
-      this.backupVolumes = pulumi.output(args.truenas.addClusterBackup(name, this));
+    if (args.enableClusterBackup) {
+      this.backupVolumes = pulumi.output(addClusterBackup(name, { globals: args.globals, credential: args.truenas.credential, parent: this }));
     }
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {

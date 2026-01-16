@@ -83,6 +83,7 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   proxmox: mainProxmoxCredentials,
   remote: false,
   cluster: celestiaCluster,
+  enableClusterBackup: false,
   tailscaleArgs: { acceptRoutes: false },
 });
 const spikeVm = new TruenasVm("spike", {
@@ -101,21 +102,9 @@ const celestiaHost = new ProxmoxHost("celestia", {
   tailscaleIpAddress: "100.111.10.103",
   macAddress: "c8:ff:bf:03:cc:4c",
   proxmox: mainProxmoxCredentials,
-  truenas: spikeVm,
+  enableClusterBackup: true,
   remote: false,
   cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-});
-
-const lunaHost = new ProxmoxHost("luna", {
-  globals: globals,
-  isProxmoxBackupServer: true,
-  tailscaleIpAddress: "100.111.10.104",
-  macAddress: "c8:ff:bf:03:c9:1e",
-  proxmox: mainProxmoxCredentials,
-  truenas: spikeVm,
-  remote: true,
-  cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
 });
 
@@ -130,6 +119,7 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   remote: false,
   cluster: alphaSiteCluster,
   shortName: "as",
+  enableClusterBackup: false,
   tailscaleArgs: { acceptRoutes: false },
 });
 
@@ -142,17 +132,6 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   host: celestiaHost,
   vmId: 300,
   cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  registerTailscaleService,
-});
-
-const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: lunaHost,
-  vmId: 400,
-  cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   registerTailscaleService,

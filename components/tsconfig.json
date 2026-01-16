@@ -9,6 +9,7 @@
   "include": [
     "**/*.ts",
     "../dynamic/**/*.ts",
+    "../types/**/*.ts",
     "**/*.mts"
   ],
   "references": []
