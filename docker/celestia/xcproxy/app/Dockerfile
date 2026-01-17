@@ -1,5 +1,5 @@
 # Base image: a small Python 3.11 Linux distribution
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # These envs make Python behave nicely in containers:
 # - no .pyc files, and unbuffered stdout/stderr (logs show up immediately)
