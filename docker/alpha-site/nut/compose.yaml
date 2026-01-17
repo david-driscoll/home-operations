@@ -1,6 +1,6 @@
 services:
   peanut:
-    image: brandawg93/peanut:5.20.1@sha256:ef9b6545bb4beb156e901b1bfb1e58d1272abe8edccba81f3b21c405384d7bbf
+    image: brandawg93/peanut:5.21.1@sha256:3ccb554c9d5fcb1ea0a07eddb0f6e01e54f5a5138506793fea8467724ddd0445
     container_name: PeaNUT
     restart: unless-stopped
     dns:
