@@ -1,0 +1,25 @@
+services:
+  traefik:
+    container_name: openspeedtest
+    image: openspeedtest/latest:v2.0.6
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    labels:
+      # Enable Traefik for itself
+      traefik.enable: true
+      # Dashboard configuration
+      traefik.http.routers.openspeedtest.rule: Host(`openspeedtest.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.openspeedtest.entrypoints: websecure
+      traefik.http.routers.openspeedtest.service: openspeedtest
+      traefik.http.routers.openspeedtest.tls.certresolver: le
+
+      traefik.http.services.openspeedtest.loadbalancer.server.port: 3000
+    networks:
+      - dockge_default
+x-dockge:
+  urls:
+    - https://openspeedtest.${CLUSTER_DOMAIN}
+networks:
+  dockge_default:
+    external: true

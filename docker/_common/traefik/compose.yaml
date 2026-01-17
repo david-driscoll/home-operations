@@ -9,10 +9,6 @@ services:
       - --configfile=/config/config.yaml
       - --providers.file.watch=true
     labels:
-      tsdproxy.enable: false
-      tsdproxy.ephemeral: true
-      tsdproxy.name: internal-${host}
-
       # Enable Traefik for itself
       traefik.enable: true
       # Dashboard configuration
