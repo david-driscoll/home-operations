@@ -34,6 +34,14 @@ export declare class ProviderMicrosoftEntra extends pulumi.CustomResource {
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     readonly providerMicrosoftEntraId: pulumi.Output<string>;
+    /**
+     * Defaults to `100`.
+     */
+    readonly syncPageSize: pulumi.Output<number | undefined>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    readonly syncPageTimeout: pulumi.Output<string | undefined>;
     readonly tenantId: pulumi.Output<string>;
     /**
      * Allowed values:
@@ -74,6 +82,14 @@ export interface ProviderMicrosoftEntraState {
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerMicrosoftEntraId?: pulumi.Input<string>;
+    /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
     tenantId?: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -106,6 +122,14 @@ export interface ProviderMicrosoftEntraArgs {
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerMicrosoftEntraId?: pulumi.Input<string>;
+    /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
     tenantId: pulumi.Input<string>;
     /**
      * Allowed values:

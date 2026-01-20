@@ -16,9 +16,9 @@ export declare class DnsRecord extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is DnsRecord;
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
-    readonly enabled: pulumi.Output<boolean | undefined>;
+    readonly enabled: pulumi.Output<boolean>;
     /**
      * The key of the DNS record.
      */
@@ -26,7 +26,7 @@ export declare class DnsRecord extends pulumi.CustomResource {
     /**
      * The port of the DNS record.
      */
-    readonly port: pulumi.Output<number>;
+    readonly port: pulumi.Output<number | undefined>;
     /**
      * The priority of the DNS record.
      */
@@ -65,7 +65,7 @@ export declare class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -106,7 +106,7 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -116,7 +116,7 @@ export interface DnsRecordArgs {
     /**
      * The port of the DNS record.
      */
-    port: pulumi.Input<number>;
+    port?: pulumi.Input<number>;
     /**
      * The priority of the DNS record.
      */

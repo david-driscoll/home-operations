@@ -45,9 +45,6 @@ class DnsRecord extends pulumi.CustomResource {
         }
         else {
             const args = argsOrState;
-            if (args?.port === undefined && !opts.urn) {
-                throw new Error("Missing required property 'port'");
-            }
             if (args?.value === undefined && !opts.urn) {
                 throw new Error("Missing required property 'value'");
             }

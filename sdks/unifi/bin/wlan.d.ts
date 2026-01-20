@@ -18,79 +18,87 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is Wlan;
     /**
-     * IDs of the AP groups to use for this network.
+     * List of AP group IDs to apply this WLAN to.
      */
     readonly apGroupIds: pulumi.Output<string[] | undefined>;
     /**
-     * Improves client transitions between APs when they have a weak signal. Defaults to `true`.
+     * Access point group mode.
      */
-    readonly bssTransition: pulumi.Output<boolean | undefined>;
+    readonly apGroupMode: pulumi.Output<string>;
     /**
-     * Enables 802.11r fast roaming. Defaults to `false`.
+     * Improves client roaming by providing connection details of nearby APs.
      */
-    readonly fastRoamingEnabled: pulumi.Output<boolean | undefined>;
+    readonly bssTransition: pulumi.Output<boolean>;
+    /**
+     * Enable or disable the WLAN.
+     */
+    readonly enabled: pulumi.Output<boolean>;
+    /**
+     * Enable fast roaming, aka 802.11r.
+     */
+    readonly fastRoamingEnabled: pulumi.Output<boolean>;
     /**
      * Indicates whether or not to hide the SSID from broadcast.
      */
-    readonly hideSsid: pulumi.Output<boolean | undefined>;
+    readonly hideSsid: pulumi.Output<boolean>;
     /**
      * Indicates that this is a guest WLAN and should use guest behaviors.
      */
-    readonly isGuest: pulumi.Output<boolean | undefined>;
+    readonly isGuest: pulumi.Output<boolean>;
     /**
-     * Isolates stations on layer 2 (ethernet) level. Defaults to `false`.
+     * Isolates stations on layer 2 (ethernet) level.
      */
-    readonly l2Isolation: pulumi.Output<boolean | undefined>;
+    readonly l2Isolation: pulumi.Output<boolean>;
     /**
-     * Indicates whether or not the MAC filter is turned of for the network.
+     * MAC address filtering configuration.
      */
-    readonly macFilterEnabled: pulumi.Output<boolean | undefined>;
+    readonly macFilter: pulumi.Output<outputs.WlanMacFilter>;
     /**
-     * List of MAC addresses to filter (only valid if `mac_filter_enabled` is `true`).
+     * Minimum data rate for 2G clients in Kbps.
      */
-    readonly macFilterLists: pulumi.Output<string[] | undefined>;
+    readonly minimumDataRate2gKbps: pulumi.Output<number>;
     /**
-     * MAC address filter policy (only valid if `mac_filter_enabled` is `true`). Defaults to `deny`.
+     * Minimum data rate for 5G clients in Kbps.
      */
-    readonly macFilterPolicy: pulumi.Output<string | undefined>;
+    readonly minimumDataRate5gKbps: pulumi.Output<number>;
     /**
-     * Set minimum data rate control for 2G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `1000`, `2000`, `5500`, `6000`, `9000`, `11000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
+     * Minimum rate setting preference.
      */
-    readonly minimumDataRate2gKbps: pulumi.Output<number | undefined>;
-    /**
-     * Set minimum data rate control for 5G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `6000`, `9000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
-     */
-    readonly minimumDataRate5gKbps: pulumi.Output<number | undefined>;
+    readonly minrateSettingPreference: pulumi.Output<string>;
     /**
      * Indicates whether or not Multicast Enhance is turned of for the network.
      */
-    readonly multicastEnhance: pulumi.Output<boolean | undefined>;
+    readonly multicastEnhance: pulumi.Output<boolean>;
     /**
      * The SSID of the network.
      */
     readonly name: pulumi.Output<string>;
     /**
-     * ID of the network for this SSID
+     * NAS identifier type for RADIUS.
+     */
+    readonly nasIdentifierType: pulumi.Output<string>;
+    /**
+     * ID of the network for this WLAN.
      */
     readonly networkId: pulumi.Output<string | undefined>;
     /**
-     * Connect high performance clients to 5 GHz only. Defaults to `true`.
+     * Connect high performance clients to 5 GHz only.
      */
-    readonly no2ghzOui: pulumi.Output<boolean | undefined>;
+    readonly no2ghzOui: pulumi.Output<boolean>;
     /**
      * The passphrase for the network, this is only required if `security` is not set to `open`.
      */
     readonly passphrase: pulumi.Output<string | undefined>;
     /**
-     * Enable Protected Management Frames. This cannot be disabled if using WPA 3. Valid values are `required`, `optional` and `disabled`. Defaults to `disabled`.
+     * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */
-    readonly pmfMode: pulumi.Output<string | undefined>;
+    readonly pmfMode: pulumi.Output<string>;
     /**
-     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast. Defaults to `false`.
+     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast.
      */
-    readonly proxyArp: pulumi.Output<boolean | undefined>;
+    readonly proxyArp: pulumi.Output<boolean>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. You can query this via the `unifi.RadiusProfile` data source.
+     * ID of the RADIUS profile to use when security `wpaeap`.
      */
     readonly radiusProfileId: pulumi.Output<string | undefined>;
     /**
@@ -98,33 +106,45 @@ export declare class Wlan extends pulumi.CustomResource {
      */
     readonly schedules: pulumi.Output<outputs.WlanSchedule[] | undefined>;
     /**
-     * The type of WiFi security for this network. Valid values are: `wpapsk`, `wpaeap`, and `open`.
+     * The type of WiFi security for this network.
      */
     readonly security: pulumi.Output<string>;
     /**
-     * The name of the site to associate the wlan with.
+     * The name of the site to associate the WLAN with.
      */
     readonly site: pulumi.Output<string>;
     /**
-     * Enable Unscheduled Automatic Power Save Delivery. Defaults to `false`.
+     * Enable Unscheduled Automatic Power Save Delivery.
      */
-    readonly uapsd: pulumi.Output<boolean | undefined>;
+    readonly uapsd: pulumi.Output<boolean>;
     /**
      * ID of the user group to use for this network.
      */
     readonly userGroupId: pulumi.Output<string>;
     /**
-     * Radio band your WiFi network will use. Defaults to `both`.
+     * VLAN ID.
      */
-    readonly wlanBand: pulumi.Output<string | undefined>;
+    readonly vlan: pulumi.Output<number | undefined>;
+    /**
+     * Enable VLAN tagging.
+     */
+    readonly vlanEnabled: pulumi.Output<boolean>;
+    /**
+     * WLAN band.
+     */
+    readonly wlanBand: pulumi.Output<string>;
+    /**
+     * List of WLAN bands.
+     */
+    readonly wlanBands: pulumi.Output<string[]>;
     /**
      * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
      */
-    readonly wpa3Support: pulumi.Output<boolean | undefined>;
+    readonly wpa3Support: pulumi.Output<boolean>;
     /**
      * Enable WPA 3 and WPA 2 support (security must be `wpapsk` and `wpa3_support` must be true).
      */
-    readonly wpa3Transition: pulumi.Output<boolean | undefined>;
+    readonly wpa3Transition: pulumi.Output<boolean>;
     /**
      * Create a Wlan resource with the given unique name, arguments, and options.
      *
@@ -139,15 +159,23 @@ export declare class Wlan extends pulumi.CustomResource {
  */
 export interface WlanState {
     /**
-     * IDs of the AP groups to use for this network.
+     * List of AP group IDs to apply this WLAN to.
      */
     apGroupIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Improves client transitions between APs when they have a weak signal. Defaults to `true`.
+     * Access point group mode.
+     */
+    apGroupMode?: pulumi.Input<string>;
+    /**
+     * Improves client roaming by providing connection details of nearby APs.
      */
     bssTransition?: pulumi.Input<boolean>;
     /**
-     * Enables 802.11r fast roaming. Defaults to `false`.
+     * Enable or disable the WLAN.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Enable fast roaming, aka 802.11r.
      */
     fastRoamingEnabled?: pulumi.Input<boolean>;
     /**
@@ -159,29 +187,25 @@ export interface WlanState {
      */
     isGuest?: pulumi.Input<boolean>;
     /**
-     * Isolates stations on layer 2 (ethernet) level. Defaults to `false`.
+     * Isolates stations on layer 2 (ethernet) level.
      */
     l2Isolation?: pulumi.Input<boolean>;
     /**
-     * Indicates whether or not the MAC filter is turned of for the network.
+     * MAC address filtering configuration.
      */
-    macFilterEnabled?: pulumi.Input<boolean>;
+    macFilter?: pulumi.Input<inputs.WlanMacFilter>;
     /**
-     * List of MAC addresses to filter (only valid if `mac_filter_enabled` is `true`).
-     */
-    macFilterLists?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * MAC address filter policy (only valid if `mac_filter_enabled` is `true`). Defaults to `deny`.
-     */
-    macFilterPolicy?: pulumi.Input<string>;
-    /**
-     * Set minimum data rate control for 2G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `1000`, `2000`, `5500`, `6000`, `9000`, `11000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
+     * Minimum data rate for 2G clients in Kbps.
      */
     minimumDataRate2gKbps?: pulumi.Input<number>;
     /**
-     * Set minimum data rate control for 5G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `6000`, `9000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
+     * Minimum data rate for 5G clients in Kbps.
      */
     minimumDataRate5gKbps?: pulumi.Input<number>;
+    /**
+     * Minimum rate setting preference.
+     */
+    minrateSettingPreference?: pulumi.Input<string>;
     /**
      * Indicates whether or not Multicast Enhance is turned of for the network.
      */
@@ -191,11 +215,15 @@ export interface WlanState {
      */
     name?: pulumi.Input<string>;
     /**
-     * ID of the network for this SSID
+     * NAS identifier type for RADIUS.
+     */
+    nasIdentifierType?: pulumi.Input<string>;
+    /**
+     * ID of the network for this WLAN.
      */
     networkId?: pulumi.Input<string>;
     /**
-     * Connect high performance clients to 5 GHz only. Defaults to `true`.
+     * Connect high performance clients to 5 GHz only.
      */
     no2ghzOui?: pulumi.Input<boolean>;
     /**
@@ -203,15 +231,15 @@ export interface WlanState {
      */
     passphrase?: pulumi.Input<string>;
     /**
-     * Enable Protected Management Frames. This cannot be disabled if using WPA 3. Valid values are `required`, `optional` and `disabled`. Defaults to `disabled`.
+     * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */
     pmfMode?: pulumi.Input<string>;
     /**
-     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast. Defaults to `false`.
+     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast.
      */
     proxyArp?: pulumi.Input<boolean>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. You can query this via the `unifi.RadiusProfile` data source.
+     * ID of the RADIUS profile to use when security `wpaeap`.
      */
     radiusProfileId?: pulumi.Input<string>;
     /**
@@ -219,15 +247,15 @@ export interface WlanState {
      */
     schedules?: pulumi.Input<pulumi.Input<inputs.WlanSchedule>[]>;
     /**
-     * The type of WiFi security for this network. Valid values are: `wpapsk`, `wpaeap`, and `open`.
+     * The type of WiFi security for this network.
      */
     security?: pulumi.Input<string>;
     /**
-     * The name of the site to associate the wlan with.
+     * The name of the site to associate the WLAN with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Enable Unscheduled Automatic Power Save Delivery. Defaults to `false`.
+     * Enable Unscheduled Automatic Power Save Delivery.
      */
     uapsd?: pulumi.Input<boolean>;
     /**
@@ -235,9 +263,21 @@ export interface WlanState {
      */
     userGroupId?: pulumi.Input<string>;
     /**
-     * Radio band your WiFi network will use. Defaults to `both`.
+     * VLAN ID.
+     */
+    vlan?: pulumi.Input<number>;
+    /**
+     * Enable VLAN tagging.
+     */
+    vlanEnabled?: pulumi.Input<boolean>;
+    /**
+     * WLAN band.
      */
     wlanBand?: pulumi.Input<string>;
+    /**
+     * List of WLAN bands.
+     */
+    wlanBands?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
      */
@@ -252,15 +292,23 @@ export interface WlanState {
  */
 export interface WlanArgs {
     /**
-     * IDs of the AP groups to use for this network.
+     * List of AP group IDs to apply this WLAN to.
      */
     apGroupIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Improves client transitions between APs when they have a weak signal. Defaults to `true`.
+     * Access point group mode.
+     */
+    apGroupMode?: pulumi.Input<string>;
+    /**
+     * Improves client roaming by providing connection details of nearby APs.
      */
     bssTransition?: pulumi.Input<boolean>;
     /**
-     * Enables 802.11r fast roaming. Defaults to `false`.
+     * Enable or disable the WLAN.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Enable fast roaming, aka 802.11r.
      */
     fastRoamingEnabled?: pulumi.Input<boolean>;
     /**
@@ -272,29 +320,25 @@ export interface WlanArgs {
      */
     isGuest?: pulumi.Input<boolean>;
     /**
-     * Isolates stations on layer 2 (ethernet) level. Defaults to `false`.
+     * Isolates stations on layer 2 (ethernet) level.
      */
     l2Isolation?: pulumi.Input<boolean>;
     /**
-     * Indicates whether or not the MAC filter is turned of for the network.
+     * MAC address filtering configuration.
      */
-    macFilterEnabled?: pulumi.Input<boolean>;
+    macFilter?: pulumi.Input<inputs.WlanMacFilter>;
     /**
-     * List of MAC addresses to filter (only valid if `mac_filter_enabled` is `true`).
-     */
-    macFilterLists?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * MAC address filter policy (only valid if `mac_filter_enabled` is `true`). Defaults to `deny`.
-     */
-    macFilterPolicy?: pulumi.Input<string>;
-    /**
-     * Set minimum data rate control for 2G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `1000`, `2000`, `5500`, `6000`, `9000`, `11000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
+     * Minimum data rate for 2G clients in Kbps.
      */
     minimumDataRate2gKbps?: pulumi.Input<number>;
     /**
-     * Set minimum data rate control for 5G devices, in Kbps. Use `0` to disable minimum data rates. Valid values are: `6000`, `9000`, `12000`, `18000`, `24000`, `36000`, `48000`,  and `54000`.
+     * Minimum data rate for 5G clients in Kbps.
      */
     minimumDataRate5gKbps?: pulumi.Input<number>;
+    /**
+     * Minimum rate setting preference.
+     */
+    minrateSettingPreference?: pulumi.Input<string>;
     /**
      * Indicates whether or not Multicast Enhance is turned of for the network.
      */
@@ -304,11 +348,15 @@ export interface WlanArgs {
      */
     name?: pulumi.Input<string>;
     /**
-     * ID of the network for this SSID
+     * NAS identifier type for RADIUS.
+     */
+    nasIdentifierType?: pulumi.Input<string>;
+    /**
+     * ID of the network for this WLAN.
      */
     networkId?: pulumi.Input<string>;
     /**
-     * Connect high performance clients to 5 GHz only. Defaults to `true`.
+     * Connect high performance clients to 5 GHz only.
      */
     no2ghzOui?: pulumi.Input<boolean>;
     /**
@@ -316,15 +364,15 @@ export interface WlanArgs {
      */
     passphrase?: pulumi.Input<string>;
     /**
-     * Enable Protected Management Frames. This cannot be disabled if using WPA 3. Valid values are `required`, `optional` and `disabled`. Defaults to `disabled`.
+     * Enable Protected Management Frames. This cannot be disabled if using WPA 3.
      */
     pmfMode?: pulumi.Input<string>;
     /**
-     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast. Defaults to `false`.
+     * Reduces airtime usage by allowing APs to "proxy" common broadcast frames as unicast.
      */
     proxyArp?: pulumi.Input<boolean>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`. You can query this via the `unifi.RadiusProfile` data source.
+     * ID of the RADIUS profile to use when security `wpaeap`.
      */
     radiusProfileId?: pulumi.Input<string>;
     /**
@@ -332,15 +380,15 @@ export interface WlanArgs {
      */
     schedules?: pulumi.Input<pulumi.Input<inputs.WlanSchedule>[]>;
     /**
-     * The type of WiFi security for this network. Valid values are: `wpapsk`, `wpaeap`, and `open`.
+     * The type of WiFi security for this network.
      */
     security: pulumi.Input<string>;
     /**
-     * The name of the site to associate the wlan with.
+     * The name of the site to associate the WLAN with.
      */
     site?: pulumi.Input<string>;
     /**
-     * Enable Unscheduled Automatic Power Save Delivery. Defaults to `false`.
+     * Enable Unscheduled Automatic Power Save Delivery.
      */
     uapsd?: pulumi.Input<boolean>;
     /**
@@ -348,9 +396,21 @@ export interface WlanArgs {
      */
     userGroupId: pulumi.Input<string>;
     /**
-     * Radio band your WiFi network will use. Defaults to `both`.
+     * VLAN ID.
+     */
+    vlan?: pulumi.Input<number>;
+    /**
+     * Enable VLAN tagging.
+     */
+    vlanEnabled?: pulumi.Input<boolean>;
+    /**
+     * WLAN band.
      */
     wlanBand?: pulumi.Input<string>;
+    /**
+     * List of WLAN bands.
+     */
+    wlanBands?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Enable WPA 3 support (security must be `wpapsk` and PMF must be turned on).
      */

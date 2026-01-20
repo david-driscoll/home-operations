@@ -16,6 +16,7 @@ export declare class ProviderRadius extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is ProviderRadius;
     readonly authorizationFlow: pulumi.Output<string>;
+    readonly certificate: pulumi.Output<string | undefined>;
     /**
      * Defaults to `0.0.0.0/0, ::/0`.
      */
@@ -43,6 +44,7 @@ export declare class ProviderRadius extends pulumi.CustomResource {
  */
 export interface ProviderRadiusState {
     authorizationFlow?: pulumi.Input<string>;
+    certificate?: pulumi.Input<string>;
     /**
      * Defaults to `0.0.0.0/0, ::/0`.
      */
@@ -62,6 +64,7 @@ export interface ProviderRadiusState {
  */
 export interface ProviderRadiusArgs {
     authorizationFlow: pulumi.Input<string>;
+    certificate?: pulumi.Input<string>;
     /**
      * Defaults to `0.0.0.0/0, ::/0`.
      */

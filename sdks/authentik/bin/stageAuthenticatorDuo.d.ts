@@ -21,6 +21,9 @@ export declare class StageAuthenticatorDuo extends pulumi.CustomResource {
     readonly clientId: pulumi.Output<string>;
     readonly clientSecret: pulumi.Output<string>;
     readonly configureFlow: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to ``.
+     */
     readonly friendlyName: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     readonly stageAuthenticatorDuoId: pulumi.Output<string>;
@@ -43,6 +46,9 @@ export interface StageAuthenticatorDuoState {
     clientId?: pulumi.Input<string>;
     clientSecret?: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     stageAuthenticatorDuoId?: pulumi.Input<string>;
@@ -57,6 +63,9 @@ export interface StageAuthenticatorDuoArgs {
     clientId: pulumi.Input<string>;
     clientSecret: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     stageAuthenticatorDuoId?: pulumi.Input<string>;

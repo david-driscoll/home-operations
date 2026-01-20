@@ -37,7 +37,7 @@ class Group extends pulumi.CustomResource {
             resourceInputs["groupId"] = state?.groupId;
             resourceInputs["isSuperuser"] = state?.isSuperuser;
             resourceInputs["name"] = state?.name;
-            resourceInputs["parent"] = state?.parent;
+            resourceInputs["parents"] = state?.parents;
             resourceInputs["roles"] = state?.roles;
             resourceInputs["users"] = state?.users;
         }
@@ -47,7 +47,7 @@ class Group extends pulumi.CustomResource {
             resourceInputs["groupId"] = args?.groupId;
             resourceInputs["isSuperuser"] = args?.isSuperuser;
             resourceInputs["name"] = args?.name;
-            resourceInputs["parent"] = args?.parent;
+            resourceInputs["parents"] = args?.parents;
             resourceInputs["roles"] = args?.roles;
             resourceInputs["users"] = args?.users;
         }

@@ -26,6 +26,9 @@ export declare class StageAuthenticatorSms extends pulumi.CustomResource {
      */
     readonly authType: pulumi.Output<string | undefined>;
     readonly configureFlow: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to ``.
+     */
     readonly friendlyName: pulumi.Output<string | undefined>;
     readonly fromNumber: pulumi.Output<string>;
     readonly mapping: pulumi.Output<string | undefined>;
@@ -66,6 +69,9 @@ export interface StageAuthenticatorSmsState {
      */
     authType?: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     fromNumber?: pulumi.Input<string>;
     mapping?: pulumi.Input<string>;
@@ -98,6 +104,9 @@ export interface StageAuthenticatorSmsArgs {
      */
     authType?: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     fromNumber: pulumi.Input<string>;
     mapping?: pulumi.Input<string>;

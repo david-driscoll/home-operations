@@ -25,7 +25,7 @@ export declare class Group extends pulumi.CustomResource {
      */
     readonly isSuperuser: pulumi.Output<boolean | undefined>;
     readonly name: pulumi.Output<string>;
-    readonly parent: pulumi.Output<string | undefined>;
+    readonly parents: pulumi.Output<string[] | undefined>;
     readonly roles: pulumi.Output<string[] | undefined>;
     /**
      * Generated.
@@ -54,7 +54,7 @@ export interface GroupState {
      */
     isSuperuser?: pulumi.Input<boolean>;
     name?: pulumi.Input<string>;
-    parent?: pulumi.Input<string>;
+    parents?: pulumi.Input<pulumi.Input<string>[]>;
     roles?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Generated.
@@ -75,7 +75,7 @@ export interface GroupArgs {
      */
     isSuperuser?: pulumi.Input<boolean>;
     name?: pulumi.Input<string>;
-    parent?: pulumi.Input<string>;
+    parents?: pulumi.Input<pulumi.Input<string>[]>;
     roles?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Generated.

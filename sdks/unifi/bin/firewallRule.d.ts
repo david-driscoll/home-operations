@@ -36,17 +36,17 @@ export declare class FirewallRule extends pulumi.CustomResource {
      */
     readonly dstNetworkId: pulumi.Output<string | undefined>;
     /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
-    readonly dstNetworkType: pulumi.Output<string | undefined>;
+    readonly dstNetworkType: pulumi.Output<string>;
     /**
      * The destination port of the firewall rule.
      */
     readonly dstPort: pulumi.Output<string | undefined>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true`.
+     * Specifies whether the rule should be enabled.
      */
-    readonly enabled: pulumi.Output<boolean | undefined>;
+    readonly enabled: pulumi.Output<boolean>;
     /**
      * ICMP type name.
      */
@@ -80,7 +80,7 @@ export declare class FirewallRule extends pulumi.CustomResource {
      */
     readonly ruleIndex: pulumi.Output<number>;
     /**
-     * The ruleset for the rule. This is from the perspective of the security gateway. Must be one of `WAN_IN`, `WAN_OUT`, `WAN_LOCAL`, `LAN_IN`, `LAN_OUT`, `LAN_LOCAL`, `GUEST_IN`, `GUEST_OUT`, `GUEST_LOCAL`, `WANv6_IN`, `WANv6_OUT`, `WANv6_LOCAL`, `LANv6_IN`, `LANv6_OUT`, `LANv6_LOCAL`, `GUESTv6_IN`, `GUESTv6_OUT`, or `GUESTv6_LOCAL`.
+     * The ruleset for the rule. This is from the perspective of the security gateway.
      */
     readonly ruleset: pulumi.Output<string>;
     /**
@@ -108,9 +108,9 @@ export declare class FirewallRule extends pulumi.CustomResource {
      */
     readonly srcNetworkId: pulumi.Output<string | undefined>;
     /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
-    readonly srcNetworkType: pulumi.Output<string | undefined>;
+    readonly srcNetworkType: pulumi.Output<string>;
     /**
      * The source port of the firewall rule.
      */
@@ -165,7 +165,7 @@ export interface FirewallRuleState {
      */
     dstNetworkId?: pulumi.Input<string>;
     /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
     dstNetworkType?: pulumi.Input<string>;
     /**
@@ -173,7 +173,7 @@ export interface FirewallRuleState {
      */
     dstPort?: pulumi.Input<string>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true`.
+     * Specifies whether the rule should be enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -209,7 +209,7 @@ export interface FirewallRuleState {
      */
     ruleIndex?: pulumi.Input<number>;
     /**
-     * The ruleset for the rule. This is from the perspective of the security gateway. Must be one of `WAN_IN`, `WAN_OUT`, `WAN_LOCAL`, `LAN_IN`, `LAN_OUT`, `LAN_LOCAL`, `GUEST_IN`, `GUEST_OUT`, `GUEST_LOCAL`, `WANv6_IN`, `WANv6_OUT`, `WANv6_LOCAL`, `LANv6_IN`, `LANv6_OUT`, `LANv6_LOCAL`, `GUESTv6_IN`, `GUESTv6_OUT`, or `GUESTv6_LOCAL`.
+     * The ruleset for the rule. This is from the perspective of the security gateway.
      */
     ruleset?: pulumi.Input<string>;
     /**
@@ -237,7 +237,7 @@ export interface FirewallRuleState {
      */
     srcNetworkId?: pulumi.Input<string>;
     /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
     srcNetworkType?: pulumi.Input<string>;
     /**
@@ -286,7 +286,7 @@ export interface FirewallRuleArgs {
      */
     dstNetworkId?: pulumi.Input<string>;
     /**
-     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The destination network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
     dstNetworkType?: pulumi.Input<string>;
     /**
@@ -294,7 +294,7 @@ export interface FirewallRuleArgs {
      */
     dstPort?: pulumi.Input<string>;
     /**
-     * Specifies whether the rule should be enabled. Defaults to `true`.
+     * Specifies whether the rule should be enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -330,7 +330,7 @@ export interface FirewallRuleArgs {
      */
     ruleIndex: pulumi.Input<number>;
     /**
-     * The ruleset for the rule. This is from the perspective of the security gateway. Must be one of `WAN_IN`, `WAN_OUT`, `WAN_LOCAL`, `LAN_IN`, `LAN_OUT`, `LAN_LOCAL`, `GUEST_IN`, `GUEST_OUT`, `GUEST_LOCAL`, `WANv6_IN`, `WANv6_OUT`, `WANv6_LOCAL`, `LANv6_IN`, `LANv6_OUT`, `LANv6_LOCAL`, `GUESTv6_IN`, `GUESTv6_OUT`, or `GUESTv6_LOCAL`.
+     * The ruleset for the rule. This is from the perspective of the security gateway.
      */
     ruleset: pulumi.Input<string>;
     /**
@@ -358,7 +358,7 @@ export interface FirewallRuleArgs {
      */
     srcNetworkId?: pulumi.Input<string>;
     /**
-     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`. Defaults to `NETv4`.
+     * The source network type of the firewall rule. Can be one of `ADDRv4` or `NETv4`.
      */
     srcNetworkType?: pulumi.Input<string>;
     /**

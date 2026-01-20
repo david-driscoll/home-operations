@@ -18,9 +18,9 @@ export declare class RadiusProfile extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is RadiusProfile;
     /**
-     * Specifies whether to use RADIUS accounting. Defaults to `false`.
+     * Specifies whether to use RADIUS accounting.
      */
-    readonly accountingEnabled: pulumi.Output<boolean | undefined>;
+    readonly accountingEnabled: pulumi.Output<boolean>;
     /**
      * RADIUS accounting servers.
      */
@@ -30,13 +30,13 @@ export declare class RadiusProfile extends pulumi.CustomResource {
      */
     readonly authServers: pulumi.Output<outputs.RadiusProfileAuthServer[] | undefined>;
     /**
-     * Specifies whether to use interim_update. Defaults to `false`.
+     * Specifies whether to use interim_update.
      */
-    readonly interimUpdateEnabled: pulumi.Output<boolean | undefined>;
+    readonly interimUpdateEnabled: pulumi.Output<boolean>;
     /**
-     * Specifies interim_update interval. Defaults to `3600`.
+     * Specifies interim_update interval.
      */
-    readonly interimUpdateInterval: pulumi.Output<number | undefined>;
+    readonly interimUpdateInterval: pulumi.Output<number>;
     /**
      * The name of the profile.
      */
@@ -46,21 +46,21 @@ export declare class RadiusProfile extends pulumi.CustomResource {
      */
     readonly site: pulumi.Output<string>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS accounting server.
      */
-    readonly useUsgAcctServer: pulumi.Output<boolean | undefined>;
+    readonly useUsgAcctServer: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS authentication server.
      */
-    readonly useUsgAuthServer: pulumi.Output<boolean | undefined>;
+    readonly useUsgAuthServer: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use vlan on wired connections. Defaults to `false`.
+     * Specifies whether to use vlan on wired connections.
      */
-    readonly vlanEnabled: pulumi.Output<boolean | undefined>;
+    readonly vlanEnabled: pulumi.Output<boolean>;
     /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`. Defaults to ``.
+     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
      */
-    readonly vlanWlanMode: pulumi.Output<string | undefined>;
+    readonly vlanWlanMode: pulumi.Output<string>;
     /**
      * Create a RadiusProfile resource with the given unique name, arguments, and options.
      *
@@ -75,7 +75,7 @@ export declare class RadiusProfile extends pulumi.CustomResource {
  */
 export interface RadiusProfileState {
     /**
-     * Specifies whether to use RADIUS accounting. Defaults to `false`.
+     * Specifies whether to use RADIUS accounting.
      */
     accountingEnabled?: pulumi.Input<boolean>;
     /**
@@ -87,11 +87,11 @@ export interface RadiusProfileState {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[]>;
     /**
-     * Specifies whether to use interim_update. Defaults to `false`.
+     * Specifies whether to use interim_update.
      */
     interimUpdateEnabled?: pulumi.Input<boolean>;
     /**
-     * Specifies interim_update interval. Defaults to `3600`.
+     * Specifies interim_update interval.
      */
     interimUpdateInterval?: pulumi.Input<number>;
     /**
@@ -103,19 +103,19 @@ export interface RadiusProfileState {
      */
     site?: pulumi.Input<string>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS accounting server.
      */
     useUsgAcctServer?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS authentication server.
      */
     useUsgAuthServer?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use vlan on wired connections. Defaults to `false`.
+     * Specifies whether to use vlan on wired connections.
      */
     vlanEnabled?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`. Defaults to ``.
+     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
      */
     vlanWlanMode?: pulumi.Input<string>;
 }
@@ -124,7 +124,7 @@ export interface RadiusProfileState {
  */
 export interface RadiusProfileArgs {
     /**
-     * Specifies whether to use RADIUS accounting. Defaults to `false`.
+     * Specifies whether to use RADIUS accounting.
      */
     accountingEnabled?: pulumi.Input<boolean>;
     /**
@@ -136,11 +136,11 @@ export interface RadiusProfileArgs {
      */
     authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[]>;
     /**
-     * Specifies whether to use interim_update. Defaults to `false`.
+     * Specifies whether to use interim_update.
      */
     interimUpdateEnabled?: pulumi.Input<boolean>;
     /**
-     * Specifies interim_update interval. Defaults to `3600`.
+     * Specifies interim_update interval.
      */
     interimUpdateInterval?: pulumi.Input<number>;
     /**
@@ -152,19 +152,19 @@ export interface RadiusProfileArgs {
      */
     site?: pulumi.Input<string>;
     /**
-     * Specifies whether to use usg as a RADIUS accounting server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS accounting server.
      */
     useUsgAcctServer?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use usg as a RADIUS authentication server. Defaults to `false`.
+     * Specifies whether to use usg as a RADIUS authentication server.
      */
     useUsgAuthServer?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use vlan on wired connections. Defaults to `false`.
+     * Specifies whether to use vlan on wired connections.
      */
     vlanEnabled?: pulumi.Input<boolean>;
     /**
-     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`. Defaults to ``.
+     * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
      */
     vlanWlanMode?: pulumi.Input<string>;
 }

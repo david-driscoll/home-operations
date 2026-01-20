@@ -43,7 +43,6 @@ export class ProviderOauth2 extends pulumi.CustomResource {
     declare public readonly allowedRedirectUris: pulumi.Output<{[key: string]: string}[] | undefined>;
     declare public readonly authenticationFlow: pulumi.Output<string | undefined>;
     declare public readonly authorizationFlow: pulumi.Output<string>;
-    declare public readonly backchannelLogoutUri: pulumi.Output<string | undefined>;
     declare public readonly clientId: pulumi.Output<string>;
     /**
      * Generated.
@@ -81,9 +80,21 @@ export class ProviderOauth2 extends pulumi.CustomResource {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     declare public readonly jwtFederationSources: pulumi.Output<string[] | undefined>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    declare public readonly logoutMethod: pulumi.Output<string | undefined>;
+    declare public readonly logoutUri: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly providerOauth2Id: pulumi.Output<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    declare public readonly refreshTokenThreshold: pulumi.Output<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
@@ -119,7 +130,6 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["allowedRedirectUris"] = state?.allowedRedirectUris;
             resourceInputs["authenticationFlow"] = state?.authenticationFlow;
             resourceInputs["authorizationFlow"] = state?.authorizationFlow;
-            resourceInputs["backchannelLogoutUri"] = state?.backchannelLogoutUri;
             resourceInputs["clientId"] = state?.clientId;
             resourceInputs["clientSecret"] = state?.clientSecret;
             resourceInputs["clientType"] = state?.clientType;
@@ -130,9 +140,12 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["jwksSources"] = state?.jwksSources;
             resourceInputs["jwtFederationProviders"] = state?.jwtFederationProviders;
             resourceInputs["jwtFederationSources"] = state?.jwtFederationSources;
+            resourceInputs["logoutMethod"] = state?.logoutMethod;
+            resourceInputs["logoutUri"] = state?.logoutUri;
             resourceInputs["name"] = state?.name;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["providerOauth2Id"] = state?.providerOauth2Id;
+            resourceInputs["refreshTokenThreshold"] = state?.refreshTokenThreshold;
             resourceInputs["refreshTokenValidity"] = state?.refreshTokenValidity;
             resourceInputs["signingKey"] = state?.signingKey;
             resourceInputs["subMode"] = state?.subMode;
@@ -152,7 +165,6 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["allowedRedirectUris"] = args?.allowedRedirectUris;
             resourceInputs["authenticationFlow"] = args?.authenticationFlow;
             resourceInputs["authorizationFlow"] = args?.authorizationFlow;
-            resourceInputs["backchannelLogoutUri"] = args?.backchannelLogoutUri;
             resourceInputs["clientId"] = args?.clientId;
             resourceInputs["clientSecret"] = args?.clientSecret ? pulumi.secret(args.clientSecret) : undefined;
             resourceInputs["clientType"] = args?.clientType;
@@ -163,9 +175,12 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["jwksSources"] = args?.jwksSources;
             resourceInputs["jwtFederationProviders"] = args?.jwtFederationProviders;
             resourceInputs["jwtFederationSources"] = args?.jwtFederationSources;
+            resourceInputs["logoutMethod"] = args?.logoutMethod;
+            resourceInputs["logoutUri"] = args?.logoutUri;
             resourceInputs["name"] = args?.name;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["providerOauth2Id"] = args?.providerOauth2Id;
+            resourceInputs["refreshTokenThreshold"] = args?.refreshTokenThreshold;
             resourceInputs["refreshTokenValidity"] = args?.refreshTokenValidity;
             resourceInputs["signingKey"] = args?.signingKey;
             resourceInputs["subMode"] = args?.subMode;
@@ -192,7 +207,6 @@ export interface ProviderOauth2State {
     allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
     authenticationFlow?: pulumi.Input<string>;
     authorizationFlow?: pulumi.Input<string>;
-    backchannelLogoutUri?: pulumi.Input<string>;
     clientId?: pulumi.Input<string>;
     /**
      * Generated.
@@ -230,9 +244,21 @@ export interface ProviderOauth2State {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    logoutMethod?: pulumi.Input<string>;
+    logoutUri?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     providerOauth2Id?: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    refreshTokenThreshold?: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
@@ -266,7 +292,6 @@ export interface ProviderOauth2Args {
     allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
     authenticationFlow?: pulumi.Input<string>;
     authorizationFlow: pulumi.Input<string>;
-    backchannelLogoutUri?: pulumi.Input<string>;
     clientId: pulumi.Input<string>;
     /**
      * Generated.
@@ -304,9 +329,21 @@ export interface ProviderOauth2Args {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    logoutMethod?: pulumi.Input<string>;
+    logoutUri?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     providerOauth2Id?: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    refreshTokenThreshold?: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */

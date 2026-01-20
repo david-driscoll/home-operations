@@ -27,7 +27,11 @@ export interface GetApplicationKeyArgs {
  */
 export interface GetApplicationKeyResult {
     readonly applicationKeyId: string;
+    /**
+     * @deprecated Deprecated
+     */
     readonly bucketId: string;
+    readonly bucketIds: string[];
     readonly capabilities: string[];
     readonly id: string;
     readonly keyName: string;

@@ -1,19 +1,282 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "../types/input";
+export interface ClientGateway {
+    /**
+     * MAC address of the gateway.
+     */
+    mac?: pulumi.Input<string>;
+    /**
+     * VLAN ID on the gateway.
+     */
+    vlan?: pulumi.Input<number>;
+}
+export interface ClientGuestStatus {
+    /**
+     * Whether the client is a guest.
+     */
+    isGuest?: pulumi.Input<boolean>;
+    /**
+     * Whether the client is a guest according to UGW.
+     */
+    isGuestByUgw?: pulumi.Input<boolean>;
+    /**
+     * Whether the client is a guest according to USW.
+     */
+    isGuestByUsw?: pulumi.Input<boolean>;
+}
+export interface ClientLast {
+    /**
+     * Last connection network ID.
+     */
+    connectionNetworkId?: pulumi.Input<string>;
+    /**
+     * Last connection network name.
+     */
+    connectionNetworkName?: pulumi.Input<string>;
+    /**
+     * Last 802.1X identity.
+     */
+    identity1x?: pulumi.Input<string>;
+    /**
+     * Last known IP address.
+     */
+    ip?: pulumi.Input<string>;
+    /**
+     * Last known IPv6 addresses.
+     */
+    ipv6s?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Timestamp when last reachable by gateway.
+     */
+    reachableByGw?: pulumi.Input<number>;
+    /**
+     * Timestamp when client was last seen.
+     */
+    seen?: pulumi.Input<number>;
+    /**
+     * Timestamp when last seen by UGW.
+     */
+    seenByUgw?: pulumi.Input<number>;
+    /**
+     * Timestamp when last seen by USW.
+     */
+    seenByUsw?: pulumi.Input<number>;
+    /**
+     * MAC address of last uplink.
+     */
+    uplinkMac?: pulumi.Input<string>;
+    /**
+     * Name of last uplink.
+     */
+    uplinkName?: pulumi.Input<string>;
+    /**
+     * Remote port of last uplink.
+     */
+    uplinkRemotePort?: pulumi.Input<number>;
+}
+export interface ClientSwitch {
+    /**
+     * Switch depth in the network topology.
+     */
+    depth?: pulumi.Input<number>;
+    /**
+     * MAC address of the connected switch.
+     */
+    mac?: pulumi.Input<string>;
+    /**
+     * Switch port the client is connected to.
+     */
+    port?: pulumi.Input<number>;
+}
+export interface ClientUptimeStats {
+    /**
+     * Client uptime in seconds.
+     */
+    uptime?: pulumi.Input<number>;
+    /**
+     * Client uptime as reported by UGW.
+     */
+    uptimeByUgw?: pulumi.Input<number>;
+    /**
+     * Client uptime as reported by USW.
+     */
+    uptimeByUsw?: pulumi.Input<number>;
+}
+export interface ClientWifi {
+    /**
+     * Number of WiFi transmission attempts.
+     */
+    txAttempts?: pulumi.Input<number>;
+    /**
+     * Number of dropped WiFi transmissions.
+     */
+    txDropped?: pulumi.Input<number>;
+    /**
+     * Percentage of WiFi transmission retries.
+     */
+    txRetriesPercentage?: pulumi.Input<number>;
+}
+export interface ClientWired {
+    /**
+     * Wired connection rate in Mbps.
+     */
+    rateMbps?: pulumi.Input<number>;
+    /**
+     * Bytes received on wired connection.
+     */
+    rxBytes?: pulumi.Input<number>;
+    /**
+     * Bytes received rate on wired connection.
+     */
+    rxBytesR?: pulumi.Input<number>;
+    /**
+     * Packets received on wired connection.
+     */
+    rxPackets?: pulumi.Input<number>;
+    /**
+     * Bytes transmitted on wired connection.
+     */
+    txBytes?: pulumi.Input<number>;
+    /**
+     * Bytes transmitted rate on wired connection.
+     */
+    txBytesR?: pulumi.Input<number>;
+    /**
+     * Packets transmitted on wired connection.
+     */
+    txPackets?: pulumi.Input<number>;
+}
+export interface DeviceConfigNetwork {
+    /**
+     * Enable network bonding.
+     */
+    bondingEnabled?: pulumi.Input<boolean>;
+    /**
+     * Primary DNS server.
+     */
+    dns1?: pulumi.Input<string>;
+    /**
+     * Secondary DNS server.
+     */
+    dns2?: pulumi.Input<string>;
+    /**
+     * DNS suffix.
+     */
+    dnssuffix?: pulumi.Input<string>;
+    /**
+     * Gateway address (for static configuration).
+     */
+    gateway?: pulumi.Input<string>;
+    /**
+     * IP address (for static configuration).
+     */
+    ip?: pulumi.Input<string>;
+    /**
+     * Network mask (for static configuration).
+     */
+    netmask?: pulumi.Input<string>;
+    /**
+     * Network configuration type (dhcp or static).
+     */
+    type?: pulumi.Input<string>;
+}
+export interface DeviceOutletOverride {
+    /**
+     * Enable power cycle.
+     */
+    cycleEnabled?: pulumi.Input<boolean>;
+    /**
+     * Outlet index.
+     */
+    index: pulumi.Input<number>;
+    /**
+     * Outlet name.
+     */
+    name?: pulumi.Input<string>;
+    /**
+     * Relay state (on/off).
+     */
+    relayState?: pulumi.Input<boolean>;
+}
 export interface DevicePortOverride {
     /**
      * Number of ports in the aggregate.
      */
-    aggregateNumPorts?: pulumi.Input<number>;
+    aggregateMembers?: pulumi.Input<pulumi.Input<number>[]>;
+    /**
+     * Enable auto-negotiation for port speed.
+     */
+    autoneg?: pulumi.Input<boolean>;
+    /**
+     * 802.1X control mode.
+     */
+    dot1xCtrl?: pulumi.Input<string>;
+    /**
+     * 802.1X idle timeout in seconds.
+     */
+    dot1xIdleTimeout?: pulumi.Input<number>;
+    /**
+     * Egress rate limit in kbps.
+     */
+    egressRateLimitKbps?: pulumi.Input<number>;
+    /**
+     * Enable egress rate limiting.
+     */
+    egressRateLimitKbpsEnabled?: pulumi.Input<boolean>;
+    /**
+     * List of network IDs to exclude from this port.
+     */
+    excludedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Forward Error Correction mode.
+     */
+    fecMode?: pulumi.Input<string>;
+    /**
+     * Enable flow control.
+     */
+    flowControlEnabled?: pulumi.Input<boolean>;
+    /**
+     * Forwarding mode.
+     */
+    forward?: pulumi.Input<string>;
+    /**
+     * Enable full duplex mode.
+     */
+    fullDuplex?: pulumi.Input<boolean>;
+    /**
+     * Enable port isolation.
+     */
+    isolation?: pulumi.Input<boolean>;
+    /**
+     * Enable LLDP-MED.
+     */
+    lldpmedEnabled?: pulumi.Input<boolean>;
+    /**
+     * Enable LLDP-MED notifications.
+     */
+    lldpmedNotifyEnabled?: pulumi.Input<boolean>;
+    /**
+     * Mirror port index.
+     */
+    mirrorPortIdx?: pulumi.Input<number>;
+    /**
+     * List of network IDs for multicast router.
+     */
+    multicastRouterNetworkconfIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Human-readable name of the port.
      */
     name?: pulumi.Input<string>;
     /**
+     * Native network ID (VLAN).
+     */
+    nativeNetworkconfId?: pulumi.Input<string>;
+    /**
      * Switch port number.
      */
     number: pulumi.Input<number>;
     /**
-     * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`. Defaults to `switch`.
+     * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`.
      */
     opMode?: pulumi.Input<string>;
     /**
@@ -21,9 +284,175 @@ export interface DevicePortOverride {
      */
     poeMode?: pulumi.Input<string>;
     /**
+     * Enable port keepalive.
+     */
+    portKeepaliveEnabled?: pulumi.Input<boolean>;
+    /**
      * ID of the Port Profile used on this port.
      */
     portProfileId?: pulumi.Input<string>;
+    /**
+     * Enable port security.
+     */
+    portSecurityEnabled?: pulumi.Input<boolean>;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    portSecurityMacAddresses?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Priority queue 1 level.
+     */
+    priorityQueue1Level?: pulumi.Input<number>;
+    /**
+     * Priority queue 2 level.
+     */
+    priorityQueue2Level?: pulumi.Input<number>;
+    /**
+     * Priority queue 3 level.
+     */
+    priorityQueue3Level?: pulumi.Input<number>;
+    /**
+     * Priority queue 4 level.
+     */
+    priorityQueue4Level?: pulumi.Input<number>;
+    /**
+     * Setting preference.
+     */
+    settingPreference?: pulumi.Input<string>;
+    /**
+     * Port speed in Mbps.
+     */
+    speed?: pulumi.Input<number>;
+    /**
+     * Enable broadcast storm control.
+     */
+    stormctrlBcastEnabled?: pulumi.Input<boolean>;
+    /**
+     * Broadcast storm control level.
+     */
+    stormctrlBcastLevel?: pulumi.Input<number>;
+    /**
+     * Broadcast storm control rate.
+     */
+    stormctrlBcastRate?: pulumi.Input<number>;
+    /**
+     * Enable multicast storm control.
+     */
+    stormctrlMcastEnabled?: pulumi.Input<boolean>;
+    /**
+     * Multicast storm control level.
+     */
+    stormctrlMcastLevel?: pulumi.Input<number>;
+    /**
+     * Multicast storm control rate.
+     */
+    stormctrlMcastRate?: pulumi.Input<number>;
+    /**
+     * Storm control type.
+     */
+    stormctrlType?: pulumi.Input<string>;
+    /**
+     * Enable unicast storm control.
+     */
+    stormctrlUcastEnabled?: pulumi.Input<boolean>;
+    /**
+     * Unicast storm control level.
+     */
+    stormctrlUcastLevel?: pulumi.Input<number>;
+    /**
+     * Unicast storm control rate.
+     */
+    stormctrlUcastRate?: pulumi.Input<number>;
+    /**
+     * STP port mode.
+     */
+    stpPortMode?: pulumi.Input<boolean>;
+    /**
+     * Tagged VLAN management.
+     */
+    taggedVlanMgmt?: pulumi.Input<string>;
+    /**
+     * Voice network ID.
+     */
+    voiceNetworkconfId?: pulumi.Input<string>;
+}
+export interface DeviceRadioTable {
+    /**
+     * Antenna gain.
+     */
+    antennaGain?: pulumi.Input<number>;
+    /**
+     * Antenna ID.
+     */
+    antennaId?: pulumi.Input<number>;
+    /**
+     * Enable assisted roaming.
+     */
+    assistedRoamingEnabled?: pulumi.Input<boolean>;
+    /**
+     * Assisted roaming RSSI threshold.
+     */
+    assistedRoamingRssi?: pulumi.Input<number>;
+    /**
+     * Channel number or 'auto'.
+     */
+    channel?: pulumi.Input<string>;
+    /**
+     * Enable DFS (Dynamic Frequency Selection).
+     */
+    dfs?: pulumi.Input<boolean>;
+    /**
+     * Enable hard noise floor.
+     */
+    hardNoiseFloorEnabled?: pulumi.Input<boolean>;
+    /**
+     * Channel width (20, 40, 80, 160).
+     */
+    ht?: pulumi.Input<number>;
+    /**
+     * Enable load balancing.
+     */
+    loadbalanceEnabled?: pulumi.Input<boolean>;
+    /**
+     * Maximum number of stations.
+     */
+    maxsta?: pulumi.Input<number>;
+    /**
+     * Minimum RSSI value.
+     */
+    minRssi?: pulumi.Input<number>;
+    /**
+     * Enable minimum RSSI.
+     */
+    minRssiEnabled?: pulumi.Input<boolean>;
+    /**
+     * Radio name.
+     */
+    name?: pulumi.Input<string>;
+    /**
+     * Radio band (ng, na, ad, 6e).
+     */
+    radio?: pulumi.Input<string>;
+    /**
+     * Sensitivity level.
+     */
+    sensLevel?: pulumi.Input<number>;
+    /**
+     * Enable sensitivity level.
+     */
+    sensLevelEnabled?: pulumi.Input<boolean>;
+    /**
+     * Transmit power or 'auto'.
+     */
+    txPower?: pulumi.Input<string>;
+    /**
+     * Transmit power mode (auto, medium, high, low, custom).
+     */
+    txPowerMode?: pulumi.Input<string>;
+    /**
+     * Enable virtual wire.
+     */
+    vwireEnabled?: pulumi.Input<boolean>;
 }
 export interface RadiusProfileAcctServer {
     /**
@@ -31,13 +460,13 @@ export interface RadiusProfileAcctServer {
      */
     ip: pulumi.Input<string>;
     /**
-     * Port of accounting service. Defaults to `1813`.
+     * Port of accounting service.
      */
     port?: pulumi.Input<number>;
     /**
-     * RADIUS secret.
+     * Shared secret for accounting server.
      */
-    xsecret: pulumi.Input<string>;
+    xSecret: pulumi.Input<string>;
 }
 export interface RadiusProfileAuthServer {
     /**
@@ -45,13 +474,27 @@ export interface RadiusProfileAuthServer {
      */
     ip: pulumi.Input<string>;
     /**
-     * Port of authentication service. Defaults to `1812`.
+     * Port of authentication service.
      */
     port?: pulumi.Input<number>;
     /**
-     * RADIUS secret.
+     * Shared secret for authentication server.
      */
-    xsecret: pulumi.Input<string>;
+    xSecret: pulumi.Input<string>;
+}
+export interface SettingMgmt {
+    /**
+     * Automatically upgrade device firmware.
+     */
+    autoUpgrade?: pulumi.Input<boolean>;
+    /**
+     * Enable SSH authentication.
+     */
+    sshEnabled?: pulumi.Input<boolean>;
+    /**
+     * SSH keys.
+     */
+    sshKeys?: pulumi.Input<pulumi.Input<inputs.SettingMgmtSshKey>[]>;
 }
 export interface SettingMgmtSshKey {
     /**
@@ -71,9 +514,237 @@ export interface SettingMgmtSshKey {
      */
     type: pulumi.Input<string>;
 }
+export interface SettingRadius {
+    /**
+     * Enable RADIUS accounting.
+     */
+    accountingEnabled?: pulumi.Input<boolean>;
+    /**
+     * RADIUS accounting port.
+     */
+    acctPort?: pulumi.Input<number>;
+    /**
+     * RADIUS authentication port.
+     */
+    authPort?: pulumi.Input<number>;
+    /**
+     * Interim update interval in seconds.
+     */
+    interimUpdateInterval?: pulumi.Input<number>;
+    /**
+     * RADIUS shared secret.
+     */
+    secret?: pulumi.Input<string>;
+}
+export interface SettingUsg {
+    /**
+     * Enable broadcast ping.
+     */
+    broadcastPing?: pulumi.Input<boolean>;
+    /**
+     * DNS verification settings.
+     */
+    dnsVerification?: pulumi.Input<inputs.SettingUsgDnsVerification>;
+    /**
+     * Enable FTP module.
+     */
+    ftpModule?: pulumi.Input<boolean>;
+    /**
+     * Geo IP filtering action: block or allow.
+     */
+    geoIpFilteringBlock?: pulumi.Input<string>;
+    /**
+     * Comma-separated list of country codes for geo IP filtering.
+     */
+    geoIpFilteringCountries?: pulumi.Input<string>;
+    /**
+     * Enable geo IP filtering.
+     */
+    geoIpFilteringEnabled?: pulumi.Input<boolean>;
+    /**
+     * Geo IP filtering traffic direction: both, ingress, or egress.
+     */
+    geoIpFilteringTrafficDirection?: pulumi.Input<string>;
+    /**
+     * Enable GRE module.
+     */
+    greModule?: pulumi.Input<boolean>;
+    /**
+     * Enable H.323 module.
+     */
+    h323Module?: pulumi.Input<boolean>;
+    /**
+     * ICMP connection timeout in seconds.
+     */
+    icmpTimeout?: pulumi.Input<number>;
+    /**
+     * MSS clamping mode: auto, custom, or disabled.
+     */
+    mssClamp?: pulumi.Input<string>;
+    /**
+     * Enable hardware offload for accounting.
+     */
+    offloadAccounting?: pulumi.Input<boolean>;
+    /**
+     * Enable hardware offload for L2 blocking.
+     */
+    offloadL2Blocking?: pulumi.Input<boolean>;
+    /**
+     * Enable hardware offload for scheduling.
+     */
+    offloadSch?: pulumi.Input<boolean>;
+    /**
+     * Other connections timeout in seconds.
+     */
+    otherTimeout?: pulumi.Input<number>;
+    /**
+     * Enable PPTP module.
+     */
+    pptpModule?: pulumi.Input<boolean>;
+    /**
+     * Accept ICMP redirects.
+     */
+    receiveRedirects?: pulumi.Input<boolean>;
+    /**
+     * Send ICMP redirects.
+     */
+    sendRedirects?: pulumi.Input<boolean>;
+    /**
+     * Enable SIP module.
+     */
+    sipModule?: pulumi.Input<boolean>;
+    /**
+     * Enable SYN cookies.
+     */
+    synCookies?: pulumi.Input<boolean>;
+    /**
+     * TCP close timeout in seconds.
+     */
+    tcpCloseTimeout?: pulumi.Input<number>;
+    /**
+     * TCP close wait timeout in seconds.
+     */
+    tcpCloseWaitTimeout?: pulumi.Input<number>;
+    /**
+     * TCP established connection timeout in seconds.
+     */
+    tcpEstablishedTimeout?: pulumi.Input<number>;
+    /**
+     * TCP fin wait timeout in seconds.
+     */
+    tcpFinWaitTimeout?: pulumi.Input<number>;
+    /**
+     * TCP last ACK timeout in seconds.
+     */
+    tcpLastAckTimeout?: pulumi.Input<number>;
+    /**
+     * TCP SYN received timeout in seconds.
+     */
+    tcpSynRecvTimeout?: pulumi.Input<number>;
+    /**
+     * TCP SYN sent timeout in seconds.
+     */
+    tcpSynSentTimeout?: pulumi.Input<number>;
+    /**
+     * TCP time wait timeout in seconds.
+     */
+    tcpTimeWaitTimeout?: pulumi.Input<number>;
+    /**
+     * Enable TFTP module.
+     */
+    tftpModule?: pulumi.Input<boolean>;
+    /**
+     * Timeout setting preference: auto or manual.
+     */
+    timeoutSettingPreference?: pulumi.Input<string>;
+    /**
+     * UDP other timeout in seconds.
+     */
+    udpOtherTimeout?: pulumi.Input<number>;
+    /**
+     * UDP stream timeout in seconds.
+     */
+    udpStreamTimeout?: pulumi.Input<number>;
+    /**
+     * Unbind WAN monitors.
+     */
+    unbindWanMonitors?: pulumi.Input<boolean>;
+    /**
+     * Enable UPnP.
+     */
+    upnpEnabled?: pulumi.Input<boolean>;
+    /**
+     * Enable UPnP NAT-PMP.
+     */
+    upnpNatPmpEnabled?: pulumi.Input<boolean>;
+    /**
+     * Enable UPnP secure mode.
+     */
+    upnpSecureMode?: pulumi.Input<boolean>;
+    /**
+     * UPnP WAN interface (e.g., WAN, WAN2).
+     */
+    upnpWanInterface?: pulumi.Input<string>;
+}
+export interface SettingUsgDnsVerification {
+    /**
+     * Domain for DNS verification.
+     */
+    domain?: pulumi.Input<string>;
+    /**
+     * Primary DNS server.
+     */
+    primaryDnsServer?: pulumi.Input<string>;
+    /**
+     * Secondary DNS server.
+     */
+    secondaryDnsServer?: pulumi.Input<string>;
+    /**
+     * Setting preference: auto or manual.
+     */
+    settingPreference?: pulumi.Input<string>;
+}
+export interface WanDhcpOption {
+    optionNumber: pulumi.Input<number>;
+    value: pulumi.Input<string>;
+}
+export interface WanDhcpv6Option {
+    /**
+     * DHCPv6 option number (1, 11, 15, 16, or 17)
+     */
+    optionNumber: pulumi.Input<number>;
+    /**
+     * DHCPv6 option value
+     */
+    value: pulumi.Input<string>;
+}
+export interface WanProviderCapabilities {
+    /**
+     * Download speed in kilobits per second
+     */
+    downloadKilobitsPerSecond: pulumi.Input<number>;
+    /**
+     * Upload speed in kilobits per second
+     */
+    uploadKilobitsPerSecond: pulumi.Input<number>;
+}
+export interface WlanMacFilter {
+    /**
+     * Indicates whether or not the MAC filter is turned on for the network.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * List of MAC addresses to filter (only valid if `enabled` is `true`).
+     */
+    lists?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * MAC address filter policy (only valid if `enabled` is `true`).
+     */
+    policy?: pulumi.Input<string>;
+}
 export interface WlanSchedule {
     /**
-     * Day of week for the block. Valid values are `sun`, `mon`, `tue`, `wed`, `thu`, `fri`, `sat`.
+     * Day of week for the block.
      */
     dayOfWeek: pulumi.Input<string>;
     /**
@@ -89,7 +760,7 @@ export interface WlanSchedule {
      */
     startHour: pulumi.Input<number>;
     /**
-     * Start minute for the block (0-59). Defaults to `0`.
+     * Start minute for the block (0-59).
      */
     startMinute?: pulumi.Input<number>;
 }

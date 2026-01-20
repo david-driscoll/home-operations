@@ -12,15 +12,15 @@ export declare class Provider extends pulumi.ProviderResource {
      */
     static isInstance(obj: any): obj is Provider;
     /**
-     * B2 Application Key (B2_APPLICATION_KEY env)
+     * B2 Application Key (B2_APPLICATION_KEY env).
      */
     readonly applicationKey: pulumi.Output<string | undefined>;
     /**
-     * B2 Application Key ID (B2_APPLICATION_KEY_ID env)
+     * B2 Application Key ID (B2_APPLICATION_KEY_ID env).
      */
     readonly applicationKeyId: pulumi.Output<string | undefined>;
     /**
-     * B2 endpoint - the string 'production' or a custom B2 API URL (B2_ENDPOINT env). Defaults to 'production'. You should not need to set this unless you work at Backblaze.
+     * B2 endpoint - the string 'production' or a custom B2 API URL (B2_ENDPOINT env). You should not need to set this unless you work at Backblaze. Defaults to `production`.
      */
     readonly endpoint: pulumi.Output<string | undefined>;
     /**
@@ -43,15 +43,15 @@ export declare class Provider extends pulumi.ProviderResource {
  */
 export interface ProviderArgs {
     /**
-     * B2 Application Key (B2_APPLICATION_KEY env)
+     * B2 Application Key (B2_APPLICATION_KEY env).
      */
     applicationKey?: pulumi.Input<string>;
     /**
-     * B2 Application Key ID (B2_APPLICATION_KEY_ID env)
+     * B2 Application Key ID (B2_APPLICATION_KEY_ID env).
      */
     applicationKeyId?: pulumi.Input<string>;
     /**
-     * B2 endpoint - the string 'production' or a custom B2 API URL (B2_ENDPOINT env). Defaults to 'production'. You should not need to set this unless you work at Backblaze.
+     * B2 endpoint - the string 'production' or a custom B2 API URL (B2_ENDPOINT env). You should not need to set this unless you work at Backblaze. Defaults to `production`.
      */
     endpoint?: pulumi.Input<string>;
 }

@@ -1,28 +1,627 @@
+import * as outputs from "../types/output";
+export interface ClientGateway {
+    /**
+     * MAC address of the gateway.
+     */
+    mac: string;
+    /**
+     * VLAN ID on the gateway.
+     */
+    vlan: number;
+}
+export interface ClientGuestStatus {
+    /**
+     * Whether the client is a guest.
+     */
+    isGuest: boolean;
+    /**
+     * Whether the client is a guest according to UGW.
+     */
+    isGuestByUgw: boolean;
+    /**
+     * Whether the client is a guest according to USW.
+     */
+    isGuestByUsw: boolean;
+}
+export interface ClientLast {
+    /**
+     * Last connection network ID.
+     */
+    connectionNetworkId: string;
+    /**
+     * Last connection network name.
+     */
+    connectionNetworkName: string;
+    /**
+     * Last 802.1X identity.
+     */
+    identity1x: string;
+    /**
+     * Last known IP address.
+     */
+    ip: string;
+    /**
+     * Last known IPv6 addresses.
+     */
+    ipv6s: string[];
+    /**
+     * Timestamp when last reachable by gateway.
+     */
+    reachableByGw: number;
+    /**
+     * Timestamp when client was last seen.
+     */
+    seen: number;
+    /**
+     * Timestamp when last seen by UGW.
+     */
+    seenByUgw: number;
+    /**
+     * Timestamp when last seen by USW.
+     */
+    seenByUsw: number;
+    /**
+     * MAC address of last uplink.
+     */
+    uplinkMac: string;
+    /**
+     * Name of last uplink.
+     */
+    uplinkName: string;
+    /**
+     * Remote port of last uplink.
+     */
+    uplinkRemotePort: number;
+}
+export interface ClientSwitch {
+    /**
+     * Switch depth in the network topology.
+     */
+    depth: number;
+    /**
+     * MAC address of the connected switch.
+     */
+    mac: string;
+    /**
+     * Switch port the client is connected to.
+     */
+    port: number;
+}
+export interface ClientUptimeStats {
+    /**
+     * Client uptime in seconds.
+     */
+    uptime: number;
+    /**
+     * Client uptime as reported by UGW.
+     */
+    uptimeByUgw: number;
+    /**
+     * Client uptime as reported by USW.
+     */
+    uptimeByUsw: number;
+}
+export interface ClientWifi {
+    /**
+     * Number of WiFi transmission attempts.
+     */
+    txAttempts: number;
+    /**
+     * Number of dropped WiFi transmissions.
+     */
+    txDropped: number;
+    /**
+     * Percentage of WiFi transmission retries.
+     */
+    txRetriesPercentage: number;
+}
+export interface ClientWired {
+    /**
+     * Wired connection rate in Mbps.
+     */
+    rateMbps: number;
+    /**
+     * Bytes received on wired connection.
+     */
+    rxBytes: number;
+    /**
+     * Bytes received rate on wired connection.
+     */
+    rxBytesR: number;
+    /**
+     * Packets received on wired connection.
+     */
+    rxPackets: number;
+    /**
+     * Bytes transmitted on wired connection.
+     */
+    txBytes: number;
+    /**
+     * Bytes transmitted rate on wired connection.
+     */
+    txBytesR: number;
+    /**
+     * Packets transmitted on wired connection.
+     */
+    txPackets: number;
+}
+export interface DeviceConfigNetwork {
+    /**
+     * Enable network bonding.
+     */
+    bondingEnabled: boolean;
+    /**
+     * Primary DNS server.
+     */
+    dns1: string;
+    /**
+     * Secondary DNS server.
+     */
+    dns2: string;
+    /**
+     * DNS suffix.
+     */
+    dnssuffix: string;
+    /**
+     * Gateway address (for static configuration).
+     */
+    gateway: string;
+    /**
+     * IP address (for static configuration).
+     */
+    ip: string;
+    /**
+     * Network mask (for static configuration).
+     */
+    netmask: string;
+    /**
+     * Network configuration type (dhcp or static).
+     */
+    type: string;
+}
+export interface DeviceOutletOverride {
+    /**
+     * Enable power cycle.
+     */
+    cycleEnabled: boolean;
+    /**
+     * Outlet index.
+     */
+    index: number;
+    /**
+     * Outlet name.
+     */
+    name: string;
+    /**
+     * Relay state (on/off).
+     */
+    relayState: boolean;
+}
 export interface DevicePortOverride {
     /**
      * Number of ports in the aggregate.
      */
-    aggregateNumPorts?: number;
+    aggregateMembers?: number[];
+    /**
+     * Enable auto-negotiation for port speed.
+     */
+    autoneg: boolean;
+    /**
+     * 802.1X control mode.
+     */
+    dot1xCtrl?: string;
+    /**
+     * 802.1X idle timeout in seconds.
+     */
+    dot1xIdleTimeout?: number;
+    /**
+     * Egress rate limit in kbps.
+     */
+    egressRateLimitKbps?: number;
+    /**
+     * Enable egress rate limiting.
+     */
+    egressRateLimitKbpsEnabled: boolean;
+    /**
+     * List of network IDs to exclude from this port.
+     */
+    excludedNetworkconfIds?: string[];
+    /**
+     * Forward Error Correction mode.
+     */
+    fecMode?: string;
+    /**
+     * Enable flow control.
+     */
+    flowControlEnabled: boolean;
+    /**
+     * Forwarding mode.
+     */
+    forward?: string;
+    /**
+     * Enable full duplex mode.
+     */
+    fullDuplex: boolean;
+    /**
+     * Enable port isolation.
+     */
+    isolation: boolean;
+    /**
+     * Enable LLDP-MED.
+     */
+    lldpmedEnabled: boolean;
+    /**
+     * Enable LLDP-MED notifications.
+     */
+    lldpmedNotifyEnabled: boolean;
+    /**
+     * Mirror port index.
+     */
+    mirrorPortIdx?: number;
+    /**
+     * List of network IDs for multicast router.
+     */
+    multicastRouterNetworkconfIds?: string[];
     /**
      * Human-readable name of the port.
      */
     name?: string;
     /**
+     * Native network ID (VLAN).
+     */
+    nativeNetworkconfId?: string;
+    /**
      * Switch port number.
      */
     number: number;
     /**
-     * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`. Defaults to `switch`.
+     * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`.
      */
-    opMode?: string;
+    opMode: string;
     /**
      * PoE mode of the port; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
      */
     poeMode?: string;
     /**
+     * Enable port keepalive.
+     */
+    portKeepaliveEnabled: boolean;
+    /**
      * ID of the Port Profile used on this port.
      */
     portProfileId?: string;
+    /**
+     * Enable port security.
+     */
+    portSecurityEnabled: boolean;
+    /**
+     * List of MAC addresses allowed when port security is enabled.
+     */
+    portSecurityMacAddresses?: string[];
+    /**
+     * Priority queue 1 level.
+     */
+    priorityQueue1Level?: number;
+    /**
+     * Priority queue 2 level.
+     */
+    priorityQueue2Level?: number;
+    /**
+     * Priority queue 3 level.
+     */
+    priorityQueue3Level?: number;
+    /**
+     * Priority queue 4 level.
+     */
+    priorityQueue4Level?: number;
+    /**
+     * Setting preference.
+     */
+    settingPreference?: string;
+    /**
+     * Port speed in Mbps.
+     */
+    speed?: number;
+    /**
+     * Enable broadcast storm control.
+     */
+    stormctrlBcastEnabled: boolean;
+    /**
+     * Broadcast storm control level.
+     */
+    stormctrlBcastLevel?: number;
+    /**
+     * Broadcast storm control rate.
+     */
+    stormctrlBcastRate?: number;
+    /**
+     * Enable multicast storm control.
+     */
+    stormctrlMcastEnabled: boolean;
+    /**
+     * Multicast storm control level.
+     */
+    stormctrlMcastLevel?: number;
+    /**
+     * Multicast storm control rate.
+     */
+    stormctrlMcastRate?: number;
+    /**
+     * Storm control type.
+     */
+    stormctrlType?: string;
+    /**
+     * Enable unicast storm control.
+     */
+    stormctrlUcastEnabled: boolean;
+    /**
+     * Unicast storm control level.
+     */
+    stormctrlUcastLevel?: number;
+    /**
+     * Unicast storm control rate.
+     */
+    stormctrlUcastRate?: number;
+    /**
+     * STP port mode.
+     */
+    stpPortMode: boolean;
+    /**
+     * Tagged VLAN management.
+     */
+    taggedVlanMgmt?: string;
+    /**
+     * Voice network ID.
+     */
+    voiceNetworkconfId?: string;
+}
+export interface DeviceRadioTable {
+    /**
+     * Antenna gain.
+     */
+    antennaGain: number;
+    /**
+     * Antenna ID.
+     */
+    antennaId: number;
+    /**
+     * Enable assisted roaming.
+     */
+    assistedRoamingEnabled: boolean;
+    /**
+     * Assisted roaming RSSI threshold.
+     */
+    assistedRoamingRssi: number;
+    /**
+     * Channel number or 'auto'.
+     */
+    channel: string;
+    /**
+     * Enable DFS (Dynamic Frequency Selection).
+     */
+    dfs: boolean;
+    /**
+     * Enable hard noise floor.
+     */
+    hardNoiseFloorEnabled: boolean;
+    /**
+     * Channel width (20, 40, 80, 160).
+     */
+    ht: number;
+    /**
+     * Enable load balancing.
+     */
+    loadbalanceEnabled: boolean;
+    /**
+     * Maximum number of stations.
+     */
+    maxsta: number;
+    /**
+     * Minimum RSSI value.
+     */
+    minRssi: number;
+    /**
+     * Enable minimum RSSI.
+     */
+    minRssiEnabled: boolean;
+    /**
+     * Radio name.
+     */
+    name: string;
+    /**
+     * Radio band (ng, na, ad, 6e).
+     */
+    radio: string;
+    /**
+     * Sensitivity level.
+     */
+    sensLevel: number;
+    /**
+     * Enable sensitivity level.
+     */
+    sensLevelEnabled: boolean;
+    /**
+     * Transmit power or 'auto'.
+     */
+    txPower: string;
+    /**
+     * Transmit power mode (auto, medium, high, low, custom).
+     */
+    txPowerMode: string;
+    /**
+     * Enable virtual wire.
+     */
+    vwireEnabled: boolean;
+}
+export interface GetClientInfoListClient {
+    /**
+     * The MAC address of the access point the client is connected to.
+     */
+    apMac: string;
+    /**
+     * Whether the client is authorized.
+     */
+    authorized: boolean;
+    /**
+     * Whether the client is blocked.
+     */
+    blocked: boolean;
+    /**
+     * The BSSID of the access point.
+     */
+    bssid: string;
+    /**
+     * The WiFi channel the client is connected on.
+     */
+    channel: number;
+    /**
+     * The display name of the client.
+     */
+    displayName: string;
+    /**
+     * The ESSID (network name) the client is connected to.
+     */
+    essid: string;
+    /**
+     * Unix timestamp when the client was first seen.
+     */
+    firstSeen: number;
+    /**
+     * Fixed IPv4 address set for this client.
+     */
+    fixedIp: string;
+    /**
+     * The hostname of the client.
+     */
+    hostname: string;
+    /**
+     * The ID of the client.
+     */
+    id: string;
+    /**
+     * The IP address of the client.
+     */
+    ip: string;
+    /**
+     * Whether the client is a guest.
+     */
+    isGuest: boolean;
+    /**
+     * Whether the client is connected via wired connection.
+     */
+    isWired: boolean;
+    /**
+     * The network ID of the last connection.
+     */
+    lastConnectionNetworkId: string;
+    /**
+     * The network name of the last connection.
+     */
+    lastConnectionNetworkName: string;
+    /**
+     * Unix timestamp when the client was last seen.
+     */
+    lastSeen: number;
+    /**
+     * The MAC address of the last uplink device.
+     */
+    lastUplinkMac: string;
+    /**
+     * The name of the last uplink device.
+     */
+    lastUplinkName: string;
+    /**
+     * The remote port of the last uplink device.
+     */
+    lastUplinkRemotePort: number;
+    /**
+     * The local DNS record for this client.
+     */
+    localDnsRecord: string;
+    /**
+     * Whether local DNS record is enabled for this client.
+     */
+    localDnsRecordEnabled: boolean;
+    /**
+     * The MAC address of the client.
+     */
+    mac: string;
+    /**
+     * The name of the client.
+     */
+    name: string;
+    /**
+     * The network ID for this client.
+     */
+    networkId: string;
+    /**
+     * The network name for this client.
+     */
+    networkName: string;
+    /**
+     * The noise level in dBm.
+     */
+    noise: number;
+    /**
+     * The OUI (vendor) of the client's MAC address.
+     */
+    oui: string;
+    /**
+     * The radio type (e.g., na, ng).
+     */
+    radio: string;
+    /**
+     * The radio name (e.g., wifi0, wifi1).
+     */
+    radioName: string;
+    /**
+     * The RSSI value.
+     */
+    rssi: number;
+    /**
+     * Total bytes received.
+     */
+    rxBytes: number;
+    /**
+     * The receive rate in kbps.
+     */
+    rxRate: number;
+    /**
+     * The signal strength in dBm.
+     */
+    signal: number;
+    /**
+     * The status of the client.
+     */
+    status: string;
+    /**
+     * The switch port number the client is connected to.
+     */
+    swPort: number;
+    /**
+     * Total bytes transmitted.
+     */
+    txBytes: number;
+    /**
+     * The transmit rate in kbps.
+     */
+    txRate: number;
+    /**
+     * The uptime of the client in seconds.
+     */
+    uptime: number;
+    /**
+     * Whether this client uses a fixed IP.
+     */
+    useFixedip: boolean;
+    /**
+     * The user group ID for the client.
+     */
+    usergroupId: string;
+    /**
+     * The wired connection rate in Mbps.
+     */
+    wiredRateMbps: number;
 }
 export interface RadiusProfileAcctServer {
     /**
@@ -30,13 +629,13 @@ export interface RadiusProfileAcctServer {
      */
     ip: string;
     /**
-     * Port of accounting service. Defaults to `1813`.
+     * Port of accounting service.
      */
-    port?: number;
+    port: number;
     /**
-     * RADIUS secret.
+     * Shared secret for accounting server.
      */
-    xsecret: string;
+    xSecret: string;
 }
 export interface RadiusProfileAuthServer {
     /**
@@ -44,23 +643,37 @@ export interface RadiusProfileAuthServer {
      */
     ip: string;
     /**
-     * Port of authentication service. Defaults to `1812`.
+     * Port of authentication service.
      */
-    port?: number;
+    port: number;
     /**
-     * RADIUS secret.
+     * Shared secret for authentication server.
      */
-    xsecret: string;
+    xSecret: string;
+}
+export interface SettingMgmt {
+    /**
+     * Automatically upgrade device firmware.
+     */
+    autoUpgrade: boolean;
+    /**
+     * Enable SSH authentication.
+     */
+    sshEnabled: boolean;
+    /**
+     * SSH keys.
+     */
+    sshKeys: outputs.SettingMgmtSshKey[];
 }
 export interface SettingMgmtSshKey {
     /**
      * Comment.
      */
-    comment?: string;
+    comment: string;
     /**
      * Public SSH key.
      */
-    key?: string;
+    key: string;
     /**
      * Name of SSH key.
      */
@@ -70,9 +683,237 @@ export interface SettingMgmtSshKey {
      */
     type: string;
 }
+export interface SettingRadius {
+    /**
+     * Enable RADIUS accounting.
+     */
+    accountingEnabled: boolean;
+    /**
+     * RADIUS accounting port.
+     */
+    acctPort: number;
+    /**
+     * RADIUS authentication port.
+     */
+    authPort: number;
+    /**
+     * Interim update interval in seconds.
+     */
+    interimUpdateInterval: number;
+    /**
+     * RADIUS shared secret.
+     */
+    secret: string;
+}
+export interface SettingUsg {
+    /**
+     * Enable broadcast ping.
+     */
+    broadcastPing: boolean;
+    /**
+     * DNS verification settings.
+     */
+    dnsVerification: outputs.SettingUsgDnsVerification;
+    /**
+     * Enable FTP module.
+     */
+    ftpModule: boolean;
+    /**
+     * Geo IP filtering action: block or allow.
+     */
+    geoIpFilteringBlock: string;
+    /**
+     * Comma-separated list of country codes for geo IP filtering.
+     */
+    geoIpFilteringCountries: string;
+    /**
+     * Enable geo IP filtering.
+     */
+    geoIpFilteringEnabled: boolean;
+    /**
+     * Geo IP filtering traffic direction: both, ingress, or egress.
+     */
+    geoIpFilteringTrafficDirection: string;
+    /**
+     * Enable GRE module.
+     */
+    greModule: boolean;
+    /**
+     * Enable H.323 module.
+     */
+    h323Module: boolean;
+    /**
+     * ICMP connection timeout in seconds.
+     */
+    icmpTimeout: number;
+    /**
+     * MSS clamping mode: auto, custom, or disabled.
+     */
+    mssClamp: string;
+    /**
+     * Enable hardware offload for accounting.
+     */
+    offloadAccounting: boolean;
+    /**
+     * Enable hardware offload for L2 blocking.
+     */
+    offloadL2Blocking: boolean;
+    /**
+     * Enable hardware offload for scheduling.
+     */
+    offloadSch: boolean;
+    /**
+     * Other connections timeout in seconds.
+     */
+    otherTimeout: number;
+    /**
+     * Enable PPTP module.
+     */
+    pptpModule: boolean;
+    /**
+     * Accept ICMP redirects.
+     */
+    receiveRedirects: boolean;
+    /**
+     * Send ICMP redirects.
+     */
+    sendRedirects: boolean;
+    /**
+     * Enable SIP module.
+     */
+    sipModule: boolean;
+    /**
+     * Enable SYN cookies.
+     */
+    synCookies: boolean;
+    /**
+     * TCP close timeout in seconds.
+     */
+    tcpCloseTimeout: number;
+    /**
+     * TCP close wait timeout in seconds.
+     */
+    tcpCloseWaitTimeout: number;
+    /**
+     * TCP established connection timeout in seconds.
+     */
+    tcpEstablishedTimeout: number;
+    /**
+     * TCP fin wait timeout in seconds.
+     */
+    tcpFinWaitTimeout: number;
+    /**
+     * TCP last ACK timeout in seconds.
+     */
+    tcpLastAckTimeout: number;
+    /**
+     * TCP SYN received timeout in seconds.
+     */
+    tcpSynRecvTimeout: number;
+    /**
+     * TCP SYN sent timeout in seconds.
+     */
+    tcpSynSentTimeout: number;
+    /**
+     * TCP time wait timeout in seconds.
+     */
+    tcpTimeWaitTimeout: number;
+    /**
+     * Enable TFTP module.
+     */
+    tftpModule: boolean;
+    /**
+     * Timeout setting preference: auto or manual.
+     */
+    timeoutSettingPreference: string;
+    /**
+     * UDP other timeout in seconds.
+     */
+    udpOtherTimeout: number;
+    /**
+     * UDP stream timeout in seconds.
+     */
+    udpStreamTimeout: number;
+    /**
+     * Unbind WAN monitors.
+     */
+    unbindWanMonitors: boolean;
+    /**
+     * Enable UPnP.
+     */
+    upnpEnabled: boolean;
+    /**
+     * Enable UPnP NAT-PMP.
+     */
+    upnpNatPmpEnabled: boolean;
+    /**
+     * Enable UPnP secure mode.
+     */
+    upnpSecureMode: boolean;
+    /**
+     * UPnP WAN interface (e.g., WAN, WAN2).
+     */
+    upnpWanInterface: string;
+}
+export interface SettingUsgDnsVerification {
+    /**
+     * Domain for DNS verification.
+     */
+    domain: string;
+    /**
+     * Primary DNS server.
+     */
+    primaryDnsServer: string;
+    /**
+     * Secondary DNS server.
+     */
+    secondaryDnsServer: string;
+    /**
+     * Setting preference: auto or manual.
+     */
+    settingPreference: string;
+}
+export interface WanDhcpOption {
+    optionNumber: number;
+    value: string;
+}
+export interface WanDhcpv6Option {
+    /**
+     * DHCPv6 option number (1, 11, 15, 16, or 17)
+     */
+    optionNumber: number;
+    /**
+     * DHCPv6 option value
+     */
+    value: string;
+}
+export interface WanProviderCapabilities {
+    /**
+     * Download speed in kilobits per second
+     */
+    downloadKilobitsPerSecond: number;
+    /**
+     * Upload speed in kilobits per second
+     */
+    uploadKilobitsPerSecond: number;
+}
+export interface WlanMacFilter {
+    /**
+     * Indicates whether or not the MAC filter is turned on for the network.
+     */
+    enabled: boolean;
+    /**
+     * List of MAC addresses to filter (only valid if `enabled` is `true`).
+     */
+    lists?: string[];
+    /**
+     * MAC address filter policy (only valid if `enabled` is `true`).
+     */
+    policy: string;
+}
 export interface WlanSchedule {
     /**
-     * Day of week for the block. Valid values are `sun`, `mon`, `tue`, `wed`, `thu`, `fri`, `sat`.
+     * Day of week for the block.
      */
     dayOfWeek: string;
     /**
@@ -88,7 +929,7 @@ export interface WlanSchedule {
      */
     startHour: number;
     /**
-     * Start minute for the block (0-59). Defaults to `0`.
+     * Start minute for the block (0-59).
      */
-    startMinute?: number;
+    startMinute: number;
 }

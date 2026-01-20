@@ -47,9 +47,12 @@ class SourceSaml extends pulumi.CustomResource {
             resourceInputs["nameIdPolicy"] = state?.nameIdPolicy;
             resourceInputs["policyEngineMode"] = state?.policyEngineMode;
             resourceInputs["preAuthenticationFlow"] = state?.preAuthenticationFlow;
+            resourceInputs["promoted"] = state?.promoted;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["signatureAlgorithm"] = state?.signatureAlgorithm;
+            resourceInputs["signedAssertion"] = state?.signedAssertion;
+            resourceInputs["signedResponse"] = state?.signedResponse;
             resourceInputs["signingKp"] = state?.signingKp;
             resourceInputs["sloUrl"] = state?.sloUrl;
             resourceInputs["slug"] = state?.slug;
@@ -85,9 +88,12 @@ class SourceSaml extends pulumi.CustomResource {
             resourceInputs["nameIdPolicy"] = args?.nameIdPolicy;
             resourceInputs["policyEngineMode"] = args?.policyEngineMode;
             resourceInputs["preAuthenticationFlow"] = args?.preAuthenticationFlow;
+            resourceInputs["promoted"] = args?.promoted;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["signatureAlgorithm"] = args?.signatureAlgorithm;
+            resourceInputs["signedAssertion"] = args?.signedAssertion;
+            resourceInputs["signedResponse"] = args?.signedResponse;
             resourceInputs["signingKp"] = args?.signingKp;
             resourceInputs["sloUrl"] = args?.sloUrl;
             resourceInputs["slug"] = args?.slug;

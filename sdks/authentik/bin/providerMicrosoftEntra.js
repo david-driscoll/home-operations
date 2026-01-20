@@ -43,6 +43,8 @@ class ProviderMicrosoftEntra extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerMicrosoftEntraId"] = state?.providerMicrosoftEntraId;
+            resourceInputs["syncPageSize"] = state?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = state?.syncPageTimeout;
             resourceInputs["tenantId"] = state?.tenantId;
             resourceInputs["userDeleteAction"] = state?.userDeleteAction;
         }
@@ -67,6 +69,8 @@ class ProviderMicrosoftEntra extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerMicrosoftEntraId"] = args?.providerMicrosoftEntraId;
+            resourceInputs["syncPageSize"] = args?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = args?.syncPageTimeout;
             resourceInputs["tenantId"] = args?.tenantId;
             resourceInputs["userDeleteAction"] = args?.userDeleteAction;
         }

@@ -156,7 +156,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           accessCodeValidity: oauth2.accessCodeValidity,
           accessTokenValidity: oauth2.accessTokenValidity,
           refreshTokenValidity: oauth2.refreshTokenValidity,
-          backchannelLogoutUri: oauth2.backchannelLogoutUri,
+          logoutUri: oauth2.logoutUri,
           clientType: oauth2.clientType,
           encryptionKey: oauth2.encryptionKey,
           includeClaimsInIdToken: oauth2.includeClaimsInIdToken,

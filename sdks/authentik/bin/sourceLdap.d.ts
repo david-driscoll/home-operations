@@ -72,6 +72,14 @@ export declare class SourceLdap extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     readonly syncGroups: pulumi.Output<boolean | undefined>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    readonly syncOutgoingTriggerMode: pulumi.Output<string | undefined>;
     readonly syncParentGroup: pulumi.Output<string | undefined>;
     /**
      * Defaults to `true`.
@@ -167,6 +175,14 @@ export interface SourceLdapState {
      * Defaults to `true`.
      */
     syncGroups?: pulumi.Input<boolean>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
     syncParentGroup?: pulumi.Input<string>;
     /**
      * Defaults to `true`.
@@ -254,6 +270,14 @@ export interface SourceLdapArgs {
      * Defaults to `true`.
      */
     syncGroups?: pulumi.Input<boolean>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
     syncParentGroup?: pulumi.Input<string>;
     /**
      * Defaults to `true`.

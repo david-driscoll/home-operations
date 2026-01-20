@@ -33,6 +33,9 @@ export class StageAuthenticatorEmail extends pulumi.CustomResource {
     }
 
     declare public readonly configureFlow: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to ``.
+     */
     declare public readonly friendlyName: pulumi.Output<string | undefined>;
     /**
      * Defaults to `system@authentik.local`.
@@ -133,6 +136,9 @@ export class StageAuthenticatorEmail extends pulumi.CustomResource {
  */
 export interface StageAuthenticatorEmailState {
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     /**
      * Defaults to `system@authentik.local`.
@@ -179,6 +185,9 @@ export interface StageAuthenticatorEmailState {
  */
 export interface StageAuthenticatorEmailArgs {
     configureFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     /**
      * Defaults to `system@authentik.local`.

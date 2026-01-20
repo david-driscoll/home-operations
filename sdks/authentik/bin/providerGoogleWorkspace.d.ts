@@ -39,6 +39,14 @@ export declare class ProviderGoogleWorkspace extends pulumi.CustomResource {
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     readonly providerGoogleWorkspaceId: pulumi.Output<string>;
     /**
+     * Defaults to `100`.
+     */
+    readonly syncPageSize: pulumi.Output<number | undefined>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    readonly syncPageTimeout: pulumi.Output<string | undefined>;
+    /**
      * Allowed values:
      *   - `do_nothing`
      *   - `delete`
@@ -83,6 +91,14 @@ export interface ProviderGoogleWorkspaceState {
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerGoogleWorkspaceId?: pulumi.Input<string>;
     /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
+    /**
      * Allowed values:
      *   - `do_nothing`
      *   - `delete`
@@ -118,6 +134,14 @@ export interface ProviderGoogleWorkspaceArgs {
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerGoogleWorkspaceId?: pulumi.Input<string>;
+    /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
     /**
      * Allowed values:
      *   - `do_nothing`

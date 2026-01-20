@@ -76,6 +76,10 @@ export declare class SourceSaml extends pulumi.CustomResource {
      */
     readonly policyEngineMode: pulumi.Output<string | undefined>;
     readonly preAuthenticationFlow: pulumi.Output<string>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly promoted: pulumi.Output<boolean | undefined>;
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
@@ -92,6 +96,14 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     readonly signatureAlgorithm: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly signedAssertion: pulumi.Output<boolean | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly signedResponse: pulumi.Output<boolean | undefined>;
     readonly signingKp: pulumi.Output<string | undefined>;
     readonly sloUrl: pulumi.Output<string | undefined>;
     readonly slug: pulumi.Output<string>;
@@ -194,6 +206,10 @@ export interface SourceSamlState {
      */
     policyEngineMode?: pulumi.Input<string>;
     preAuthenticationFlow?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -210,6 +226,14 @@ export interface SourceSamlState {
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    signedAssertion?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `false`.
+     */
+    signedResponse?: pulumi.Input<boolean>;
     signingKp?: pulumi.Input<string>;
     sloUrl?: pulumi.Input<string>;
     slug?: pulumi.Input<string>;
@@ -300,6 +324,10 @@ export interface SourceSamlArgs {
      */
     policyEngineMode?: pulumi.Input<string>;
     preAuthenticationFlow: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -316,6 +344,14 @@ export interface SourceSamlArgs {
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    signedAssertion?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `false`.
+     */
+    signedResponse?: pulumi.Input<boolean>;
     signingKp?: pulumi.Input<string>;
     sloUrl?: pulumi.Input<string>;
     slug: pulumi.Input<string>;

@@ -66,7 +66,7 @@ class PortProfile extends pulumi.CustomResource {
             resourceInputs["stormctrlUcastLevel"] = state?.stormctrlUcastLevel;
             resourceInputs["stormctrlUcastRate"] = state?.stormctrlUcastRate;
             resourceInputs["stpPortMode"] = state?.stpPortMode;
-            resourceInputs["taggedVlanMgmt"] = state?.taggedVlanMgmt;
+            resourceInputs["taggedNetworkconfIds"] = state?.taggedNetworkconfIds;
             resourceInputs["voiceNetworkconfId"] = state?.voiceNetworkconfId;
         }
         else {
@@ -104,7 +104,7 @@ class PortProfile extends pulumi.CustomResource {
             resourceInputs["stormctrlUcastLevel"] = args?.stormctrlUcastLevel;
             resourceInputs["stormctrlUcastRate"] = args?.stormctrlUcastRate;
             resourceInputs["stpPortMode"] = args?.stpPortMode;
-            resourceInputs["taggedVlanMgmt"] = args?.taggedVlanMgmt;
+            resourceInputs["taggedNetworkconfIds"] = args?.taggedNetworkconfIds;
             resourceInputs["voiceNetworkconfId"] = args?.voiceNetworkconfId;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

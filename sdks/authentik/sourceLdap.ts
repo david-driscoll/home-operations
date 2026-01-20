@@ -89,6 +89,14 @@ export class SourceLdap extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     declare public readonly syncGroups: pulumi.Output<boolean | undefined>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    declare public readonly syncOutgoingTriggerMode: pulumi.Output<string | undefined>;
     declare public readonly syncParentGroup: pulumi.Output<string | undefined>;
     /**
      * Defaults to `true`.
@@ -149,6 +157,7 @@ export class SourceLdap extends pulumi.CustomResource {
             resourceInputs["sourceLdapId"] = state?.sourceLdapId;
             resourceInputs["startTls"] = state?.startTls;
             resourceInputs["syncGroups"] = state?.syncGroups;
+            resourceInputs["syncOutgoingTriggerMode"] = state?.syncOutgoingTriggerMode;
             resourceInputs["syncParentGroup"] = state?.syncParentGroup;
             resourceInputs["syncUsers"] = state?.syncUsers;
             resourceInputs["syncUsersPassword"] = state?.syncUsersPassword;
@@ -194,6 +203,7 @@ export class SourceLdap extends pulumi.CustomResource {
             resourceInputs["sourceLdapId"] = args?.sourceLdapId;
             resourceInputs["startTls"] = args?.startTls;
             resourceInputs["syncGroups"] = args?.syncGroups;
+            resourceInputs["syncOutgoingTriggerMode"] = args?.syncOutgoingTriggerMode;
             resourceInputs["syncParentGroup"] = args?.syncParentGroup;
             resourceInputs["syncUsers"] = args?.syncUsers;
             resourceInputs["syncUsersPassword"] = args?.syncUsersPassword;
@@ -270,6 +280,14 @@ export interface SourceLdapState {
      * Defaults to `true`.
      */
     syncGroups?: pulumi.Input<boolean>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
     syncParentGroup?: pulumi.Input<string>;
     /**
      * Defaults to `true`.
@@ -358,6 +376,14 @@ export interface SourceLdapArgs {
      * Defaults to `true`.
      */
     syncGroups?: pulumi.Input<boolean>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
     syncParentGroup?: pulumi.Input<string>;
     /**
      * Defaults to `true`.

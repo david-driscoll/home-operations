@@ -50,6 +50,14 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      * Defaults to `authentik`.
      */
     readonly issuer: pulumi.Output<string | undefined>;
+    /**
+     * Allowed values:
+     *   - `frontchannel_iframe`
+     *   - `frontchannel_native`
+     *   - `backchannel`
+     *  Defaults to `frontchannel_iframe`.
+     */
+    readonly logoutMethod: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     readonly nameIdMapping: pulumi.Output<string | undefined>;
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
@@ -62,6 +70,10 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     readonly signAssertion: pulumi.Output<boolean | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly signLogoutRequest: pulumi.Output<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
@@ -81,6 +93,14 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      */
     readonly signatureAlgorithm: pulumi.Output<string | undefined>;
     readonly signingKp: pulumi.Output<string | undefined>;
+    /**
+     * Allowed values:
+     *   - `redirect`
+     *   - `post`
+     *  Defaults to `redirect`.
+     */
+    readonly slsBinding: pulumi.Output<string | undefined>;
+    readonly slsUrl: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
      *   - `redirect`
@@ -157,6 +177,14 @@ export interface ProviderSamlState {
      * Defaults to `authentik`.
      */
     issuer?: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `frontchannel_iframe`
+     *   - `frontchannel_native`
+     *   - `backchannel`
+     *  Defaults to `frontchannel_iframe`.
+     */
+    logoutMethod?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     nameIdMapping?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
@@ -169,6 +197,10 @@ export interface ProviderSamlState {
      * Defaults to `true`.
      */
     signAssertion?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `false`.
+     */
+    signLogoutRequest?: pulumi.Input<boolean>;
     /**
      * Defaults to `false`.
      */
@@ -188,6 +220,14 @@ export interface ProviderSamlState {
      */
     signatureAlgorithm?: pulumi.Input<string>;
     signingKp?: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `redirect`
+     *   - `post`
+     *  Defaults to `redirect`.
+     */
+    slsBinding?: pulumi.Input<string>;
+    slsUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
      *   - `redirect`
@@ -256,6 +296,14 @@ export interface ProviderSamlArgs {
      * Defaults to `authentik`.
      */
     issuer?: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `frontchannel_iframe`
+     *   - `frontchannel_native`
+     *   - `backchannel`
+     *  Defaults to `frontchannel_iframe`.
+     */
+    logoutMethod?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     nameIdMapping?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
@@ -268,6 +316,10 @@ export interface ProviderSamlArgs {
      * Defaults to `true`.
      */
     signAssertion?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `false`.
+     */
+    signLogoutRequest?: pulumi.Input<boolean>;
     /**
      * Defaults to `false`.
      */
@@ -287,6 +339,14 @@ export interface ProviderSamlArgs {
      */
     signatureAlgorithm?: pulumi.Input<string>;
     signingKp?: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `redirect`
+     *   - `post`
+     *  Defaults to `redirect`.
+     */
+    slsBinding?: pulumi.Input<string>;
+    slsUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
      *   - `redirect`

@@ -40,7 +40,7 @@ export class BucketFileVersion extends pulumi.CustomResource {
     declare public /*out*/ readonly action: pulumi.Output<string>;
     declare public readonly bucketFileVersionId: pulumi.Output<string>;
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly bucketId: pulumi.Output<string>;
     /**
@@ -52,7 +52,7 @@ export class BucketFileVersion extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly contentSha1: pulumi.Output<string>;
     /**
-     * Content type. If not set, it will be set based on the file extension.
+     * Content type. If not set, it will be set based on the file extension. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly contentType: pulumi.Output<string | undefined>;
     /**
@@ -60,15 +60,15 @@ export class BucketFileVersion extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly fileId: pulumi.Output<string>;
     /**
-     * The custom information that is uploaded with the file.
+     * The custom information that is uploaded with the file. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly fileInfo: pulumi.Output<{[key: string]: string}>;
     /**
-     * The name of the B2 file.
+     * The name of the B2 file. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly fileName: pulumi.Output<string>;
     /**
-     * Server-side encryption settings.
+     * Server-side encryption settings. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly serverSideEncryption: pulumi.Output<outputs.BucketFileVersionServerSideEncryption | undefined>;
     /**
@@ -76,7 +76,7 @@ export class BucketFileVersion extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly size: pulumi.Output<number>;
     /**
-     * Path to the local file.
+     * Path to the local file. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly source: pulumi.Output<string>;
     /**
@@ -150,7 +150,7 @@ export interface BucketFileVersionState {
     action?: pulumi.Input<string>;
     bucketFileVersionId?: pulumi.Input<string>;
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketId?: pulumi.Input<string>;
     /**
@@ -162,7 +162,7 @@ export interface BucketFileVersionState {
      */
     contentSha1?: pulumi.Input<string>;
     /**
-     * Content type. If not set, it will be set based on the file extension.
+     * Content type. If not set, it will be set based on the file extension. **Modifying this attribute will force creation of a new resource.**
      */
     contentType?: pulumi.Input<string>;
     /**
@@ -170,15 +170,15 @@ export interface BucketFileVersionState {
      */
     fileId?: pulumi.Input<string>;
     /**
-     * The custom information that is uploaded with the file.
+     * The custom information that is uploaded with the file. **Modifying this attribute will force creation of a new resource.**
      */
     fileInfo?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
     /**
-     * The name of the B2 file.
+     * The name of the B2 file. **Modifying this attribute will force creation of a new resource.**
      */
     fileName?: pulumi.Input<string>;
     /**
-     * Server-side encryption settings.
+     * Server-side encryption settings. **Modifying this attribute will force creation of a new resource.**
      */
     serverSideEncryption?: pulumi.Input<inputs.BucketFileVersionServerSideEncryption>;
     /**
@@ -186,7 +186,7 @@ export interface BucketFileVersionState {
      */
     size?: pulumi.Input<number>;
     /**
-     * Path to the local file.
+     * Path to the local file. **Modifying this attribute will force creation of a new resource.**
      */
     source?: pulumi.Input<string>;
     /**
@@ -201,27 +201,27 @@ export interface BucketFileVersionState {
 export interface BucketFileVersionArgs {
     bucketFileVersionId?: pulumi.Input<string>;
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketId: pulumi.Input<string>;
     /**
-     * Content type. If not set, it will be set based on the file extension.
+     * Content type. If not set, it will be set based on the file extension. **Modifying this attribute will force creation of a new resource.**
      */
     contentType?: pulumi.Input<string>;
     /**
-     * The custom information that is uploaded with the file.
+     * The custom information that is uploaded with the file. **Modifying this attribute will force creation of a new resource.**
      */
     fileInfo?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
     /**
-     * The name of the B2 file.
+     * The name of the B2 file. **Modifying this attribute will force creation of a new resource.**
      */
     fileName: pulumi.Input<string>;
     /**
-     * Server-side encryption settings.
+     * Server-side encryption settings. **Modifying this attribute will force creation of a new resource.**
      */
     serverSideEncryption?: pulumi.Input<inputs.BucketFileVersionServerSideEncryption>;
     /**
-     * Path to the local file.
+     * Path to the local file. **Modifying this attribute will force creation of a new resource.**
      */
     source: pulumi.Input<string>;
 }

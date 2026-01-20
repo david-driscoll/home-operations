@@ -511,7 +511,7 @@ export interface Proxy {
   propertyMappings?: string[];
   providerProxyId?: string;
   refreshTokenValidity?: string;
-  backchannelLogoutUri?: string;
+  logoutUri?: string;
   skipPathRegex?: string;
 }
 export interface Oauth2 {
@@ -536,7 +536,7 @@ export interface Oauth2 {
   propertyMappings?: string[];
   providerOauth2Id?: string;
   refreshTokenValidity?: string;
-  backchannelLogoutUri?: string;
+  logoutUri?: string;
   signingKey?: string;
   subMode?: string;
 }

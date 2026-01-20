@@ -34,9 +34,25 @@ export class ProviderScim extends pulumi.CustomResource {
 
     /**
      * Allowed values:
+     *   - `token`
+     *   - `oauth`
+     *  Defaults to `token`.
+     */
+    declare public readonly authMode: pulumi.Output<string | undefined>;
+    /**
+     * Slug of an OAuth source used for authentication
+     */
+    declare public readonly authOauth: pulumi.Output<string | undefined>;
+    /**
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
+     */
+    declare public readonly authOauthParams: pulumi.Output<string | undefined>;
+    /**
+     * Allowed values:
      *   - `default`
      *   - `aws`
      *   - `slack`
+     *   - `sfdc`
      *  Defaults to `default`.
      */
     declare public readonly compatibilityMode: pulumi.Output<string | undefined>;
@@ -50,7 +66,19 @@ export class ProviderScim extends pulumi.CustomResource {
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     declare public readonly providerScimId: pulumi.Output<string>;
-    declare public readonly token: pulumi.Output<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `hours=1`.
+     */
+    declare public readonly serviceProviderConfigCacheTimeout: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `100`.
+     */
+    declare public readonly syncPageSize: pulumi.Output<number | undefined>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    declare public readonly syncPageTimeout: pulumi.Output<string | undefined>;
+    declare public readonly token: pulumi.Output<string | undefined>;
     declare public readonly url: pulumi.Output<string>;
 
     /**
@@ -66,6 +94,9 @@ export class ProviderScim extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as ProviderScimState | undefined;
+            resourceInputs["authMode"] = state?.authMode;
+            resourceInputs["authOauth"] = state?.authOauth;
+            resourceInputs["authOauthParams"] = state?.authOauthParams;
             resourceInputs["compatibilityMode"] = state?.compatibilityMode;
             resourceInputs["dryRun"] = state?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = state?.excludeUsersServiceAccount;
@@ -74,16 +105,19 @@ export class ProviderScim extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerScimId"] = state?.providerScimId;
+            resourceInputs["serviceProviderConfigCacheTimeout"] = state?.serviceProviderConfigCacheTimeout;
+            resourceInputs["syncPageSize"] = state?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = state?.syncPageTimeout;
             resourceInputs["token"] = state?.token;
             resourceInputs["url"] = state?.url;
         } else {
             const args = argsOrState as ProviderScimArgs | undefined;
-            if (args?.token === undefined && !opts.urn) {
-                throw new Error("Missing required property 'token'");
-            }
             if (args?.url === undefined && !opts.urn) {
                 throw new Error("Missing required property 'url'");
             }
+            resourceInputs["authMode"] = args?.authMode;
+            resourceInputs["authOauth"] = args?.authOauth;
+            resourceInputs["authOauthParams"] = args?.authOauthParams;
             resourceInputs["compatibilityMode"] = args?.compatibilityMode;
             resourceInputs["dryRun"] = args?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = args?.excludeUsersServiceAccount;
@@ -92,6 +126,9 @@ export class ProviderScim extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerScimId"] = args?.providerScimId;
+            resourceInputs["serviceProviderConfigCacheTimeout"] = args?.serviceProviderConfigCacheTimeout;
+            resourceInputs["syncPageSize"] = args?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = args?.syncPageTimeout;
             resourceInputs["token"] = args?.token ? pulumi.secret(args.token) : undefined;
             resourceInputs["url"] = args?.url;
         }
@@ -108,9 +145,25 @@ export class ProviderScim extends pulumi.CustomResource {
 export interface ProviderScimState {
     /**
      * Allowed values:
+     *   - `token`
+     *   - `oauth`
+     *  Defaults to `token`.
+     */
+    authMode?: pulumi.Input<string>;
+    /**
+     * Slug of an OAuth source used for authentication
+     */
+    authOauth?: pulumi.Input<string>;
+    /**
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
+     */
+    authOauthParams?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `default`
      *   - `aws`
      *   - `slack`
+     *   - `sfdc`
      *  Defaults to `default`.
      */
     compatibilityMode?: pulumi.Input<string>;
@@ -124,6 +177,18 @@ export interface ProviderScimState {
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerScimId?: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `hours=1`.
+     */
+    serviceProviderConfigCacheTimeout?: pulumi.Input<string>;
+    /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
     token?: pulumi.Input<string>;
     url?: pulumi.Input<string>;
 }
@@ -134,9 +199,25 @@ export interface ProviderScimState {
 export interface ProviderScimArgs {
     /**
      * Allowed values:
+     *   - `token`
+     *   - `oauth`
+     *  Defaults to `token`.
+     */
+    authMode?: pulumi.Input<string>;
+    /**
+     * Slug of an OAuth source used for authentication
+     */
+    authOauth?: pulumi.Input<string>;
+    /**
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
+     */
+    authOauthParams?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `default`
      *   - `aws`
      *   - `slack`
+     *   - `sfdc`
      *  Defaults to `default`.
      */
     compatibilityMode?: pulumi.Input<string>;
@@ -150,6 +231,18 @@ export interface ProviderScimArgs {
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     providerScimId?: pulumi.Input<string>;
-    token: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `hours=1`.
+     */
+    serviceProviderConfigCacheTimeout?: pulumi.Input<string>;
+    /**
+     * Defaults to `100`.
+     */
+    syncPageSize?: pulumi.Input<number>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
+     */
+    syncPageTimeout?: pulumi.Input<string>;
+    token?: pulumi.Input<string>;
     url: pulumi.Input<string>;
 }

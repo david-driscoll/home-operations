@@ -43,6 +43,7 @@ class SourcePlex extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["plexToken"] = state?.plexToken;
             resourceInputs["policyEngineMode"] = state?.policyEngineMode;
+            resourceInputs["promoted"] = state?.promoted;
             resourceInputs["slug"] = state?.slug;
             resourceInputs["sourcePlexId"] = state?.sourcePlexId;
             resourceInputs["userMatchingMode"] = state?.userMatchingMode;
@@ -70,6 +71,7 @@ class SourcePlex extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["plexToken"] = args?.plexToken ? pulumi.secret(args.plexToken) : undefined;
             resourceInputs["policyEngineMode"] = args?.policyEngineMode;
+            resourceInputs["promoted"] = args?.promoted;
             resourceInputs["slug"] = args?.slug;
             resourceInputs["sourcePlexId"] = args?.sourcePlexId;
             resourceInputs["userMatchingMode"] = args?.userMatchingMode;

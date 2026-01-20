@@ -432,7 +432,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       accessCodeValidity: oauth2Resource.accessCodeValidity,
       accessTokenValidity: oauth2Resource.accessTokenValidity,
       refreshTokenValidity: oauth2Resource.refreshTokenValidity,
-      backchannelLogoutUri: oauth2Resource.backchannelLogoutUri,
+      logoutUri: oauth2Resource.logoutUri,
       jwksSources: oauth2Resource.jwksSources ? oauth2Resource.jwksSources.split(",") : undefined,
       jwtFederationProviders: oauth2Resource.jwtFederationProviders ? oauth2Resource.jwtFederationProviders.split(",") : undefined,
       jwtFederationSources: oauth2Resource.jwtFederationSources ? oauth2Resource.jwtFederationSources.split(",") : undefined,

@@ -6,7 +6,6 @@ exports.getPortProfileOutput = exports.getPortProfile = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 function getPortProfile(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,
@@ -15,7 +14,6 @@ function getPortProfile(args, opts) {
 }
 exports.getPortProfile = getPortProfile;
 function getPortProfileOutput(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,

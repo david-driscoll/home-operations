@@ -15,12 +15,6 @@ export declare class RbacInitialPermissions extends pulumi.CustomResource {
      * when multiple copies of the Pulumi SDK have been loaded into the same process.
      */
     static isInstance(obj: any): obj is RbacInitialPermissions;
-    /**
-     * Allowed values:
-     *   - `user`
-     *   - `role`
-     */
-    readonly mode: pulumi.Output<string>;
     readonly name: pulumi.Output<string>;
     readonly permissions: pulumi.Output<number[]>;
     readonly rbacInitialPermissionsId: pulumi.Output<string>;
@@ -38,12 +32,6 @@ export declare class RbacInitialPermissions extends pulumi.CustomResource {
  * Input properties used for looking up and filtering RbacInitialPermissions resources.
  */
 export interface RbacInitialPermissionsState {
-    /**
-     * Allowed values:
-     *   - `user`
-     *   - `role`
-     */
-    mode?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     permissions?: pulumi.Input<pulumi.Input<number>[]>;
     rbacInitialPermissionsId?: pulumi.Input<string>;
@@ -53,12 +41,6 @@ export interface RbacInitialPermissionsState {
  * The set of arguments for constructing a RbacInitialPermissions resource.
  */
 export interface RbacInitialPermissionsArgs {
-    /**
-     * Allowed values:
-     *   - `user`
-     *   - `role`
-     */
-    mode: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     permissions: pulumi.Input<pulumi.Input<number>[]>;
     rbacInitialPermissionsId?: pulumi.Input<string>;

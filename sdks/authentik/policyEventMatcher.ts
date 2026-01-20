@@ -35,14 +35,18 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
     declare public readonly action: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
+     *   - `authentik.commands`
      *   - `authentik.tenants`
      *   - `authentik.tasks`
      *   - `authentik.admin`
      *   - `authentik.api`
      *   - `authentik.core`
      *   - `authentik.crypto`
+     *   - `authentik.endpoints`
+     *   - `authentik.endpoints.connectors.agent`
      *   - `authentik.enterprise`
      *   - `authentik.events`
+     *   - `authentik.admin.files`
      *   - `authentik.flows`
      *   - `authentik.outposts`
      *   - `authentik.policies.dummy`
@@ -68,6 +72,7 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik.sources.plex`
      *   - `authentik.sources.saml`
      *   - `authentik.sources.scim`
+     *   - `authentik.sources.telegram`
      *   - `authentik.stages.authenticator`
      *   - `authentik.stages.authenticator_duo`
      *   - `authentik.stages.authenticator_email`
@@ -94,10 +99,14 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik.brands`
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
+     *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
+     *   - `authentik.enterprise.providers.radius`
+     *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
@@ -118,6 +127,12 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -174,6 +189,10 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -189,7 +208,6 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -213,6 +231,7 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -263,14 +282,18 @@ export interface PolicyEventMatcherState {
     action?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `authentik.commands`
      *   - `authentik.tenants`
      *   - `authentik.tasks`
      *   - `authentik.admin`
      *   - `authentik.api`
      *   - `authentik.core`
      *   - `authentik.crypto`
+     *   - `authentik.endpoints`
+     *   - `authentik.endpoints.connectors.agent`
      *   - `authentik.enterprise`
      *   - `authentik.events`
+     *   - `authentik.admin.files`
      *   - `authentik.flows`
      *   - `authentik.outposts`
      *   - `authentik.policies.dummy`
@@ -296,6 +319,7 @@ export interface PolicyEventMatcherState {
      *   - `authentik.sources.plex`
      *   - `authentik.sources.saml`
      *   - `authentik.sources.scim`
+     *   - `authentik.sources.telegram`
      *   - `authentik.stages.authenticator`
      *   - `authentik.stages.authenticator_duo`
      *   - `authentik.stages.authenticator_email`
@@ -322,10 +346,14 @@ export interface PolicyEventMatcherState {
      *   - `authentik.brands`
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
+     *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
+     *   - `authentik.enterprise.providers.radius`
+     *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
@@ -346,6 +374,12 @@ export interface PolicyEventMatcherState {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -402,6 +436,10 @@ export interface PolicyEventMatcherState {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -417,7 +455,6 @@ export interface PolicyEventMatcherState {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -441,6 +478,7 @@ export interface PolicyEventMatcherState {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -457,14 +495,18 @@ export interface PolicyEventMatcherArgs {
     action?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `authentik.commands`
      *   - `authentik.tenants`
      *   - `authentik.tasks`
      *   - `authentik.admin`
      *   - `authentik.api`
      *   - `authentik.core`
      *   - `authentik.crypto`
+     *   - `authentik.endpoints`
+     *   - `authentik.endpoints.connectors.agent`
      *   - `authentik.enterprise`
      *   - `authentik.events`
+     *   - `authentik.admin.files`
      *   - `authentik.flows`
      *   - `authentik.outposts`
      *   - `authentik.policies.dummy`
@@ -490,6 +532,7 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik.sources.plex`
      *   - `authentik.sources.saml`
      *   - `authentik.sources.scim`
+     *   - `authentik.sources.telegram`
      *   - `authentik.stages.authenticator`
      *   - `authentik.stages.authenticator_duo`
      *   - `authentik.stages.authenticator_email`
@@ -516,10 +559,14 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik.brands`
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
+     *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
+     *   - `authentik.enterprise.providers.radius`
+     *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
@@ -540,6 +587,12 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -596,6 +649,10 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -611,7 +668,6 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -635,6 +691,7 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`

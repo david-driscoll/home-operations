@@ -38,7 +38,6 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["allowedRedirectUris"] = state?.allowedRedirectUris;
             resourceInputs["authenticationFlow"] = state?.authenticationFlow;
             resourceInputs["authorizationFlow"] = state?.authorizationFlow;
-            resourceInputs["backchannelLogoutUri"] = state?.backchannelLogoutUri;
             resourceInputs["clientId"] = state?.clientId;
             resourceInputs["clientSecret"] = state?.clientSecret;
             resourceInputs["clientType"] = state?.clientType;
@@ -49,9 +48,12 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["jwksSources"] = state?.jwksSources;
             resourceInputs["jwtFederationProviders"] = state?.jwtFederationProviders;
             resourceInputs["jwtFederationSources"] = state?.jwtFederationSources;
+            resourceInputs["logoutMethod"] = state?.logoutMethod;
+            resourceInputs["logoutUri"] = state?.logoutUri;
             resourceInputs["name"] = state?.name;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["providerOauth2Id"] = state?.providerOauth2Id;
+            resourceInputs["refreshTokenThreshold"] = state?.refreshTokenThreshold;
             resourceInputs["refreshTokenValidity"] = state?.refreshTokenValidity;
             resourceInputs["signingKey"] = state?.signingKey;
             resourceInputs["subMode"] = state?.subMode;
@@ -72,7 +74,6 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["allowedRedirectUris"] = args?.allowedRedirectUris;
             resourceInputs["authenticationFlow"] = args?.authenticationFlow;
             resourceInputs["authorizationFlow"] = args?.authorizationFlow;
-            resourceInputs["backchannelLogoutUri"] = args?.backchannelLogoutUri;
             resourceInputs["clientId"] = args?.clientId;
             resourceInputs["clientSecret"] = args?.clientSecret ? pulumi.secret(args.clientSecret) : undefined;
             resourceInputs["clientType"] = args?.clientType;
@@ -83,9 +84,12 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["jwksSources"] = args?.jwksSources;
             resourceInputs["jwtFederationProviders"] = args?.jwtFederationProviders;
             resourceInputs["jwtFederationSources"] = args?.jwtFederationSources;
+            resourceInputs["logoutMethod"] = args?.logoutMethod;
+            resourceInputs["logoutUri"] = args?.logoutUri;
             resourceInputs["name"] = args?.name;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["providerOauth2Id"] = args?.providerOauth2Id;
+            resourceInputs["refreshTokenThreshold"] = args?.refreshTokenThreshold;
             resourceInputs["refreshTokenValidity"] = args?.refreshTokenValidity;
             resourceInputs["signingKey"] = args?.signingKey;
             resourceInputs["subMode"] = args?.subMode;

@@ -44,6 +44,8 @@ class SystemSettings extends pulumi.CustomResource {
             resourceInputs["footerLinks"] = state?.footerLinks;
             resourceInputs["gdprCompliance"] = state?.gdprCompliance;
             resourceInputs["impersonation"] = state?.impersonation;
+            resourceInputs["paginationDefaultPageSize"] = state?.paginationDefaultPageSize;
+            resourceInputs["paginationMaxPageSize"] = state?.paginationMaxPageSize;
             resourceInputs["reputationLowerLimit"] = state?.reputationLowerLimit;
             resourceInputs["reputationUpperLimit"] = state?.reputationUpperLimit;
             resourceInputs["systemSettingsId"] = state?.systemSettingsId;
@@ -61,6 +63,8 @@ class SystemSettings extends pulumi.CustomResource {
             resourceInputs["footerLinks"] = args?.footerLinks;
             resourceInputs["gdprCompliance"] = args?.gdprCompliance;
             resourceInputs["impersonation"] = args?.impersonation;
+            resourceInputs["paginationDefaultPageSize"] = args?.paginationDefaultPageSize;
+            resourceInputs["paginationMaxPageSize"] = args?.paginationMaxPageSize;
             resourceInputs["reputationLowerLimit"] = args?.reputationLowerLimit;
             resourceInputs["reputationUpperLimit"] = args?.reputationUpperLimit;
             resourceInputs["systemSettingsId"] = args?.systemSettingsId;

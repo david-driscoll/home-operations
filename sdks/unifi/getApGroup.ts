@@ -4,8 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-export function getApGroup(args?: GetApGroupArgs, opts?: pulumi.InvokeOptions): Promise<GetApGroupResult> {
-    args = args || {};
+export function getApGroup(args: GetApGroupArgs, opts?: pulumi.InvokeOptions): Promise<GetApGroupResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getApGroup:getApGroup", {
         "name": args.name,
@@ -17,7 +16,7 @@ export function getApGroup(args?: GetApGroupArgs, opts?: pulumi.InvokeOptions): 
  * A collection of arguments for invoking getApGroup.
  */
 export interface GetApGroupArgs {
-    name?: string;
+    name: string;
     site?: string;
 }
 
@@ -25,12 +24,12 @@ export interface GetApGroupArgs {
  * A collection of values returned by getApGroup.
  */
 export interface GetApGroupResult {
+    readonly deviceMacs: string[];
     readonly id: string;
-    readonly name?: string;
+    readonly name: string;
     readonly site: string;
 }
-export function getApGroupOutput(args?: GetApGroupOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetApGroupResult> {
-    args = args || {};
+export function getApGroupOutput(args: GetApGroupOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetApGroupResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getApGroup:getApGroup", {
         "name": args.name,
@@ -42,6 +41,6 @@ export function getApGroupOutput(args?: GetApGroupOutputArgs, opts?: pulumi.Invo
  * A collection of arguments for invoking getApGroup.
  */
 export interface GetApGroupOutputArgs {
-    name?: pulumi.Input<string>;
+    name: pulumi.Input<string>;
     site?: pulumi.Input<string>;
 }

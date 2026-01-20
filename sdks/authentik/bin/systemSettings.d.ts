@@ -44,7 +44,7 @@ export declare class SystemSettings extends pulumi.CustomResource {
      */
     readonly eventRetention: pulumi.Output<string | undefined>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"policies_buffered_access_view": false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     readonly flags: pulumi.Output<string | undefined>;
     readonly footerLinks: pulumi.Output<{
@@ -58,6 +58,14 @@ export declare class SystemSettings extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     readonly impersonation: pulumi.Output<boolean | undefined>;
+    /**
+     * Defaults to `20`.
+     */
+    readonly paginationDefaultPageSize: pulumi.Output<number | undefined>;
+    /**
+     * Defaults to `100`.
+     */
+    readonly paginationMaxPageSize: pulumi.Output<number | undefined>;
     /**
      * Defaults to `-5`.
      */
@@ -109,7 +117,7 @@ export interface SystemSettingsState {
      */
     eventRetention?: pulumi.Input<string>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"policies_buffered_access_view": false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     flags?: pulumi.Input<string>;
     footerLinks?: pulumi.Input<pulumi.Input<{
@@ -123,6 +131,14 @@ export interface SystemSettingsState {
      * Defaults to `true`.
      */
     impersonation?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `20`.
+     */
+    paginationDefaultPageSize?: pulumi.Input<number>;
+    /**
+     * Defaults to `100`.
+     */
+    paginationMaxPageSize?: pulumi.Input<number>;
     /**
      * Defaults to `-5`.
      */
@@ -166,7 +182,7 @@ export interface SystemSettingsArgs {
      */
     eventRetention?: pulumi.Input<string>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"policies_buffered_access_view": false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     flags?: pulumi.Input<string>;
     footerLinks?: pulumi.Input<pulumi.Input<{
@@ -180,6 +196,14 @@ export interface SystemSettingsArgs {
      * Defaults to `true`.
      */
     impersonation?: pulumi.Input<boolean>;
+    /**
+     * Defaults to `20`.
+     */
+    paginationDefaultPageSize?: pulumi.Input<number>;
+    /**
+     * Defaults to `100`.
+     */
+    paginationMaxPageSize?: pulumi.Input<number>;
     /**
      * Defaults to `-5`.
      */

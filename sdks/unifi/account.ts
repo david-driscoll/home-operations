@@ -49,13 +49,13 @@ export class Account extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2 Defaults to `6`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
-    declare public readonly tunnelMediumType: pulumi.Output<number | undefined>;
+    declare public readonly tunnelMediumType: pulumi.Output<number>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1 Defaults to `13`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
      */
-    declare public readonly tunnelType: pulumi.Output<number | undefined>;
+    declare public readonly tunnelType: pulumi.Output<number>;
 
     /**
      * Create a Account resource with the given unique name, arguments, and options.
@@ -116,11 +116,11 @@ export interface AccountState {
      */
     site?: pulumi.Input<string>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2 Defaults to `6`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
     tunnelMediumType?: pulumi.Input<number>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1 Defaults to `13`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
      */
     tunnelType?: pulumi.Input<number>;
 }
@@ -146,11 +146,11 @@ export interface AccountArgs {
      */
     site?: pulumi.Input<string>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2 Defaults to `6`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
     tunnelMediumType?: pulumi.Input<number>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1 Defaults to `13`.
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
      */
     tunnelType?: pulumi.Input<number>;
 }

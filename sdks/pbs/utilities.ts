@@ -110,8 +110,8 @@ export async function getPackage() : Promise<string | undefined> {
 			const monitor = runtime.getMonitor();
 			const params = new resproto.Parameterization();
 			params.setName("pbs");
-			params.setVersion("0.1.0");
-			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL21jZml0ejIvcGJzIiwidmVyc2lvbiI6IjAuMS4wIn19"), c => c.charCodeAt(0)));
+			params.setVersion("0.2.1");
+			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL21jZml0ejIvcGJzIiwidmVyc2lvbiI6IjAuMi4xIn19"), c => c.charCodeAt(0)));
 
 			const req = new resproto.RegisterPackageRequest();
 			req.setName("terraform-provider");

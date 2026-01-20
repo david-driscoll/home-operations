@@ -27,11 +27,6 @@ export interface GetNetworkArgs {
  * A collection of values returned by getNetwork.
  */
 export interface GetNetworkResult {
-    readonly dhcpDns: string[];
-    readonly dhcpEnabled: boolean;
-    readonly dhcpLease: number;
-    readonly dhcpStart: string;
-    readonly dhcpStop: string;
     readonly dhcpV6Dns: string[];
     readonly dhcpV6DnsAuto: boolean;
     readonly dhcpV6Enabled: boolean;
@@ -41,9 +36,15 @@ export interface GetNetworkResult {
     readonly dhcpdBootEnabled: boolean;
     readonly dhcpdBootFilename: string;
     readonly dhcpdBootServer: string;
+    readonly dhcpdDns: string[];
+    readonly dhcpdEnabled: boolean;
+    readonly dhcpdLeasetime: number;
+    readonly dhcpdStart: string;
+    readonly dhcpdStop: string;
     readonly domainName: string;
     readonly id: string;
     readonly igmpSnooping: boolean;
+    readonly ipSubnet: string;
     readonly ipv6InterfaceType: string;
     readonly ipv6PdInterface: string;
     readonly ipv6PdPrefixid: string;
@@ -61,20 +62,16 @@ export interface GetNetworkResult {
     readonly site: string;
     readonly subnet: string;
     readonly vlanId: number;
-    readonly wanDhcpV6PdSize: number;
     readonly wanDns: string[];
     readonly wanEgressQos: number;
     readonly wanGateway: string;
     readonly wanGatewayV6: string;
     readonly wanIp: string;
-    readonly wanIpv6: string;
     readonly wanNetmask: string;
-    readonly wanNetworkgroup: string;
-    readonly wanPrefixlen: number;
+    readonly wanNetworkGroup: string;
     readonly wanType: string;
     readonly wanTypeV6: string;
     readonly wanUsername: string;
-    readonly xWanPassword: string;
 }
 export function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetNetworkResult> {
     args = args || {};

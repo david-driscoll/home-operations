@@ -54,6 +54,7 @@ class SourceLdap extends pulumi.CustomResource {
             resourceInputs["sourceLdapId"] = state?.sourceLdapId;
             resourceInputs["startTls"] = state?.startTls;
             resourceInputs["syncGroups"] = state?.syncGroups;
+            resourceInputs["syncOutgoingTriggerMode"] = state?.syncOutgoingTriggerMode;
             resourceInputs["syncParentGroup"] = state?.syncParentGroup;
             resourceInputs["syncUsers"] = state?.syncUsers;
             resourceInputs["syncUsersPassword"] = state?.syncUsersPassword;
@@ -100,6 +101,7 @@ class SourceLdap extends pulumi.CustomResource {
             resourceInputs["sourceLdapId"] = args?.sourceLdapId;
             resourceInputs["startTls"] = args?.startTls;
             resourceInputs["syncGroups"] = args?.syncGroups;
+            resourceInputs["syncOutgoingTriggerMode"] = args?.syncOutgoingTriggerMode;
             resourceInputs["syncParentGroup"] = args?.syncParentGroup;
             resourceInputs["syncUsers"] = args?.syncUsers;
             resourceInputs["syncUsersPassword"] = args?.syncUsersPassword;

@@ -70,7 +70,7 @@ export class SourceOauth extends pulumi.CustomResource {
     declare public readonly groupMatchingMode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     declare public readonly oidcJwks: pulumi.Output<string>;
     /**
@@ -83,6 +83,14 @@ export class SourceOauth extends pulumi.CustomResource {
     declare public readonly oidcWellKnownUrl: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    declare public readonly pkce: pulumi.Output<string | undefined>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -92,6 +100,10 @@ export class SourceOauth extends pulumi.CustomResource {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     declare public readonly profileUrl: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    declare public readonly promoted: pulumi.Output<boolean | undefined>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
@@ -109,8 +121,10 @@ export class SourceOauth extends pulumi.CustomResource {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     declare public readonly providerType: pulumi.Output<string>;
     /**
@@ -166,8 +180,10 @@ export class SourceOauth extends pulumi.CustomResource {
             resourceInputs["oidcJwks"] = state?.oidcJwks;
             resourceInputs["oidcJwksUrl"] = state?.oidcJwksUrl;
             resourceInputs["oidcWellKnownUrl"] = state?.oidcWellKnownUrl;
+            resourceInputs["pkce"] = state?.pkce;
             resourceInputs["policyEngineMode"] = state?.policyEngineMode;
             resourceInputs["profileUrl"] = state?.profileUrl;
+            resourceInputs["promoted"] = state?.promoted;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerType"] = state?.providerType;
@@ -205,8 +221,10 @@ export class SourceOauth extends pulumi.CustomResource {
             resourceInputs["oidcJwks"] = args?.oidcJwks;
             resourceInputs["oidcJwksUrl"] = args?.oidcJwksUrl;
             resourceInputs["oidcWellKnownUrl"] = args?.oidcWellKnownUrl;
+            resourceInputs["pkce"] = args?.pkce;
             resourceInputs["policyEngineMode"] = args?.policyEngineMode;
             resourceInputs["profileUrl"] = args?.profileUrl;
+            resourceInputs["promoted"] = args?.promoted;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerType"] = args?.providerType;
@@ -267,7 +285,7 @@ export interface SourceOauthState {
     groupMatchingMode?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     oidcJwks?: pulumi.Input<string>;
     /**
@@ -280,6 +298,14 @@ export interface SourceOauthState {
     oidcWellKnownUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    pkce?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -289,6 +315,10 @@ export interface SourceOauthState {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     profileUrl?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -306,8 +336,10 @@ export interface SourceOauthState {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     providerType?: pulumi.Input<string>;
     /**
@@ -374,7 +406,7 @@ export interface SourceOauthArgs {
     groupMatchingMode?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     oidcJwks?: pulumi.Input<string>;
     /**
@@ -387,6 +419,14 @@ export interface SourceOauthArgs {
     oidcWellKnownUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    pkce?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -396,6 +436,10 @@ export interface SourceOauthArgs {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     profileUrl?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -413,8 +457,10 @@ export interface SourceOauthArgs {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     providerType: pulumi.Input<string>;
     /**

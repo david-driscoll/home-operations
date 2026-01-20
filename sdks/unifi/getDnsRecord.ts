@@ -4,18 +4,11 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-export function getDnsRecord(args?: GetDnsRecordArgs, opts?: pulumi.InvokeOptions): Promise<GetDnsRecordResult> {
-    args = args || {};
+export function getDnsRecord(args: GetDnsRecordArgs, opts?: pulumi.InvokeOptions): Promise<GetDnsRecordResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "port": args.port,
-        "priority": args.priority,
-        "recordType": args.recordType,
         "site": args.site,
-        "ttl": args.ttl,
-        "value": args.value,
-        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 
@@ -23,42 +16,27 @@ export function getDnsRecord(args?: GetDnsRecordArgs, opts?: pulumi.InvokeOption
  * A collection of arguments for invoking getDnsRecord.
  */
 export interface GetDnsRecordArgs {
-    name?: string;
-    port?: number;
-    priority?: number;
-    recordType?: string;
+    name: string;
     site?: string;
-    ttl?: number;
-    value?: string;
-    weight?: number;
 }
 
 /**
  * A collection of values returned by getDnsRecord.
  */
 export interface GetDnsRecordResult {
+    readonly enabled: boolean;
     readonly id: string;
-    readonly name?: string;
-    readonly port?: number;
-    readonly priority?: number;
-    readonly recordType?: string;
+    readonly name: string;
     readonly site: string;
-    readonly ttl?: number;
-    readonly value?: string;
-    readonly weight?: number;
+    readonly ttl: number;
+    readonly type: string;
+    readonly value: string;
 }
-export function getDnsRecordOutput(args?: GetDnsRecordOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDnsRecordResult> {
-    args = args || {};
+export function getDnsRecordOutput(args: GetDnsRecordOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetDnsRecordResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
-        "port": args.port,
-        "priority": args.priority,
-        "recordType": args.recordType,
         "site": args.site,
-        "ttl": args.ttl,
-        "value": args.value,
-        "weight": args.weight,
     }, opts, utilities.getPackage());
 }
 
@@ -66,12 +44,6 @@ export function getDnsRecordOutput(args?: GetDnsRecordOutputArgs, opts?: pulumi.
  * A collection of arguments for invoking getDnsRecord.
  */
 export interface GetDnsRecordOutputArgs {
-    name?: pulumi.Input<string>;
-    port?: pulumi.Input<number>;
-    priority?: pulumi.Input<number>;
-    recordType?: pulumi.Input<string>;
+    name: pulumi.Input<string>;
     site?: pulumi.Input<string>;
-    ttl?: pulumi.Input<number>;
-    value?: pulumi.Input<string>;
-    weight?: pulumi.Input<number>;
 }

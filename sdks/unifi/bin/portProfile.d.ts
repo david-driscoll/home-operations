@@ -16,41 +16,41 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is PortProfile;
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
      */
-    readonly autoneg: pulumi.Output<boolean | undefined>;
+    readonly autoneg: pulumi.Output<boolean>;
     /**
-     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
      */
-    readonly dot1xCtrl: pulumi.Output<string | undefined>;
+    readonly dot1xCtrl: pulumi.Output<string>;
     /**
-     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535
      */
-    readonly dot1xIdleTimeout: pulumi.Output<number | undefined>;
+    readonly dot1xIdleTimeout: pulumi.Output<number>;
     /**
      * The egress rate limit, in kpbs, for the port profile. Can be between `64` and `9999999`.
      */
     readonly egressRateLimitKbps: pulumi.Output<number | undefined>;
     /**
-     * Enable egress rate limiting for the port profile. Defaults to `false`.
+     * Enable egress rate limiting for the port profile.
      */
-    readonly egressRateLimitKbpsEnabled: pulumi.Output<boolean | undefined>;
+    readonly egressRateLimitKbpsEnabled: pulumi.Output<boolean>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
      */
-    readonly forward: pulumi.Output<string | undefined>;
+    readonly forward: pulumi.Output<string>;
     /**
-     * Enable full duplex for the port profile. Defaults to `false`.
+     * Enable full duplex for the port profile.
      */
-    readonly fullDuplex: pulumi.Output<boolean | undefined>;
+    readonly fullDuplex: pulumi.Output<boolean>;
     /**
-     * Enable port isolation for the port profile. Defaults to `false`.
+     * Enable port isolation for the port profile.
      */
-    readonly isolation: pulumi.Output<boolean | undefined>;
+    readonly isolation: pulumi.Output<boolean>;
     /**
-     * Enable LLDP-MED for the port profile. Defaults to `true`.
+     * Enable LLDP-MED for the port profile.
      */
-    readonly lldpmedEnabled: pulumi.Output<boolean | undefined>;
+    readonly lldpmedEnabled: pulumi.Output<boolean>;
     /**
      * Enable LLDP-MED topology change notifications for the port profile.
      */
@@ -64,17 +64,17 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly nativeNetworkconfId: pulumi.Output<string | undefined>;
     /**
-     * The operation mode for the port profile. Can only be `switch` Defaults to `switch`.
+     * The operation mode for the port profile. Can only be `switch`
      */
-    readonly opMode: pulumi.Output<string | undefined>;
+    readonly opMode: pulumi.Output<string>;
     /**
      * The POE mode for the port profile. Can be one of `auto`, `passv24`, `passthrough` or `off`.
      */
     readonly poeMode: pulumi.Output<string | undefined>;
     /**
-     * Enable port security for the port profile. Defaults to `false`.
+     * Enable port security for the port profile.
      */
-    readonly portSecurityEnabled: pulumi.Output<boolean | undefined>;
+    readonly portSecurityEnabled: pulumi.Output<boolean>;
     /**
      * The MAC addresses associated with the port security for the port profile.
      */
@@ -104,9 +104,9 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly speed: pulumi.Output<number | undefined>;
     /**
-     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile.
      */
-    readonly stormctrlBcastEnabled: pulumi.Output<boolean | undefined>;
+    readonly stormctrlBcastEnabled: pulumi.Output<boolean>;
     /**
      * The broadcast Storm Control level for the port profile. Can be between 0 and 100.
      */
@@ -116,9 +116,9 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly stormctrlBcastRate: pulumi.Output<number | undefined>;
     /**
-     * Enable multicast Storm Control for the port profile. Defaults to `false`.
+     * Enable multicast Storm Control for the port profile.
      */
-    readonly stormctrlMcastEnabled: pulumi.Output<boolean | undefined>;
+    readonly stormctrlMcastEnabled: pulumi.Output<boolean>;
     /**
      * The multicast Storm Control level for the port profile. Can be between 0 and 100.
      */
@@ -128,13 +128,13 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly stormctrlMcastRate: pulumi.Output<number | undefined>;
     /**
-     * The type of Storm Control to use for the port profile. Can be one of `level` or `rate`.
+     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
      */
     readonly stormctrlType: pulumi.Output<string | undefined>;
     /**
-     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile.
      */
-    readonly stormctrlUcastEnabled: pulumi.Output<boolean | undefined>;
+    readonly stormctrlUcastEnabled: pulumi.Output<boolean>;
     /**
      * The unknown unicast Storm Control level for the port profile. Can be between 0 and 100.
      */
@@ -144,15 +144,15 @@ export declare class PortProfile extends pulumi.CustomResource {
      */
     readonly stormctrlUcastRate: pulumi.Output<number | undefined>;
     /**
-     * Enable spanning tree protocol on the port profile. Defaults to `true`.
+     * Enable Spanning Tree Protocol (STP) for the port profile.
      */
     readonly stpPortMode: pulumi.Output<boolean | undefined>;
     /**
      * The IDs of networks to tag traffic with for the port profile.
      */
-    readonly taggedVlanMgmt: pulumi.Output<string | undefined>;
+    readonly taggedNetworkconfIds: pulumi.Output<string[] | undefined>;
     /**
-     * The ID of network to use as the voice network on the port profile.
+     * The ID of network to use for voice traffic for the port profile.
      */
     readonly voiceNetworkconfId: pulumi.Output<string | undefined>;
     /**
@@ -169,15 +169,15 @@ export declare class PortProfile extends pulumi.CustomResource {
  */
 export interface PortProfileState {
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
      */
     autoneg?: pulumi.Input<boolean>;
     /**
-     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
      */
     dot1xCtrl?: pulumi.Input<string>;
     /**
-     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535
      */
     dot1xIdleTimeout?: pulumi.Input<number>;
     /**
@@ -185,23 +185,23 @@ export interface PortProfileState {
      */
     egressRateLimitKbps?: pulumi.Input<number>;
     /**
-     * Enable egress rate limiting for the port profile. Defaults to `false`.
+     * Enable egress rate limiting for the port profile.
      */
     egressRateLimitKbpsEnabled?: pulumi.Input<boolean>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
      */
     forward?: pulumi.Input<string>;
     /**
-     * Enable full duplex for the port profile. Defaults to `false`.
+     * Enable full duplex for the port profile.
      */
     fullDuplex?: pulumi.Input<boolean>;
     /**
-     * Enable port isolation for the port profile. Defaults to `false`.
+     * Enable port isolation for the port profile.
      */
     isolation?: pulumi.Input<boolean>;
     /**
-     * Enable LLDP-MED for the port profile. Defaults to `true`.
+     * Enable LLDP-MED for the port profile.
      */
     lldpmedEnabled?: pulumi.Input<boolean>;
     /**
@@ -217,7 +217,7 @@ export interface PortProfileState {
      */
     nativeNetworkconfId?: pulumi.Input<string>;
     /**
-     * The operation mode for the port profile. Can only be `switch` Defaults to `switch`.
+     * The operation mode for the port profile. Can only be `switch`
      */
     opMode?: pulumi.Input<string>;
     /**
@@ -225,7 +225,7 @@ export interface PortProfileState {
      */
     poeMode?: pulumi.Input<string>;
     /**
-     * Enable port security for the port profile. Defaults to `false`.
+     * Enable port security for the port profile.
      */
     portSecurityEnabled?: pulumi.Input<boolean>;
     /**
@@ -257,7 +257,7 @@ export interface PortProfileState {
      */
     speed?: pulumi.Input<number>;
     /**
-     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile.
      */
     stormctrlBcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -269,7 +269,7 @@ export interface PortProfileState {
      */
     stormctrlBcastRate?: pulumi.Input<number>;
     /**
-     * Enable multicast Storm Control for the port profile. Defaults to `false`.
+     * Enable multicast Storm Control for the port profile.
      */
     stormctrlMcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -281,11 +281,11 @@ export interface PortProfileState {
      */
     stormctrlMcastRate?: pulumi.Input<number>;
     /**
-     * The type of Storm Control to use for the port profile. Can be one of `level` or `rate`.
+     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
      */
     stormctrlType?: pulumi.Input<string>;
     /**
-     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile.
      */
     stormctrlUcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -297,15 +297,15 @@ export interface PortProfileState {
      */
     stormctrlUcastRate?: pulumi.Input<number>;
     /**
-     * Enable spanning tree protocol on the port profile. Defaults to `true`.
+     * Enable Spanning Tree Protocol (STP) for the port profile.
      */
     stpPortMode?: pulumi.Input<boolean>;
     /**
      * The IDs of networks to tag traffic with for the port profile.
      */
-    taggedVlanMgmt?: pulumi.Input<string>;
+    taggedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * The ID of network to use as the voice network on the port profile.
+     * The ID of network to use for voice traffic for the port profile.
      */
     voiceNetworkconfId?: pulumi.Input<string>;
 }
@@ -314,15 +314,15 @@ export interface PortProfileState {
  */
 export interface PortProfileArgs {
     /**
-     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`. Defaults to `true`.
+     * Enable link auto negotiation for the port profile. When set to `true` this overrides `speed`.
      */
     autoneg?: pulumi.Input<boolean>;
     /**
-     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`. Defaults to `force_authorized`.
+     * The type of 802.1X control to use. Can be `auto`, `force_authorized`, `force_unauthorized`, `mac_based` or `multi_host`.
      */
     dot1xCtrl?: pulumi.Input<string>;
     /**
-     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535 Defaults to `300`.
+     * The timeout, in seconds, to use when using the MAC Based 802.1X control. Can be between 0 and 65535
      */
     dot1xIdleTimeout?: pulumi.Input<number>;
     /**
@@ -330,23 +330,23 @@ export interface PortProfileArgs {
      */
     egressRateLimitKbps?: pulumi.Input<number>;
     /**
-     * Enable egress rate limiting for the port profile. Defaults to `false`.
+     * Enable egress rate limiting for the port profile.
      */
     egressRateLimitKbpsEnabled?: pulumi.Input<boolean>;
     /**
-     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`. Defaults to `native`.
+     * The type forwarding to use for the port profile. Can be `all`, `native`, `customize` or `disabled`.
      */
     forward?: pulumi.Input<string>;
     /**
-     * Enable full duplex for the port profile. Defaults to `false`.
+     * Enable full duplex for the port profile.
      */
     fullDuplex?: pulumi.Input<boolean>;
     /**
-     * Enable port isolation for the port profile. Defaults to `false`.
+     * Enable port isolation for the port profile.
      */
     isolation?: pulumi.Input<boolean>;
     /**
-     * Enable LLDP-MED for the port profile. Defaults to `true`.
+     * Enable LLDP-MED for the port profile.
      */
     lldpmedEnabled?: pulumi.Input<boolean>;
     /**
@@ -362,7 +362,7 @@ export interface PortProfileArgs {
      */
     nativeNetworkconfId?: pulumi.Input<string>;
     /**
-     * The operation mode for the port profile. Can only be `switch` Defaults to `switch`.
+     * The operation mode for the port profile. Can only be `switch`
      */
     opMode?: pulumi.Input<string>;
     /**
@@ -370,7 +370,7 @@ export interface PortProfileArgs {
      */
     poeMode?: pulumi.Input<string>;
     /**
-     * Enable port security for the port profile. Defaults to `false`.
+     * Enable port security for the port profile.
      */
     portSecurityEnabled?: pulumi.Input<boolean>;
     /**
@@ -402,7 +402,7 @@ export interface PortProfileArgs {
      */
     speed?: pulumi.Input<number>;
     /**
-     * Enable broadcast Storm Control for the port profile. Defaults to `false`.
+     * Enable broadcast Storm Control for the port profile.
      */
     stormctrlBcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -414,7 +414,7 @@ export interface PortProfileArgs {
      */
     stormctrlBcastRate?: pulumi.Input<number>;
     /**
-     * Enable multicast Storm Control for the port profile. Defaults to `false`.
+     * Enable multicast Storm Control for the port profile.
      */
     stormctrlMcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -426,11 +426,11 @@ export interface PortProfileArgs {
      */
     stormctrlMcastRate?: pulumi.Input<number>;
     /**
-     * The type of Storm Control to use for the port profile. Can be one of `level` or `rate`.
+     * The type of Storm Control to use for the port profile. Can be `level` or `rate`.
      */
     stormctrlType?: pulumi.Input<string>;
     /**
-     * Enable unknown unicast Storm Control for the port profile. Defaults to `false`.
+     * Enable unknown unicast Storm Control for the port profile.
      */
     stormctrlUcastEnabled?: pulumi.Input<boolean>;
     /**
@@ -442,15 +442,15 @@ export interface PortProfileArgs {
      */
     stormctrlUcastRate?: pulumi.Input<number>;
     /**
-     * Enable spanning tree protocol on the port profile. Defaults to `true`.
+     * Enable Spanning Tree Protocol (STP) for the port profile.
      */
     stpPortMode?: pulumi.Input<boolean>;
     /**
      * The IDs of networks to tag traffic with for the port profile.
      */
-    taggedVlanMgmt?: pulumi.Input<string>;
+    taggedNetworkconfIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * The ID of network to use as the voice network on the port profile.
+     * The ID of network to use for voice traffic for the port profile.
      */
     voiceNetworkconfId?: pulumi.Input<string>;
 }

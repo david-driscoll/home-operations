@@ -7,7 +7,7 @@ interface ScopeMappingDefinition {
 }
 
 export class PropertyMappings extends pulumi.ComponentResource {
-  private readonly scopeMappings = new Map<string, authentik.ScopeMapping>();
+  private readonly scopeMappings = new Map<string, authentik.PropertyMappingProviderScope>();
   private readonly defaultScopeMappings = new Map<string, pulumi.Output<authentik.GetPropertyMappingProviderScopeResult>>();
 
   private readonly oauthScopes: Record<string, ScopeMappingDefinition> = {
@@ -66,7 +66,7 @@ else:
 
     // Create custom scope mappings
     for (const [scopeName, scopeDef] of Object.entries(this.oauthScopes)) {
-      const mapping = new authentik.ScopeMapping(
+      const mapping = new authentik.PropertyMappingProviderScope(
         scopeName,
         {
           scopeName,
@@ -81,7 +81,7 @@ else:
 
   public get allScopeMappings() {
     return Array.from(this.scopeMappings.entries())
-      .map(([key, output]) => [key, output.scopeMappingId] as const)
+      .map(([key, output]) => [key, output.propertyMappingProviderScopeId] as const)
       .concat(Array.from(this.defaultScopeMappings.entries()).map(([key, output]) => [key.replace(/\//g, "~1"), output.apply((m) => m.id)] as const));
   }
 

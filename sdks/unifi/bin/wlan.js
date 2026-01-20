@@ -34,18 +34,20 @@ class Wlan extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState;
             resourceInputs["apGroupIds"] = state?.apGroupIds;
+            resourceInputs["apGroupMode"] = state?.apGroupMode;
             resourceInputs["bssTransition"] = state?.bssTransition;
+            resourceInputs["enabled"] = state?.enabled;
             resourceInputs["fastRoamingEnabled"] = state?.fastRoamingEnabled;
             resourceInputs["hideSsid"] = state?.hideSsid;
             resourceInputs["isGuest"] = state?.isGuest;
             resourceInputs["l2Isolation"] = state?.l2Isolation;
-            resourceInputs["macFilterEnabled"] = state?.macFilterEnabled;
-            resourceInputs["macFilterLists"] = state?.macFilterLists;
-            resourceInputs["macFilterPolicy"] = state?.macFilterPolicy;
+            resourceInputs["macFilter"] = state?.macFilter;
             resourceInputs["minimumDataRate2gKbps"] = state?.minimumDataRate2gKbps;
             resourceInputs["minimumDataRate5gKbps"] = state?.minimumDataRate5gKbps;
+            resourceInputs["minrateSettingPreference"] = state?.minrateSettingPreference;
             resourceInputs["multicastEnhance"] = state?.multicastEnhance;
             resourceInputs["name"] = state?.name;
+            resourceInputs["nasIdentifierType"] = state?.nasIdentifierType;
             resourceInputs["networkId"] = state?.networkId;
             resourceInputs["no2ghzOui"] = state?.no2ghzOui;
             resourceInputs["passphrase"] = state?.passphrase;
@@ -57,7 +59,10 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["site"] = state?.site;
             resourceInputs["uapsd"] = state?.uapsd;
             resourceInputs["userGroupId"] = state?.userGroupId;
+            resourceInputs["vlan"] = state?.vlan;
+            resourceInputs["vlanEnabled"] = state?.vlanEnabled;
             resourceInputs["wlanBand"] = state?.wlanBand;
+            resourceInputs["wlanBands"] = state?.wlanBands;
             resourceInputs["wpa3Support"] = state?.wpa3Support;
             resourceInputs["wpa3Transition"] = state?.wpa3Transition;
         }
@@ -70,18 +75,20 @@ class Wlan extends pulumi.CustomResource {
                 throw new Error("Missing required property 'userGroupId'");
             }
             resourceInputs["apGroupIds"] = args?.apGroupIds;
+            resourceInputs["apGroupMode"] = args?.apGroupMode;
             resourceInputs["bssTransition"] = args?.bssTransition;
+            resourceInputs["enabled"] = args?.enabled;
             resourceInputs["fastRoamingEnabled"] = args?.fastRoamingEnabled;
             resourceInputs["hideSsid"] = args?.hideSsid;
             resourceInputs["isGuest"] = args?.isGuest;
             resourceInputs["l2Isolation"] = args?.l2Isolation;
-            resourceInputs["macFilterEnabled"] = args?.macFilterEnabled;
-            resourceInputs["macFilterLists"] = args?.macFilterLists;
-            resourceInputs["macFilterPolicy"] = args?.macFilterPolicy;
+            resourceInputs["macFilter"] = args?.macFilter;
             resourceInputs["minimumDataRate2gKbps"] = args?.minimumDataRate2gKbps;
             resourceInputs["minimumDataRate5gKbps"] = args?.minimumDataRate5gKbps;
+            resourceInputs["minrateSettingPreference"] = args?.minrateSettingPreference;
             resourceInputs["multicastEnhance"] = args?.multicastEnhance;
             resourceInputs["name"] = args?.name;
+            resourceInputs["nasIdentifierType"] = args?.nasIdentifierType;
             resourceInputs["networkId"] = args?.networkId;
             resourceInputs["no2ghzOui"] = args?.no2ghzOui;
             resourceInputs["passphrase"] = args?.passphrase ? pulumi.secret(args.passphrase) : undefined;
@@ -93,7 +100,10 @@ class Wlan extends pulumi.CustomResource {
             resourceInputs["site"] = args?.site;
             resourceInputs["uapsd"] = args?.uapsd;
             resourceInputs["userGroupId"] = args?.userGroupId;
+            resourceInputs["vlan"] = args?.vlan;
+            resourceInputs["vlanEnabled"] = args?.vlanEnabled;
             resourceInputs["wlanBand"] = args?.wlanBand;
+            resourceInputs["wlanBands"] = args?.wlanBands;
             resourceInputs["wpa3Support"] = args?.wpa3Support;
             resourceInputs["wpa3Transition"] = args?.wpa3Transition;
         }

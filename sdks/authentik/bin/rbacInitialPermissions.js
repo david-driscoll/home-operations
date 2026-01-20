@@ -33,7 +33,6 @@ class RbacInitialPermissions extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState;
-            resourceInputs["mode"] = state?.mode;
             resourceInputs["name"] = state?.name;
             resourceInputs["permissions"] = state?.permissions;
             resourceInputs["rbacInitialPermissionsId"] = state?.rbacInitialPermissionsId;
@@ -41,16 +40,12 @@ class RbacInitialPermissions extends pulumi.CustomResource {
         }
         else {
             const args = argsOrState;
-            if (args?.mode === undefined && !opts.urn) {
-                throw new Error("Missing required property 'mode'");
-            }
             if (args?.permissions === undefined && !opts.urn) {
                 throw new Error("Missing required property 'permissions'");
             }
             if (args?.role === undefined && !opts.urn) {
                 throw new Error("Missing required property 'role'");
             }
-            resourceInputs["mode"] = args?.mode;
             resourceInputs["name"] = args?.name;
             resourceInputs["permissions"] = args?.permissions;
             resourceInputs["rbacInitialPermissionsId"] = args?.rbacInitialPermissionsId;

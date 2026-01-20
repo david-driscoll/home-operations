@@ -45,11 +45,11 @@ export interface BucketDefaultServerSideEncryption {
 
 export interface BucketFileLockConfiguration {
     /**
-     * Default retention settings for files uploaded to this bucket
+     * Default retention settings for files uploaded to this bucket.
      */
     defaultRetention?: outputs.BucketFileLockConfigurationDefaultRetention;
     /**
-     * If present, the boolean value specifies whether bucket is File Lock-enabled. Defaults to `false`.
+     * If present, the boolean value specifies whether bucket is File Lock-enabled. Defaults to `false`. **Modifying this attribute will force creation of a new resource.**
      */
     isFileLockEnabled?: boolean;
 }
@@ -60,18 +60,18 @@ export interface BucketFileLockConfigurationDefaultRetention {
      */
     mode: string;
     /**
-     * How long for to make files immutable
+     * How long for to make files immutable.
      */
     period?: outputs.BucketFileLockConfigurationDefaultRetentionPeriod;
 }
 
 export interface BucketFileLockConfigurationDefaultRetentionPeriod {
     /**
-     * Duration
+     * Duration.
      */
     duration: number;
     /**
-     * Unit for duration (days|years)
+     * Unit for duration (days|years).
      */
     unit: string;
 }
@@ -93,11 +93,11 @@ export interface BucketFileVersionServerSideEncryption {
 
 export interface BucketFileVersionServerSideEncryptionKey {
     /**
-     * Key identifier stored in file info metadata
+     * Key identifier stored in file info metadata.
      */
     keyId?: string;
     /**
-     * Secret key value, in standard Base 64 encoding (RFC 4648)
+     * Secret key value, in standard Base 64 encoding (RFC 4648).
      */
     secretB64?: string;
 }
@@ -107,6 +107,10 @@ export interface BucketLifecycleRule {
      * It says how long to keep file versions that are not the current version.
      */
     daysFromHidingToDeleting?: number;
+    /**
+     * It cancels any unfinished large file versions after a given number of days.
+     */
+    daysFromStartingToCancelingUnfinishedLargeFiles?: number;
     /**
      * It causes files to be hidden automatically after the given number of days.
      */
@@ -123,7 +127,7 @@ export interface BucketNotificationRulesNotificationRule {
      */
     eventTypes: string[];
     /**
-     * Whether the event notification rule is enabled.
+     * Whether the event notification rule is enabled. Defaults to `true`.
      */
     isEnabled?: boolean;
     /**
@@ -181,8 +185,14 @@ export interface BucketNotificationRulesNotificationRuleTargetConfigurationCusto
 export interface GetAccountInfoAllowed {
     bucketId: string;
     bucketName: string;
+    buckets: outputs.GetAccountInfoAllowedBucket[];
     capabilities: string[];
     namePrefix: string;
+}
+
+export interface GetAccountInfoAllowedBucket {
+    id: string;
+    name: string;
 }
 
 export interface GetBucketCorsRule {
@@ -254,6 +264,7 @@ export interface GetBucketFilesFileVersionServerSideEncryption {
 
 export interface GetBucketLifecycleRule {
     daysFromHidingToDeleting: number;
+    daysFromStartingToCancelingUnfinishedLargeFiles: number;
     daysFromUploadingToHiding: number;
     fileNamePrefix: string;
 }

@@ -28,7 +28,6 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
     }[] | undefined>;
     readonly authenticationFlow: pulumi.Output<string | undefined>;
     readonly authorizationFlow: pulumi.Output<string>;
-    readonly backchannelLogoutUri: pulumi.Output<string | undefined>;
     readonly clientId: pulumi.Output<string>;
     /**
      * Generated.
@@ -66,9 +65,21 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     readonly jwtFederationSources: pulumi.Output<string[] | undefined>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    readonly logoutMethod: pulumi.Output<string | undefined>;
+    readonly logoutUri: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
     readonly providerOauth2Id: pulumi.Output<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    readonly refreshTokenThreshold: pulumi.Output<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
@@ -111,7 +122,6 @@ export interface ProviderOauth2State {
     }>[]>;
     authenticationFlow?: pulumi.Input<string>;
     authorizationFlow?: pulumi.Input<string>;
-    backchannelLogoutUri?: pulumi.Input<string>;
     clientId?: pulumi.Input<string>;
     /**
      * Generated.
@@ -149,9 +159,21 @@ export interface ProviderOauth2State {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    logoutMethod?: pulumi.Input<string>;
+    logoutUri?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     providerOauth2Id?: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    refreshTokenThreshold?: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
@@ -186,7 +208,6 @@ export interface ProviderOauth2Args {
     }>[]>;
     authenticationFlow?: pulumi.Input<string>;
     authorizationFlow: pulumi.Input<string>;
-    backchannelLogoutUri?: pulumi.Input<string>;
     clientId: pulumi.Input<string>;
     /**
      * Generated.
@@ -224,9 +245,21 @@ export interface ProviderOauth2Args {
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
     jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Allowed values:
+     *   - `backchannel`
+     *   - `frontchannel`
+     *  Defaults to `backchannel`.
+     */
+    logoutMethod?: pulumi.Input<string>;
+    logoutUri?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     providerOauth2Id?: pulumi.Input<string>;
+    /**
+     * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
+     */
+    refreshTokenThreshold?: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */

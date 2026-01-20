@@ -6,7 +6,6 @@ exports.getRadiusProfileOutput = exports.getRadiusProfile = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 function getRadiusProfile(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getRadiusProfile:getRadiusProfile", {
         "name": args.name,
@@ -15,7 +14,6 @@ function getRadiusProfile(args, opts) {
 }
 exports.getRadiusProfile = getRadiusProfile;
 function getRadiusProfileOutput(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getRadiusProfile:getRadiusProfile", {
         "name": args.name,

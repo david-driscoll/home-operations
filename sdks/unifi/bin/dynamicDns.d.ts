@@ -20,15 +20,15 @@ export declare class DynamicDns extends pulumi.CustomResource {
      */
     readonly hostName: pulumi.Output<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
      */
-    readonly interface: pulumi.Output<string | undefined>;
+    readonly interface: pulumi.Output<string>;
     /**
-     * The server for the dynamic DNS service.
+     * The login for the dynamic DNS service.
      */
     readonly login: pulumi.Output<string | undefined>;
     /**
-     * The server for the dynamic DNS service.
+     * The password for the dynamic DNS service.
      */
     readonly password: pulumi.Output<string | undefined>;
     /**
@@ -40,7 +40,7 @@ export declare class DynamicDns extends pulumi.CustomResource {
      */
     readonly service: pulumi.Output<string>;
     /**
-     * The name of the site to associate the dynamic DNS with.
+     * The name of the site to associate with the dynamic DNS resource.
      */
     readonly site: pulumi.Output<string>;
     /**
@@ -61,15 +61,15 @@ export interface DynamicDnsState {
      */
     hostName?: pulumi.Input<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
      */
     interface?: pulumi.Input<string>;
     /**
-     * The server for the dynamic DNS service.
+     * The login for the dynamic DNS service.
      */
     login?: pulumi.Input<string>;
     /**
-     * The server for the dynamic DNS service.
+     * The password for the dynamic DNS service.
      */
     password?: pulumi.Input<string>;
     /**
@@ -81,7 +81,7 @@ export interface DynamicDnsState {
      */
     service?: pulumi.Input<string>;
     /**
-     * The name of the site to associate the dynamic DNS with.
+     * The name of the site to associate with the dynamic DNS resource.
      */
     site?: pulumi.Input<string>;
 }
@@ -94,15 +94,15 @@ export interface DynamicDnsArgs {
      */
     hostName: pulumi.Input<string>;
     /**
-     * The interface for the dynamic DNS. Can be `wan` or `wan2`. Defaults to `wan`.
+     * The interface for the dynamic DNS. Can be `wan` or `wan2`.
      */
     interface?: pulumi.Input<string>;
     /**
-     * The server for the dynamic DNS service.
+     * The login for the dynamic DNS service.
      */
     login?: pulumi.Input<string>;
     /**
-     * The server for the dynamic DNS service.
+     * The password for the dynamic DNS service.
      */
     password?: pulumi.Input<string>;
     /**
@@ -114,7 +114,7 @@ export interface DynamicDnsArgs {
      */
     service: pulumi.Input<string>;
     /**
-     * The name of the site to associate the dynamic DNS with.
+     * The name of the site to associate with the dynamic DNS resource.
      */
     site?: pulumi.Input<string>;
 }

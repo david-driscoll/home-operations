@@ -16,33 +16,143 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.config = exports.S3Endpoint = exports.Datastore = void 0;
+exports.WebhookNotification = exports.VerifyJob = exports.SyncJob = exports.SmtpNotification = exports.SendmailNotification = exports.S3Endpoint = exports.Remote = exports.PruneJob = exports.NotificationMatcher = exports.MetricsServer = exports.GotifyNotification = exports.getVerifyJobsOutput = exports.getVerifyJobs = exports.getVerifyJobOutput = exports.getVerifyJob = exports.getSyncJobsOutput = exports.getSyncJobs = exports.getSyncJobOutput = exports.getSyncJob = exports.getS3EndpointsOutput = exports.getS3Endpoints = exports.getS3EndpointOutput = exports.getS3Endpoint = exports.getRemoteStoresOutput = exports.getRemoteStores = exports.getRemoteNamespacesOutput = exports.getRemoteNamespaces = exports.getRemoteGroupsOutput = exports.getRemoteGroups = exports.getPruneJobsOutput = exports.getPruneJobs = exports.getPruneJobOutput = exports.getPruneJob = exports.getNotificationMatchersOutput = exports.getNotificationMatchers = exports.getNotificationMatcherOutput = exports.getNotificationMatcher = exports.getNotificationEndpointsOutput = exports.getNotificationEndpoints = exports.getNotificationEndpointOutput = exports.getNotificationEndpoint = exports.getMetricsServersOutput = exports.getMetricsServers = exports.getMetricsServerOutput = exports.getMetricsServer = exports.getDatastoresOutput = exports.getDatastores = exports.getDatastoreOutput = exports.getDatastore = exports.Datastore = void 0;
+exports.types = exports.config = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 exports.Datastore = null;
 utilities.lazyLoad(exports, ["Datastore"], () => require("./datastore"));
+exports.getDatastore = null;
+exports.getDatastoreOutput = null;
+utilities.lazyLoad(exports, ["getDatastore", "getDatastoreOutput"], () => require("./getDatastore"));
+exports.getDatastores = null;
+exports.getDatastoresOutput = null;
+utilities.lazyLoad(exports, ["getDatastores", "getDatastoresOutput"], () => require("./getDatastores"));
+exports.getMetricsServer = null;
+exports.getMetricsServerOutput = null;
+utilities.lazyLoad(exports, ["getMetricsServer", "getMetricsServerOutput"], () => require("./getMetricsServer"));
+exports.getMetricsServers = null;
+exports.getMetricsServersOutput = null;
+utilities.lazyLoad(exports, ["getMetricsServers", "getMetricsServersOutput"], () => require("./getMetricsServers"));
+exports.getNotificationEndpoint = null;
+exports.getNotificationEndpointOutput = null;
+utilities.lazyLoad(exports, ["getNotificationEndpoint", "getNotificationEndpointOutput"], () => require("./getNotificationEndpoint"));
+exports.getNotificationEndpoints = null;
+exports.getNotificationEndpointsOutput = null;
+utilities.lazyLoad(exports, ["getNotificationEndpoints", "getNotificationEndpointsOutput"], () => require("./getNotificationEndpoints"));
+exports.getNotificationMatcher = null;
+exports.getNotificationMatcherOutput = null;
+utilities.lazyLoad(exports, ["getNotificationMatcher", "getNotificationMatcherOutput"], () => require("./getNotificationMatcher"));
+exports.getNotificationMatchers = null;
+exports.getNotificationMatchersOutput = null;
+utilities.lazyLoad(exports, ["getNotificationMatchers", "getNotificationMatchersOutput"], () => require("./getNotificationMatchers"));
+exports.getPruneJob = null;
+exports.getPruneJobOutput = null;
+utilities.lazyLoad(exports, ["getPruneJob", "getPruneJobOutput"], () => require("./getPruneJob"));
+exports.getPruneJobs = null;
+exports.getPruneJobsOutput = null;
+utilities.lazyLoad(exports, ["getPruneJobs", "getPruneJobsOutput"], () => require("./getPruneJobs"));
+exports.getRemoteGroups = null;
+exports.getRemoteGroupsOutput = null;
+utilities.lazyLoad(exports, ["getRemoteGroups", "getRemoteGroupsOutput"], () => require("./getRemoteGroups"));
+exports.getRemoteNamespaces = null;
+exports.getRemoteNamespacesOutput = null;
+utilities.lazyLoad(exports, ["getRemoteNamespaces", "getRemoteNamespacesOutput"], () => require("./getRemoteNamespaces"));
+exports.getRemoteStores = null;
+exports.getRemoteStoresOutput = null;
+utilities.lazyLoad(exports, ["getRemoteStores", "getRemoteStoresOutput"], () => require("./getRemoteStores"));
+exports.getS3Endpoint = null;
+exports.getS3EndpointOutput = null;
+utilities.lazyLoad(exports, ["getS3Endpoint", "getS3EndpointOutput"], () => require("./getS3Endpoint"));
+exports.getS3Endpoints = null;
+exports.getS3EndpointsOutput = null;
+utilities.lazyLoad(exports, ["getS3Endpoints", "getS3EndpointsOutput"], () => require("./getS3Endpoints"));
+exports.getSyncJob = null;
+exports.getSyncJobOutput = null;
+utilities.lazyLoad(exports, ["getSyncJob", "getSyncJobOutput"], () => require("./getSyncJob"));
+exports.getSyncJobs = null;
+exports.getSyncJobsOutput = null;
+utilities.lazyLoad(exports, ["getSyncJobs", "getSyncJobsOutput"], () => require("./getSyncJobs"));
+exports.getVerifyJob = null;
+exports.getVerifyJobOutput = null;
+utilities.lazyLoad(exports, ["getVerifyJob", "getVerifyJobOutput"], () => require("./getVerifyJob"));
+exports.getVerifyJobs = null;
+exports.getVerifyJobsOutput = null;
+utilities.lazyLoad(exports, ["getVerifyJobs", "getVerifyJobsOutput"], () => require("./getVerifyJobs"));
+exports.GotifyNotification = null;
+utilities.lazyLoad(exports, ["GotifyNotification"], () => require("./gotifyNotification"));
+exports.MetricsServer = null;
+utilities.lazyLoad(exports, ["MetricsServer"], () => require("./metricsServer"));
+exports.NotificationMatcher = null;
+utilities.lazyLoad(exports, ["NotificationMatcher"], () => require("./notificationMatcher"));
 __exportStar(require("./provider"), exports);
 const provider_1 = require("./provider");
+exports.PruneJob = null;
+utilities.lazyLoad(exports, ["PruneJob"], () => require("./pruneJob"));
+exports.Remote = null;
+utilities.lazyLoad(exports, ["Remote"], () => require("./remote"));
 exports.S3Endpoint = null;
 utilities.lazyLoad(exports, ["S3Endpoint"], () => require("./s3endpoint"));
+exports.SendmailNotification = null;
+utilities.lazyLoad(exports, ["SendmailNotification"], () => require("./sendmailNotification"));
+exports.SmtpNotification = null;
+utilities.lazyLoad(exports, ["SmtpNotification"], () => require("./smtpNotification"));
+exports.SyncJob = null;
+utilities.lazyLoad(exports, ["SyncJob"], () => require("./syncJob"));
+exports.VerifyJob = null;
+utilities.lazyLoad(exports, ["VerifyJob"], () => require("./verifyJob"));
+exports.WebhookNotification = null;
+utilities.lazyLoad(exports, ["WebhookNotification"], () => require("./webhookNotification"));
 // Export sub-modules:
 const config = require("./config");
 exports.config = config;
+const types = require("./types");
+exports.types = types;
 const _module = {
     version: utilities.getVersion(),
     construct: (name, type, urn) => {
         switch (type) {
             case "pbs:index/datastore:Datastore":
                 return new exports.Datastore(name, undefined, { urn });
+            case "pbs:index/gotifyNotification:GotifyNotification":
+                return new exports.GotifyNotification(name, undefined, { urn });
+            case "pbs:index/metricsServer:MetricsServer":
+                return new exports.MetricsServer(name, undefined, { urn });
+            case "pbs:index/notificationMatcher:NotificationMatcher":
+                return new exports.NotificationMatcher(name, undefined, { urn });
+            case "pbs:index/pruneJob:PruneJob":
+                return new exports.PruneJob(name, undefined, { urn });
+            case "pbs:index/remote:Remote":
+                return new exports.Remote(name, undefined, { urn });
             case "pbs:index/s3Endpoint:S3Endpoint":
                 return new exports.S3Endpoint(name, undefined, { urn });
+            case "pbs:index/sendmailNotification:SendmailNotification":
+                return new exports.SendmailNotification(name, undefined, { urn });
+            case "pbs:index/smtpNotification:SmtpNotification":
+                return new exports.SmtpNotification(name, undefined, { urn });
+            case "pbs:index/syncJob:SyncJob":
+                return new exports.SyncJob(name, undefined, { urn });
+            case "pbs:index/verifyJob:VerifyJob":
+                return new exports.VerifyJob(name, undefined, { urn });
+            case "pbs:index/webhookNotification:WebhookNotification":
+                return new exports.WebhookNotification(name, undefined, { urn });
             default:
                 throw new Error(`unknown resource type ${type}`);
         }
     },
 };
 pulumi.runtime.registerResourceModule("pbs", "index/datastore", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/gotifyNotification", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/metricsServer", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/notificationMatcher", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/pruneJob", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/remote", _module);
 pulumi.runtime.registerResourceModule("pbs", "index/s3Endpoint", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/sendmailNotification", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/smtpNotification", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/syncJob", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/verifyJob", _module);
+pulumi.runtime.registerResourceModule("pbs", "index/webhookNotification", _module);
 pulumi.runtime.registerResourcePackage("pbs", {
     version: utilities.getVersion(),
     constructProvider: (name, type, urn) => {

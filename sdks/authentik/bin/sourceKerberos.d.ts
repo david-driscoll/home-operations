@@ -72,6 +72,14 @@ export declare class SourceKerberos extends pulumi.CustomResource {
      */
     readonly syncKeytab: pulumi.Output<string | undefined>;
     /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    readonly syncOutgoingTriggerMode: pulumi.Output<string | undefined>;
+    /**
      * Password to authenticate to kadmin for sync
      */
     readonly syncPassword: pulumi.Output<string | undefined>;
@@ -175,6 +183,14 @@ export interface SourceKerberosState {
      */
     syncKeytab?: pulumi.Input<string>;
     /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
+    /**
      * Password to authenticate to kadmin for sync
      */
     syncPassword?: pulumi.Input<string>;
@@ -269,6 +285,14 @@ export interface SourceKerberosArgs {
      * Keytab to authenticate to kadmin for sync. Must be base64-encoded or in the form TYPE:residual
      */
     syncKeytab?: pulumi.Input<string>;
+    /**
+     * Allowed values:
+     *   - `none`
+     *   - `immediate`
+     *   - `deferred_end`
+     *  Defaults to `deferred_end`.
+     */
+    syncOutgoingTriggerMode?: pulumi.Input<string>;
     /**
      * Password to authenticate to kadmin for sync
      */

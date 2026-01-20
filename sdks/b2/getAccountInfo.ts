@@ -25,12 +25,14 @@ export interface GetAccountInfoArgs {
  * A collection of values returned by getAccountInfo.
  */
 export interface GetAccountInfoResult {
+    readonly absoluteMinimumPartSize: number;
     readonly accountAuthToken: string;
     readonly accountId: string;
     readonly alloweds: outputs.GetAccountInfoAllowed[];
     readonly apiUrl: string;
     readonly downloadUrl: string;
     readonly id: string;
+    readonly recommendedPartSize: number;
     readonly s3ApiUrl: string;
 }
 export function getAccountInfoOutput(args?: GetAccountInfoOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetAccountInfoResult> {

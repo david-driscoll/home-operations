@@ -6,7 +6,6 @@ exports.getApGroupOutput = exports.getApGroup = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 function getApGroup(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getApGroup:getApGroup", {
         "name": args.name,
@@ -15,7 +14,6 @@ function getApGroup(args, opts) {
 }
 exports.getApGroup = getApGroup;
 function getApGroupOutput(args, opts) {
-    args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getApGroup:getApGroup", {
         "name": args.name,

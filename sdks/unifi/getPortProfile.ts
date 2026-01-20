@@ -4,8 +4,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-export function getPortProfile(args?: GetPortProfileArgs, opts?: pulumi.InvokeOptions): Promise<GetPortProfileResult> {
-    args = args || {};
+export function getPortProfile(args: GetPortProfileArgs, opts?: pulumi.InvokeOptions): Promise<GetPortProfileResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,
@@ -17,7 +16,7 @@ export function getPortProfile(args?: GetPortProfileArgs, opts?: pulumi.InvokeOp
  * A collection of arguments for invoking getPortProfile.
  */
 export interface GetPortProfileArgs {
-    name?: string;
+    name: string;
     site?: string;
 }
 
@@ -26,11 +25,10 @@ export interface GetPortProfileArgs {
  */
 export interface GetPortProfileResult {
     readonly id: string;
-    readonly name?: string;
+    readonly name: string;
     readonly site: string;
 }
-export function getPortProfileOutput(args?: GetPortProfileOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetPortProfileResult> {
-    args = args || {};
+export function getPortProfileOutput(args: GetPortProfileOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetPortProfileResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,
@@ -42,6 +40,6 @@ export function getPortProfileOutput(args?: GetPortProfileOutputArgs, opts?: pul
  * A collection of arguments for invoking getPortProfile.
  */
 export interface GetPortProfileOutputArgs {
-    name?: pulumi.Input<string>;
+    name: pulumi.Input<string>;
     site?: pulumi.Input<string>;
 }

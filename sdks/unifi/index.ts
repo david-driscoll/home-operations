@@ -10,6 +10,21 @@ export type Account = import("./account").Account;
 export const Account: typeof import("./account").Account = null as any;
 utilities.lazyLoad(exports, ["Account"], () => require("./account"));
 
+export { BgpArgs, BgpState } from "./bgp";
+export type Bgp = import("./bgp").Bgp;
+export const Bgp: typeof import("./bgp").Bgp = null as any;
+utilities.lazyLoad(exports, ["Bgp"], () => require("./bgp"));
+
+export { ClientArgs, ClientState } from "./client";
+export type Client = import("./client").Client;
+export const Client: typeof import("./client").Client = null as any;
+utilities.lazyLoad(exports, ["Client"], () => require("./client"));
+
+export { ClientGroupArgs, ClientGroupState } from "./clientGroup";
+export type ClientGroup = import("./clientGroup").ClientGroup;
+export const ClientGroup: typeof import("./clientGroup").ClientGroup = null as any;
+utilities.lazyLoad(exports, ["ClientGroup"], () => require("./clientGroup"));
+
 export { DeviceArgs, DeviceState } from "./device";
 export type Device = import("./device").Device;
 export const Device: typeof import("./device").Device = null as any;
@@ -45,6 +60,26 @@ export const getApGroup: typeof import("./getApGroup").getApGroup = null as any;
 export const getApGroupOutput: typeof import("./getApGroup").getApGroupOutput = null as any;
 utilities.lazyLoad(exports, ["getApGroup","getApGroupOutput"], () => require("./getApGroup"));
 
+export { GetClientArgs, GetClientResult, GetClientOutputArgs } from "./getClient";
+export const getClient: typeof import("./getClient").getClient = null as any;
+export const getClientOutput: typeof import("./getClient").getClientOutput = null as any;
+utilities.lazyLoad(exports, ["getClient","getClientOutput"], () => require("./getClient"));
+
+export { GetClientGroupArgs, GetClientGroupResult, GetClientGroupOutputArgs } from "./getClientGroup";
+export const getClientGroup: typeof import("./getClientGroup").getClientGroup = null as any;
+export const getClientGroupOutput: typeof import("./getClientGroup").getClientGroupOutput = null as any;
+utilities.lazyLoad(exports, ["getClientGroup","getClientGroupOutput"], () => require("./getClientGroup"));
+
+export { GetClientInfoArgs, GetClientInfoResult, GetClientInfoOutputArgs } from "./getClientInfo";
+export const getClientInfo: typeof import("./getClientInfo").getClientInfo = null as any;
+export const getClientInfoOutput: typeof import("./getClientInfo").getClientInfoOutput = null as any;
+utilities.lazyLoad(exports, ["getClientInfo","getClientInfoOutput"], () => require("./getClientInfo"));
+
+export { GetClientInfoListArgs, GetClientInfoListResult, GetClientInfoListOutputArgs } from "./getClientInfoList";
+export const getClientInfoList: typeof import("./getClientInfoList").getClientInfoList = null as any;
+export const getClientInfoListOutput: typeof import("./getClientInfoList").getClientInfoListOutput = null as any;
+utilities.lazyLoad(exports, ["getClientInfoList","getClientInfoListOutput"], () => require("./getClientInfoList"));
+
 export { GetDnsRecordArgs, GetDnsRecordResult, GetDnsRecordOutputArgs } from "./getDnsRecord";
 export const getDnsRecord: typeof import("./getDnsRecord").getDnsRecord = null as any;
 export const getDnsRecordOutput: typeof import("./getDnsRecord").getDnsRecordOutput = null as any;
@@ -64,16 +99,6 @@ export { GetRadiusProfileArgs, GetRadiusProfileResult, GetRadiusProfileOutputArg
 export const getRadiusProfile: typeof import("./getRadiusProfile").getRadiusProfile = null as any;
 export const getRadiusProfileOutput: typeof import("./getRadiusProfile").getRadiusProfileOutput = null as any;
 utilities.lazyLoad(exports, ["getRadiusProfile","getRadiusProfileOutput"], () => require("./getRadiusProfile"));
-
-export { GetUserArgs, GetUserResult, GetUserOutputArgs } from "./getUser";
-export const getUser: typeof import("./getUser").getUser = null as any;
-export const getUserOutput: typeof import("./getUser").getUserOutput = null as any;
-utilities.lazyLoad(exports, ["getUser","getUserOutput"], () => require("./getUser"));
-
-export { GetUserGroupArgs, GetUserGroupResult, GetUserGroupOutputArgs } from "./getUserGroup";
-export const getUserGroup: typeof import("./getUserGroup").getUserGroup = null as any;
-export const getUserGroupOutput: typeof import("./getUserGroup").getUserGroupOutput = null as any;
-utilities.lazyLoad(exports, ["getUserGroup","getUserGroupOutput"], () => require("./getUserGroup"));
 
 export { NetworkArgs, NetworkState } from "./network";
 export type Network = import("./network").Network;
@@ -98,20 +123,10 @@ export type RadiusProfile = import("./radiusProfile").RadiusProfile;
 export const RadiusProfile: typeof import("./radiusProfile").RadiusProfile = null as any;
 utilities.lazyLoad(exports, ["RadiusProfile"], () => require("./radiusProfile"));
 
-export { SettingMgmtArgs, SettingMgmtState } from "./settingMgmt";
-export type SettingMgmt = import("./settingMgmt").SettingMgmt;
-export const SettingMgmt: typeof import("./settingMgmt").SettingMgmt = null as any;
-utilities.lazyLoad(exports, ["SettingMgmt"], () => require("./settingMgmt"));
-
-export { SettingRadiusArgs, SettingRadiusState } from "./settingRadius";
-export type SettingRadius = import("./settingRadius").SettingRadius;
-export const SettingRadius: typeof import("./settingRadius").SettingRadius = null as any;
-utilities.lazyLoad(exports, ["SettingRadius"], () => require("./settingRadius"));
-
-export { SettingUsgArgs, SettingUsgState } from "./settingUsg";
-export type SettingUsg = import("./settingUsg").SettingUsg;
-export const SettingUsg: typeof import("./settingUsg").SettingUsg = null as any;
-utilities.lazyLoad(exports, ["SettingUsg"], () => require("./settingUsg"));
+export { SettingArgs, SettingState } from "./setting";
+export type Setting = import("./setting").Setting;
+export const Setting: typeof import("./setting").Setting = null as any;
+utilities.lazyLoad(exports, ["Setting"], () => require("./setting"));
 
 export { SiteArgs, SiteState } from "./site";
 export type Site = import("./site").Site;
@@ -123,15 +138,10 @@ export type StaticRoute = import("./staticRoute").StaticRoute;
 export const StaticRoute: typeof import("./staticRoute").StaticRoute = null as any;
 utilities.lazyLoad(exports, ["StaticRoute"], () => require("./staticRoute"));
 
-export { UserArgs, UserState } from "./user";
-export type User = import("./user").User;
-export const User: typeof import("./user").User = null as any;
-utilities.lazyLoad(exports, ["User"], () => require("./user"));
-
-export { UserGroupArgs, UserGroupState } from "./userGroup";
-export type UserGroup = import("./userGroup").UserGroup;
-export const UserGroup: typeof import("./userGroup").UserGroup = null as any;
-utilities.lazyLoad(exports, ["UserGroup"], () => require("./userGroup"));
+export { WanArgs, WanState } from "./wan";
+export type Wan = import("./wan").Wan;
+export const Wan: typeof import("./wan").Wan = null as any;
+utilities.lazyLoad(exports, ["Wan"], () => require("./wan"));
 
 export { WlanArgs, WlanState } from "./wlan";
 export type Wlan = import("./wlan").Wlan;
@@ -154,6 +164,12 @@ const _module = {
         switch (type) {
             case "unifi:index/account:Account":
                 return new Account(name, <any>undefined, { urn })
+            case "unifi:index/bgp:Bgp":
+                return new Bgp(name, <any>undefined, { urn })
+            case "unifi:index/client:Client":
+                return new Client(name, <any>undefined, { urn })
+            case "unifi:index/clientGroup:ClientGroup":
+                return new ClientGroup(name, <any>undefined, { urn })
             case "unifi:index/device:Device":
                 return new Device(name, <any>undefined, { urn })
             case "unifi:index/dnsRecord:DnsRecord":
@@ -172,20 +188,14 @@ const _module = {
                 return new PortProfile(name, <any>undefined, { urn })
             case "unifi:index/radiusProfile:RadiusProfile":
                 return new RadiusProfile(name, <any>undefined, { urn })
-            case "unifi:index/settingMgmt:SettingMgmt":
-                return new SettingMgmt(name, <any>undefined, { urn })
-            case "unifi:index/settingRadius:SettingRadius":
-                return new SettingRadius(name, <any>undefined, { urn })
-            case "unifi:index/settingUsg:SettingUsg":
-                return new SettingUsg(name, <any>undefined, { urn })
+            case "unifi:index/setting:Setting":
+                return new Setting(name, <any>undefined, { urn })
             case "unifi:index/site:Site":
                 return new Site(name, <any>undefined, { urn })
             case "unifi:index/staticRoute:StaticRoute":
                 return new StaticRoute(name, <any>undefined, { urn })
-            case "unifi:index/user:User":
-                return new User(name, <any>undefined, { urn })
-            case "unifi:index/userGroup:UserGroup":
-                return new UserGroup(name, <any>undefined, { urn })
+            case "unifi:index/wan:Wan":
+                return new Wan(name, <any>undefined, { urn })
             case "unifi:index/wlan:Wlan":
                 return new Wlan(name, <any>undefined, { urn })
             default:
@@ -194,6 +204,9 @@ const _module = {
     },
 };
 pulumi.runtime.registerResourceModule("unifi", "index/account", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/bgp", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/client", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/clientGroup", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/device", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module)
@@ -203,13 +216,10 @@ pulumi.runtime.registerResourceModule("unifi", "index/network", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portForward", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portProfile", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingMgmt", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingRadius", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/settingUsg", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/setting", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/user", _module)
-pulumi.runtime.registerResourceModule("unifi", "index/userGroup", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/wan", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/wlan", _module)
 pulumi.runtime.registerResourcePackage("unifi", {
     version: utilities.getVersion(),

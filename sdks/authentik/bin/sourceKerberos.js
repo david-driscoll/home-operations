@@ -49,6 +49,7 @@ class SourceKerberos extends pulumi.CustomResource {
             resourceInputs["spnegoServerName"] = state?.spnegoServerName;
             resourceInputs["syncCcache"] = state?.syncCcache;
             resourceInputs["syncKeytab"] = state?.syncKeytab;
+            resourceInputs["syncOutgoingTriggerMode"] = state?.syncOutgoingTriggerMode;
             resourceInputs["syncPassword"] = state?.syncPassword;
             resourceInputs["syncPrincipal"] = state?.syncPrincipal;
             resourceInputs["syncUsers"] = state?.syncUsers;
@@ -81,6 +82,7 @@ class SourceKerberos extends pulumi.CustomResource {
             resourceInputs["spnegoServerName"] = args?.spnegoServerName;
             resourceInputs["syncCcache"] = args?.syncCcache;
             resourceInputs["syncKeytab"] = args?.syncKeytab ? pulumi.secret(args.syncKeytab) : undefined;
+            resourceInputs["syncOutgoingTriggerMode"] = args?.syncOutgoingTriggerMode;
             resourceInputs["syncPassword"] = args?.syncPassword ? pulumi.secret(args.syncPassword) : undefined;
             resourceInputs["syncPrincipal"] = args?.syncPrincipal;
             resourceInputs["syncUsers"] = args?.syncUsers;

@@ -27,7 +27,7 @@ export declare class Flow extends pulumi.CustomResource {
      */
     readonly authentication: pulumi.Output<string | undefined>;
     /**
-     * Optional URL to an image which will be used as the background during the flow.
+     * Optional URL to an image which will be used as the background during the flow. Defaults to `/static/dist/assets/images/flow_background.jpg`.
      */
     readonly background: pulumi.Output<string | undefined>;
     /**
@@ -99,7 +99,7 @@ export interface FlowState {
      */
     authentication?: pulumi.Input<string>;
     /**
-     * Optional URL to an image which will be used as the background during the flow.
+     * Optional URL to an image which will be used as the background during the flow. Defaults to `/static/dist/assets/images/flow_background.jpg`.
      */
     background?: pulumi.Input<string>;
     /**
@@ -163,7 +163,7 @@ export interface FlowArgs {
      */
     authentication?: pulumi.Input<string>;
     /**
-     * Optional URL to an image which will be used as the background during the flow.
+     * Optional URL to an image which will be used as the background during the flow. Defaults to `/static/dist/assets/images/flow_background.jpg`.
      */
     background?: pulumi.Input<string>;
     /**

@@ -53,7 +53,7 @@ export declare class SourceOauth extends pulumi.CustomResource {
     readonly groupMatchingMode: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     readonly oidcJwks: pulumi.Output<string>;
     /**
@@ -66,6 +66,14 @@ export declare class SourceOauth extends pulumi.CustomResource {
     readonly oidcWellKnownUrl: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    readonly pkce: pulumi.Output<string | undefined>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -75,6 +83,10 @@ export declare class SourceOauth extends pulumi.CustomResource {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     readonly profileUrl: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly promoted: pulumi.Output<boolean | undefined>;
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
@@ -92,8 +104,10 @@ export declare class SourceOauth extends pulumi.CustomResource {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     readonly providerType: pulumi.Output<string>;
     /**
@@ -171,7 +185,7 @@ export interface SourceOauthState {
     groupMatchingMode?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     oidcJwks?: pulumi.Input<string>;
     /**
@@ -184,6 +198,14 @@ export interface SourceOauthState {
     oidcWellKnownUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    pkce?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -193,6 +215,10 @@ export interface SourceOauthState {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     profileUrl?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -210,8 +236,10 @@ export interface SourceOauthState {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     providerType?: pulumi.Input<string>;
     /**
@@ -277,7 +305,7 @@ export interface SourceOauthArgs {
     groupMatchingMode?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     /**
-     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+     * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
     oidcJwks?: pulumi.Input<string>;
     /**
@@ -290,6 +318,14 @@ export interface SourceOauthArgs {
     oidcWellKnownUrl?: pulumi.Input<string>;
     /**
      * Allowed values:
+     *   - `none`
+     *   - `plain`
+     *   - `S256`
+     *  Defaults to `none`.
+     */
+    pkce?: pulumi.Input<string>;
+    /**
+     * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
@@ -299,6 +335,10 @@ export interface SourceOauthArgs {
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
     profileUrl?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -316,8 +356,10 @@ export interface SourceOauthArgs {
      *   - `okta`
      *   - `patreon`
      *   - `reddit`
+     *   - `slack`
      *   - `twitch`
      *   - `twitter`
+     *   - `wechat`
      */
     providerType: pulumi.Input<string>;
     /**

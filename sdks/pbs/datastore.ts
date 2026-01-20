@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class Datastore extends pulumi.CustomResource {
@@ -33,39 +35,23 @@ export class Datastore extends pulumi.CustomResource {
     }
 
     /**
-     * Block size for ZFS datasets (e.g., `4K`, `8K`, `16K`).
+     * UUID of the filesystem partition for a removable datastore (e.g., `01234567-89ab-cdef-0123-456789abcdef`).
      */
-    declare public readonly blockSize: pulumi.Output<string | undefined>;
+    declare public readonly backingDevice: pulumi.Output<string | undefined>;
     /**
      * Description for the datastore.
      */
     declare public readonly comment: pulumi.Output<string | undefined>;
     /**
-     * Compression algorithm for ZFS. Valid values: `on`, `off`, `lz4`, `zstd`, `gzip`.
+     * Opaque digest returned by PBS for optimistic locking.
      */
-    declare public readonly compression: pulumi.Output<string | undefined>;
-    /**
-     * Content types allowed on this datastore. Valid values: `backup`, `ct`, `iso`, `vztmpl`.
-     */
-    declare public readonly contents: pulumi.Output<string[]>;
-    /**
-     * Create base directory if it doesn't exist. Only applicable for directory datastores.
-     */
-    declare public readonly createBasePath: pulumi.Output<boolean>;
+    declare public readonly digest: pulumi.Output<string>;
     /**
      * Whether the datastore is disabled.
      */
     declare public readonly disabled: pulumi.Output<boolean>;
     /**
-     * Domain for CIFS authentication. Optional for CIFS datastores.
-     */
-    declare public readonly domain: pulumi.Output<string | undefined>;
-    /**
-     * NFS export path. Required for NFS datastores.
-     */
-    declare public readonly export: pulumi.Output<string | undefined>;
-    /**
-     * Certificate fingerprint for secure connections (network datastores).
+     * Certificate fingerprint for secure connections (S3 datastores).
      */
     declare public readonly fingerprint: pulumi.Output<string | undefined>;
     /**
@@ -73,13 +59,45 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly gcSchedule: pulumi.Output<string | undefined>;
     /**
-     * Maximum number of backups per guest. Set to 0 for unlimited backups.
+     * Number of daily backups to keep when pruning.
      */
-    declare public readonly maxBackups: pulumi.Output<number | undefined>;
+    declare public readonly keepDaily: pulumi.Output<number | undefined>;
+    /**
+     * Number of hourly backups to keep when pruning.
+     */
+    declare public readonly keepHourly: pulumi.Output<number | undefined>;
+    /**
+     * Number of latest backups to keep when pruning.
+     */
+    declare public readonly keepLast: pulumi.Output<number | undefined>;
+    /**
+     * Number of monthly backups to keep when pruning.
+     */
+    declare public readonly keepMonthly: pulumi.Output<number | undefined>;
+    /**
+     * Number of weekly backups to keep when pruning.
+     */
+    declare public readonly keepWeekly: pulumi.Output<number | undefined>;
+    /**
+     * Number of yearly backups to keep when pruning.
+     */
+    declare public readonly keepYearly: pulumi.Output<number | undefined>;
+    /**
+     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     */
+    declare public readonly maintenanceMode: pulumi.Output<outputs.DatastoreMaintenanceMode | undefined>;
     /**
      * Unique identifier for the datastore.
      */
     declare public readonly name: pulumi.Output<string>;
+    /**
+     * Notification delivery mode. Valid values: `legacy-sendmail`, `notification-system`.
+     */
+    declare public readonly notificationMode: pulumi.Output<string | undefined>;
+    /**
+     * Per-job notification settings overriding datastore defaults.
+     */
+    declare public readonly notify: pulumi.Output<outputs.DatastoreNotify | undefined>;
     /**
      * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
      */
@@ -89,21 +107,27 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly notifyUser: pulumi.Output<string | undefined>;
     /**
-     * Mount options for network storage (e.g., `vers=3,soft`).
+     * Allow overwriting chunks that are currently in use.
      */
-    declare public readonly options: pulumi.Output<string | undefined>;
+    declare public readonly overwriteInUse: pulumi.Output<boolean | undefined>;
     /**
-     * Password for CIFS authentication. Optional for CIFS datastores.
-     */
-    declare public readonly password: pulumi.Output<string | undefined>;
-    /**
-     * Path to the datastore. Required for directory datastores, optional for others.
+     * Filesystem path to the datastore data. Required for directory datastores and used as the local cache directory for S3 datastores.
      */
     declare public readonly path: pulumi.Output<string | undefined>;
     /**
      * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     *
+     * @deprecated Deprecated
      */
     declare public readonly pruneSchedule: pulumi.Output<string | undefined>;
+    /**
+     * Set to `true` to manage a removable datastore backed by a device UUID.
+     */
+    declare public readonly removable: pulumi.Output<boolean>;
+    /**
+     * Reuse existing datastore chunks when possible.
+     */
+    declare public readonly reuseDatastore: pulumi.Output<boolean | undefined>;
     /**
      * S3 bucket name for S3 datastores. The bucket must be created beforehand.
      */
@@ -113,45 +137,19 @@ export class Datastore extends pulumi.CustomResource {
      */
     declare public readonly s3Client: pulumi.Output<string | undefined>;
     /**
-     * Server hostname or IP address. Required for CIFS/NFS datastores.
-     */
-    declare public readonly server: pulumi.Output<string | undefined>;
-    /**
-     * CIFS share name. Required for CIFS datastores.
-     */
-    declare public readonly share: pulumi.Output<string | undefined>;
-    /**
-     * Subdirectory on the remote share. Optional for network datastores.
-     */
-    declare public readonly subDir: pulumi.Output<string | undefined>;
-    /**
-     * LVM thin pool name. Optional for LVM datastores.
-     */
-    declare public readonly thinPool: pulumi.Output<string | undefined>;
-    /**
      * Tuning level for performance optimization (0-4).
+     *
+     * @deprecated Deprecated
      */
     declare public readonly tuneLevel: pulumi.Output<number | undefined>;
     /**
-     * Type of datastore backend. Valid values: `dir`, `zfs`, `lvm`, `cifs`, `nfs`, `s3`.
+     * Advanced tuning options for datastore behaviour such as chunk order and sync level.
      */
-    declare public readonly type: pulumi.Output<string>;
+    declare public readonly tuning: pulumi.Output<outputs.DatastoreTuning | undefined>;
     /**
-     * Username for CIFS authentication. Optional for CIFS datastores.
+     * Verify newly created snapshots immediately after backup.
      */
-    declare public readonly username: pulumi.Output<string | undefined>;
-    /**
-     * LVM volume group name. Required for LVM datastores.
-     */
-    declare public readonly volumeGroup: pulumi.Output<string | undefined>;
-    /**
-     * ZFS dataset name. Optional for ZFS datastores.
-     */
-    declare public readonly zfsDataset: pulumi.Output<string | undefined>;
-    /**
-     * ZFS pool name. Required for ZFS datastores.
-     */
-    declare public readonly zfsPool: pulumi.Output<string | undefined>;
+    declare public readonly verifyNew: pulumi.Output<boolean | undefined>;
 
     /**
      * Create a Datastore resource with the given unique name, arguments, and options.
@@ -160,81 +158,72 @@ export class Datastore extends pulumi.CustomResource {
      * @param args The arguments to use to populate this resource's properties.
      * @param opts A bag of options that control this resource's behavior.
      */
-    constructor(name: string, args: DatastoreArgs, opts?: pulumi.CustomResourceOptions)
+    constructor(name: string, args?: DatastoreArgs, opts?: pulumi.CustomResourceOptions)
     constructor(name: string, argsOrState?: DatastoreArgs | DatastoreState, opts?: pulumi.CustomResourceOptions) {
         let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as DatastoreState | undefined;
-            resourceInputs["blockSize"] = state?.blockSize;
+            resourceInputs["backingDevice"] = state?.backingDevice;
             resourceInputs["comment"] = state?.comment;
-            resourceInputs["compression"] = state?.compression;
-            resourceInputs["contents"] = state?.contents;
-            resourceInputs["createBasePath"] = state?.createBasePath;
+            resourceInputs["digest"] = state?.digest;
             resourceInputs["disabled"] = state?.disabled;
-            resourceInputs["domain"] = state?.domain;
-            resourceInputs["export"] = state?.export;
             resourceInputs["fingerprint"] = state?.fingerprint;
             resourceInputs["gcSchedule"] = state?.gcSchedule;
-            resourceInputs["maxBackups"] = state?.maxBackups;
+            resourceInputs["keepDaily"] = state?.keepDaily;
+            resourceInputs["keepHourly"] = state?.keepHourly;
+            resourceInputs["keepLast"] = state?.keepLast;
+            resourceInputs["keepMonthly"] = state?.keepMonthly;
+            resourceInputs["keepWeekly"] = state?.keepWeekly;
+            resourceInputs["keepYearly"] = state?.keepYearly;
+            resourceInputs["maintenanceMode"] = state?.maintenanceMode;
             resourceInputs["name"] = state?.name;
+            resourceInputs["notificationMode"] = state?.notificationMode;
+            resourceInputs["notify"] = state?.notify;
             resourceInputs["notifyLevel"] = state?.notifyLevel;
             resourceInputs["notifyUser"] = state?.notifyUser;
-            resourceInputs["options"] = state?.options;
-            resourceInputs["password"] = state?.password;
+            resourceInputs["overwriteInUse"] = state?.overwriteInUse;
             resourceInputs["path"] = state?.path;
             resourceInputs["pruneSchedule"] = state?.pruneSchedule;
+            resourceInputs["removable"] = state?.removable;
+            resourceInputs["reuseDatastore"] = state?.reuseDatastore;
             resourceInputs["s3Bucket"] = state?.s3Bucket;
             resourceInputs["s3Client"] = state?.s3Client;
-            resourceInputs["server"] = state?.server;
-            resourceInputs["share"] = state?.share;
-            resourceInputs["subDir"] = state?.subDir;
-            resourceInputs["thinPool"] = state?.thinPool;
             resourceInputs["tuneLevel"] = state?.tuneLevel;
-            resourceInputs["type"] = state?.type;
-            resourceInputs["username"] = state?.username;
-            resourceInputs["volumeGroup"] = state?.volumeGroup;
-            resourceInputs["zfsDataset"] = state?.zfsDataset;
-            resourceInputs["zfsPool"] = state?.zfsPool;
+            resourceInputs["tuning"] = state?.tuning;
+            resourceInputs["verifyNew"] = state?.verifyNew;
         } else {
             const args = argsOrState as DatastoreArgs | undefined;
-            if (args?.type === undefined && !opts.urn) {
-                throw new Error("Missing required property 'type'");
-            }
-            resourceInputs["blockSize"] = args?.blockSize;
+            resourceInputs["backingDevice"] = args?.backingDevice;
             resourceInputs["comment"] = args?.comment;
-            resourceInputs["compression"] = args?.compression;
-            resourceInputs["contents"] = args?.contents;
-            resourceInputs["createBasePath"] = args?.createBasePath;
+            resourceInputs["digest"] = args?.digest;
             resourceInputs["disabled"] = args?.disabled;
-            resourceInputs["domain"] = args?.domain;
-            resourceInputs["export"] = args?.export;
             resourceInputs["fingerprint"] = args?.fingerprint;
             resourceInputs["gcSchedule"] = args?.gcSchedule;
-            resourceInputs["maxBackups"] = args?.maxBackups;
+            resourceInputs["keepDaily"] = args?.keepDaily;
+            resourceInputs["keepHourly"] = args?.keepHourly;
+            resourceInputs["keepLast"] = args?.keepLast;
+            resourceInputs["keepMonthly"] = args?.keepMonthly;
+            resourceInputs["keepWeekly"] = args?.keepWeekly;
+            resourceInputs["keepYearly"] = args?.keepYearly;
+            resourceInputs["maintenanceMode"] = args?.maintenanceMode;
             resourceInputs["name"] = args?.name;
+            resourceInputs["notificationMode"] = args?.notificationMode;
+            resourceInputs["notify"] = args?.notify;
             resourceInputs["notifyLevel"] = args?.notifyLevel;
             resourceInputs["notifyUser"] = args?.notifyUser;
-            resourceInputs["options"] = args?.options;
-            resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
+            resourceInputs["overwriteInUse"] = args?.overwriteInUse;
             resourceInputs["path"] = args?.path;
             resourceInputs["pruneSchedule"] = args?.pruneSchedule;
+            resourceInputs["removable"] = args?.removable;
+            resourceInputs["reuseDatastore"] = args?.reuseDatastore;
             resourceInputs["s3Bucket"] = args?.s3Bucket;
             resourceInputs["s3Client"] = args?.s3Client;
-            resourceInputs["server"] = args?.server;
-            resourceInputs["share"] = args?.share;
-            resourceInputs["subDir"] = args?.subDir;
-            resourceInputs["thinPool"] = args?.thinPool;
             resourceInputs["tuneLevel"] = args?.tuneLevel;
-            resourceInputs["type"] = args?.type;
-            resourceInputs["username"] = args?.username;
-            resourceInputs["volumeGroup"] = args?.volumeGroup;
-            resourceInputs["zfsDataset"] = args?.zfsDataset;
-            resourceInputs["zfsPool"] = args?.zfsPool;
+            resourceInputs["tuning"] = args?.tuning;
+            resourceInputs["verifyNew"] = args?.verifyNew;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["password"] };
-        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Datastore.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -244,39 +233,23 @@ export class Datastore extends pulumi.CustomResource {
  */
 export interface DatastoreState {
     /**
-     * Block size for ZFS datasets (e.g., `4K`, `8K`, `16K`).
+     * UUID of the filesystem partition for a removable datastore (e.g., `01234567-89ab-cdef-0123-456789abcdef`).
      */
-    blockSize?: pulumi.Input<string>;
+    backingDevice?: pulumi.Input<string>;
     /**
      * Description for the datastore.
      */
     comment?: pulumi.Input<string>;
     /**
-     * Compression algorithm for ZFS. Valid values: `on`, `off`, `lz4`, `zstd`, `gzip`.
+     * Opaque digest returned by PBS for optimistic locking.
      */
-    compression?: pulumi.Input<string>;
-    /**
-     * Content types allowed on this datastore. Valid values: `backup`, `ct`, `iso`, `vztmpl`.
-     */
-    contents?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * Create base directory if it doesn't exist. Only applicable for directory datastores.
-     */
-    createBasePath?: pulumi.Input<boolean>;
+    digest?: pulumi.Input<string>;
     /**
      * Whether the datastore is disabled.
      */
     disabled?: pulumi.Input<boolean>;
     /**
-     * Domain for CIFS authentication. Optional for CIFS datastores.
-     */
-    domain?: pulumi.Input<string>;
-    /**
-     * NFS export path. Required for NFS datastores.
-     */
-    export?: pulumi.Input<string>;
-    /**
-     * Certificate fingerprint for secure connections (network datastores).
+     * Certificate fingerprint for secure connections (S3 datastores).
      */
     fingerprint?: pulumi.Input<string>;
     /**
@@ -284,13 +257,45 @@ export interface DatastoreState {
      */
     gcSchedule?: pulumi.Input<string>;
     /**
-     * Maximum number of backups per guest. Set to 0 for unlimited backups.
+     * Number of daily backups to keep when pruning.
      */
-    maxBackups?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number>;
+    /**
+     * Number of hourly backups to keep when pruning.
+     */
+    keepHourly?: pulumi.Input<number>;
+    /**
+     * Number of latest backups to keep when pruning.
+     */
+    keepLast?: pulumi.Input<number>;
+    /**
+     * Number of monthly backups to keep when pruning.
+     */
+    keepMonthly?: pulumi.Input<number>;
+    /**
+     * Number of weekly backups to keep when pruning.
+     */
+    keepWeekly?: pulumi.Input<number>;
+    /**
+     * Number of yearly backups to keep when pruning.
+     */
+    keepYearly?: pulumi.Input<number>;
+    /**
+     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     */
+    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode>;
     /**
      * Unique identifier for the datastore.
      */
     name?: pulumi.Input<string>;
+    /**
+     * Notification delivery mode. Valid values: `legacy-sendmail`, `notification-system`.
+     */
+    notificationMode?: pulumi.Input<string>;
+    /**
+     * Per-job notification settings overriding datastore defaults.
+     */
+    notify?: pulumi.Input<inputs.DatastoreNotify>;
     /**
      * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
      */
@@ -300,21 +305,27 @@ export interface DatastoreState {
      */
     notifyUser?: pulumi.Input<string>;
     /**
-     * Mount options for network storage (e.g., `vers=3,soft`).
+     * Allow overwriting chunks that are currently in use.
      */
-    options?: pulumi.Input<string>;
+    overwriteInUse?: pulumi.Input<boolean>;
     /**
-     * Password for CIFS authentication. Optional for CIFS datastores.
-     */
-    password?: pulumi.Input<string>;
-    /**
-     * Path to the datastore. Required for directory datastores, optional for others.
+     * Filesystem path to the datastore data. Required for directory datastores and used as the local cache directory for S3 datastores.
      */
     path?: pulumi.Input<string>;
     /**
      * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     *
+     * @deprecated Deprecated
      */
     pruneSchedule?: pulumi.Input<string>;
+    /**
+     * Set to `true` to manage a removable datastore backed by a device UUID.
+     */
+    removable?: pulumi.Input<boolean>;
+    /**
+     * Reuse existing datastore chunks when possible.
+     */
+    reuseDatastore?: pulumi.Input<boolean>;
     /**
      * S3 bucket name for S3 datastores. The bucket must be created beforehand.
      */
@@ -324,45 +335,19 @@ export interface DatastoreState {
      */
     s3Client?: pulumi.Input<string>;
     /**
-     * Server hostname or IP address. Required for CIFS/NFS datastores.
-     */
-    server?: pulumi.Input<string>;
-    /**
-     * CIFS share name. Required for CIFS datastores.
-     */
-    share?: pulumi.Input<string>;
-    /**
-     * Subdirectory on the remote share. Optional for network datastores.
-     */
-    subDir?: pulumi.Input<string>;
-    /**
-     * LVM thin pool name. Optional for LVM datastores.
-     */
-    thinPool?: pulumi.Input<string>;
-    /**
      * Tuning level for performance optimization (0-4).
+     *
+     * @deprecated Deprecated
      */
     tuneLevel?: pulumi.Input<number>;
     /**
-     * Type of datastore backend. Valid values: `dir`, `zfs`, `lvm`, `cifs`, `nfs`, `s3`.
+     * Advanced tuning options for datastore behaviour such as chunk order and sync level.
      */
-    type?: pulumi.Input<string>;
+    tuning?: pulumi.Input<inputs.DatastoreTuning>;
     /**
-     * Username for CIFS authentication. Optional for CIFS datastores.
+     * Verify newly created snapshots immediately after backup.
      */
-    username?: pulumi.Input<string>;
-    /**
-     * LVM volume group name. Required for LVM datastores.
-     */
-    volumeGroup?: pulumi.Input<string>;
-    /**
-     * ZFS dataset name. Optional for ZFS datastores.
-     */
-    zfsDataset?: pulumi.Input<string>;
-    /**
-     * ZFS pool name. Required for ZFS datastores.
-     */
-    zfsPool?: pulumi.Input<string>;
+    verifyNew?: pulumi.Input<boolean>;
 }
 
 /**
@@ -370,39 +355,23 @@ export interface DatastoreState {
  */
 export interface DatastoreArgs {
     /**
-     * Block size for ZFS datasets (e.g., `4K`, `8K`, `16K`).
+     * UUID of the filesystem partition for a removable datastore (e.g., `01234567-89ab-cdef-0123-456789abcdef`).
      */
-    blockSize?: pulumi.Input<string>;
+    backingDevice?: pulumi.Input<string>;
     /**
      * Description for the datastore.
      */
     comment?: pulumi.Input<string>;
     /**
-     * Compression algorithm for ZFS. Valid values: `on`, `off`, `lz4`, `zstd`, `gzip`.
+     * Opaque digest returned by PBS for optimistic locking.
      */
-    compression?: pulumi.Input<string>;
-    /**
-     * Content types allowed on this datastore. Valid values: `backup`, `ct`, `iso`, `vztmpl`.
-     */
-    contents?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * Create base directory if it doesn't exist. Only applicable for directory datastores.
-     */
-    createBasePath?: pulumi.Input<boolean>;
+    digest?: pulumi.Input<string>;
     /**
      * Whether the datastore is disabled.
      */
     disabled?: pulumi.Input<boolean>;
     /**
-     * Domain for CIFS authentication. Optional for CIFS datastores.
-     */
-    domain?: pulumi.Input<string>;
-    /**
-     * NFS export path. Required for NFS datastores.
-     */
-    export?: pulumi.Input<string>;
-    /**
-     * Certificate fingerprint for secure connections (network datastores).
+     * Certificate fingerprint for secure connections (S3 datastores).
      */
     fingerprint?: pulumi.Input<string>;
     /**
@@ -410,13 +379,45 @@ export interface DatastoreArgs {
      */
     gcSchedule?: pulumi.Input<string>;
     /**
-     * Maximum number of backups per guest. Set to 0 for unlimited backups.
+     * Number of daily backups to keep when pruning.
      */
-    maxBackups?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number>;
+    /**
+     * Number of hourly backups to keep when pruning.
+     */
+    keepHourly?: pulumi.Input<number>;
+    /**
+     * Number of latest backups to keep when pruning.
+     */
+    keepLast?: pulumi.Input<number>;
+    /**
+     * Number of monthly backups to keep when pruning.
+     */
+    keepMonthly?: pulumi.Input<number>;
+    /**
+     * Number of weekly backups to keep when pruning.
+     */
+    keepWeekly?: pulumi.Input<number>;
+    /**
+     * Number of yearly backups to keep when pruning.
+     */
+    keepYearly?: pulumi.Input<number>;
+    /**
+     * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
+     */
+    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode>;
     /**
      * Unique identifier for the datastore.
      */
     name?: pulumi.Input<string>;
+    /**
+     * Notification delivery mode. Valid values: `legacy-sendmail`, `notification-system`.
+     */
+    notificationMode?: pulumi.Input<string>;
+    /**
+     * Per-job notification settings overriding datastore defaults.
+     */
+    notify?: pulumi.Input<inputs.DatastoreNotify>;
     /**
      * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
      */
@@ -426,21 +427,27 @@ export interface DatastoreArgs {
      */
     notifyUser?: pulumi.Input<string>;
     /**
-     * Mount options for network storage (e.g., `vers=3,soft`).
+     * Allow overwriting chunks that are currently in use.
      */
-    options?: pulumi.Input<string>;
+    overwriteInUse?: pulumi.Input<boolean>;
     /**
-     * Password for CIFS authentication. Optional for CIFS datastores.
-     */
-    password?: pulumi.Input<string>;
-    /**
-     * Path to the datastore. Required for directory datastores, optional for others.
+     * Filesystem path to the datastore data. Required for directory datastores and used as the local cache directory for S3 datastores.
      */
     path?: pulumi.Input<string>;
     /**
      * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
+     *
+     * @deprecated Deprecated
      */
     pruneSchedule?: pulumi.Input<string>;
+    /**
+     * Set to `true` to manage a removable datastore backed by a device UUID.
+     */
+    removable?: pulumi.Input<boolean>;
+    /**
+     * Reuse existing datastore chunks when possible.
+     */
+    reuseDatastore?: pulumi.Input<boolean>;
     /**
      * S3 bucket name for S3 datastores. The bucket must be created beforehand.
      */
@@ -450,43 +457,17 @@ export interface DatastoreArgs {
      */
     s3Client?: pulumi.Input<string>;
     /**
-     * Server hostname or IP address. Required for CIFS/NFS datastores.
-     */
-    server?: pulumi.Input<string>;
-    /**
-     * CIFS share name. Required for CIFS datastores.
-     */
-    share?: pulumi.Input<string>;
-    /**
-     * Subdirectory on the remote share. Optional for network datastores.
-     */
-    subDir?: pulumi.Input<string>;
-    /**
-     * LVM thin pool name. Optional for LVM datastores.
-     */
-    thinPool?: pulumi.Input<string>;
-    /**
      * Tuning level for performance optimization (0-4).
+     *
+     * @deprecated Deprecated
      */
     tuneLevel?: pulumi.Input<number>;
     /**
-     * Type of datastore backend. Valid values: `dir`, `zfs`, `lvm`, `cifs`, `nfs`, `s3`.
+     * Advanced tuning options for datastore behaviour such as chunk order and sync level.
      */
-    type: pulumi.Input<string>;
+    tuning?: pulumi.Input<inputs.DatastoreTuning>;
     /**
-     * Username for CIFS authentication. Optional for CIFS datastores.
+     * Verify newly created snapshots immediately after backup.
      */
-    username?: pulumi.Input<string>;
-    /**
-     * LVM volume group name. Required for LVM datastores.
-     */
-    volumeGroup?: pulumi.Input<string>;
-    /**
-     * ZFS dataset name. Optional for ZFS datastores.
-     */
-    zfsDataset?: pulumi.Input<string>;
-    /**
-     * ZFS pool name. Required for ZFS datastores.
-     */
-    zfsPool?: pulumi.Input<string>;
+    verifyNew?: pulumi.Input<boolean>;
 }

@@ -40,6 +40,9 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
     declare public readonly authenticatorAttachment: pulumi.Output<string | undefined>;
     declare public readonly configureFlow: pulumi.Output<string | undefined>;
     declare public readonly deviceTypeRestrictions: pulumi.Output<string[] | undefined>;
+    /**
+     * Defaults to ``.
+     */
     declare public readonly friendlyName: pulumi.Output<string | undefined>;
     declare public readonly maxAttempts: pulumi.Output<number | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -112,6 +115,9 @@ export interface StageAuthenticatorWebauthnState {
     authenticatorAttachment?: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
     deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     maxAttempts?: pulumi.Input<number>;
     name?: pulumi.Input<string>;
@@ -146,6 +152,9 @@ export interface StageAuthenticatorWebauthnArgs {
     authenticatorAttachment?: pulumi.Input<string>;
     configureFlow?: pulumi.Input<string>;
     deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     maxAttempts?: pulumi.Input<number>;
     name?: pulumi.Input<string>;

@@ -20,11 +20,11 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     readonly dstPort: pulumi.Output<string | undefined>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not. Defaults to `true`. This will attribute will be removed in a future release. Instead of disabling a port forwarding rule you can remove it from your configuration.
+     * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
-    readonly enabled: pulumi.Output<boolean | undefined>;
+    readonly enabled: pulumi.Output<boolean>;
     /**
      * The IPv4 address to forward traffic to.
      */
@@ -34,9 +34,9 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     readonly fwdPort: pulumi.Output<string | undefined>;
     /**
-     * Specifies whether to log forwarded traffic or not. Defaults to `false`.
+     * Specifies whether to log forwarded traffic or not.
      */
-    readonly log: pulumi.Output<boolean | undefined>;
+    readonly log: pulumi.Output<boolean>;
     /**
      * The name of the port forwarding rule.
      */
@@ -46,17 +46,17 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     readonly portForwardInterface: pulumi.Output<string | undefined>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Defaults to `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
-    readonly protocol: pulumi.Output<string | undefined>;
+    readonly protocol: pulumi.Output<string>;
     /**
      * The name of the site to associate the port forwarding rule with.
      */
     readonly site: pulumi.Output<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`. Defaults to `any`.
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
      */
-    readonly srcIp: pulumi.Output<string | undefined>;
+    readonly srcIp: pulumi.Output<string>;
     /**
      * Create a PortForward resource with the given unique name, arguments, and options.
      *
@@ -75,7 +75,7 @@ export interface PortForwardState {
      */
     dstPort?: pulumi.Input<string>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not. Defaults to `true`. This will attribute will be removed in a future release. Instead of disabling a port forwarding rule you can remove it from your configuration.
+     * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
@@ -89,7 +89,7 @@ export interface PortForwardState {
      */
     fwdPort?: pulumi.Input<string>;
     /**
-     * Specifies whether to log forwarded traffic or not. Defaults to `false`.
+     * Specifies whether to log forwarded traffic or not.
      */
     log?: pulumi.Input<boolean>;
     /**
@@ -101,7 +101,7 @@ export interface PortForwardState {
      */
     portForwardInterface?: pulumi.Input<string>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Defaults to `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
     protocol?: pulumi.Input<string>;
     /**
@@ -109,7 +109,7 @@ export interface PortForwardState {
      */
     site?: pulumi.Input<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`. Defaults to `any`.
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
      */
     srcIp?: pulumi.Input<string>;
 }
@@ -122,7 +122,7 @@ export interface PortForwardArgs {
      */
     dstPort?: pulumi.Input<string>;
     /**
-     * Specifies whether the port forwarding rule is enabled or not. Defaults to `true`. This will attribute will be removed in a future release. Instead of disabling a port forwarding rule you can remove it from your configuration.
+     * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
@@ -136,7 +136,7 @@ export interface PortForwardArgs {
      */
     fwdPort?: pulumi.Input<string>;
     /**
-     * Specifies whether to log forwarded traffic or not. Defaults to `false`.
+     * Specifies whether to log forwarded traffic or not.
      */
     log?: pulumi.Input<boolean>;
     /**
@@ -148,7 +148,7 @@ export interface PortForwardArgs {
      */
     portForwardInterface?: pulumi.Input<string>;
     /**
-     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`. Defaults to `tcp_udp`.
+     * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
     protocol?: pulumi.Input<string>;
     /**
@@ -156,7 +156,7 @@ export interface PortForwardArgs {
      */
     site?: pulumi.Input<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`. Defaults to `any`.
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
      */
     srcIp?: pulumi.Input<string>;
 }

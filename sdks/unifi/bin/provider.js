@@ -34,13 +34,15 @@ class Provider extends pulumi.ProviderResource {
         opts = opts || {};
         {
             resourceInputs["allowInsecure"] = pulumi.output(args?.allowInsecure).apply(JSON.stringify);
-            resourceInputs["apiKey"] = args?.apiKey;
+            resourceInputs["apiKey"] = args?.apiKey ? pulumi.secret(args.apiKey) : undefined;
             resourceInputs["apiUrl"] = args?.apiUrl;
-            resourceInputs["password"] = args?.password;
+            resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
             resourceInputs["site"] = args?.site;
-            resourceInputs["username"] = args?.username;
+            resourceInputs["username"] = args?.username ? pulumi.secret(args.username) : undefined;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
+        const secretOpts = { additionalSecretOutputs: ["apiKey", "password", "username"] };
+        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Provider.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
     /**

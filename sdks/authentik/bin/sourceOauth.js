@@ -48,8 +48,10 @@ class SourceOauth extends pulumi.CustomResource {
             resourceInputs["oidcJwks"] = state?.oidcJwks;
             resourceInputs["oidcJwksUrl"] = state?.oidcJwksUrl;
             resourceInputs["oidcWellKnownUrl"] = state?.oidcWellKnownUrl;
+            resourceInputs["pkce"] = state?.pkce;
             resourceInputs["policyEngineMode"] = state?.policyEngineMode;
             resourceInputs["profileUrl"] = state?.profileUrl;
+            resourceInputs["promoted"] = state?.promoted;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerType"] = state?.providerType;
@@ -88,8 +90,10 @@ class SourceOauth extends pulumi.CustomResource {
             resourceInputs["oidcJwks"] = args?.oidcJwks;
             resourceInputs["oidcJwksUrl"] = args?.oidcJwksUrl;
             resourceInputs["oidcWellKnownUrl"] = args?.oidcWellKnownUrl;
+            resourceInputs["pkce"] = args?.pkce;
             resourceInputs["policyEngineMode"] = args?.policyEngineMode;
             resourceInputs["profileUrl"] = args?.profileUrl;
+            resourceInputs["promoted"] = args?.promoted;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerType"] = args?.providerType;

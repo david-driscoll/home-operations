@@ -33,6 +33,9 @@ class ProviderScim extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState;
+            resourceInputs["authMode"] = state?.authMode;
+            resourceInputs["authOauth"] = state?.authOauth;
+            resourceInputs["authOauthParams"] = state?.authOauthParams;
             resourceInputs["compatibilityMode"] = state?.compatibilityMode;
             resourceInputs["dryRun"] = state?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = state?.excludeUsersServiceAccount;
@@ -41,17 +44,20 @@ class ProviderScim extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerScimId"] = state?.providerScimId;
+            resourceInputs["serviceProviderConfigCacheTimeout"] = state?.serviceProviderConfigCacheTimeout;
+            resourceInputs["syncPageSize"] = state?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = state?.syncPageTimeout;
             resourceInputs["token"] = state?.token;
             resourceInputs["url"] = state?.url;
         }
         else {
             const args = argsOrState;
-            if (args?.token === undefined && !opts.urn) {
-                throw new Error("Missing required property 'token'");
-            }
             if (args?.url === undefined && !opts.urn) {
                 throw new Error("Missing required property 'url'");
             }
+            resourceInputs["authMode"] = args?.authMode;
+            resourceInputs["authOauth"] = args?.authOauth;
+            resourceInputs["authOauthParams"] = args?.authOauthParams;
             resourceInputs["compatibilityMode"] = args?.compatibilityMode;
             resourceInputs["dryRun"] = args?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = args?.excludeUsersServiceAccount;
@@ -60,6 +66,9 @@ class ProviderScim extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerScimId"] = args?.providerScimId;
+            resourceInputs["serviceProviderConfigCacheTimeout"] = args?.serviceProviderConfigCacheTimeout;
+            resourceInputs["syncPageSize"] = args?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = args?.syncPageTimeout;
             resourceInputs["token"] = args?.token ? pulumi.secret(args.token) : undefined;
             resourceInputs["url"] = args?.url;
         }

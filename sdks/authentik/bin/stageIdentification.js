@@ -47,6 +47,7 @@ class StageIdentification extends pulumi.CustomResource {
             resourceInputs["sources"] = state?.sources;
             resourceInputs["stageIdentificationId"] = state?.stageIdentificationId;
             resourceInputs["userFields"] = state?.userFields;
+            resourceInputs["webauthnStage"] = state?.webauthnStage;
         }
         else {
             const args = argsOrState;
@@ -64,6 +65,7 @@ class StageIdentification extends pulumi.CustomResource {
             resourceInputs["sources"] = args?.sources;
             resourceInputs["stageIdentificationId"] = args?.stageIdentificationId;
             resourceInputs["userFields"] = args?.userFields;
+            resourceInputs["webauthnStage"] = args?.webauthnStage;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(StageIdentification.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());

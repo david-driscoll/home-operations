@@ -33,9 +33,9 @@ export class DnsRecord extends pulumi.CustomResource {
     }
 
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
-    declare public readonly enabled: pulumi.Output<boolean | undefined>;
+    declare public readonly enabled: pulumi.Output<boolean>;
     /**
      * The key of the DNS record.
      */
@@ -43,7 +43,7 @@ export class DnsRecord extends pulumi.CustomResource {
     /**
      * The port of the DNS record.
      */
-    declare public readonly port: pulumi.Output<number>;
+    declare public readonly port: pulumi.Output<number | undefined>;
     /**
      * The priority of the DNS record.
      */
@@ -93,9 +93,6 @@ export class DnsRecord extends pulumi.CustomResource {
             resourceInputs["weight"] = state?.weight;
         } else {
             const args = argsOrState as DnsRecordArgs | undefined;
-            if (args?.port === undefined && !opts.urn) {
-                throw new Error("Missing required property 'port'");
-            }
             if (args?.value === undefined && !opts.urn) {
                 throw new Error("Missing required property 'value'");
             }
@@ -119,7 +116,7 @@ export class DnsRecord extends pulumi.CustomResource {
  */
 export interface DnsRecordState {
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -161,7 +158,7 @@ export interface DnsRecordState {
  */
 export interface DnsRecordArgs {
     /**
-     * Whether the DNS record is enabled. Defaults to `true`.
+     * Whether the DNS record is enabled.
      */
     enabled?: pulumi.Input<boolean>;
     /**
@@ -171,7 +168,7 @@ export interface DnsRecordArgs {
     /**
      * The port of the DNS record.
      */
-    port: pulumi.Input<number>;
+    port?: pulumi.Input<number>;
     /**
      * The priority of the DNS record.
      */

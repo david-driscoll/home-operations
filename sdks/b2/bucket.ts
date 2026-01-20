@@ -48,7 +48,7 @@ export class Bucket extends pulumi.CustomResource {
      */
     declare public readonly bucketInfo: pulumi.Output<{[key: string]: string} | undefined>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly bucketName: pulumi.Output<string>;
     /**
@@ -149,7 +149,7 @@ export interface BucketState {
      */
     bucketInfo?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketName?: pulumi.Input<string>;
     /**
@@ -192,7 +192,7 @@ export interface BucketArgs {
      */
     bucketInfo?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketName: pulumi.Input<string>;
     /**

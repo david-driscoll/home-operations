@@ -33,7 +33,7 @@ export declare class Bucket extends pulumi.CustomResource {
         [key: string]: string;
     } | undefined>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     readonly bucketName: pulumi.Output<string>;
     /**
@@ -93,7 +93,7 @@ export interface BucketState {
         [key: string]: pulumi.Input<string>;
     }>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketName?: pulumi.Input<string>;
     /**
@@ -137,7 +137,7 @@ export interface BucketArgs {
         [key: string]: pulumi.Input<string>;
     }>;
     /**
-     * The name of the bucket.
+     * The name of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketName: pulumi.Input<string>;
     /**

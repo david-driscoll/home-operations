@@ -37,6 +37,7 @@ class ApplicationKey extends pulumi.CustomResource {
             resourceInputs["applicationKeyId"] = state?.applicationKeyId;
             resourceInputs["b2ApplicationKeyId"] = state?.b2ApplicationKeyId;
             resourceInputs["bucketId"] = state?.bucketId;
+            resourceInputs["bucketIds"] = state?.bucketIds;
             resourceInputs["capabilities"] = state?.capabilities;
             resourceInputs["keyName"] = state?.keyName;
             resourceInputs["namePrefix"] = state?.namePrefix;
@@ -52,6 +53,7 @@ class ApplicationKey extends pulumi.CustomResource {
             }
             resourceInputs["b2ApplicationKeyId"] = args?.b2ApplicationKeyId;
             resourceInputs["bucketId"] = args?.bucketId;
+            resourceInputs["bucketIds"] = args?.bucketIds;
             resourceInputs["capabilities"] = args?.capabilities;
             resourceInputs["keyName"] = args?.keyName;
             resourceInputs["namePrefix"] = args?.namePrefix;

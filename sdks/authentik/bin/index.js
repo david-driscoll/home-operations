@@ -16,9 +16,9 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = exports.getUser = exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = exports.getRbacPermissionOutput = exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = void 0;
-exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.ScopeMapping = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingScim = exports.PropertyMappingSaml = exports.PropertyMappingRadius = exports.PropertyMappingRac = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PropertyMappingMicrosoftEntra = exports.PropertyMappingLdap = exports.PropertyMappingGoogleWorkspace = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.Outpost = exports.Group = void 0;
-exports.types = exports.config = exports.User = exports.Token = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = exports.SourceLdap = exports.SourceKerberos = void 0;
+exports.getUser = exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = exports.getRbacPermissionOutput = exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getOutpostOutput = exports.getOutpost = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.EndpointsDeviceAccessGroup = exports.EndpointsConnectorAgentEnrollmentToken = exports.EndpointsConnectorAgent = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = void 0;
+exports.SourceLdap = exports.SourceKerberos = exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.OutpostProviderAttachment = exports.Outpost = exports.Group = exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = void 0;
+exports.types = exports.config = exports.User = exports.Token = exports.TaskSchedule = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEndpoints = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.SourceTelegram = exports.SourceScim = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 exports.Application = null;
@@ -31,6 +31,12 @@ exports.Brand = null;
 utilities.lazyLoad(exports, ["Brand"], () => require("./brand"));
 exports.CertificateKeyPair = null;
 utilities.lazyLoad(exports, ["CertificateKeyPair"], () => require("./certificateKeyPair"));
+exports.EndpointsConnectorAgent = null;
+utilities.lazyLoad(exports, ["EndpointsConnectorAgent"], () => require("./endpointsConnectorAgent"));
+exports.EndpointsConnectorAgentEnrollmentToken = null;
+utilities.lazyLoad(exports, ["EndpointsConnectorAgentEnrollmentToken"], () => require("./endpointsConnectorAgentEnrollmentToken"));
+exports.EndpointsDeviceAccessGroup = null;
+utilities.lazyLoad(exports, ["EndpointsDeviceAccessGroup"], () => require("./endpointsDeviceAccessGroup"));
 exports.EnterpriseLicense = null;
 utilities.lazyLoad(exports, ["EnterpriseLicense"], () => require("./enterpriseLicense"));
 exports.EventRule = null;
@@ -56,6 +62,9 @@ utilities.lazyLoad(exports, ["getGroup", "getGroupOutput"], () => require("./get
 exports.getGroups = null;
 exports.getGroupsOutput = null;
 utilities.lazyLoad(exports, ["getGroups", "getGroupsOutput"], () => require("./getGroups"));
+exports.getOutpost = null;
+exports.getOutpostOutput = null;
+utilities.lazyLoad(exports, ["getOutpost", "getOutpostOutput"], () => require("./getOutpost"));
 exports.getPropertyMappingProviderRac = null;
 exports.getPropertyMappingProviderRacOutput = null;
 utilities.lazyLoad(exports, ["getPropertyMappingProviderRac", "getPropertyMappingProviderRacOutput"], () => require("./getPropertyMappingProviderRac"));
@@ -105,6 +114,8 @@ exports.Group = null;
 utilities.lazyLoad(exports, ["Group"], () => require("./group"));
 exports.Outpost = null;
 utilities.lazyLoad(exports, ["Outpost"], () => require("./outpost"));
+exports.OutpostProviderAttachment = null;
+utilities.lazyLoad(exports, ["OutpostProviderAttachment"], () => require("./outpostProviderAttachment"));
 exports.PolicyBinding = null;
 utilities.lazyLoad(exports, ["PolicyBinding"], () => require("./policyBinding"));
 exports.PolicyDummy = null;
@@ -123,12 +134,6 @@ exports.PolicyReputation = null;
 utilities.lazyLoad(exports, ["PolicyReputation"], () => require("./policyReputation"));
 exports.PolicyUniquePassword = null;
 utilities.lazyLoad(exports, ["PolicyUniquePassword"], () => require("./policyUniquePassword"));
-exports.PropertyMappingGoogleWorkspace = null;
-utilities.lazyLoad(exports, ["PropertyMappingGoogleWorkspace"], () => require("./propertyMappingGoogleWorkspace"));
-exports.PropertyMappingLdap = null;
-utilities.lazyLoad(exports, ["PropertyMappingLdap"], () => require("./propertyMappingLdap"));
-exports.PropertyMappingMicrosoftEntra = null;
-utilities.lazyLoad(exports, ["PropertyMappingMicrosoftEntra"], () => require("./propertyMappingMicrosoftEntra"));
 exports.PropertyMappingNotification = null;
 utilities.lazyLoad(exports, ["PropertyMappingNotification"], () => require("./propertyMappingNotification"));
 exports.PropertyMappingProviderGoogleWorkspace = null;
@@ -145,14 +150,6 @@ exports.PropertyMappingProviderScim = null;
 utilities.lazyLoad(exports, ["PropertyMappingProviderScim"], () => require("./propertyMappingProviderScim"));
 exports.PropertyMappingProviderScope = null;
 utilities.lazyLoad(exports, ["PropertyMappingProviderScope"], () => require("./propertyMappingProviderScope"));
-exports.PropertyMappingRac = null;
-utilities.lazyLoad(exports, ["PropertyMappingRac"], () => require("./propertyMappingRac"));
-exports.PropertyMappingRadius = null;
-utilities.lazyLoad(exports, ["PropertyMappingRadius"], () => require("./propertyMappingRadius"));
-exports.PropertyMappingSaml = null;
-utilities.lazyLoad(exports, ["PropertyMappingSaml"], () => require("./propertyMappingSaml"));
-exports.PropertyMappingScim = null;
-utilities.lazyLoad(exports, ["PropertyMappingScim"], () => require("./propertyMappingScim"));
 exports.PropertyMappingSourceKerberos = null;
 utilities.lazyLoad(exports, ["PropertyMappingSourceKerberos"], () => require("./propertyMappingSourceKerberos"));
 exports.PropertyMappingSourceLdap = null;
@@ -197,8 +194,6 @@ exports.RbacPermissionUser = null;
 utilities.lazyLoad(exports, ["RbacPermissionUser"], () => require("./rbacPermissionUser"));
 exports.RbacRole = null;
 utilities.lazyLoad(exports, ["RbacRole"], () => require("./rbacRole"));
-exports.ScopeMapping = null;
-utilities.lazyLoad(exports, ["ScopeMapping"], () => require("./scopeMapping"));
 exports.ServiceConnectionDocker = null;
 utilities.lazyLoad(exports, ["ServiceConnectionDocker"], () => require("./serviceConnectionDocker"));
 exports.ServiceConnectionKubernetes = null;
@@ -213,6 +208,10 @@ exports.SourcePlex = null;
 utilities.lazyLoad(exports, ["SourcePlex"], () => require("./sourcePlex"));
 exports.SourceSaml = null;
 utilities.lazyLoad(exports, ["SourceSaml"], () => require("./sourceSaml"));
+exports.SourceScim = null;
+utilities.lazyLoad(exports, ["SourceScim"], () => require("./sourceScim"));
+exports.SourceTelegram = null;
+utilities.lazyLoad(exports, ["SourceTelegram"], () => require("./sourceTelegram"));
 exports.StageAuthenticatorDuo = null;
 utilities.lazyLoad(exports, ["StageAuthenticatorDuo"], () => require("./stageAuthenticatorDuo"));
 exports.StageAuthenticatorEmail = null;
@@ -239,6 +238,8 @@ exports.StageDummy = null;
 utilities.lazyLoad(exports, ["StageDummy"], () => require("./stageDummy"));
 exports.StageEmail = null;
 utilities.lazyLoad(exports, ["StageEmail"], () => require("./stageEmail"));
+exports.StageEndpoints = null;
+utilities.lazyLoad(exports, ["StageEndpoints"], () => require("./stageEndpoints"));
 exports.StageIdentification = null;
 utilities.lazyLoad(exports, ["StageIdentification"], () => require("./stageIdentification"));
 exports.StageInvitation = null;
@@ -265,6 +266,8 @@ exports.StageUserWrite = null;
 utilities.lazyLoad(exports, ["StageUserWrite"], () => require("./stageUserWrite"));
 exports.SystemSettings = null;
 utilities.lazyLoad(exports, ["SystemSettings"], () => require("./systemSettings"));
+exports.TaskSchedule = null;
+utilities.lazyLoad(exports, ["TaskSchedule"], () => require("./taskSchedule"));
 exports.Token = null;
 utilities.lazyLoad(exports, ["Token"], () => require("./token"));
 exports.User = null;
@@ -288,6 +291,12 @@ const _module = {
                 return new exports.Brand(name, undefined, { urn });
             case "authentik:index/certificateKeyPair:CertificateKeyPair":
                 return new exports.CertificateKeyPair(name, undefined, { urn });
+            case "authentik:index/endpointsConnectorAgent:EndpointsConnectorAgent":
+                return new exports.EndpointsConnectorAgent(name, undefined, { urn });
+            case "authentik:index/endpointsConnectorAgentEnrollmentToken:EndpointsConnectorAgentEnrollmentToken":
+                return new exports.EndpointsConnectorAgentEnrollmentToken(name, undefined, { urn });
+            case "authentik:index/endpointsDeviceAccessGroup:EndpointsDeviceAccessGroup":
+                return new exports.EndpointsDeviceAccessGroup(name, undefined, { urn });
             case "authentik:index/enterpriseLicense:EnterpriseLicense":
                 return new exports.EnterpriseLicense(name, undefined, { urn });
             case "authentik:index/eventRule:EventRule":
@@ -302,6 +311,8 @@ const _module = {
                 return new exports.Group(name, undefined, { urn });
             case "authentik:index/outpost:Outpost":
                 return new exports.Outpost(name, undefined, { urn });
+            case "authentik:index/outpostProviderAttachment:OutpostProviderAttachment":
+                return new exports.OutpostProviderAttachment(name, undefined, { urn });
             case "authentik:index/policyBinding:PolicyBinding":
                 return new exports.PolicyBinding(name, undefined, { urn });
             case "authentik:index/policyDummy:PolicyDummy":
@@ -320,12 +331,6 @@ const _module = {
                 return new exports.PolicyReputation(name, undefined, { urn });
             case "authentik:index/policyUniquePassword:PolicyUniquePassword":
                 return new exports.PolicyUniquePassword(name, undefined, { urn });
-            case "authentik:index/propertyMappingGoogleWorkspace:PropertyMappingGoogleWorkspace":
-                return new exports.PropertyMappingGoogleWorkspace(name, undefined, { urn });
-            case "authentik:index/propertyMappingLdap:PropertyMappingLdap":
-                return new exports.PropertyMappingLdap(name, undefined, { urn });
-            case "authentik:index/propertyMappingMicrosoftEntra:PropertyMappingMicrosoftEntra":
-                return new exports.PropertyMappingMicrosoftEntra(name, undefined, { urn });
             case "authentik:index/propertyMappingNotification:PropertyMappingNotification":
                 return new exports.PropertyMappingNotification(name, undefined, { urn });
             case "authentik:index/propertyMappingProviderGoogleWorkspace:PropertyMappingProviderGoogleWorkspace":
@@ -342,14 +347,6 @@ const _module = {
                 return new exports.PropertyMappingProviderScim(name, undefined, { urn });
             case "authentik:index/propertyMappingProviderScope:PropertyMappingProviderScope":
                 return new exports.PropertyMappingProviderScope(name, undefined, { urn });
-            case "authentik:index/propertyMappingRac:PropertyMappingRac":
-                return new exports.PropertyMappingRac(name, undefined, { urn });
-            case "authentik:index/propertyMappingRadius:PropertyMappingRadius":
-                return new exports.PropertyMappingRadius(name, undefined, { urn });
-            case "authentik:index/propertyMappingSaml:PropertyMappingSaml":
-                return new exports.PropertyMappingSaml(name, undefined, { urn });
-            case "authentik:index/propertyMappingScim:PropertyMappingScim":
-                return new exports.PropertyMappingScim(name, undefined, { urn });
             case "authentik:index/propertyMappingSourceKerberos:PropertyMappingSourceKerberos":
                 return new exports.PropertyMappingSourceKerberos(name, undefined, { urn });
             case "authentik:index/propertyMappingSourceLdap:PropertyMappingSourceLdap":
@@ -392,8 +389,6 @@ const _module = {
                 return new exports.RbacPermissionUser(name, undefined, { urn });
             case "authentik:index/rbacRole:RbacRole":
                 return new exports.RbacRole(name, undefined, { urn });
-            case "authentik:index/scopeMapping:ScopeMapping":
-                return new exports.ScopeMapping(name, undefined, { urn });
             case "authentik:index/serviceConnectionDocker:ServiceConnectionDocker":
                 return new exports.ServiceConnectionDocker(name, undefined, { urn });
             case "authentik:index/serviceConnectionKubernetes:ServiceConnectionKubernetes":
@@ -408,6 +403,10 @@ const _module = {
                 return new exports.SourcePlex(name, undefined, { urn });
             case "authentik:index/sourceSaml:SourceSaml":
                 return new exports.SourceSaml(name, undefined, { urn });
+            case "authentik:index/sourceScim:SourceScim":
+                return new exports.SourceScim(name, undefined, { urn });
+            case "authentik:index/sourceTelegram:SourceTelegram":
+                return new exports.SourceTelegram(name, undefined, { urn });
             case "authentik:index/stageAuthenticatorDuo:StageAuthenticatorDuo":
                 return new exports.StageAuthenticatorDuo(name, undefined, { urn });
             case "authentik:index/stageAuthenticatorEmail:StageAuthenticatorEmail":
@@ -434,6 +433,8 @@ const _module = {
                 return new exports.StageDummy(name, undefined, { urn });
             case "authentik:index/stageEmail:StageEmail":
                 return new exports.StageEmail(name, undefined, { urn });
+            case "authentik:index/stageEndpoints:StageEndpoints":
+                return new exports.StageEndpoints(name, undefined, { urn });
             case "authentik:index/stageIdentification:StageIdentification":
                 return new exports.StageIdentification(name, undefined, { urn });
             case "authentik:index/stageInvitation:StageInvitation":
@@ -460,6 +461,8 @@ const _module = {
                 return new exports.StageUserWrite(name, undefined, { urn });
             case "authentik:index/systemSettings:SystemSettings":
                 return new exports.SystemSettings(name, undefined, { urn });
+            case "authentik:index/taskSchedule:TaskSchedule":
+                return new exports.TaskSchedule(name, undefined, { urn });
             case "authentik:index/token:Token":
                 return new exports.Token(name, undefined, { urn });
             case "authentik:index/user:User":
@@ -474,6 +477,9 @@ pulumi.runtime.registerResourceModule("authentik", "index/applicationEntitlement
 pulumi.runtime.registerResourceModule("authentik", "index/blueprint", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/brand", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/certificateKeyPair", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgent", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgentEnrollmentToken", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/endpointsDeviceAccessGroup", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/enterpriseLicense", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/eventRule", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/eventTransport", _module);
@@ -481,6 +487,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/flow", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/flowStageBinding", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/group", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/outpost", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/outpostProviderAttachment", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyBinding", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyDummy", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyEventMatcher", _module);
@@ -490,9 +497,6 @@ pulumi.runtime.registerResourceModule("authentik", "index/policyGeoip", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/policyPassword", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyReputation", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyUniquePassword", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingGoogleWorkspace", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingLdap", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingMicrosoftEntra", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingNotification", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProviderGoogleWorkspace", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProviderMicrosoftEntra", _module);
@@ -501,10 +505,6 @@ pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProvide
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProviderSaml", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProviderScim", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingProviderScope", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingRac", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingRadius", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingSaml", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingScim", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingSourceKerberos", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingSourceLdap", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/propertyMappingSourceOauth", _module);
@@ -526,7 +526,6 @@ pulumi.runtime.registerResourceModule("authentik", "index/rbacInitialPermissions
 pulumi.runtime.registerResourceModule("authentik", "index/rbacPermissionRole", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/rbacPermissionUser", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/rbacRole", _module);
-pulumi.runtime.registerResourceModule("authentik", "index/scopeMapping", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/serviceConnectionDocker", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/serviceConnectionKubernetes", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceKerberos", _module);
@@ -534,6 +533,8 @@ pulumi.runtime.registerResourceModule("authentik", "index/sourceLdap", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceOauth", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourcePlex", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceSaml", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/sourceScim", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/sourceTelegram", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorDuo", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEmail", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEndpointGdtc", _module);
@@ -547,6 +548,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/stageConsent", _module
 pulumi.runtime.registerResourceModule("authentik", "index/stageDeny", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageDummy", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageEmail", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/stageEndpoints", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageIdentification", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageInvitation", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageMutualTls", _module);
@@ -560,6 +562,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/stageUserLogin", _modu
 pulumi.runtime.registerResourceModule("authentik", "index/stageUserLogout", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageUserWrite", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/systemSettings", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/taskSchedule", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/token", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/user", _module);
 pulumi.runtime.registerResourcePackage("authentik", {

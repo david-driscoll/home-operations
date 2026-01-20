@@ -41,6 +41,7 @@ export declare class StageIdentification extends pulumi.CustomResource {
     readonly sources: pulumi.Output<string[] | undefined>;
     readonly stageIdentificationId: pulumi.Output<string>;
     readonly userFields: pulumi.Output<string[] | undefined>;
+    readonly webauthnStage: pulumi.Output<string | undefined>;
     /**
      * Create a StageIdentification resource with the given unique name, arguments, and options.
      *
@@ -80,6 +81,7 @@ export interface StageIdentificationState {
     sources?: pulumi.Input<pulumi.Input<string>[]>;
     stageIdentificationId?: pulumi.Input<string>;
     userFields?: pulumi.Input<pulumi.Input<string>[]>;
+    webauthnStage?: pulumi.Input<string>;
 }
 /**
  * The set of arguments for constructing a StageIdentification resource.
@@ -111,4 +113,5 @@ export interface StageIdentificationArgs {
     sources?: pulumi.Input<pulumi.Input<string>[]>;
     stageIdentificationId?: pulumi.Input<string>;
     userFields?: pulumi.Input<pulumi.Input<string>[]>;
+    webauthnStage?: pulumi.Input<string>;
 }

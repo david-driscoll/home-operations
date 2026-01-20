@@ -44,6 +44,8 @@ class ProviderGoogleWorkspace extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
             resourceInputs["providerGoogleWorkspaceId"] = state?.providerGoogleWorkspaceId;
+            resourceInputs["syncPageSize"] = state?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = state?.syncPageTimeout;
             resourceInputs["userDeleteAction"] = state?.userDeleteAction;
         }
         else {
@@ -62,6 +64,8 @@ class ProviderGoogleWorkspace extends pulumi.CustomResource {
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
             resourceInputs["providerGoogleWorkspaceId"] = args?.providerGoogleWorkspaceId;
+            resourceInputs["syncPageSize"] = args?.syncPageSize;
+            resourceInputs["syncPageTimeout"] = args?.syncPageTimeout;
             resourceInputs["userDeleteAction"] = args?.userDeleteAction;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

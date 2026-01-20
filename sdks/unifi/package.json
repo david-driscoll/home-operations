@@ -1,6 +1,6 @@
 {
     "name": "@pulumi/unifi",
-    "version": "0.41.3",
+    "version": "0.41.8",
     "description": "A Pulumi provider dynamically bridged from unifi.",
     "repository": "https://github.com/ubiquiti-community/terraform-provider-unifi",
     "main": "bin/index.js",
@@ -20,8 +20,8 @@
         "version": "0.14.0",
         "parameterization": {
             "name": "unifi",
-            "version": "0.41.3",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjMifX0="
+            "version": "0.41.8",
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjQxLjgifX0="
         }
     }
 }

@@ -41,6 +41,12 @@ export class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -97,6 +103,10 @@ export class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -112,7 +122,6 @@ export class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -136,6 +145,7 @@ export class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -196,6 +206,12 @@ export interface RbacPermissionRoleState {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -252,6 +268,10 @@ export interface RbacPermissionRoleState {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -267,7 +287,6 @@ export interface RbacPermissionRoleState {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -291,6 +310,7 @@ export interface RbacPermissionRoleState {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -315,6 +335,12 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
      *   - `authentik_crypto.certificatekeypair`
+     *   - `authentik_endpoints.deviceuserbinding`
+     *   - `authentik_endpoints.deviceaccessgroup`
+     *   - `authentik_endpoints.endpointstage`
+     *   - `authentik_endpoints_connectors_agent.agentconnector`
+     *   - `authentik_endpoints_connectors_agent.agentdeviceuserbinding`
+     *   - `authentik_endpoints_connectors_agent.enrollmenttoken`
      *   - `authentik_enterprise.license`
      *   - `authentik_events.event`
      *   - `authentik_events.notificationtransport`
@@ -371,6 +397,10 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_sources_saml.groupsamlsourceconnection`
      *   - `authentik_sources_scim.scimsource`
      *   - `authentik_sources_scim.scimsourcepropertymapping`
+     *   - `authentik_sources_telegram.telegramsource`
+     *   - `authentik_sources_telegram.telegramsourcepropertymapping`
+     *   - `authentik_sources_telegram.usertelegramsourceconnection`
+     *   - `authentik_sources_telegram.grouptelegramsourceconnection`
      *   - `authentik_stages_authenticator_duo.authenticatorduostage`
      *   - `authentik_stages_authenticator_duo.duodevice`
      *   - `authentik_stages_authenticator_email.authenticatoremailstage`
@@ -386,7 +416,6 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_stages_authenticator_webauthn.webauthndevice`
      *   - `authentik_stages_captcha.captchastage`
      *   - `authentik_stages_consent.consentstage`
-     *   - `authentik_stages_consent.userconsent`
      *   - `authentik_stages_deny.denystage`
      *   - `authentik_stages_dummy.dummystage`
      *   - `authentik_stages_email.emailstage`
@@ -410,6 +439,7 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`

@@ -25,19 +25,25 @@ export declare class ApplicationKey extends pulumi.CustomResource {
     readonly applicationKeyId: pulumi.Output<string>;
     readonly b2ApplicationKeyId: pulumi.Output<string>;
     /**
-     * When present, restricts access to one bucket.
+     * When present, restricts access to one bucket. Conflicts with `bucket_ids`. **Modifying this attribute will force creation of a new resource.**
+     *
+     * @deprecated Deprecated
      */
     readonly bucketId: pulumi.Output<string | undefined>;
     /**
-     * A set of strings, each one naming a capability the key has.
+     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     */
+    readonly bucketIds: pulumi.Output<string[] | undefined>;
+    /**
+     * A set of strings, each one naming a capability the key has. **Modifying this attribute will force creation of a new resource.**
      */
     readonly capabilities: pulumi.Output<string[]>;
     /**
-     * The name of the key.
+     * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     readonly keyName: pulumi.Output<string>;
     /**
-     * When present, restricts access to files whose names start with the prefix.
+     * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
     readonly namePrefix: pulumi.Output<string | undefined>;
     /**
@@ -67,19 +73,25 @@ export interface ApplicationKeyState {
     applicationKeyId?: pulumi.Input<string>;
     b2ApplicationKeyId?: pulumi.Input<string>;
     /**
-     * When present, restricts access to one bucket.
+     * When present, restricts access to one bucket. Conflicts with `bucket_ids`. **Modifying this attribute will force creation of a new resource.**
+     *
+     * @deprecated Deprecated
      */
     bucketId?: pulumi.Input<string>;
     /**
-     * A set of strings, each one naming a capability the key has.
+     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     */
+    bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * A set of strings, each one naming a capability the key has. **Modifying this attribute will force creation of a new resource.**
      */
     capabilities?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * The name of the key.
+     * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     keyName?: pulumi.Input<string>;
     /**
-     * When present, restricts access to files whose names start with the prefix.
+     * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
     namePrefix?: pulumi.Input<string>;
     /**
@@ -93,19 +105,25 @@ export interface ApplicationKeyState {
 export interface ApplicationKeyArgs {
     b2ApplicationKeyId?: pulumi.Input<string>;
     /**
-     * When present, restricts access to one bucket.
+     * When present, restricts access to one bucket. Conflicts with `bucket_ids`. **Modifying this attribute will force creation of a new resource.**
+     *
+     * @deprecated Deprecated
      */
     bucketId?: pulumi.Input<string>;
     /**
-     * A set of strings, each one naming a capability the key has.
+     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     */
+    bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * A set of strings, each one naming a capability the key has. **Modifying this attribute will force creation of a new resource.**
      */
     capabilities: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * The name of the key.
+     * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     keyName: pulumi.Input<string>;
     /**
-     * When present, restricts access to files whose names start with the prefix.
+     * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
     namePrefix?: pulumi.Input<string>;
 }

@@ -18,7 +18,7 @@ export declare class BucketNotificationRules extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is BucketNotificationRules;
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     readonly bucketId: pulumi.Output<string>;
     readonly bucketNotificationRulesId: pulumi.Output<string>;
@@ -40,7 +40,7 @@ export declare class BucketNotificationRules extends pulumi.CustomResource {
  */
 export interface BucketNotificationRulesState {
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketId?: pulumi.Input<string>;
     bucketNotificationRulesId?: pulumi.Input<string>;
@@ -54,7 +54,7 @@ export interface BucketNotificationRulesState {
  */
 export interface BucketNotificationRulesArgs {
     /**
-     * The ID of the bucket.
+     * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketId: pulumi.Input<string>;
     bucketNotificationRulesId?: pulumi.Input<string>;

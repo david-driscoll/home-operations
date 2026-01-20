@@ -44,6 +44,10 @@ export declare class SourcePlex extends pulumi.CustomResource {
      *  Defaults to `any`.
      */
     readonly policyEngineMode: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly promoted: pulumi.Output<boolean | undefined>;
     readonly slug: pulumi.Output<string>;
     readonly sourcePlexId: pulumi.Output<string>;
     /**
@@ -106,6 +110,10 @@ export interface SourcePlexState {
      *  Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     slug?: pulumi.Input<string>;
     sourcePlexId?: pulumi.Input<string>;
     /**
@@ -160,6 +168,10 @@ export interface SourcePlexArgs {
      *  Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string>;
+    /**
+     * Defaults to `false`.
+     */
+    promoted?: pulumi.Input<boolean>;
     slug: pulumi.Input<string>;
     sourcePlexId?: pulumi.Input<string>;
     /**

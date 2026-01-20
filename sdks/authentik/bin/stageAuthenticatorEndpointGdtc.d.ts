@@ -17,6 +17,9 @@ export declare class StageAuthenticatorEndpointGdtc extends pulumi.CustomResourc
     static isInstance(obj: any): obj is StageAuthenticatorEndpointGdtc;
     readonly configureFlow: pulumi.Output<string | undefined>;
     readonly credentials: pulumi.Output<string>;
+    /**
+     * Defaults to ``.
+     */
     readonly friendlyName: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     readonly stageAuthenticatorEndpointGdtcId: pulumi.Output<string>;
@@ -35,6 +38,9 @@ export declare class StageAuthenticatorEndpointGdtc extends pulumi.CustomResourc
 export interface StageAuthenticatorEndpointGdtcState {
     configureFlow?: pulumi.Input<string>;
     credentials?: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     stageAuthenticatorEndpointGdtcId?: pulumi.Input<string>;
@@ -45,6 +51,9 @@ export interface StageAuthenticatorEndpointGdtcState {
 export interface StageAuthenticatorEndpointGdtcArgs {
     configureFlow?: pulumi.Input<string>;
     credentials: pulumi.Input<string>;
+    /**
+     * Defaults to ``.
+     */
     friendlyName?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
     stageAuthenticatorEndpointGdtcId?: pulumi.Input<string>;
