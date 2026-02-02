@@ -822,7 +822,7 @@ def player_api(
                     "episode_num": ep.get("episode") or 1,
                     "title": ep.get("title") or f"S{(ep.get('season') or 1):02d}E{(ep.get('episode') or 1):02d}",
                     "container_extension": ep.get("container_extension") or "mp4",
-                    "episode_run_time": ep.get("episode_run_time") or "30"
+                    "episode_run_time": ep.get("episode_run_time") or 30
                 }
                 for k, v in ep.items():
                     if k not in item:
