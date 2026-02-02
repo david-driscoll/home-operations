@@ -448,7 +448,7 @@ def _parse_m3u_series(text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     idx: Dict[str, Any] = {}
     meta: Dict[str,str] = {}; title: Optional[str] = None
 
-    def put_episode(series_name: str, season: int, episode: int, ep_title: str, url: str, poster: str):
+    def put_episode(series_name: str, season: int, episode: int, ep_title: str, url: str, poster: str, meta: Dict[str,str]):
         sid = str(abs(hash("series:" + series_name.lower())) % (2**31))
         eid = abs(hash("ep:" + url)) % (2**31)
         show = idx.setdefault(sid, {
@@ -469,7 +469,7 @@ def _parse_m3u_series(text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "direct_source": url,
         }
         show["seasons"].setdefault(season, []).append(ep)
-        eps.append({"series_id": int(sid), **ep})
+        eps.append({"series_id": int(sid), **ep, "_keys": list(meta.keys())})
 
     for line in text.splitlines():
         if line.startswith("#EXTINF:"):
@@ -501,7 +501,7 @@ def _parse_m3u_series(text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
                     s, e = 1, 1
                     show_name = raw
                     ep_title = raw
-            put_episode(show_name.strip(), s, e, ep_title.strip(), url, poster)
+            put_episode(show_name.strip(), s, e, ep_title.strip(), url, poster, meta)
             meta = {}; title = None
     return eps, idx
 
@@ -572,6 +572,7 @@ def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> 
         except Exception:
             pass
     if md.get("cast"): item["cast"] = md["cast"]
+    item["_keys"] = list(md.keys())
     return item
 
 def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dict[str, Any]:
@@ -585,6 +586,8 @@ def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dic
         except Exception:
             pass
     if md.get("cast"): item["cast"] = md["cast"]
+    item["episode_run_time"] = md.get("episode_run_time") or "30"
+    item["_keys"] = list(md.keys())
     return item
 
 # ----------------------------
