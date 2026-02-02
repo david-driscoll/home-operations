@@ -556,6 +556,11 @@ def load_series() -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
 # ----------------------------
 def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> Dict[str, Any]:
     if not md: return item
+
+    item["_keys"] = list(md.keys())
+    for sid, s in md.items():
+        item[sid] = s
+
     r = md.get("rating_tmdb")
     if r is not None:
         try:
@@ -572,11 +577,15 @@ def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> 
         except Exception:
             pass
     if md.get("cast"): item["cast"] = md["cast"]
-    item["_keys"] = list(md.keys())
     return item
 
 def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dict[str, Any]:
     if not md: return item
+
+    item["_keys"] = list(md.keys())
+    for sid, s in md.items():
+        item[sid] = s
+
     r = md.get("rating_tmdb")
     if r is not None:
         try:
@@ -587,7 +596,6 @@ def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dic
             pass
     if md.get("cast"): item["cast"] = md["cast"]
     item["episode_run_time"] = md.get("episode_run_time") or "30"
-    item["_keys"] = list(md.keys())
     return item
 
 # ----------------------------
