@@ -436,6 +436,7 @@ def _parse_m3u_movies(text: str) -> List[Dict[str, Any]]:
                 "category_id": MOVIE_CAT_ID,
                 "container_extension": ext,
                 "direct_source": url,
+                "_keys": list(meta.keys()),
             })
             meta = {}; title = None
     return items
@@ -467,9 +468,10 @@ def _parse_m3u_series(text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "poster": poster,
             "container_extension": ext,
             "direct_source": url,
+            "_keys": list(meta.keys()),
         }
         show["seasons"].setdefault(season, []).append(ep)
-        eps.append({"series_id": int(sid), **ep, "_keys": list(meta.keys())})
+        eps.append({"series_id": int(sid), **ep})
 
     for line in text.splitlines():
         if line.startswith("#EXTINF:"):
@@ -815,12 +817,17 @@ def player_api(
         for season, eps_list in sorted(s["seasons"].items()):
             seasons.append({"air_date": "", "season_number": season, "name": f"Season {season}"})
             for ep in sorted(eps_list, key=lambda x: x.get("episode", 1)):
-                episodes_out.setdefault(str(season), []).append({
+                item = {
                     "id": ep["id"],
                     "episode_num": ep.get("episode") or 1,
                     "title": ep.get("title") or f"S{(ep.get('season') or 1):02d}E{(ep.get('episode') or 1):02d}",
                     "container_extension": ep.get("container_extension") or "mp4",
-                })
+                    "episode_run_time": ep.get("episode_run_time") or "30"
+                }
+                for k, v in ep.items():
+                    if k not in item:
+                        item[k] = v
+                episodes_out.setdefault(str(season), []).append(item)
 
         info = {
             "name": series_title, "cover": poster, "plot": md.get("plot") or "",
