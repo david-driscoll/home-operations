@@ -55,7 +55,10 @@ export class DockgeLxc extends ComponentResource {
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
   registerTailscaleService: (service: string) => void;
-  constructor(name: string, private readonly args: DockgeLxcArgs) {
+  constructor(
+    name: string,
+    private readonly args: DockgeLxcArgs,
+  ) {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
@@ -71,7 +74,7 @@ export class DockgeLxc extends ComponentResource {
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
     this.tailscaleIpAddress = output(
-      args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp)
+      args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp),
     );
 
     // update hostname on machine
@@ -81,21 +84,21 @@ export class DockgeLxc extends ComponentResource {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
       },
-      mergeOptions(cro, { dependsOn: [] })
+      mergeOptions(cro, { dependsOn: [] }),
     );
 
     const ipAddress = (this.ipAddress = args.ipAddress
       ? output(args.ipAddress)
       : args.host.remote
-      ? this.tailscaleIpAddress
-      : (new remote.Command(
-          `${name}-get-ip-address`,
-          {
-            connection: args.host.remoteConnection,
-            create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
-          },
-          mergeOptions(cro, { dependsOn: [setHostname] })
-        ).stdout as Output<TailscaleIp>));
+        ? this.tailscaleIpAddress
+        : (new remote.Command(
+            `${name}-get-ip-address`,
+            {
+              connection: args.host.remoteConnection,
+              create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+            },
+            mergeOptions(cro, { dependsOn: [setHostname] }),
+          ).stdout as Output<TailscaleIp>));
 
     this.credential = output(args.credential);
 
@@ -119,7 +122,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
       },
-      mergeOptions(cro, { dependsOn: [setHostname] })
+      mergeOptions(cro, { dependsOn: [setHostname] }),
     );
 
     const keyWrites: any[] = [];
@@ -131,7 +134,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.publicKeyOpenssh).apply((k) => `${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     keyWrites.push(
@@ -141,7 +144,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Derive server public key (OpenSSH) for clients
@@ -155,7 +158,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
     keyWrites.push(
       copyFileToRemote(`${name}-backrest-client-key`, {
@@ -164,7 +167,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Write client private key for rclone-jobs client
@@ -175,7 +178,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
     keyWrites.push(
       copyFileToRemote(`${name}-backrest-client-pub`, {
@@ -184,7 +187,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Write server public key for known_hosts usage by clients
@@ -195,7 +198,7 @@ export class DockgeLxc extends ComponentResource {
         content: output(sftpHostPublicKey).apply((k) => k.trim() + "\n"),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Also generate a convenience known_hosts entry using tailscale hostname with port
@@ -206,7 +209,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Also generate a convenience known_hosts entry using tailscale hostname with port
@@ -217,7 +220,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
-      })
+      }),
     );
 
     // Set restrictive permissions on the keys
@@ -228,7 +231,7 @@ export class DockgeLxc extends ComponentResource {
         triggers: keyWrites.map((k) => k.id),
         create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts || true`,
       },
-      mergeOptions(cro, { dependsOn: keyWrites })
+      mergeOptions(cro, { dependsOn: keyWrites }),
     );
 
     // Get Tailscale device - this will need to be done after the hook script runs
@@ -244,7 +247,7 @@ export class DockgeLxc extends ComponentResource {
           log.error(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
         }
         return result;
-      }
+      },
     );
 
     new remote.Command(`${name}-install-tools`, {
@@ -264,7 +267,7 @@ export class DockgeLxc extends ComponentResource {
         parent: this,
         retainOnDelete: true,
         dependsOn: [tailscaleSet],
-      }
+      },
     );
 
     // Create device key
@@ -278,7 +281,7 @@ export class DockgeLxc extends ComponentResource {
         provider: args.globals.tailscaleProvider,
         parent: this,
         dependsOn: [tailscaleSet],
-      }
+      },
     );
 
     const dockgeInfo = new OnePasswordItem(
@@ -304,7 +307,7 @@ export class DockgeLxc extends ComponentResource {
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
         },
       },
-      cro
+      cro,
     );
 
     new remote.Command(`${name}-delete-docker-daemon`, {
@@ -370,7 +373,7 @@ export class DockgeLxc extends ComponentResource {
     ];
 
     const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
-      unique([...hostFiles, ...commonFiles].filter((z) => z !== ".keep"))
+      unique([...hostFiles, ...commonFiles].filter((z) => z !== ".keep")),
     );
 
     return stacks
@@ -383,8 +386,8 @@ export class DockgeLxc extends ComponentResource {
               return null;
             }
             return this.createStack(this.args.host.name, stackName, files, path, replacements, args.dependsOn);
-          })
-        )
+          }),
+        ),
       )
       .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
@@ -422,7 +425,7 @@ export class DockgeLxc extends ComponentResource {
     files: Map<string, string>,
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
-    dependsOn: Input<Resource[]>
+    dependsOn: Input<Resource[]>,
   ): Promise<{ name: string; path: string; compose?: remote.Command }> {
     const copyFiles = [];
     const cluster = await awaitOutput(this.cluster);
@@ -471,7 +474,7 @@ export class DockgeLxc extends ComponentResource {
               dependsOn: dependsOn,
               parent: this,
               protect: stackName === "adguard",
-            }
+            },
           );
         }
       } else if (file === "definition.yaml") {
@@ -486,7 +489,7 @@ export class DockgeLxc extends ComponentResource {
               upper: false,
               special: false,
             },
-            { parent: this, dependsOn: dependsOn }
+            { parent: this, dependsOn: dependsOn },
           );
           const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this, dependsOn: dependsOn });
           const [clientIdResult, clientSecretResult] = await awaitOutput(all([clientId.id, clientSecret.result]));
@@ -504,7 +507,7 @@ export class DockgeLxc extends ComponentResource {
           content: replacedContent,
           parent: this,
           dependsOn: dependsOn,
-        })
+        }),
       );
     }
 
@@ -514,9 +517,9 @@ export class DockgeLxc extends ComponentResource {
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose build -f compose.yaml && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
-        mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true })
+        mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
       );
 
       return { name: stackName, path, compose };

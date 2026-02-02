@@ -27,6 +27,9 @@ accessLog:
 entryPoints:
   web:
     address: ":80"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   websecure:
     address: ":443"
     http:
@@ -37,8 +40,14 @@ entryPoints:
         readTimeout: "0s"
   tailscale:
     address: ":8443"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   sftp:
     address: ":2022"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   metrics:
     address: ":8082"
 

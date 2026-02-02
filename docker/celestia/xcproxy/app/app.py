@@ -436,7 +436,6 @@ def _parse_m3u_movies(text: str) -> List[Dict[str, Any]]:
                 "category_id": MOVIE_CAT_ID,
                 "container_extension": ext,
                 "direct_source": url,
-                "_keys": list(meta.keys()),
             })
             meta = {}; title = None
     return items
@@ -468,7 +467,6 @@ def _parse_m3u_series(text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
             "poster": poster,
             "container_extension": ext,
             "direct_source": url,
-            "_keys": list(meta.keys()),
         }
         show["seasons"].setdefault(season, []).append(ep)
         eps.append({"series_id": int(sid), **ep})
@@ -559,8 +557,6 @@ def load_series() -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
 def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> Dict[str, Any]:
     if not md: return item
 
-    item["_keys"] = list(md.keys())
-
     r = md.get("rating_tmdb")
     if r is not None:
         try:
@@ -582,8 +578,6 @@ def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> 
 def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dict[str, Any]:
     if not md: return item
 
-    item["_keys"] = list(md.keys())
-
     r = md.get("rating_tmdb")
     if r is not None:
         try:
@@ -593,13 +587,6 @@ def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dic
         except Exception:
             pass
     if md.get("cast"): item["cast"] = md["cast"]
-    if md.get("runtime_minutes"):
-        try:
-            mins = int(md["runtime_minutes"])
-            item["episode_run_time"] = str(mins)
-            item["episode_run_time_secs"] = mins * 60
-        except Exception:
-            pass
     return item
 
 # ----------------------------
@@ -817,12 +804,15 @@ def player_api(
         for season, eps_list in sorted(s["seasons"].items()):
             seasons.append({"air_date": "", "season_number": season, "name": f"Season {season}"})
             for ep in sorted(eps_list, key=lambda x: x.get("episode", 1)):
+                ep_title = ep.get("title") or ep.get("group_title") or f"S{(ep.get('season') or 1):02d}E{(ep.get('episode') or 1):02d}"
+                ep_title = re.sub(r"\[.*?\]", "", ep_title).strip()
                 item = {
                     "id": ep["id"],
                     "episode_num": ep.get("episode") or 1,
-                    "title": ep.get("title") or f"S{(ep.get('season') or 1):02d}E{(ep.get('episode') or 1):02d}",
+                    "title": ep_title,
                     "container_extension": ep.get("container_extension") or "mp4",
-                    "episode_run_time": ep.get("episode_run_time") or 30
+                    "episode_run_time": ep.get("episode_run_time") or 30,
+                    "_keys": list(ep.keys())
                 }
                 for k, v in ep.items():
                     if k not in item:
