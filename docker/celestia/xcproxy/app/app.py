@@ -558,8 +558,6 @@ def _apply_enrichment_xtream_movie(item: Dict[str, Any], md: Dict[str, Any]) -> 
     if not md: return item
 
     item["_keys"] = list(md.keys())
-    for sid, s in md.items():
-        item[sid] = s
 
     r = md.get("rating_tmdb")
     if r is not None:
@@ -583,8 +581,6 @@ def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dic
     if not md: return item
 
     item["_keys"] = list(md.keys())
-    for sid, s in md.items():
-        item[sid] = s
 
     r = md.get("rating_tmdb")
     if r is not None:
@@ -595,7 +591,13 @@ def _apply_enrichment_xtream_tv(item: Dict[str, Any], md: Dict[str, Any]) -> Dic
         except Exception:
             pass
     if md.get("cast"): item["cast"] = md["cast"]
-    item["episode_run_time"] = md.get("episode_run_time") or "30"
+    if md.get("runtime_minutes"):
+        try:
+            mins = int(md["runtime_minutes"])
+            item["episode_run_time"] = str(mins)
+            item["episode_run_time_secs"] = mins * 60
+        except Exception:
+            pass
     return item
 
 # ----------------------------
