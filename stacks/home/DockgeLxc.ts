@@ -517,7 +517,7 @@ export class DockgeLxc extends ComponentResource {
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose build -f compose.yaml && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
+          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
       );
