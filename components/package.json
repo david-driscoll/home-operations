@@ -25,7 +25,8 @@
     "@pulumi/tailscale": "^0.25.0",
     "@pulumi/tls": "^5.2.2",
     "node-unifi": "^2.2.1",
-    "openapi-client-axios": "^7.7.0"
+    "openapi-client-axios": "^7.7.0",
+    "vscode-ws-jsonrpc": "^3.5.0"
   },
   "devDependencies": {
     "@types/node-unifi": "^2.5.1"
