@@ -32,7 +32,7 @@ export class ProxmoxBackupServer extends ComponentResource {
         username: interpolate`${credential.apply((i) => i.fields.username.value!)}@pbs`,
         password: credential.apply((i) => i.fields.password.value!),
       },
-      { parent: this }
+      { parent: this },
     );
   }
 }
@@ -43,7 +43,7 @@ export async function createBackupDatastores(
     globals: GlobalResources;
     sourceServer: ProxmoxBackupServer;
     destinationServer: ProxmoxBackupServer;
-  }
+  },
 ) {
   const suffix = new RandomString(`${name}-pbs-datastore`, {
     length: 6,
@@ -53,23 +53,23 @@ export async function createBackupDatastores(
     special: false,
   });
 
-  const sourceDatastore = new Datastore(
-    `${name}-src`,
-    {
-      type: "dir",
-      contents: ["backup"],
-      path: interpolate`/data/backup/${name}-${suffix.result}`,
-      gcSchedule: "daily",
-      pruneSchedule: "daily",
-      createBasePath: true,
-    },
-    {
-      provider: args.sourceServer.provider,
-      parent: args.sourceServer,
-      retainOnDelete: true,
-      protect: true,
-    }
-  );
+  // const sourceDatastore = new Datastore(
+  //   `${name}-src`,
+  //   {
+  //     type: "dir",
+  //     contents: ["backup"],
+  //     path: interpolate`/data/backup/${name}-${suffix.result}`,
+  //     gcSchedule: "daily",
+  //     pruneSchedule: "daily",
+  //     createBasePath: true,
+  //   },
+  //   {
+  //     provider: args.sourceServer.provider,
+  //     parent: args.sourceServer,
+  //     retainOnDelete: true,
+  //     protect: true,
+  //   },
+  // );
 
   // const sourcePruneJob = createPruneJob(`${name}-src`, {
   //   server: args.sourceServer,
@@ -81,24 +81,24 @@ export async function createBackupDatastores(
   //   keepMonthly: 3,
   // });
 
-  const destinationDatastore = new Datastore(
-    `${name}-dst`,
-    {
-      type: "dir",
-      contents: ["backup"],
-      path: interpolate`/data/backup/${name}-${suffix.result}`,
-      createBasePath: true,
-      gcSchedule: "weekly",
-      pruneSchedule: "weekly",
-    },
-    {
-      provider: args.destinationServer.provider,
-      parent: args.destinationServer,
-      dependsOn: [sourceDatastore],
-      retainOnDelete: true,
-      protect: true,
-    }
-  );
+  // const destinationDatastore = new Datastore(
+  //   `${name}-dst`,
+  //   {
+  //     type: "dir",
+  //     contents: ["backup"],
+  //     path: interpolate`/data/backup/${name}-${suffix.result}`,
+  //     createBasePath: true,
+  //     gcSchedule: "weekly",
+  //     pruneSchedule: "weekly",
+  //   },
+  //   {
+  //     provider: args.destinationServer.provider,
+  //     parent: args.destinationServer,
+  //     dependsOn: [sourceDatastore],
+  //     retainOnDelete: true,
+  //     protect: true,
+  //   },
+  // );
 
   // const destinationPruneJob = createPruneJob(`${name}-dst`, {
   //   server: args.destinationServer,
@@ -136,7 +136,7 @@ export async function createBackupDatastores(
       provider: args.globals.backblazeProvider,
       retainOnDelete: true,
       protect: true,
-    }
+    },
   );
 
   // b2 buckets, application key, minio buckets
@@ -164,7 +164,7 @@ export async function createBackupDatastores(
         "writeFiles",
       ],
     },
-    { parent: args.sourceServer, provider: args.globals.backblazeProvider }
+    { parent: args.sourceServer, provider: args.globals.backblazeProvider },
   );
 
   const s3Endpoint = new S3Endpoint(
@@ -182,30 +182,29 @@ export async function createBackupDatastores(
       parent: args.sourceServer,
       retainOnDelete: true,
       protect: true,
-    }
-  );
-
-  const destinationBackblazeBucket = new Datastore(
-    `${name}-b2`,
-    {
-      type: "s3",
-      contents: ["backup"],
-      s3Bucket: b2Bucket.bucketName,
-      s3Client: s3Endpoint.s3EndpointId,
-      gcSchedule: "weekly",
-      pruneSchedule: "weekly",
-      path: interpolate`/data/cache/${s3Endpoint.s3EndpointId}`,
-      createBasePath: true,
     },
-    {
-      provider: args.sourceServer.provider,
-      parent: args.sourceServer,
-      dependsOn: [destinationDatastore],
-
-      retainOnDelete: true,
-      protect: true,
-    }
   );
+
+  // const destinationBackblazeBucket = new Datastore(
+  //   `${name}-b2`,
+  //   {
+  //     contents: ["backup"],
+  //     s3Bucket: b2Bucket.bucketName,
+  //     s3Client: s3Endpoint.s3EndpointId,
+  //     gcSchedule: "weekly",
+  //     pruneSchedule: "weekly",
+  //     path: interpolate`/data/cache/${s3Endpoint.s3EndpointId}`,
+  //     createBasePath: true,
+  //   },
+  //   {
+  //     provider: args.sourceServer.provider,
+  //     parent: args.sourceServer,
+  //     dependsOn: [destinationDatastore],
+
+  //     retainOnDelete: true,
+  //     protect: true,
+  //   }
+  // );
 
   // const b2PruneJob = createPruneJob(`${name}-b2`, {
   //   server: args.sourceServer,
@@ -240,12 +239,12 @@ export async function createBackupDatastores(
   //   maxDepth: 1,
   // });
 
-  await awaitOutput(destinationBackblazeBucket.id);
+  // await awaitOutput(destinationBackblazeBucket.id);
 
   return {
-    sourceDatastore,
-    destinationDatastore,
-    destinationBackblazeBucket,
+    // sourceDatastore,
+    // destinationDatastore,
+    // destinationBackblazeBucket,
     b2Bucket,
     b2BucketApplicationKey,
   };
@@ -274,7 +273,7 @@ function createPruneJob(name: string, args: PruneJobArgs) {
       number: true,
       special: false,
     },
-    { parent: args.server }
+    { parent: args.server },
   );
 
   const jobId = interpolate`${name}-${suffix.result}`;
@@ -308,7 +307,7 @@ function createPruneJob(name: string, args: PruneJobArgs) {
       deleteBody: jsonStringify({}),
       deleteResponseCodes: ["200"],
     },
-    { parent: args.server }
+    { parent: args.server },
   );
 
   return job;
@@ -341,7 +340,7 @@ function createSyncJob(name: string, args: SyncJobArgs) {
       number: true,
       special: false,
     },
-    { parent: args.sourceServer }
+    { parent: args.sourceServer },
   );
 
   const jobId = interpolate`${name}-${suffix.result}`;
@@ -381,7 +380,7 @@ function createSyncJob(name: string, args: SyncJobArgs) {
       deleteBody: jsonStringify({}),
       deleteResponseCodes: ["200"],
     },
-    { parent: args.sourceServer }
+    { parent: args.sourceServer },
   );
 
   // celestia.opossum-yo.ts.net

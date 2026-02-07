@@ -12,6 +12,7 @@
     "pretty": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@components/*": [

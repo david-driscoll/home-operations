@@ -113,6 +113,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         }
       }
     }
+    return Promise.reject(new Error("Max retries reached"));
   }
 
   async delete(id: string) {
@@ -144,12 +145,12 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const compareOlds = Object.fromEntries(
       Object.keys(fullNewInputs)
         .filter((z) => !z.startsWith("_"))
-        .map((key) => [key, (oldOutputs as any)[key]] as const)
+        .map((key) => [key, (oldOutputs as any)[key]] as const),
     );
     const compareNews = Object.fromEntries(
       Object.keys(fullNewInputs)
         .filter((z) => !z.startsWith("_"))
-        .map((key) => [key, (fullNewInputs as any)[key]] as const)
+        .map((key) => [key, (fullNewInputs as any)[key]] as const),
     );
     const delta = differ.diff(compareOlds, compareNews);
     const patch = jsonpatch
