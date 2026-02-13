@@ -84,7 +84,7 @@ export async function updateTailscaleAcls(args: {
       dst: [tag.apps, tag.dockge],
       ip: ports.web,
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
   );
 
   manager.setGrant(
@@ -93,7 +93,7 @@ export async function updateTailscaleAcls(args: {
       dst: [tag.proxmox, tag.dockge],
       ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.proxmoxManagement],
     },
-    { accept: testData.knownAdminUsers }
+    { accept: testData.knownAdminUsers },
   );
 
   manager.setSshRule(
@@ -103,7 +103,7 @@ export async function updateTailscaleAcls(args: {
       users: ["root"],
       action: "check",
     },
-    Object.fromEntries(manager.testData.knownAdminUsers.map((user) => [user, { check: [`root`] } as TailscaleSshTestInputItem] as const))
+    Object.fromEntries(manager.testData.knownAdminUsers.map((user) => [user, { check: [`root`] } as TailscaleSshTestInputItem] as const)),
   );
 
   manager.setGrant(
@@ -113,7 +113,7 @@ export async function updateTailscaleAcls(args: {
       dst: ["host:primary-dns", "host:secondary-dns", "host:unifi-dns"],
       ip: ports.dns,
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
   );
 
   const allowedIps = clusters.flatMap((z) => z.publicIps).concat(internalIps);
@@ -125,7 +125,7 @@ export async function updateTailscaleAcls(args: {
       dst: allowedIps,
       ip: ["*"],
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
   );
 
   manager.setGrant(
@@ -135,7 +135,7 @@ export async function updateTailscaleAcls(args: {
       dst: [subnets.internal],
       ip: ["*"],
     },
-    { accept: [], deny: testData.knownNormalUsers }
+    { accept: [], deny: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -144,7 +144,7 @@ export async function updateTailscaleAcls(args: {
       dst: [tag.exitNode, autogroups.internet],
       ip: ["*"],
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
   );
 
   manager.setGrant(
@@ -153,7 +153,7 @@ export async function updateTailscaleAcls(args: {
       dst: ["host:idp"],
       ip: ["tcp:443"],
     },
-    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) }
+    { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
   );
 
   manager.setGrant(
@@ -170,7 +170,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setNodeAttr({
@@ -192,7 +192,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -221,7 +221,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -242,7 +242,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -259,7 +259,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setNodeAttr({
@@ -275,7 +275,7 @@ export async function updateTailscaleAcls(args: {
         "tailscale.com/cap/golink": [{ admin: true }],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -300,7 +300,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -319,7 +319,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setGrant(
@@ -338,7 +338,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: testData.knownNormalUsers }
+    { accept: testData.knownNormalUsers },
   );
 
   manager.setNodeAttr({
@@ -365,7 +365,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: [groups.admins] }
+    { accept: [groups.admins] },
   );
 
   manager.setGrant(
@@ -382,7 +382,7 @@ export async function updateTailscaleAcls(args: {
         ],
       },
     },
-    { accept: [tag.egress] }
+    { accept: [tag.egress] },
   );
 
   const json = await manager.getJson();
@@ -392,7 +392,7 @@ export async function updateTailscaleAcls(args: {
       acl: json,
       overwriteExistingContent: true,
     },
-    cro
+    cro,
   );
 
   new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers }, cro);
@@ -413,7 +413,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   manager.setGrant({ src: [tag.proxmox], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.proxmox] });
 
   const rules = Object.fromEntries(
-    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.proxmoxDevices.map((z) => [z, { accept: [`root`] }] as const))
+    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.proxmoxDevices.map((z) => [z, { accept: [`root`] }] as const)),
   );
   manager.setSshRule({ src: [tag.proxmox], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
@@ -432,7 +432,7 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setGrant({ src: [tag.dockge], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.dockge] });
 
   const rules = Object.fromEntries(
-    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map((z) => [z, { accept: [`root`] }] as const))
+    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map((z) => [z, { accept: [`root`] }] as const)),
   );
   manager.setSshRule({ src: [tag.dockge], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
@@ -471,22 +471,22 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
         dst: [cluster.serviceNetwork, cluster.clusterNetwork],
         ip: ["*"],
       },
-      { accept: clusterTags, deny: testData.knownNormalUsers }
+      { accept: clusterTags, deny: testData.knownNormalUsers },
     );
   }
 
   manager.setGrant(
     { src: [autogroups.admin, groups.admins, tag.sgc], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["system:masters"] } }] } },
-    { accept: [groups.admins] }
+    { accept: [groups.admins] },
   );
   manager.setGrant(
     { src: [groups.family, groups.friends], dst: [tag.k8s, tag.operator], ip: ports.web, app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-readers"] } }] } },
-    { accept: [groups.family, groups.friends] }
+    { accept: [groups.family, groups.friends] },
   );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.ssh }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant(
     { src: [autogroups.member, autogroups.tagged, ...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: ports.web },
-    { accept: [...clusterTags, tag.egress, ...testData.knownNormalUsers, ...testData.knownAdminUsers] }
+    { accept: [...clusterTags, tag.egress, ...testData.knownNormalUsers, ...testData.knownAdminUsers] },
   );
   manager.setGrant({ src: [...clusterTags, tag.egress], dst: [tag.observability], ip: ports.observability }, { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers });
   manager.setGrant({ src: clusterTags, dst: [autogroups.internet], ip: ports.any }, { accept: clusterTags });
@@ -503,12 +503,12 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
         dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp],
         ip: ["*"],
       },
-      { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers }
+      { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers },
     );
   }
 
   const rules = Object.fromEntries(
-    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const))
+    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const)),
   );
   manager.setSshRule({ src: [tag.management], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
@@ -534,7 +534,7 @@ function createGroupGrants(manager: TailscaleAclManager) {
           ],
         },
       },
-      { accept: [] }
+      { accept: [] },
     );
   }
 }
