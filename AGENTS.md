@@ -45,42 +45,30 @@ Key files to inspect first
 - `stacks/home/index.ts` and `stacks/authentik/index.ts` — canonical stack usage examples
 - `sdks/unifi/*` — example vendor SDK wrappers
 
-If any section is unclear or you want a short example ("add a new provider", "add a new stack", or "write Pulumi outputs to 1Password"), tell me which example to add.
-
-MCP servers (tools) agents should use
+# MCP servers (tools) agents should use
 
 - mcp_context7_resolve-library-id + mcp_context7_get-library-docs
-
   - Use for authoritative library documentation and code examples (Pulumi providers, SDKs like `@1password/connect`, Unifi SDKs). Always call `resolve-library-id` first unless the caller supplies a Context7-compatible ID (`/org/project`).
 
 - mcp_microsoft-doc_microsoft_docs_search + mcp_microsoft-doc_microsoft_code_sample_search + mcp_microsoft-doc_microsoft_docs_fetch
-
   - Use for Microsoft/Azure docs and official code samples. Prefer `code_sample_search` with `language` set when you need runnable snippets. For Azure-related generation or deployment plans, call the Azure best-practice tool (get_bestpractices) first as required by repo rules.
 
 - mcp_duckduckgo_search + mcp_duckduckgo_fetch_content
-
   - General web search and page fetching for vendor docs, blog posts, or quick troubleshooting. Use when library-specific or vendor-specific MCPs do not return sufficient context.
 
 - mcp_github_pull_request_read, mcp_github_list_discussions, mcp_github_search_issues, mcp_github_list_projects
-
   - Use to inspect PRs, changed files, discussions and project context in the target repo. Prefer `mcp_github_pull_request_read(method: get_files|get_diff|get)` to obtain exact diffs and changed file lists before editing code or proposing PR changes.
 
 - mcp_flux-operator_get_flux_instance
-
   - Use to get a report of Flux controllers/CRDs and their status when investigating GitOps/Flux issues.
 
 - mcp_kubernetes_namespaces_list + mcp_kubernetes_resources_create_or_update/get/delete
-
   - Use for cluster-aware workflows (listing namespaces, creating or updating resources). Only call resource-changing tools when the user explicitly asks to modify a cluster; otherwise prefer read-only queries and local validation (`flux-local`).
-
-- mcp_pulumi_neo-task-launcher
-
-  - Use to launch Pulumi Neo tasks (automated infra work) when the user requests an automated Pulumi operation. Always supply clear context and expected artifacts.
 
 - activate\_\* tools (activate_kubernetes_resource_management, activate_pulumi_deployment_tools, activate_flux_reconciliation_tools, etc.)
   - Call the appropriate `activate_` tool before using specialized domain tools; they ensure the agent has access to the right capabilities and permissions.
 
-Quick rules
+# Quick rules
 
 - Prefer specialized MCP tools (Context7, Microsoft-doc, GitHub, Flux) over a generic web search when authoritative docs are available.
 - Resolve library IDs with `mcp_context7_resolve-library-id` before fetching library docs.
