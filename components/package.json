@@ -22,7 +22,7 @@
     "@pulumi/cloudflare": "^6.10.0",
     "@pulumi/minio": "^0.16.6",
     "@pulumi/random": "^4.18.4",
-    "@pulumi/tailscale": "^0.25.0",
+    "@pulumi/tailscale": "^0.27.0",
     "@pulumi/tls": "^5.2.2",
     "node-unifi": "^2.2.1",
     "openapi-client-axios": "^7.7.0",
