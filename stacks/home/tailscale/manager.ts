@@ -41,7 +41,7 @@ export const ports = {
   ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
   dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
   dockgeManagement: ["tcp:5001", "udp:5001", "tcp:9595", "tcp:2022", "udp:2022", "tcp:2375", "udp:2375"] as TailscaleNetworkCapability[],
-  observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883"] as TailscaleNetworkCapability[],
+  observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080"] as TailscaleNetworkCapability[],
   nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
   proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
   proxmoxManagement: ["tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
@@ -140,10 +140,12 @@ export class TailscaleAclManager {
   public setGrant(
     name: string | pulumi.Input<TailscaleGrant> | undefined,
     grant: pulumi.Input<TailscaleGrant> | TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput,
-    tests?: TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput
+    tests?: TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput,
   ) {
     this.updates.push((context) =>
-      pulumi.all([typeof name === "string" ? name : undefined, typeof name !== "string" ? name! : grant!, typeof name !== "string" ? grant! : tests!]).apply((data) => buildGrant(data as any, context))
+      pulumi
+        .all([typeof name === "string" ? name : undefined, typeof name !== "string" ? name! : grant!, typeof name !== "string" ? grant! : tests!])
+        .apply((data) => buildGrant(data as any, context)),
     );
     return this;
 
@@ -183,7 +185,7 @@ export class TailscaleAclManager {
                     proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
                     accept: destinations(p, user),
                   } as TailscaleTest;
-                })
+                }),
               ),
             ...(testSources.deny ?? [])
               .map((u) => u.replace(/^host\:/, ""))
@@ -195,7 +197,7 @@ export class TailscaleAclManager {
                     proto: proto === "*" ? "tcp" : (proto as TailscaleTest["proto"]),
                     deny: destinations(p, user),
                   } as TailscaleTest;
-                })
+                }),
               ),
           ].filter((z) => (z.accept?.length ?? 0) + (z.deny?.length ?? 0) > 0);
         };
@@ -394,7 +396,7 @@ function getGrantName(grant: TailscaleGrant) {
     nameParts.push(
       ...Object.keys(grant.app)
         .filter((k) => k !== "driscoll.dev/name")
-        .map((k) => k.replace("tailscale.com/cap/", ""))
+        .map((k) => k.replace("tailscale.com/cap/", "")),
     );
   }
   return nameParts.join("-");
