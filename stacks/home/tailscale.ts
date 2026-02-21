@@ -467,11 +467,19 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
     manager.setGrant(
       {
-        src: clusterTags.concat([tag.ingress, tag.egress, tag.operator, tag.observability, tag.management, tag.k8s]),
+        src: [...clusterTags, tag.ingress, tag.egress, tag.operator, tag.observability, tag.management, tag.k8s],
         dst: [cluster.serviceNetwork, cluster.clusterNetwork],
         ip: ["*"],
       },
       { accept: clusterTags, deny: testData.knownNormalUsers },
+    );
+    manager.setGrant(
+      {
+        src: [groups.admins, autogroups.admin],
+        dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp],
+        ip: ["*"],
+      },
+      { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers },
     );
   }
 
@@ -495,17 +503,6 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant({ src: [tag.management], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.management], dst: [tag.dockge, tag.proxmox], ip: [...ports.ssh, ...ports.nut] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
-
-  for (const cluster of clusters) {
-    manager.setGrant(
-      {
-        src: [groups.admins, autogroups.admin],
-        dst: [cluster.serviceNetwork, cluster.clusterNetwork, cluster.kubeApiIp],
-        ip: ["*"],
-      },
-      { accept: testData.knownAdminUsers, deny: testData.knownNormalUsers },
-    );
-  }
 
   const rules = Object.fromEntries(
     testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const)),
