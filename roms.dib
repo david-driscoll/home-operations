@@ -1,0 +1,19 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"pwsh","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"pwsh"},{"name":"value"}]}}
+
+#!pwsh
+
+$media='/mnt/stash/media/'
+$path="$media/games/roms/library"
+$dats="$media/games/dats.zip"
+
+$dockerCmd = "docker run --rm -v `"$media`:$media`" -v /root/logs:/logs node npx -y igir@latest"
+
+# $subCmd = "link clean report --dat '$dats' --input '$path' --output '$path/{romm}' --report-output '/root/igir-%X.csv'"
+$subCmd = "link clean report --dat '$dats' --input '$path' --output '$path/{romm}' --report-output '/logs/igir-%X.csv'"
+
+# iex "ssh root@truenas.driscoll.tech $dockerCmd $subCmd -vv"
+iex "ssh root@truenas.driscoll.tech `"nohup $dockerCmd $subCmd -vvv > /tmp/igir.log 2>&1 &`""
+
+# ssh root@truenas docker run --rm -it -v "$media`:$media" node npx igir@latest link dir2dat --input "/Volumes/media/games/roms/library" --output "/Volumes/media/games/roms/library/{romm}"

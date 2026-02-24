@@ -1,0 +1,24 @@
+services:
+  uhf-server:
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    image: swapplications/uhf-server:1.6.0
+    container_name: uhf-server
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Web UI routing (HTTPS)
+      traefik.http.routers.${APP}.rule: Host(`uhf.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.${APP}.entrypoints: websecure
+      traefik.http.routers.${APP}.tls.certresolver: le
+      traefik.http.routers.${APP}.service: ${APP}
+
+      traefik.http.services.${APP}.loadbalancer.server.port: 8000
+    volumes:
+      - /data/uhf/recordings/:/recordings
+      - ./uhf-db:/var/lib/uhf-server
+    environment:
+      - PORT=8000
+    command: uhf-server --port 8000 --recordings-dir /recordings --enable-commercial-detection
