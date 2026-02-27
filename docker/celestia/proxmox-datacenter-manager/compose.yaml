@@ -1,0 +1,45 @@
+services:
+  pdm:
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    image: ghcr.io/longqt-sea/proxmox-datacenter-manager:2026-02-22@sha256:3980347cf896d6e6e49570695f8fab0a26f8dff582ebe1f5410fde631c43f22a
+    container_name: pdm
+    hostname: pdm
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      # Web UI routing (HTTPS)
+      traefik.http.routers.${APP}.rule: Host(`pdm.${ROOT_DOMAIN}`)
+      traefik.http.routers.${APP}.entrypoints: websecure
+      traefik.http.routers.${APP}.tls.certresolver: le
+      traefik.http.routers.${APP}.service: ${APP}
+
+      traefik.http.services.${APP}.loadbalancer.server.port: 8443
+
+    stdin_open: true
+    tty: true
+    cgroup: private
+    device_cgroup_rules:
+      - "a *:* rwm"
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+      - systempaths=unconfined
+    environment:
+      PASSWORD: ""
+    ports:
+      - "2225:22"
+      - "8443:8443"
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://pdm.${ROOT_DOMAIN}

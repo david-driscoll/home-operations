@@ -22,3 +22,11 @@ services:
     environment:
       - PORT=8000
     command: uhf-server --port 8000 --recordings-dir /recordings --enable-commercial-detection
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://uhf.${CLUSTER_DOMAIN}
