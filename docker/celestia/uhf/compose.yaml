@@ -3,7 +3,7 @@ services:
     restart: unless-stopped
     dns:
       - 100.100.100.100
-    image: swapplications/uhf-server:1.6.0
+    image: swapplications/uhf-server:1.6.0@sha256:01e9fc1fc2725e8f10973cb8aa06638e9c82dcb64e4d5ae01b58f7651fe1e3ba
     container_name: uhf-server
     labels:
       # Enable Traefik
