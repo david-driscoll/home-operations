@@ -11,7 +11,7 @@ services:
       traefik.enable: true
 
       # Web UI routing (HTTPS)
-      traefik.http.routers.${APP}.rule: Host(`pdm.${ROOT_DOMAIN}`)
+      traefik.http.routers.${APP}.rule: Host(`pdm.${searchDomain}`)
       traefik.http.routers.${APP}.entrypoints: websecure
       traefik.http.routers.${APP}.tls.certresolver: le
       traefik.http.routers.${APP}.service: ${APP}
@@ -42,4 +42,4 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://pdm.${ROOT_DOMAIN}
+    - https://pdm.${searchDomain}
