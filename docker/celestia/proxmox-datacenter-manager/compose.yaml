@@ -17,6 +17,11 @@ services:
       traefik.http.routers.${APP}.service: ${APP}
 
       traefik.http.services.${APP}.loadbalancer.server.port: 8443
+      traefik.http.services.${APP}.loadbalancer.server.scheme: https
+      traefik.http.services.${APP}.loadbalancer.serverstransport: ${APP}-transport@docker
+
+      # PDM uses a self-signed cert internally; skip verification
+      traefik.http.serversTransports.${APP}-transport.insecureSkipVerify: "true"
 
     stdin_open: true
     tty: true
