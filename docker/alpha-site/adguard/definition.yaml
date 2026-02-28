@@ -7,7 +7,7 @@ metadata:
   name: adguard
 spec:
   name: Backup Replica
-  category: ${CLUSTER_TITLE}
+  category: Infrastructure
   url: &url https://adguard.${searchDomain}/index.html
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/adguard-home.svg
   access_policy:

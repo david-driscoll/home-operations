@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Uptime
-  category: Applications
+  category: Infrastructure
   description: Gatus is an open-source status monitoring service.  This is a overall gatus instance.
   url: &url https://uptime.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/gatus.svg
