@@ -31,7 +31,7 @@ services:
       - apparmor=unconfined
       - systempaths=unconfined
     environment:
-      PASSWORD: ""
+      PASSWORD: "op://Eris/Proxmox/password"
     ports:
       - "2225:22"
       - "8443:8443"
