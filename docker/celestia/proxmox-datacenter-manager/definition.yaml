@@ -1,0 +1,25 @@
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: proxmox-datacenter-manager
+spec:
+  name: Proxmox Datacenter Manager
+  category: Applications
+  url: &url https://pdm.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+  - url: *url
+    method: GET
+    enabled: false
+    client:
+      insecure: true
+    group: "Applications"
+    conditions:
+      - "[STATUS] == 200"
+
