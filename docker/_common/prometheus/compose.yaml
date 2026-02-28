@@ -52,6 +52,8 @@ services:
       traefik.http.routers.prometheus-tailscale.rule: Host(`prometheus-${host}.${tailscaleDomain}`)
       traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
       traefik.http.routers.prometheus-tailscale.service: prometheus
+    extra_hosts:
+      - "node-exporter:host-gateway"
     volumes:
       - ./data/prometheus:/prometheus:rw
       - ./config/:/etc/prometheus:ro

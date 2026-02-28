@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     dns:
       - 100.100.100.100
+    extra_hosts:
+      - "alpha-site-host:host-gateway"
     volumes:
       - ./config:/config
     environment:
