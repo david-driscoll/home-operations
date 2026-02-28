@@ -10,8 +10,7 @@ $dats="$media/games/dats.zip"
 
 $dockerCmd = "docker run --rm -v `"$media`:$media`" -v /root/logs:/logs node npx -y igir@latest"
 
-# $subCmd = "link clean report --dat '$dats' --input '$path' --output '$path/{romm}' --report-output '/root/igir-%X.csv'"
-$subCmd = "link clean report --dat '$dats' --input '$path' --output '$path/{romm}' --report-output '/logs/igir-%X.csv'"
+$subCmd = "link clean report --dat '$dats' --input '$media/games/roms/library' --input '$path' --output '$path/{romm}' --report-output '/logs/igir-%X.csv'"
 
 # iex "ssh root@truenas.driscoll.tech $dockerCmd $subCmd -vv"
 iex "ssh root@truenas.driscoll.tech `"nohup $dockerCmd $subCmd -vvv > /tmp/igir.log 2>&1 &`""

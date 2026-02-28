@@ -32,6 +32,15 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
 
   # Node Exporter - host system metrics (local container)
   - job_name: 'node-exporter'
@@ -40,6 +49,15 @@ scrape_configs:
       - targets: ['node-exporter:9100']
         labels:
           host: '${host}'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
 
   # cAdvisor - Docker container metrics (local container)
   - job_name: 'cadvisor'
@@ -48,6 +66,15 @@ scrape_configs:
       - targets: ['cadvisor:8080']
         labels:
           host: '${host}'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
 
   # Traefik metrics (local traefik instance)
   - job_name: 'traefik'
@@ -55,6 +82,15 @@ scrape_configs:
       - targets: ['traefik:8082']
         labels:
           host: '${host}'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
 
   # Blackbox Exporter - HTTP/TCP/ICMP probes
   - job_name: 'blackbox'
@@ -62,6 +98,15 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['blackbox-exporter:9115']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
 
   # Blackbox probes for key services
   - job_name: 'blackbox-http'
@@ -76,8 +121,10 @@ scrape_configs:
           - https://alloy.${CLUSTER_DOMAIN}
     relabel_configs:
       - source_labels: [__address__]
-        target_label: __param_target
+        target_label: instance
       - source_labels: [__param_target]
         target_label: instance
-      - target_label: __address__
-        replacement: blackbox-exporter:9115
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'  # Use the value of instance as hostname
+        regex: '([^:]+).*'
