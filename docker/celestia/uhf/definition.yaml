@@ -1,0 +1,25 @@
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: uhf-server
+spec:
+  name: UHF Server
+  category: Media Management
+  url: &url https://uhf.${CLUSTER_DOMAIN}
+  icon: https://nyc3.digitaloceanspaces.com/files.indieapps.space/accounts/avatars/110/852/305/969/167/232/original/bdf79cf1c4318a22.png
+  access_policy:
+    groups:
+      - media-managers
+  gatus:
+  - url: *url
+    method: GET
+    enabled: false
+    client:
+      insecure: true
+    group: "Applications"
+    conditions:
+      - "[STATUS] == 200"
+
