@@ -51,6 +51,9 @@ entryPoints:
   metrics:
     address: ":8082"
 
+serversTransport:
+  insecureSkipVerify: true
+
 # Metrics configuration
 metrics:
   prometheus:

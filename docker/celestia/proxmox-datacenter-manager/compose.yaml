@@ -34,7 +34,7 @@ services:
       PASSWORD: "op://Eris/Proxmox/password"
     ports:
       - "2225:22"
-      - "8443:8443"
+      - "9443:8443"
     networks:
       - dockge_default
 networks:
