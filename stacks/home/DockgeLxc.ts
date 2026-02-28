@@ -244,7 +244,7 @@ export class DockgeLxc extends ComponentResource {
           const client = await getTailscaleClient();
           await client.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
         } catch (e) {
-          log.error(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
+          log.warn(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
         }
         return result;
       },
@@ -336,6 +336,7 @@ export class DockgeLxc extends ComponentResource {
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(this.args.host.shortName ?? this.args.host.name)),
       replaceVariable(/\$\{searchDomain\}/g, this.args.globals.searchDomain),
+      replaceVariable(/\$\{ROOT_DOMAIN\}/g, this.args.globals.searchDomain),
       replaceVariable(/\$\{TIMEZONE\}/g, "America/New_York"),
       replaceVariable(/\$\{tailscaleDomain\}/g, this.args.globals.tailscaleDomain),
       replaceVariable(/\$\{hostname\}/g, this.hostname),
