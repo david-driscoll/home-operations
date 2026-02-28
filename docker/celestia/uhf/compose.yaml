@@ -15,13 +15,15 @@ services:
       traefik.http.routers.${APP}.tls.certresolver: le
       traefik.http.routers.${APP}.service: ${APP}
 
-      traefik.http.services.${APP}.loadbalancer.server.port: 8000
+      traefik.http.services.${APP}.loadbalancer.server.port: 8809
     volumes:
       - /data/uhf/recordings/:/recordings
       - ./uhf-db:/var/lib/uhf-server
     environment:
-      - PORT=8000
-    command: uhf-server --port 8000 --recordings-dir /recordings --enable-commercial-detection
+      PORT: "8809"
+    expose:
+      - "8809:8809"
+    command: uhf-server --port 8809 --recordings-dir /recordings --enable-commercial-detection
     networks:
       - dockge_default
 networks:
