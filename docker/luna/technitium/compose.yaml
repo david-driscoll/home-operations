@@ -1,0 +1,64 @@
+services:
+  technitium:
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    image: technitium/dns-server:14.3.0@sha256:322b236403ca25028032f28736e2270a860527b030b162c9f82451c6494c4698
+    container_name: technitium
+    hostname: ${host}
+    env_file:
+      - .env
+    environment:
+      # These are applied on first start only (ignored if /etc/dns config already exists)
+      DNS_SERVER_DOMAIN: ${host}.technitium.driscoll.tech
+      DNS_SERVER_WEB_SERVICE_ENABLE_HTTPS: "true"
+      DNS_SERVER_WEB_SERVICE_USE_SELF_SIGNED_CERT: "true"
+      DNS_SERVER_RECURSION: AllowOnlyForPrivateNetworks
+      # DNS_SERVER_FORWARDERS: "1.1.1.1, 1.0.0.1, 9.9.9.9"
+      # DNS_SERVER_FORWARDER_PROTOCOL: Tls
+      DNS_SERVER_ENABLE_BLOCKING: "true"
+      DNS_SERVER_OPTIONAL_PROTOCOL_DNS_OVER_HTTP: "true"
+    labels:
+      traefik.enable: true
+
+      # Admin web UI via local domain
+      traefik.http.routers.technitium.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.technitium.entrypoints: websecure
+      traefik.http.routers.technitium.tls.certresolver: le
+      traefik.http.routers.technitium.service: technitium-admin
+
+      # Admin web UI via Tailscale
+      traefik.http.routers.technitium-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.http.routers.technitium-tailscale.entrypoints: tailscale
+      traefik.http.routers.technitium-tailscale.service: technitium-admin
+
+      traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
+
+      # DNS over HTTPS (DoH)
+      traefik.http.routers.technitium-doh.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && Path(`/dns-query`)
+      traefik.http.routers.technitium-doh.entrypoints: websecure
+      traefik.http.routers.technitium-doh.tls.certresolver: le
+      traefik.http.routers.technitium-doh.service: technitium-doh
+      traefik.http.services.technitium-doh.loadbalancer.server.port: 5380
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "853:853/tcp"
+      - "853:853/udp"
+      - "8053:8053/tcp"
+      - "8053:8053/udp"
+      - "5380:5380/tcp"
+    volumes:
+      - ./config:/etc/dns
+    networks:
+      - dockge_default
+    sysctls:
+      - net.ipv4.ip_local_port_range=1024 65535
+networks:
+  dockge_default:
+    external: true
+x-dockge:
+  urls:
+    - https://${APP}.${CLUSTER_DOMAIN}
+    - https://${APP}-${host}.${tailscaleDomain}
+    - http://${ipAddress}:5380

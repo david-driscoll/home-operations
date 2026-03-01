@@ -1,7 +1,7 @@
 ---
 name: 'DevOps Expert'
 description: 'DevOps specialist following the infinity loop principle (Plan → Code → Build → Test → Release → Deploy → Operate → Monitor) with focus on automation, collaboration, and continuous improvement'
-tools: ['codebase', 'edit/editFiles', 'terminalCommand', 'search', 'githubRepo', 'runCommands', 'runTasks']
+tools: [vscode/getProjectSetupInfo, vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/runCommand, vscode/vscodeAPI, vscode/extensions, vscode/askQuestions, execute/runNotebookCell, execute/testFailure, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/runTests, read/getNotebookSummary, read/problems, read/readFile, read/readNotebookCellOutput, read/terminalSelection, read/terminalLastCommand, agent/runSubagent, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/searchSubagent, search/usages, web/fetch, web/githubRepo, browser/openBrowserPage, browser/readPage, browser/screenshotPage, browser/navigatePage, browser/clickElement, browser/dragElement, browser/hoverElement, browser/typeInPage, browser/runPlaywrightCode, browser/handleDialog, pulumi/deploy-to-aws, pulumi/neo-task-launcher, pulumi/pulumi-cli-preview, pulumi/pulumi-cli-refresh, pulumi/pulumi-cli-stack-output, pulumi/pulumi-cli-up, pulumi/pulumi-registry-get-function, pulumi/pulumi-registry-get-resource, pulumi/pulumi-registry-get-type, pulumi/pulumi-registry-list-functions, pulumi/pulumi-registry-list-resources, pulumi/pulumi-resource-search, awesome-copilot/list_collections, awesome-copilot/load_collection, awesome-copilot/load_instruction, awesome-copilot/search_instructions, context7/query-docs, context7/resolve-library-id, duckduckgo/fetch_content, duckduckgo/search, kubernetes/configuration_contexts_list, kubernetes/configuration_view, kubernetes/events_list, kubernetes/helm_install, kubernetes/helm_list, kubernetes/helm_uninstall, kubernetes/namespaces_list, kubernetes/nodes_log, kubernetes/nodes_stats_summary, kubernetes/nodes_top, kubernetes/pods_delete, kubernetes/pods_exec, kubernetes/pods_get, kubernetes/pods_list, kubernetes/pods_list_in_namespace, kubernetes/pods_log, kubernetes/pods_run, kubernetes/pods_top, kubernetes/resources_create_or_update, kubernetes/resources_delete, kubernetes/resources_get, kubernetes/resources_list, kubernetes/resources_scale, memory/add_observations, memory/create_entities, memory/create_relations, memory/delete_entities, memory/delete_observations, memory/delete_relations, memory/open_nodes, memory/read_graph, memory/search_nodes, sequential-thinking/sequentialthinking, ms-azuretools.vscode-containers/containerToolsConfig, ms-vscode.vscode-websearchforcopilot/websearch, todo]
 ---
 
 # DevOps Expert
@@ -206,7 +206,7 @@ Each phase feeds insights into the next, creating a continuous improvement cycle
 
 Monitor insights feed back into Plan:
 - **Incidents** → New requirements or technical debt
-- **Performance data** → Optimization opportunities  
+- **Performance data** → Optimization opportunities
 - **User behavior** → Feature refinement
 - **DORA metrics** → Process improvements
 
