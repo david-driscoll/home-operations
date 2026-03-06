@@ -1,7 +1,7 @@
 services:
   authentik_proxy:
     container_name: authentik-outpost
-    image: ghcr.io/goauthentik/proxy:2026.2.0@sha256:0e6047822f406f73bb1e05f88b48c537f4d1c6908048415635f8c3f706b62e30
+    image: ghcr.io/goauthentik/proxy:2026.2.1@sha256:578b13a69df3869c8c721ce3e87658f7ce4440661c5042cf30d2ee90cacdfe6d
     restart: unless-stopped
     dns:
       - 100.100.100.100
