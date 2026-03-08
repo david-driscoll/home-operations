@@ -121,7 +121,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
         authentik_host_insecure: false,
         // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
         authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
-        log_level: "trace",
+        // log_level: "trace",
         object_naming_template: `authentik-outpost`,
         docker_network: "dockge_default",
       }, undefined, 2),

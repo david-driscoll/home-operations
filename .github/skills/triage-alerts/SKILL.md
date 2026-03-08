@@ -12,10 +12,15 @@ Fetch live data from AlertManager and the Gatus uptime instance, then identify r
 | Source | Access Method | URL |
 |---|---|---|
 | Gatus | Direct HTTPS | `https://uptime.driscoll.tech/api/v1/endpoints/statuses` |
-| AlertManager (equestria + SGC) | Tailscale | `http://alertmanager/api/v2/alerts` |
-| AlertManager silences | Tailscale | `http://alertmanager/api/v2/silences` |
+| AlertManager (equestria + SGC) | Tailscale | `http://alertmanager.opossum-yo.ts.net:9093/api/v2/alerts` |
+| AlertManager silences | Tailscale | `http://alertmanager.opossum-yo.ts.net:9093/api/v2/silences` |
 
 > AlertManager runs in the equestria cluster (`observability` namespace) and covers alerts from **both equestria and SGC**.
+> Service name: `alertmanager-alertmanager`, port **9093**. For port-forward use:
+> ```bash
+> kubectl --kubeconfig $EQ port-forward -n observability svc/alertmanager-alertmanager 9093:9093 &
+> # then use http://localhost:9093/api/v2/...
+> ```
 
 ## Process
 
@@ -38,7 +43,7 @@ Parse the response to produce a concise list: `GROUP/NAME — error detail`.
 ### Step 2 — Fetch AlertManager active alerts (via Tailscale)
 
 ```bash
-curl -s http://alertmanager/api/v2/alerts | \
+curl -s http://alertmanager.opossum-yo.ts.net:9093/api/v2/alerts | \
   python3 -c "
 import json, sys
 alerts = json.load(sys.stdin)
@@ -55,7 +60,7 @@ for a in sorted(active, key=lambda x: (SEV_ORDER.get(x['labels'].get('severity',
 
 **Check silences** (to understand what is intentionally muted):
 ```bash
-curl -s http://alertmanager/api/v2/silences | \
+curl -s http://alertmanager.opossum-yo.ts.net:9093/api/v2/silences | \
   python3 -c "
 import json, sys
 silences = [s for s in json.load(sys.stdin) if s['status']['state'] == 'active']

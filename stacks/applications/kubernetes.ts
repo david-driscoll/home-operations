@@ -208,9 +208,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           authentik_host_insecure: false,
           authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
           // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
-          log_level: "trace",
+          // log_level: "trace",
           object_naming_template: `authentik-outpost`,
-          kubernetes_replicas: 1,
+          kubernetes_replicas: 2,
           kubernetes_namespace: clusterDefinition.key,
           kubernetes_ingress_class_name: "internal",
           kubernetes_ingress_annotations: {
