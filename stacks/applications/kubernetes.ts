@@ -50,13 +50,13 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
             version: "v1",
             namespace: ns,
             plural: "applicationdefinitions",
-          })
-        )
+          }),
+        ),
       ),
       map((res) => res as { items: ApplicationDefinitionSchema[] }),
       concatMap((res) => from(res.items)),
-      toArray()
-    )
+      toArray(),
+    ),
   );
 
   const applicationManager = new AuthentikApplicationManager({
@@ -107,7 +107,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         {
           parent: applicationManager,
           provider,
-        }
+        },
       );
     }
   }
@@ -121,15 +121,15 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
               coreApi.listNamespacedSecret({
                 namespace: ns,
                 labelSelector: "volsync=true",
-              })
-            )
+              }),
+            ),
           ),
           map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
           mergeMap((lists) => from(lists)),
           map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
-          toArray()
-        )
-      )
+          toArray(),
+        ),
+      ),
     )
     .apply((jobs) => Array.from(new Set(jobs)))
     .apply((jobs) => {
@@ -147,8 +147,8 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
         });
-      })
-    )
+      }),
+    ),
   );
 
   const lunaJobs = volsyncBackupJobs.apply((jobs) =>
@@ -161,8 +161,8 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           destinationType: "local",
           destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
         });
-      })
-    )
+      }),
+    ),
   );
 
   addUptimeGatus(
@@ -172,20 +172,20 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
       "external-endpoints": pulumi.all([celestiaJobs, lunaJobs]).apply((jobs) => jobs.flat().map((z) => z.externalEndpoint)),
     },
-    applicationManager
+    applicationManager,
   );
 
   celestiaJobs.apply((jobs) =>
     insertVolsyncRepos(
       globals.localBackupServerConnection,
-      jobs.map((j) => j.volsyncRepo)
-    )
+      jobs.map((j) => j.volsyncRepo),
+    ),
   );
   lunaJobs.apply((jobs) =>
     insertVolsyncRepos(
       globals.remoteBackupServerConnection,
-      jobs.map((j) => j.volsyncRepo)
-    )
+      jobs.map((j) => j.volsyncRepo),
+    ),
   );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
@@ -210,7 +210,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
           // log_level: "trace",
           object_naming_template: `authentik-outpost`,
-          kubernetes_replicas: 2,
+          kubernetes_replicas: 1,
           kubernetes_namespace: clusterDefinition.key,
           kubernetes_ingress_class_name: "internal",
           kubernetes_ingress_annotations: {
@@ -229,11 +229,11 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           kubernetes_ingress_secret_name: "",
         },
         undefined,
-        2
+        2,
       ),
       protocolProviders: applicationManager.proxyProviders,
     },
-    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
+    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
 
   return {};
