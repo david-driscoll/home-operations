@@ -49,7 +49,7 @@ for a in sorted(active, key=lambda x: (SEV_ORDER.get(x['labels'].get('severity',
     labels = a['labels']
     ann = a['annotations']
     cluster = labels.get('cluster', labels.get('prometheus', '-'))
-    print(f\"  [{labels.get('severity','?')}] {cluster} | {labels.get('namespace','-')} | {labels.get('alertname')} — {ann.get('summary', ann.get('description',''))}\") 
+    print(f\"  [{labels.get('severity','?')}] {cluster} | {labels.get('namespace','-')} | {labels.get('alertname')} — {ann.get('summary', ann.get('description',''))}\")
 "
 ```
 
