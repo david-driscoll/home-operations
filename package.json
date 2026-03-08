@@ -37,7 +37,6 @@
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/unifi": "file:sdks/unifi",
-    "@pulumi/uptimekuma": "^0.0.12",
     "@pulumiverse/purrl": "^0.6.2",
     "confbox": "^0.2.2",
     "diff": "^8.0.2",
