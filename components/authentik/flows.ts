@@ -198,7 +198,10 @@ export class FlowsManager extends pulumi.ComponentResource {
     const items = pulumi.output(this.opClient.listItemsByTitleContains("Cluster:")).apply((items) => {
       return Array.from(
         new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values(),
-      ).concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`, `https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`]);
+      ).concat([
+        `https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
+        // `https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`
+      ]);
     });
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });
     const dynamicRegistration = new purrl.Purrl(
