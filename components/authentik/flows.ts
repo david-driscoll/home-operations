@@ -12,6 +12,7 @@ import { AuthenticationStages } from "./authentication-stages.js";
 import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
 import { OPClient } from "../op.ts";
 import { clientIdPair } from "@components/helpers.ts";
+import { GlobalResources } from "@components/globals.ts";
 
 interface PlexServerField {
   value?: string;
@@ -61,7 +62,10 @@ export class FlowsManager extends pulumi.ComponentResource {
   public readonly authenticationStages: AuthenticationStages;
   private readonly opClient: OPClient;
 
-  constructor(opts?: pulumi.ComponentResourceOptions) {
+  constructor(
+    private readonly globals: GlobalResources,
+    opts?: pulumi.ComponentResourceOptions,
+  ) {
     super("custom:resource:FlowsManager", "flows-manager", {}, opts);
 
     this.opClient = new OPClient();
@@ -109,7 +113,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         showMatchedUser: true,
         passwordlessFlow: authenticationFlow.uuid,
       },
-      { parent: this.stagesComponent }
+      { parent: this.stagesComponent },
     );
 
     // Create identification stage
@@ -123,7 +127,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         userFields: ["email", "username"],
         pretendUserExists: false,
       },
-      { parent: this.stagesComponent }
+      { parent: this.stagesComponent },
     );
 
     // Add stages to authentication flow
@@ -161,7 +165,7 @@ export class FlowsManager extends pulumi.ComponentResource {
         deniedAction: "message_continue",
         authentication: "none",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
     return flow;
   }
@@ -186,15 +190,15 @@ export class FlowsManager extends pulumi.ComponentResource {
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
       },
-      { parent: this.sourcesComponent }
+      { parent: this.sourcesComponent },
     );
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
     const items = pulumi.output(this.opClient.listItemsByTitleContains("Cluster:")).apply((items) => {
       return Array.from(
-        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values()
-      ).concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`]);
+        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values(),
+      ).concat([`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`, `https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`]);
     });
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });
     const dynamicRegistration = new purrl.Purrl(
@@ -202,19 +206,23 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Tailscale OAuth Dynamic Registration",
         responseCodes: ["201"],
-        url: "https://idp.opossum-yo.ts.net/register",
+        url: `https://idp.${this.globals.tailscaleDomain}/register`,
         method: "POST",
-        body: pulumi.jsonStringify({
-          client_name: "Authentik Tailscale Client",
-          client_id: clientId,
-          client_secret: clientSecret,
-          redirect_uris: items,
-        }, undefined, 2),
+        body: pulumi.jsonStringify(
+          {
+            client_name: "Authentik Tailscale Client",
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uris: items,
+          },
+          undefined,
+          2,
+        ),
         headers: {
           "Content-Type": "application/json",
         },
       },
-      { parent: this.sourcesComponent }
+      { parent: this.sourcesComponent },
     );
 
     const response = pulumi.jsonParse(dynamicRegistration.response).apply((responseBody: { client_name: string; client_id: string; client_secret: string }) => {
@@ -230,7 +238,7 @@ export class FlowsManager extends pulumi.ComponentResource {
 ak_logger.info("property mapping data", request=request)
 return {}`,
       },
-      { parent: this.propertyMappings }
+      { parent: this.propertyMappings },
     );
 
     return new authentik.SourceOauth(
@@ -242,7 +250,7 @@ return {}`,
         enabled: true,
         policyEngineMode: "any",
         userPathTemplate: "driscoll.dev/tailscale/%(slug)s",
-        oidcWellKnownUrl: "https://idp.opossum-yo.ts.net/.well-known/openid-configuration",
+        oidcWellKnownUrl: `https://idp.${this.globals.tailscaleDomain}/.well-known/openid-configuration`,
         consumerKey: response.client_id,
         consumerSecret: response.client_secret,
         userMatchingMode: "email_link",
@@ -251,7 +259,7 @@ return {}`,
         enrollmentFlow: enrollmentFlow.uuid,
         propertyMappings: [propertyMapping.propertyMappingSourceOauthId],
       },
-      { parent: this.sourcesComponent }
+      { parent: this.sourcesComponent },
     );
   }
 
@@ -269,7 +277,7 @@ return {}`,
         deniedAction: "continue",
         authentication: "none",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addPolicyBindingToFlow(flow, this.policies.sourceAuthenticationIfSingleSignOn.policyExpressionId);
@@ -292,7 +300,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "none",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addPolicyBindingToFlow(flow, this.policies.sourceEnrollmentIfSingleSignOn.policyExpressionId);
@@ -318,7 +326,7 @@ return {}`,
         deniedAction: "continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
   }
 
@@ -336,7 +344,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
     addFlowStageBinding(flow, this.consentStages.permanent.stageConsentId);
     return flow;
@@ -356,7 +364,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "none",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addFlowStageBinding(flow, this.invalidationStages.logout.stageUserLogoutId);
@@ -377,7 +385,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "none",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
   }
 
@@ -395,7 +403,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     const userSettingsBinding = addFlowStageBinding(flow, this.stagePrompts.userSettings.stagePromptId);
@@ -419,7 +427,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addFlowStageBinding(flow, this.authenticatorStages.backupCodes.stageAuthenticatorStaticId);
@@ -440,7 +448,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addFlowStageBinding(flow, this.authenticatorStages.passkey.stageAuthenticatorWebauthnId);
@@ -461,7 +469,7 @@ return {}`,
         deniedAction: "message_continue",
         authentication: "require_authenticated",
       },
-      { parent: this.flowsComponent }
+      { parent: this.flowsComponent },
     );
 
     addFlowStageBinding(flow, this.authenticatorStages.totp.stageAuthenticatorTotpId);
