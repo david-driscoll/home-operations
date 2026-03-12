@@ -9,7 +9,7 @@ import { OPClient } from "@components/op.ts";
 
 const globals = new GlobalResources({}, {});
 const authentikGroups = new AuthentikGroups({});
-const flowsManager = new FlowsManager({});
+const flowsManager = new FlowsManager(globals, {});
 const authentikFlows = flowsManager.createFlows();
 
 function exportFlows(flows: ReturnType<FlowsManager["createFlows"]>): { [K in keyof typeof flows]: pulumi.Output<string> } {

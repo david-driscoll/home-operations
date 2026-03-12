@@ -197,10 +197,12 @@ export class FlowsManager extends pulumi.ComponentResource {
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
     const items = pulumi.output(this.opClient.listItemsByTitleContains("Cluster:")).apply((items) => {
       return Array.from(
-        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true).map((z) => `https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`)).values(),
+        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true)
+          .map((z) => pulumi.interpolate`https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`))
+          .values(),
       ).concat([
-        `https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
-        // `https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`
+        pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
+        pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`
       ]);
     });
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });
@@ -209,7 +211,7 @@ export class FlowsManager extends pulumi.ComponentResource {
       {
         name: "Tailscale OAuth Dynamic Registration",
         responseCodes: ["201"],
-        url: `https://idp.${this.globals.tailscaleDomain}/register`,
+        url: pulumi.interpolate`https://idp.${this.globals.tailscaleDomain}/register`,
         method: "POST",
         body: pulumi.jsonStringify(
           {
@@ -253,7 +255,7 @@ return {}`,
         enabled: true,
         policyEngineMode: "any",
         userPathTemplate: "driscoll.dev/tailscale/%(slug)s",
-        oidcWellKnownUrl: `https://idp.${this.globals.tailscaleDomain}/.well-known/openid-configuration`,
+        oidcWellKnownUrl: pulumi.interpolate`https://idp.${this.globals.tailscaleDomain}/.well-known/openid-configuration`,
         consumerKey: response.client_id,
         consumerSecret: response.client_secret,
         userMatchingMode: "email_link",
