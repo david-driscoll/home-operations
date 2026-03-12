@@ -5,7 +5,7 @@
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
   schedule: ["every weekend"],
-  ignorePaths: ["**/*.sops.*"],
+  ignorePaths: ["**/*.sops.*", "sdks/**"],
   flux: {
     pinDigests: false,
   },
