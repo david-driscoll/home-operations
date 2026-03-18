@@ -69,6 +69,7 @@ export const groups = {
 export const tag = {
   exitNode: "tag:exit-node" as TailscaleTags,
   mediaDevice: "tag:media-device" as TailscaleTags,
+  peerRelay: "tag:peer-relay" as TailscaleTags,
   sgc: "tag:sgc" as TailscaleTags,
   k8s: "tag:k8s" as TailscaleTags,
   equestria: "tag:equestria" as TailscaleTags,

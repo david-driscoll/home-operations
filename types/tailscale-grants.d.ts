@@ -24,6 +24,7 @@ export type TailscaleTags =
   | "tag:egress"
   | "tag:apps"
   | "tag:media-device"
+  | "tag:peer-relay"
   | "tag:exit-node"
   | "tag:recorder"
   | "tag:dockge"
@@ -277,6 +278,11 @@ export type TailscaleAppCapabilities = {
    * The name as managed by home-operations
    */
   "driscoll.dev/name"?: string[];
+
+  /**
+   * Enable relay access for these devices (if not directly reachable)
+   */
+  "tailscale.com/cap/relay"?: string[];
 
   /**
    * Custom application capabilities

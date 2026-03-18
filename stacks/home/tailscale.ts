@@ -88,6 +88,19 @@ export async function updateTailscaleAcls(args: {
   );
 
   manager.setGrant(
+    "peer-relay",
+    {
+      src: [tag.mediaDevice],
+      dst: [tag.peerRelay],
+      app: {
+        "tailscale.com/cap/relay": []
+      },
+    }, {
+    accept: ["debs-apple-tv"],
+  }
+  );
+
+  manager.setGrant(
     {
       src: [groups.admins, autogroups.admin],
       dst: [tag.proxmox, tag.dockge],

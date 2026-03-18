@@ -99,6 +99,7 @@ const celestiaHost = new ProxmoxHost("celestia", {
   isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
+  tailscaleTags: ['tag:peer-relay'],
   macAddress: "c8:ff:bf:03:cc:4c",
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
