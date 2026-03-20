@@ -120,7 +120,7 @@
       description: "Pulumi parameters pair manager (registry.terraform.io/?dep then version)",
       customType: "regex",
       managerFilePatterns: ["/(^|/).+\\.ya?ml$/", "/(^|/)Pulumi\\.ya?ml$/"],
-      matchStrings: ["parameters:\\s*\\n(?:[ \\t]*-\\s*(?<prefix>registry\\.terraform\\.io/)?(?<depName>[^\\n]+)\\s*\\n[ \\t]*-\\s*(?<currentValue>\\S+))"],
+      matchStrings: ["parameters:\\s*\\n(?:[ \\t]*-\\s*(?<prefix>.+?/)?(?<depName>[^\\n]+)\\s*\\n[ \\t]*-\\s*(?<currentValue>\\S+))"],
       depNameTemplate: "{{depName}}",
       datasourceTemplate: "terraform-provider",
       versioningTemplate: "semver",
