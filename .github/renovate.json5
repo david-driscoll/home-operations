@@ -117,18 +117,14 @@
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
     },
     {
-      description: "Annotations YAML list manager (pulumi)",
+      description: "Pulumi parameters pair manager (registry.terraform.io/?dep then version)",
       customType: "regex",
-      managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
-      matchStringsStrategy: "combination",
-      matchStrings: [
-        "annotations:\\s*\\n(?:[ \\t]*-\\s*name:\\s*(?<depName>[^\\n]+)\\s*\\n[ \\t]*value:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?)",
-        "[ \\t]*-\\s*name:\\s*(?<depName>[^\\n]+?)\\s*value:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?",
-      ],
+      managerFilePatterns: ["/(^|/).+\\.ya?ml$/", "/(^|/)Pulumi\\.ya?ml$/"],
+      matchStrings: ["parameters:\\s*\\n(?:[ \\t]*-\\s*(?<prefix>registry\\.terraform\\.io/)?(?<depName>[^\\n]+)\\s*\\n[ \\t]*-\\s*(?<currentValue>\\S+))"],
       depNameTemplate: "{{depName}}",
-      datasourceTemplate: "github-releases",
+      datasourceTemplate: "terraform-provider",
       versioningTemplate: "semver",
-      autoReplaceStringTemplate: 'annotations:\\n  - name: {{depName}}\\n    value: "{{newValue}}"',
+      autoReplaceStringTemplate: "parameters:\\n      - {{#if prefix}}{{prefix}}{{/if}}{{depName}}\\n      - {{newValue}}",
     },
   ],
 }
