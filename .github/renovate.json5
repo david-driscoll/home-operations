@@ -117,14 +117,15 @@
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
     },
     {
-      description: "Pulumi parameters pair manager (registry.terraform.io/?dep then version)",
+      description: "Pulumi parameters pair manager",
       customType: "regex",
       managerFilePatterns: ["/(^|/).+\\.ya?ml$/", "/(^|/)Pulumi\\.ya?ml$/"],
-      matchStrings: ["parameters:\\s*\\n(?:[ \\t]*-\\s*(?<prefix>.+?/)?(?<depName>[^\\n]+)\\s*\\n[ \\t]*-\\s*(?<currentValue>\\S+))"],
+      matchStrings: ["parameters:\\s*\\n(?:[ \\t]*-\\s*(?<registryUrl>.+?/)?(?<depName>[^\\n]+)\\s*\\n[ \\t]*-\\s*(?<currentValue>\\S+))"],
       depNameTemplate: "{{depName}}",
       datasourceTemplate: "terraform-provider",
       versioningTemplate: "semver",
-      autoReplaceStringTemplate: "parameters:\\n      - {{#if prefix}}{{prefix}}{{/if}}{{depName}}\\n      - {{newValue}}",
+      registryUrlTemplate: "{{#if registryUrl}}https://{{{registryUrl}}}{{else}}https://registry.terraform.io{{/if}}",
+      autoReplaceStringTemplate: "parameters:\\n      - {{depName}}\\n      - {{newValue}}",
     },
   ],
 }
