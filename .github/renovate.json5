@@ -24,6 +24,9 @@
   "docker-compose": {
     pinDigests: true,
   },
+  terraform: {
+    managerFilePatterns: ["**/*.tf", "**/*.tofu", "**/Pulumi.yaml"],
+  },
   packageRules: [
     {
       description: "Auto-merge GitHub Actions",
