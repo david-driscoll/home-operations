@@ -16,28 +16,33 @@ packages:
     version: 0.14.0
     parameters:
       - registry.terraform.io/goauthentik/authentik
+      # renovate: datasource=terraform-provider registryUrl=https://registry.terraform.io depName=goauthentik/authentik
       - 2025.12.0
   unifi:
     source: terraform-provider
     version: 0.14.0
     parameters:
       - registry.terraform.io/ubiquiti-community/unifi
+      # renovate: datasource=terraform-provider registryUrl=https://registry.terraform.io depName=ubiquiti-community/unifi
       - 0.41.8
   b2:
     source: terraform-provider
     version: 0.14.0
     parameters:
       - registry.terraform.io/Backblaze/b2
+      # renovate: datasource=terraform-provider registryUrl=https://registry.terraform.io depName=Backblaze/b2
       - 0.12.0
   adguard:
     source: terraform-provider
     version: 0.14.0
     parameters:
       - gmichels/adguard
+      # renovate: datasource=terraform-provider registryUrl=https://registry.terraform.io depName=gmichels/adguard
       - 1.6.2
   pbs:
     source: terraform-provider
     version: 0.14.0
     parameters:
       - registry.terraform.io/mcfitz2/pbs
+      # renovate: datasource=terraform-provider registryUrl=https://registry.terraform.io depName=mcfitz2/pbs
       - 0.2.1
