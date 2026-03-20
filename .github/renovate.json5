@@ -119,5 +119,19 @@
       ],
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
     },
+    {
+      description: "Annotations YAML list manager (pulumi)",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
+      matchStringsStrategy: "combination",
+      matchStrings: [
+        "annotations:\\s*\\n(?:[ \\t]*-\\s*name:\\s*(?<depName>[^\\n]+)\\s*\\n[ \\t]*value:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?)",
+        "[ \\t]*-\\s*name:\\s*(?<depName>[^\\n]+?)\\s*value:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?",
+      ],
+      depNameTemplate: "{{depName}}",
+      datasourceTemplate: "github-releases",
+      versioningTemplate: "semver",
+      autoReplaceStringTemplate: 'annotations:\\n  - name: {{depName}}\\n    value: "{{newValue}}"',
+    },
   ],
 }
