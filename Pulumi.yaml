@@ -22,7 +22,7 @@ packages:
   b2:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/Backblaze/b2, 0.12.0]
+    parameters: [registry.terraform.io/Backblaze/b2, 0.12.1]
   adguard:
     source: terraform-provider
     version: 0.14.0
