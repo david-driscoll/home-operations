@@ -120,10 +120,10 @@
       description: "Pulumi parameters pair manager",
       customType: "regex",
       managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
-      matchStrings: ["parameters: \\[(?<registryDomain>.+?)/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
+      matchStrings: ["parameters: \\[(?<registryUrl>.+?)/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
       datasourceTemplate: "terraform-provider",
-      registryUrlTemplate: "https://{{{registryDomain}}}",
-      autoReplaceStringTemplate: "parameters: [{{{registryDomain}}}/{{{packageName}}}, {{{newValue}}}]",
+      registryUrlTemplate: "https://{{{registryUrl}}}",
+      autoReplaceStringTemplate: "parameters: [{{{registryUrl}}}/{{{packageName}}}, {{{newValue}}}]",
     },
   ],
 }
