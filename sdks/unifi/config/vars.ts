@@ -8,7 +8,7 @@ declare var exports: any;
 const __config = new pulumi.Config("unifi");
 
 /**
- * Skip verification of TLS certificates of API requests. You may need to set this to `true` if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable.
+ * Skip verification of TLS certificates of API requests. You may need to set this to `true` if you are using your local API without setting up a signed certificate. Can be specified with the `UNIFI_INSECURE` environment variable. Ignored when `cloud_connector` is enabled.
  */
 export declare const allowInsecure: boolean | undefined;
 Object.defineProperty(exports, "allowInsecure", {
@@ -36,6 +36,28 @@ export declare const apiUrl: string | undefined;
 Object.defineProperty(exports, "apiUrl", {
     get() {
         return __config.get("apiUrl");
+    },
+    enumerable: true,
+});
+
+/**
+ * Use UniFi Cloud Connector API to access the controller. When enabled, requires `api_key` authentication and automatically routes requests through https://api.ui.com. Can be specified with the `UNIFI_CLOUD_CONNECTOR` environment variable. The `api_url` field is ignored when this is enabled.
+ */
+export declare const cloudConnector: boolean | undefined;
+Object.defineProperty(exports, "cloudConnector", {
+    get() {
+        return __config.getObject<boolean>("cloudConnector");
+    },
+    enumerable: true,
+});
+
+/**
+ * Hardware ID of the UniFi console to connect to when using Cloud Connector. If not specified, defaults to the first console where owner=true. Can be specified with the `UNIFI_HARDWARE_ID` environment variable. Only used when `cloud_connector` is enabled.
+ */
+export declare const hardwareId: string | undefined;
+Object.defineProperty(exports, "hardwareId", {
+    get() {
+        return __config.get("hardwareId");
     },
     enumerable: true,
 });

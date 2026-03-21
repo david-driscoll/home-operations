@@ -36,6 +36,8 @@ class Provider extends pulumi.ProviderResource {
             resourceInputs["allowInsecure"] = pulumi.output(args?.allowInsecure).apply(JSON.stringify);
             resourceInputs["apiKey"] = args?.apiKey ? pulumi.secret(args.apiKey) : undefined;
             resourceInputs["apiUrl"] = args?.apiUrl;
+            resourceInputs["cloudConnector"] = pulumi.output(args?.cloudConnector).apply(JSON.stringify);
+            resourceInputs["hardwareId"] = args?.hardwareId;
             resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
             resourceInputs["site"] = args?.site;
             resourceInputs["username"] = args?.username ? pulumi.secret(args.username) : undefined;

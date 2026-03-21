@@ -5,157 +5,42 @@ import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
-export interface ClientGateway {
+export interface BgpPeer {
     /**
-     * MAC address of the gateway.
+     * Description of this peer group.
      */
-    mac: string;
+    description?: string;
     /**
-     * VLAN ID on the gateway.
+     * The peer group name.
      */
-    vlan: number;
+    name: string;
+    /**
+     * List of network CIDR ranges to listen on for this peer group.
+     */
+    networks?: string[];
+    /**
+     * The remote Autonomous System Number for this peer group.
+     */
+    remoteAs: number;
 }
 
-export interface ClientGuestStatus {
+export interface ClientQosRate {
     /**
-     * Whether the client is a guest.
+     * The ID of the client group (usergroup). If set, this group is used directly.
      */
-    isGuest: boolean;
+    id: string;
     /**
-     * Whether the client is a guest according to UGW.
+     * Maximum download rate in kbps.
      */
-    isGuestByUgw: boolean;
+    maxDown: number;
     /**
-     * Whether the client is a guest according to USW.
+     * Maximum upload rate in kbps.
      */
-    isGuestByUsw: boolean;
-}
-
-export interface ClientLast {
+    maxUp: number;
     /**
-     * Last connection network ID.
+     * The name of the client group. If set, the group is looked up or created by name.
      */
-    connectionNetworkId: string;
-    /**
-     * Last connection network name.
-     */
-    connectionNetworkName: string;
-    /**
-     * Last 802.1X identity.
-     */
-    identity1x: string;
-    /**
-     * Last known IP address.
-     */
-    ip: string;
-    /**
-     * Last known IPv6 addresses.
-     */
-    ipv6s: string[];
-    /**
-     * Timestamp when last reachable by gateway.
-     */
-    reachableByGw: number;
-    /**
-     * Timestamp when client was last seen.
-     */
-    seen: number;
-    /**
-     * Timestamp when last seen by UGW.
-     */
-    seenByUgw: number;
-    /**
-     * Timestamp when last seen by USW.
-     */
-    seenByUsw: number;
-    /**
-     * MAC address of last uplink.
-     */
-    uplinkMac: string;
-    /**
-     * Name of last uplink.
-     */
-    uplinkName: string;
-    /**
-     * Remote port of last uplink.
-     */
-    uplinkRemotePort: number;
-}
-
-export interface ClientSwitch {
-    /**
-     * Switch depth in the network topology.
-     */
-    depth: number;
-    /**
-     * MAC address of the connected switch.
-     */
-    mac: string;
-    /**
-     * Switch port the client is connected to.
-     */
-    port: number;
-}
-
-export interface ClientUptimeStats {
-    /**
-     * Client uptime in seconds.
-     */
-    uptime: number;
-    /**
-     * Client uptime as reported by UGW.
-     */
-    uptimeByUgw: number;
-    /**
-     * Client uptime as reported by USW.
-     */
-    uptimeByUsw: number;
-}
-
-export interface ClientWifi {
-    /**
-     * Number of WiFi transmission attempts.
-     */
-    txAttempts: number;
-    /**
-     * Number of dropped WiFi transmissions.
-     */
-    txDropped: number;
-    /**
-     * Percentage of WiFi transmission retries.
-     */
-    txRetriesPercentage: number;
-}
-
-export interface ClientWired {
-    /**
-     * Wired connection rate in Mbps.
-     */
-    rateMbps: number;
-    /**
-     * Bytes received on wired connection.
-     */
-    rxBytes: number;
-    /**
-     * Bytes received rate on wired connection.
-     */
-    rxBytesR: number;
-    /**
-     * Packets received on wired connection.
-     */
-    rxPackets: number;
-    /**
-     * Bytes transmitted on wired connection.
-     */
-    txBytes: number;
-    /**
-     * Bytes transmitted rate on wired connection.
-     */
-    txBytesR: number;
-    /**
-     * Packets transmitted on wired connection.
-     */
-    txPackets: number;
+    name: string;
 }
 
 export interface DeviceConfigNetwork {
@@ -258,6 +143,10 @@ export interface DevicePortOverride {
      */
     fullDuplex: boolean;
     /**
+     * Switch port index.
+     */
+    index: number;
+    /**
      * Enable port isolation.
      */
     isolation: boolean;
@@ -285,10 +174,6 @@ export interface DevicePortOverride {
      * Native network ID (VLAN).
      */
     nativeNetworkconfId?: string;
-    /**
-     * Switch port number.
-     */
-    number: number;
     /**
      * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`.
      */
@@ -641,6 +526,528 @@ export interface GetClientInfoListClient {
     wiredRateMbps: number;
 }
 
+export interface GetClientListClient {
+    /**
+     * The MAC address of the access point the client is connected to.
+     */
+    apMac: string;
+    /**
+     * Whether the client is authorized.
+     */
+    authorized: boolean;
+    /**
+     * Whether the client is blocked from the network.
+     */
+    blocked: boolean;
+    /**
+     * The BSSID of the access point.
+     */
+    bssid: string;
+    /**
+     * The WiFi channel the client is connected on.
+     */
+    channel: number;
+    /**
+     * The display name of the client.
+     */
+    displayName: string;
+    /**
+     * The ESSID (network name) the client is connected to.
+     */
+    essid: string;
+    /**
+     * Unix timestamp when the client was first seen.
+     */
+    firstSeen: number;
+    /**
+     * The MAC address of the access point to which this client is fixed.
+     */
+    fixedApMac: string;
+    /**
+     * A fixed IPv4 address for this client.
+     */
+    fixedIp: string;
+    /**
+     * The user group ID for the client.
+     */
+    groupId: string;
+    /**
+     * The hostname of the client.
+     */
+    hostname: string;
+    /**
+     * The ID of the client.
+     */
+    id: string;
+    /**
+     * The IP address of the client.
+     */
+    ip: string;
+    /**
+     * Whether the client is a guest.
+     */
+    isGuest: boolean;
+    /**
+     * Whether the client is connected via wired connection.
+     */
+    isWired: boolean;
+    /**
+     * The network ID of the last connection.
+     */
+    lastConnectionNetworkId: string;
+    /**
+     * The network name of the last connection.
+     */
+    lastConnectionNetworkName: string;
+    /**
+     * Unix timestamp when the client was last seen.
+     */
+    lastSeen: number;
+    /**
+     * The MAC address of the last uplink device.
+     */
+    lastUplinkMac: string;
+    /**
+     * The name of the last uplink device.
+     */
+    lastUplinkName: string;
+    /**
+     * The local DNS record for this client.
+     */
+    localDnsRecord: string;
+    /**
+     * The MAC address of the client.
+     */
+    mac: string;
+    /**
+     * The name of the client.
+     */
+    name: string;
+    /**
+     * The network ID for this client.
+     */
+    networkId: string;
+    /**
+     * List of network member group IDs for this client.
+     */
+    networkMembersGroupIds: string[];
+    /**
+     * The network name for this client.
+     */
+    networkName: string;
+    /**
+     * The noise level in dBm.
+     */
+    noise: number;
+    /**
+     * A note with additional information for the client.
+     */
+    note: string;
+    /**
+     * The OUI (vendor) of the client's MAC address.
+     */
+    oui: string;
+    /**
+     * The radio type (e.g., na, ng).
+     */
+    radio: string;
+    /**
+     * The radio name (e.g., wifi0, wifi1).
+     */
+    radioName: string;
+    /**
+     * The RSSI value.
+     */
+    rssi: number;
+    /**
+     * Total bytes received.
+     */
+    rxBytes: number;
+    /**
+     * The receive rate in kbps.
+     */
+    rxRate: number;
+    /**
+     * The signal strength in dBm.
+     */
+    signal: number;
+    /**
+     * The connection status of the client.
+     */
+    status: string;
+    /**
+     * The switch port number the client is connected to.
+     */
+    swPort: number;
+    /**
+     * Total bytes transmitted.
+     */
+    txBytes: number;
+    /**
+     * The transmit rate in kbps.
+     */
+    txRate: number;
+    /**
+     * The uptime of the client in seconds.
+     */
+    uptime: number;
+    /**
+     * The wired connection rate in Mbps.
+     */
+    wiredRateMbps: number;
+}
+
+export interface GetClientQosRate {
+    /**
+     * The ID of the client group.
+     */
+    id: string;
+    /**
+     * Maximum download rate in kbps.
+     */
+    maxDown: number;
+    /**
+     * Maximum upload rate in kbps.
+     */
+    maxUp: number;
+    /**
+     * The name of the client group.
+     */
+    name: string;
+}
+
+export interface GetNetworkDhcpGuarding {
+    /**
+     * Specifies whether DHCP guarding is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of allowed DHCP server IP addresses.
+     */
+    servers: string[];
+}
+
+export interface GetNetworkDhcpRelay {
+    /**
+     * Specifies whether DHCP relay is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of DHCP relay server addresses.
+     */
+    servers: string[];
+}
+
+export interface GetNetworkDhcpServer {
+    /**
+     * DHCP boot settings.
+     */
+    boot: outputs.GetNetworkDhcpServerBoot;
+    /**
+     * Specifies whether DHCP conflict checking is enabled.
+     */
+    conflictChecking: boolean;
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    dnsEnabled: boolean;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    dnsServers: string[];
+    /**
+     * Specifies whether DHCP server is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Specifies whether DHCP gateway is enabled.
+     */
+    gatewayEnabled: boolean;
+    /**
+     * Specifies the lease time for DHCP addresses in seconds.
+     */
+    leasetime: number;
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    ntpEnabled: boolean;
+    /**
+     * The IPv4 address where the DHCP range starts.
+     */
+    start: string;
+    /**
+     * The IPv4 address where the DHCP range stops.
+     */
+    stop: string;
+    /**
+     * TFTP server address.
+     */
+    tftpServer: string;
+    /**
+     * Specifies whether DHCP time offset is enabled.
+     */
+    timeOffsetEnabled: boolean;
+    /**
+     * UniFi controller IP address.
+     */
+    unifiController: string;
+    /**
+     * WINS server configuration.
+     */
+    wins: outputs.GetNetworkDhcpServerWins;
+    /**
+     * WPAD URL for proxy auto-configuration.
+     */
+    wpadUrl: string;
+}
+
+export interface GetNetworkDhcpServerBoot {
+    /**
+     * Toggles DHCP boot options.
+     */
+    enabled: boolean;
+    /**
+     * Boot filename.
+     */
+    filename: string;
+    /**
+     * TFTP server for boot options.
+     */
+    server: string;
+}
+
+export interface GetNetworkDhcpServerWins {
+    /**
+     * List of WINS server addresses.
+     */
+    addresses: string[];
+    /**
+     * Specifies whether DHCP WINS is enabled.
+     */
+    enabled: boolean;
+}
+
+export interface GetNetworkDhcpV6Server {
+    /**
+     * When true, upstream DNS entries are propagated. When false, `dns_servers` are used.
+     */
+    dnsAuto: boolean;
+    /**
+     * IPv6 DNS server addresses for DHCPv6 clients.
+     */
+    dnsServers: string[];
+    /**
+     * Specifies whether stateful DHCPv6 is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Lease time for DHCPv6 addresses in seconds.
+     */
+    lease: number;
+    /**
+     * Start address of the DHCPv6 range.
+     */
+    start: string;
+    /**
+     * End address of the DHCPv6 range.
+     */
+    stop: string;
+}
+
+export interface GetNetworkNatOutboundIpAddress {
+    /**
+     * The IP address.
+     */
+    ipAddress: string;
+    /**
+     * The IP address pool.
+     */
+    ipAddressPools: string[];
+    /**
+     * The mode.
+     */
+    mode: string;
+    /**
+     * The WAN network group.
+     */
+    wanNetworkGroup: string;
+}
+
+export interface NetworkDhcpGuarding {
+    /**
+     * Specifies whether DHCP guarding is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of allowed DHCP server IP addresses (maximum 3). Only applies when `third_party_gateway` is enabled.
+     */
+    servers?: string[];
+}
+
+export interface NetworkDhcpRelay {
+    /**
+     * Specifies whether DHCP relay is enabled.
+     */
+    enabled: boolean;
+    /**
+     * List of DHCP relay server addresses.
+     */
+    servers?: string[];
+}
+
+export interface NetworkDhcpServer {
+    /**
+     * DHCP boot settings.
+     */
+    boot: outputs.NetworkDhcpServerBoot;
+    /**
+     * Specifies whether DHCP conflict checking is enabled.
+     */
+    conflictChecking: boolean;
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    dnsEnabled: boolean;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    dnsServers?: string[];
+    /**
+     * Specifies whether DHCP server is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Specifies whether DHCP gateway is enabled.
+     */
+    gatewayEnabled: boolean;
+    /**
+     * Specifies the lease time for DHCP addresses in seconds.
+     */
+    leasetime: number;
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    ntpEnabled: boolean;
+    /**
+     * The IPv4 address where the DHCP range starts.
+     */
+    start: string;
+    /**
+     * The IPv4 address where the DHCP range stops.
+     */
+    stop: string;
+    /**
+     * TFTP server address.
+     */
+    tftpServer?: string;
+    /**
+     * Specifies whether DHCP time offset is enabled.
+     */
+    timeOffsetEnabled: boolean;
+    /**
+     * UniFi controller IP address.
+     */
+    unifiController?: string;
+    /**
+     * WINS server configuration.
+     */
+    wins: outputs.NetworkDhcpServerWins;
+    /**
+     * WPAD URL for proxy auto-configuration.
+     */
+    wpadUrl?: string;
+}
+
+export interface NetworkDhcpServerBoot {
+    /**
+     * Toggles DHCP boot options.
+     */
+    enabled: boolean;
+    /**
+     * Boot filename.
+     */
+    filename: string;
+    /**
+     * TFTP server for boot options.
+     */
+    server: string;
+}
+
+export interface NetworkDhcpServerWins {
+    /**
+     * List of WINS server addresses (maximum 2).
+     */
+    addresses?: string[];
+    /**
+     * Specifies whether DHCP WINS is enabled.
+     */
+    enabled: boolean;
+}
+
+export interface NetworkNatOutboundIpAddress {
+    /**
+     * The IP address.
+     */
+    ipAddress?: string;
+    /**
+     * The IP address pool.
+     */
+    ipAddressPools?: string[];
+    /**
+     * The mode.
+     */
+    mode?: string;
+    /**
+     * The WAN network group.
+     */
+    wanNetworkGroup?: string;
+}
+
+export interface PortForwardForward {
+    /**
+     * The forward IPv4 address to send traffic to.
+     */
+    ip?: string;
+    /**
+     * The forward port or port range (e.g. `1-10,11,12`).
+     */
+    port?: string;
+}
+
+export interface PortForwardSourceLimiting {
+    /**
+     * Specifies whether source limiting is enabled.
+     */
+    enabled: boolean;
+    /**
+     * The ID of the firewall group to use for source limiting.
+     */
+    firewallGroupId?: string;
+    /**
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     */
+    ip: string;
+    /**
+     * The source limiting type. Can be `ip` or `firewall_group`. Inferred automatically when only one of `ip` or `firewall_group_id` is set.
+     */
+    type: string;
+}
+
+export interface PortForwardWan {
+    /**
+     * The WAN interface. Can be `wan`, `wan2`, or `both`.
+     */
+    interface?: string;
+    /**
+     * The WAN IP address for the port forwarding rule. Use `any` for all addresses.
+     */
+    ipAddress?: string;
+    /**
+     * The WAN port or port range (e.g. `1-10,11,12`).
+     */
+    port?: string;
+}
+
 export interface RadiusProfileAcctServer {
     /**
      * IP address of accounting service server.
@@ -898,9 +1305,308 @@ export interface SettingUsgDnsVerification {
     settingPreference: string;
 }
 
+export interface TrafficRouteDestination {
+    /**
+     * List of domain entries to match.
+     */
+    domains?: outputs.TrafficRouteDestinationDomain[];
+    /**
+     * List of IP address or subnet entries to match.
+     */
+    ipAddresses?: outputs.TrafficRouteDestinationIpAddress[];
+    /**
+     * List of IP range entries to match.
+     */
+    ipRanges?: outputs.TrafficRouteDestinationIpRange[];
+    /**
+     * List of regions to match.
+     */
+    regions?: string[];
+}
+
+export interface TrafficRouteDestinationDomain {
+    /**
+     * The domain name to match.
+     */
+    domain: string;
+    /**
+     * List of port ranges to match.
+     */
+    portRanges?: outputs.TrafficRouteDestinationDomainPortRange[];
+    /**
+     * List of individual ports to match.
+     */
+    ports?: number[];
+}
+
+export interface TrafficRouteDestinationDomainPortRange {
+    /**
+     * The start port of the range.
+     */
+    start: number;
+    /**
+     * The stop port of the range.
+     */
+    stop: number;
+}
+
+export interface TrafficRouteDestinationIpAddress {
+    /**
+     * An IP address or CIDR subnet to match.
+     */
+    ipOrSubnet: string;
+    /**
+     * List of port ranges to match.
+     */
+    portRanges?: outputs.TrafficRouteDestinationIpAddressPortRange[];
+    /**
+     * List of individual ports to match.
+     */
+    ports?: number[];
+}
+
+export interface TrafficRouteDestinationIpAddressPortRange {
+    /**
+     * The start port of the range.
+     */
+    start: number;
+    /**
+     * The stop port of the range.
+     */
+    stop: number;
+}
+
+export interface TrafficRouteDestinationIpRange {
+    /**
+     * The start IP address of the range.
+     */
+    start: string;
+    /**
+     * The stop IP address of the range.
+     */
+    stop: string;
+}
+
+export interface TrafficRouteSource {
+    /**
+     * List of client devices whose traffic this route applies to.
+     */
+    clients?: outputs.TrafficRouteSourceClient[];
+    /**
+     * List of networks whose traffic this route applies to.
+     */
+    networks?: outputs.TrafficRouteSourceNetwork[];
+}
+
+export interface TrafficRouteSourceClient {
+    /**
+     * The MAC address of the client device.
+     */
+    mac: string;
+}
+
+export interface TrafficRouteSourceNetwork {
+    /**
+     * The ID of the network.
+     */
+    id: string;
+}
+
+export interface VpnClientWireguard {
+    /**
+     * File-based WireGuard configuration. Provide a complete WireGuard .conf file.
+     */
+    configuration?: outputs.VpnClientWireguardConfiguration;
+    /**
+     * DNS servers for the WireGuard interface. Required for manual mode. Must specify 1-2 DNS server addresses.
+     */
+    dnsServers?: string[];
+    /**
+     * WAN interface to use for the VPN connection (e.g., `wan`, `wan2`).
+     */
+    interface: string;
+    /**
+     * Manual WireGuard peer configuration. Specify peer endpoint and public key.
+     */
+    peer?: outputs.VpnClientWireguardPeer;
+    /**
+     * WireGuard preshared key. Required when preshared_key_enabled is true.
+     */
+    presharedKey?: string;
+    /**
+     * Specifies whether to use a preshared key for additional security.
+     */
+    presharedKeyEnabled: boolean;
+    /**
+     * WireGuard private key for this client.
+     */
+    privateKey: string;
+}
+
+export interface VpnClientWireguardConfiguration {
+    /**
+     * Base64-encoded WireGuard configuration file content.
+     */
+    content: string;
+    /**
+     * Filename of the WireGuard configuration file.
+     */
+    filename: string;
+}
+
+export interface VpnClientWireguardPeer {
+    /**
+     * WireGuard peer endpoint IP address.
+     */
+    ip: string;
+    /**
+     * WireGuard peer endpoint port.
+     */
+    port: number;
+    /**
+     * WireGuard peer public key.
+     */
+    publicKey: string;
+}
+
+export interface VpnServerDns {
+    /**
+     * Specifies whether custom DNS servers are enabled for VPN clients. Defaults to `true` when `servers` is non-empty.
+     */
+    enabled: boolean;
+    /**
+     * DNS servers to push to VPN clients.
+     */
+    servers?: string[];
+}
+
+export interface VpnServerL2tp {
+    /**
+     * Allow weak ciphers for L2TP connections.
+     */
+    allowWeakCiphers: boolean;
+    /**
+     * IPsec pre-shared key for L2TP. Required by the UniFi controller.
+     */
+    preSharedKey: string;
+}
+
+export interface VpnServerOpenvpn {
+    /**
+     * OpenVPN static authentication key generated by the controller.
+     */
+    authKey: string;
+    /**
+     * CA certificate generated by the controller.
+     */
+    caCrt: string;
+    /**
+     * CA private key generated by the controller.
+     */
+    caKey: string;
+    /**
+     * Diffie-Hellman parameters generated by the controller.
+     */
+    dhKey: string;
+    /**
+     * Encryption cipher for OpenVPN.
+     */
+    encryptionCipher: string;
+    /**
+     * OpenVPN mode.
+     */
+    mode: string;
+    /**
+     * Port for the OpenVPN server to listen on.
+     */
+    port: number;
+    /**
+     * Server certificate generated by the controller.
+     */
+    serverCrt: string;
+    /**
+     * Server private key generated by the controller.
+     */
+    serverKey: string;
+    /**
+     * Shared client certificate generated by the controller.
+     */
+    sharedClientCrt: string;
+    /**
+     * Shared client private key generated by the controller.
+     */
+    sharedClientKey: string;
+}
+
+export interface VpnServerWan {
+    /**
+     * WAN interface to use for the VPN server (e.g., `wan`, `wan2`).
+     */
+    interface: string;
+    /**
+     * Local WAN IP to bind the VPN server to. Use `any` to listen on all addresses.
+     */
+    ip: string;
+}
+
+export interface VpnServerWireguard {
+    /**
+     * UDP port for the WireGuard server to listen on.
+     */
+    port: number;
+    /**
+     * WireGuard private key for this server. If not specified, one will be generated by the controller.
+     */
+    privateKey: string;
+    /**
+     * WireGuard public key for this server. Computed from the private key.
+     */
+    publicKey: string;
+}
+
+export interface WanDhcp {
+    /**
+     * DHCP Class of Service
+     */
+    cos: number;
+    /**
+     * DHCP options
+     */
+    options?: outputs.WanDhcpOption[];
+}
+
 export interface WanDhcpOption {
+    /**
+     * DHCP option number
+     */
     optionNumber: number;
+    /**
+     * DHCP option value
+     */
     value: string;
+}
+
+export interface WanDhcpv6 {
+    /**
+     * DHCPv6 Class of Service
+     */
+    cos: number;
+    /**
+     * DHCPv6 options
+     */
+    options?: outputs.WanDhcpv6Option[];
+    /**
+     * DHCPv6 prefix delegation size
+     */
+    pdSize: number;
+    /**
+     * Whether DHCPv6 PD size is automatic
+     */
+    pdSizeAuto: boolean;
+    /**
+     * IPv6 WAN delegation type (pd, single_network, none)
+     */
+    wanDelegationType: string;
 }
 
 export interface WanDhcpv6Option {
@@ -914,6 +1620,70 @@ export interface WanDhcpv6Option {
     value: string;
 }
 
+export interface WanDns {
+    /**
+     * IPv6 DNS preference (auto, manual)
+     */
+    ipv6Preference: string;
+    /**
+     * Primary IPv6 DNS server
+     */
+    ipv6Primary?: string;
+    /**
+     * Secondary IPv6 DNS server
+     */
+    ipv6Secondary?: string;
+    /**
+     * DNS preference (auto, manual)
+     */
+    preference: string;
+    /**
+     * Primary DNS server
+     */
+    primary?: string;
+    /**
+     * Secondary DNS server
+     */
+    secondary?: string;
+}
+
+export interface WanEgressQos {
+    /**
+     * Whether egress QoS is enabled
+     */
+    enabled: boolean;
+    /**
+     * Egress QoS priority
+     */
+    priority: number;
+}
+
+export interface WanIgmpProxy {
+    /**
+     * IGMP proxy downstream target (none, lan, guest)
+     */
+    downstream: string;
+    /**
+     * Whether IGMP proxy upstream is enabled
+     */
+    upstream: boolean;
+}
+
+export interface WanLoadBalance {
+    /**
+     * Failover priority
+     */
+    failoverPriority: number;
+    /**
+     * Load balance type (failover-only, weighted)
+     */
+    type: string;
+    /**
+     * Load balance weight
+     */
+    weight: number;
+}
+
 export interface WanProviderCapabilities {
     /**
      * Download speed in kilobits per second
@@ -923,6 +1693,51 @@ export interface WanProviderCapabilities {
      * Upload speed in kilobits per second
      */
     uploadKilobitsPerSecond: number;
+}
+
+export interface WanSmartq {
+    /**
+     * Smart Queue download rate in kbps
+     */
+    downRate?: number;
+    /**
+     * Whether Smart Queue is enabled
+     */
+    enabled: boolean;
+    /**
+     * Smart Queue upload rate in kbps
+     */
+    upRate?: number;
+}
+
+export interface WanUpnp {
+    /**
+     * Whether UPnP is enabled
+     */
+    enabled: boolean;
+    /**
+     * Whether UPnP NAT-PMP is enabled
+     */
+    natPmpEnabled: boolean;
+    /**
+     * Whether UPnP secure mode is enabled
+     */
+    secureMode: boolean;
+    /**
+     * UPnP WAN interface
+     */
+    wanInterface?: string;
+}
+
+export interface WanVlan {
+    /**
+     * Whether VLAN is enabled
+     */
+    enabled: boolean;
+    /**
+     * The VLAN ID
+     */
+    id: number;
 }
 
 export interface WlanMacFilter {

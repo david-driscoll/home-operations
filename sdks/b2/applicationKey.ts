@@ -48,7 +48,7 @@ export class ApplicationKey extends pulumi.CustomResource {
      */
     declare public readonly bucketId: pulumi.Output<string | undefined>;
     /**
-     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     * When provided, the new key can only access the specified buckets. Conflicts with `bucket_id`. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly bucketIds: pulumi.Output<string[] | undefined>;
     /**
@@ -135,7 +135,7 @@ export interface ApplicationKeyState {
      */
     bucketId?: pulumi.Input<string>;
     /**
-     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     * When provided, the new key can only access the specified buckets. Conflicts with `bucket_id`. **Modifying this attribute will force creation of a new resource.**
      */
     bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**
@@ -168,7 +168,7 @@ export interface ApplicationKeyArgs {
      */
     bucketId?: pulumi.Input<string>;
     /**
-     * When provided, the new key can only access the specified buckets. **Modifying this attribute will force creation of a new resource.**
+     * When provided, the new key can only access the specified buckets. Conflicts with `bucket_id`. **Modifying this attribute will force creation of a new resource.**
      */
     bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
     /**

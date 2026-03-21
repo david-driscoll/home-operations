@@ -22,6 +22,18 @@ Object.defineProperty(exports, "apiUrl", {
     },
     enumerable: true,
 });
+Object.defineProperty(exports, "cloudConnector", {
+    get() {
+        return __config.getObject("cloudConnector");
+    },
+    enumerable: true,
+});
+Object.defineProperty(exports, "hardwareId", {
+    get() {
+        return __config.get("hardwareId");
+    },
+    enumerable: true,
+});
 Object.defineProperty(exports, "password", {
     get() {
         return __config.get("password");

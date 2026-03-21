@@ -111,7 +111,7 @@ export async function getPackage() : Promise<string | undefined> {
 			const params = new resproto.Parameterization();
 			params.setName("adguard");
 			params.setVersion("1.6.2");
-			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2dtaWNoZWxzL2FkZ3VhcmQiLCJ2ZXJzaW9uIjoiMS42LjIifX0="), c => c.charCodeAt(0)));
+			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2dtaWNoZWxzL2FkZ3VhcmQiLCJ2ZXJzaW9uIjoiMS42LjIifX0="), c => c.charCodeAt(0)));
 
 			const req = new resproto.RegisterPackageRequest();
 			req.setName("terraform-provider");

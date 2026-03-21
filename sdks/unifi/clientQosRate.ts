@@ -4,9 +4,9 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-export class ClientGroup extends pulumi.CustomResource {
+export class ClientQosRate extends pulumi.CustomResource {
     /**
-     * Get an existing ClientGroup resource's state with the given name, ID, and optional extra
+     * Get an existing ClientQosRate resource's state with the given name, ID, and optional extra
      * properties used to qualify the lookup.
      *
      * @param name The _unique_ name of the resulting resource.
@@ -14,26 +14,26 @@ export class ClientGroup extends pulumi.CustomResource {
      * @param state Any extra arguments used during the lookup.
      * @param opts Optional settings to control the behavior of the CustomResource.
      */
-    public static get(name: string, id: pulumi.Input<pulumi.ID>, state?: ClientGroupState, opts?: pulumi.CustomResourceOptions): ClientGroup {
-        return new ClientGroup(name, <any>state, { ...opts, id: id });
+    public static get(name: string, id: pulumi.Input<pulumi.ID>, state?: ClientQosRateState, opts?: pulumi.CustomResourceOptions): ClientQosRate {
+        return new ClientQosRate(name, <any>state, { ...opts, id: id });
     }
 
     /** @internal */
-    public static readonly __pulumiType = 'unifi:index/clientGroup:ClientGroup';
+    public static readonly __pulumiType = 'unifi:index/clientQosRate:ClientQosRate';
 
     /**
-     * Returns true if the given object is an instance of ClientGroup.  This is designed to work even
+     * Returns true if the given object is an instance of ClientQosRate.  This is designed to work even
      * when multiple copies of the Pulumi SDK have been loaded into the same process.
      */
-    public static isInstance(obj: any): obj is ClientGroup {
+    public static isInstance(obj: any): obj is ClientQosRate {
         if (obj === undefined || obj === null) {
             return false;
         }
-        return obj['__pulumiType'] === ClientGroup.__pulumiType;
+        return obj['__pulumiType'] === ClientQosRate.__pulumiType;
     }
 
     /**
-     * The name of the client group.
+     * The name of the client QOS rate.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
@@ -45,45 +45,45 @@ export class ClientGroup extends pulumi.CustomResource {
      */
     declare public readonly qosRateMaxUp: pulumi.Output<number>;
     /**
-     * The name of the site to associate the client group with.
+     * The name of the site to associate the client QOS rate with.
      */
     declare public readonly site: pulumi.Output<string>;
 
     /**
-     * Create a ClientGroup resource with the given unique name, arguments, and options.
+     * Create a ClientQosRate resource with the given unique name, arguments, and options.
      *
      * @param name The _unique_ name of the resource.
      * @param args The arguments to use to populate this resource's properties.
      * @param opts A bag of options that control this resource's behavior.
      */
-    constructor(name: string, args?: ClientGroupArgs, opts?: pulumi.CustomResourceOptions)
-    constructor(name: string, argsOrState?: ClientGroupArgs | ClientGroupState, opts?: pulumi.CustomResourceOptions) {
+    constructor(name: string, args?: ClientQosRateArgs, opts?: pulumi.CustomResourceOptions)
+    constructor(name: string, argsOrState?: ClientQosRateArgs | ClientQosRateState, opts?: pulumi.CustomResourceOptions) {
         let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         if (opts.id) {
-            const state = argsOrState as ClientGroupState | undefined;
+            const state = argsOrState as ClientQosRateState | undefined;
             resourceInputs["name"] = state?.name;
             resourceInputs["qosRateMaxDown"] = state?.qosRateMaxDown;
             resourceInputs["qosRateMaxUp"] = state?.qosRateMaxUp;
             resourceInputs["site"] = state?.site;
         } else {
-            const args = argsOrState as ClientGroupArgs | undefined;
+            const args = argsOrState as ClientQosRateArgs | undefined;
             resourceInputs["name"] = args?.name;
             resourceInputs["qosRateMaxDown"] = args?.qosRateMaxDown;
             resourceInputs["qosRateMaxUp"] = args?.qosRateMaxUp;
             resourceInputs["site"] = args?.site;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        super(ClientGroup.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
+        super(ClientQosRate.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
 
 /**
- * Input properties used for looking up and filtering ClientGroup resources.
+ * Input properties used for looking up and filtering ClientQosRate resources.
  */
-export interface ClientGroupState {
+export interface ClientQosRateState {
     /**
-     * The name of the client group.
+     * The name of the client QOS rate.
      */
     name?: pulumi.Input<string>;
     /**
@@ -95,17 +95,17 @@ export interface ClientGroupState {
      */
     qosRateMaxUp?: pulumi.Input<number>;
     /**
-     * The name of the site to associate the client group with.
+     * The name of the site to associate the client QOS rate with.
      */
     site?: pulumi.Input<string>;
 }
 
 /**
- * The set of arguments for constructing a ClientGroup resource.
+ * The set of arguments for constructing a ClientQosRate resource.
  */
-export interface ClientGroupArgs {
+export interface ClientQosRateArgs {
     /**
-     * The name of the client group.
+     * The name of the client QOS rate.
      */
     name?: pulumi.Input<string>;
     /**
@@ -117,7 +117,7 @@ export interface ClientGroupArgs {
      */
     qosRateMaxUp?: pulumi.Input<number>;
     /**
-     * The name of the site to associate the client group with.
+     * The name of the site to associate the client QOS rate with.
      */
     site?: pulumi.Input<string>;
 }

@@ -157,7 +157,7 @@ export class Device extends pulumi.CustomResource {
     /**
      * STP priority.
      */
-    declare public readonly stpPriority: pulumi.Output<string>;
+    declare public readonly stpPriority: pulumi.Output<number>;
     /**
      * STP version; valid values are `stp`, `rstp`, and `disabled`.
      */
@@ -401,7 +401,7 @@ export interface DeviceState {
     /**
      * STP priority.
      */
-    stpPriority?: pulumi.Input<string>;
+    stpPriority?: pulumi.Input<number>;
     /**
      * STP version; valid values are `stp`, `rstp`, and `disabled`.
      */
@@ -539,7 +539,7 @@ export interface DeviceArgs {
     /**
      * STP priority.
      */
-    stpPriority?: pulumi.Input<string>;
+    stpPriority?: pulumi.Input<number>;
     /**
      * STP version; valid values are `stp`, `rstp`, and `disabled`.
      */

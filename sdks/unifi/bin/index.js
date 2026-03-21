@@ -16,7 +16,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.types = exports.config = exports.Wlan = exports.Wan = exports.StaticRoute = exports.Site = exports.Setting = exports.RadiusProfile = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientGroupOutput = exports.getClientGroup = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallRule = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientGroup = exports.Client = exports.Bgp = exports.Account = void 0;
+exports.types = exports.config = exports.Wlan = exports.Wan = exports.VpnServer = exports.VpnClient = exports.TrafficRoute = exports.StaticRoute = exports.Site = exports.Setting = exports.RadiusProfile = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientQosRateOutput = exports.getClientQosRate = exports.getClientListOutput = exports.getClientList = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallRule = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientQosRate = exports.Client = exports.Bgp = exports.Account = void 0;
 const pulumi = require("@pulumi/pulumi");
 const utilities = require("./utilities");
 exports.Account = null;
@@ -25,8 +25,8 @@ exports.Bgp = null;
 utilities.lazyLoad(exports, ["Bgp"], () => require("./bgp"));
 exports.Client = null;
 utilities.lazyLoad(exports, ["Client"], () => require("./client"));
-exports.ClientGroup = null;
-utilities.lazyLoad(exports, ["ClientGroup"], () => require("./clientGroup"));
+exports.ClientQosRate = null;
+utilities.lazyLoad(exports, ["ClientQosRate"], () => require("./clientQosRate"));
 exports.Device = null;
 utilities.lazyLoad(exports, ["Device"], () => require("./device"));
 exports.DnsRecord = null;
@@ -46,15 +46,18 @@ utilities.lazyLoad(exports, ["getApGroup", "getApGroupOutput"], () => require(".
 exports.getClient = null;
 exports.getClientOutput = null;
 utilities.lazyLoad(exports, ["getClient", "getClientOutput"], () => require("./getClient"));
-exports.getClientGroup = null;
-exports.getClientGroupOutput = null;
-utilities.lazyLoad(exports, ["getClientGroup", "getClientGroupOutput"], () => require("./getClientGroup"));
 exports.getClientInfo = null;
 exports.getClientInfoOutput = null;
 utilities.lazyLoad(exports, ["getClientInfo", "getClientInfoOutput"], () => require("./getClientInfo"));
 exports.getClientInfoList = null;
 exports.getClientInfoListOutput = null;
 utilities.lazyLoad(exports, ["getClientInfoList", "getClientInfoListOutput"], () => require("./getClientInfoList"));
+exports.getClientList = null;
+exports.getClientListOutput = null;
+utilities.lazyLoad(exports, ["getClientList", "getClientListOutput"], () => require("./getClientList"));
+exports.getClientQosRate = null;
+exports.getClientQosRateOutput = null;
+utilities.lazyLoad(exports, ["getClientQosRate", "getClientQosRateOutput"], () => require("./getClientQosRate"));
 exports.getDnsRecord = null;
 exports.getDnsRecordOutput = null;
 utilities.lazyLoad(exports, ["getDnsRecord", "getDnsRecordOutput"], () => require("./getDnsRecord"));
@@ -83,6 +86,12 @@ exports.Site = null;
 utilities.lazyLoad(exports, ["Site"], () => require("./site"));
 exports.StaticRoute = null;
 utilities.lazyLoad(exports, ["StaticRoute"], () => require("./staticRoute"));
+exports.TrafficRoute = null;
+utilities.lazyLoad(exports, ["TrafficRoute"], () => require("./trafficRoute"));
+exports.VpnClient = null;
+utilities.lazyLoad(exports, ["VpnClient"], () => require("./vpnClient"));
+exports.VpnServer = null;
+utilities.lazyLoad(exports, ["VpnServer"], () => require("./vpnServer"));
 exports.Wan = null;
 utilities.lazyLoad(exports, ["Wan"], () => require("./wan"));
 exports.Wlan = null;
@@ -102,8 +111,8 @@ const _module = {
                 return new exports.Bgp(name, undefined, { urn });
             case "unifi:index/client:Client":
                 return new exports.Client(name, undefined, { urn });
-            case "unifi:index/clientGroup:ClientGroup":
-                return new exports.ClientGroup(name, undefined, { urn });
+            case "unifi:index/clientQosRate:ClientQosRate":
+                return new exports.ClientQosRate(name, undefined, { urn });
             case "unifi:index/device:Device":
                 return new exports.Device(name, undefined, { urn });
             case "unifi:index/dnsRecord:DnsRecord":
@@ -128,6 +137,12 @@ const _module = {
                 return new exports.Site(name, undefined, { urn });
             case "unifi:index/staticRoute:StaticRoute":
                 return new exports.StaticRoute(name, undefined, { urn });
+            case "unifi:index/trafficRoute:TrafficRoute":
+                return new exports.TrafficRoute(name, undefined, { urn });
+            case "unifi:index/vpnClient:VpnClient":
+                return new exports.VpnClient(name, undefined, { urn });
+            case "unifi:index/vpnServer:VpnServer":
+                return new exports.VpnServer(name, undefined, { urn });
             case "unifi:index/wan:Wan":
                 return new exports.Wan(name, undefined, { urn });
             case "unifi:index/wlan:Wlan":
@@ -140,7 +155,7 @@ const _module = {
 pulumi.runtime.registerResourceModule("unifi", "index/account", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/bgp", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/client", _module);
-pulumi.runtime.registerResourceModule("unifi", "index/clientGroup", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/clientQosRate", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/device", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module);
@@ -153,6 +168,9 @@ pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/setting", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/trafficRoute", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/vpnClient", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/vpnServer", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/wan", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/wlan", _module);
 pulumi.runtime.registerResourcePackage("unifi", {

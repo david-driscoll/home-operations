@@ -4,44 +4,44 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as utilities from "./utilities";
 
-export function getClientGroup(args: GetClientGroupArgs, opts?: pulumi.InvokeOptions): Promise<GetClientGroupResult> {
+export function getClientQosRate(args: GetClientQosRateArgs, opts?: pulumi.InvokeOptions): Promise<GetClientQosRateResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
-    return pulumi.runtime.invoke("unifi:index/getClientGroup:getClientGroup", {
+    return pulumi.runtime.invoke("unifi:index/getClientQosRate:getClientQosRate", {
         "name": args.name,
         "site": args.site,
     }, opts, utilities.getPackage());
 }
 
 /**
- * A collection of arguments for invoking getClientGroup.
+ * A collection of arguments for invoking getClientQosRate.
  */
-export interface GetClientGroupArgs {
+export interface GetClientQosRateArgs {
     name: string;
     site?: string;
 }
 
 /**
- * A collection of values returned by getClientGroup.
+ * A collection of values returned by getClientQosRate.
  */
-export interface GetClientGroupResult {
+export interface GetClientQosRateResult {
     readonly id: string;
     readonly name: string;
     readonly qosRateMaxDown: number;
     readonly qosRateMaxUp: number;
     readonly site: string;
 }
-export function getClientGroupOutput(args: GetClientGroupOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientGroupResult> {
+export function getClientQosRateOutput(args: GetClientQosRateOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientQosRateResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
-    return pulumi.runtime.invokeOutput("unifi:index/getClientGroup:getClientGroup", {
+    return pulumi.runtime.invokeOutput("unifi:index/getClientQosRate:getClientQosRate", {
         "name": args.name,
         "site": args.site,
     }, opts, utilities.getPackage());
 }
 
 /**
- * A collection of arguments for invoking getClientGroup.
+ * A collection of arguments for invoking getClientQosRate.
  */
-export interface GetClientGroupOutputArgs {
+export interface GetClientQosRateOutputArgs {
     name: pulumi.Input<string>;
     site?: pulumi.Input<string>;
 }

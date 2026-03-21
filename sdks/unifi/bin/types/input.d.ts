@@ -1,150 +1,40 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
-export interface ClientGateway {
+export interface BgpPeer {
     /**
-     * MAC address of the gateway.
+     * Description of this peer group.
      */
-    mac?: pulumi.Input<string>;
+    description?: pulumi.Input<string>;
     /**
-     * VLAN ID on the gateway.
+     * The peer group name.
      */
-    vlan?: pulumi.Input<number>;
+    name: pulumi.Input<string>;
+    /**
+     * List of network CIDR ranges to listen on for this peer group.
+     */
+    networks?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * The remote Autonomous System Number for this peer group.
+     */
+    remoteAs: pulumi.Input<number>;
 }
-export interface ClientGuestStatus {
+export interface ClientQosRate {
     /**
-     * Whether the client is a guest.
+     * The ID of the client group (usergroup). If set, this group is used directly.
      */
-    isGuest?: pulumi.Input<boolean>;
+    id?: pulumi.Input<string>;
     /**
-     * Whether the client is a guest according to UGW.
+     * Maximum download rate in kbps.
      */
-    isGuestByUgw?: pulumi.Input<boolean>;
+    maxDown?: pulumi.Input<number>;
     /**
-     * Whether the client is a guest according to USW.
+     * Maximum upload rate in kbps.
      */
-    isGuestByUsw?: pulumi.Input<boolean>;
-}
-export interface ClientLast {
+    maxUp?: pulumi.Input<number>;
     /**
-     * Last connection network ID.
+     * The name of the client group. If set, the group is looked up or created by name.
      */
-    connectionNetworkId?: pulumi.Input<string>;
-    /**
-     * Last connection network name.
-     */
-    connectionNetworkName?: pulumi.Input<string>;
-    /**
-     * Last 802.1X identity.
-     */
-    identity1x?: pulumi.Input<string>;
-    /**
-     * Last known IP address.
-     */
-    ip?: pulumi.Input<string>;
-    /**
-     * Last known IPv6 addresses.
-     */
-    ipv6s?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * Timestamp when last reachable by gateway.
-     */
-    reachableByGw?: pulumi.Input<number>;
-    /**
-     * Timestamp when client was last seen.
-     */
-    seen?: pulumi.Input<number>;
-    /**
-     * Timestamp when last seen by UGW.
-     */
-    seenByUgw?: pulumi.Input<number>;
-    /**
-     * Timestamp when last seen by USW.
-     */
-    seenByUsw?: pulumi.Input<number>;
-    /**
-     * MAC address of last uplink.
-     */
-    uplinkMac?: pulumi.Input<string>;
-    /**
-     * Name of last uplink.
-     */
-    uplinkName?: pulumi.Input<string>;
-    /**
-     * Remote port of last uplink.
-     */
-    uplinkRemotePort?: pulumi.Input<number>;
-}
-export interface ClientSwitch {
-    /**
-     * Switch depth in the network topology.
-     */
-    depth?: pulumi.Input<number>;
-    /**
-     * MAC address of the connected switch.
-     */
-    mac?: pulumi.Input<string>;
-    /**
-     * Switch port the client is connected to.
-     */
-    port?: pulumi.Input<number>;
-}
-export interface ClientUptimeStats {
-    /**
-     * Client uptime in seconds.
-     */
-    uptime?: pulumi.Input<number>;
-    /**
-     * Client uptime as reported by UGW.
-     */
-    uptimeByUgw?: pulumi.Input<number>;
-    /**
-     * Client uptime as reported by USW.
-     */
-    uptimeByUsw?: pulumi.Input<number>;
-}
-export interface ClientWifi {
-    /**
-     * Number of WiFi transmission attempts.
-     */
-    txAttempts?: pulumi.Input<number>;
-    /**
-     * Number of dropped WiFi transmissions.
-     */
-    txDropped?: pulumi.Input<number>;
-    /**
-     * Percentage of WiFi transmission retries.
-     */
-    txRetriesPercentage?: pulumi.Input<number>;
-}
-export interface ClientWired {
-    /**
-     * Wired connection rate in Mbps.
-     */
-    rateMbps?: pulumi.Input<number>;
-    /**
-     * Bytes received on wired connection.
-     */
-    rxBytes?: pulumi.Input<number>;
-    /**
-     * Bytes received rate on wired connection.
-     */
-    rxBytesR?: pulumi.Input<number>;
-    /**
-     * Packets received on wired connection.
-     */
-    rxPackets?: pulumi.Input<number>;
-    /**
-     * Bytes transmitted on wired connection.
-     */
-    txBytes?: pulumi.Input<number>;
-    /**
-     * Bytes transmitted rate on wired connection.
-     */
-    txBytesR?: pulumi.Input<number>;
-    /**
-     * Packets transmitted on wired connection.
-     */
-    txPackets?: pulumi.Input<number>;
+    name?: pulumi.Input<string>;
 }
 export interface DeviceConfigNetwork {
     /**
@@ -244,6 +134,10 @@ export interface DevicePortOverride {
      */
     fullDuplex?: pulumi.Input<boolean>;
     /**
+     * Switch port index.
+     */
+    index: pulumi.Input<number>;
+    /**
      * Enable port isolation.
      */
     isolation?: pulumi.Input<boolean>;
@@ -271,10 +165,6 @@ export interface DevicePortOverride {
      * Native network ID (VLAN).
      */
     nativeNetworkconfId?: pulumi.Input<string>;
-    /**
-     * Switch port number.
-     */
-    number: pulumi.Input<number>;
     /**
      * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`.
      */
@@ -453,6 +343,172 @@ export interface DeviceRadioTable {
      * Enable virtual wire.
      */
     vwireEnabled?: pulumi.Input<boolean>;
+}
+export interface NetworkDhcpGuarding {
+    /**
+     * Specifies whether DHCP guarding is enabled.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * List of allowed DHCP server IP addresses (maximum 3). Only applies when `third_party_gateway` is enabled.
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[]>;
+}
+export interface NetworkDhcpRelay {
+    /**
+     * Specifies whether DHCP relay is enabled.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * List of DHCP relay server addresses.
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[]>;
+}
+export interface NetworkDhcpServer {
+    /**
+     * DHCP boot settings.
+     */
+    boot?: pulumi.Input<inputs.NetworkDhcpServerBoot>;
+    /**
+     * Specifies whether DHCP conflict checking is enabled.
+     */
+    conflictChecking?: pulumi.Input<boolean>;
+    /**
+     * Specifies whether DHCP DNS is enabled.
+     */
+    dnsEnabled?: pulumi.Input<boolean>;
+    /**
+     * List of DNS server addresses for DHCP clients.
+     */
+    dnsServers?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Specifies whether DHCP server is enabled.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Specifies whether DHCP gateway is enabled.
+     */
+    gatewayEnabled?: pulumi.Input<boolean>;
+    /**
+     * Specifies the lease time for DHCP addresses in seconds.
+     */
+    leasetime?: pulumi.Input<number>;
+    /**
+     * Specifies whether DHCP NTP is enabled.
+     */
+    ntpEnabled?: pulumi.Input<boolean>;
+    /**
+     * The IPv4 address where the DHCP range starts.
+     */
+    start?: pulumi.Input<string>;
+    /**
+     * The IPv4 address where the DHCP range stops.
+     */
+    stop?: pulumi.Input<string>;
+    /**
+     * TFTP server address.
+     */
+    tftpServer?: pulumi.Input<string>;
+    /**
+     * Specifies whether DHCP time offset is enabled.
+     */
+    timeOffsetEnabled?: pulumi.Input<boolean>;
+    /**
+     * UniFi controller IP address.
+     */
+    unifiController?: pulumi.Input<string>;
+    /**
+     * WINS server configuration.
+     */
+    wins?: pulumi.Input<inputs.NetworkDhcpServerWins>;
+    /**
+     * WPAD URL for proxy auto-configuration.
+     */
+    wpadUrl?: pulumi.Input<string>;
+}
+export interface NetworkDhcpServerBoot {
+    /**
+     * Toggles DHCP boot options.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Boot filename.
+     */
+    filename?: pulumi.Input<string>;
+    /**
+     * TFTP server for boot options.
+     */
+    server?: pulumi.Input<string>;
+}
+export interface NetworkDhcpServerWins {
+    /**
+     * List of WINS server addresses (maximum 2).
+     */
+    addresses?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Specifies whether DHCP WINS is enabled.
+     */
+    enabled?: pulumi.Input<boolean>;
+}
+export interface NetworkNatOutboundIpAddress {
+    /**
+     * The IP address.
+     */
+    ipAddress?: pulumi.Input<string>;
+    /**
+     * The IP address pool.
+     */
+    ipAddressPools?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * The mode.
+     */
+    mode?: pulumi.Input<string>;
+    /**
+     * The WAN network group.
+     */
+    wanNetworkGroup?: pulumi.Input<string>;
+}
+export interface PortForwardForward {
+    /**
+     * The forward IPv4 address to send traffic to.
+     */
+    ip?: pulumi.Input<string>;
+    /**
+     * The forward port or port range (e.g. `1-10,11,12`).
+     */
+    port?: pulumi.Input<string>;
+}
+export interface PortForwardSourceLimiting {
+    /**
+     * Specifies whether source limiting is enabled.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * The ID of the firewall group to use for source limiting.
+     */
+    firewallGroupId?: pulumi.Input<string>;
+    /**
+     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     */
+    ip?: pulumi.Input<string>;
+    /**
+     * The source limiting type. Can be `ip` or `firewall_group`. Inferred automatically when only one of `ip` or `firewall_group_id` is set.
+     */
+    type?: pulumi.Input<string>;
+}
+export interface PortForwardWan {
+    /**
+     * The WAN interface. Can be `wan`, `wan2`, or `both`.
+     */
+    interface?: pulumi.Input<string>;
+    /**
+     * The WAN IP address for the port forwarding rule. Use `any` for all addresses.
+     */
+    ipAddress?: pulumi.Input<string>;
+    /**
+     * The WAN port or port range (e.g. `1-10,11,12`).
+     */
+    port?: pulumi.Input<string>;
 }
 export interface RadiusProfileAcctServer {
     /**
@@ -704,9 +760,289 @@ export interface SettingUsgDnsVerification {
      */
     settingPreference?: pulumi.Input<string>;
 }
+export interface TrafficRouteDestination {
+    /**
+     * List of domain entries to match.
+     */
+    domains?: pulumi.Input<pulumi.Input<inputs.TrafficRouteDestinationDomain>[]>;
+    /**
+     * List of IP address or subnet entries to match.
+     */
+    ipAddresses?: pulumi.Input<pulumi.Input<inputs.TrafficRouteDestinationIpAddress>[]>;
+    /**
+     * List of IP range entries to match.
+     */
+    ipRanges?: pulumi.Input<pulumi.Input<inputs.TrafficRouteDestinationIpRange>[]>;
+    /**
+     * List of regions to match.
+     */
+    regions?: pulumi.Input<pulumi.Input<string>[]>;
+}
+export interface TrafficRouteDestinationDomain {
+    /**
+     * The domain name to match.
+     */
+    domain: pulumi.Input<string>;
+    /**
+     * List of port ranges to match.
+     */
+    portRanges?: pulumi.Input<pulumi.Input<inputs.TrafficRouteDestinationDomainPortRange>[]>;
+    /**
+     * List of individual ports to match.
+     */
+    ports?: pulumi.Input<pulumi.Input<number>[]>;
+}
+export interface TrafficRouteDestinationDomainPortRange {
+    /**
+     * The start port of the range.
+     */
+    start: pulumi.Input<number>;
+    /**
+     * The stop port of the range.
+     */
+    stop: pulumi.Input<number>;
+}
+export interface TrafficRouteDestinationIpAddress {
+    /**
+     * An IP address or CIDR subnet to match.
+     */
+    ipOrSubnet: pulumi.Input<string>;
+    /**
+     * List of port ranges to match.
+     */
+    portRanges?: pulumi.Input<pulumi.Input<inputs.TrafficRouteDestinationIpAddressPortRange>[]>;
+    /**
+     * List of individual ports to match.
+     */
+    ports?: pulumi.Input<pulumi.Input<number>[]>;
+}
+export interface TrafficRouteDestinationIpAddressPortRange {
+    /**
+     * The start port of the range.
+     */
+    start: pulumi.Input<number>;
+    /**
+     * The stop port of the range.
+     */
+    stop: pulumi.Input<number>;
+}
+export interface TrafficRouteDestinationIpRange {
+    /**
+     * The start IP address of the range.
+     */
+    start: pulumi.Input<string>;
+    /**
+     * The stop IP address of the range.
+     */
+    stop: pulumi.Input<string>;
+}
+export interface TrafficRouteSource {
+    /**
+     * List of client devices whose traffic this route applies to.
+     */
+    clients?: pulumi.Input<pulumi.Input<inputs.TrafficRouteSourceClient>[]>;
+    /**
+     * List of networks whose traffic this route applies to.
+     */
+    networks?: pulumi.Input<pulumi.Input<inputs.TrafficRouteSourceNetwork>[]>;
+}
+export interface TrafficRouteSourceClient {
+    /**
+     * The MAC address of the client device.
+     */
+    mac: pulumi.Input<string>;
+}
+export interface TrafficRouteSourceNetwork {
+    /**
+     * The ID of the network.
+     */
+    id: pulumi.Input<string>;
+}
+export interface VpnClientWireguard {
+    /**
+     * File-based WireGuard configuration. Provide a complete WireGuard .conf file.
+     */
+    configuration?: pulumi.Input<inputs.VpnClientWireguardConfiguration>;
+    /**
+     * DNS servers for the WireGuard interface. Required for manual mode. Must specify 1-2 DNS server addresses.
+     */
+    dnsServers?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * WAN interface to use for the VPN connection (e.g., `wan`, `wan2`).
+     */
+    interface?: pulumi.Input<string>;
+    /**
+     * Manual WireGuard peer configuration. Specify peer endpoint and public key.
+     */
+    peer?: pulumi.Input<inputs.VpnClientWireguardPeer>;
+    /**
+     * WireGuard preshared key. Required when preshared_key_enabled is true.
+     */
+    presharedKey?: pulumi.Input<string>;
+    /**
+     * Specifies whether to use a preshared key for additional security.
+     */
+    presharedKeyEnabled?: pulumi.Input<boolean>;
+    /**
+     * WireGuard private key for this client.
+     */
+    privateKey: pulumi.Input<string>;
+}
+export interface VpnClientWireguardConfiguration {
+    /**
+     * Base64-encoded WireGuard configuration file content.
+     */
+    content: pulumi.Input<string>;
+    /**
+     * Filename of the WireGuard configuration file.
+     */
+    filename: pulumi.Input<string>;
+}
+export interface VpnClientWireguardPeer {
+    /**
+     * WireGuard peer endpoint IP address.
+     */
+    ip: pulumi.Input<string>;
+    /**
+     * WireGuard peer endpoint port.
+     */
+    port: pulumi.Input<number>;
+    /**
+     * WireGuard peer public key.
+     */
+    publicKey: pulumi.Input<string>;
+}
+export interface VpnServerDns {
+    /**
+     * Specifies whether custom DNS servers are enabled for VPN clients. Defaults to `true` when `servers` is non-empty.
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * DNS servers to push to VPN clients.
+     */
+    servers?: pulumi.Input<pulumi.Input<string>[]>;
+}
+export interface VpnServerL2tp {
+    /**
+     * Allow weak ciphers for L2TP connections.
+     */
+    allowWeakCiphers?: pulumi.Input<boolean>;
+    /**
+     * IPsec pre-shared key for L2TP. Required by the UniFi controller.
+     */
+    preSharedKey: pulumi.Input<string>;
+}
+export interface VpnServerOpenvpn {
+    /**
+     * OpenVPN static authentication key generated by the controller.
+     */
+    authKey?: pulumi.Input<string>;
+    /**
+     * CA certificate generated by the controller.
+     */
+    caCrt?: pulumi.Input<string>;
+    /**
+     * CA private key generated by the controller.
+     */
+    caKey?: pulumi.Input<string>;
+    /**
+     * Diffie-Hellman parameters generated by the controller.
+     */
+    dhKey?: pulumi.Input<string>;
+    /**
+     * Encryption cipher for OpenVPN.
+     */
+    encryptionCipher?: pulumi.Input<string>;
+    /**
+     * OpenVPN mode.
+     */
+    mode?: pulumi.Input<string>;
+    /**
+     * Port for the OpenVPN server to listen on.
+     */
+    port?: pulumi.Input<number>;
+    /**
+     * Server certificate generated by the controller.
+     */
+    serverCrt?: pulumi.Input<string>;
+    /**
+     * Server private key generated by the controller.
+     */
+    serverKey?: pulumi.Input<string>;
+    /**
+     * Shared client certificate generated by the controller.
+     */
+    sharedClientCrt?: pulumi.Input<string>;
+    /**
+     * Shared client private key generated by the controller.
+     */
+    sharedClientKey?: pulumi.Input<string>;
+}
+export interface VpnServerWan {
+    /**
+     * WAN interface to use for the VPN server (e.g., `wan`, `wan2`).
+     */
+    interface?: pulumi.Input<string>;
+    /**
+     * Local WAN IP to bind the VPN server to. Use `any` to listen on all addresses.
+     */
+    ip?: pulumi.Input<string>;
+}
+export interface VpnServerWireguard {
+    /**
+     * UDP port for the WireGuard server to listen on.
+     */
+    port?: pulumi.Input<number>;
+    /**
+     * WireGuard private key for this server. If not specified, one will be generated by the controller.
+     */
+    privateKey?: pulumi.Input<string>;
+    /**
+     * WireGuard public key for this server. Computed from the private key.
+     */
+    publicKey?: pulumi.Input<string>;
+}
+export interface WanDhcp {
+    /**
+     * DHCP Class of Service
+     */
+    cos?: pulumi.Input<number>;
+    /**
+     * DHCP options
+     */
+    options?: pulumi.Input<pulumi.Input<inputs.WanDhcpOption>[]>;
+}
 export interface WanDhcpOption {
+    /**
+     * DHCP option number
+     */
     optionNumber: pulumi.Input<number>;
+    /**
+     * DHCP option value
+     */
     value: pulumi.Input<string>;
+}
+export interface WanDhcpv6 {
+    /**
+     * DHCPv6 Class of Service
+     */
+    cos?: pulumi.Input<number>;
+    /**
+     * DHCPv6 options
+     */
+    options?: pulumi.Input<pulumi.Input<inputs.WanDhcpv6Option>[]>;
+    /**
+     * DHCPv6 prefix delegation size
+     */
+    pdSize?: pulumi.Input<number>;
+    /**
+     * Whether DHCPv6 PD size is automatic
+     */
+    pdSizeAuto?: pulumi.Input<boolean>;
+    /**
+     * IPv6 WAN delegation type (pd, single_network, none)
+     */
+    wanDelegationType?: pulumi.Input<string>;
 }
 export interface WanDhcpv6Option {
     /**
@@ -718,6 +1054,66 @@ export interface WanDhcpv6Option {
      */
     value: pulumi.Input<string>;
 }
+export interface WanDns {
+    /**
+     * IPv6 DNS preference (auto, manual)
+     */
+    ipv6Preference?: pulumi.Input<string>;
+    /**
+     * Primary IPv6 DNS server
+     */
+    ipv6Primary?: pulumi.Input<string>;
+    /**
+     * Secondary IPv6 DNS server
+     */
+    ipv6Secondary?: pulumi.Input<string>;
+    /**
+     * DNS preference (auto, manual)
+     */
+    preference?: pulumi.Input<string>;
+    /**
+     * Primary DNS server
+     */
+    primary?: pulumi.Input<string>;
+    /**
+     * Secondary DNS server
+     */
+    secondary?: pulumi.Input<string>;
+}
+export interface WanEgressQos {
+    /**
+     * Whether egress QoS is enabled
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Egress QoS priority
+     */
+    priority?: pulumi.Input<number>;
+}
+export interface WanIgmpProxy {
+    /**
+     * IGMP proxy downstream target (none, lan, guest)
+     */
+    downstream?: pulumi.Input<string>;
+    /**
+     * Whether IGMP proxy upstream is enabled
+     */
+    upstream?: pulumi.Input<boolean>;
+}
+export interface WanLoadBalance {
+    /**
+     * Failover priority
+     */
+    failoverPriority?: pulumi.Input<number>;
+    /**
+     * Load balance type (failover-only, weighted)
+     */
+    type?: pulumi.Input<string>;
+    /**
+     * Load balance weight
+     */
+    weight?: pulumi.Input<number>;
+}
 export interface WanProviderCapabilities {
     /**
      * Download speed in kilobits per second
@@ -727,6 +1123,48 @@ export interface WanProviderCapabilities {
      * Upload speed in kilobits per second
      */
     uploadKilobitsPerSecond: pulumi.Input<number>;
+}
+export interface WanSmartq {
+    /**
+     * Smart Queue download rate in kbps
+     */
+    downRate?: pulumi.Input<number>;
+    /**
+     * Whether Smart Queue is enabled
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Smart Queue upload rate in kbps
+     */
+    upRate?: pulumi.Input<number>;
+}
+export interface WanUpnp {
+    /**
+     * Whether UPnP is enabled
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * Whether UPnP NAT-PMP is enabled
+     */
+    natPmpEnabled?: pulumi.Input<boolean>;
+    /**
+     * Whether UPnP secure mode is enabled
+     */
+    secureMode?: pulumi.Input<boolean>;
+    /**
+     * UPnP WAN interface
+     */
+    wanInterface?: pulumi.Input<string>;
+}
+export interface WanVlan {
+    /**
+     * Whether VLAN is enabled
+     */
+    enabled?: pulumi.Input<boolean>;
+    /**
+     * The VLAN ID
+     */
+    id?: pulumi.Input<number>;
 }
 export interface WlanMacFilter {
     /**

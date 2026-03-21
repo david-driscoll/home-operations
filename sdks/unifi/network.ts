@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class Network extends pulumi.CustomResource {
@@ -33,221 +35,93 @@ export class Network extends pulumi.CustomResource {
     }
 
     /**
-     * Specifies the IPv4 addresses for the DNS server to be returned from the DHCP server. Leave blank to disable this feature.
+     * Specifies whether auto-scaling is enabled.
      */
-    declare public readonly dhcpDns: pulumi.Output<string[] | undefined>;
+    declare public readonly autoScale: pulumi.Output<boolean>;
     /**
-     * Specifies whether DHCP is enabled or not on this network.
+     * DHCP guarding configuration. When `third_party_gateway` is enabled, the `servers` list specifies the allowed DHCP server IPs.
      */
-    declare public readonly dhcpEnabled: pulumi.Output<boolean | undefined>;
+    declare public readonly dhcpGuarding: pulumi.Output<outputs.NetworkDhcpGuarding | undefined>;
     /**
-     * Specifies the lease time for DHCP addresses in seconds.
+     * DHCP relay configuration.
      */
-    declare public readonly dhcpLease: pulumi.Output<number>;
+    declare public readonly dhcpRelay: pulumi.Output<outputs.NetworkDhcpRelay | undefined>;
     /**
-     * Specifies whether DHCP relay is enabled or not on this network.
+     * DHCP server configuration.
      */
-    declare public readonly dhcpRelayEnabled: pulumi.Output<boolean | undefined>;
+    declare public readonly dhcpServer: pulumi.Output<outputs.NetworkDhcpServer | undefined>;
     /**
-     * The IPv4 address where the DHCP range of addresses starts.
+     * The domain name for the network.
      */
-    declare public readonly dhcpStart: pulumi.Output<string | undefined>;
+    declare public readonly domainName: pulumi.Output<string>;
     /**
-     * The IPv4 address where the DHCP range of addresses stops.
+     * Specifies whether the network is enabled.
      */
-    declare public readonly dhcpStop: pulumi.Output<string | undefined>;
+    declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Specifies the IPv6 addresses for the DNS server to be returned from the DHCP server. Used if `dhcp_v6_dns_auto` is set to `false`.
+     * The gateway type. Must be one of `default` or `switch`.
      */
-    declare public readonly dhcpV6Dns: pulumi.Output<string[] | undefined>;
+    declare public readonly gatewayType: pulumi.Output<string>;
     /**
-     * Specifies DNS source to propagate. If set `false` the entries in `dhcp_v6_dns` are used, the upstream entries otherwise
+     * Specifies whether IGMP snooping is enabled.
      */
-    declare public readonly dhcpV6DnsAuto: pulumi.Output<boolean>;
+    declare public readonly igmpSnooping: pulumi.Output<boolean>;
     /**
-     * Enable stateful DHCPv6 for static configuration.
+     * Specifies whether internet access is enabled.
      */
-    declare public readonly dhcpV6Enabled: pulumi.Output<boolean | undefined>;
+    declare public readonly internetAccess: pulumi.Output<boolean>;
     /**
-     * Specifies the lease time for DHCPv6 addresses in seconds.
+     * List of IP aliases for the network.
      */
-    declare public readonly dhcpV6Lease: pulumi.Output<number>;
+    declare public readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * List of IPv6 aliases for the network.
      */
-    declare public readonly dhcpV6PdStart: pulumi.Output<string | undefined>;
+    declare public readonly ipv6Aliases: pulumi.Output<string[] | undefined>;
     /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
      */
-    declare public readonly dhcpV6PdStop: pulumi.Output<string | undefined>;
+    declare public readonly ipv6InterfaceType: pulumi.Output<string>;
     /**
-     * Start address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
+     * Specifies whether LTE LAN is enabled.
      */
-    declare public readonly dhcpV6Start: pulumi.Output<string | undefined>;
+    declare public readonly lteLan: pulumi.Output<boolean>;
     /**
-     * End address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
+     * Specifies whether mDNS is enabled.
      */
-    declare public readonly dhcpV6Stop: pulumi.Output<string | undefined>;
-    /**
-     * Toggles on the DHCP boot options. Should be set to true when you want to have dhcpd_boot_filename, and dhcpd_boot_server to take effect.
-     */
-    declare public readonly dhcpdBootEnabled: pulumi.Output<boolean | undefined>;
-    /**
-     * Specifies the file to PXE boot from on the dhcpd_boot_server.
-     */
-    declare public readonly dhcpdBootFilename: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the IPv4 address of a TFTP server to network boot from.
-     */
-    declare public readonly dhcpdBootServer: pulumi.Output<string | undefined>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of either `none`, `pd`, or `static`.
-     */
-    declare public readonly ipv6InterfaceType: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the IPv6 Prefix ID.
-     */
-    declare public readonly ipv6PdPrefixid: pulumi.Output<string | undefined>;
-    /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    declare public readonly ipv6PdStart: pulumi.Output<string | undefined>;
-    /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    declare public readonly ipv6PdStop: pulumi.Output<string | undefined>;
-    /**
-     * Specifies whether to enable router advertisements or not.
-     */
-    declare public readonly ipv6RaEnable: pulumi.Output<boolean | undefined>;
-    /**
-     * Lifetime in which addresses generated from the prefix remain preferred. Value is in seconds.
-     */
-    declare public readonly ipv6RaPreferredLifetime: pulumi.Output<number | undefined>;
-    /**
-     * IPv6 router advertisement priority. Must be one of either `high`, `medium`, or `low`
-     */
-    declare public readonly ipv6RaPriority: pulumi.Output<string | undefined>;
-    /**
-     * Lifetime in which the prefix is valid for the purpose of on-link determination. Value is in seconds.
-     */
-    declare public readonly ipv6RaValidLifetime: pulumi.Output<number | undefined>;
-    /**
-     * Specifies the static IPv6 addresses for the network.
-     */
-    declare public readonly ipv6Statics: pulumi.Output<string[] | undefined>;
+    declare public readonly multicastDns: pulumi.Output<boolean>;
     /**
      * The name of the network.
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * The group of the network.
+     * List of NAT outbound IP addresses.
      */
-    declare public readonly networkGroup: pulumi.Output<string>;
+    declare public readonly natOutboundIpAddresses: pulumi.Output<outputs.NetworkNatOutboundIpAddress[] | undefined>;
     /**
-     * The purpose of the network. Must be one of `corporate`, `guest`, `wan`, `vlan-only`, or `vpn-client`.
+     * Specifies whether network isolation is enabled.
      */
-    declare public readonly purpose: pulumi.Output<string>;
+    declare public readonly networkIsolation: pulumi.Output<boolean>;
+    /**
+     * Setting preference. Must be one of `auto` or `manual`.
+     */
+    declare public readonly settingPreference: pulumi.Output<string>;
     /**
      * The name of the site to associate the network with.
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * The subnet of the network. Must be a valid CIDR address.
+     * The IP subnet of the network in CIDR notation.
      */
-    declare public readonly subnet: pulumi.Output<string | undefined>;
+    declare public readonly subnet: pulumi.Output<string>;
     /**
-     * The VLAN ID of the network.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
      */
-    declare public readonly vlanId: pulumi.Output<number | undefined>;
+    declare public readonly thirdPartyGateway: pulumi.Output<boolean>;
     /**
-     * Enable stateful DHCPv6 for the WAN.
+     * The VLAN ID for the network.
      */
-    declare public readonly wanDhcpV6: pulumi.Output<boolean | undefined>;
-    /**
-     * DNS servers IPs of the WAN.
-     */
-    declare public readonly wanDns: pulumi.Output<string[] | undefined>;
-    /**
-     * The IPv4 gateway of the WAN.
-     */
-    declare public readonly wanGateway: pulumi.Output<string | undefined>;
-    /**
-     * The IPv6 gateway of the WAN.
-     */
-    declare public readonly wanGatewayV6: pulumi.Output<string | undefined>;
-    /**
-     * The IPv4 address of the WAN.
-     */
-    declare public readonly wanIp: pulumi.Output<string | undefined>;
-    /**
-     * The IPv6 address of the WAN.
-     */
-    declare public readonly wanIpv6: pulumi.Output<string | undefined>;
-    /**
-     * The IPv4 netmask of the WAN.
-     */
-    declare public readonly wanNetmask: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the WAN network group. Must be one of either `WAN`, `WAN2` or `WAN_LTE_FAILOVER`.
-     */
-    declare public readonly wanNetworkGroup: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the IPV4 WAN password.
-     */
-    declare public readonly wanPassword: pulumi.Output<string | undefined>;
-    /**
-     * The IPv6 prefix length of the WAN. Must be between 1 and 128.
-     */
-    declare public readonly wanPrefixlen: pulumi.Output<number | undefined>;
-    /**
-     * Specifies the IPV4 WAN connection type. Must be one of either `disabled`, `dhcp`, `static`, or `pppoe`.
-     */
-    declare public readonly wanType: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the IPV6 WAN connection type. Must be one of either `disabled`, `dhcpv6`, or `static`.
-     */
-    declare public readonly wanTypeV6: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the IPV4 WAN username.
-     */
-    declare public readonly wanUsername: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the Wireguard client mode. Must be one of either `file` or `manual`.
-     */
-    declare public readonly wireguardClientMode: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the Wireguard client peer IP.
-     */
-    declare public readonly wireguardClientPeerIp: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the Wireguard client peer port.
-     */
-    declare public readonly wireguardClientPeerPort: pulumi.Output<number | undefined>;
-    /**
-     * Specifies the Wireguard client peer public key.
-     */
-    declare public readonly wireguardClientPeerPublicKey: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the Wireguard client preshared key.
-     */
-    declare public readonly wireguardClientPresharedKey: pulumi.Output<string | undefined>;
-    /**
-     * Specifies whether the Wireguard client preshared key is enabled or not.
-     */
-    declare public readonly wireguardClientPresharedKeyEnabled: pulumi.Output<boolean | undefined>;
-    /**
-     * Specifies the Wireguard ID.
-     */
-    declare public readonly wireguardId: pulumi.Output<number | undefined>;
-    /**
-     * Specifies the Wireguard private key.
-     */
-    declare public readonly wireguardPrivateKey: pulumi.Output<string | undefined>;
-    /**
-     * Specifies the Wireguard public key.
-     */
-    declare public readonly wireguardPublicKey: pulumi.Output<string | undefined>;
+    declare public readonly vlan: pulumi.Output<number | undefined>;
 
     /**
      * Create a Network resource with the given unique name, arguments, and options.
@@ -262,123 +136,57 @@ export class Network extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as NetworkState | undefined;
-            resourceInputs["dhcpDns"] = state?.dhcpDns;
-            resourceInputs["dhcpEnabled"] = state?.dhcpEnabled;
-            resourceInputs["dhcpLease"] = state?.dhcpLease;
-            resourceInputs["dhcpRelayEnabled"] = state?.dhcpRelayEnabled;
-            resourceInputs["dhcpStart"] = state?.dhcpStart;
-            resourceInputs["dhcpStop"] = state?.dhcpStop;
-            resourceInputs["dhcpV6Dns"] = state?.dhcpV6Dns;
-            resourceInputs["dhcpV6DnsAuto"] = state?.dhcpV6DnsAuto;
-            resourceInputs["dhcpV6Enabled"] = state?.dhcpV6Enabled;
-            resourceInputs["dhcpV6Lease"] = state?.dhcpV6Lease;
-            resourceInputs["dhcpV6PdStart"] = state?.dhcpV6PdStart;
-            resourceInputs["dhcpV6PdStop"] = state?.dhcpV6PdStop;
-            resourceInputs["dhcpV6Start"] = state?.dhcpV6Start;
-            resourceInputs["dhcpV6Stop"] = state?.dhcpV6Stop;
-            resourceInputs["dhcpdBootEnabled"] = state?.dhcpdBootEnabled;
-            resourceInputs["dhcpdBootFilename"] = state?.dhcpdBootFilename;
-            resourceInputs["dhcpdBootServer"] = state?.dhcpdBootServer;
+            resourceInputs["autoScale"] = state?.autoScale;
+            resourceInputs["dhcpGuarding"] = state?.dhcpGuarding;
+            resourceInputs["dhcpRelay"] = state?.dhcpRelay;
+            resourceInputs["dhcpServer"] = state?.dhcpServer;
+            resourceInputs["domainName"] = state?.domainName;
+            resourceInputs["enabled"] = state?.enabled;
+            resourceInputs["gatewayType"] = state?.gatewayType;
+            resourceInputs["igmpSnooping"] = state?.igmpSnooping;
+            resourceInputs["internetAccess"] = state?.internetAccess;
+            resourceInputs["ipAliases"] = state?.ipAliases;
+            resourceInputs["ipv6Aliases"] = state?.ipv6Aliases;
             resourceInputs["ipv6InterfaceType"] = state?.ipv6InterfaceType;
-            resourceInputs["ipv6PdPrefixid"] = state?.ipv6PdPrefixid;
-            resourceInputs["ipv6PdStart"] = state?.ipv6PdStart;
-            resourceInputs["ipv6PdStop"] = state?.ipv6PdStop;
-            resourceInputs["ipv6RaEnable"] = state?.ipv6RaEnable;
-            resourceInputs["ipv6RaPreferredLifetime"] = state?.ipv6RaPreferredLifetime;
-            resourceInputs["ipv6RaPriority"] = state?.ipv6RaPriority;
-            resourceInputs["ipv6RaValidLifetime"] = state?.ipv6RaValidLifetime;
-            resourceInputs["ipv6Statics"] = state?.ipv6Statics;
+            resourceInputs["lteLan"] = state?.lteLan;
+            resourceInputs["multicastDns"] = state?.multicastDns;
             resourceInputs["name"] = state?.name;
-            resourceInputs["networkGroup"] = state?.networkGroup;
-            resourceInputs["purpose"] = state?.purpose;
+            resourceInputs["natOutboundIpAddresses"] = state?.natOutboundIpAddresses;
+            resourceInputs["networkIsolation"] = state?.networkIsolation;
+            resourceInputs["settingPreference"] = state?.settingPreference;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
-            resourceInputs["vlanId"] = state?.vlanId;
-            resourceInputs["wanDhcpV6"] = state?.wanDhcpV6;
-            resourceInputs["wanDns"] = state?.wanDns;
-            resourceInputs["wanGateway"] = state?.wanGateway;
-            resourceInputs["wanGatewayV6"] = state?.wanGatewayV6;
-            resourceInputs["wanIp"] = state?.wanIp;
-            resourceInputs["wanIpv6"] = state?.wanIpv6;
-            resourceInputs["wanNetmask"] = state?.wanNetmask;
-            resourceInputs["wanNetworkGroup"] = state?.wanNetworkGroup;
-            resourceInputs["wanPassword"] = state?.wanPassword;
-            resourceInputs["wanPrefixlen"] = state?.wanPrefixlen;
-            resourceInputs["wanType"] = state?.wanType;
-            resourceInputs["wanTypeV6"] = state?.wanTypeV6;
-            resourceInputs["wanUsername"] = state?.wanUsername;
-            resourceInputs["wireguardClientMode"] = state?.wireguardClientMode;
-            resourceInputs["wireguardClientPeerIp"] = state?.wireguardClientPeerIp;
-            resourceInputs["wireguardClientPeerPort"] = state?.wireguardClientPeerPort;
-            resourceInputs["wireguardClientPeerPublicKey"] = state?.wireguardClientPeerPublicKey;
-            resourceInputs["wireguardClientPresharedKey"] = state?.wireguardClientPresharedKey;
-            resourceInputs["wireguardClientPresharedKeyEnabled"] = state?.wireguardClientPresharedKeyEnabled;
-            resourceInputs["wireguardId"] = state?.wireguardId;
-            resourceInputs["wireguardPrivateKey"] = state?.wireguardPrivateKey;
-            resourceInputs["wireguardPublicKey"] = state?.wireguardPublicKey;
+            resourceInputs["thirdPartyGateway"] = state?.thirdPartyGateway;
+            resourceInputs["vlan"] = state?.vlan;
         } else {
             const args = argsOrState as NetworkArgs | undefined;
-            if (args?.purpose === undefined && !opts.urn) {
-                throw new Error("Missing required property 'purpose'");
+            if (args?.subnet === undefined && !opts.urn) {
+                throw new Error("Missing required property 'subnet'");
             }
-            resourceInputs["dhcpDns"] = args?.dhcpDns;
-            resourceInputs["dhcpEnabled"] = args?.dhcpEnabled;
-            resourceInputs["dhcpLease"] = args?.dhcpLease;
-            resourceInputs["dhcpRelayEnabled"] = args?.dhcpRelayEnabled;
-            resourceInputs["dhcpStart"] = args?.dhcpStart;
-            resourceInputs["dhcpStop"] = args?.dhcpStop;
-            resourceInputs["dhcpV6Dns"] = args?.dhcpV6Dns;
-            resourceInputs["dhcpV6DnsAuto"] = args?.dhcpV6DnsAuto;
-            resourceInputs["dhcpV6Enabled"] = args?.dhcpV6Enabled;
-            resourceInputs["dhcpV6Lease"] = args?.dhcpV6Lease;
-            resourceInputs["dhcpV6PdStart"] = args?.dhcpV6PdStart;
-            resourceInputs["dhcpV6PdStop"] = args?.dhcpV6PdStop;
-            resourceInputs["dhcpV6Start"] = args?.dhcpV6Start;
-            resourceInputs["dhcpV6Stop"] = args?.dhcpV6Stop;
-            resourceInputs["dhcpdBootEnabled"] = args?.dhcpdBootEnabled;
-            resourceInputs["dhcpdBootFilename"] = args?.dhcpdBootFilename;
-            resourceInputs["dhcpdBootServer"] = args?.dhcpdBootServer;
+            resourceInputs["autoScale"] = args?.autoScale;
+            resourceInputs["dhcpGuarding"] = args?.dhcpGuarding;
+            resourceInputs["dhcpRelay"] = args?.dhcpRelay;
+            resourceInputs["dhcpServer"] = args?.dhcpServer;
+            resourceInputs["domainName"] = args?.domainName;
+            resourceInputs["enabled"] = args?.enabled;
+            resourceInputs["gatewayType"] = args?.gatewayType;
+            resourceInputs["igmpSnooping"] = args?.igmpSnooping;
+            resourceInputs["internetAccess"] = args?.internetAccess;
+            resourceInputs["ipAliases"] = args?.ipAliases;
+            resourceInputs["ipv6Aliases"] = args?.ipv6Aliases;
             resourceInputs["ipv6InterfaceType"] = args?.ipv6InterfaceType;
-            resourceInputs["ipv6PdPrefixid"] = args?.ipv6PdPrefixid;
-            resourceInputs["ipv6PdStart"] = args?.ipv6PdStart;
-            resourceInputs["ipv6PdStop"] = args?.ipv6PdStop;
-            resourceInputs["ipv6RaEnable"] = args?.ipv6RaEnable;
-            resourceInputs["ipv6RaPreferredLifetime"] = args?.ipv6RaPreferredLifetime;
-            resourceInputs["ipv6RaPriority"] = args?.ipv6RaPriority;
-            resourceInputs["ipv6RaValidLifetime"] = args?.ipv6RaValidLifetime;
-            resourceInputs["ipv6Statics"] = args?.ipv6Statics;
+            resourceInputs["lteLan"] = args?.lteLan;
+            resourceInputs["multicastDns"] = args?.multicastDns;
             resourceInputs["name"] = args?.name;
-            resourceInputs["networkGroup"] = args?.networkGroup;
-            resourceInputs["purpose"] = args?.purpose;
+            resourceInputs["natOutboundIpAddresses"] = args?.natOutboundIpAddresses;
+            resourceInputs["networkIsolation"] = args?.networkIsolation;
+            resourceInputs["settingPreference"] = args?.settingPreference;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;
-            resourceInputs["vlanId"] = args?.vlanId;
-            resourceInputs["wanDhcpV6"] = args?.wanDhcpV6;
-            resourceInputs["wanDns"] = args?.wanDns;
-            resourceInputs["wanGateway"] = args?.wanGateway;
-            resourceInputs["wanGatewayV6"] = args?.wanGatewayV6;
-            resourceInputs["wanIp"] = args?.wanIp;
-            resourceInputs["wanIpv6"] = args?.wanIpv6;
-            resourceInputs["wanNetmask"] = args?.wanNetmask;
-            resourceInputs["wanNetworkGroup"] = args?.wanNetworkGroup;
-            resourceInputs["wanPassword"] = args?.wanPassword ? pulumi.secret(args.wanPassword) : undefined;
-            resourceInputs["wanPrefixlen"] = args?.wanPrefixlen;
-            resourceInputs["wanType"] = args?.wanType;
-            resourceInputs["wanTypeV6"] = args?.wanTypeV6;
-            resourceInputs["wanUsername"] = args?.wanUsername;
-            resourceInputs["wireguardClientMode"] = args?.wireguardClientMode;
-            resourceInputs["wireguardClientPeerIp"] = args?.wireguardClientPeerIp;
-            resourceInputs["wireguardClientPeerPort"] = args?.wireguardClientPeerPort;
-            resourceInputs["wireguardClientPeerPublicKey"] = args?.wireguardClientPeerPublicKey;
-            resourceInputs["wireguardClientPresharedKey"] = args?.wireguardClientPresharedKey;
-            resourceInputs["wireguardClientPresharedKeyEnabled"] = args?.wireguardClientPresharedKeyEnabled;
-            resourceInputs["wireguardId"] = args?.wireguardId;
-            resourceInputs["wireguardPrivateKey"] = args?.wireguardPrivateKey;
-            resourceInputs["wireguardPublicKey"] = args?.wireguardPublicKey;
+            resourceInputs["thirdPartyGateway"] = args?.thirdPartyGateway;
+            resourceInputs["vlan"] = args?.vlan;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
-        const secretOpts = { additionalSecretOutputs: ["wanPassword"] };
-        opts = pulumi.mergeOptions(opts, secretOpts);
         super(Network.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
     }
 }
@@ -388,221 +196,93 @@ export class Network extends pulumi.CustomResource {
  */
 export interface NetworkState {
     /**
-     * Specifies the IPv4 addresses for the DNS server to be returned from the DHCP server. Leave blank to disable this feature.
+     * Specifies whether auto-scaling is enabled.
      */
-    dhcpDns?: pulumi.Input<pulumi.Input<string>[]>;
+    autoScale?: pulumi.Input<boolean>;
     /**
-     * Specifies whether DHCP is enabled or not on this network.
+     * DHCP guarding configuration. When `third_party_gateway` is enabled, the `servers` list specifies the allowed DHCP server IPs.
      */
-    dhcpEnabled?: pulumi.Input<boolean>;
+    dhcpGuarding?: pulumi.Input<inputs.NetworkDhcpGuarding>;
     /**
-     * Specifies the lease time for DHCP addresses in seconds.
+     * DHCP relay configuration.
      */
-    dhcpLease?: pulumi.Input<number>;
+    dhcpRelay?: pulumi.Input<inputs.NetworkDhcpRelay>;
     /**
-     * Specifies whether DHCP relay is enabled or not on this network.
+     * DHCP server configuration.
      */
-    dhcpRelayEnabled?: pulumi.Input<boolean>;
+    dhcpServer?: pulumi.Input<inputs.NetworkDhcpServer>;
     /**
-     * The IPv4 address where the DHCP range of addresses starts.
+     * The domain name for the network.
      */
-    dhcpStart?: pulumi.Input<string>;
+    domainName?: pulumi.Input<string>;
     /**
-     * The IPv4 address where the DHCP range of addresses stops.
+     * Specifies whether the network is enabled.
      */
-    dhcpStop?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean>;
     /**
-     * Specifies the IPv6 addresses for the DNS server to be returned from the DHCP server. Used if `dhcp_v6_dns_auto` is set to `false`.
+     * The gateway type. Must be one of `default` or `switch`.
      */
-    dhcpV6Dns?: pulumi.Input<pulumi.Input<string>[]>;
+    gatewayType?: pulumi.Input<string>;
     /**
-     * Specifies DNS source to propagate. If set `false` the entries in `dhcp_v6_dns` are used, the upstream entries otherwise
+     * Specifies whether IGMP snooping is enabled.
      */
-    dhcpV6DnsAuto?: pulumi.Input<boolean>;
+    igmpSnooping?: pulumi.Input<boolean>;
     /**
-     * Enable stateful DHCPv6 for static configuration.
+     * Specifies whether internet access is enabled.
      */
-    dhcpV6Enabled?: pulumi.Input<boolean>;
+    internetAccess?: pulumi.Input<boolean>;
     /**
-     * Specifies the lease time for DHCPv6 addresses in seconds.
+     * List of IP aliases for the network.
      */
-    dhcpV6Lease?: pulumi.Input<number>;
+    ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * List of IPv6 aliases for the network.
      */
-    dhcpV6PdStart?: pulumi.Input<string>;
+    ipv6Aliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    dhcpV6PdStop?: pulumi.Input<string>;
-    /**
-     * Start address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
-     */
-    dhcpV6Start?: pulumi.Input<string>;
-    /**
-     * End address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
-     */
-    dhcpV6Stop?: pulumi.Input<string>;
-    /**
-     * Toggles on the DHCP boot options. Should be set to true when you want to have dhcpd_boot_filename, and dhcpd_boot_server to take effect.
-     */
-    dhcpdBootEnabled?: pulumi.Input<boolean>;
-    /**
-     * Specifies the file to PXE boot from on the dhcpd_boot_server.
-     */
-    dhcpdBootFilename?: pulumi.Input<string>;
-    /**
-     * Specifies the IPv4 address of a TFTP server to network boot from.
-     */
-    dhcpdBootServer?: pulumi.Input<string>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of either `none`, `pd`, or `static`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
      */
     ipv6InterfaceType?: pulumi.Input<string>;
     /**
-     * Specifies the IPv6 Prefix ID.
+     * Specifies whether LTE LAN is enabled.
      */
-    ipv6PdPrefixid?: pulumi.Input<string>;
+    lteLan?: pulumi.Input<boolean>;
     /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * Specifies whether mDNS is enabled.
      */
-    ipv6PdStart?: pulumi.Input<string>;
-    /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    ipv6PdStop?: pulumi.Input<string>;
-    /**
-     * Specifies whether to enable router advertisements or not.
-     */
-    ipv6RaEnable?: pulumi.Input<boolean>;
-    /**
-     * Lifetime in which addresses generated from the prefix remain preferred. Value is in seconds.
-     */
-    ipv6RaPreferredLifetime?: pulumi.Input<number>;
-    /**
-     * IPv6 router advertisement priority. Must be one of either `high`, `medium`, or `low`
-     */
-    ipv6RaPriority?: pulumi.Input<string>;
-    /**
-     * Lifetime in which the prefix is valid for the purpose of on-link determination. Value is in seconds.
-     */
-    ipv6RaValidLifetime?: pulumi.Input<number>;
-    /**
-     * Specifies the static IPv6 addresses for the network.
-     */
-    ipv6Statics?: pulumi.Input<pulumi.Input<string>[]>;
+    multicastDns?: pulumi.Input<boolean>;
     /**
      * The name of the network.
      */
     name?: pulumi.Input<string>;
     /**
-     * The group of the network.
+     * List of NAT outbound IP addresses.
      */
-    networkGroup?: pulumi.Input<string>;
+    natOutboundIpAddresses?: pulumi.Input<pulumi.Input<inputs.NetworkNatOutboundIpAddress>[]>;
     /**
-     * The purpose of the network. Must be one of `corporate`, `guest`, `wan`, `vlan-only`, or `vpn-client`.
+     * Specifies whether network isolation is enabled.
      */
-    purpose?: pulumi.Input<string>;
+    networkIsolation?: pulumi.Input<boolean>;
+    /**
+     * Setting preference. Must be one of `auto` or `manual`.
+     */
+    settingPreference?: pulumi.Input<string>;
     /**
      * The name of the site to associate the network with.
      */
     site?: pulumi.Input<string>;
     /**
-     * The subnet of the network. Must be a valid CIDR address.
+     * The IP subnet of the network in CIDR notation.
      */
     subnet?: pulumi.Input<string>;
     /**
-     * The VLAN ID of the network.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
      */
-    vlanId?: pulumi.Input<number>;
+    thirdPartyGateway?: pulumi.Input<boolean>;
     /**
-     * Enable stateful DHCPv6 for the WAN.
+     * The VLAN ID for the network.
      */
-    wanDhcpV6?: pulumi.Input<boolean>;
-    /**
-     * DNS servers IPs of the WAN.
-     */
-    wanDns?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * The IPv4 gateway of the WAN.
-     */
-    wanGateway?: pulumi.Input<string>;
-    /**
-     * The IPv6 gateway of the WAN.
-     */
-    wanGatewayV6?: pulumi.Input<string>;
-    /**
-     * The IPv4 address of the WAN.
-     */
-    wanIp?: pulumi.Input<string>;
-    /**
-     * The IPv6 address of the WAN.
-     */
-    wanIpv6?: pulumi.Input<string>;
-    /**
-     * The IPv4 netmask of the WAN.
-     */
-    wanNetmask?: pulumi.Input<string>;
-    /**
-     * Specifies the WAN network group. Must be one of either `WAN`, `WAN2` or `WAN_LTE_FAILOVER`.
-     */
-    wanNetworkGroup?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV4 WAN password.
-     */
-    wanPassword?: pulumi.Input<string>;
-    /**
-     * The IPv6 prefix length of the WAN. Must be between 1 and 128.
-     */
-    wanPrefixlen?: pulumi.Input<number>;
-    /**
-     * Specifies the IPV4 WAN connection type. Must be one of either `disabled`, `dhcp`, `static`, or `pppoe`.
-     */
-    wanType?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV6 WAN connection type. Must be one of either `disabled`, `dhcpv6`, or `static`.
-     */
-    wanTypeV6?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV4 WAN username.
-     */
-    wanUsername?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client mode. Must be one of either `file` or `manual`.
-     */
-    wireguardClientMode?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client peer IP.
-     */
-    wireguardClientPeerIp?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client peer port.
-     */
-    wireguardClientPeerPort?: pulumi.Input<number>;
-    /**
-     * Specifies the Wireguard client peer public key.
-     */
-    wireguardClientPeerPublicKey?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client preshared key.
-     */
-    wireguardClientPresharedKey?: pulumi.Input<string>;
-    /**
-     * Specifies whether the Wireguard client preshared key is enabled or not.
-     */
-    wireguardClientPresharedKeyEnabled?: pulumi.Input<boolean>;
-    /**
-     * Specifies the Wireguard ID.
-     */
-    wireguardId?: pulumi.Input<number>;
-    /**
-     * Specifies the Wireguard private key.
-     */
-    wireguardPrivateKey?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard public key.
-     */
-    wireguardPublicKey?: pulumi.Input<string>;
+    vlan?: pulumi.Input<number>;
 }
 
 /**
@@ -610,219 +290,91 @@ export interface NetworkState {
  */
 export interface NetworkArgs {
     /**
-     * Specifies the IPv4 addresses for the DNS server to be returned from the DHCP server. Leave blank to disable this feature.
+     * Specifies whether auto-scaling is enabled.
      */
-    dhcpDns?: pulumi.Input<pulumi.Input<string>[]>;
+    autoScale?: pulumi.Input<boolean>;
     /**
-     * Specifies whether DHCP is enabled or not on this network.
+     * DHCP guarding configuration. When `third_party_gateway` is enabled, the `servers` list specifies the allowed DHCP server IPs.
      */
-    dhcpEnabled?: pulumi.Input<boolean>;
+    dhcpGuarding?: pulumi.Input<inputs.NetworkDhcpGuarding>;
     /**
-     * Specifies the lease time for DHCP addresses in seconds.
+     * DHCP relay configuration.
      */
-    dhcpLease?: pulumi.Input<number>;
+    dhcpRelay?: pulumi.Input<inputs.NetworkDhcpRelay>;
     /**
-     * Specifies whether DHCP relay is enabled or not on this network.
+     * DHCP server configuration.
      */
-    dhcpRelayEnabled?: pulumi.Input<boolean>;
+    dhcpServer?: pulumi.Input<inputs.NetworkDhcpServer>;
     /**
-     * The IPv4 address where the DHCP range of addresses starts.
+     * The domain name for the network.
      */
-    dhcpStart?: pulumi.Input<string>;
+    domainName?: pulumi.Input<string>;
     /**
-     * The IPv4 address where the DHCP range of addresses stops.
+     * Specifies whether the network is enabled.
      */
-    dhcpStop?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean>;
     /**
-     * Specifies the IPv6 addresses for the DNS server to be returned from the DHCP server. Used if `dhcp_v6_dns_auto` is set to `false`.
+     * The gateway type. Must be one of `default` or `switch`.
      */
-    dhcpV6Dns?: pulumi.Input<pulumi.Input<string>[]>;
+    gatewayType?: pulumi.Input<string>;
     /**
-     * Specifies DNS source to propagate. If set `false` the entries in `dhcp_v6_dns` are used, the upstream entries otherwise
+     * Specifies whether IGMP snooping is enabled.
      */
-    dhcpV6DnsAuto?: pulumi.Input<boolean>;
+    igmpSnooping?: pulumi.Input<boolean>;
     /**
-     * Enable stateful DHCPv6 for static configuration.
+     * Specifies whether internet access is enabled.
      */
-    dhcpV6Enabled?: pulumi.Input<boolean>;
+    internetAccess?: pulumi.Input<boolean>;
     /**
-     * Specifies the lease time for DHCPv6 addresses in seconds.
+     * List of IP aliases for the network.
      */
-    dhcpV6Lease?: pulumi.Input<number>;
+    ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * List of IPv6 aliases for the network.
      */
-    dhcpV6PdStart?: pulumi.Input<string>;
+    ipv6Aliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    dhcpV6PdStop?: pulumi.Input<string>;
-    /**
-     * Start address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
-     */
-    dhcpV6Start?: pulumi.Input<string>;
-    /**
-     * End address of the DHCPv6 pool. Used if `dhcp_v6_enabled` is set to `true`.
-     */
-    dhcpV6Stop?: pulumi.Input<string>;
-    /**
-     * Toggles on the DHCP boot options. Should be set to true when you want to have dhcpd_boot_filename, and dhcpd_boot_server to take effect.
-     */
-    dhcpdBootEnabled?: pulumi.Input<boolean>;
-    /**
-     * Specifies the file to PXE boot from on the dhcpd_boot_server.
-     */
-    dhcpdBootFilename?: pulumi.Input<string>;
-    /**
-     * Specifies the IPv4 address of a TFTP server to network boot from.
-     */
-    dhcpdBootServer?: pulumi.Input<string>;
-    /**
-     * Specifies which type of IPv6 connection to use. Must be one of either `none`, `pd`, or `static`.
+     * Specifies which type of IPv6 connection to use. Must be one of `none`, `pd`, or `static`.
      */
     ipv6InterfaceType?: pulumi.Input<string>;
     /**
-     * Specifies the IPv6 Prefix ID.
+     * Specifies whether LTE LAN is enabled.
      */
-    ipv6PdPrefixid?: pulumi.Input<string>;
+    lteLan?: pulumi.Input<boolean>;
     /**
-     * Start address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
+     * Specifies whether mDNS is enabled.
      */
-    ipv6PdStart?: pulumi.Input<string>;
-    /**
-     * End address of the DHCPv6 Prefix Delegation pool. Used if `ipv6_interface_type` is set to `pd`.
-     */
-    ipv6PdStop?: pulumi.Input<string>;
-    /**
-     * Specifies whether to enable router advertisements or not.
-     */
-    ipv6RaEnable?: pulumi.Input<boolean>;
-    /**
-     * Lifetime in which addresses generated from the prefix remain preferred. Value is in seconds.
-     */
-    ipv6RaPreferredLifetime?: pulumi.Input<number>;
-    /**
-     * IPv6 router advertisement priority. Must be one of either `high`, `medium`, or `low`
-     */
-    ipv6RaPriority?: pulumi.Input<string>;
-    /**
-     * Lifetime in which the prefix is valid for the purpose of on-link determination. Value is in seconds.
-     */
-    ipv6RaValidLifetime?: pulumi.Input<number>;
-    /**
-     * Specifies the static IPv6 addresses for the network.
-     */
-    ipv6Statics?: pulumi.Input<pulumi.Input<string>[]>;
+    multicastDns?: pulumi.Input<boolean>;
     /**
      * The name of the network.
      */
     name?: pulumi.Input<string>;
     /**
-     * The group of the network.
+     * List of NAT outbound IP addresses.
      */
-    networkGroup?: pulumi.Input<string>;
+    natOutboundIpAddresses?: pulumi.Input<pulumi.Input<inputs.NetworkNatOutboundIpAddress>[]>;
     /**
-     * The purpose of the network. Must be one of `corporate`, `guest`, `wan`, `vlan-only`, or `vpn-client`.
+     * Specifies whether network isolation is enabled.
      */
-    purpose: pulumi.Input<string>;
+    networkIsolation?: pulumi.Input<boolean>;
+    /**
+     * Setting preference. Must be one of `auto` or `manual`.
+     */
+    settingPreference?: pulumi.Input<string>;
     /**
      * The name of the site to associate the network with.
      */
     site?: pulumi.Input<string>;
     /**
-     * The subnet of the network. Must be a valid CIDR address.
+     * The IP subnet of the network in CIDR notation.
      */
-    subnet?: pulumi.Input<string>;
+    subnet: pulumi.Input<string>;
     /**
-     * The VLAN ID of the network.
+     * Specifies whether this network uses a third-party gateway. When enabled, the network purpose is set to `vlan-only` and only VLAN ID, DHCP guarding, and basic network settings are configured.
      */
-    vlanId?: pulumi.Input<number>;
+    thirdPartyGateway?: pulumi.Input<boolean>;
     /**
-     * Enable stateful DHCPv6 for the WAN.
+     * The VLAN ID for the network.
      */
-    wanDhcpV6?: pulumi.Input<boolean>;
-    /**
-     * DNS servers IPs of the WAN.
-     */
-    wanDns?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * The IPv4 gateway of the WAN.
-     */
-    wanGateway?: pulumi.Input<string>;
-    /**
-     * The IPv6 gateway of the WAN.
-     */
-    wanGatewayV6?: pulumi.Input<string>;
-    /**
-     * The IPv4 address of the WAN.
-     */
-    wanIp?: pulumi.Input<string>;
-    /**
-     * The IPv6 address of the WAN.
-     */
-    wanIpv6?: pulumi.Input<string>;
-    /**
-     * The IPv4 netmask of the WAN.
-     */
-    wanNetmask?: pulumi.Input<string>;
-    /**
-     * Specifies the WAN network group. Must be one of either `WAN`, `WAN2` or `WAN_LTE_FAILOVER`.
-     */
-    wanNetworkGroup?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV4 WAN password.
-     */
-    wanPassword?: pulumi.Input<string>;
-    /**
-     * The IPv6 prefix length of the WAN. Must be between 1 and 128.
-     */
-    wanPrefixlen?: pulumi.Input<number>;
-    /**
-     * Specifies the IPV4 WAN connection type. Must be one of either `disabled`, `dhcp`, `static`, or `pppoe`.
-     */
-    wanType?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV6 WAN connection type. Must be one of either `disabled`, `dhcpv6`, or `static`.
-     */
-    wanTypeV6?: pulumi.Input<string>;
-    /**
-     * Specifies the IPV4 WAN username.
-     */
-    wanUsername?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client mode. Must be one of either `file` or `manual`.
-     */
-    wireguardClientMode?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client peer IP.
-     */
-    wireguardClientPeerIp?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client peer port.
-     */
-    wireguardClientPeerPort?: pulumi.Input<number>;
-    /**
-     * Specifies the Wireguard client peer public key.
-     */
-    wireguardClientPeerPublicKey?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard client preshared key.
-     */
-    wireguardClientPresharedKey?: pulumi.Input<string>;
-    /**
-     * Specifies whether the Wireguard client preshared key is enabled or not.
-     */
-    wireguardClientPresharedKeyEnabled?: pulumi.Input<boolean>;
-    /**
-     * Specifies the Wireguard ID.
-     */
-    wireguardId?: pulumi.Input<number>;
-    /**
-     * Specifies the Wireguard private key.
-     */
-    wireguardPrivateKey?: pulumi.Input<string>;
-    /**
-     * Specifies the Wireguard public key.
-     */
-    wireguardPublicKey?: pulumi.Input<string>;
+    vlan?: pulumi.Input<number>;
 }

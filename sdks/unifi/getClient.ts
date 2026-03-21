@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getClient(args: GetClientArgs, opts?: pulumi.InvokeOptions): Promise<GetClientResult> {
@@ -25,18 +27,18 @@ export interface GetClientArgs {
  */
 export interface GetClientResult {
     readonly blocked: boolean;
-    readonly clientGroupId: string;
-    readonly devIdOverride: number;
+    readonly displayName: string;
+    readonly fixedApMac: string;
     readonly fixedIp: string;
+    readonly groups: string[];
     readonly hostname: string;
     readonly id: string;
-    readonly ip: string;
-    readonly lastIp: string;
     readonly localDnsRecord: string;
     readonly mac: string;
     readonly name: string;
     readonly networkId: string;
     readonly note: string;
+    readonly qosRate: outputs.GetClientQosRate;
     readonly site: string;
 }
 export function getClientOutput(args: GetClientOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientResult> {

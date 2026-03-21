@@ -35,93 +35,37 @@ export class Wan extends pulumi.CustomResource {
     }
 
     /**
-     * DHCP Class of Service
+     * DHCP configuration
      */
-    declare public readonly dhcpCos: pulumi.Output<number>;
+    declare public readonly dhcp: pulumi.Output<outputs.WanDhcp>;
     /**
-     * DHCP options
+     * DHCPv6 configuration
      */
-    declare public readonly dhcpOptions: pulumi.Output<outputs.WanDhcpOption[] | undefined>;
+    declare public readonly dhcpv6: pulumi.Output<outputs.WanDhcpv6>;
     /**
-     * DHCPv6 Class of Service
+     * DNS configuration
      */
-    declare public readonly dhcpv6Cos: pulumi.Output<number>;
+    declare public readonly dns: pulumi.Output<outputs.WanDns>;
     /**
-     * DHCPv6 options
+     * Egress QoS configuration
      */
-    declare public readonly dhcpv6Options: pulumi.Output<outputs.WanDhcpv6Option[] | undefined>;
-    /**
-     * DHCPv6 prefix delegation size
-     */
-    declare public readonly dhcpv6PdSize: pulumi.Output<number>;
-    /**
-     * Whether DHCPv6 PD size is automatic
-     */
-    declare public readonly dhcpv6PdSizeAuto: pulumi.Output<boolean>;
-    /**
-     * Primary DNS server
-     */
-    declare public readonly dns1: pulumi.Output<string | undefined>;
-    /**
-     * Secondary DNS server
-     */
-    declare public readonly dns2: pulumi.Output<string | undefined>;
-    /**
-     * DNS preference (auto, manual)
-     */
-    declare public readonly dnsPreference: pulumi.Output<string>;
-    /**
-     * Egress QoS priority
-     */
-    declare public readonly egressQos: pulumi.Output<number>;
-    /**
-     * Whether egress QoS is enabled
-     */
-    declare public readonly egressQosEnabled: pulumi.Output<boolean>;
+    declare public readonly egressQos: pulumi.Output<outputs.WanEgressQos>;
     /**
      * Whether the WAN network is enabled
      */
     declare public readonly enabled: pulumi.Output<boolean>;
     /**
-     * Failover priority
+     * IGMP proxy configuration
      */
-    declare public readonly failoverPriority: pulumi.Output<number>;
-    /**
-     * IGMP proxy for (none, lan, guest)
-     */
-    declare public readonly igmpProxyFor: pulumi.Output<string>;
-    /**
-     * Whether IGMP proxy upstream is enabled
-     */
-    declare public readonly igmpProxyUpstream: pulumi.Output<boolean>;
+    declare public readonly igmpProxy: pulumi.Output<outputs.WanIgmpProxy>;
     /**
      * IP aliases
      */
     declare public readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
-     * Primary IPv6 DNS server
+     * Load balance configuration
      */
-    declare public readonly ipv6Dns1: pulumi.Output<string | undefined>;
-    /**
-     * Secondary IPv6 DNS server
-     */
-    declare public readonly ipv6Dns2: pulumi.Output<string | undefined>;
-    /**
-     * IPv6 DNS preference (auto, manual)
-     */
-    declare public readonly ipv6DnsPreference: pulumi.Output<string>;
-    /**
-     * IPv6 WAN delegation type (pd, static)
-     */
-    declare public readonly ipv6WanDelegationType: pulumi.Output<string>;
-    /**
-     * Load balance type (failover-only, weighted)
-     */
-    declare public readonly loadBalanceType: pulumi.Output<string>;
-    /**
-     * Load balance weight
-     */
-    declare public readonly loadBalanceWeight: pulumi.Output<number>;
+    declare public readonly loadBalance: pulumi.Output<outputs.WanLoadBalance>;
     /**
      * The name of the WAN network
      */
@@ -139,17 +83,9 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * Smart Queue download rate in kbps
+     * Smart Queue configuration
      */
-    declare public readonly smartqDownRate: pulumi.Output<number | undefined>;
-    /**
-     * Whether Smart Queue is enabled
-     */
-    declare public readonly smartqEnabled: pulumi.Output<boolean>;
-    /**
-     * Smart Queue upload rate in kbps
-     */
-    declare public readonly smartqUpRate: pulumi.Output<number | undefined>;
+    declare public readonly smartq: pulumi.Output<outputs.WanSmartq>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
@@ -159,29 +95,13 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly typeV6: pulumi.Output<string>;
     /**
-     * Whether UPnP is enabled
+     * UPnP configuration
      */
-    declare public readonly upnpEnabled: pulumi.Output<boolean>;
+    declare public readonly upnp: pulumi.Output<outputs.WanUpnp>;
     /**
-     * Whether UPnP NAT-PMP is enabled
+     * VLAN configuration
      */
-    declare public readonly upnpNatPmpEnabled: pulumi.Output<boolean>;
-    /**
-     * Whether UPnP secure mode is enabled
-     */
-    declare public readonly upnpSecureMode: pulumi.Output<boolean>;
-    /**
-     * UPnP WAN interface
-     */
-    declare public readonly upnpWanInterface: pulumi.Output<string | undefined>;
-    /**
-     * The VLAN ID
-     */
-    declare public readonly vlan: pulumi.Output<number>;
-    /**
-     * Whether VLAN is enabled
-     */
-    declare public readonly vlanEnabled: pulumi.Output<boolean>;
+    declare public readonly vlan: pulumi.Output<outputs.WanVlan>;
 
     /**
      * Create a Wan resource with the given unique name, arguments, and options.
@@ -196,82 +116,42 @@ export class Wan extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as WanState | undefined;
-            resourceInputs["dhcpCos"] = state?.dhcpCos;
-            resourceInputs["dhcpOptions"] = state?.dhcpOptions;
-            resourceInputs["dhcpv6Cos"] = state?.dhcpv6Cos;
-            resourceInputs["dhcpv6Options"] = state?.dhcpv6Options;
-            resourceInputs["dhcpv6PdSize"] = state?.dhcpv6PdSize;
-            resourceInputs["dhcpv6PdSizeAuto"] = state?.dhcpv6PdSizeAuto;
-            resourceInputs["dns1"] = state?.dns1;
-            resourceInputs["dns2"] = state?.dns2;
-            resourceInputs["dnsPreference"] = state?.dnsPreference;
+            resourceInputs["dhcp"] = state?.dhcp;
+            resourceInputs["dhcpv6"] = state?.dhcpv6;
+            resourceInputs["dns"] = state?.dns;
             resourceInputs["egressQos"] = state?.egressQos;
-            resourceInputs["egressQosEnabled"] = state?.egressQosEnabled;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["failoverPriority"] = state?.failoverPriority;
-            resourceInputs["igmpProxyFor"] = state?.igmpProxyFor;
-            resourceInputs["igmpProxyUpstream"] = state?.igmpProxyUpstream;
+            resourceInputs["igmpProxy"] = state?.igmpProxy;
             resourceInputs["ipAliases"] = state?.ipAliases;
-            resourceInputs["ipv6Dns1"] = state?.ipv6Dns1;
-            resourceInputs["ipv6Dns2"] = state?.ipv6Dns2;
-            resourceInputs["ipv6DnsPreference"] = state?.ipv6DnsPreference;
-            resourceInputs["ipv6WanDelegationType"] = state?.ipv6WanDelegationType;
-            resourceInputs["loadBalanceType"] = state?.loadBalanceType;
-            resourceInputs["loadBalanceWeight"] = state?.loadBalanceWeight;
+            resourceInputs["loadBalance"] = state?.loadBalance;
             resourceInputs["name"] = state?.name;
             resourceInputs["providerCapabilities"] = state?.providerCapabilities;
             resourceInputs["reportWanEvent"] = state?.reportWanEvent;
             resourceInputs["site"] = state?.site;
-            resourceInputs["smartqDownRate"] = state?.smartqDownRate;
-            resourceInputs["smartqEnabled"] = state?.smartqEnabled;
-            resourceInputs["smartqUpRate"] = state?.smartqUpRate;
+            resourceInputs["smartq"] = state?.smartq;
             resourceInputs["type"] = state?.type;
             resourceInputs["typeV6"] = state?.typeV6;
-            resourceInputs["upnpEnabled"] = state?.upnpEnabled;
-            resourceInputs["upnpNatPmpEnabled"] = state?.upnpNatPmpEnabled;
-            resourceInputs["upnpSecureMode"] = state?.upnpSecureMode;
-            resourceInputs["upnpWanInterface"] = state?.upnpWanInterface;
+            resourceInputs["upnp"] = state?.upnp;
             resourceInputs["vlan"] = state?.vlan;
-            resourceInputs["vlanEnabled"] = state?.vlanEnabled;
         } else {
             const args = argsOrState as WanArgs | undefined;
-            resourceInputs["dhcpCos"] = args?.dhcpCos;
-            resourceInputs["dhcpOptions"] = args?.dhcpOptions;
-            resourceInputs["dhcpv6Cos"] = args?.dhcpv6Cos;
-            resourceInputs["dhcpv6Options"] = args?.dhcpv6Options;
-            resourceInputs["dhcpv6PdSize"] = args?.dhcpv6PdSize;
-            resourceInputs["dhcpv6PdSizeAuto"] = args?.dhcpv6PdSizeAuto;
-            resourceInputs["dns1"] = args?.dns1;
-            resourceInputs["dns2"] = args?.dns2;
-            resourceInputs["dnsPreference"] = args?.dnsPreference;
+            resourceInputs["dhcp"] = args?.dhcp;
+            resourceInputs["dhcpv6"] = args?.dhcpv6;
+            resourceInputs["dns"] = args?.dns;
             resourceInputs["egressQos"] = args?.egressQos;
-            resourceInputs["egressQosEnabled"] = args?.egressQosEnabled;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["failoverPriority"] = args?.failoverPriority;
-            resourceInputs["igmpProxyFor"] = args?.igmpProxyFor;
-            resourceInputs["igmpProxyUpstream"] = args?.igmpProxyUpstream;
+            resourceInputs["igmpProxy"] = args?.igmpProxy;
             resourceInputs["ipAliases"] = args?.ipAliases;
-            resourceInputs["ipv6Dns1"] = args?.ipv6Dns1;
-            resourceInputs["ipv6Dns2"] = args?.ipv6Dns2;
-            resourceInputs["ipv6DnsPreference"] = args?.ipv6DnsPreference;
-            resourceInputs["ipv6WanDelegationType"] = args?.ipv6WanDelegationType;
-            resourceInputs["loadBalanceType"] = args?.loadBalanceType;
-            resourceInputs["loadBalanceWeight"] = args?.loadBalanceWeight;
+            resourceInputs["loadBalance"] = args?.loadBalance;
             resourceInputs["name"] = args?.name;
             resourceInputs["providerCapabilities"] = args?.providerCapabilities;
             resourceInputs["reportWanEvent"] = args?.reportWanEvent;
             resourceInputs["site"] = args?.site;
-            resourceInputs["smartqDownRate"] = args?.smartqDownRate;
-            resourceInputs["smartqEnabled"] = args?.smartqEnabled;
-            resourceInputs["smartqUpRate"] = args?.smartqUpRate;
+            resourceInputs["smartq"] = args?.smartq;
             resourceInputs["type"] = args?.type;
             resourceInputs["typeV6"] = args?.typeV6;
-            resourceInputs["upnpEnabled"] = args?.upnpEnabled;
-            resourceInputs["upnpNatPmpEnabled"] = args?.upnpNatPmpEnabled;
-            resourceInputs["upnpSecureMode"] = args?.upnpSecureMode;
-            resourceInputs["upnpWanInterface"] = args?.upnpWanInterface;
+            resourceInputs["upnp"] = args?.upnp;
             resourceInputs["vlan"] = args?.vlan;
-            resourceInputs["vlanEnabled"] = args?.vlanEnabled;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(Wan.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -283,93 +163,37 @@ export class Wan extends pulumi.CustomResource {
  */
 export interface WanState {
     /**
-     * DHCP Class of Service
+     * DHCP configuration
      */
-    dhcpCos?: pulumi.Input<number>;
+    dhcp?: pulumi.Input<inputs.WanDhcp>;
     /**
-     * DHCP options
+     * DHCPv6 configuration
      */
-    dhcpOptions?: pulumi.Input<pulumi.Input<inputs.WanDhcpOption>[]>;
+    dhcpv6?: pulumi.Input<inputs.WanDhcpv6>;
     /**
-     * DHCPv6 Class of Service
+     * DNS configuration
      */
-    dhcpv6Cos?: pulumi.Input<number>;
+    dns?: pulumi.Input<inputs.WanDns>;
     /**
-     * DHCPv6 options
+     * Egress QoS configuration
      */
-    dhcpv6Options?: pulumi.Input<pulumi.Input<inputs.WanDhcpv6Option>[]>;
-    /**
-     * DHCPv6 prefix delegation size
-     */
-    dhcpv6PdSize?: pulumi.Input<number>;
-    /**
-     * Whether DHCPv6 PD size is automatic
-     */
-    dhcpv6PdSizeAuto?: pulumi.Input<boolean>;
-    /**
-     * Primary DNS server
-     */
-    dns1?: pulumi.Input<string>;
-    /**
-     * Secondary DNS server
-     */
-    dns2?: pulumi.Input<string>;
-    /**
-     * DNS preference (auto, manual)
-     */
-    dnsPreference?: pulumi.Input<string>;
-    /**
-     * Egress QoS priority
-     */
-    egressQos?: pulumi.Input<number>;
-    /**
-     * Whether egress QoS is enabled
-     */
-    egressQosEnabled?: pulumi.Input<boolean>;
+    egressQos?: pulumi.Input<inputs.WanEgressQos>;
     /**
      * Whether the WAN network is enabled
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * Failover priority
+     * IGMP proxy configuration
      */
-    failoverPriority?: pulumi.Input<number>;
-    /**
-     * IGMP proxy for (none, lan, guest)
-     */
-    igmpProxyFor?: pulumi.Input<string>;
-    /**
-     * Whether IGMP proxy upstream is enabled
-     */
-    igmpProxyUpstream?: pulumi.Input<boolean>;
+    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy>;
     /**
      * IP aliases
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Primary IPv6 DNS server
+     * Load balance configuration
      */
-    ipv6Dns1?: pulumi.Input<string>;
-    /**
-     * Secondary IPv6 DNS server
-     */
-    ipv6Dns2?: pulumi.Input<string>;
-    /**
-     * IPv6 DNS preference (auto, manual)
-     */
-    ipv6DnsPreference?: pulumi.Input<string>;
-    /**
-     * IPv6 WAN delegation type (pd, static)
-     */
-    ipv6WanDelegationType?: pulumi.Input<string>;
-    /**
-     * Load balance type (failover-only, weighted)
-     */
-    loadBalanceType?: pulumi.Input<string>;
-    /**
-     * Load balance weight
-     */
-    loadBalanceWeight?: pulumi.Input<number>;
+    loadBalance?: pulumi.Input<inputs.WanLoadBalance>;
     /**
      * The name of the WAN network
      */
@@ -387,17 +211,9 @@ export interface WanState {
      */
     site?: pulumi.Input<string>;
     /**
-     * Smart Queue download rate in kbps
+     * Smart Queue configuration
      */
-    smartqDownRate?: pulumi.Input<number>;
-    /**
-     * Whether Smart Queue is enabled
-     */
-    smartqEnabled?: pulumi.Input<boolean>;
-    /**
-     * Smart Queue upload rate in kbps
-     */
-    smartqUpRate?: pulumi.Input<number>;
+    smartq?: pulumi.Input<inputs.WanSmartq>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
@@ -407,29 +223,13 @@ export interface WanState {
      */
     typeV6?: pulumi.Input<string>;
     /**
-     * Whether UPnP is enabled
+     * UPnP configuration
      */
-    upnpEnabled?: pulumi.Input<boolean>;
+    upnp?: pulumi.Input<inputs.WanUpnp>;
     /**
-     * Whether UPnP NAT-PMP is enabled
+     * VLAN configuration
      */
-    upnpNatPmpEnabled?: pulumi.Input<boolean>;
-    /**
-     * Whether UPnP secure mode is enabled
-     */
-    upnpSecureMode?: pulumi.Input<boolean>;
-    /**
-     * UPnP WAN interface
-     */
-    upnpWanInterface?: pulumi.Input<string>;
-    /**
-     * The VLAN ID
-     */
-    vlan?: pulumi.Input<number>;
-    /**
-     * Whether VLAN is enabled
-     */
-    vlanEnabled?: pulumi.Input<boolean>;
+    vlan?: pulumi.Input<inputs.WanVlan>;
 }
 
 /**
@@ -437,93 +237,37 @@ export interface WanState {
  */
 export interface WanArgs {
     /**
-     * DHCP Class of Service
+     * DHCP configuration
      */
-    dhcpCos?: pulumi.Input<number>;
+    dhcp?: pulumi.Input<inputs.WanDhcp>;
     /**
-     * DHCP options
+     * DHCPv6 configuration
      */
-    dhcpOptions?: pulumi.Input<pulumi.Input<inputs.WanDhcpOption>[]>;
+    dhcpv6?: pulumi.Input<inputs.WanDhcpv6>;
     /**
-     * DHCPv6 Class of Service
+     * DNS configuration
      */
-    dhcpv6Cos?: pulumi.Input<number>;
+    dns?: pulumi.Input<inputs.WanDns>;
     /**
-     * DHCPv6 options
+     * Egress QoS configuration
      */
-    dhcpv6Options?: pulumi.Input<pulumi.Input<inputs.WanDhcpv6Option>[]>;
-    /**
-     * DHCPv6 prefix delegation size
-     */
-    dhcpv6PdSize?: pulumi.Input<number>;
-    /**
-     * Whether DHCPv6 PD size is automatic
-     */
-    dhcpv6PdSizeAuto?: pulumi.Input<boolean>;
-    /**
-     * Primary DNS server
-     */
-    dns1?: pulumi.Input<string>;
-    /**
-     * Secondary DNS server
-     */
-    dns2?: pulumi.Input<string>;
-    /**
-     * DNS preference (auto, manual)
-     */
-    dnsPreference?: pulumi.Input<string>;
-    /**
-     * Egress QoS priority
-     */
-    egressQos?: pulumi.Input<number>;
-    /**
-     * Whether egress QoS is enabled
-     */
-    egressQosEnabled?: pulumi.Input<boolean>;
+    egressQos?: pulumi.Input<inputs.WanEgressQos>;
     /**
      * Whether the WAN network is enabled
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * Failover priority
+     * IGMP proxy configuration
      */
-    failoverPriority?: pulumi.Input<number>;
-    /**
-     * IGMP proxy for (none, lan, guest)
-     */
-    igmpProxyFor?: pulumi.Input<string>;
-    /**
-     * Whether IGMP proxy upstream is enabled
-     */
-    igmpProxyUpstream?: pulumi.Input<boolean>;
+    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy>;
     /**
      * IP aliases
      */
     ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Primary IPv6 DNS server
+     * Load balance configuration
      */
-    ipv6Dns1?: pulumi.Input<string>;
-    /**
-     * Secondary IPv6 DNS server
-     */
-    ipv6Dns2?: pulumi.Input<string>;
-    /**
-     * IPv6 DNS preference (auto, manual)
-     */
-    ipv6DnsPreference?: pulumi.Input<string>;
-    /**
-     * IPv6 WAN delegation type (pd, static)
-     */
-    ipv6WanDelegationType?: pulumi.Input<string>;
-    /**
-     * Load balance type (failover-only, weighted)
-     */
-    loadBalanceType?: pulumi.Input<string>;
-    /**
-     * Load balance weight
-     */
-    loadBalanceWeight?: pulumi.Input<number>;
+    loadBalance?: pulumi.Input<inputs.WanLoadBalance>;
     /**
      * The name of the WAN network
      */
@@ -541,17 +285,9 @@ export interface WanArgs {
      */
     site?: pulumi.Input<string>;
     /**
-     * Smart Queue download rate in kbps
+     * Smart Queue configuration
      */
-    smartqDownRate?: pulumi.Input<number>;
-    /**
-     * Whether Smart Queue is enabled
-     */
-    smartqEnabled?: pulumi.Input<boolean>;
-    /**
-     * Smart Queue upload rate in kbps
-     */
-    smartqUpRate?: pulumi.Input<number>;
+    smartq?: pulumi.Input<inputs.WanSmartq>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
@@ -561,27 +297,11 @@ export interface WanArgs {
      */
     typeV6?: pulumi.Input<string>;
     /**
-     * Whether UPnP is enabled
+     * UPnP configuration
      */
-    upnpEnabled?: pulumi.Input<boolean>;
+    upnp?: pulumi.Input<inputs.WanUpnp>;
     /**
-     * Whether UPnP NAT-PMP is enabled
+     * VLAN configuration
      */
-    upnpNatPmpEnabled?: pulumi.Input<boolean>;
-    /**
-     * Whether UPnP secure mode is enabled
-     */
-    upnpSecureMode?: pulumi.Input<boolean>;
-    /**
-     * UPnP WAN interface
-     */
-    upnpWanInterface?: pulumi.Input<string>;
-    /**
-     * The VLAN ID
-     */
-    vlan?: pulumi.Input<number>;
-    /**
-     * Whether VLAN is enabled
-     */
-    vlanEnabled?: pulumi.Input<boolean>;
+    vlan?: pulumi.Input<inputs.WanVlan>;
 }

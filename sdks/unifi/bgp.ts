@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class Bgp extends pulumi.CustomResource {
@@ -33,9 +35,13 @@ export class Bgp extends pulumi.CustomResource {
     }
 
     /**
-     * The FRRouting BGP daemon configuration.
+     * The BGP Autonomous System Number. Conflicts with `config`.
      */
-    declare public readonly config: pulumi.Output<string | undefined>;
+    declare public readonly asn: pulumi.Output<number | undefined>;
+    /**
+     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
+     */
+    declare public readonly config: pulumi.Output<string>;
     /**
      * Description of the BGP configuration.
      */
@@ -44,6 +50,14 @@ export class Bgp extends pulumi.CustomResource {
      * Enable BGP routing.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
+    /**
+     * List of BGP peer groups. Conflicts with `config`.
+     */
+    declare public readonly peers: pulumi.Output<outputs.BgpPeer[] | undefined>;
+    /**
+     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     */
+    declare public readonly routerId: pulumi.Output<string | undefined>;
     /**
      * The name of the site to associate the BGP configuration with.
      */
@@ -66,16 +80,22 @@ export class Bgp extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as BgpState | undefined;
+            resourceInputs["asn"] = state?.asn;
             resourceInputs["config"] = state?.config;
             resourceInputs["description"] = state?.description;
             resourceInputs["enabled"] = state?.enabled;
+            resourceInputs["peers"] = state?.peers;
+            resourceInputs["routerId"] = state?.routerId;
             resourceInputs["site"] = state?.site;
             resourceInputs["uploadFileName"] = state?.uploadFileName;
         } else {
             const args = argsOrState as BgpArgs | undefined;
+            resourceInputs["asn"] = args?.asn;
             resourceInputs["config"] = args?.config;
             resourceInputs["description"] = args?.description;
             resourceInputs["enabled"] = args?.enabled;
+            resourceInputs["peers"] = args?.peers;
+            resourceInputs["routerId"] = args?.routerId;
             resourceInputs["site"] = args?.site;
             resourceInputs["uploadFileName"] = args?.uploadFileName;
         }
@@ -89,7 +109,11 @@ export class Bgp extends pulumi.CustomResource {
  */
 export interface BgpState {
     /**
-     * The FRRouting BGP daemon configuration.
+     * The BGP Autonomous System Number. Conflicts with `config`.
+     */
+    asn?: pulumi.Input<number>;
+    /**
+     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
      */
     config?: pulumi.Input<string>;
     /**
@@ -100,6 +124,14 @@ export interface BgpState {
      * Enable BGP routing.
      */
     enabled?: pulumi.Input<boolean>;
+    /**
+     * List of BGP peer groups. Conflicts with `config`.
+     */
+    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[]>;
+    /**
+     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     */
+    routerId?: pulumi.Input<string>;
     /**
      * The name of the site to associate the BGP configuration with.
      */
@@ -115,7 +147,11 @@ export interface BgpState {
  */
 export interface BgpArgs {
     /**
-     * The FRRouting BGP daemon configuration.
+     * The BGP Autonomous System Number. Conflicts with `config`.
+     */
+    asn?: pulumi.Input<number>;
+    /**
+     * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
      */
     config?: pulumi.Input<string>;
     /**
@@ -126,6 +162,14 @@ export interface BgpArgs {
      * Enable BGP routing.
      */
     enabled?: pulumi.Input<boolean>;
+    /**
+     * List of BGP peer groups. Conflicts with `config`.
+     */
+    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[]>;
+    /**
+     * The BGP router ID (typically an IP address). Conflicts with `config`.
+     */
+    routerId?: pulumi.Input<string>;
     /**
      * The name of the site to associate the BGP configuration with.
      */

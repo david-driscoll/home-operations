@@ -39,85 +39,29 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly allowExisting: pulumi.Output<boolean>;
     /**
-     * Number of anomalies detected for this client.
-     */
-    declare public /*out*/ readonly anomalies: pulumi.Output<number>;
-    /**
-     * Association time timestamp.
-     */
-    declare public /*out*/ readonly assocTime: pulumi.Output<number>;
-    /**
-     * Whether the client is authorized.
-     */
-    declare public /*out*/ readonly authorized: pulumi.Output<boolean>;
-    /**
      * Specifies whether this client should be blocked from the network.
      */
     declare public readonly blocked: pulumi.Output<boolean>;
     /**
-     * Override the device fingerprint.
+     * The display name of the client.
      */
-    declare public readonly devIdOverride: pulumi.Output<number>;
+    declare public readonly displayName: pulumi.Output<string>;
     /**
-     * Timestamp of last disconnect.
+     * The MAC address of the access point to which this client should be fixed.
      */
-    declare public /*out*/ readonly disconnectTimestamp: pulumi.Output<number>;
-    /**
-     * Whether the client was eagerly discovered.
-     */
-    declare public /*out*/ readonly eagerlyDiscovered: pulumi.Output<boolean>;
-    /**
-     * Whether device fingerprint is overridden.
-     */
-    declare public /*out*/ readonly fingerprintOverride: pulumi.Output<boolean>;
-    /**
-     * Timestamp when client was first seen.
-     */
-    declare public /*out*/ readonly firstSeen: pulumi.Output<number>;
+    declare public readonly fixedApMac: pulumi.Output<string>;
     /**
      * A fixed IPv4 address for this client.
      */
     declare public readonly fixedIp: pulumi.Output<string>;
     /**
-     * Gateway information for the client.
+     * List of network members group names for this client.
      */
-    declare public /*out*/ readonly gateway: pulumi.Output<outputs.ClientGateway>;
-    /**
-     * The group ID to attach to the client (controls QoS and other group-based settings).
-     */
-    declare public readonly groupId: pulumi.Output<string>;
-    /**
-     * Guest status information for the client.
-     */
-    declare public /*out*/ readonly guestStatus: pulumi.Output<outputs.ClientGuestStatus>;
+    declare public readonly groups: pulumi.Output<string[]>;
     /**
      * The hostname of the client.
      */
     declare public /*out*/ readonly hostname: pulumi.Output<string>;
-    /**
-     * Source of the hostname.
-     */
-    declare public /*out*/ readonly hostnameSource: pulumi.Output<string>;
-    /**
-     * The IP address of the client.
-     */
-    declare public /*out*/ readonly ip: pulumi.Output<string>;
-    /**
-     * List of IPv6 addresses assigned to the client.
-     */
-    declare public /*out*/ readonly ipv6Addresses: pulumi.Output<string[]>;
-    /**
-     * Whether the client is connected via wired connection.
-     */
-    declare public /*out*/ readonly isWired: pulumi.Output<boolean>;
-    /**
-     * Last known information about the client.
-     */
-    declare public /*out*/ readonly last: pulumi.Output<outputs.ClientLast>;
-    /**
-     * Latest association time timestamp.
-     */
-    declare public /*out*/ readonly latestAssocTime: pulumi.Output<number>;
     /**
      * Specifies the local DNS record for this client.
      */
@@ -131,10 +75,6 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Network name the client is connected to.
-     */
-    declare public /*out*/ readonly network: pulumi.Output<string>;
-    /**
      * The network ID for this client.
      */
     declare public readonly networkId: pulumi.Output<string>;
@@ -143,21 +83,9 @@ export class Client extends pulumi.CustomResource {
      */
     declare public readonly note: pulumi.Output<string>;
     /**
-     * Whether the client has a note.
+     * QoS rate limiting configuration. Controls the client group (usergroup) used for bandwidth limits.
      */
-    declare public /*out*/ readonly noted: pulumi.Output<boolean>;
-    /**
-     * Organizationally Unique Identifier from MAC address.
-     */
-    declare public /*out*/ readonly oui: pulumi.Output<string>;
-    /**
-     * Whether QoS policy is applied to this client.
-     */
-    declare public /*out*/ readonly qosPolicyApplied: pulumi.Output<boolean>;
-    /**
-     * Client satisfaction score.
-     */
-    declare public /*out*/ readonly satisfaction: pulumi.Output<number>;
+    declare public readonly qosRate: pulumi.Output<outputs.ClientQosRate>;
     /**
      * The name of the site to associate the client with.
      */
@@ -166,38 +94,6 @@ export class Client extends pulumi.CustomResource {
      * Specifies whether this resource should tell the controller to "forget" the client on destroy.
      */
     declare public readonly skipForgetOnDestroy: pulumi.Output<boolean>;
-    /**
-     * Switch connection information for the client.
-     */
-    declare public /*out*/ readonly switch: pulumi.Output<outputs.ClientSwitch>;
-    /**
-     * Number of transmission retries.
-     */
-    declare public /*out*/ readonly txRetries: pulumi.Output<number>;
-    /**
-     * Client uptime in seconds.
-     */
-    declare public /*out*/ readonly uptime: pulumi.Output<number>;
-    /**
-     * Uptime statistics for the client.
-     */
-    declare public /*out*/ readonly uptimeStats: pulumi.Output<outputs.ClientUptimeStats>;
-    /**
-     * User ID associated with the client.
-     */
-    declare public /*out*/ readonly userId: pulumi.Output<string>;
-    /**
-     * VLAN ID the client is on.
-     */
-    declare public /*out*/ readonly vlan: pulumi.Output<number>;
-    /**
-     * WiFi connection statistics for the client.
-     */
-    declare public /*out*/ readonly wifi: pulumi.Output<outputs.ClientWifi>;
-    /**
-     * Wired connection statistics for the client.
-     */
-    declare public /*out*/ readonly wired: pulumi.Output<outputs.ClientWired>;
 
     /**
      * Create a Client resource with the given unique name, arguments, and options.
@@ -213,46 +109,20 @@ export class Client extends pulumi.CustomResource {
         if (opts.id) {
             const state = argsOrState as ClientState | undefined;
             resourceInputs["allowExisting"] = state?.allowExisting;
-            resourceInputs["anomalies"] = state?.anomalies;
-            resourceInputs["assocTime"] = state?.assocTime;
-            resourceInputs["authorized"] = state?.authorized;
             resourceInputs["blocked"] = state?.blocked;
-            resourceInputs["devIdOverride"] = state?.devIdOverride;
-            resourceInputs["disconnectTimestamp"] = state?.disconnectTimestamp;
-            resourceInputs["eagerlyDiscovered"] = state?.eagerlyDiscovered;
-            resourceInputs["fingerprintOverride"] = state?.fingerprintOverride;
-            resourceInputs["firstSeen"] = state?.firstSeen;
+            resourceInputs["displayName"] = state?.displayName;
+            resourceInputs["fixedApMac"] = state?.fixedApMac;
             resourceInputs["fixedIp"] = state?.fixedIp;
-            resourceInputs["gateway"] = state?.gateway;
-            resourceInputs["groupId"] = state?.groupId;
-            resourceInputs["guestStatus"] = state?.guestStatus;
+            resourceInputs["groups"] = state?.groups;
             resourceInputs["hostname"] = state?.hostname;
-            resourceInputs["hostnameSource"] = state?.hostnameSource;
-            resourceInputs["ip"] = state?.ip;
-            resourceInputs["ipv6Addresses"] = state?.ipv6Addresses;
-            resourceInputs["isWired"] = state?.isWired;
-            resourceInputs["last"] = state?.last;
-            resourceInputs["latestAssocTime"] = state?.latestAssocTime;
             resourceInputs["localDnsRecord"] = state?.localDnsRecord;
             resourceInputs["mac"] = state?.mac;
             resourceInputs["name"] = state?.name;
-            resourceInputs["network"] = state?.network;
             resourceInputs["networkId"] = state?.networkId;
             resourceInputs["note"] = state?.note;
-            resourceInputs["noted"] = state?.noted;
-            resourceInputs["oui"] = state?.oui;
-            resourceInputs["qosPolicyApplied"] = state?.qosPolicyApplied;
-            resourceInputs["satisfaction"] = state?.satisfaction;
+            resourceInputs["qosRate"] = state?.qosRate;
             resourceInputs["site"] = state?.site;
             resourceInputs["skipForgetOnDestroy"] = state?.skipForgetOnDestroy;
-            resourceInputs["switch"] = state?.switch;
-            resourceInputs["txRetries"] = state?.txRetries;
-            resourceInputs["uptime"] = state?.uptime;
-            resourceInputs["uptimeStats"] = state?.uptimeStats;
-            resourceInputs["userId"] = state?.userId;
-            resourceInputs["vlan"] = state?.vlan;
-            resourceInputs["wifi"] = state?.wifi;
-            resourceInputs["wired"] = state?.wired;
         } else {
             const args = argsOrState as ClientArgs | undefined;
             if (args?.mac === undefined && !opts.urn) {
@@ -260,45 +130,19 @@ export class Client extends pulumi.CustomResource {
             }
             resourceInputs["allowExisting"] = args?.allowExisting;
             resourceInputs["blocked"] = args?.blocked;
-            resourceInputs["devIdOverride"] = args?.devIdOverride;
+            resourceInputs["displayName"] = args?.displayName;
+            resourceInputs["fixedApMac"] = args?.fixedApMac;
             resourceInputs["fixedIp"] = args?.fixedIp;
-            resourceInputs["groupId"] = args?.groupId;
+            resourceInputs["groups"] = args?.groups;
             resourceInputs["localDnsRecord"] = args?.localDnsRecord;
             resourceInputs["mac"] = args?.mac;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkId"] = args?.networkId;
             resourceInputs["note"] = args?.note;
+            resourceInputs["qosRate"] = args?.qosRate;
             resourceInputs["site"] = args?.site;
             resourceInputs["skipForgetOnDestroy"] = args?.skipForgetOnDestroy;
-            resourceInputs["anomalies"] = undefined /*out*/;
-            resourceInputs["assocTime"] = undefined /*out*/;
-            resourceInputs["authorized"] = undefined /*out*/;
-            resourceInputs["disconnectTimestamp"] = undefined /*out*/;
-            resourceInputs["eagerlyDiscovered"] = undefined /*out*/;
-            resourceInputs["fingerprintOverride"] = undefined /*out*/;
-            resourceInputs["firstSeen"] = undefined /*out*/;
-            resourceInputs["gateway"] = undefined /*out*/;
-            resourceInputs["guestStatus"] = undefined /*out*/;
             resourceInputs["hostname"] = undefined /*out*/;
-            resourceInputs["hostnameSource"] = undefined /*out*/;
-            resourceInputs["ip"] = undefined /*out*/;
-            resourceInputs["ipv6Addresses"] = undefined /*out*/;
-            resourceInputs["isWired"] = undefined /*out*/;
-            resourceInputs["last"] = undefined /*out*/;
-            resourceInputs["latestAssocTime"] = undefined /*out*/;
-            resourceInputs["network"] = undefined /*out*/;
-            resourceInputs["noted"] = undefined /*out*/;
-            resourceInputs["oui"] = undefined /*out*/;
-            resourceInputs["qosPolicyApplied"] = undefined /*out*/;
-            resourceInputs["satisfaction"] = undefined /*out*/;
-            resourceInputs["switch"] = undefined /*out*/;
-            resourceInputs["txRetries"] = undefined /*out*/;
-            resourceInputs["uptime"] = undefined /*out*/;
-            resourceInputs["uptimeStats"] = undefined /*out*/;
-            resourceInputs["userId"] = undefined /*out*/;
-            resourceInputs["vlan"] = undefined /*out*/;
-            resourceInputs["wifi"] = undefined /*out*/;
-            resourceInputs["wired"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(Client.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -314,85 +158,29 @@ export interface ClientState {
      */
     allowExisting?: pulumi.Input<boolean>;
     /**
-     * Number of anomalies detected for this client.
-     */
-    anomalies?: pulumi.Input<number>;
-    /**
-     * Association time timestamp.
-     */
-    assocTime?: pulumi.Input<number>;
-    /**
-     * Whether the client is authorized.
-     */
-    authorized?: pulumi.Input<boolean>;
-    /**
      * Specifies whether this client should be blocked from the network.
      */
     blocked?: pulumi.Input<boolean>;
     /**
-     * Override the device fingerprint.
+     * The display name of the client.
      */
-    devIdOverride?: pulumi.Input<number>;
+    displayName?: pulumi.Input<string>;
     /**
-     * Timestamp of last disconnect.
+     * The MAC address of the access point to which this client should be fixed.
      */
-    disconnectTimestamp?: pulumi.Input<number>;
-    /**
-     * Whether the client was eagerly discovered.
-     */
-    eagerlyDiscovered?: pulumi.Input<boolean>;
-    /**
-     * Whether device fingerprint is overridden.
-     */
-    fingerprintOverride?: pulumi.Input<boolean>;
-    /**
-     * Timestamp when client was first seen.
-     */
-    firstSeen?: pulumi.Input<number>;
+    fixedApMac?: pulumi.Input<string>;
     /**
      * A fixed IPv4 address for this client.
      */
     fixedIp?: pulumi.Input<string>;
     /**
-     * Gateway information for the client.
+     * List of network members group names for this client.
      */
-    gateway?: pulumi.Input<inputs.ClientGateway>;
-    /**
-     * The group ID to attach to the client (controls QoS and other group-based settings).
-     */
-    groupId?: pulumi.Input<string>;
-    /**
-     * Guest status information for the client.
-     */
-    guestStatus?: pulumi.Input<inputs.ClientGuestStatus>;
+    groups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * The hostname of the client.
      */
     hostname?: pulumi.Input<string>;
-    /**
-     * Source of the hostname.
-     */
-    hostnameSource?: pulumi.Input<string>;
-    /**
-     * The IP address of the client.
-     */
-    ip?: pulumi.Input<string>;
-    /**
-     * List of IPv6 addresses assigned to the client.
-     */
-    ipv6Addresses?: pulumi.Input<pulumi.Input<string>[]>;
-    /**
-     * Whether the client is connected via wired connection.
-     */
-    isWired?: pulumi.Input<boolean>;
-    /**
-     * Last known information about the client.
-     */
-    last?: pulumi.Input<inputs.ClientLast>;
-    /**
-     * Latest association time timestamp.
-     */
-    latestAssocTime?: pulumi.Input<number>;
     /**
      * Specifies the local DNS record for this client.
      */
@@ -406,10 +194,6 @@ export interface ClientState {
      */
     name?: pulumi.Input<string>;
     /**
-     * Network name the client is connected to.
-     */
-    network?: pulumi.Input<string>;
-    /**
      * The network ID for this client.
      */
     networkId?: pulumi.Input<string>;
@@ -418,21 +202,9 @@ export interface ClientState {
      */
     note?: pulumi.Input<string>;
     /**
-     * Whether the client has a note.
+     * QoS rate limiting configuration. Controls the client group (usergroup) used for bandwidth limits.
      */
-    noted?: pulumi.Input<boolean>;
-    /**
-     * Organizationally Unique Identifier from MAC address.
-     */
-    oui?: pulumi.Input<string>;
-    /**
-     * Whether QoS policy is applied to this client.
-     */
-    qosPolicyApplied?: pulumi.Input<boolean>;
-    /**
-     * Client satisfaction score.
-     */
-    satisfaction?: pulumi.Input<number>;
+    qosRate?: pulumi.Input<inputs.ClientQosRate>;
     /**
      * The name of the site to associate the client with.
      */
@@ -441,38 +213,6 @@ export interface ClientState {
      * Specifies whether this resource should tell the controller to "forget" the client on destroy.
      */
     skipForgetOnDestroy?: pulumi.Input<boolean>;
-    /**
-     * Switch connection information for the client.
-     */
-    switch?: pulumi.Input<inputs.ClientSwitch>;
-    /**
-     * Number of transmission retries.
-     */
-    txRetries?: pulumi.Input<number>;
-    /**
-     * Client uptime in seconds.
-     */
-    uptime?: pulumi.Input<number>;
-    /**
-     * Uptime statistics for the client.
-     */
-    uptimeStats?: pulumi.Input<inputs.ClientUptimeStats>;
-    /**
-     * User ID associated with the client.
-     */
-    userId?: pulumi.Input<string>;
-    /**
-     * VLAN ID the client is on.
-     */
-    vlan?: pulumi.Input<number>;
-    /**
-     * WiFi connection statistics for the client.
-     */
-    wifi?: pulumi.Input<inputs.ClientWifi>;
-    /**
-     * Wired connection statistics for the client.
-     */
-    wired?: pulumi.Input<inputs.ClientWired>;
 }
 
 /**
@@ -488,17 +228,21 @@ export interface ClientArgs {
      */
     blocked?: pulumi.Input<boolean>;
     /**
-     * Override the device fingerprint.
+     * The display name of the client.
      */
-    devIdOverride?: pulumi.Input<number>;
+    displayName?: pulumi.Input<string>;
+    /**
+     * The MAC address of the access point to which this client should be fixed.
+     */
+    fixedApMac?: pulumi.Input<string>;
     /**
      * A fixed IPv4 address for this client.
      */
     fixedIp?: pulumi.Input<string>;
     /**
-     * The group ID to attach to the client (controls QoS and other group-based settings).
+     * List of network members group names for this client.
      */
-    groupId?: pulumi.Input<string>;
+    groups?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Specifies the local DNS record for this client.
      */
@@ -519,6 +263,10 @@ export interface ClientArgs {
      * A note with additional information for the client.
      */
     note?: pulumi.Input<string>;
+    /**
+     * QoS rate limiting configuration. Controls the client group (usergroup) used for bandwidth limits.
+     */
+    qosRate?: pulumi.Input<inputs.ClientQosRate>;
     /**
      * The name of the site to associate the client with.
      */

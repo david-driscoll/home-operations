@@ -33,29 +33,25 @@ class PortForward extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState;
-            resourceInputs["dstPort"] = state?.dstPort;
             resourceInputs["enabled"] = state?.enabled;
-            resourceInputs["fwdIp"] = state?.fwdIp;
-            resourceInputs["fwdPort"] = state?.fwdPort;
-            resourceInputs["log"] = state?.log;
+            resourceInputs["forward"] = state?.forward;
+            resourceInputs["logging"] = state?.logging;
             resourceInputs["name"] = state?.name;
-            resourceInputs["portForwardInterface"] = state?.portForwardInterface;
             resourceInputs["protocol"] = state?.protocol;
             resourceInputs["site"] = state?.site;
-            resourceInputs["srcIp"] = state?.srcIp;
+            resourceInputs["sourceLimiting"] = state?.sourceLimiting;
+            resourceInputs["wan"] = state?.wan;
         }
         else {
             const args = argsOrState;
-            resourceInputs["dstPort"] = args?.dstPort;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["fwdIp"] = args?.fwdIp;
-            resourceInputs["fwdPort"] = args?.fwdPort;
-            resourceInputs["log"] = args?.log;
+            resourceInputs["forward"] = args?.forward;
+            resourceInputs["logging"] = args?.logging;
             resourceInputs["name"] = args?.name;
-            resourceInputs["portForwardInterface"] = args?.portForwardInterface;
             resourceInputs["protocol"] = args?.protocol;
             resourceInputs["site"] = args?.site;
-            resourceInputs["srcIp"] = args?.srcIp;
+            resourceInputs["sourceLimiting"] = args?.sourceLimiting;
+            resourceInputs["wan"] = args?.wan;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(PortForward.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());

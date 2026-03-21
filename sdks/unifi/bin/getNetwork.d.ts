@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as outputs from "./types/output";
 export declare function getNetwork(args?: GetNetworkArgs, opts?: pulumi.InvokeOptions): Promise<GetNetworkResult>;
 /**
  * A collection of arguments for invoking getNetwork.
@@ -12,41 +13,41 @@ export interface GetNetworkArgs {
  * A collection of values returned by getNetwork.
  */
 export interface GetNetworkResult {
-    readonly dhcpV6Dns: string[];
-    readonly dhcpV6DnsAuto: boolean;
-    readonly dhcpV6Enabled: boolean;
-    readonly dhcpV6Lease: number;
-    readonly dhcpV6Start: string;
-    readonly dhcpV6Stop: string;
-    readonly dhcpdBootEnabled: boolean;
-    readonly dhcpdBootFilename: string;
-    readonly dhcpdBootServer: string;
-    readonly dhcpdDns: string[];
-    readonly dhcpdEnabled: boolean;
-    readonly dhcpdLeasetime: number;
-    readonly dhcpdStart: string;
-    readonly dhcpdStop: string;
+    readonly autoScale: boolean;
+    readonly dhcpGuarding: outputs.GetNetworkDhcpGuarding;
+    readonly dhcpRelay: outputs.GetNetworkDhcpRelay;
+    readonly dhcpServer: outputs.GetNetworkDhcpServer;
+    readonly dhcpV6Server: outputs.GetNetworkDhcpV6Server;
     readonly domainName: string;
+    readonly enabled: boolean;
+    readonly gatewayType: string;
     readonly id: string;
     readonly igmpSnooping: boolean;
-    readonly ipSubnet: string;
+    readonly internetAccess: boolean;
+    readonly ipAliases: string[];
+    readonly ipv6Aliases: string[];
     readonly ipv6InterfaceType: string;
     readonly ipv6PdInterface: string;
     readonly ipv6PdPrefixid: string;
     readonly ipv6PdStart: string;
     readonly ipv6PdStop: string;
-    readonly ipv6RaEnable: boolean;
+    readonly ipv6Ra: boolean;
     readonly ipv6RaPreferredLifetime: number;
     readonly ipv6RaPriority: string;
     readonly ipv6RaValidLifetime: number;
     readonly ipv6StaticSubnet: string;
+    readonly lteLan: boolean;
     readonly multicastDns: boolean;
     readonly name: string;
+    readonly natOutboundIpAddresses: outputs.GetNetworkNatOutboundIpAddress[];
     readonly networkGroup: string;
+    readonly networkIsolation: boolean;
     readonly purpose: string;
+    readonly settingPreference: string;
     readonly site: string;
     readonly subnet: string;
-    readonly vlanId: number;
+    readonly thirdPartyGateway: boolean;
+    readonly vlan: number;
     readonly wanDns: string[];
     readonly wanEgressQos: number;
     readonly wanGateway: string;

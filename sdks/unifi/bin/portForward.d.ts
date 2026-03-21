@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class PortForward extends pulumi.CustomResource {
     /**
      * Get an existing PortForward resource's state with the given name, ID, and optional extra
@@ -16,35 +18,23 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is PortForward;
     /**
-     * The destination port for the forwarding.
-     */
-    readonly dstPort: pulumi.Output<string | undefined>;
-    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
     readonly enabled: pulumi.Output<boolean>;
     /**
-     * The IPv4 address to forward traffic to.
+     * Forward destination configuration.
      */
-    readonly fwdIp: pulumi.Output<string | undefined>;
+    readonly forward: pulumi.Output<outputs.PortForwardForward | undefined>;
     /**
-     * The port to forward traffic to.
+     * Specifies whether to enable syslog logging for forwarded traffic.
      */
-    readonly fwdPort: pulumi.Output<string | undefined>;
-    /**
-     * Specifies whether to log forwarded traffic or not.
-     */
-    readonly log: pulumi.Output<boolean>;
+    readonly logging: pulumi.Output<boolean>;
     /**
      * The name of the port forwarding rule.
      */
     readonly name: pulumi.Output<string>;
-    /**
-     * The port forwarding interface. Can be `wan`, `wan2`, or `both`.
-     */
-    readonly portForwardInterface: pulumi.Output<string | undefined>;
     /**
      * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
@@ -54,9 +44,13 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     readonly site: pulumi.Output<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     * Source limiting configuration for the port forwarding rule.
      */
-    readonly srcIp: pulumi.Output<string>;
+    readonly sourceLimiting: pulumi.Output<outputs.PortForwardSourceLimiting | undefined>;
+    /**
+     * WAN configuration for the port forwarding rule.
+     */
+    readonly wan: pulumi.Output<outputs.PortForwardWan | undefined>;
     /**
      * Create a PortForward resource with the given unique name, arguments, and options.
      *
@@ -71,35 +65,23 @@ export declare class PortForward extends pulumi.CustomResource {
  */
 export interface PortForwardState {
     /**
-     * The destination port for the forwarding.
-     */
-    dstPort?: pulumi.Input<string>;
-    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * The IPv4 address to forward traffic to.
+     * Forward destination configuration.
      */
-    fwdIp?: pulumi.Input<string>;
+    forward?: pulumi.Input<inputs.PortForwardForward>;
     /**
-     * The port to forward traffic to.
+     * Specifies whether to enable syslog logging for forwarded traffic.
      */
-    fwdPort?: pulumi.Input<string>;
-    /**
-     * Specifies whether to log forwarded traffic or not.
-     */
-    log?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean>;
     /**
      * The name of the port forwarding rule.
      */
     name?: pulumi.Input<string>;
-    /**
-     * The port forwarding interface. Can be `wan`, `wan2`, or `both`.
-     */
-    portForwardInterface?: pulumi.Input<string>;
     /**
      * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
@@ -109,44 +91,36 @@ export interface PortForwardState {
      */
     site?: pulumi.Input<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     * Source limiting configuration for the port forwarding rule.
      */
-    srcIp?: pulumi.Input<string>;
+    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting>;
+    /**
+     * WAN configuration for the port forwarding rule.
+     */
+    wan?: pulumi.Input<inputs.PortForwardWan>;
 }
 /**
  * The set of arguments for constructing a PortForward resource.
  */
 export interface PortForwardArgs {
     /**
-     * The destination port for the forwarding.
-     */
-    dstPort?: pulumi.Input<string>;
-    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
     enabled?: pulumi.Input<boolean>;
     /**
-     * The IPv4 address to forward traffic to.
+     * Forward destination configuration.
      */
-    fwdIp?: pulumi.Input<string>;
+    forward?: pulumi.Input<inputs.PortForwardForward>;
     /**
-     * The port to forward traffic to.
+     * Specifies whether to enable syslog logging for forwarded traffic.
      */
-    fwdPort?: pulumi.Input<string>;
-    /**
-     * Specifies whether to log forwarded traffic or not.
-     */
-    log?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean>;
     /**
      * The name of the port forwarding rule.
      */
     name?: pulumi.Input<string>;
-    /**
-     * The port forwarding interface. Can be `wan`, `wan2`, or `both`.
-     */
-    portForwardInterface?: pulumi.Input<string>;
     /**
      * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
@@ -156,7 +130,11 @@ export interface PortForwardArgs {
      */
     site?: pulumi.Input<string>;
     /**
-     * The source IPv4 address (or CIDR) of the port forwarding rule. For all traffic, specify `any`.
+     * Source limiting configuration for the port forwarding rule.
      */
-    srcIp?: pulumi.Input<string>;
+    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting>;
+    /**
+     * WAN configuration for the port forwarding rule.
+     */
+    wan?: pulumi.Input<inputs.PortForwardWan>;
 }
