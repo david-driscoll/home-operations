@@ -18,7 +18,7 @@ packages:
   unifi:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/ubiquiti-community/unifi, 0.41.8]
+    parameters: [registry.terraform.io/ubiquiti-community/unifi, 0.41.25]
   b2:
     source: terraform-provider
     version: 0.14.0
