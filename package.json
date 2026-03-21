@@ -43,6 +43,7 @@
     "jsonc-morph": "^0.3.0",
     "jsonc-parser": "^3.3.1",
     "jsondiffpatch": "^0.7.3",
-    "moderndash": "^4.0.0"
+    "moderndash": "^4.0.0",
+    "private-ip": "^3.0.2"
   }
 }
