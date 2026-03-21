@@ -1,0 +1,12 @@
+name: applications
+description: Configures authentik applications and related resources.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+    nodeargs: "--import tsx/esm"
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript
