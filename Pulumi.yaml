@@ -33,7 +33,7 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters:
-      - gmichels/adguard
+      - registry.terraform.io/gmichels/adguard
       - 1.6.2
   pbs:
     source: terraform-provider
