@@ -123,7 +123,7 @@
       matchStrings: ["parameters: \\[(?<registryUrl>.+?)/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
       datasourceTemplate: "terraform-provider",
       registryUrlTemplate: "https://{{{registryUrl}}}",
-      autoReplaceStringTemplate: "parameters: [{{{packageName}}}, {{{newValue}}}]",
+      autoReplaceStringTemplate: "parameters: [{{{registryUrl}}}/{{{packageName}}}, {{{newValue}}}]",
     },
   ],
 }
