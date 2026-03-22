@@ -31,3 +31,7 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters: [registry.terraform.io/mcfitz2/pbs, 0.2.1]
+  terrifi:
+    source: terraform-provider
+    version: 0.14.0
+    parameters: [registry.opentofu.org/alexklibisz/terrifi, 0.2.0]

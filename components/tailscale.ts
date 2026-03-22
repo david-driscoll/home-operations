@@ -1,44 +1,35 @@
 import { OPClient } from "./op.ts";
 import { readFile } from "fs/promises";
-import type { Client } from "../types/tailscale.ts";
-import { OpenAPIClientAxios } from "openapi-client-axios";
+import type { paths } from "../types/tailscale.ts";
+import createClient, { Client } from "openapi-fetch";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import { GlobalResources } from "./globals.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
+import { ClientCredentials } from "simple-oauth2";
 
-export async function getTailscaleClient(): Promise<Client> {
+export async function getTailscaleClient(): Promise<Client<paths>> {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
 
   const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");
-  const specFilename = path.join(__dirname, "tailscale.json");
-  const spec = await readFile(specFilename, "utf-8");
-
-  const client = new OpenAPIClientAxios({
-    definition: JSON.parse(spec),
-    axiosConfigDefaults: {
-      params: { tailnet: "-" },
-      headers: {},
+  const oauth = new ClientCredentials({
+    client: {
+      id: tailscaleCredential.fields["username"].value!,
+      secret: tailscaleCredential.fields["credential"].value!,
+    },
+    auth: {
+      tokenHost: "https://api.tailscale.com/api/v2/",
+      tokenPath: "oauth/token",
     },
   });
-  const tailscale = await client.init<Client>();
 
-  await axios
-    .post(
-      "https://api.tailscale.com/api/v2/oauth/token",
-      axios.toFormData({
-        client_id: tailscaleCredential.fields["username"].value!,
-        client_secret: tailscaleCredential.fields["credential"].value!,
-        grant_type: "client_credentials",
-      })
-    )
-    .then((response) => {
-      tailscale.defaults.headers["Authorization"] = `Bearer ${response.data.access_token}`;
-    });
-  return tailscale;
+  const token = await oauth.getToken({});
+  const client = createClient<paths>({ baseUrl: "https://api.tailscale.com/api/v2/", headers: { Authorization: `Bearer ${token.token.access_token}` } });
+
+  return client;
 }
 
 export function installTailscale({
@@ -76,7 +67,7 @@ export function installTailscale({
       connection,
       create: pulumi.interpolate`curl -fsSL https://tailscale.com/install.sh | sh`,
     },
-    { parent, dependsOn: [] }
+    { parent, dependsOn: [] },
   );
 
   const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
@@ -92,7 +83,7 @@ export function installTailscale({
       triggers: [installTailscale.id],
       // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
-    { parent, dependsOn: [installTailscale] }
+    { parent, dependsOn: [installTailscale] },
   );
 
   const tailscaleSet = new remote.Command(
@@ -103,7 +94,7 @@ export function installTailscale({
       triggers: [installTailscale.id, tailscaleUp.id],
       // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
     },
-    { parent, dependsOn: [tailscaleUp, installTailscale] }
+    { parent, dependsOn: [tailscaleUp, installTailscale] },
   );
   return tailscaleSet;
 }

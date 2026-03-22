@@ -1,90 +1,121 @@
 import * as pulumi from "@pulumi/pulumi";
 import axios from "axios";
-import * as tailscale from "@pulumi/tailscale";
-import * as unifi from "@pulumi/unifi";
+import * as unifi from "@pulumiverse/unifi";
+import * as firewall from "@pulumi/terrifi";
 import is_ip_private from "private-ip";
+import type { components } from "../../types/tailscale.ts";
 
 import { GlobalResources } from "../../components/globals.ts";
-import { awaitOutput } from "../../components/helpers.ts";
+import { getTailscaleClient } from "../../components/tailscale.ts";
 
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
-  const devices = tailscale.getDevicesOutput({}, { provider: globals.tailscaleProvider }).apply(async (result) => {
-    const devicesIncludingDrops: { device: (typeof result.devices)[0]; ipv4IpsToDrop: Set<string>; ipv6IpsToDrop: Set<string> }[] = [];
-    for (const device of result.devices) {
-      const ipv6IpsToDrop = new Set<string>();
-      const ipv4IpsToDrop = new Set<string>();
-      for (const endpoint of device.addresses ?? []) {
-        let [ip, port] = endpoint.split(":");
-        if (ip.startsWith("[") && ip.endsWith("]")) {
-          ip = ip.slice(1, -1);
-        }
+  const devices = pulumi.output(getTailscaleClient()).apply(async (client) => {
+    const devices = await client.GET("/tailnet/{tailnet}/devices", {
+      params: {
+        path: { tailnet: "-" },
+        query: { fields: "all" },
+      },
+    });
+    const devicesIncludingDrops: { device: components["schemas"]["Device"]; ipv4IpsToDrop: { ip: string; port: number }[]; ipv6IpsToDrop: { ip: string; port: number }[] }[] = [];
+    for (const device of devices.data?.devices ?? []) {
+      const ipv6IpsToDrop: { ip: string; port: number }[] = [];
+      const ipv4IpsToDrop: { ip: string; port: number }[] = [];
+      const endpoints = device.clientConnectivity?.endpoints ?? [];
+      for (const { ip, port } of endpoints.map((e) => ({ ip: e.substring(0, e.lastIndexOf(":")).replace("[", "").replace("]", ""), port: +e.substring(e.lastIndexOf(":") + 1) }))) {
         if (is_ip_private(ip)) {
           continue;
         }
+
         const ipDetails = await getIpDetails(ip);
         if (!ipDetails) continue;
         if (ipDetails.type !== "isp") continue;
         if (ipDetails.domain !== "att.com") continue;
         if (ipDetails.country_code !== "US") continue;
-        if (ipDetails.ip_version === 4) {
-          ipv4IpsToDrop.add(ip);
-        } else if (ipDetails.ip_version === 6) {
-          ipv6IpsToDrop.add(ip);
+
+        if (ipDetails.ip_version === "4") {
+          ipv4IpsToDrop.push({ ip, port });
+        } else if (ipDetails.ip_version === "6") {
+          ipv6IpsToDrop.push({ ip, port });
         }
       }
-      if (ipv4IpsToDrop.size > 0 || ipv6IpsToDrop.size > 0) {
+      if (ipv4IpsToDrop.length > 0 || ipv6IpsToDrop.length > 0) {
         devicesIncludingDrops.push({ device, ipv4IpsToDrop, ipv6IpsToDrop });
       }
     }
     return devicesIncludingDrops;
   });
 
-  return devices.apply((devices) => {
-    const ipv6Ips: string[] = [];
-    const ipv4Ips: string[] = [];
-    for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
-      pulumi.log.info(`Device ${device.name} has ${ipv4IpsToDrop.size} IPv4 IPs to drop: ${[...ipv4IpsToDrop].join(", ")}`);
-      pulumi.log.info(`Device ${device.name} has ${ipv6IpsToDrop.size} IPv6 IPs to drop: ${[...ipv6IpsToDrop].join(", ")}`);
-      ipv6Ips.push(...ipv6IpsToDrop);
-      ipv4Ips.push(...ipv4IpsToDrop);
-    }
-    const ipv4FirewallGroup = new unifi.FirewallGroup(
-      `att-tailscale-ips-to-drop-ipv4`,
-      {
-        type: "address-group",
-        members: [...ipv4Ips],
-      },
-      { provider: globals.unifiProvider },
-    );
+  devices.apply((d) => pulumi.log.info(`Found ${d.length} Tailscale devices with AT&T IPs to drop`));
 
-    const ipv6FirewallGroup = new unifi.FirewallGroup(
-      `att-tailscale-ips-to-drop-ipv6`,
-      {
-        type: "ipv6-address-group",
-        members: [...ipv6Ips],
-      },
-      { provider: globals.unifiProvider },
-    );
-    const firewallRule = new unifi.FirewallRule(
-      `att-tailscale-drop`,
-      {
-        action: "drop",
-        enabled: true,
-        ruleset: "WAN_IN",
-        protocol: "all",
-        protocolV6: "all",
-        ruleIndex: 2223,
-        srcFirewallGroupIds: [ipv4FirewallGroup.id, ipv6FirewallGroup.id],
-      },
-      { provider: globals.unifiProvider },
-    );
-    return firewallRule;
+  const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
+  const externalZone = unifi.firewall.getZoneOutput({ name: "External" }, { provider: globals.unifiProvider });
+
+  return devices.apply((devices) => {
+    for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
+      if (ipv4IpsToDrop.length > 0) {
+        for (const { ip, port } of ipv4IpsToDrop) {
+          const firewallRule = new firewall.FirewallPolicy(
+            `att-tailscale-drop-ipv4-${ip.replace(/\./g, "-")}`,
+            {
+              enabled: true,
+
+              action: "BLOCK", // REJECT ?
+              connectionStateType: "ALL",
+              protocol: "all",
+              ipVersion: "IPV4",
+
+              source: {
+                zoneId: externalZone.id,
+                ips: [ip],
+                port: port,
+              },
+              destination: {
+                zoneId: internalZone.id,
+              },
+              schedule: {
+                mode: "ALWAYS",
+              },
+            },
+            { provider: globals.unifiFirewallProvider },
+          );
+        }
+      }
+
+      if (ipv6IpsToDrop.length > 0) {
+        for (const { ip, port } of ipv6IpsToDrop) {
+          const firewallRule = new firewall.FirewallPolicy(
+            `att-tailscale-drop-ipv6-${ip.replace(/:/g, "-")}`,
+            {
+              enabled: true,
+
+              action: "BLOCK", // REJECT ?
+              connectionStateType: "ALL",
+              protocol: "all",
+              ipVersion: "IPV6",
+
+              source: {
+                zoneId: externalZone.id,
+                ips: [ip],
+                port: port,
+              },
+              destination: {
+                zoneId: internalZone.id,
+              },
+              schedule: {
+                mode: "ALWAYS",
+              },
+            },
+            { provider: globals.unifiFirewallProvider },
+          );
+        }
+      }
+    }
   });
 }
 
 interface IPInfo {
   ip: string;
-  ip_version: number;
+  ip_version: string;
   type: string;
   company: string;
   domain: string;

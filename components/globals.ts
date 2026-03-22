@@ -2,6 +2,7 @@ import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOpti
 import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumi/unifi";
+import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { Provider as BackblazeProvider } from "@pulumi/b2";
@@ -59,6 +60,7 @@ export class GlobalResources extends ComponentResource {
   public readonly cloudflareProvider: CloudflareProvider;
   public readonly unifiCredential: Output<OnePasswordItem>;
   public readonly unifiProvider: UnifiProvider;
+  public readonly unifiFirewallProvider: UnifiFirewallProvider;
   public readonly proxmoxCredential: Output<OnePasswordItem>;
   public readonly tailscaleCredential: Output<OnePasswordItem>;
   public readonly backblazeCredential: Output<OnePasswordItem>;
@@ -97,7 +99,7 @@ export class GlobalResources extends ComponentResource {
         insecure: true,
         scheme: "http",
       },
-      cro
+      cro,
     );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
@@ -107,7 +109,15 @@ export class GlobalResources extends ComponentResource {
         apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
         apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro
+      cro,
+    );
+    this.unifiFirewallProvider = new UnifiFirewallProvider(
+      "unifi-firewall",
+      {
+        apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
+        apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
+      },
+      cro,
     );
     this.tailscaleProvider = new TailscaleProvider(
       "tailscale",
@@ -115,7 +125,7 @@ export class GlobalResources extends ComponentResource {
         oauthClientId: this.tailscaleCredential.apply((z) => z.fields["username"].value!),
         oauthClientSecret: this.tailscaleCredential.apply((z) => z.fields["credential"].value!),
       },
-      cro
+      cro,
     );
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
@@ -152,7 +162,7 @@ export class GlobalResources extends ComponentResource {
         minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
         minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["hostname"].value)}:9000`,
       },
-      cro
+      cro,
     );
 
     this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
@@ -162,7 +172,7 @@ export class GlobalResources extends ComponentResource {
         applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
         applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
       },
-      cro
+      cro,
     );
   }
 }

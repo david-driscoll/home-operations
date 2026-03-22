@@ -90,14 +90,15 @@ export async function updateTailscaleAcls(args: {
   manager.setGrant(
     "peer-relay",
     {
-      src: [tag.mediaDevice],
+      src: [tag.mediaDevice, groups.family, groups.friends, groups.admins],
       dst: [tag.peerRelay],
       app: {
-        "tailscale.com/cap/relay": []
+        "tailscale.com/cap/relay": [],
       },
-    }, {
-    accept: ["debs-apple-tv"],
-  }
+    },
+    {
+      accept: ["debs-apple-tv"],
+    },
   );
 
   manager.setGrant(

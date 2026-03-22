@@ -201,7 +201,7 @@ export class ProxmoxHost extends ComponentResource {
       const device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
         try {
           const client = await getTailscaleClient();
-          await client.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
+          await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: args.tailscaleIpAddress } });
         } catch (e) {
           pulumi.log.warn(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
         }

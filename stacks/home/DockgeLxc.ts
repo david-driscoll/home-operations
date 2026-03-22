@@ -242,7 +242,7 @@ export class DockgeLxc extends ComponentResource {
       async ([tailscaleIpAddress, result]) => {
         try {
           const client = await getTailscaleClient();
-          await client.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: tailscaleIpAddress });
+          await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: tailscaleIpAddress } });
         } catch (e) {
           log.warn(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
         }
