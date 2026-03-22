@@ -22,25 +22,25 @@ export class StandardDns extends ComponentResource {
       record?: Input<string>;
     },
     globals: GlobalResources,
-    cro: ComponentResourceOptions
+    cro: ComponentResourceOptions,
   ) {
     super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
-    this.unifi = new unifi.DnsRecord(
-      `${name}-unifi`,
-      {
-        name: args.hostname,
-        recordType: args.type,
-        value: args.record ?? args.ipAddress,
-        port: 0,
-        ttl: 0,
-      },
-      {
-        parent: this,
-        provider: globals.unifiProvider,
-        deleteBeforeReplace: true,
-      }
-    );
+    // this.unifi = new unifi.DnsRecord(
+    //   `${name}-unifi`,
+    //   {
+    //     name: args.hostname,
+    //     recordType: args.type,
+    //     value: args.record ?? args.ipAddress,
+    //     port: 0,
+    //     ttl: 0,
+    //   },
+    //   {
+    //     parent: this,
+    //     provider: globals.unifiProvider,
+    //     deleteBeforeReplace: true,
+    //   }
+    // );
 
     this.cloudflare = new cloudflare.DnsRecord(
       `${name}-cloudflare`,
@@ -55,7 +55,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.cloudflareProvider,
         deleteBeforeReplace: true,
-      }
+      },
     );
 
     this.adguard = new adguard.Rewrite(
@@ -68,7 +68,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.adguardProvider,
         deleteBeforeReplace: true,
-      }
+      },
     );
     this.hostname = output(args.hostname);
     this.ipAddress = output(args.ipAddress);
@@ -93,7 +93,7 @@ function addGatusDnsRecord(
     ipAddress: Input<string>;
     type: "A" | "CNAME";
     record?: Input<string>;
-  }
+  },
 ) {
   for (const [ip, server] of Object.entries(dnsServers)) {
     const bodyConfig = output(args.hostname).apply((hostname) => {
@@ -110,7 +110,7 @@ function addGatusDnsRecord(
           "query-type": args.type,
         },
         interval: "5m",
-        timeout: '1m',
+        timeout: "1m",
         conditions: [interpolate`[BODY] == any(${bodyConfig})`, "[DNS_RCODE] == NOERROR"],
         alerts: [
           {
@@ -119,7 +119,7 @@ function addGatusDnsRecord(
             "minimum-reminder-interval": "2h",
           },
         ],
-      })
+      }),
     );
   }
 }

@@ -47,70 +47,70 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
 
   devices.apply((d) => pulumi.log.info(`Found ${d.length} Tailscale devices with AT&T IPs to drop`));
 
-  const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
-  const externalZone = unifi.firewall.getZoneOutput({ name: "External" }, { provider: globals.unifiProvider });
+  // const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
+  // const externalZone = unifi.firewall.getZoneOutput({ name: "External" }, { provider: globals.unifiProvider });
 
-  return devices.apply((devices) => {
-    for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
-      if (ipv4IpsToDrop.length > 0) {
-        for (const { ip, port } of ipv4IpsToDrop) {
-          const firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv4-${ip.replace(/\./g, "-")}`,
-            {
-              enabled: true,
+  // return devices.apply((devices) => {
+  //   for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
+  //     if (ipv4IpsToDrop.length > 0) {
+  //       for (const { ip, port } of ipv4IpsToDrop) {
+  //         const firewallRule = new firewall.FirewallPolicy(
+  //           `att-tailscale-drop-ipv4-${ip.replace(/\./g, "-")}`,
+  //           {
+  //             enabled: true,
 
-              action: "BLOCK", // REJECT ?
-              connectionStateType: "ALL",
-              protocol: "all",
-              ipVersion: "IPV4",
+  //             action: "BLOCK", // REJECT ?
+  //             connectionStateType: "ALL",
+  //             protocol: "all",
+  //             ipVersion: "IPV4",
 
-              source: {
-                zoneId: externalZone.id,
-                ips: [ip],
-                port: port,
-              },
-              destination: {
-                zoneId: internalZone.id,
-              },
-              schedule: {
-                mode: "ALWAYS",
-              },
-            },
-            { provider: globals.unifiFirewallProvider },
-          );
-        }
-      }
+  //             source: {
+  //               zoneId: externalZone.id,
+  //               ips: [ip],
+  //               port: port,
+  //             },
+  //             destination: {
+  //               zoneId: internalZone.id,
+  //             },
+  //             schedule: {
+  //               mode: "ALWAYS",
+  //             },
+  //           },
+  //           { provider: globals.unifiFirewallProvider },
+  //         );
+  //       }
+  //     }
 
-      if (ipv6IpsToDrop.length > 0) {
-        for (const { ip, port } of ipv6IpsToDrop) {
-          const firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv6-${ip.replace(/:/g, "-")}`,
-            {
-              enabled: true,
+  //     if (ipv6IpsToDrop.length > 0) {
+  //       for (const { ip, port } of ipv6IpsToDrop) {
+  //         const firewallRule = new firewall.FirewallPolicy(
+  //           `att-tailscale-drop-ipv6-${ip.replace(/:/g, "-")}`,
+  //           {
+  //             enabled: true,
 
-              action: "BLOCK", // REJECT ?
-              connectionStateType: "ALL",
-              protocol: "all",
-              ipVersion: "IPV6",
+  //             action: "BLOCK", // REJECT ?
+  //             connectionStateType: "ALL",
+  //             protocol: "all",
+  //             ipVersion: "IPV6",
 
-              source: {
-                zoneId: externalZone.id,
-                ips: [ip],
-                port: port,
-              },
-              destination: {
-                zoneId: internalZone.id,
-              },
-              schedule: {
-                mode: "ALWAYS",
-              },
-            },
-            { provider: globals.unifiFirewallProvider },
-          );
-        }
-      }
-    }
-  });
+  //             source: {
+  //               zoneId: externalZone.id,
+  //               ips: [ip],
+  //               port: port,
+  //             },
+  //             destination: {
+  //               zoneId: internalZone.id,
+  //             },
+  //             schedule: {
+  //               mode: "ALWAYS",
+  //             },
+  //           },
+  //           { provider: globals.unifiFirewallProvider },
+  //         );
+  //       }
+  //     }
+  //   }
+  // });
 }
 
 interface IPInfo {
