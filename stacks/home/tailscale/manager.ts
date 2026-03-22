@@ -1,5 +1,6 @@
 import * as tailscale from "@pulumi/tailscale";
 import * as pulumi from "@pulumi/pulumi";
+import { Tailscale } from "../../../components/constants.ts";
 import {
   PolicyFile,
   TailscaleAutoApprovers,
@@ -23,6 +24,8 @@ import {
 import * as parser from "jsonc-parser";
 import { awaitOutput } from "@components/helpers.ts";
 
+export const { groups, autogroups, tag, subnets, ports } = Tailscale;
+
 type TailscaleTestFactory<T, R> = (grant: T) => R[];
 export type TailscaleTestInput = { accept: pulumi.Input<string[]>; deny?: pulumi.Input<string[]> } | { accept?: pulumi.Input<string[]>; deny: pulumi.Input<string[]> };
 export type TailscaleSshTestInputItem =
@@ -30,60 +33,6 @@ export type TailscaleSshTestInputItem =
   | { accept?: pulumi.Input<TailscaleSshUser[]>; deny: pulumi.Input<TailscaleSshUser[]>; check?: pulumi.Input<TailscaleSshUser[]> }
   | { accept?: pulumi.Input<TailscaleSshUser[]>; deny?: pulumi.Input<TailscaleSshUser[]>; check: pulumi.Input<TailscaleSshUser[]> };
 type TailscaleSshTestInput = Record<TailscaleSshUser, TailscaleSshTestInputItem>;
-
-export const subnets = {
-  internal: "10.10.0.0/16" as TailscaleCidr,
-};
-export const ports = {
-  any: ["*"] as TailscaleNetworkCapability[],
-  web: ["tcp:443", "tcp:80", "udp:443", "udp:80"] as TailscaleNetworkCapability[],
-  dns: ["tcp:53", "udp:53", "tcp:853", "udp:853", "udp:784", "tcp:443"] as TailscaleNetworkCapability[],
-  ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
-  dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
-  dockgeManagement: ["tcp:5001", "udp:5001", "tcp:9595", "tcp:2022", "udp:2022", "tcp:2375", "udp:2375"] as TailscaleNetworkCapability[],
-  observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],
-  nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
-  proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
-  proxmoxManagement: ["tcp:8006", "tcp:8007"] as TailscaleNetworkCapability[],
-};
-export const autogroups = {
-  member: "autogroup:member" as TailscaleAutogroups,
-  self: "autogroup:self" as TailscaleAutogroups,
-  tagged: "autogroup:tagged" as TailscaleAutogroups,
-  shared: "autogroup:shared" as TailscaleAutogroups,
-  internet: "autogroup:internet" as TailscaleAutogroups,
-  admin: "autogroup:admin" as TailscaleAutogroups,
-  owner: "autogroup:owner" as TailscaleAutogroups,
-  iiAdmin: "autogroup:it-admin" as TailscaleAutogroups,
-  networkAdmin: "autogroup:network-admin" as TailscaleAutogroups,
-  billingAdmin: "autogroup:billing-admin" as TailscaleAutogroups,
-  auditor: "autogroup:auditor" as TailscaleAutogroups,
-};
-export const groups = {
-  me: "group:me" as TailscaleGroups,
-  admins: "group:admins" as TailscaleGroups,
-  mediaManagers: "group:media-managers" as TailscaleGroups,
-  family: "group:family" as TailscaleGroups,
-  friends: "group:friends" as TailscaleGroups,
-};
-export const tag = {
-  exitNode: "tag:exit-node" as TailscaleTags,
-  mediaDevice: "tag:media-device" as TailscaleTags,
-  peerRelay: "tag:peer-relay" as TailscaleTags,
-  sgc: "tag:sgc" as TailscaleTags,
-  k8s: "tag:k8s" as TailscaleTags,
-  equestria: "tag:equestria" as TailscaleTags,
-  operator: "tag:operator" as TailscaleTags,
-  recorder: "tag:recorder" as TailscaleTags,
-  proxmox: "tag:proxmox" as TailscaleTags,
-  dockge: "tag:dockge" as TailscaleTags,
-  apps: "tag:apps" as TailscaleTags,
-  sharedDrive: "tag:shared-drive" as TailscaleTags,
-  egress: "tag:egress" as TailscaleTags,
-  ingress: "tag:ingress" as TailscaleTags,
-  management: "tag:management" as TailscaleTags,
-  observability: "tag:observability" as TailscaleTags,
-};
 
 class TailscaleAclContext {
   _acls: string;

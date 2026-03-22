@@ -24,11 +24,13 @@
     "@pulumi/std": "^2.2.0",
     "@pulumi/tls": "^5.2.2",
     "@pulumiverse/unifi": "^0.2.0",
+    "cidr-matcher": "^2.1.1",
     "glob": "^13.0.0",
     "private-ip": "^3.0.2",
     "simple-oauth2": "^5.1.0"
   },
   "devDependencies": {
+    "@types/cidr-matcher": "^2.1.2",
     "@types/simple-oauth2": "^5.0.8"
   }
 }

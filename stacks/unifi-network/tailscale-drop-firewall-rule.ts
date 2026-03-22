@@ -6,9 +6,12 @@ import is_ip_private from "private-ip";
 import type { components } from "../../types/tailscale.ts";
 
 import { GlobalResources } from "../../components/globals.ts";
+import { Tailscale } from "../../components/constants.ts";
 import { getTailscaleClient } from "../../components/tailscale.ts";
+import CIDRMatcher from "cidr-matcher";
 
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
+  const matcher = new CIDRMatcher([Tailscale.subnets.home]);
   const devices = pulumi.output(getTailscaleClient()).apply(async (client) => {
     const devices = await client.GET("/tailnet/{tailnet}/devices", {
       params: {
@@ -17,11 +20,16 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       },
     });
     const devicesIncludingDrops: { device: components["schemas"]["Device"]; ipv4IpsToDrop: { ip: string; port: number }[]; ipv6IpsToDrop: { ip: string; port: number }[] }[] = [];
+    const peerRelays: string[] = [];
     for (const device of devices.data?.devices ?? []) {
       const ipv6IpsToDrop: { ip: string; port: number }[] = [];
       const ipv4IpsToDrop: { ip: string; port: number }[] = [];
       const endpoints = device.clientConnectivity?.endpoints ?? [];
       for (const { ip, port } of endpoints.map((e) => ({ ip: e.substring(0, e.lastIndexOf(":")).replace("[", "").replace("]", ""), port: +e.substring(e.lastIndexOf(":") + 1) }))) {
+        if (device.tags?.includes(Tailscale.tag.peerRelay) && matcher.contains(ip)) {
+          peerRelays.push(ip);
+          continue;
+        }
         if (is_ip_private(ip)) {
           continue;
         }
@@ -42,15 +50,22 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         devicesIncludingDrops.push({ device, ipv4IpsToDrop, ipv6IpsToDrop });
       }
     }
-    return devicesIncludingDrops;
+    return { devices: devicesIncludingDrops, peerRelays };
   });
 
-  devices.apply((d) => pulumi.log.info(`Found ${d.length} Tailscale devices with AT&T IPs to drop`));
+  devices.apply(({ devices, peerRelays }) => {
+    pulumi.log.info(`Found ${devices.length} Tailscale devices with AT&T IPs to drop`);
+    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d.name).join(", ")}`);
+  });
 
   const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
   const externalZone = unifi.firewall.getZoneOutput({ name: "External" }, { provider: globals.unifiProvider });
 
-  return devices.apply((devices) => {
+  return devices.apply(({ devices, peerRelays }) => {
+    if (peerRelays.length === 0) {
+      pulumi.log.info("No peer relays found, skipping firewall rule creation");
+      return;
+    }
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
       if (ipv4IpsToDrop.length > 0) {
         for (const { ip, port } of ipv4IpsToDrop) {
@@ -71,6 +86,8 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               },
               destination: {
                 zoneId: internalZone.id,
+                ips: peerRelays.map((d) => d),
+                matchOppositeIps: true,
               },
               schedule: {
                 mode: "ALWAYS",
@@ -100,6 +117,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               },
               destination: {
                 zoneId: internalZone.id,
+                // TOOD: peer-relays that have ipv6?
               },
               schedule: {
                 mode: "ALWAYS",
