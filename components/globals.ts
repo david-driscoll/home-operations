@@ -1,7 +1,7 @@
 import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions, interpolate } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
-import { Provider as UnifiProvider } from "@pulumi/unifi";
+import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";

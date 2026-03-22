@@ -3,13 +3,13 @@ import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePas
 import * as cloudflare from "@pulumi/cloudflare";
 import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
-import * as unifi from "@pulumi/unifi";
+import * as unifi from "@pulumiverse/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly ipAddress: Output<string>;
-  public readonly unifi: unifi.DnsRecord;
+  public readonly unifi: unifi.dns.Record;
   public readonly cloudflare: cloudflare.DnsRecord;
   public readonly adguard: adguard.Rewrite;
 
@@ -26,21 +26,19 @@ export class StandardDns extends ComponentResource {
   ) {
     super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
-    // this.unifi = new unifi.DnsRecord(
-    //   `${name}-unifi`,
-    //   {
-    //     name: args.hostname,
-    //     recordType: args.type,
-    //     value: args.record ?? args.ipAddress,
-    //     port: 0,
-    //     ttl: 0,
-    //   },
-    //   {
-    //     parent: this,
-    //     provider: globals.unifiProvider,
-    //     deleteBeforeReplace: true,
-    //   }
-    // );
+    this.unifi = new unifi.dns.Record(
+      `${name}-unifi`,
+      {
+        name: args.hostname,
+        type: args.type,
+        value: args.record ?? args.ipAddress,
+      },
+      {
+        parent: this,
+        provider: globals.unifiProvider,
+        deleteBeforeReplace: true,
+      },
+    );
 
     this.cloudflare = new cloudflare.DnsRecord(
       `${name}-cloudflare`,
