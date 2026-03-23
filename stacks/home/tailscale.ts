@@ -146,7 +146,7 @@ export async function updateTailscaleAcls(args: {
     "admins-home-subnet-access",
     {
       src: [autogroups.admin, groups.admins],
-      dst: [subnets.internal],
+      dst: [subnets.home],
       ip: ["*"],
     },
     { accept: [], deny: testData.knownNormalUsers },
@@ -419,7 +419,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
   manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.sharedDrive, tag.peerRelay, tag.mediaDevice]);
   manager.setExitNode(tag.proxmox);
-  manager.setRoute(subnets.internal, [tag.proxmox]);
+  manager.setRoute(subnets.home, [tag.proxmox]);
 
   manager.setGrant({ src: [tag.proxmox], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
@@ -474,7 +474,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setService(tag.observability, [...clusterTags, tag.operator, tag.ingress]);
   manager.setService(tag.k8s, [tag.k8s]);
 
-  manager.setRoute(subnets.internal, clusterTags);
+  manager.setRoute(subnets.home, clusterTags);
   for (const cluster of clusters) {
     manager.setRoute(cluster.serviceNetwork, [cluster.tag]);
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
