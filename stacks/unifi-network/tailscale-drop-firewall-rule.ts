@@ -55,7 +55,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
 
   devices.apply(({ devices, peerRelays }) => {
     pulumi.log.info(`Found ${devices.length} Tailscale devices with AT&T IPs to drop`);
-    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d.name).join(", ")}`);
+    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d).join(", ")}`);
   });
 
   const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
