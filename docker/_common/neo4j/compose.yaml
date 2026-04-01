@@ -1,0 +1,48 @@
+services:
+  neo4j:
+    container_name: neo4j
+    image: neo4j:5.21-community
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      TZ: ${TIMEZONE}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc", "apoc-extended", "genai"]'
+      NEO4J_server_memory_pagecache_size: 2G
+      NEO4J_server_memory_heap_max__size: 2G
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+    labels:
+      traefik.enable: true
+
+      # HTTPS routing via Traefik
+      traefik.http.routers.${APP}.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.${APP}.entrypoints: websecure
+      traefik.http.routers.${APP}.tls.certresolver: le
+      traefik.http.routers.${APP}.service: ${APP}
+
+      # Tailscale internal routing
+      traefik.http.routers.${APP}-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.http.routers.${APP}-tailscale.entrypoints: tailscale
+      traefik.http.routers.${APP}-tailscale.service: ${APP}
+
+      # Service port for HTTP (Neo4j Browser)
+      traefik.http.services.${APP}.loadbalancer.server.port: 7474
+
+      # Health check
+      traefik.http.services.${APP}.loadbalancer.healthcheck.path: "/"
+      traefik.http.services.${APP}.loadbalancer.healthcheck.port: 7474
+      traefik.http.services.${APP}.loadbalancer.healthcheck.interval: 30s
+    volumes:
+      - ./neo4j-data:/data
+      - ./neo4j-logs:/logs
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true
+
+x-dockge:
+  urls:
+    - https://${APP}.${CLUSTER_DOMAIN}/browser
