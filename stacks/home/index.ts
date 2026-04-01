@@ -173,11 +173,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   registerTailscaleService,
 });
 
-// LM Studio LXC instances for GPU-accelerated inference
-// NOTE: These LXC containers (vmId 301, 401) must be created manually in Proxmox with:
-// - GPU device passthrough: /dev/dri/renderD128, /dev/kfd
-// - Ubuntu 22.04 template
-// - Sufficient CPU/RAM for LLM workloads
+
 const celestiaLmStudioLxc = new LmStudioLxc("celestia-lmstudio", {
   globals,
   host: celestiaHost,

@@ -16,6 +16,45 @@ export const Roles = {
 
 import { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleNetworkCapability, TailscaleTags } from "@openapi/tailscale-grants.js";
 
+const dnsServers = {
+  "Alpha Site": {
+    ips: ["10.10.10.9"],
+    uptime: false,
+    use: true,
+    internal: true,
+  },
+  Discord: {
+    ips: ["10.10.0.1"],
+    uptime: true,
+    use: true,
+    internal: true,
+  },
+  "Stargate Command": {
+    ips: ["10.10.209.201"],
+    uptime: true,
+    use: true,
+    internal: true,
+  },
+  Quad9: {
+    ips: ["9.9.9.9", "149.112.112.112"],
+    uptime: true,
+    use: true,
+    internal: false,
+  },
+  CloudFlare: {
+    ips: ["1.1.1.1", "1.0.0.1"],
+    uptime: true,
+    use: false,
+    internal: false,
+  },
+};
+export const dns = {
+  config: dnsServers,
+  ips: Object.values(dnsServers).flatMap((server) => (server.use ? server.ips : [])),
+  externalIps: Object.values(dnsServers).flatMap((server) => (server.use && server.internal ? [] : server.ips)),
+  internalIps: Object.values(dnsServers).flatMap((server) => (server.use && server.internal ? server.ips : [])),
+} as const;
+
 export const Tailscale = {
   subnets: {
     home: "10.10.0.0/16" as TailscaleCidr,

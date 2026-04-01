@@ -5,6 +5,7 @@ import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Inpu
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumiverse/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
+import { dns } from "@components/constants.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -74,14 +75,6 @@ export class StandardDns extends ComponentResource {
   }
 }
 
-const dnsServers = {
-  // "10.10.10.9": "Alpha Site",
-  "10.10.0.1": "Discord",
-  "10.10.209.201": "Stargate Command",
-  "9.9.9.9": "Quad9",
-  "1.1.1.1": "CloudFlare",
-};
-
 export const gatusDnsRecords: Output<GatusDefinition>[] = [];
 
 function addGatusDnsRecord(
@@ -93,7 +86,9 @@ function addGatusDnsRecord(
     record?: Input<string>;
   },
 ) {
-  for (const [ip, server] of Object.entries(dnsServers)) {
+  for (const [server, { ips, uptime }] of Object.entries(dns.config)) {
+    if (!uptime) continue;
+    const ip = ips[0];
     const bodyConfig = output(args.hostname).apply((hostname) => {
       if (args.type === "A") return args.ipAddress;
       return interpolate`${args.record}., ${args.record},`;

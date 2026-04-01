@@ -8,10 +8,12 @@ import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi
 import { getTailscaleClient, installTailscale } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
+import proxmox from "@muhlba91/pulumi-proxmoxve";
 import { OPClient } from "@components/op.ts";
 import * as tls from "@pulumi/tls";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { awaitOutput, copyFileToRemote } from "@components/helpers.ts";
+import { dns } from "@components/constants.ts";
 
 export interface LmStudioLxcArgs {
   globals: GlobalResources;
@@ -32,6 +34,7 @@ export class LmStudioLxc extends ComponentResource {
   public readonly cluster: Output<ClusterDefinition>;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
+  public readonly vmId: Output<number>;
 
   constructor(
     name: string,
@@ -53,24 +56,90 @@ export class LmStudioLxc extends ComponentResource {
     const tailscaleIpParts = args.host.tailscaleIpAddress.split(".");
     this.tailscaleIpAddress = interpolate`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${tailscaleIpParts[2]}.${parseInt(tailscaleIpParts[3]) + 1}` as Output<TailscaleIp>;
 
-    // Set hostname in container
-    const setHostname = new remote.Command(
-      `${name}-set-hostname`,
+    // Create LXC container with sufficient resources for LLM workloads
+    const container = new proxmox.ct.Container(
+      `${name}-container`,
       {
-        connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
+        nodeName: args.host.name,
+        vmId: args.vmId,
+        description: `LM Studio Container for ${cluster.title}`,
+        unprivileged: false, // Must be privileged for GPU passthrough
+        operatingSystem: {
+          templateFileId: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
+          type: "ubuntu",
+        },
+        // GPU workload resource requirements
+        cpu: {
+          cores: 6, // Adjust based on your hardware
+        },
+        memory: {
+          dedicated: 8196, // 8GB for LLM workloads
+          swap: 4096,
+        },
+        disk: {
+          datastoreId: "local-lvm",
+          size: 200, // 200GB for models and temp data
+        },
+        networkInterfaces: [
+          {
+            name: "eth0",
+            bridge: "vmbr0",
+            firewall: false,
+          },
+        ],
+        initialization: {
+          hostname: name,
+          dns: {
+            servers: dns.internalIps,
+          },
+        },
+        started: true,
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { provider: args.host.pveProvider }),
     );
 
+    this.vmId = container.vmId;
+
+    // Configure GPU device passthrough on the host
+    // This adds the necessary cgroup2 device permissions and mount entries for AMD GPU
+    const configureGpuPassthrough = new remote.Command(
+      `${name}-configure-gpu`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`
+# Get the major and minor device numbers
+RENDERD_MAJOR=\$(stat -c '%t' /dev/dri/renderD128 | xargs printf '%d')
+RENDERD_MINOR=\$(stat -c '%T' /dev/dri/renderD128 | xargs printf '%d')
+KFD_MAJOR=\$(stat -c '%t' /dev/kfd | xargs printf '%d')
+KFD_MINOR=\$(stat -c '%T' /dev/kfd | xargs printf '%d')
+
+# Backup the container config
+cp /etc/pve/lxc/${this.vmId}.conf /etc/pve/lxc/${this.vmId}.conf.backup
+
+# Add GPU device passthrough configuration
+cat >> /etc/pve/lxc/${this.vmId}.conf << 'EOF'
+
+# AMD GPU passthrough configuration
+lxc.apparmor.profile: unconfined
+lxc.cgroup2.devices.allow: c \$RENDERD_MAJOR:\$RENDERD_MINOR rwm
+lxc.cgroup2.devices.allow: c \$KFD_MAJOR:\$KFD_MINOR rwm
+lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file
+lxc.mount.entry: /dev/kfd dev/kfd none bind,optional,create=file
+EOF
+
+echo "GPU passthrough configuration added successfully"
+`,
+      },
+      mergeOptions(cro, { dependsOn: [container] }),
+    );
     // Get container IP address
     const getIpCommand = new remote.Command(
       `${name}-get-ip-address`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+        create: interpolate`pct exec ${this.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
       },
-      mergeOptions(cro, { dependsOn: [setHostname] }),
+      mergeOptions(cro, { dependsOn: [configureGpuPassthrough] }),
     );
 
     const internalIpAddress = (this.internalIpAddress = getIpCommand.stdout.apply((ip) => ip.trim()));
