@@ -5,6 +5,7 @@ import { ClusterDefinition, createClusterDefinition, GlobalResources } from "../
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
+import { LmStudioLxc, getLmStudioProperties } from "./LmStudioLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 import * as b2 from "@pulumi/b2";
@@ -48,7 +49,7 @@ const minioBucket = new minio.S3Bucket(
     provider: globals.truenasMinioProvider,
     protect: true,
     retainOnDelete: true,
-  }
+  },
 );
 
 const b2Bucket = new b2.Bucket(
@@ -71,7 +72,7 @@ const b2Bucket = new b2.Bucket(
     provider: globals.backblazeProvider,
     protect: true,
     retainOnDelete: true,
-  }
+  },
 );
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
@@ -99,7 +100,7 @@ const celestiaHost = new ProxmoxHost("celestia", {
   isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
-  tailscaleTags: ['tag:peer-relay'],
+  tailscaleTags: ["tag:peer-relay"],
   macAddress: "c8:ff:bf:03:cc:4c",
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
@@ -172,6 +173,29 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   registerTailscaleService,
 });
 
+// LM Studio LXC instances for GPU-accelerated inference
+// NOTE: These LXC containers (vmId 301, 401) must be created manually in Proxmox with:
+// - GPU device passthrough: /dev/dri/renderD128, /dev/kfd
+// - Ubuntu 22.04 template
+// - Sufficient CPU/RAM for LLM workloads
+const celestiaLmStudioLxc = new LmStudioLxc("celestia-lmstudio", {
+  globals,
+  host: celestiaHost,
+  vmId: 301,
+  cluster: celestiaCluster,
+  tailscaleArgs: { acceptRoutes: false },
+  registerTailscaleService,
+});
+
+const lunaLmStudioLxc = new LmStudioLxc("luna-lmstudio", {
+  globals,
+  host: lunaHost,
+  vmId: 401,
+  cluster: lunaCluster,
+  tailscaleArgs: { acceptRoutes: false },
+  registerTailscaleService,
+});
+
 try {
   const tailscaleManager = await updateTailscaleAcls({
     globals,
@@ -190,12 +214,7 @@ try {
       spike: spikeVm.tailscaleIpAddress,
       "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [
-      spikeVm.ipAddress,
-      celestiaDockgeRuntime.ipAddress,
-      lunaDockgeRuntime.ipAddress,
-      alphaSiteDockgeRuntime.ipAddress,
-    ],
+    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
     tests: {
       dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
       proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
@@ -212,8 +231,18 @@ try {
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
-export const celestia = { proxmox: getProxmoxProperties(celestiaHost), dockge: getDockageProperties(celestiaDockgeRuntime), backup: celestiaHost.backupVolumes! };
-export const luna = { proxmox: getProxmoxProperties(lunaHost), dockge: getDockageProperties(lunaDockgeRuntime), backup: lunaHost.backupVolumes! };
+export const celestia = {
+  proxmox: getProxmoxProperties(celestiaHost),
+  dockge: getDockageProperties(celestiaDockgeRuntime),
+  lmstudio: getLmStudioProperties(),
+  backup: celestiaHost.backupVolumes!,
+};
+export const luna = {
+  proxmox: getProxmoxProperties(lunaHost),
+  dockge: getDockageProperties(lunaDockgeRuntime),
+  lmstudio: getLmStudioProperties(),
+  backup: lunaHost.backupVolumes!,
+};
 // const users = await tailscale.
 // console.log(users);
 
@@ -237,8 +266,8 @@ const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime()
       endpoints: [...prev.endpoints, ...curr.endpoints],
       "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
     }),
-    { endpoints: [], "external-endpoints": [] }
-  )
+    { endpoints: [], "external-endpoints": [] },
+  ),
 );
 
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
@@ -250,6 +279,6 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
       endpoints: [...endpoints, ...other.endpoints],
       "external-endpoints": [...other["external-endpoints"]],
     },
-    dnsParent
+    dnsParent,
   );
 });

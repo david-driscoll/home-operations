@@ -1,4 +1,4 @@
-import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
+import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset, unknown, runtime } from "@pulumi/pulumi";
 import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
 import { remote, types } from "@pulumi/command";
@@ -198,15 +198,24 @@ export class ProxmoxHost extends ComponentResource {
       );
 
       // Get Tailscale device
-      const device = getDeviceOutput({ hostname: this.tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this }).apply(async (result) => {
-        try {
-          const client = await getTailscaleClient();
-          await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: args.tailscaleIpAddress } });
-        } catch (e) {
-          pulumi.log.warn(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
-        }
-        return result;
-      });
+      const device = runtime.isDryRun()
+        ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
+        : getDeviceOutput(
+            { hostname: this.tailscaleHostname },
+            {
+              provider: args.globals.tailscaleProvider,
+              parent: this,
+              dependsOn: [tailscaleSet],
+            },
+          ).apply(async (result) => {
+            try {
+              const client = await getTailscaleClient();
+              await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: args.tailscaleIpAddress } });
+            } catch (e) {
+              pulumi.log.warn(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
+            }
+            return result;
+          });
       // Create device tags
       const deviceTags = new DeviceTags(
         `${name}-tags`,

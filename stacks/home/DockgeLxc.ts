@@ -1,5 +1,5 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown, Unwrap } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
@@ -238,17 +238,27 @@ export class DockgeLxc extends ComponentResource {
     // and Tailscale is configured. For now, we'll comment this out as it requires
     // manual Tailscale configuration after container creation.
 
-    this.device = all([this.tailscaleIpAddress, getDeviceOutput({ name: tailscaleHostname }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] })]).apply(
-      async ([tailscaleIpAddress, result]) => {
-        try {
-          const client = await getTailscaleClient();
-          await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: tailscaleIpAddress } });
-        } catch (e) {
-          log.warn(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
-        }
-        return result;
-      },
-    );
+    this.device = all([
+      this.tailscaleIpAddress,
+      runtime.isDryRun()
+      ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
+      : getDeviceOutput(
+            { name: tailscaleHostname },
+            {
+              provider: args.globals.tailscaleProvider,
+              parent: this,
+              dependsOn: [tailscaleSet],
+            },
+          ),
+    ]).apply(async ([tailscaleIpAddress, result]) => {
+      try {
+        const client = await getTailscaleClient();
+        await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: tailscaleIpAddress } });
+      } catch (e) {
+        log.warn(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
+      }
+      return result;
+    });
 
     new remote.Command(`${name}-install-tools`, {
       connection: this.remoteConnection,
@@ -266,7 +276,6 @@ export class DockgeLxc extends ComponentResource {
         provider: args.globals.tailscaleProvider,
         parent: this,
         retainOnDelete: true,
-        dependsOn: [tailscaleSet],
       },
     );
 
@@ -280,7 +289,6 @@ export class DockgeLxc extends ComponentResource {
       {
         provider: args.globals.tailscaleProvider,
         parent: this,
-        dependsOn: [tailscaleSet],
       },
     );
 
