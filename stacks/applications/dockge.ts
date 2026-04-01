@@ -6,7 +6,7 @@ import { OPClient } from "../../components/op.ts";
 import * as yaml from "yaml";
 import { NodeSSH } from "node-ssh";
 import type { ApplicationDefinitionSchema, GatusDefinition } from "@openapi/application-definition.d.ts";
-import * as authentikApi from "@goauthentik/api";
+import * as authentikApi from "@goauthentik/api/dist/esm";
 import { addUptimeGatus, copyFileToRemote, awaitOutput as outToPromise, writeTempFile } from "@components/helpers.ts";
 
 export async function dockgeApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: DockgeClusterDefinition) {
