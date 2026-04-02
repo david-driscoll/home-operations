@@ -442,13 +442,16 @@ export class DockgeLxc extends ComponentResource {
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
     let hasCompose = false;
+    let hasInit = false;
 
     for (const [relativeFilePath, absoluteFilePath] of files) {
       const content = await readFile(absoluteFilePath, "utf-8");
       const file = relativeFilePath;
       let replacedContent = replacements.reduce((p, r) => r(p), output(content));
 
-      if (file.endsWith("compose.yaml")) {
+      if (file.endsWith("init.sh")) {
+        hasInit = true;
+      } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
         const content = await awaitOutput(replacedContent);
         const hostRegex = /Host\(`(.*?)`\)/g;
@@ -521,6 +524,22 @@ export class DockgeLxc extends ComponentResource {
     }
 
     if (hasCompose) {
+      // If the stack has an init.sh, run it before docker compose.
+      // init.sh is designed to be idempotent and is always executed.
+      const composeDeps: Input<Resource>[] = [...copyFiles];
+      if (hasInit) {
+        const initCommand = new remote.Command(
+          `${hostname}-${stackName}-init`,
+          {
+            connection: this.remoteConnection,
+            triggers: [new Date().getTime()], // always run
+            create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
+          },
+          mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
+        );
+        composeDeps.push(initCommand);
+      }
+
       const compose = new remote.Command(
         `${hostname}-${stackName}-compose`,
         {
@@ -528,7 +547,7 @@ export class DockgeLxc extends ComponentResource {
           triggers: copyFiles.map((f) => f.id),
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
-        mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
+        mergeOptions({ parent: this }, { dependsOn: composeDeps, deleteBeforeReplace: true }),
       );
 
       return { name: stackName, path, compose };

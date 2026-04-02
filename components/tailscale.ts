@@ -40,6 +40,7 @@ export function installTailscaleLxc({
   tailscaleName,
   vmId,
   globals,
+  dependsOn,
   args = { acceptDns: true, acceptRoutes: true, ssh: true },
 }: {
   connection: types.input.remote.ConnectionArgs;
@@ -47,6 +48,7 @@ export function installTailscaleLxc({
   name: string;
   tailscaleName: pulumi.Input<string>;
   parent: pulumi.Resource;
+  dependsOn?: pulumi.Resource[];
   vmId: pulumi.Input<number>;
   args?: {
     acceptDns?: boolean;
@@ -55,6 +57,7 @@ export function installTailscaleLxc({
     advertiseExitNode?: boolean;
   };
 }) {
+  dependsOn = dependsOn ?? [];
   const authKey = copyFileToRemote(`${name}-authkey`, {
     content: globals.tailscaleAuthKey.key,
     remotePath: "/tmp/authkey",
@@ -67,7 +70,7 @@ export function installTailscaleLxc({
       connection,
       create: pulumi.interpolate`pct push ${vmId} /tmp/authkey /tmp/authkey`,
     },
-    { parent, dependsOn: [authKey] },
+    { parent, dependsOn: [authKey, ...dependsOn] },
   );
   const tailscaleArgs = pulumi.interpolate`--auth-key=file:/tmp/authkey --hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
     args.ssh ? "--ssh" : "--ssh=false"
@@ -77,7 +80,7 @@ export function installTailscaleLxc({
     `${name}-tailscale-install`,
     {
       connection,
-      create: pulumi.interpolate`pct exec ${vmId} -- mkdir -p --mode=0755 /usr/share/keyrings && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list | tee /etc/apt/sources.list.d/tailscale.list && apt-get update && apt-get install tailscale`,
+      create: pulumi.interpolate`pct exec ${vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
     },
     { parent, dependsOn: [copyAuthKey] },
   );

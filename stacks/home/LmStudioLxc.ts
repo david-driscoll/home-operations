@@ -73,15 +73,15 @@ export class LmStudioLxc extends ComponentResource {
         },
         // GPU workload resource requirements
         cpu: {
-          cores: 6, // Adjust based on your hardware
+          cores: 4, // Adjust based on your hardware
         },
         memory: {
-          dedicated: 8196, // 8GB for LLM workloads
-          swap: 4096,
+          dedicated: 6 * 1024, // 6GB for LLM workloads
+          swap: 1024,
         },
         disk: {
           datastoreId: "local-lvm",
-          size: 200, // 200GB for models and temp data
+          size: 100, // 200GB for models and temp data
         },
         networkInterfaces: [
           {
@@ -103,18 +103,6 @@ export class LmStudioLxc extends ComponentResource {
     );
 
     this.vmId = container.vmId;
-
-    // Install Tailscale
-    const tailscaleSet = installTailscaleLxc({
-      connection: args.host.remoteConnection,
-      name,
-      parent: this,
-      tailscaleName: tailscaleHostname,
-      globals: args.globals,
-      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
-      vmId: this.vmId,
-    });
-
     // After container creation, inject AMD GPU passthrough config then (re)start the container.
     // Using pct.conf directly avoids the provider treating vzcreate warnings as errors.
     const configureGpuPassthrough = new remote.Command(
@@ -181,6 +169,18 @@ echo "AMD GPU passthrough configured and container restarted"
       },
       mergeOptions(cro, { dependsOn: [getIpCommand] }),
     );
+
+    // Install Tailscale
+    const tailscaleSet = installTailscaleLxc({
+      connection: args.host.remoteConnection,
+      name,
+      parent: this,
+      tailscaleName: tailscaleHostname,
+      globals: args.globals,
+      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
+      vmId: this.vmId,
+      dependsOn: [installDeps],
+    });
 
     // Install LM Studio headless (llmster)
     const installLmStudio = new remote.Command(
