@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as minio from "@pulumi/minio";
-import * as b2 from "@pulumi/b2";
+// import * as b2 from "@pulumi/b2";
 import * as random from "@pulumi/random";
 
 export type { CustomResourceOptions } from "@pulumi/pulumi";
@@ -28,14 +28,14 @@ export interface TruenasVmArgs {
 export interface TruenasVmResult {
   longhorn: string;
   volsync: string;
-  backblaze: {
-    backup: pulumi.Output<string>;
-    backupCredential: OnePasswordItem;
-    backupApplicationKey: pulumi.Output<string>;
-    database: pulumi.Output<string>;
-    databaseCredential: OnePasswordItem;
-    databaseApplicationKey: pulumi.Output<string>;
-  };
+  // backblaze: {
+  //   backup: pulumi.Output<string>;
+  //   backupCredential: OnePasswordItem;
+  //   backupApplicationKey: pulumi.Output<string>;
+  //   database: pulumi.Output<string>;
+  //   databaseCredential: OnePasswordItem;
+  //   databaseApplicationKey: pulumi.Output<string>;
+  // };
   truenas: {
     backup: pulumi.Output<string>;
     database: pulumi.Output<string>;
@@ -162,58 +162,58 @@ export class TruenasVm extends pulumi.ComponentResource {
       }
     );
 
-    const b2Bucket = new b2.Bucket(
-      `${name}-b2-bucket`,
-      {
-        bucketName: pulumi.interpolate`${suffix}-backup`,
-        bucketType: "allPrivate",
-        bucketInfo: {
-          project: "home-operations",
-          cluster: name,
-          purpose: "backup",
-        },
-        lifecycleRules: [
-          {
-            fileNamePrefix: "",
-            daysFromHidingToDeleting: 1,
-          },
-        ],
-      },
-      {
-        parent,
-        provider: this.globals.backblazeProvider,
-        protect: true,
-        retainOnDelete: true,
-      }
-    );
+    // const b2Bucket = new b2.Bucket(
+    //   `${name}-b2-bucket`,
+    //   {
+    //     bucketName: pulumi.interpolate`${suffix}-backup`,
+    //     bucketType: "allPrivate",
+    //     bucketInfo: {
+    //       project: "home-operations",
+    //       cluster: name,
+    //       purpose: "backup",
+    //     },
+    //     lifecycleRules: [
+    //       {
+    //         fileNamePrefix: "",
+    //         daysFromHidingToDeleting: 1,
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     parent,
+    //     provider: this.globals.backblazeProvider,
+    //     protect: true,
+    //     retainOnDelete: true,
+    //   }
+    // );
 
-    // b2 buckets, application key, minio buckets
-    const b2BucketApplicationKey = new b2.ApplicationKey(
-      `${name}-b2-application-key`,
-      {
-        keyName: pulumi.interpolate`home-operations-${suffix}-backup`,
-        bucketId: b2Bucket.id,
-        capabilities: [
-          "deleteFiles",
-          "listAllBucketNames",
-          "listBuckets",
-          "listFiles",
-          "readBucketEncryption",
-          "readBucketLogging",
-          "readBucketNotifications",
-          "readBucketReplications",
-          "readBuckets",
-          "readFiles",
-          "shareFiles",
-          "writeBucketEncryption",
-          "writeBucketLogging",
-          "writeBucketNotifications",
-          "writeBucketReplications",
-          "writeFiles",
-        ],
-      },
-      { parent, provider: this.globals.backblazeProvider }
-    );
+    // // b2 buckets, application key, minio buckets
+    // const b2BucketApplicationKey = new b2.ApplicationKey(
+    //   `${name}-b2-application-key`,
+    //   {
+    //     keyName: pulumi.interpolate`home-operations-${suffix}-backup`,
+    //     bucketId: b2Bucket.id,
+    //     capabilities: [
+    //       "deleteFiles",
+    //       "listAllBucketNames",
+    //       "listBuckets",
+    //       "listFiles",
+    //       "readBucketEncryption",
+    //       "readBucketLogging",
+    //       "readBucketNotifications",
+    //       "readBucketReplications",
+    //       "readBuckets",
+    //       "readFiles",
+    //       "shareFiles",
+    //       "writeBucketEncryption",
+    //       "writeBucketLogging",
+    //       "writeBucketNotifications",
+    //       "writeBucketReplications",
+    //       "writeFiles",
+    //     ],
+    //   },
+    //   { parent, provider: this.globals.backblazeProvider }
+    // );
 
     const minioDbBucket = new minio.S3Bucket(
       `${name}-minio-db-bucket`,
@@ -229,104 +229,104 @@ export class TruenasVm extends pulumi.ComponentResource {
       }
     );
 
-    const b2DatabaseBucket = new b2.Bucket(
-      `${name}-b2-db-bucket`,
-      {
-        bucketName: pulumi.interpolate`${suffix}-db`,
-        bucketType: "allPrivate",
-        bucketInfo: {
-          project: "home-operations",
-          cluster: name,
-          purpose: "database-backup",
-        },
-        lifecycleRules: [
-          {
-            fileNamePrefix: "",
-            daysFromHidingToDeleting: 1,
-          },
-        ],
-      },
-      {
-        parent,
-        provider: this.globals.backblazeProvider,
-        protect: true,
-        retainOnDelete: true,
-      }
-    );
+    // const b2DatabaseBucket = new b2.Bucket(
+    //   `${name}-b2-db-bucket`,
+    //   {
+    //     bucketName: pulumi.interpolate`${suffix}-db`,
+    //     bucketType: "allPrivate",
+    //     bucketInfo: {
+    //       project: "home-operations",
+    //       cluster: name,
+    //       purpose: "database-backup",
+    //     },
+    //     lifecycleRules: [
+    //       {
+    //         fileNamePrefix: "",
+    //         daysFromHidingToDeleting: 1,
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     parent,
+    //     provider: this.globals.backblazeProvider,
+    //     protect: true,
+    //     retainOnDelete: true,
+    //   }
+    // );
 
-    // b2 buckets, application key, minio buckets
-    const b2DatabaseBucketApplicationKey = new b2.ApplicationKey(
-      `${name}-b2-db-application-key`,
-      {
-        keyName: pulumi.interpolate`home-operations-${suffix}-db`,
-        bucketId: b2DatabaseBucket.id,
-        capabilities: [
-          "deleteFiles",
-          "listAllBucketNames",
-          "listBuckets",
-          "listFiles",
-          "readBucketEncryption",
-          "readBucketLogging",
-          "readBucketNotifications",
-          "readBucketReplications",
-          "readBuckets",
-          "readFiles",
-          "shareFiles",
-          "writeBucketEncryption",
-          "writeBucketLogging",
-          "writeBucketNotifications",
-          "writeBucketReplications",
-          "writeFiles",
-        ],
-      },
-      { parent, provider: this.globals.backblazeProvider }
-    );
+    // // b2 buckets, application key, minio buckets
+    // const b2DatabaseBucketApplicationKey = new b2.ApplicationKey(
+    //   `${name}-b2-db-application-key`,
+    //   {
+    //     keyName: pulumi.interpolate`home-operations-${suffix}-db`,
+    //     bucketId: b2DatabaseBucket.id,
+    //     capabilities: [
+    //       "deleteFiles",
+    //       "listAllBucketNames",
+    //       "listBuckets",
+    //       "listFiles",
+    //       "readBucketEncryption",
+    //       "readBucketLogging",
+    //       "readBucketNotifications",
+    //       "readBucketReplications",
+    //       "readBuckets",
+    //       "readFiles",
+    //       "shareFiles",
+    //       "writeBucketEncryption",
+    //       "writeBucketLogging",
+    //       "writeBucketNotifications",
+    //       "writeBucketReplications",
+    //       "writeFiles",
+    //     ],
+    //   },
+    //   { parent, provider: this.globals.backblazeProvider }
+    // );
 
-    const backupCredential = new OnePasswordItem(
-      `${name}-b2-credential`,
-      {
-        title: pulumi.interpolate`B2 Backup Key ${name}`,
-        category: FullItem.CategoryEnum.APICredential,
-        fields: pulumi.output({
-          username: { value: b2BucketApplicationKey.applicationKeyId, type: TypeEnum.String },
-          credential: { value: b2BucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
-          keyName: { value: b2BucketApplicationKey.keyName, type: TypeEnum.String },
-          bucket: { value: b2Bucket.bucketName, type: TypeEnum.String },
-          hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
-        }),
-        tags: ["backblaze", "backup", name],
-      },
-      { parent }
-    );
+    // const backupCredential = new OnePasswordItem(
+    //   `${name}-b2-credential`,
+    //   {
+    //     title: pulumi.interpolate`B2 Backup Key ${name}`,
+    //     category: FullItem.CategoryEnum.APICredential,
+    //     fields: pulumi.output({
+    //       username: { value: b2BucketApplicationKey.applicationKeyId, type: TypeEnum.String },
+    //       credential: { value: b2BucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
+    //       keyName: { value: b2BucketApplicationKey.keyName, type: TypeEnum.String },
+    //       bucket: { value: b2Bucket.bucketName, type: TypeEnum.String },
+    //       hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
+    //     }),
+    //     tags: ["backblaze", "backup", name],
+    //   },
+    //   { parent }
+    // );
 
-    const databaseCredential = new OnePasswordItem(
-      `${name}-b2-db-credential`,
-      {
-        title: pulumi.interpolate`B2 Database Key ${name}`,
-        category: FullItem.CategoryEnum.APICredential,
-        fields: pulumi.output({
-          username: { value: b2DatabaseBucketApplicationKey.applicationKeyId, type: TypeEnum.String },
-          credential: { value: b2DatabaseBucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
-          keyName: { value: b2DatabaseBucketApplicationKey.keyName, type: TypeEnum.String },
-          bucket: { value: b2DatabaseBucket.bucketName, type: TypeEnum.String },
-          hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
-        }),
-        tags: ["backblaze", "database", "backup", name],
-      },
-      { parent }
-    );
+    // const databaseCredential = new OnePasswordItem(
+    //   `${name}-b2-db-credential`,
+    //   {
+    //     title: pulumi.interpolate`B2 Database Key ${name}`,
+    //     category: FullItem.CategoryEnum.APICredential,
+    //     fields: pulumi.output({
+    //       username: { value: b2DatabaseBucketApplicationKey.applicationKeyId, type: TypeEnum.String },
+    //       credential: { value: b2DatabaseBucketApplicationKey.applicationKey, type: TypeEnum.Concealed },
+    //       keyName: { value: b2DatabaseBucketApplicationKey.keyName, type: TypeEnum.String },
+    //       bucket: { value: b2DatabaseBucket.bucketName, type: TypeEnum.String },
+    //       hostname: { value: "s3.us-east-005.backblazeb2.com", type: TypeEnum.String },
+    //     }),
+    //     tags: ["backblaze", "database", "backup", name],
+    //   },
+    //   { parent }
+    // );
 
     return {
       longhorn: longhorn?.mountpoint ?? `/mnt/${this.backupDatasetId}/${name}/longhorn`,
       volsync: volsync?.mountpoint ?? `/mnt/${this.backupDatasetId}/${name}/volsync`,
-      backblaze: {
-        backupCredential: backupCredential,
-        backup: b2Bucket.bucketName,
-        backupApplicationKey: b2BucketApplicationKey.applicationKeyId,
-        database: b2DatabaseBucket.bucketName,
-        databaseCredential: backupCredential,
-        databaseApplicationKey: b2DatabaseBucketApplicationKey.applicationKeyId,
-      },
+      // backblaze: {
+      //   backupCredential: backupCredential,
+      //   backup: b2Bucket.bucketName,
+      //   backupApplicationKey: b2BucketApplicationKey.applicationKeyId,
+      //   database: b2DatabaseBucket.bucketName,
+      //   databaseCredential: backupCredential,
+      //   databaseApplicationKey: b2DatabaseBucketApplicationKey.applicationKeyId,
+      // },
       truenas: {
         backup: minioBucket.bucket,
         database: minioDbBucket.bucket,

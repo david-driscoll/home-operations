@@ -5,7 +5,7 @@ import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { Provider as BackblazeProvider } from "@pulumi/b2";
+// import { Provider as BackblazeProvider } from "@pulumi/b2";
 import { Provider as PbsProvider } from "@pulumi/pbs";
 import { OPClient, OPClientItem } from "./op.ts";
 import { remote, types } from "@pulumi/command";
@@ -63,7 +63,7 @@ export class GlobalResources extends ComponentResource {
   public readonly unifiFirewallProvider: UnifiFirewallProvider;
   public readonly proxmoxCredential: Output<OnePasswordItem>;
   public readonly tailscaleCredential: Output<OnePasswordItem>;
-  public readonly backblazeCredential: Output<OnePasswordItem>;
+  // public readonly backblazeCredential: Output<OnePasswordItem>;
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
@@ -74,7 +74,7 @@ export class GlobalResources extends ComponentResource {
   public readonly gateway: Output<string>;
   public readonly adguardCredential: Output<OnePasswordItem>;
   public readonly adguardProvider: AdguardProvider;
-  public readonly backblazeProvider: BackblazeProvider;
+  // public readonly backblazeProvider: BackblazeProvider;
   public readonly localBackupServerConnection: types.input.remote.ConnectionArgs;
   public readonly remoteBackupServerConnection: types.input.remote.ConnectionArgs;
 
@@ -165,14 +165,14 @@ export class GlobalResources extends ComponentResource {
       cro,
     );
 
-    this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
-    this.backblazeProvider = new BackblazeProvider(
-      "backblaze",
-      {
-        applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
-        applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
-      },
-      cro,
-    );
+    // this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
+    // this.backblazeProvider = new BackblazeProvider(
+    //   "backblaze",
+    //   {
+    //     applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
+    //     applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
+    //   },
+    //   cro,
+    // );
   }
 }

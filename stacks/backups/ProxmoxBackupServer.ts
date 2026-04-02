@@ -2,7 +2,7 @@ import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, j
 import { Provider as PbsProvider, Datastore, S3Endpoint } from "@pulumi/pbs";
 import { RandomString, RandomPet } from "@pulumi/random";
 import { Purrl } from "@pulumiverse/purrl";
-import * as b2 from "@pulumi/b2";
+// import * as b2 from "@pulumi/b2";
 import * as http from "@pulumi/http";
 import { OPClient } from "@components/op.ts";
 import { ClusterDefinition, GlobalResources } from "@components/globals.ts";
@@ -114,76 +114,76 @@ export async function createBackupDatastores(
     length: 2,
   }).id.apply((z) => z.toLowerCase());
 
-  const b2Bucket = new b2.Bucket(
-    `${name}-bucket`,
-    {
-      bucketName: interpolate`${bucketName}-${suffix.result}`,
-      bucketType: "allPrivate",
-      bucketInfo: {
-        project: "home-operations",
-        cluster: name,
-        purpose: "pbs-backup",
-      },
-      lifecycleRules: [
-        {
-          fileNamePrefix: "",
-          daysFromHidingToDeleting: 1,
-        },
-      ],
-    },
-    {
-      parent: args.sourceServer,
-      provider: args.globals.backblazeProvider,
-      retainOnDelete: true,
-      protect: true,
-    },
-  );
+  // const b2Bucket = new b2.Bucket(
+  //   `${name}-bucket`,
+  //   {
+  //     bucketName: interpolate`${bucketName}-${suffix.result}`,
+  //     bucketType: "allPrivate",
+  //     bucketInfo: {
+  //       project: "home-operations",
+  //       cluster: name,
+  //       purpose: "pbs-backup",
+  //     },
+  //     lifecycleRules: [
+  //       {
+  //         fileNamePrefix: "",
+  //         daysFromHidingToDeleting: 1,
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     parent: args.sourceServer,
+  //     provider: args.globals.backblazeProvider,
+  //     retainOnDelete: true,
+  //     protect: true,
+  //   },
+  // );
 
-  // b2 buckets, application key, minio buckets
-  const b2BucketApplicationKey = new b2.ApplicationKey(
-    `${name}-bucket-application-key`,
-    {
-      keyName: interpolate`${name}-${suffix.result}`,
-      bucketId: b2Bucket.id,
-      capabilities: [
-        "deleteFiles",
-        "listAllBucketNames",
-        "listBuckets",
-        "listFiles",
-        "readBucketEncryption",
-        "readBucketLogging",
-        "readBucketNotifications",
-        "readBucketReplications",
-        "readBuckets",
-        "readFiles",
-        "shareFiles",
-        "writeBucketEncryption",
-        "writeBucketLogging",
-        "writeBucketNotifications",
-        "writeBucketReplications",
-        "writeFiles",
-      ],
-    },
-    { parent: args.sourceServer, provider: args.globals.backblazeProvider },
-  );
+  // // b2 buckets, application key, minio buckets
+  // const b2BucketApplicationKey = new b2.ApplicationKey(
+  //   `${name}-bucket-application-key`,
+  //   {
+  //     keyName: interpolate`${name}-${suffix.result}`,
+  //     bucketId: b2Bucket.id,
+  //     capabilities: [
+  //       "deleteFiles",
+  //       "listAllBucketNames",
+  //       "listBuckets",
+  //       "listFiles",
+  //       "readBucketEncryption",
+  //       "readBucketLogging",
+  //       "readBucketNotifications",
+  //       "readBucketReplications",
+  //       "readBuckets",
+  //       "readFiles",
+  //       "shareFiles",
+  //       "writeBucketEncryption",
+  //       "writeBucketLogging",
+  //       "writeBucketNotifications",
+  //       "writeBucketReplications",
+  //       "writeFiles",
+  //     ],
+  //   },
+  //   { parent: args.sourceServer, provider: args.globals.backblazeProvider },
+  // );
 
-  const s3Endpoint = new S3Endpoint(
-    `${name}-bucket-s3-endpoint`,
-    {
-      s3EndpointId: interpolate`${name}-${suffix.result}`,
-      endpoint: "s3.us-east-005.backblazeb2.com",
-      accessKey: b2BucketApplicationKey.applicationKeyId,
-      secretKey: b2BucketApplicationKey.applicationKey,
-      pathStyle: true,
-      providerQuirks: ["skip-if-none-match-header"],
-    },
-    {
-      provider: args.sourceServer.provider,
-      parent: args.sourceServer,
-      retainOnDelete: true,
-      protect: true,
-    },
-  );
+  // const s3Endpoint = new S3Endpoint(
+  //   `${name}-bucket-s3-endpoint`,
+  //   {
+  //     s3EndpointId: interpolate`${name}-${suffix.result}`,
+  //     endpoint: "s3.us-east-005.backblazeb2.com",
+  //     accessKey: b2BucketApplicationKey.applicationKeyId,
+  //     secretKey: b2BucketApplicationKey.applicationKey,
+  //     pathStyle: true,
+  //     providerQuirks: ["skip-if-none-match-header"],
+  //   },
+  //   {
+  //     provider: args.sourceServer.provider,
+  //     parent: args.sourceServer,
+  //     retainOnDelete: true,
+  //     protect: true,
+  //   },
+  // );
 
   // const destinationBackblazeBucket = new Datastore(
   //   `${name}-b2`,
@@ -245,8 +245,8 @@ export async function createBackupDatastores(
     // sourceDatastore,
     // destinationDatastore,
     // destinationBackblazeBucket,
-    b2Bucket,
-    b2BucketApplicationKey,
+    // b2Bucket,
+    // b2BucketApplicationKey,
   };
 }
 

@@ -8,7 +8,7 @@ import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
 import { LmStudioLxc, getLmStudioProperties } from "./LmStudioLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import * as minio from "@pulumi/minio";
-import * as b2 from "@pulumi/b2";
+// import * as b2 from "@pulumi/b2";
 import { updateTailscaleAcls } from "./tailscale.ts";
 import { configureAdGuard } from "./adguard.ts";
 import { gatusDnsRecords } from "./StandardDns.ts";
@@ -52,28 +52,28 @@ const minioBucket = new minio.S3Bucket(
   },
 );
 
-const b2Bucket = new b2.Bucket(
-  `home-operations-b2-bucket`,
-  {
-    bucketName: pulumi.interpolate`home-operations`,
-    bucketType: "allPrivate",
-    bucketInfo: {
-      project: "home-operations",
-      purpose: "pulumi storage",
-    },
-    lifecycleRules: [
-      {
-        fileNamePrefix: "",
-        daysFromHidingToDeleting: 1,
-      },
-    ],
-  },
-  {
-    provider: globals.backblazeProvider,
-    protect: true,
-    retainOnDelete: true,
-  },
-);
+  // const b2Bucket = new b2.Bucket(
+  //   `home-operations-b2-bucket`,
+  //   {
+  //     bucketName: pulumi.interpolate`home-operations`,
+  //     bucketType: "allPrivate",
+  //     bucketInfo: {
+  //       project: "home-operations",
+  //       purpose: "pulumi storage",
+  //     },
+  //     lifecycleRules: [
+  //       {
+  //         fileNamePrefix: "",
+  //         daysFromHidingToDeleting: 1,
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     provider: globals.backblazeProvider,
+  //     protect: true,
+  //     retainOnDelete: true,
+  //   },
+  // );
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
   globals: globals,

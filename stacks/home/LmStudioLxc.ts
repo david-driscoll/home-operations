@@ -63,7 +63,7 @@ export class LmStudioLxc extends ComponentResource {
         nodeName: args.host.name,
         vmId: args.vmId,
         description: `LM Studio Container for ${cluster.title}`,
-        unprivileged: false, // Must be privileged for GPU passthrough
+        unprivileged: true, // Must be privileged for GPU passthrough
         operatingSystem: {
           templateFileId: "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst",
           type: "ubuntu",
