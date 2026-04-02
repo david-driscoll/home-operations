@@ -11,4 +11,8 @@ else
   echo "LM Studio already installed, skipping."
 fi
 
+"${HOME}/.local/bin/lms" get zai-org/glm-4.6v-flash
+"${HOME}/.local/bin/lms" get google/gemma-4-e4b
+"${HOME}/.local/bin/lms" get qwen/qwen3.5-4b
+
 exec "${HOME}/.local/bin/lms" server start --listen 0.0.0.0:1234

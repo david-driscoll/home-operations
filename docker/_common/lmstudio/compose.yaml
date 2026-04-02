@@ -17,7 +17,7 @@ services:
       - /dev/kfd:/dev/kfd
     group_add:
       - video
-      - render
+      # - render
     labels:
       traefik.enable: true
 
