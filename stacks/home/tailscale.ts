@@ -417,7 +417,7 @@ export async function updateTailscaleAcls(args: {
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
-  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.sharedDrive, tag.peerRelay, tag.mediaDevice]);
+  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox]);
   manager.setExitNode(tag.proxmox);
   manager.setRoute(subnets.home, [tag.proxmox]);
 

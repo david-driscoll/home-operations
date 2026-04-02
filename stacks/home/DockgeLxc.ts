@@ -400,7 +400,7 @@ export class DockgeLxc extends ComponentResource {
       )
       .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
-        z.forEach((s) => console.log(`Loaded docker stack ${s.name} from ${s.path}`));
+        z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       });
   }
@@ -457,7 +457,7 @@ export class DockgeLxc extends ComponentResource {
           if (host.indexOf(tailscaleDomain) > -1) {
             // this is a service domain
             const service = host.replace(`.${tailscaleDomain}`, "");
-            console.log(`Creating Tailscale DNS entry for service ${service}`);
+            log.info(`Creating Tailscale DNS entry for service ${service}`);
 
             new remote.Command(`${stackName}-tailscale-service-${service}`, {
               connection: this.remoteConnection,

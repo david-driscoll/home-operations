@@ -63,7 +63,10 @@ export class LmStudioLxc extends ComponentResource {
         nodeName: args.host.name,
         vmId: args.vmId,
         description: `LM Studio Container for ${cluster.title}`,
-        unprivileged: true, // Must be privileged for GPU passthrough
+        unprivileged: false,
+        features: {
+          nesting: true,
+        },
         operatingSystem: {
           templateFileId: "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst",
           type: "ubuntu",
@@ -103,10 +106,7 @@ export class LmStudioLxc extends ComponentResource {
 
     // Install Tailscale
     const tailscaleSet = installTailscaleLxc({
-      connection: {
-        host: tailscaleHostname,
-        user: "root",
-      },
+      connection: args.host.remoteConnection,
       name,
       parent: this,
       tailscaleName: tailscaleHostname,
@@ -162,39 +162,31 @@ echo "AMD GPU passthrough configured and container restarted"
     const internalIpAddress = (this.internalIpAddress = getIpCommand.stdout.apply((ip) => ip.trim()));
 
     // Configure SSH environment for Tailscale
-    const configureSshEnv = new remote.Command(
-      `${name}-configure-ssh-env`,
-      {
-        connection: {
-          host: tailscaleHostname,
-          user: "root",
-        },
-        create: interpolate`pct exec ${this.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
-      },
-      mergeOptions(cro, { dependsOn: [getIpCommand] }),
-    );
+    // const configureSshEnv = new remote.Command(
+    //   `${name}-configure-ssh-env`,
+    //   {
+    //     connection: args.host.remoteConnection,
+    //     create: interpolate`pct exec ${this.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+    //     delete: interpolate`pct exec ${this.vmId} -- rm -f /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+    //   },
+    //   mergeOptions(cro, { dependsOn: [getIpCommand] }),
+    // );
 
     // Install dependencies
     const installDeps = new remote.Command(
       `${name}-install-deps`,
       {
-        connection: {
-          host: tailscaleHostname,
-          user: "root",
-        },
+        connection: args.host.remoteConnection,
         create: interpolate`pct exec ${this.vmId} -- apt-get update && apt-get install -y curl wget jq ca-certificates`,
       },
-      mergeOptions(cro, { dependsOn: [configureSshEnv] }),
+      mergeOptions(cro, { dependsOn: [getIpCommand] }),
     );
 
     // Install LM Studio headless (llmster)
     const installLmStudio = new remote.Command(
       `${name}-install-lmstudio`,
       {
-        connection: {
-          host: tailscaleHostname,
-          user: "root",
-        },
+        connection: args.host.remoteConnection,
         create: interpolate`pct exec ${this.vmId} -- curl -fsSL https://lmstudio.ai/install.sh | bash && pct exec ${this.vmId} -- lms --version`,
       },
       mergeOptions(cro, { dependsOn: [installDeps] }),
@@ -227,7 +219,7 @@ WantedBy=multi-user.target
       remotePath: "/etc/systemd/system/lmstudio.service",
       content: lmstudioServiceConfig,
       parent: this,
-      dependsOn: [installLmStudio],
+      dependsOn: [tailscaleSet, installLmStudio],
     });
 
     // Enable and start LM Studio service

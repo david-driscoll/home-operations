@@ -146,6 +146,7 @@ export class ProxmoxHost extends ComponentResource {
         {
           connection: connection,
           create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+          delete: interpolate`rm -f /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
         },
         cro,
       );
