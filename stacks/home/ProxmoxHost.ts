@@ -42,6 +42,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly tailscaleIpAddress: TailscaleIp;
   public readonly macAddress: string;
   public readonly pveProvider: ProxmoxVEProvider;
+  public readonly rootPveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleName: Output<string>;
@@ -94,6 +95,24 @@ export class ProxmoxHost extends ComponentResource {
         randomVmIdEnd: 1999,
         endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
         apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
+        ssh: {
+          username: "root",
+          password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
+        },
+      },
+      cro,
+    );
+    // Create ProxmoxVE Provider
+    this.rootPveProvider = new ProxmoxVEProvider(
+      `${name}-root-pve-provider`,
+      {
+        randomVmIds: true,
+        randomVmIdStart: 1000,
+        randomVmIdEnd: 1999,
+        endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
+        username: "root@pam",
+        password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
+        // apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
         ssh: {
           username: "root",
           password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),

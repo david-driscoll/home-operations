@@ -93,15 +93,10 @@ export class LmStudioLxc extends ComponentResource {
             servers: dns.internalIps,
           },
         },
-          started: true,
-          startOnBoot: true,
-          // AMD GPU passthrough: render node + ROCm KFD
-          devicePassthroughs: [
-            { path: "/dev/dri/renderD128", mode: "0666" },
-            { path: "/dev/kfd", mode: "0666" },
-          ],
+        started: true,
+        startOnBoot: true,
       },
-      mergeOptions(cro, { provider: args.host.pveProvider }),
+      mergeOptions(cro, { provider: args.host.rootPveProvider }),
     );
 
     this.vmId = container.vmId;
@@ -120,15 +115,36 @@ export class LmStudioLxc extends ComponentResource {
       vmId: this.vmId,
     });
 
-    // Set apparmor to unconfined so the container can access the AMD GPU devices
+    // After container creation, inject AMD GPU passthrough config then (re)start the container.
+    // Using pct.conf directly avoids the provider treating vzcreate warnings as errors.
     const configureGpuPassthrough = new remote.Command(
       `${name}-configure-gpu`,
       {
         connection: args.host.remoteConnection,
         create: interpolate`
-grep -qxF 'lxc.apparmor.profile: unconfined' /etc/pve/lxc/${this.vmId}.conf || \
-  echo 'lxc.apparmor.profile: unconfined' >> /etc/pve/lxc/${this.vmId}.conf
-echo "AppArmor profile set to unconfined"
+CONF=/etc/pve/lxc/${this.vmId}.conf
+
+# Get dynamic major:minor numbers for the AMD GPU devices
+RENDERD_MAJ=\$(stat -c '%t' /dev/dri/renderD128 2>/dev/null | xargs printf '%d')
+RENDERD_MIN=\$(stat -c '%T' /dev/dri/renderD128 2>/dev/null | xargs printf '%d')
+KFD_MAJ=\$(stat -c '%t' /dev/kfd 2>/dev/null | xargs printf '%d')
+KFD_MIN=\$(stat -c '%T' /dev/kfd 2>/dev/null | xargs printf '%d')
+
+add_if_missing() {
+  grep -qxF "$1" "$CONF" || echo "$1" >> "$CONF"
+}
+
+add_if_missing "lxc.apparmor.profile: unconfined"
+add_if_missing "lxc.cgroup2.devices.allow: c \${RENDERD_MAJ}:\${RENDERD_MIN} rwm"
+add_if_missing "lxc.cgroup2.devices.allow: c \${KFD_MAJ}:\${KFD_MIN} rwm"
+add_if_missing "lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file"
+add_if_missing "lxc.mount.entry: /dev/kfd dev/kfd none bind,optional,create=file"
+
+# Restart the container to apply the new config
+pct stop ${this.vmId} 2>/dev/null || true
+sleep 2
+pct start ${this.vmId}
+echo "AMD GPU passthrough configured and container restarted"
 `,
       },
       mergeOptions(cro, { dependsOn: [container] }),
