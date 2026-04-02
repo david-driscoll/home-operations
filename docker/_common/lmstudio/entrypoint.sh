@@ -14,9 +14,9 @@ fi
 
 export PATH="${HOME}/.lmstudio/bin:${PATH}"
 
+lms server start
 lms get zai-org/glm-4.6v-flash --yes
 lms get google/gemma-4-e4b --yes
 lms get qwen/qwen3.5-4b --yes
-lms server start
 
 sleep infinity
