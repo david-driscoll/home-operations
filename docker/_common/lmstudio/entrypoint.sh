@@ -18,4 +18,4 @@ lms get zai-org/glm-4.6v-flash --yes
 lms get google/gemma-4-e4b --yes
 lms get qwen/qwen3.5-4b --yes
 
-exec lms server start --listen 0.0.0.0:1234
+exec lms server start
