@@ -5,7 +5,7 @@ set -e
 # This mirrors the llm-graph-builder init pattern: idempotent, skips if already done.
 if [ ! -f "${HOME}/.local/bin/lms" ]; then
   echo "Installing LM Studio headless (lms)..."
-  apt-get update && apt-get install -y libatomic1 libgomp
+  apt-get update && apt-get install -y libatomic1
   curl -fsSL https://lmstudio.ai/install.sh | bash
   echo "LM Studio installed successfully."
 else
