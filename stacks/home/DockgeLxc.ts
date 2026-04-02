@@ -241,8 +241,8 @@ export class DockgeLxc extends ComponentResource {
     this.device = all([
       this.tailscaleIpAddress,
       runtime.isDryRun()
-      ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
-      : getDeviceOutput(
+        ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
+        : getDeviceOutput(
             { name: tailscaleHostname },
             {
               provider: args.globals.tailscaleProvider,

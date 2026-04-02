@@ -173,11 +173,10 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   registerTailscaleService,
 });
 
-
 const celestiaLmStudioLxc = new LmStudioLxc("celestia-lmstudio", {
   globals,
   host: celestiaHost,
-  vmId: 301,
+  vmId: 340,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   registerTailscaleService,
@@ -186,7 +185,7 @@ const celestiaLmStudioLxc = new LmStudioLxc("celestia-lmstudio", {
 const lunaLmStudioLxc = new LmStudioLxc("luna-lmstudio", {
   globals,
   host: lunaHost,
-  vmId: 401,
+  vmId: 440,
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
   registerTailscaleService,

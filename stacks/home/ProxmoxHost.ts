@@ -13,6 +13,7 @@ import { getTailscaleDevice, getTailscaleSection, writeTempFile } from "@compone
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { Purrl } from "@pulumiverse/purrl";
+import proxmox from "@muhlba91/pulumi-proxmoxve";
 import { Logging } from "@pulumi/command/remote/index.js";
 import { TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
 

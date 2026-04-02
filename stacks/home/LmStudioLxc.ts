@@ -5,7 +5,7 @@ import { ClusterDefinition, GlobalResources } from "../../components/globals.ts"
 import { getContainerHostnames } from "./helper.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
-import { getTailscaleClient, installTailscale } from "@components/tailscale.ts";
+import { getTailscaleClient, installTailscale, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import proxmox from "@muhlba91/pulumi-proxmoxve";
@@ -65,7 +65,7 @@ export class LmStudioLxc extends ComponentResource {
         description: `LM Studio Container for ${cluster.title}`,
         unprivileged: false, // Must be privileged for GPU passthrough
         operatingSystem: {
-          templateFileId: "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst",
+          templateFileId: "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst",
           type: "ubuntu",
         },
         // GPU workload resource requirements
@@ -93,41 +93,42 @@ export class LmStudioLxc extends ComponentResource {
             servers: dns.internalIps,
           },
         },
-        started: true,
+          started: true,
+          startOnBoot: true,
+          // AMD GPU passthrough: render node + ROCm KFD
+          devicePassthroughs: [
+            { path: "/dev/dri/renderD128", mode: "0666" },
+            { path: "/dev/kfd", mode: "0666" },
+          ],
       },
       mergeOptions(cro, { provider: args.host.pveProvider }),
     );
 
     this.vmId = container.vmId;
 
-    // Configure GPU device passthrough on the host
-    // This adds the necessary cgroup2 device permissions and mount entries for AMD GPU
+    // Install Tailscale
+    const tailscaleSet = installTailscaleLxc({
+      connection: {
+        host: tailscaleHostname,
+        user: "root",
+      },
+      name,
+      parent: this,
+      tailscaleName: tailscaleHostname,
+      globals: args.globals,
+      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
+      vmId: this.vmId,
+    });
+
+    // Set apparmor to unconfined so the container can access the AMD GPU devices
     const configureGpuPassthrough = new remote.Command(
       `${name}-configure-gpu`,
       {
         connection: args.host.remoteConnection,
         create: interpolate`
-# Get the major and minor device numbers
-RENDERD_MAJOR=\$(stat -c '%t' /dev/dri/renderD128 | xargs printf '%d')
-RENDERD_MINOR=\$(stat -c '%T' /dev/dri/renderD128 | xargs printf '%d')
-KFD_MAJOR=\$(stat -c '%t' /dev/kfd | xargs printf '%d')
-KFD_MINOR=\$(stat -c '%T' /dev/kfd | xargs printf '%d')
-
-# Backup the container config
-cp /etc/pve/lxc/${this.vmId}.conf /etc/pve/lxc/${this.vmId}.conf.backup
-
-# Add GPU device passthrough configuration
-cat >> /etc/pve/lxc/${this.vmId}.conf << 'EOF'
-
-# AMD GPU passthrough configuration
-lxc.apparmor.profile: unconfined
-lxc.cgroup2.devices.allow: c \$RENDERD_MAJOR:\$RENDERD_MINOR rwm
-lxc.cgroup2.devices.allow: c \$KFD_MAJOR:\$KFD_MINOR rwm
-lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file
-lxc.mount.entry: /dev/kfd dev/kfd none bind,optional,create=file
-EOF
-
-echo "GPU passthrough configuration added successfully"
+grep -qxF 'lxc.apparmor.profile: unconfined' /etc/pve/lxc/${this.vmId}.conf || \
+  echo 'lxc.apparmor.profile: unconfined' >> /etc/pve/lxc/${this.vmId}.conf
+echo "AppArmor profile set to unconfined"
 `,
       },
       mergeOptions(cro, { dependsOn: [container] }),
@@ -152,7 +153,7 @@ echo "GPU passthrough configuration added successfully"
           host: tailscaleHostname,
           user: "root",
         },
-        create: interpolate`mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
+        create: interpolate`pct exec ${this.vmId} -- mkdir -p /etc/ssh/sshd_config.d/ && echo 'AcceptEnv TS_AUTHKEY' > /etc/ssh/sshd_config.d/99-tailscale.conf && systemctl restart sshd`,
       },
       mergeOptions(cro, { dependsOn: [getIpCommand] }),
     );
@@ -165,7 +166,7 @@ echo "GPU passthrough configuration added successfully"
           host: tailscaleHostname,
           user: "root",
         },
-        create: interpolate`apt-get update && apt-get install -y curl wget jq ca-certificates`,
+        create: interpolate`pct exec ${this.vmId} -- apt-get update && apt-get install -y curl wget jq ca-certificates`,
       },
       mergeOptions(cro, { dependsOn: [configureSshEnv] }),
     );
@@ -178,7 +179,7 @@ echo "GPU passthrough configuration added successfully"
           host: tailscaleHostname,
           user: "root",
         },
-        create: interpolate`curl -fsSL https://lmstudio.ai/install.sh | bash && lms --version`,
+        create: interpolate`pct exec ${this.vmId} -- curl -fsSL https://lmstudio.ai/install.sh | bash && pct exec ${this.vmId} -- lms --version`,
       },
       mergeOptions(cro, { dependsOn: [installDeps] }),
     );
@@ -225,19 +226,6 @@ WantedBy=multi-user.target
       },
       mergeOptions(cro, { dependsOn: [copySystemdFile] }),
     );
-
-    // Install Tailscale
-    const tailscaleSet = installTailscale({
-      connection: {
-        host: tailscaleHostname,
-        user: "root",
-      },
-      name,
-      parent: this,
-      tailscaleName: tailscaleHostname,
-      globals: args.globals,
-      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
-    });
 
     // Get Tailscale device
     const device = (this.device = runtime.isDryRun()

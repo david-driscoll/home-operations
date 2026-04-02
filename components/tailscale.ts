@@ -32,6 +32,66 @@ export async function getTailscaleClient(): Promise<Client<paths>> {
   return client;
 }
 
+export function installTailscaleLxc({
+  connection,
+  name,
+  parent,
+  tailscaleName,
+  vmId,
+  globals,
+  args = { acceptDns: true, acceptRoutes: true, ssh: true },
+}: {
+  connection: types.input.remote.ConnectionArgs;
+  globals: GlobalResources;
+  name: string;
+  tailscaleName: pulumi.Input<string>;
+  parent: pulumi.Resource;
+  vmId: pulumi.Input<number>;
+  args?: {
+    acceptDns?: boolean;
+    acceptRoutes?: boolean;
+    ssh?: boolean;
+    advertiseExitNode?: boolean;
+  };
+}) {
+  const installTailscale = new remote.Command(
+    `${name}-tailscale-install`,
+    {
+      connection,
+      create: pulumi.interpolate`pct exec ${vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
+    },
+    { parent, dependsOn: [] },
+  );
+
+  const tailscaleArgs = pulumi.interpolate`--hostname=${tailscaleName} ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
+    args.ssh ? "--ssh" : "--ssh=false"
+  } ${args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
+
+  // Set Tailscale configuration
+  const tailscaleUp = new remote.Command(
+    `${name}-tailscale-up`,
+    {
+      connection,
+      create: pulumi.interpolate`pct exec ${vmId} -- tailscale up ${tailscaleArgs} --reset`,
+      triggers: [installTailscale.id],
+      // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+    },
+    { parent, dependsOn: [installTailscale] },
+  );
+
+  const tailscaleSet = new remote.Command(
+    `${name}-tailscale-set`,
+    {
+      connection,
+      create: pulumi.interpolate`pct exec ${vmId} -- tailscale set ${tailscaleArgs} --auto-update `,
+      triggers: [installTailscale.id, tailscaleUp.id],
+      // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
+    },
+    { parent, dependsOn: [tailscaleUp, installTailscale] },
+  );
+  return tailscaleSet;
+}
+
 export function installTailscale({
   connection,
   name,
