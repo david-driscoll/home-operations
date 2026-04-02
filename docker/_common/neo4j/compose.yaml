@@ -21,10 +21,20 @@ services:
       traefik.http.routers.${APP}.tls.certresolver: le
       traefik.http.routers.${APP}.service: ${APP}
 
+      traefik.tcp.routers.${APP}-bolt.rule: HostSNI(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.tcp.routers.${APP}-bolt.entrypoints: bolt
+      traefik.tcp.routers.${APP}-bolt.tls.certresolver: le
+      traefik.tcp.services.${APP}-bolt.loadbalancer.server.port: 7687
+
       # Tailscale internal routing
       traefik.http.routers.${APP}-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
       traefik.http.routers.${APP}-tailscale.entrypoints: tailscale
       traefik.http.routers.${APP}-tailscale.service: ${APP}
+
+      traefik.tcp.routers.${APP}-bolt-tailscale.rule: HostSNI(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.tcp.routers.${APP}-bolt-tailscale.entrypoints: bolt
+      traefik.tcp.routers.${APP}-bolt-tailscale.tls.certresolver: le
+      traefik.tcp.services.${APP}-bolt-tailscale.loadbalancer.server.port: 7687
 
       # Service port for HTTP (Neo4j Browser)
       traefik.http.services.${APP}.loadbalancer.server.port: 7474

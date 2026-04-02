@@ -50,6 +50,11 @@ entryPoints:
         readTimeout: "0s"
   metrics:
     address: ":8082"
+  bolt:
+    address: ":7687"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
 
 serversTransport:
   insecureSkipVerify: true
