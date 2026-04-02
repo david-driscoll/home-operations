@@ -8,6 +8,10 @@ services:
     environment:
       TZ: ${TIMEZONE}
       LMS_SERVER_HOST: "0.0.0.0"
+      # ROCm environment for AMD GPU support
+      ROCM_HOME: /opt/rocm
+      LD_LIBRARY_PATH: /opt/rocm/lib:/opt/rocm/lib64:${LD_LIBRARY_PATH}
+      PATH: /opt/rocm/bin:${PATH}
     cpu_count: 2
     volumes:
       # Persist the lms binary and models across container restarts/rebuilds.
