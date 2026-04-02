@@ -5,7 +5,6 @@ import { ClusterDefinition, createClusterDefinition, GlobalResources } from "../
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
-import { LmStudioLxc, getLmStudioProperties } from "./LmStudioLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
@@ -52,28 +51,28 @@ const minioBucket = new minio.S3Bucket(
   },
 );
 
-  // const b2Bucket = new b2.Bucket(
-  //   `home-operations-b2-bucket`,
-  //   {
-  //     bucketName: pulumi.interpolate`home-operations`,
-  //     bucketType: "allPrivate",
-  //     bucketInfo: {
-  //       project: "home-operations",
-  //       purpose: "pulumi storage",
-  //     },
-  //     lifecycleRules: [
-  //       {
-  //         fileNamePrefix: "",
-  //         daysFromHidingToDeleting: 1,
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     provider: globals.backblazeProvider,
-  //     protect: true,
-  //     retainOnDelete: true,
-  //   },
-  // );
+// const b2Bucket = new b2.Bucket(
+//   `home-operations-b2-bucket`,
+//   {
+//     bucketName: pulumi.interpolate`home-operations`,
+//     bucketType: "allPrivate",
+//     bucketInfo: {
+//       project: "home-operations",
+//       purpose: "pulumi storage",
+//     },
+//     lifecycleRules: [
+//       {
+//         fileNamePrefix: "",
+//         daysFromHidingToDeleting: 1,
+//       },
+//     ],
+//   },
+//   {
+//     provider: globals.backblazeProvider,
+//     protect: true,
+//     retainOnDelete: true,
+//   },
+// );
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
   globals: globals,
@@ -173,23 +172,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   registerTailscaleService,
 });
 
-const celestiaLmStudioLxc = new LmStudioLxc("celestia-lmstudio", {
-  globals,
-  host: celestiaHost,
-  vmId: 340,
-  cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  registerTailscaleService,
-});
-
-const lunaLmStudioLxc = new LmStudioLxc("luna-lmstudio", {
-  globals,
-  host: lunaHost,
-  vmId: 440,
-  cluster: lunaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  registerTailscaleService,
-});
 
 try {
   const tailscaleManager = await updateTailscaleAcls({
@@ -229,13 +211,11 @@ export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHo
 export const celestia = {
   proxmox: getProxmoxProperties(celestiaHost),
   dockge: getDockageProperties(celestiaDockgeRuntime),
-  lmstudio: getLmStudioProperties(),
   backup: celestiaHost.backupVolumes!,
 };
 export const luna = {
   proxmox: getProxmoxProperties(lunaHost),
   dockge: getDockageProperties(lunaDockgeRuntime),
-  lmstudio: getLmStudioProperties(),
   backup: lunaHost.backupVolumes!,
 };
 // const users = await tailscale.

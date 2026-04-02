@@ -1,0 +1,51 @@
+services:
+  lmstudio:
+    container_name: lmstudio
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      TZ: ${TIMEZONE}
+    volumes:
+      # Persist the lms binary and models across container restarts/rebuilds.
+      # entrypoint.sh checks this volume and skips install if lms is already present.
+      - lmstudio-home:/root/.local
+      - lmstudio-models:/root/.lmstudio
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/kfd:/dev/kfd
+    group_add:
+      - video
+      - render
+    labels:
+      traefik.enable: true
+
+      traefik.http.routers.${APP}.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.${APP}.entrypoints: websecure
+      traefik.http.routers.${APP}.tls.certresolver: le
+      traefik.http.routers.${APP}.service: ${APP}
+
+      traefik.http.routers.${APP}-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.http.routers.${APP}-tailscale.entrypoints: tailscale
+      traefik.http.routers.${APP}-tailscale.service: ${APP}
+
+      traefik.http.services.${APP}.loadbalancer.server.port: 1234
+      traefik.http.services.${APP}.loadbalancer.healthcheck.path: /v1/models
+      traefik.http.services.${APP}.loadbalancer.healthcheck.port: 1234
+      traefik.http.services.${APP}.loadbalancer.healthcheck.interval: 30s
+    networks:
+      - dockge_default
+
+volumes:
+  lmstudio-home:
+  lmstudio-models:
+
+networks:
+  dockge_default:
+    external: true
+
+x-dockge:
+  urls:
+    - https://${APP}.${CLUSTER_DOMAIN}
+    - http://${APP}-${host}.${tailscaleDomain}:1234/v1
