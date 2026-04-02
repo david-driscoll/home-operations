@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       TZ: ${TIMEZONE}
+    cpu_count: 2
     volumes:
       # Persist the lms binary and models across container restarts/rebuilds.
       # entrypoint.sh checks this volume and skips install if lms is already present.
