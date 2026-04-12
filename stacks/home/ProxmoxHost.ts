@@ -4,12 +4,12 @@ import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { getTailscaleClient, installTailscale } from "../../components/tailscale.js";
+import { createPeerRelayRule, getTailscaleClient, updateTailscaleProxmox } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { TruenasVm } from "./TruenasVm.ts";
-import { getTailscaleDevice, getTailscaleSection, writeTempFile } from "@components/helpers.ts";
+import { copyFileToRemote, getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { Purrl } from "@pulumiverse/purrl";
@@ -26,14 +26,14 @@ export interface ProxmoxHostArgs {
   tailscaleIpAddress: TailscaleIp;
   tailscaleTags?: TailscaleTags[];
   macAddress: string;
-  isProxmoxBackupServer: boolean;
   remote: boolean;
   internalIpAddress?: TailscaleIp;
   installTailscale?: boolean;
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
   shortName?: string;
-  tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
+  peerRelay?: boolean;
+  tailscaleArgs?: Parameters<typeof updateTailscaleProxmox>[0]["args"];
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -126,7 +126,7 @@ export class ProxmoxHost extends ComponentResource {
     }
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleHostname,
+      host: this.tailscaleIpAddress,
       user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
     });
@@ -146,7 +146,7 @@ export class ProxmoxHost extends ComponentResource {
         `${name}-install-jq`,
         {
           connection: connection,
-          create: "apt-get install -y jq",
+          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
         },
         mergeOptions(cro, { dependsOn: [] }),
       );
@@ -177,13 +177,40 @@ export class ProxmoxHost extends ComponentResource {
       //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
       // );
 
-      const tailscaleSet = installTailscale({
+      const tailscaleForwardingConfig = copyFileToRemote(`${name}-tailscale-forwarding-config`, {
+        connection,
+        remotePath: "/etc/sysctl.d/99-tailscale.conf",
+        content: `net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+`,
+        parent: this,
+      });
+
+      const tailscaleForwarding = new remote.Command(
+        `${name}-tailscale-forwarding`,
+        {
+          connection,
+          create: "sysctl -p /etc/sysctl.d/99-tailscale.conf",
+          triggers: [tailscaleForwardingConfig.id],
+        },
+        mergeOptions(cro, { dependsOn: [tailscaleForwardingConfig] }),
+      );
+
+      const tailscaleSet = updateTailscaleProxmox({
         connection,
         name,
         parent: this,
-        tailscaleName: this.tailscaleHostname,
+        tailscaleName: this.tailscaleName,
         globals: args.globals,
-        args: { acceptDns: true, acceptRoutes: true, ssh: true, advertiseExitNode: true, ...args.tailscaleArgs },
+        dependsOn: [tailscaleForwarding],
+        args: {
+          acceptDns: false,
+          acceptRoutes: false,
+          ssh: true,
+          advertiseExitNode: true,
+          relayServerPort: args.peerRelay ? createPeerRelayRule(this.internalIpAddress, args.globals).result : undefined,
+          ...args.tailscaleArgs,
+        },
       });
       // Configure SSH environment
 
@@ -193,7 +220,7 @@ export class ProxmoxHost extends ComponentResource {
         {
           connection: connection,
           remotePath: "/etc/cron.weekly/tailscale",
-          source: new asset.FileAsset(args.isProxmoxBackupServer ? "scripts/tailscale-pbs.sh" : "scripts/tailscale.sh"),
+          source: new asset.FileAsset("scripts/tailscale.sh"),
         },
         mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] }),
       );
@@ -216,7 +243,7 @@ export class ProxmoxHost extends ComponentResource {
             {
               provider: args.globals.tailscaleProvider,
               parent: this,
-              dependsOn: [tailscaleSet],
+              dependsOn: [tailscaleSetCert, tailscaleSet],
             },
           ).apply(async (result) => {
             try {

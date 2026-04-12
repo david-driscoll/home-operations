@@ -1,5 +1,5 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown, Unwrap } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown, Unwrap } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
@@ -8,7 +8,7 @@ import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { DeviceKey, DeviceTags, getDeviceOutput, GetDeviceResult } from "@pulumi/tailscale";
 import { RandomPassword, RandomString } from "@pulumi/random";
-import { getTailscaleClient, installTailscale } from "@components/tailscale.ts";
+import { getTailscaleClient, installTailscaleLxc } from "@components/tailscale.ts";
 import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -23,6 +23,7 @@ import { BackupJobManager } from "./jobs.ts";
 import { unique } from "moderndash";
 import { Command } from "@pulumi/command/remote/index.js";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
+import { runCommunityScriptLxc } from "./lxc.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -30,6 +31,7 @@ const dockerPath = resolve(__dirname, "../../docker");
 export type OPClientItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface DockgeLxcArgs {
+  createDockerLxc?: boolean;
   globals: GlobalResources;
   host: ProxmoxHost;
   vmId: number;
@@ -37,10 +39,19 @@ export interface DockgeLxcArgs {
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
-  tailscaleArgs?: Parameters<typeof installTailscale>[0]["args"];
+  tailscaleArgs?: Parameters<typeof installTailscaleLxc>[0]["args"];
   sftpKey: tls.PrivateKey;
   registerTailscaleService(service: string): void;
 }
+export interface ExternalServiceOpts {
+  name: string;
+  hostname: Input<string>;
+  port: Input<number>;
+  middleware?: string[];
+  certResolver?: string;
+  entrypoints?: string[];
+}
+
 export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleIpAddress: Output<TailscaleIp>;
@@ -52,6 +63,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
   private backupJobManager: BackupJobManager;
+  private readonly ensureDynamicDir: remote.Command;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
   registerTailscaleService: (service: string) => void;
@@ -70,21 +82,62 @@ export class DockgeLxc extends ComponentResource {
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
-    this.tailscaleName = tailscaleName;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
     this.tailscaleIpAddress = output(
       args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp),
     );
 
+    // Check if the Docker LXC container already exists on the Proxmox host
+    const lxcExists = new remote.Command(
+      `${name}-check-lxc-exists`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct status ${args.vmId} 2>/dev/null && echo exists || echo missing`,
+      },
+      mergeOptions(cro, { dependsOn: [], ignoreChanges: ["create"] }),
+    );
+
+    var depends = [];
+    if (args.createDockerLxc) {
+      // Create the Docker LXC container via community-scripts.
+      // mode=generated skips all whiptail menus and reads var_* directly from the environment.
+      const createDockerLxc = runCommunityScriptLxc(
+        `${name}-create-docker-lxc`,
+        {
+          connection: args.host.remoteConnection,
+          script: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docker.sh",
+          vars: {
+            ctid: args.vmId,
+            hostname: name,
+            unprivileged: 1,
+            cpu: 4,
+            ram: 8192,
+            disk: 64,
+            os: "debian",
+            version: 13,
+            nesting: 1,
+            fuse: "yes",
+            gpu: "yes",
+            ipv6_method: "none",
+            mount_fs: "nfs",
+            ...(args.ipAddress ? { net: `${args.ipAddress}/16`, gateway: "10.10.0.1" } : {}),
+          },
+        },
+        mergeOptions(cro, { dependsOn: [lxcExists] }),
+      );
+      depends.push(createDockerLxc);
+    }
+
     // update hostname on machine
     const setHostname = new remote.Command(
       `${name}-set-hostname`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
+        create: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
+        update: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { dependsOn: [...depends] }),
     );
 
     const ipAddress = (this.ipAddress = args.ipAddress
@@ -103,11 +156,39 @@ export class DockgeLxc extends ComponentResource {
     this.credential = output(args.credential);
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleHostname,
+      host: this.tailscaleIpAddress,
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-    const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName, globals: args.globals, args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs } });
+    const tailscaleSet = installTailscaleLxc({
+      connection: args.host.remoteConnection,
+      name,
+      parent: this,
+      tailscaleName,
+      globals: args.globals,
+      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
+      vmId: args.vmId,
+      dependsOn: [setHostname],
+    });
+
+    const sshReady = new remote.Command(
+      `${name}-ssh-ready`,
+      {
+        connection: this.remoteConnection,
+        create: "hostname",
+      },
+      mergeOptions(cro, { dependsOn: [tailscaleSet] }),
+    );
+
+    // Install Dockge addon inside the container via community-scripts
+    const installDockge = new remote.Command(
+      `${name}-install-dockge`,
+      {
+        connection: this.remoteConnection,
+        create: `printf "y\ny\n" | bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockge.sh)"`,
+      },
+      mergeOptions(cro, { dependsOn: [sshReady], ignoreChanges: ["create"] }),
+    );
 
     this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [setHostname] }));
 
@@ -122,7 +203,16 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
       },
-      mergeOptions(cro, { dependsOn: [setHostname] }),
+      mergeOptions(cro, { dependsOn: [installDockge] }),
+    );
+
+    this.ensureDynamicDir = new remote.Command(
+      `${name}-traefik-dynamic-dir`,
+      {
+        connection: this.remoteConnection,
+        create: "mkdir -p /opt/stacks/traefik/dynamic",
+      },
+      mergeOptions(cro, { dependsOn: [installDockge] }),
     );
 
     const keyWrites: any[] = [];
@@ -260,10 +350,16 @@ export class DockgeLxc extends ComponentResource {
       return result;
     });
 
-    new remote.Command(`${name}-install-tools`, {
-      connection: this.remoteConnection,
-      create: interpolate`apt-get update && apt-get install -y restic`,
-    });
+    new remote.Command(
+      `${name}-install-tools`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`apt-get update && apt-get install -y restic`,
+      },
+      mergeOptions(cro, { dependsOn: [installDockge] }),
+    );
+
+    this.tailscaleName = this.device.apply((d) => d.name!);
 
     // Create device tags
     const deviceTags = new DeviceTags(
@@ -318,10 +414,14 @@ export class DockgeLxc extends ComponentResource {
       cro,
     );
 
-    new remote.Command(`${name}-delete-docker-daemon`, {
-      connection: this.remoteConnection,
-      create: interpolate`rm -f /etc/docker/daemon.json`,
-    });
+    new remote.Command(
+      `${name}-delete-docker-daemon`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`rm -f /etc/docker/daemon.json`,
+      },
+      mergeOptions(cro, { dependsOn: [installDockge] }),
+    );
 
     this.backupJobManager = new BackupJobManager(`${name}-backup-job-manager`, {
       cluster: this,
@@ -334,6 +434,37 @@ export class DockgeLxc extends ComponentResource {
 
   public createBackupUptime(): Output<{ "external-endpoints": ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
     return this.backupJobManager.createUptime();
+  }
+
+  public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]): ReturnType<typeof copyFileToRemote> {
+    const entrypoints = opts.entrypoints ?? ["websecure"];
+    const certResolver = opts.certResolver ?? "le";
+    const entrypointsYaml = entrypoints.map((ep) => `        - ${ep}`).join("\n");
+    const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
+
+    const content = interpolate`http:
+  routers:
+    ${opts.name}:
+      rule: "Host(\`${opts.hostname}\`)"
+      entryPoints:
+${entrypointsYaml}
+      service: ${opts.name}
+      tls:
+        certResolver: ${certResolver}
+${middlewareYaml}  services:
+    ${opts.name}:
+      loadBalancer:
+        servers:
+          - url: http://${this.cluster.rootDomain}:${opts.port}
+`;
+
+    return copyFileToRemote(`${opts.name}-traefik-route`, {
+      connection: this.remoteConnection,
+      remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
+      content: content,
+      parent: this,
+      dependsOn: [this.ensureDynamicDir, ...(dependsOn ?? [])],
+    });
   }
 
   public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<Command[]> {

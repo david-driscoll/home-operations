@@ -1,0 +1,31 @@
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: pdm
+spec:
+  name: Proxmox Datacenter Manager
+  category: Infrastructure
+  url: &url https://pdm.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+      - url: "https://pdm.${searchDomain}/oidc-callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

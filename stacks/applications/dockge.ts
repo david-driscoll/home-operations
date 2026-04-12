@@ -94,6 +94,63 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
+  // Register Proxmox UIs as Authentik forward-proxy applications.
+  // Traffic is routed through this cluster's Dockge Traefik ingress.
+  await applicationManager.createApplication({
+    metadata: { name: "pve", namespace: clusterDefinition.key },
+    spec: {
+      name: "Proxmox VE",
+      category: clusterDefinition.title,
+      description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
+      url: `https://pve.${clusterDefinition.rootDomain}`,
+      icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+      authentik: {
+        proxy: {
+          mode: "forward_single",
+          externalHost: `https://pve.${clusterDefinition.rootDomain}`,
+        },
+      },
+    },
+  });
+
+  if (clusterDefinition.key === "celestia" || clusterDefinition.key === "luna") {
+    await applicationManager.createApplication({
+      metadata: { name: "pbs", namespace: clusterDefinition.key },
+      spec: {
+        name: "Proxmox Backup Server",
+        category: clusterDefinition.title,
+        description: `Proxmox Backup Server for ${clusterDefinition.title}`,
+        url: `https://pbs.${clusterDefinition.rootDomain}`,
+        icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+        authentik: {
+          proxy: {
+            mode: "forward_single",
+            externalHost: `https://pbs.${clusterDefinition.rootDomain}`,
+          },
+        },
+      },
+    });
+  }
+
+  if (clusterDefinition.key === "alpha-site") {
+    await applicationManager.createApplication({
+      metadata: { name: "pdm", namespace: clusterDefinition.key },
+      spec: {
+        name: "Proxmox Datacenter Manager",
+        category: clusterDefinition.title,
+        description: `Proxmox Datacenter Manager for ${clusterDefinition.title}`,
+        url: `https://pdm.${clusterDefinition.rootDomain}`,
+        icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+        authentik: {
+          proxy: {
+            mode: "forward_single",
+            externalHost: `https://pdm.${clusterDefinition.rootDomain}`,
+          },
+        },
+      },
+    });
+  }
+
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
     if (!definition) {

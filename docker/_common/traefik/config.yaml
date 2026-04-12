@@ -78,6 +78,9 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
+  file:
+    directory: /config/dynamic/
+    watch: true
 
 # Certificate resolvers configuration
 certificatesResolvers:

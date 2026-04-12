@@ -27,6 +27,14 @@ export class StandardDns extends ComponentResource {
   ) {
     super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
+    const existingUnifiRecordId = output(args.hostname).apply(async (hostname) => {
+      try {
+        return (await unifi.dns.getRecord({ name: hostname }, { provider: globals.unifiProvider })).id;
+      } catch {
+        return undefined;
+      }
+    });
+
     this.unifi = new unifi.dns.Record(
       `${name}-unifi`,
       {
@@ -38,6 +46,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.unifiProvider,
         deleteBeforeReplace: true,
+        import: existingUnifiRecordId,
       },
     );
 

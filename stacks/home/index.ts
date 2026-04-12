@@ -1,10 +1,12 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pbs from "@pulumi/pbs";
 import * as random from "@pulumi/random";
+import * as firewall from "@pulumi/terrifi";
 import { ClusterDefinition, createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
 import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
+import { ProxmoxBackupServerLxc, getProxmoxBackupServerLxcProperties } from "./ProxmoxBackupServerLxc.ts";
 import { TruenasVm } from "./TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
@@ -14,12 +16,12 @@ import { gatusDnsRecords } from "./StandardDns.ts";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem } from "@openapi/aliases.js";
 import * as tls from "@pulumi/tls";
-import { NodeSSH } from "node-ssh";
 import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { createBackupJobs } from "./backups.ts";
 import { TailscaleAclManager } from "./tailscale/manager.ts";
 import { TailscaleService } from "@openapi/tailscale-grants.js";
+import { AuthentikOutputs } from "@components/authentik.ts";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -29,6 +31,7 @@ export const sftpClientPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpC
 
 const op = new OPClient();
 
+const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
 const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
@@ -48,6 +51,7 @@ const minioBucket = new minio.S3Bucket(
     provider: globals.truenasMinioProvider,
     protect: true,
     retainOnDelete: true,
+    import: "home-operations",
   },
 );
 
@@ -76,7 +80,6 @@ const minioBucket = new minio.S3Bucket(
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
   globals: globals,
-  isProxmoxBackupServer: false,
   internalIpAddress: "10.10.10.100",
   tailscaleIpAddress: "100.111.10.100",
   macAddress: "58:47:ca:7b:a9:9d",
@@ -96,7 +99,6 @@ const spikeVm = new TruenasVm("spike", {
 
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,
-  isProxmoxBackupServer: true,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
   tailscaleTags: ["tag:peer-relay"],
@@ -105,12 +107,12 @@ const celestiaHost = new ProxmoxHost("celestia", {
   truenas: spikeVm,
   remote: false,
   cluster: celestiaCluster,
+  peerRelay: true,
   tailscaleArgs: { acceptRoutes: false },
 });
 
 const lunaHost = new ProxmoxHost("luna", {
   globals: globals,
-  isProxmoxBackupServer: true,
   tailscaleIpAddress: "100.111.10.104",
   macAddress: "c8:ff:bf:03:c9:1e",
   proxmox: mainProxmoxCredentials,
@@ -122,7 +124,6 @@ const lunaHost = new ProxmoxHost("luna", {
 
 const alphaSiteHost = new ProxmoxHost("alpha-site", {
   globals: globals,
-  isProxmoxBackupServer: false,
   internalIpAddress: "10.10.10.200",
   tailscaleIpAddress: "100.111.10.200",
   macAddress: "e4:5f:01:90:36:22",
@@ -145,6 +146,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  createDockerLxc: true,
   registerTailscaleService,
 });
 
@@ -156,7 +158,28 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   cluster: lunaCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  createDockerLxc: true,
   registerTailscaleService,
+});
+
+const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
+  globals,
+  outputs,
+  host: celestiaHost,
+  vmId: 301,
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  cluster: celestiaCluster,
+  dockge: celestiaDockgeRuntime,
+});
+
+const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
+  globals,
+  outputs,
+  host: lunaHost,
+  vmId: 401,
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  cluster: lunaCluster,
+  dockge: lunaDockgeRuntime,
 });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
@@ -171,7 +194,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   sftpKey: sftpClientKey,
   registerTailscaleService,
 });
-
 
 try {
   const tailscaleManager = await updateTailscaleAcls({
@@ -191,7 +213,7 @@ try {
       spike: spikeVm.tailscaleIpAddress,
       "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
+    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress, celestiaPbs.ipAddress, lunaPbs.ipAddress],
     tests: {
       dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
       proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],

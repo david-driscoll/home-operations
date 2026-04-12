@@ -1,0 +1,44 @@
+services:
+  pdm:
+    image: ghcr.io/longqt-sea/proxmox-datacenter-manager
+    container_name: pdm
+    hostname: pdm
+    cgroup: host
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    cap_add:
+      - ALL
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+
+      traefik.http.routers.pdm.rule: Host(`pdm.${searchDomain}`)
+      traefik.http.routers.pdm.middlewares: authentik-outpost@docker
+      traefik.http.routers.pdm.entrypoints: websecure
+      traefik.http.routers.pdm.service: pdm
+      traefik.http.routers.pdm.tls.certresolver: le
+
+      traefik.http.routers.pdm-tailscale.rule: Host(`pdm.${tailscaleDomain}`)
+      traefik.http.routers.pdm-tailscale.middlewares: authentik-outpost@docker
+      traefik.http.routers.pdm-tailscale.entrypoints: tailscale
+      traefik.http.routers.pdm-tailscale.service: pdm
+
+      traefik.http.services.pdm.loadbalancer.server.port: 8443
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+
+    # ports:
+    # - "2222:22"
+    # - "8443:8443"
+x-dockge:
+  urls:
+    - https://pdm.${searchDomain}
+networks:
+  dockge_default:
+    external: true

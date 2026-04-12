@@ -7,7 +7,6 @@ services:
       - 100.100.100.100
     command:
       - --configfile=/config/config.yaml
-      - --providers.file.watch=true
     labels:
       # Enable Traefik for itself
       traefik.enable: true
@@ -40,6 +39,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
       - ./config.yaml:/config/config.yaml
+      - ./dynamic:/config/dynamic
     networks:
       - dockge_default
 x-dockge:
