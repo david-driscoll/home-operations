@@ -20,6 +20,14 @@ function buildVarString(vars: CommunityScriptLxcVars): string {
     .map(([k, v]) => `var_${k}="${v}"`)
     .join(" ");
 }
+function buildEnv(vars: CommunityScriptLxcVars): Record<string, any> {
+  return Object.fromEntries(
+    Object.entries(vars)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [`var_${k}`, `${v}`])
+      .concat([["mode", "generated"]]),
+  );
+}
 
 /**
  * Runs a community-scripts ProxmoxVE LXC creation script non-interactively
@@ -40,10 +48,21 @@ export function runCommunityScriptLxc(
   opts?: pulumi.CustomResourceOptions,
 ): remote.Command {
   const create = pulumi.output(args.script).apply((script) => {
-    return `TERM=dumb mode=generated ${buildVarString(args.vars)} bash -c "$(curl -fsSL ${script})"`;
+    return `bash -c 'clear() { :; }; eval "$(curl -fsSL ${script})"'`;
   });
 
-  return new remote.Command(name, { connection: args.connection, create }, opts);
+  return new remote.Command(
+    name,
+    {
+      connection: args.connection,
+      environment: buildEnv(args.vars),
+      create,
+      update: create,
+      delete: `pct delete ${args.vars.ctid}`,
+      triggers: [...Object.values(args.vars), ...Object.keys(args.vars)],
+    },
+    opts,
+  );
 }
 
 /**
@@ -76,10 +95,11 @@ export function runCommunityScriptTool(
     '  [[ "$t" == "REBOOT" ]] && echo no >&2 && return 0;',
     "  echo yes >&2;",
     "}",
+    "function clear() { :; }",
   ].join(" ");
 
-  const inner = `export TERM=dumb; ${mockWhiptail}; export -f whiptail; echo y | bash -c "$(curl -fsSL ${args.script})"`;
+  const inner = `${mockWhiptail}; export -f whiptail clear; echo y | bash -c "$(curl -fsSL ${args.script})"`;
   const create = pulumi.interpolate`pct exec ${args.vmId} -- bash -c '${inner}'`;
 
-  return new remote.Command(name, { connection: args.connection, create }, opts);
+  return new remote.Command(name, { connection: args.connection, create, update: create }, opts);
 }

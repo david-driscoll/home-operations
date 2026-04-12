@@ -162,25 +162,25 @@ const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
   registerTailscaleService,
 });
 
-const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
-  globals,
-  outputs,
-  host: celestiaHost,
-  vmId: 301,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: celestiaCluster,
-  dockge: celestiaDockgeRuntime,
-});
+// const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
+//   globals,
+//   outputs,
+//   host: celestiaHost,
+//   vmId: 301,
+//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+//   cluster: celestiaCluster,
+//   dockge: celestiaDockgeRuntime,
+// });
 
-const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
-  globals,
-  outputs,
-  host: lunaHost,
-  vmId: 401,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: lunaCluster,
-  dockge: lunaDockgeRuntime,
-});
+// const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
+//   globals,
+//   outputs,
+//   host: lunaHost,
+//   vmId: 401,
+//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+//   cluster: lunaCluster,
+//   dockge: lunaDockgeRuntime,
+// });
 
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
