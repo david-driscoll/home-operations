@@ -112,7 +112,7 @@ export function runCommunityScriptLxc(
     {
       connection: args.connection,
       create: create.apply((cmd) => `bash -c '${cmd.replace(/'/g, "'\"'\"'")}'`),
-      delete: pulumi.interpolate`pct delete ${ctid} --purge 2>/dev/null || true`,
+      delete: pulumi.interpolate`pct destroy ${ctid} --purge 2>/dev/null || true`,
       triggers: [...Object.values(args.vars), ...Object.keys(args.vars)],
     },
     opts,
