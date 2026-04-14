@@ -1,20 +1,16 @@
-import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset, unknown, runtime } from "@pulumi/pulumi";
+import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
 import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
-import { getDeviceOutput, DeviceTags, DeviceKey, GetDeviceResult } from "@pulumi/tailscale";
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { createPeerRelayRule, getTailscaleClient, updateTailscaleProxmox } from "../../components/tailscale.js";
+import { createPeerRelayRule, updateTailscaleProxmox } from "../../components/tailscale.js";
 import { OPClient } from "../../components/op.ts";
 import { getHostnames } from "./helper.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { TruenasVm } from "./TruenasVm.ts";
-import { copyFileToRemote, getTailscaleDevice, getTailscaleSection } from "@components/helpers.ts";
+import { copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { Purrl } from "@pulumiverse/purrl";
-import proxmox from "@muhlba91/pulumi-proxmoxve";
-import { Logging } from "@pulumi/command/remote/index.js";
 import { TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
 import { Tailscale } from "@components/constants.ts";
 
