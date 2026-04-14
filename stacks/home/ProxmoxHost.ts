@@ -206,7 +206,7 @@ net.ipv6.conf.all.forwarding = 1
         dependsOn: [tailscaleForwarding],
         args: {
           ...args.tailscaleArgs,
-          advertiseTags: ["tag:proxmox", "tag:exit-node"].concat(args.tailscaleTags ?? []),
+          advertiseTags: [Tailscale.tag.proxmox, Tailscale.tag.exitNode, ...(args.peerRelay ? [Tailscale.tag.peerRelay] : [])].concat(args.tailscaleTags ?? []),
           acceptDns: false,
           acceptRoutes: false,
           ssh: true,

@@ -42,6 +42,7 @@ export interface DockgeLxcArgs {
   credential: Input<OPClientItem>;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   sftpKey: tls.PrivateKey;
+  installTailscale?: boolean;
   registerTailscaleService(service: string): void;
 }
 export interface ExternalServiceOpts {
@@ -160,38 +161,11 @@ export class DockgeLxc extends ComponentResource {
           ).stdout as Output<TailscaleIp>));
 
     this.credential = output(args.credential);
-
-    const deviceInfo = (this.device = installTailscaleLxc({
-      connection: args.host.remoteConnection,
-      parent: this,
-      name: tailscaleName,
-      ipAddress: this.tailscaleIpAddress,
-      globals: args.globals,
-      args: {
-        ...args.tailscaleArgs,
-        advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
-        acceptDns: true,
-        acceptRoutes: false,
-        ssh: true,
-      },
-      vmId: args.vmId,
-      dependsOn: [setHostname],
-    }));
-
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.tailscaleHostname,
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-
-    // const sshReady = new remote.Command(
-    //   `${name}-ssh-ready`,
-    //   {
-    //     connection: this.remoteConnection,
-    //     create: "hostname",
-    //   },
-    //   mergeOptions(cro, { dependsOn: [tailscaleSet] }),
-    // );
 
     if (args.createDockerLxc) {
       // Install Dockge addon inside the container via community-scripts
@@ -212,6 +186,25 @@ export class DockgeLxc extends ComponentResource {
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
     const jobsKeysDir = "/opt/stacks/backups/keys";
     const backrestSshDir = "/opt/stacks/backrest/ssh";
+
+    if (args.installTailscale === undefined || args.installTailscale === true) {
+      const deviceInfo = (this.device = installTailscaleLxc({
+        connection: args.host.remoteConnection,
+        parent: this,
+        name: tailscaleName,
+        ipAddress: this.tailscaleIpAddress,
+        globals: args.globals,
+        args: {
+          ...args.tailscaleArgs,
+          advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
+          acceptDns: true,
+          acceptRoutes: false,
+          ssh: true,
+        },
+        vmId: args.vmId,
+        dependsOn: [...depends, setHostname],
+      }));
+    }
 
     const ensureKeysDir = new remote.Command(
       `${name}-ensure-sftp-keys-dir`,
@@ -349,7 +342,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.tailscaleName = this.device.apply((d) => d.name!);
+    this.tailscaleName = tailscaleName;
 
     const dockgeInfo = new OnePasswordItem(
       `${args.host.name}-dockge`,

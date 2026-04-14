@@ -15,13 +15,13 @@ services:
       # Enable Traefik
       traefik.enable: true
 
-      traefik.http.routers.pdm.rule: Host(`pdm.${searchDomain}`)
+      traefik.http.routers.pdm.rule: Host(`pdma.${searchDomain}`)
       traefik.http.routers.pdm.middlewares: authentik-outpost@docker
       traefik.http.routers.pdm.entrypoints: websecure
       traefik.http.routers.pdm.service: pdm
       traefik.http.routers.pdm.tls.certresolver: le
 
-      traefik.http.routers.pdm-tailscale.rule: Host(`pdm.${tailscaleDomain}`)
+      traefik.http.routers.pdm-tailscale.rule: Host(`pdma.${tailscaleDomain}`)
       traefik.http.routers.pdm-tailscale.middlewares: authentik-outpost@docker
       traefik.http.routers.pdm-tailscale.entrypoints: tailscale
       traefik.http.routers.pdm-tailscale.service: pdm
@@ -38,7 +38,7 @@ services:
     # - "8443:8443"
 x-dockge:
   urls:
-    - https://pdm.${searchDomain}
+    - https://pdma.${searchDomain}
 networks:
   dockge_default:
     external: true

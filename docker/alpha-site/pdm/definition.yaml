@@ -6,9 +6,9 @@ kind: ApplicationDefinition
 metadata:
   name: pdm
 spec:
-  name: Proxmox Datacenter Manager
+  name: Proxmox Datacenter Manager (A)
   category: Infrastructure
-  url: &url https://pdm.${searchDomain}
+  url: &url https://pdma.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg
   access_policy:
     groups:
@@ -17,7 +17,7 @@ spec:
     oauth2:
       clientType: confidential
       allowedRedirectUris:
-      - url: "https://pdm.${searchDomain}/oidc-callback"
+      - url: "https://pdma.${searchDomain}/oidc-callback"
       propertyMappings:
         - email
         - openid
