@@ -15,7 +15,9 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "up": "op run --no-masking -- pulumi up --skip-preview",
+    "cancel": "op run --no-masking -- pulumi cancel --yes",
+    "refresh": "op run --no-masking -- pulumi refresh --yes"
   },
   "dependencies": {
     "@muhlba91/pulumi-proxmoxve": "^7.7.0",

@@ -12,7 +12,7 @@ export class StandardDns extends ComponentResource {
   public readonly ipAddress: Output<string>;
   public readonly unifi: unifi.dns.Record;
   public readonly cloudflare: cloudflare.DnsRecord;
-  public readonly adguard: adguard.Rewrite;
+  // public readonly adguard: adguard.Rewrite;
 
   constructor(
     name: string,
@@ -27,14 +27,6 @@ export class StandardDns extends ComponentResource {
   ) {
     super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
-    const existingUnifiRecordId = output(args.hostname).apply(async (hostname) => {
-      try {
-        return (await unifi.dns.getRecord({ name: hostname }, { provider: globals.unifiProvider })).id;
-      } catch {
-        return undefined;
-      }
-    });
-
     this.unifi = new unifi.dns.Record(
       `${name}-unifi`,
       {
@@ -46,7 +38,6 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.unifiProvider,
         deleteBeforeReplace: true,
-        import: existingUnifiRecordId,
       },
     );
 
@@ -66,18 +57,18 @@ export class StandardDns extends ComponentResource {
       },
     );
 
-    this.adguard = new adguard.Rewrite(
-      `${name}-adguard`,
-      {
-        domain: args.hostname,
-        answer: args.ipAddress,
-      },
-      {
-        parent: this,
-        provider: globals.adguardProvider,
-        deleteBeforeReplace: true,
-      },
-    );
+    // this.adguard = new adguard.Rewrite(
+    //   `${name}-adguard`,
+    //   {
+    //     domain: args.hostname,
+    //     answer: args.ipAddress,
+    //   },
+    //   {
+    //     parent: this,
+    //     provider: globals.adguardProvider,
+    //     deleteBeforeReplace: true,
+    //   },
+    // );
     this.hostname = output(args.hostname);
     this.ipAddress = output(args.ipAddress);
     addGatusDnsRecord(name, args);

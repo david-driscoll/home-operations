@@ -213,7 +213,7 @@ try {
       spike: spikeVm.tailscaleIpAddress,
       "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress, celestiaPbs.ipAddress, lunaPbs.ipAddress],
+    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress /*, celestiaPbs.ipAddress, lunaPbs.ipAddress*/],
     tests: {
       dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
       proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],

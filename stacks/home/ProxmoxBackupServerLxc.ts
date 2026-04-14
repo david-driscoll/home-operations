@@ -36,10 +36,12 @@ export interface ProxmoxBackupServerLxcArgs {
   ipAddress?: TailscaleIp;
   tailscaleIpAddress?: TailscaleIp;
   tailscaleArgs?: {
-    acceptDns?: boolean;
-    acceptRoutes?: boolean;
-    ssh?: boolean;
-    advertiseExitNode?: boolean;
+    advertiseTags: string[];
+    acceptDns?: Input<boolean>;
+    acceptRoutes?: Input<boolean>;
+    ssh?: Input<boolean>;
+    advertiseExitNode?: Input<boolean>;
+    relayServerPort?: Input<number>;
   };
   lxcVars?: Partial<Omit<CommunityScriptLxcVars, "ctid" | "hostname">>;
   /** Post-install configuration. Runs after Tailscale is set up. */
@@ -73,11 +75,12 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
 
     const cro = { parent: this };
     const tailscaleOptions = {
+      advertiseTags: args.tailscaleArgs?.advertiseTags ?? [],
+      ...(args.tailscaleArgs ?? {}),
       acceptDns: true,
       acceptRoutes: false,
       ssh: true,
       advertiseExitNode: false,
-      ...(args.tailscaleArgs ?? {}),
     };
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("pbs", args.host, args.globals);
     this.hostname = hostname;
@@ -132,11 +135,11 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: [mountHostData] }),
     );
 
-    const tailscaleSet = installTailscaleLxc({
+    const deviceInfo = installTailscaleLxc({
       connection: args.host.remoteConnection,
-      name,
+      name: tailscaleName,
+      ipAddress: args.tailscaleIpAddress ?? deriveContainerTailscaleIp(args.host.tailscaleIpAddress, 200 + args.vmId),
       parent: this,
-      tailscaleName,
       vmId: args.vmId,
       globals: args.globals,
       dependsOn: [setHostname],
@@ -165,7 +168,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
         update: configureRootSshCommand,
         triggers: [output(this.sshKey.publicKeyFingerprintSha256)],
       },
-      mergeOptions(cro, { dependsOn: [tailscaleSet] }),
+      mergeOptions(cro, { dependsOn: [] }),
     );
 
     const cluster = output(args.cluster);
@@ -248,28 +251,28 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       mergeOptions(cro, { dependsOn: [] }),
     );
 
-    const postInstallRun = runCommunityScriptTool(
-      `${name}-post-install`,
-      {
-        connection: args.host.remoteConnection,
-        vmId: args.vmId,
-        script: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh",
-      },
-      mergeOptions(cro, { dependsOn: [tailscaleSet] }),
-    );
+    // const postInstallRun = runCommunityScriptTool(
+    //   `${name}-post-install`,
+    //   {
+    //     connection: args.host.remoteConnection,
+    //     vmId: args.vmId,
+    //     script: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh",
+    //   },
+    //   mergeOptions(cro, { dependsOn: [tailscaleSet] }),
+    // );
 
-    if (args.postInstall?.rebootAfter) {
-      new remote.Command(
-        `${name}-post-install-reboot`,
-        {
-          connection: args.host.remoteConnection,
-          create: interpolate`pct reboot ${args.vmId}`,
-          update: interpolate`pct reboot ${args.vmId}`,
-          triggers: [postInstallRun],
-        },
-        mergeOptions(cro, { dependsOn: postInstallRun ? [postInstallRun] : [tailscaleSet] }),
-      );
-    }
+    // if (args.postInstall?.rebootAfter) {
+    //   new remote.Command(
+    //     `${name}-post-install-reboot`,
+    //     {
+    //       connection: args.host.remoteConnection,
+    //       create: interpolate`pct reboot ${args.vmId}`,
+    //       update: interpolate`pct reboot ${args.vmId}`,
+    //       triggers: [postInstallRun],
+    //     },
+    //     mergeOptions(cro, { dependsOn: postInstallRun ? [postInstallRun] : [tailscaleSet] }),
+    //   );
+    // }
 
     const ipAddress = (this.ipAddress = args.ipAddress
       ? output(args.ipAddress)
@@ -287,11 +290,11 @@ echo "PBS OIDC configured for realm: $REALM_ID"
     this.device = runtime.isDryRun()
       ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
       : getDeviceOutput(
-          { name: tailscaleHostname },
+          { name: tailscaleName },
           {
             provider: args.globals.tailscaleProvider,
             parent: this,
-            dependsOn: [tailscaleSet],
+            dependsOn: [],
           },
         );
 
@@ -319,7 +322,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           webUrl: { type: TypeEnum.String, value: interpolate`https://${this.hostname}:8007` },
         },
       },
-      mergeOptions(cro, { dependsOn: postInstallRun ? [postInstallRun] : [] }),
+      mergeOptions(cro, { dependsOn: [] }),
     );
   }
 }

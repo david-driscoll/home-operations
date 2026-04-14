@@ -16,6 +16,7 @@ import { Purrl } from "@pulumiverse/purrl";
 import proxmox from "@muhlba91/pulumi-proxmoxve";
 import { Logging } from "@pulumi/command/remote/index.js";
 import { TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
+import { Tailscale } from "@components/constants.ts";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -33,7 +34,7 @@ export interface ProxmoxHostArgs {
   cluster: Input<ClusterDefinition>;
   shortName?: string;
   peerRelay?: boolean;
-  tailscaleArgs?: Parameters<typeof updateTailscaleProxmox>[0]["args"];
+  tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -126,7 +127,7 @@ export class ProxmoxHost extends ComponentResource {
     }
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleIpAddress,
+      host: this.tailscaleHostname,
       user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
       password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
     });
@@ -196,20 +197,21 @@ net.ipv6.conf.all.forwarding = 1
         mergeOptions(cro, { dependsOn: [tailscaleForwardingConfig] }),
       );
 
-      const tailscaleSet = updateTailscaleProxmox({
+      const deviceInfo = updateTailscaleProxmox({
         connection,
-        name,
         parent: this,
-        tailscaleName: this.tailscaleName,
+        name: this.tailscaleName,
+        ipAddress: this.tailscaleIpAddress,
         globals: args.globals,
         dependsOn: [tailscaleForwarding],
         args: {
+          ...args.tailscaleArgs,
+          advertiseTags: ["tag:proxmox", "tag:exit-node"].concat(args.tailscaleTags ?? []),
           acceptDns: false,
           acceptRoutes: false,
           ssh: true,
           advertiseExitNode: true,
           relayServerPort: args.peerRelay ? createPeerRelayRule(this.internalIpAddress, args.globals).result : undefined,
-          ...args.tailscaleArgs,
         },
       });
       // Configure SSH environment
@@ -222,7 +224,7 @@ net.ipv6.conf.all.forwarding = 1
           remotePath: "/etc/cron.weekly/tailscale",
           source: new asset.FileAsset("scripts/tailscale.sh"),
         },
-        mergeOptions(cro, { dependsOn: [installJq, tailscaleSet] }),
+        mergeOptions(cro, { dependsOn: [installJq] }),
       );
 
       // Set executable permissions and run cron script
@@ -233,52 +235,6 @@ net.ipv6.conf.all.forwarding = 1
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
         },
         mergeOptions(cro, { dependsOn: [tailscaleCron] }),
-      );
-
-      // Get Tailscale device
-      const device = runtime.isDryRun()
-        ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
-        : getDeviceOutput(
-            { hostname: this.tailscaleHostname },
-            {
-              provider: args.globals.tailscaleProvider,
-              parent: this,
-              dependsOn: [tailscaleSetCert, tailscaleSet],
-            },
-          ).apply(async (result) => {
-            try {
-              const client = await getTailscaleClient();
-              await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: args.tailscaleIpAddress } });
-            } catch (e) {
-              pulumi.log.warn(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
-            }
-            return result;
-          });
-      // Create device tags
-      const deviceTags = new DeviceTags(
-        `${name}-tags`,
-        {
-          tags: ["tag:proxmox", "tag:exit-node"].concat(args.tailscaleTags ?? []),
-          deviceId: device.apply((z) => z.id),
-        },
-        {
-          provider: args.globals.tailscaleProvider,
-          parent: this,
-          retainOnDelete: true,
-        },
-      );
-
-      // Create device key
-      const deviceKey = new DeviceKey(
-        `${name}-key`,
-        {
-          keyExpiryDisabled: true,
-          deviceId: device.apply((z) => z.id),
-        },
-        {
-          provider: args.globals.tailscaleProvider,
-          parent: this,
-        },
       );
     }
 

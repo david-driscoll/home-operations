@@ -24,6 +24,7 @@ import { unique } from "moderndash";
 import { Command } from "@pulumi/command/remote/index.js";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { runCommunityScriptLxc } from "./lxc.ts";
+import { Tailscale } from "@components/constants.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -39,7 +40,7 @@ export interface DockgeLxcArgs {
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
-  tailscaleArgs?: Parameters<typeof installTailscaleLxc>[0]["args"];
+  tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   sftpKey: tls.PrivateKey;
   registerTailscaleService(service: string): void;
 }
@@ -56,7 +57,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleIpAddress: Output<TailscaleIp>;
   public readonly hostname: Output<string>;
-  public readonly device: Output<GetDeviceResult>;
+  public readonly device: ReturnType<typeof installTailscaleLxc>;
   public readonly dns: StandardDns;
   public readonly ipAddress: Output<TailscaleIp>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
@@ -98,12 +99,13 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: [], ignoreChanges: ["create"] }),
     );
 
-    var depends = [];
+    const depends = [];
     if (args.createDockerLxc) {
       // Create the Docker LXC container via community-scripts.
       // mode=generated skips all whiptail menus and reads var_* directly from the environment.
+      // installPromptAnswers: "n" x3 skips Portainer, Portainer Agent, and Docker TCP socket prompts
       const createDockerLxc = runCommunityScriptLxc(
-        `${name}-create-docker-lxc`,
+        `${name}-create-docker`,
         {
           connection: args.host.remoteConnection,
           script: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/docker.sh",
@@ -114,8 +116,8 @@ export class DockgeLxc extends ComponentResource {
             cpu: 4,
             ram: 8192,
             disk: 64,
-            os: "debian",
-            version: 13,
+            // os: "debian",
+            // version: 13,
             nesting: 1,
             fuse: "yes",
             gpu: "yes",
@@ -123,6 +125,8 @@ export class DockgeLxc extends ComponentResource {
             mount_fs: "nfs",
             ...(args.ipAddress ? { net: `${args.ipAddress}/16`, gateway: "10.10.0.1" } : {}),
           },
+          // Skip optional docker-install.sh prompts: Portainer (n), Portainer Agent (n), TCP socket (n)
+          installPromptAnswers: ["n", "n", "n"],
         },
         mergeOptions(cro, { dependsOn: [lxcExists] }),
       );
@@ -134,10 +138,12 @@ export class DockgeLxc extends ComponentResource {
       `${name}-set-hostname`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
-        update: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
+        create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
+        update: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
       },
-      mergeOptions(cro, { dependsOn: [...depends] }),
+      mergeOptions(cro, {
+        dependsOn: [...depends],
+      }),
     );
 
     const ipAddress = (this.ipAddress = args.ipAddress
@@ -145,7 +151,7 @@ export class DockgeLxc extends ComponentResource {
       : args.host.remote
         ? this.tailscaleIpAddress
         : (new remote.Command(
-            `${name}-get-ip-address`,
+            `${name}-ip-address`,
             {
               connection: args.host.remoteConnection,
               create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
@@ -155,42 +161,52 @@ export class DockgeLxc extends ComponentResource {
 
     this.credential = output(args.credential);
 
+    const deviceInfo = (this.device = installTailscaleLxc({
+      connection: args.host.remoteConnection,
+      parent: this,
+      name: tailscaleName,
+      ipAddress: this.tailscaleIpAddress,
+      globals: args.globals,
+      args: {
+        ...args.tailscaleArgs,
+        advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
+        acceptDns: true,
+        acceptRoutes: false,
+        ssh: true,
+      },
+      vmId: args.vmId,
+      dependsOn: [setHostname],
+    }));
+
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
-      host: this.tailscaleIpAddress,
+      host: this.tailscaleHostname,
       user: this.credential.apply((z) => z.fields?.username?.value!),
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
-    const tailscaleSet = installTailscaleLxc({
-      connection: args.host.remoteConnection,
-      name,
-      parent: this,
-      tailscaleName,
-      globals: args.globals,
-      args: { acceptDns: true, acceptRoutes: false, ssh: true, ...args.tailscaleArgs },
-      vmId: args.vmId,
-      dependsOn: [setHostname],
-    });
 
-    const sshReady = new remote.Command(
-      `${name}-ssh-ready`,
-      {
-        connection: this.remoteConnection,
-        create: "hostname",
-      },
-      mergeOptions(cro, { dependsOn: [tailscaleSet] }),
-    );
+    // const sshReady = new remote.Command(
+    //   `${name}-ssh-ready`,
+    //   {
+    //     connection: this.remoteConnection,
+    //     create: "hostname",
+    //   },
+    //   mergeOptions(cro, { dependsOn: [tailscaleSet] }),
+    // );
 
-    // Install Dockge addon inside the container via community-scripts
-    const installDockge = new remote.Command(
-      `${name}-install-dockge`,
-      {
-        connection: this.remoteConnection,
-        create: `printf "y\ny\n" | bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockge.sh)"`,
-      },
-      mergeOptions(cro, { dependsOn: [sshReady], ignoreChanges: ["create"] }),
-    );
+    if (args.createDockerLxc) {
+      // Install Dockge addon inside the container via community-scripts
+      const installDockge = new remote.Command(
+        `${name}-install-dockge`,
+        {
+          connection: args.host.remoteConnection,
+          create: interpolate`pct exec ${args.vmId} -- printf "y\ny\n" | bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockge.sh)"`,
+        },
+        mergeOptions(cro, { dependsOn: [...depends], ignoreChanges: ["create"] }),
+      );
+      depends.push(installDockge);
+    }
 
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [setHostname] }));
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [...depends, setHostname] }));
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
@@ -203,7 +219,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
       },
-      mergeOptions(cro, { dependsOn: [installDockge] }),
+      mergeOptions(cro, { dependsOn: depends }),
     );
 
     this.ensureDynamicDir = new remote.Command(
@@ -212,7 +228,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: "mkdir -p /opt/stacks/traefik/dynamic",
       },
-      mergeOptions(cro, { dependsOn: [installDockge] }),
+      mergeOptions(cro, { dependsOn: depends }),
     );
 
     const keyWrites: any[] = [];
@@ -324,69 +340,16 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: keyWrites }),
     );
 
-    // Get Tailscale device - this will need to be done after the hook script runs
-    // and Tailscale is configured. For now, we'll comment this out as it requires
-    // manual Tailscale configuration after container creation.
-
-    this.device = all([
-      this.tailscaleIpAddress,
-      runtime.isDryRun()
-        ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
-        : getDeviceOutput(
-            { name: tailscaleHostname },
-            {
-              provider: args.globals.tailscaleProvider,
-              parent: this,
-              dependsOn: [tailscaleSet],
-            },
-          ),
-    ]).apply(async ([tailscaleIpAddress, result]) => {
-      try {
-        const client = await getTailscaleClient();
-        await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId } }, body: { ipv4: tailscaleIpAddress } });
-      } catch (e) {
-        log.warn(`Error setting IP address for device ${tailscaleIpAddress}: ${e}`, this);
-      }
-      return result;
-    });
-
     new remote.Command(
       `${name}-install-tools`,
       {
         connection: this.remoteConnection,
         create: interpolate`apt-get update && apt-get install -y restic`,
       },
-      mergeOptions(cro, { dependsOn: [installDockge] }),
+      mergeOptions(cro, { dependsOn: depends }),
     );
 
     this.tailscaleName = this.device.apply((d) => d.name!);
-
-    // Create device tags
-    const deviceTags = new DeviceTags(
-      `${name}-tags`,
-      {
-        tags: ["tag:dockge"],
-        deviceId: this.device.apply((z) => z.id),
-      },
-      {
-        provider: args.globals.tailscaleProvider,
-        parent: this,
-        retainOnDelete: true,
-      },
-    );
-
-    // Create device key
-    const deviceKey = new DeviceKey(
-      `${name}-key`,
-      {
-        keyExpiryDisabled: true,
-        deviceId: this.device.apply((z) => z.id),
-      },
-      {
-        provider: args.globals.tailscaleProvider,
-        parent: this,
-      },
-    );
 
     const dockgeInfo = new OnePasswordItem(
       `${args.host.name}-dockge`,
@@ -420,7 +383,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         create: interpolate`rm -f /etc/docker/daemon.json`,
       },
-      mergeOptions(cro, { dependsOn: [installDockge] }),
+      mergeOptions(cro, { dependsOn: depends }),
     );
 
     this.backupJobManager = new BackupJobManager(`${name}-backup-job-manager`, {

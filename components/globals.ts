@@ -145,7 +145,7 @@ export class GlobalResources extends ComponentResource {
       {
         reusable: true,
         preauthorized: true,
-        ephemeral: true,
+        ephemeral: false,
         // expiry: Math.floor(60 * 60), // 1 hour in seconds
         recreateIfInvalid: "always",
         tags: [Tailscale.tag.dockge, Tailscale.tag.proxmox, Tailscale.tag.apps],
