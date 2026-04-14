@@ -101,7 +101,6 @@ const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
-  tailscaleTags: ["tag:peer-relay"],
   macAddress: "c8:ff:bf:03:cc:4c",
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
@@ -138,29 +137,29 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
 const tailscaleServices: TailscaleService[] = [];
 const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}` as TailscaleService);
 
-const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: celestiaHost,
-  vmId: 300,
-  cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  createDockerLxc: true,
-  registerTailscaleService,
-});
+// const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
+//   globals,
+//   credential: dockgeCredential,
+//   host: celestiaHost,
+//   vmId: 300,
+//   cluster: celestiaCluster,
+//   tailscaleArgs: { acceptRoutes: false },
+//   sftpKey: sftpClientKey,
+//   createDockerLxc: true,
+//   registerTailscaleService,
+// });
 
-const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: lunaHost,
-  vmId: 400,
-  cluster: lunaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  createDockerLxc: true,
-  registerTailscaleService,
-});
+// const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
+//   globals,
+//   credential: dockgeCredential,
+//   host: lunaHost,
+//   vmId: 400,
+//   cluster: lunaCluster,
+//   tailscaleArgs: { acceptRoutes: false },
+//   sftpKey: sftpClientKey,
+//   createDockerLxc: true,
+//   registerTailscaleService,
+// });
 
 // const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
 //   globals,
@@ -192,6 +191,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
+  installTailscale: false,
   registerTailscaleService,
 });
 
@@ -207,15 +207,15 @@ try {
       "alpha-site": alphaSiteHost.tailscaleIpAddress,
       [await awaitOutput(alphaSiteDockgeRuntime.tailscaleName)]: alphaSiteDockgeRuntime.tailscaleIpAddress,
       celestia: celestiaHost.tailscaleIpAddress,
-      [await awaitOutput(celestiaDockgeRuntime.tailscaleName)]: celestiaDockgeRuntime.tailscaleIpAddress,
+      // [await awaitOutput(celestiaDockgeRuntime.tailscaleName)]: celestiaDockgeRuntime.tailscaleIpAddress,
       luna: lunaHost.tailscaleIpAddress,
-      [await awaitOutput(lunaDockgeRuntime.tailscaleName)]: lunaDockgeRuntime.tailscaleIpAddress,
+      // [await awaitOutput(lunaDockgeRuntime.tailscaleName)]: lunaDockgeRuntime.tailscaleIpAddress,
       spike: spikeVm.tailscaleIpAddress,
       "twilight-sparkle": twilightSparkleHost.tailscaleIpAddress,
     },
-    internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress /*, celestiaPbs.ipAddress, lunaPbs.ipAddress*/],
+    internalIps: [spikeVm.ipAddress, /*celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress,*/ alphaSiteDockgeRuntime.ipAddress /*, celestiaPbs.ipAddress, lunaPbs.ipAddress*/],
     tests: {
-      dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
+      dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName /*, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName*/],
       proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
       taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
       kubernetesDevices: ["sgc", "equestria"],
@@ -232,32 +232,32 @@ export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup:
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
 export const celestia = {
   proxmox: getProxmoxProperties(celestiaHost),
-  dockge: getDockageProperties(celestiaDockgeRuntime),
+  // dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
 };
 export const luna = {
   proxmox: getProxmoxProperties(lunaHost),
-  dockge: getDockageProperties(lunaDockgeRuntime),
+  // dockge: getDockageProperties(lunaDockgeRuntime),
   backup: lunaHost.backupVolumes!,
 };
 // const users = await tailscale.
 // console.log(users);
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-lunaDockgeRuntime.deployStacks({ dependsOn: [] });
+// celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
+// lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
-await createBackupJobs({
-  celestiaDockgeRuntime,
-  lunaDockgeRuntime,
-  alphaSiteDockgeRuntime,
-  celestiaHost,
-  lunaHost,
-  alphaSiteHost,
-  globals,
-});
+// await createBackupJobs({
+//   celestiaDockgeRuntime,
+//   lunaDockgeRuntime,
+//   alphaSiteDockgeRuntime,
+//   celestiaHost,
+//   lunaHost,
+//   alphaSiteHost,
+//   globals,
+// });
 
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+const externalEndpoints = pulumi.all([/*celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(),*/ alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(
     (prev, curr) => ({
       endpoints: [...prev.endpoints, ...curr.endpoints],
