@@ -78,8 +78,8 @@ export class TailscaleAclManager {
     });
 
     const context = new TailscaleAclContext(acls);
-    const knownAdminUsers = context.policy.groups?.[groups.admins] ?? [];
-    const knownNormalUsers = context.policy.groups?.[groups.family] ?? [];
+    const knownAdminUsers = ["david.driscoll@gmail.com"];
+    const knownNormalUsers = context.policy.groups?.[groups.friendsAndFamily] ?? [];
 
     // parser.findNodeAtLocation
     this.testData = { ...testData, knownNormalUsers: knownNormalUsers.filter((z) => !knownAdminUsers.includes(z)), knownAdminUsers };

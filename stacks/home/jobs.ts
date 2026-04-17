@@ -2,7 +2,7 @@ import { ClusterDefinition, GlobalResources, OnePasswordItem } from "../../compo
 import { OnePasswordItem as OPItem } from "../../dynamic/1password/OnePasswordItem.ts";
 import { OPClient } from "../../components/op.ts";
 import { createBackupDatastores, ProxmoxBackupServer } from "../backups/ProxmoxBackupServer.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, Output, output, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap } from "@pulumi/pulumi";
 import { B2Backend, RcloneBackend, RcloneOperation } from "../../types/rclone.ts";
 import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
@@ -220,8 +220,13 @@ export class BackupPlanManager extends ComponentResource {
         username: "root",
       });
 
-      var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
-      var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
+      const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+      let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
+      try {
+        updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
+      } catch (e) {
+        log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
+      }
       updatedConfig.repos = updatedConfig.repos || [];
       updatedConfig.plans = updatedConfig.plans || [];
 

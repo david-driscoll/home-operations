@@ -246,8 +246,14 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       username: "root",
     });
 
-    var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
-    var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
+    const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+    let updatedConfig: { repos: BackrestRepository[] } = { repos: [] };
+    try {
+      updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
+    } catch (e) {
+      pulumi.log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
+    }
+
     updatedConfig.repos = updatedConfig.repos || [];
     for (let i = updatedConfig.repos.length - 1; i >= 0; i--) {
       if (updatedConfig.repos[i].id.startsWith("spike-")) {
@@ -276,6 +282,12 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         });
       }
     }
+    const newConfig = JSON.stringify(updatedConfig);
+    if (currentConfig.trim() === newConfig.trim()) {
+      ssh.dispose();
+      return;
+    }
+
     await ssh.execCommand(`echo '${JSON.stringify(updatedConfig)}' > /opt/stacks/backrest/config/config.json`);
 
     ssh.dispose();
