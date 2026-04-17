@@ -8,7 +8,7 @@ spec:
   name: Dockge
   category: ${CLUSTER_TITLE}
   description: Access to the Dockge dashboard
-  url: &url https://internal.${CLUSTER_DOMAIN}
+  url: &url https://dockge.${CLUSTER_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dockge.svg
   access_policy:
     groups:

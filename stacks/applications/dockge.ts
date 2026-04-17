@@ -64,36 +64,6 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
 
   pulumi.log.info(`Found stacks: ${stacks.join(", ")}`);
 
-  // Create the main Dockge application
-  await applicationManager.createApplication({
-    metadata: {
-      name: "dockge",
-      namespace: clusterDefinition.key,
-    },
-    spec: {
-      name: "Dockge",
-      category: clusterDefinition.title,
-      description: `Access to ${clusterDefinition.title} Dockge`,
-      url: `https://dockge.${clusterDefinition.rootDomain}`,
-      icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dockge.svg",
-      gatus: [
-        {
-          name: "Dockge",
-          url: `https://dockge.${clusterDefinition.rootDomain}/health`,
-          group: "System",
-          method: "GET",
-          conditions: ["[STATUS] == 200"],
-        },
-      ],
-      authentik: {
-        proxy: {
-          mode: "forward_single",
-          externalHost: `https://dockge.${clusterDefinition.rootDomain}`,
-        },
-      },
-    },
-  });
-
   // Register Proxmox UIs as Authentik forward-proxy applications.
   // Traffic is routed through this cluster's Dockge Traefik ingress.
   await applicationManager.createApplication({
@@ -113,43 +83,43 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
-  if (clusterDefinition.key === "celestia" || clusterDefinition.key === "luna") {
-    await applicationManager.createApplication({
-      metadata: { name: "pbs", namespace: clusterDefinition.key },
-      spec: {
-        name: "Proxmox Backup Server",
-        category: clusterDefinition.title,
-        description: `Proxmox Backup Server for ${clusterDefinition.title}`,
-        url: `https://pbs.${clusterDefinition.rootDomain}`,
-        icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-        authentik: {
-          proxy: {
-            mode: "forward_single",
-            externalHost: `https://pbs.${clusterDefinition.rootDomain}`,
-          },
-        },
-      },
-    });
-  }
+  // if (clusterDefinition.key === "celestia" || clusterDefinition.key === "luna") {
+  //   await applicationManager.createApplication({
+  //     metadata: { name: "pbs", namespace: clusterDefinition.key },
+  //     spec: {
+  //       name: "Proxmox Backup Server",
+  //       category: clusterDefinition.title,
+  //       description: `Proxmox Backup Server for ${clusterDefinition.title}`,
+  //       url: `https://pbs.${clusterDefinition.rootDomain}`,
+  //       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+  //       authentik: {
+  //         proxy: {
+  //           mode: "forward_single",
+  //           externalHost: `https://pbs.${clusterDefinition.rootDomain}`,
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
 
-  if (clusterDefinition.key === "alpha-site") {
-    await applicationManager.createApplication({
-      metadata: { name: "pdm", namespace: clusterDefinition.key },
-      spec: {
-        name: "Proxmox Datacenter Manager",
-        category: clusterDefinition.title,
-        description: `Proxmox Datacenter Manager for ${clusterDefinition.title}`,
-        url: `https://pdm.${clusterDefinition.rootDomain}`,
-        icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-        authentik: {
-          proxy: {
-            mode: "forward_single",
-            externalHost: `https://pdm.${clusterDefinition.rootDomain}`,
-          },
-        },
-      },
-    });
-  }
+  // if (clusterDefinition.key === "alpha-site") {
+  //   await applicationManager.createApplication({
+  //     metadata: { name: "pdm", namespace: clusterDefinition.key },
+  //     spec: {
+  //       name: "Proxmox Datacenter Manager",
+  //       category: clusterDefinition.title,
+  //       description: `Proxmox Datacenter Manager for ${clusterDefinition.title}`,
+  //       url: `https://pdm.${clusterDefinition.rootDomain}`,
+  //       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+  //       authentik: {
+  //         proxy: {
+  //           mode: "forward_single",
+  //           externalHost: `https://pdm.${clusterDefinition.rootDomain}`,
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
 
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
@@ -165,7 +135,7 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
     },
-    applicationManager
+    applicationManager,
   );
 
   const outpost = new authentik.Outpost(
@@ -173,18 +143,22 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     {
       type: "proxy",
       name: `Outpost for ${clusterDefinition.title}`,
-      config: pulumi.jsonStringify({
-        authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
-        authentik_host_insecure: false,
-        // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
-        authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
-        // log_level: "trace",
-        object_naming_template: `authentik-outpost`,
-        docker_network: "dockge_default",
-      }, undefined, 2),
+      config: pulumi.jsonStringify(
+        {
+          authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,
+          authentik_host_insecure: false,
+          // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
+          authentik_host_browser: `https://${clusterDefinition.authentikDomain}/`,
+          // log_level: "trace",
+          object_naming_template: `authentik-outpost`,
+          docker_network: "dockge_default",
+        },
+        undefined,
+        2,
+      ),
       protocolProviders: applicationManager.proxyProviders,
     },
-    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true }
+    { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
   const clientConfig = new authentikApi.Configuration({
     accessToken: authentikToken.fields.credential.value,
