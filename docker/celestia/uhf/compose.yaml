@@ -21,9 +21,8 @@ services:
       - ./uhf-db:/var/lib/uhf-server
     environment:
       PORT: "8809"
-    expose:
-      - "8809:8809"
-    command: uhf-server --port 8809 --recordings-dir /recordings --enable-commercial-detection
+    command: uhf-server --port 8809 --recordings-dir /recordings
+      --enable-commercial-detection
     networks:
       - dockge_default
 networks:

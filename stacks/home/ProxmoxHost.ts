@@ -1,5 +1,5 @@
 import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
-import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
+import proxmox, { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
@@ -11,7 +11,7 @@ import { TruenasVm } from "./TruenasVm.ts";
 import { copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
+import { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
 import { Tailscale } from "@components/constants.ts";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
@@ -22,6 +22,7 @@ export interface ProxmoxHostArgs {
   proxmox: Input<OPClientItem>;
   tailscaleIpAddress: TailscaleIp;
   tailscaleTags?: TailscaleTags[];
+  tailscaleSubnetRoutes: TailscaleCidr[];
   macAddress: string;
   remote: boolean;
   internalIpAddress?: TailscaleIp;
@@ -208,6 +209,8 @@ net.ipv6.conf.all.forwarding = 1
           ssh: true,
           advertiseExitNode: true,
           relayServerPort: args.peerRelay ? createPeerRelayRule(this.internalIpAddress, args.globals).result : undefined,
+          advertiseRoutes: args.tailscaleSubnetRoutes,
+          exitNodeAllowLanAccess: true,
         },
       });
       // Configure SSH environment
@@ -233,7 +236,6 @@ net.ipv6.conf.all.forwarding = 1
         mergeOptions(cro, { dependsOn: [tailscaleCron] }),
       );
     }
-
     const proxmoxInfo = new OnePasswordItem(
       `${this.name}-proxmox`,
       {
@@ -242,7 +244,7 @@ net.ipv6.conf.all.forwarding = 1
         tags: ["proxmox", "host"],
         sections: {
           tailscale: getTailscaleSection(this),
-          dns: createDnsSection(this.dns),
+          // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
@@ -259,9 +261,28 @@ net.ipv6.conf.all.forwarding = 1
       },
       cro,
     );
+  }
 
-    // Note: The commented-out Hosts resource would need to be implemented
-    // if you have a custom Hosts resource or provider for managing /etc/hosts
+  public addNfsMount(hostname: Input<string>, remotePath: string) {
+    const resourceName = `${this.name}-${remotePath.substring(1).replace(/\//g, "-")}nfs`;
+    return resourceName;
+    // fails with provider for now, the items get created, but seems to be a serialization issue.
+    // return new proxmox.storage.Nfs(
+    //   resourceName,
+    //   {
+    //     server: hostname,
+    //     export: remotePath,
+    //     resourceId: resourceName,
+    //     contents: ["rootdir"],
+    //     options: "rw,nfsvers=4",
+    //     nodes: [this.name],
+    //   },
+    //   {
+    //     import: resourceName,
+    //     parent: this,
+    //     provider: this.pveProvider,
+    //   },
+    // );
   }
 }
 

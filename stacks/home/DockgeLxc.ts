@@ -2,6 +2,7 @@ import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
+import { getContainerLegacyOutput } from "@muhlba91/pulumi-proxmoxve";
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { getContainerHostnames } from "./helper.ts";
 import { createDnsSection } from "./StandardDns.ts";
@@ -41,7 +42,6 @@ export interface DockgeLxcArgs {
   credential: Input<OPClientItem>;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   sftpKey: tls.PrivateKey;
-  installTailscale?: boolean;
   registerTailscaleService(service: string): void;
 }
 export interface ExternalServiceOpts {
@@ -57,17 +57,19 @@ export class DockgeLxc extends ComponentResource {
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleIpAddress: Output<TailscaleIp>;
   public readonly hostname: Output<string>;
-  public readonly device: ReturnType<typeof installTailscaleLxc>;
+  public readonly device?: ReturnType<typeof installTailscaleLxc>;
   public readonly dns: StandardDns;
   public readonly ipAddress: Output<TailscaleIp>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
   private backupJobManager: BackupJobManager;
-  private readonly ensureDynamicDir: remote.Command;
+  private readonly ensureDynamicDir: Resource;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
+  private readonly mountPoints: remote.Command[] = [];
   registerTailscaleService: (service: string) => void;
+  private readonly resources: Input<Resource>[];
   constructor(
     name: string,
     private readonly args: DockgeLxcArgs,
@@ -119,7 +121,7 @@ export class DockgeLxc extends ComponentResource {
             // os: "debian",
             // version: 13,
             nesting: 1,
-            fuse: "yes",
+            keyctl: 1,
             gpu: "yes",
             ipv6_method: "none",
             mount_fs: "nfs",
@@ -132,6 +134,24 @@ export class DockgeLxc extends ComponentResource {
       );
       depends.push(createDockerLxc);
     }
+    const deviceInfo = installTailscaleLxc({
+      connection: args.host.remoteConnection,
+      parent: this,
+      name: tailscaleName,
+      ipAddress: this.tailscaleIpAddress,
+      globals: args.globals,
+      installTailscale: args.createDockerLxc ?? false,
+      args: {
+        ...args.tailscaleArgs,
+        advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
+        acceptDns: true,
+        acceptRoutes: false,
+        ssh: true,
+      },
+      vmId: args.vmId,
+      dependsOn: [...depends],
+    });
+    depends.push(deviceInfo);
 
     // update hostname on machine
     const setHostname = new remote.Command(
@@ -154,10 +174,10 @@ export class DockgeLxc extends ComponentResource {
             `${name}-ip-address`,
             {
               connection: args.host.remoteConnection,
-              create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
+              create: interpolate`pct exec ${args.vmId} -- hostname -I`,
             },
             mergeOptions(cro, { dependsOn: [setHostname] }),
-          ).stdout as Output<TailscaleIp>));
+          ).stdout.apply((z) => z.split(" ")[0]) as Output<TailscaleIp>));
 
     this.credential = output(args.credential);
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
@@ -166,50 +186,18 @@ export class DockgeLxc extends ComponentResource {
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
 
-    if (args.createDockerLxc) {
-      // Install Dockge addon inside the container via community-scripts
-      const installDockge = new remote.Command(
-        `${name}-install-dockge`,
-        {
-          connection: args.host.remoteConnection,
-          create: interpolate`pct exec ${args.vmId} -- printf "y\ny\n" | bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/dockge.sh)"`,
-        },
-        mergeOptions(cro, { dependsOn: [...depends], ignoreChanges: ["create"] }),
-      );
-      depends.push(installDockge);
-    }
-
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [...depends, setHostname] }));
+    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [...depends, setHostname], deleteBeforeReplace: true }));
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
     const jobsKeysDir = "/opt/stacks/backups/keys";
     const backrestSshDir = "/opt/stacks/backrest/ssh";
 
-    if (args.installTailscale === undefined || args.installTailscale === true) {
-      const deviceInfo = (this.device = installTailscaleLxc({
-        connection: args.host.remoteConnection,
-        parent: this,
-        name: tailscaleName,
-        ipAddress: this.tailscaleIpAddress,
-        globals: args.globals,
-        args: {
-          ...args.tailscaleArgs,
-          advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
-          acceptDns: true,
-          acceptRoutes: false,
-          ssh: true,
-        },
-        vmId: args.vmId,
-        dependsOn: [...depends, setHostname],
-      }));
-    }
-
     const ensureKeysDir = new remote.Command(
       `${name}-ensure-sftp-keys-dir`,
       {
         connection: this.remoteConnection,
-        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir}`,
+        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir}`,
       },
       mergeOptions(cro, { dependsOn: depends }),
     );
@@ -351,7 +339,7 @@ export class DockgeLxc extends ComponentResource {
         tags: ["dockge", "lxc"],
         sections: {
           tailscale: getTailscaleSection(this),
-          dns: createDnsSection(this.dns),
+          // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
@@ -378,10 +366,15 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.backupJobManager = new BackupJobManager(`${name}-backup-job-manager`, {
-      cluster: this,
-      globals: this.args.globals,
-    });
+    this.resources = [...depends, dockgeInfo];
+    this.backupJobManager = new BackupJobManager(
+      `${name}-backup-job-manager`,
+      {
+        cluster: this,
+        globals: this.args.globals,
+      },
+      { dependsOn: this.resources },
+    );
   }
   public createBackupJob(job: BackupTask) {
     return this.backupJobManager.createBackupJob(job);
@@ -418,14 +411,42 @@ ${middlewareYaml}  services:
       remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
       content: content,
       parent: this,
-      dependsOn: [this.ensureDynamicDir, ...(dependsOn ?? [])],
+      dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
     });
+  }
+
+  public addHostMount(path: string, containerPath?: string) {
+    const mp = new remote.Command(
+      `${this.args.host.name}-dockge-${path.replace(/\//g, "-")}-mount`,
+      {
+        connection: this.args.host.remoteConnection,
+        create: interpolate`pct set ${this.args.vmId} -mp${this.mountPoints.length} ${path},mp=${containerPath ?? path}`,
+      },
+      { parent: this, dependsOn: [...this.mountPoints, ...this.resources] },
+    );
+    this.mountPoints.push(mp);
+    return mp;
   }
 
   public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<Command[]> {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
+
+    // update hostname on machine
+    const createDockerNetwork = new remote.Command(
+      `${this.args.host.name}-create-docker-network`,
+      {
+        connection: this.args.host.remoteConnection,
+        create: interpolate`pct exec ${this.args.vmId} -- docker network create dockge_default || true`,
+      },
+      {
+        parent: this,
+        dependsOn: [...this.resources],
+      },
+    );
+
+    args.dependsOn = output(args.dependsOn).apply((z) => z.concat(createDockerNetwork));
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(this.args.host.shortName ?? this.args.host.name)),
@@ -480,7 +501,14 @@ ${middlewareYaml}  services:
             if (!files) {
               return null;
             }
-            return this.createStack(this.args.host.name, stackName, files, path, replacements, args.dependsOn);
+            return this.createStack(
+              this.args.host.name,
+              stackName,
+              files,
+              path,
+              replacements,
+              output(args.dependsOn).apply((z) => z.concat(this.mountPoints)),
+            );
           }),
         ),
       )
@@ -548,11 +576,18 @@ ${middlewareYaml}  services:
             const service = host.replace(`.${tailscaleDomain}`, "");
             log.info(`Creating Tailscale DNS entry for service ${service}`);
 
-            new remote.Command(`${stackName}-tailscale-service-${service}`, {
-              connection: this.remoteConnection,
-              create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
-              delete: interpolate`tailscale serve clear svc:${service}`,
-            }, { parent: this });
+            new remote.Command(
+              `${stackName}-tailscale-service-${service}`,
+              {
+                connection: this.remoteConnection,
+                create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
+                delete: interpolate`tailscale serve clear svc:${service}`,
+              },
+              {
+                parent: this,
+                dependsOn: dependsOn,
+              },
+            );
 
             this.registerTailscaleService(service);
 

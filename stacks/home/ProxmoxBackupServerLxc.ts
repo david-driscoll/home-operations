@@ -305,7 +305,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
         title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
         tags: ["pbs", "lxc", "backup"],
         sections: {
-          dns: createDnsSection(this.dns),
+          // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: hostname },

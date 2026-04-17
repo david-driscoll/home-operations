@@ -57,18 +57,18 @@ export class StandardDns extends ComponentResource {
       },
     );
 
-    // this.adguard = new adguard.Rewrite(
-    //   `${name}-adguard`,
-    //   {
-    //     domain: args.hostname,
-    //     answer: args.ipAddress,
-    //   },
-    //   {
-    //     parent: this,
-    //     provider: globals.adguardProvider,
-    //     deleteBeforeReplace: true,
-    //   },
-    // );
+    this.adguard = new adguard.Rewrite(
+      `${name}-adguard`,
+      {
+        domain: args.hostname,
+        answer: args.ipAddress,
+      },
+      {
+        parent: this,
+        provider: globals.adguardProvider,
+        deleteBeforeReplace: true,
+      },
+    );
     this.hostname = output(args.hostname);
     this.ipAddress = output(args.ipAddress);
     addGatusDnsRecord(name, args);

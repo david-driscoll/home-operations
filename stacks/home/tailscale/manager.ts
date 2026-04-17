@@ -69,11 +69,11 @@ export class TailscaleAclManager {
   acls: string;
   updates: ((context: TailscaleAclContext) => pulumi.Output<string>)[] = [];
   testData: TestsDataPopulated;
-  constructor(acls: string, hosts: { [key: string]: pulumi.Input<string> }, testData: TestsData) {
+  constructor(acls: string, hosts: [pulumi.Input<string>, pulumi.Input<string>][], testData: TestsData) {
     this.acls = acls;
     this.updates.push(({ acls }) => {
       return pulumi.output(hosts).apply((hosts) => {
-        return Object.entries(hosts).reduce((acc, [key, value]) => applyAllEdits(acc, ["hosts", key], value), acls);
+        return hosts.reduce((acc, [key, value]) => applyAllEdits(acc, ["hosts", key], value), acls);
       });
     });
 

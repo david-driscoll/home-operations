@@ -23,7 +23,7 @@ export class BackupJobManager extends ComponentResource {
       cluster: DockgeLxc;
       globals: GlobalResources;
     },
-    opts?: ComponentResourceOptions
+    opts?: ComponentResourceOptions,
   ) {
     super("home:backups:BackupJobManager", name, {}, opts);
     this.connection = args.cluster.remoteConnection;
@@ -42,14 +42,17 @@ export class BackupJobManager extends ComponentResource {
         parent: this,
         connection: this.connection,
         remotePath: interpolate`/opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
-        dependsOn: [new remote.Command(
-          `${cluster.key}-backup-job-${kebabCase(job.name)}-remove`,
+        dependsOn: [
+          new remote.Command(
+            `${cluster.key}-backup-job-${kebabCase(job.name)}-remove`,
 
-          {
-            connection: this.connection,
-            delete: interpolate`rm -f /opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
-          },
-          { parent: this })],
+            {
+              connection: this.connection,
+              delete: interpolate`rm -f /opt/stacks/backups/jobs/${cluster.key}-${kebabCase(job.name)}.json`,
+            },
+            { parent: this },
+          ),
+        ],
       });
     });
   }
@@ -78,7 +81,7 @@ export class BackupJobManager extends ComponentResource {
                   "minimum-reminder-interval": "24h",
                 },
               ],
-            } as ExternalEndpoint)
+            }) as ExternalEndpoint,
         ),
       };
     });
@@ -103,7 +106,7 @@ export class BackupPlanManager extends ComponentResource {
       remoteBackup: DockgeLxc;
       globals: GlobalResources;
     },
-    opts?: ComponentResourceOptions
+    opts?: ComponentResourceOptions,
   ) {
     super("home:backups:BackupPlanManager", name, {}, opts);
     this.localBackup = args.localBackup;
@@ -112,7 +115,7 @@ export class BackupPlanManager extends ComponentResource {
     this.globals = args.globals;
   }
 
-  public async createBackrestPlan(
+  public createBackrestPlan(
     name: string,
     args: {
       title: Input<string>;
@@ -121,87 +124,79 @@ export class BackupPlanManager extends ComponentResource {
       paths: Input<string[]>;
       repository?: Input<string>;
       backblazeSecret?: Input<string>;
-    }
+    },
   ) {
-    const password = await this.getVolsyncPassword();
-    const { planConfig, repositoryConfig, paths, repository = name, title, backblazeSecret } = await awaitOutput(output(args));
-    // check if the repository exists at the location (if the config file exists in the given directory)
-    // then if the repository doesn't exist call restic init to initialize it
+    return all([this.localBackup.tailscaleHostname, this.source.tailscaleHostname, output(this.getVolsyncPassword()), output(args)]).apply(
+      ([localHostname, sourceHostname, password, { planConfig, repositoryConfig, paths, repository = name, title, backblazeSecret }]) => {
+        this.repos.set(name, {
+          prunePolicy: {
+            schedule: {
+              maxFrequencyDays: 30,
+              clock: "CLOCK_LAST_RUN_TIME",
+            },
+            maxUnusedPercent: 10,
+          },
+          checkPolicy: {
+            schedule: {
+              maxFrequencyDays: 7,
+              clock: "CLOCK_LAST_RUN_TIME",
+            },
+            readDataSubsetPercent: 10,
+          },
+          commandPrefix: {
+            ioNice: "IO_BEST_EFFORT_LOW",
+            cpuNice: "CPU_LOW",
+          },
+          ...repositoryConfig,
+          id: name,
+          uri: localHostname === sourceHostname ? `/backup/${repository}/` : `sftp:celestia:/${repository}/`,
+          password,
+          autoUnlock: true,
+        });
 
-    const localTailscaleHostname = await awaitOutput(this.localBackup.tailscaleHostname);
-    const isLocalBackupSameAsSource = await awaitOutput(
-      all([this.localBackup.tailscaleHostname, this.source.tailscaleHostname]).apply(([localHostname, sourceHostname]) => localHostname === sourceHostname)
+        this.plans.set(name, {
+          retention: {
+            policyTimeBucketed: {
+              daily: 7,
+              weekly: 4,
+              monthly: 3,
+              keepLastN: 10,
+            },
+          },
+          skipIfUnchanged: true,
+          schedule: {
+            clock: "CLOCK_LAST_RUN_TIME",
+            maxFrequencyDays: 1,
+          },
+          ...planConfig,
+          id: name,
+          repo: name,
+          paths: paths,
+        });
+
+        // TODO: Google Drive?
+        // if (backblazeSecret) {
+        //   this.localBackup.createBackupJob({
+        //     name: interpolate`Backblaze ${title}`,
+        //     schedule: "0 10 */3 * *",
+        //     sourceType: "local",
+        //     source: `/data/backup/${repository}/`,
+        //     destinationType: "b2",
+        //     destination: interpolate`${repository}`,
+        //     destinationSecret: backblazeSecret,
+        //   });
+        // }
+
+        return this.remoteBackup.createBackupJob({
+          name: interpolate`Replicate ${title}`,
+          schedule: "0 3 * * *",
+          sourceType: "sftp",
+          source: interpolate`${this.localBackup.tailscaleHostname}/${repository}`,
+          destinationType: "local",
+          destination: interpolate`/data/backup/${repository}/`,
+        });
+      },
     );
-
-    this.repos.set(name, {
-      prunePolicy: {
-        schedule: {
-          maxFrequencyDays: 30,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        maxUnusedPercent: 10,
-      },
-      checkPolicy: {
-        schedule: {
-          maxFrequencyDays: 7,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        readDataSubsetPercent: 10,
-      },
-      commandPrefix: {
-        ioNice: "IO_BEST_EFFORT_LOW",
-        cpuNice: "CPU_LOW",
-      },
-      ...repositoryConfig,
-      id: name,
-      uri: isLocalBackupSameAsSource ? `/backup/${repository}/` : `sftp:celestia:/${repository}/`,
-      password,
-      autoUnlock: true,
-    });
-
-    this.plans.set(name, {
-      retention: {
-        policyTimeBucketed: {
-          daily: 7,
-          weekly: 4,
-          monthly: 3,
-          keepLastN: 10,
-        },
-      },
-      skipIfUnchanged: true,
-      schedule: {
-        clock: "CLOCK_LAST_RUN_TIME",
-        maxFrequencyDays: 1,
-      },
-      ...planConfig,
-      id: name,
-      repo: name,
-      paths: paths,
-    });
-
-    if (!isLocalBackupSameAsSource) {
-    }
-
-    if (backblazeSecret) {
-      this.localBackup.createBackupJob({
-        name: interpolate`Backblaze ${title}`,
-        schedule: "0 10 */3 * *",
-        sourceType: "local",
-        source: `/data/backup/${repository}/`,
-        destinationType: "b2",
-        destination: interpolate`${repository}`,
-        destinationSecret: backblazeSecret,
-      });
-    }
-
-    this.remoteBackup.createBackupJob({
-      name: interpolate`Replicate ${title}`,
-      schedule: "0 3 * * *",
-      sourceType: "sftp",
-      source: interpolate`${this.localBackup.tailscaleHostname}/${repository}`,
-      destinationType: "local",
-      destination: interpolate`/data/backup/${repository}/`,
-    });
   }
 
   private async getVolsyncPassword(): Promise<string> {
@@ -217,72 +212,72 @@ export class BackupPlanManager extends ComponentResource {
     return (this.volsyncPassword = volsyncItem.fields.credential.value!);
   }
 
-  public async updateBackrestConfig() {
+  public updateBackrestConfig() {
     const ssh = new NodeSSH();
-    const localBackupServerHost = await awaitOutput(output(this.source.tailscaleHostname))!;
-    const sourceKey = await awaitOutput(output(this.source.cluster.key))!;
-    await ssh.connect({
-      host: localBackupServerHost,
-      username: "root",
-    });
+    all([this.source.tailscaleHostname, this.source.cluster.key, this.globals.tailscaleDomain]).apply(async ([localBackupServerHost, sourceKey, domain]) => {
+      await ssh.connect({
+        host: localBackupServerHost,
+        username: "root",
+      });
 
-    var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
-    var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
-    updatedConfig.repos = updatedConfig.repos || [];
-    updatedConfig.plans = updatedConfig.plans || [];
+      var currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+      var updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
+      updatedConfig.repos = updatedConfig.repos || [];
+      updatedConfig.plans = updatedConfig.plans || [];
 
-    for (const plan of this.plans.values()) {
-      const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
-      if (jobIndex >= 0) {
-        updatedConfig.plans[jobIndex] = {
-          ...updatedConfig.plans[jobIndex],
-          paths: plan.paths,
-          excludes: plan.excludes,
-          iexcludes: plan.iexcludes,
-          schedule: plan.schedule,
-          retention: plan.retention,
-          hooks: plan.hooks,
-          backupFlags: plan.backupFlags,
-          skipIfUnchanged: plan.skipIfUnchanged,
-          repo: plan.repo,
-        };
-      } else {
-        updatedConfig.plans.push(plan);
+      for (const plan of this.plans.values()) {
+        const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+        if (jobIndex >= 0) {
+          updatedConfig.plans[jobIndex] = {
+            ...updatedConfig.plans[jobIndex],
+            paths: plan.paths,
+            excludes: plan.excludes,
+            iexcludes: plan.iexcludes,
+            schedule: plan.schedule,
+            retention: plan.retention,
+            hooks: plan.hooks,
+            backupFlags: plan.backupFlags,
+            skipIfUnchanged: plan.skipIfUnchanged,
+            repo: plan.repo,
+          };
+        } else {
+          updatedConfig.plans.push(plan);
+        }
       }
-    }
 
-    for (const repo of this.repos.values()) {
-      const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-      if (jobIndex >= 0) {
-        updatedConfig.repos[jobIndex] = {
-          ...updatedConfig.repos[jobIndex],
-          uri: repo.uri,
-          password: repo.password,
-          env: repo.env,
-          flags: repo.flags,
-          prunePolicy: repo.prunePolicy,
-          checkPolicy: repo.checkPolicy,
-          hooks: repo.hooks,
-          commandPrefix: repo.commandPrefix,
-          autoUnlock: repo.autoUnlock,
-        };
-      } else {
-        updatedConfig.repos.push({
-          ...repo,
-          autoInitialize: true,
-        });
+      for (const repo of this.repos.values()) {
+        const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+        if (jobIndex >= 0) {
+          updatedConfig.repos[jobIndex] = {
+            ...updatedConfig.repos[jobIndex],
+            uri: repo.uri,
+            password: repo.password,
+            env: repo.env,
+            flags: repo.flags,
+            prunePolicy: repo.prunePolicy,
+            checkPolicy: repo.checkPolicy,
+            hooks: repo.hooks,
+            commandPrefix: repo.commandPrefix,
+            autoUnlock: repo.autoUnlock,
+          };
+        } else {
+          updatedConfig.repos.push({
+            ...repo,
+            autoInitialize: true,
+          });
+        }
       }
-    }
 
-    const newConfig = JSON.stringify(updatedConfig);
-    if (currentConfig.trim() === newConfig.trim()) {
+      const newConfig = JSON.stringify(updatedConfig);
+      if (currentConfig.trim() === newConfig.trim()) {
+        ssh.dispose();
+        return;
+      }
+
+      await ssh.execCommand(`echo '${newConfig}' > /opt/stacks/backrest/config/config.json`);
+      await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
+
       ssh.dispose();
-      return;
-    }
-
-    await ssh.execCommand(`echo '${newConfig}' > /opt/stacks/backrest/config/config.json`);
-    await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
-
-    ssh.dispose();
+    });
   }
 }

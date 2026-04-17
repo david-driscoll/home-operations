@@ -6,47 +6,15 @@ import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
 import { BackupPlanManager } from "./jobs.ts";
 
-export async function createBackupJobs({
-  celestiaDockgeRuntime,
-  lunaDockgeRuntime,
-  alphaSiteDockgeRuntime,
-  celestiaHost,
-  globals,
-}: {
-  celestiaDockgeRuntime: DockgeLxc;
-  lunaDockgeRuntime: DockgeLxc;
-  alphaSiteDockgeRuntime: DockgeLxc;
-  celestiaHost: ProxmoxHost;
-  lunaHost: ProxmoxHost;
-  alphaSiteHost: ProxmoxHost;
-  globals: GlobalResources;
-}) {
+export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, globals }: { celestiaDockgeRuntime: DockgeLxc; lunaDockgeRuntime: DockgeLxc; globals: GlobalResources }) {
   const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {
     globals: globals,
     source: celestiaDockgeRuntime,
     localBackup: celestiaDockgeRuntime,
     remoteBackup: lunaDockgeRuntime,
   });
-  // const alphaSiteBackupManager = new BackupPlanManager("alpha-site-backup-plan-manager", {
-  //   globals: globals,
-  //   source: alphaSiteDockgeRuntime,
-  //   localBackup: celestiaDockgeRuntime,
-  //   remoteBackup: lunaDockgeRuntime,
-  // });
 
-  // await alphaSiteBackupManager.createBackrestPlan("adguard", {
-  //   title: "AdGuard Home",
-  //   paths: ["/opt/stacks/adguard"],
-  //   repository: "adguard",
-  // });
-
-  // await alphaSiteBackupManager.createBackrestPlan("zigbee", {
-  //   title: "ZigBee",
-  //   paths: ["/opt/stacks/zigbee-poe"],
-  //   repository: "zigbee",
-  // });
-
-  await celestiaBackupManager.createBackrestPlan("immich", {
+  celestiaBackupManager.createBackrestPlan("immich", {
     title: "Immich",
     paths: ["/spike/data/immich/"],
     repository: "immich",
@@ -55,7 +23,7 @@ export async function createBackupJobs({
     },
   });
 
-  await celestiaBackupManager.createBackrestPlan("pgdump", {
+  celestiaBackupManager.createBackrestPlan("pgdump", {
     title: "Postgres Dumps",
     paths: ["/spike/data/pgdump/"],
     repository: "pgdump",
@@ -97,7 +65,7 @@ export async function createBackupJobs({
       provider: globals.truenasMinioProvider,
       protect: true,
       retainOnDelete: true,
-    }
+    },
   );
 
   const thanosMinioSecret = new OPI("thanos-minio-secret", {
@@ -115,7 +83,8 @@ export async function createBackupJobs({
   createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime, globals });
 
   // await alphaSiteBackupManager.updateBackrestConfig();
-  await celestiaBackupManager.updateBackrestConfig();
+  // TODO: Handle luna backrest config
+  celestiaBackupManager.updateBackrestConfig();
 }
 
 function createMinioBucketBackupJob({
@@ -177,7 +146,8 @@ function createMinioBucketBackupJob({
           provider: globals.truenasMinioProvider,
           protect: true,
           retainOnDelete: true,
-        }
+          import: restoreBucket,
+        },
       );
       source.createBackupJob({
         name: pulumi.interpolate`Sync ${bucket} from ${restoreBucket}`,

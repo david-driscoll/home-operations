@@ -6,9 +6,9 @@ services:
       - ./keys:/keys:ro
       - ./jobs:/jobs:ro
       - /data/backup:/data/backup:rw
-      - /data/restic:/data/restic:rw
-      - spike-backup:/spike/backup:ro
-      - spike-data:/spike/data:ro
+      # - /data/restic:/data/restic:rw
+      - /spike/backup:/spike/backup:ro
+      - /spike/data:/spike/data:ro
     working_dir: /workspace
     restart: unless-stopped
     dns:
@@ -20,17 +20,3 @@ services:
     env_file:
       - .env
     cpus: 1
-
-volumes:
-  spike-backup:
-    driver: local
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.10,rw,nfsvers=4"
-      device: ":/mnt/stash/backup/"
-  spike-data:
-    driver: local
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.10,rw,nfsvers=4"
-      device: ":/mnt/stash/data/"

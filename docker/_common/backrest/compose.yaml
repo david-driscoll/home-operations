@@ -26,10 +26,10 @@ services:
       - ./cache:/cache
       - ./rclone:/root/.config/rclone
       - /data/backup:/backup
-      - /data/restic:/repos
+      # - /data/restic:/repos
       - ./ssh:/root/.ssh:ro
-      - spike-backup:/spike/backup:ro
-      - spike-data:/spike/data:ro
+      - /spike/backup:/spike/backup:ro
+      - /spike/data:/spike/data:ro
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
@@ -48,16 +48,3 @@ x-dockge:
   urls:
     - https://backrest.${CLUSTER_DOMAIN}
     - https://backrest-${host}.${tailscaleDomain}
-volumes:
-  spike-backup:
-    driver: local
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.10,rw,nfsvers=4"
-      device: ":/mnt/stash/backup/"
-  spike-data:
-    driver: local
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.10,rw,nfsvers=4"
-      device: ":/mnt/stash/data/"

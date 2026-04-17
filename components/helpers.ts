@@ -4,7 +4,6 @@ import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, truncate, rm } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
-import { md5 } from "@pulumi/std";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";

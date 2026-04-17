@@ -50,6 +50,7 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly name: string;
   public readonly ipAddress: pulumi.Output<TailscaleIp>;
   public readonly tailscaleIpAddress: TailscaleIp;
+  public readonly tailscaleName: pulumi.Output<string>;
   public readonly macAddress: string;
   // public readonly device: pulumi.Output<GetDeviceResult>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
@@ -62,6 +63,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     this.name = name;
     this.ipAddress = pulumi.output(args.ipAddress);
     this.tailscaleIpAddress = args.tailscaleIpAddress;
+    this.tailscaleName = pulumi.interpolate`${name}`;
     this.macAddress = args.macAddress;
     this.credential = pulumi.output(args.credential);
     const credentialItem = this.credential.apply(async (title) => opClient.getItemByTitle(title));
@@ -108,7 +110,7 @@ export class TruenasVm extends pulumi.ComponentResource {
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
         },
       },
-      { parent: this }
+      { parent: this },
     );
   }
 
@@ -127,7 +129,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     const manager = await promisifyOutput(
       pulumi.output(this.credential).apply(async (credential) => {
         return new TrueNASResourceManager(await getTruenasClient(credential));
-      })
+      }),
     );
 
     let longhorn: Dataset | null = null;
@@ -159,7 +161,7 @@ export class TruenasVm extends pulumi.ComponentResource {
         provider: this.globals.truenasMinioProvider,
         protect: false,
         retainOnDelete: true,
-      }
+      },
     );
 
     // const b2Bucket = new b2.Bucket(
@@ -226,7 +228,7 @@ export class TruenasVm extends pulumi.ComponentResource {
         provider: this.globals.truenasMinioProvider,
         protect: true,
         retainOnDelete: true,
-      }
+      },
     );
 
     // const b2DatabaseBucket = new b2.Bucket(

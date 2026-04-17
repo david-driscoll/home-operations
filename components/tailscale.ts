@@ -14,6 +14,8 @@ import { ClientCredentials } from "simple-oauth2";
 import { awaitOutput, copyFileToRemote } from "./helpers.ts";
 import { output } from "sdks/pbs/bin/types/index.js";
 import { Tailscale } from "./constants.ts";
+import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult, getDevicesOutput } from "@pulumi/tailscale";
+import { TailscaleCidr } from "@openapi/tailscale-grants.js";
 
 export async function getTailscaleClient(): Promise<Client<paths>> {
   const __filename = fileURLToPath(import.meta.url);
@@ -56,7 +58,8 @@ export function installTailscaleLxc(options: {
   parent: pulumi.Resource;
   dependsOn?: pulumi.Resource[];
   vmId: pulumi.Input<number>;
-  args?: {
+  installTailscale: boolean;
+  args: {
     advertiseTags: string[];
     acceptDns?: pulumi.Input<boolean>;
     acceptRoutes?: pulumi.Input<boolean>;
@@ -68,85 +71,105 @@ export function installTailscaleLxc(options: {
   const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
     options.dependsOn = options.dependsOn ?? [];
 
-    // Step 2: Copy auth key to container
-    const authKey = copyFileToRemote(`${name}-auth-key`, {
-      content: options.globals.tailscaleAuthKey.key,
-      remotePath: "/tmp/authkey",
-      connection: options.connection,
-      parent: options.parent,
-    });
-
-    const copyAuthKey = new remote.Command(
-      `${name}-copy-auth-key`,
+    const depends = [];
+    const lxcConfig = new remote.Command(
+      `${name}-lxc-tun`,
       {
         connection: options.connection,
-        create: pulumi.interpolate`pct push ${options.vmId} /tmp/authkey /tmp/authkey`,
+        create: pulumi.interpolate`pct set ${options.vmId} --dev2 /dev/net/tun`,
       },
-      { parent: options.parent, dependsOn: [authKey] },
+      { parent: options.parent, dependsOn: [] },
     );
 
-    const installTailscale = new remote.Command(
-      `${name}-tailscale-install`,
-      {
-        connection: options.connection,
-        create: pulumi.interpolate`pct exec ${options.vmId} -- curl -fsSL https://tailscale.com/install.sh | sh`,
-      },
-      { parent: options.parent, dependsOn: [copyAuthKey] },
-    );
-    // restart lxc
-    const restartLxc = new remote.Command(
-      `${name}-restart-lxc`,
-      {
-        connection: options.connection,
-        create: pulumi.interpolate`pct reboot ${options.vmId}`,
-        update: "echo 0",
-        triggers: [installTailscale.id],
-      },
-      { parent: options.parent, dependsOn: [installTailscale] },
-    );
+    if (pulumi.runtime.isDryRun()) {
+      return pulumi.unknown as remote.Command;
+    }
 
-    const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${options.args?.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${options.args?.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
-      options.args?.ssh ? "--ssh" : "--ssh=false"
-    } ${options.args?.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
+    const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${options.args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${options.args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
+      options.args.ssh ? "--ssh" : "--ssh=false"
+    } ${options.args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
 
-    // Step 4: Run tailscale up with auth key
-    const tailscaleUp = new remote.Command(
-      `${name}-tailscale-up-lxc`,
-      {
+    if (options.installTailscale) {
+      const installTailscale = new remote.Command(
+        `${name}-tailscale-install`,
+        {
+          connection: options.connection,
+          create: pulumi.interpolate`pct exec ${options.vmId} -- sh -lc 'curl -fsSL https://tailscale.com/install.sh | sh'`,
+        },
+        { parent: options.parent, dependsOn: [lxcConfig] },
+      );
+
+      // restart lxc
+      const restartLxc = new remote.Command(
+        `${name}-restart-lxc`,
+        {
+          connection: options.connection,
+          create: pulumi.interpolate`pct reboot ${options.vmId}`,
+          update: "echo 0",
+          triggers: [installTailscale.create, lxcConfig.create],
+        },
+        { parent: options.parent, dependsOn: [installTailscale] },
+      );
+      depends.push(installTailscale, restartLxc);
+
+      // Step 2: Copy auth key to container
+      const authKey = copyFileToRemote(`${name}-authkey`, {
+        content: options.globals.tailscaleAuthKey.key,
+        remotePath: "/tmp/authkey",
         connection: options.connection,
-        create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/authkey ${tailscaleArgs} --reset`,
-        triggers: [installTailscale.id, authKey.id, copyAuthKey.id],
-      },
-      { parent: options.parent, dependsOn: [restartLxc, copyAuthKey] },
-    );
+        parent: options.parent,
+        dependsOn: options.dependsOn,
+      });
+
+      const copyAuthKey = new remote.Command(
+        `${name}-copy-authkey`,
+        {
+          connection: options.connection,
+          create: pulumi.interpolate`pct push ${options.vmId} /tmp/authkey /tmp/authkey`,
+          triggers: [authKey.id],
+        },
+        { parent: options.parent, dependsOn: [authKey, ...depends] },
+      );
+      depends.push(copyAuthKey);
+
+      // Step 4: Run tailscale up with auth key
+      const tailscaleUp = new remote.Command(
+        `${name}-tailscale-up-lxc`,
+        {
+          connection: options.connection,
+          create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/authkey ${tailscaleArgs} --reset`,
+        },
+        { parent: options.parent, dependsOn: [...depends] },
+      );
+      depends.push(tailscaleUp);
+    }
 
     // Step 5: Configure tailscale settings
     const tailscaleSet = new remote.Command(
       `${name}-tailscale-set-lxc`,
       {
         connection: options.connection,
-        create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale set ${options.args?.relayServerPort ? pulumi.interpolate`--relay-server-port=${options.args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update`,
-        triggers: [installTailscale.id, authKey.id, copyAuthKey.id, tailscaleUp.id],
+        create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale set ${options.args.relayServerPort ? pulumi.interpolate`--relay-server-port=${options.args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update`,
+        triggers: [],
       },
-      { parent: options.parent, dependsOn: [copyAuthKey, tailscaleUp] },
+      { parent: options.parent, dependsOn: [...depends] },
     );
-
-    if (pulumi.runtime.isDryRun()) {
-      return pulumi.output(pulumi.unknown) as components["schemas"]["Device"];
-    }
-
+    depends.push(tailscaleSet);
     await awaitOutput(tailscaleSet.id);
 
-    const devices = await client.GET("/tailnet/{tailnet}/devices", { params: { path: { tailnet: "-" }, query: { fields: "all", hostname: options.name } } });
-    const result = devices.data?.devices?.[0];
-    if (!result) {
-      throw new Error(`Device with hostname ${name} not found in Tailscale`);
-    }
-    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId! } }, body: { ipv4: ipAddress } });
-    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: result.nodeId! } }, body: { keyExpiryDisabled: true } });
-    await client.POST("/device/{deviceId}/tags", { params: { path: { deviceId: result.nodeId! } }, body: { add: args?.advertiseTags ?? [] } });
+    const deviceInfo = await getDevice({ hostname: name }, { parent: options.parent, provider: options.globals.tailscaleProvider });
 
-    return result;
+    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { ipv4: ipAddress } });
+    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { keyExpiryDisabled: true } });
+
+    return new DeviceTags(
+      `${name}-device-tags`,
+      {
+        deviceId: deviceInfo.nodeId!,
+        tags: args.advertiseTags,
+      },
+      { parent: options.parent, provider: options.globals.tailscaleProvider, dependsOn: [], retainOnDelete: true },
+    );
   });
 
   return deviceInfo;
@@ -159,27 +182,29 @@ export function updateTailscaleProxmox(options: {
   ipAddress: pulumi.Input<string>;
   parent: pulumi.Resource;
   dependsOn?: pulumi.Resource[];
-  args?: {
+  args: {
     advertiseTags: string[];
+    advertiseRoutes: TailscaleCidr[];
     acceptDns?: pulumi.Input<boolean>;
     acceptRoutes?: pulumi.Input<boolean>;
     ssh?: pulumi.Input<boolean>;
     advertiseExitNode?: pulumi.Input<boolean>;
     relayServerPort?: pulumi.Input<number>;
+    exitNodeAllowLanAccess?: pulumi.Input<boolean>;
   };
 }) {
   const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
     options.dependsOn = options.dependsOn ?? [];
 
-    const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${args?.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args?.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
-      args?.ssh ? "--ssh" : "--ssh=false"
-    } ${args?.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} --accept-risk=lose-ssh`;
+    const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
+      args.ssh ? "--ssh" : "--ssh=false"
+    } ${args.advertiseExitNode ? "--advertise-exit-node" : "--advertise-exit-node=false"} ${args.exitNodeAllowLanAccess ? "--exit-node-allow-lan-access" : "--exit-node-allow-lan-access=false"} --accept-risk=lose-ssh --advertise-routes="${args.advertiseRoutes.join(",")}"`;
 
     const tailscaleSet = new remote.Command(
       `${name}-tailscale-set`,
       {
         connection: options.connection,
-        create: pulumi.interpolate`tailscale set ${args?.relayServerPort ? pulumi.interpolate`--relay-server-port=${args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update `,
+        create: pulumi.interpolate`tailscale set ${args.relayServerPort ? pulumi.interpolate`--relay-server-port=${args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update `,
         triggers: [],
         // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
       },
@@ -192,16 +217,19 @@ export function updateTailscaleProxmox(options: {
 
     await awaitOutput(tailscaleSet.id);
 
-    const devices = await client.GET("/tailnet/{tailnet}/devices", { params: { path: { tailnet: "-" }, query: { fields: "all", hostname: name } } });
-    const result = devices.data?.devices?.[0];
-    if (!result) {
-      throw new Error(`Device with hostname ${name} not found in Tailscale`);
-    }
-    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: result.nodeId! } }, body: { ipv4: ipAddress } });
-    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: result.nodeId! } }, body: { keyExpiryDisabled: true } });
-    await client.POST("/device/{deviceId}/tags", { params: { path: { deviceId: result.nodeId! } }, body: { add: args?.advertiseTags ?? [] } });
+    const deviceInfo = await getDevice({ hostname: name }, { parent: options.parent, provider: options.globals.tailscaleProvider });
+    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId! } }, body: { ipv4: ipAddress } });
+    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId! } }, body: { keyExpiryDisabled: true } });
 
-    return result;
+    new DeviceTags(
+      `${name}-device-tags`,
+      {
+        deviceId: deviceInfo.nodeId!,
+        tags: args.advertiseTags,
+      },
+      { parent: options.parent, provider: options.globals.tailscaleProvider, dependsOn: [tailscaleSet], retainOnDelete: true },
+    );
+    return deviceInfo;
   });
 
   return deviceInfo;
@@ -216,8 +244,8 @@ export function createPeerRelayRule(fwdIp: pulumi.Input<string>, globals: Global
       `tailscale-port-forward-${ipDash}`,
       {
         dstPort: forwardPort.result.apply((p) => p.toString()),
-        portForwardInterface: "both",
-        protocol: "udp",
+        portForwardInterface: "wan",
+        protocol: "tcp_udp",
         srcIp: "any",
         fwdIp: fwdIp,
         fwdPort: relayPort.result.apply((p) => p.toString()),

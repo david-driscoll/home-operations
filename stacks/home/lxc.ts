@@ -84,26 +84,16 @@ export function runCommunityScriptLxc(
   const create = pulumi.all([args.script, varString, ctid]).apply(([script, vars, id]) => {
     // If prompt answers provided, pipe them to the script via printf
     const scriptCmd = `TERM=linux mode=generated ${vars} eval "$(curl -fsSL ${script})"`;
-    const runCmd = promptAnswers.length > 0
-      ? `printf '%s\\n' ${promptAnswers.map(a => `'${a}'`).join(" ")} | ${scriptCmd}`
-      : scriptCmd;
+    const runCmd = promptAnswers.length > 0 ? `printf '%s\\n' ${promptAnswers.map((a) => `'${a}'`).join(" ")} | ${scriptCmd}` : scriptCmd;
 
     return [
       `set -e`,
-      // Pre-check: Skip if container already exists
-      `if pct status ${id} >/dev/null 2>&1; then`,
-      `  echo "Container ${id} already exists, skipping creation"`,
-      `  exit 0`,
-      `fi`,
-      // Run the community-scripts creation script
-      `echo "Creating container ${id}..."`,
       runCmd,
       // Post-verification: Ensure container was created
       `if ! pct status ${id} >/dev/null 2>&1; then`,
       `  echo "ERROR: Container ${id} was not created" >&2`,
       `  exit 1`,
       `fi`,
-      `echo "Container ${id} created successfully"`,
     ].join("\n");
   });
 
@@ -112,7 +102,8 @@ export function runCommunityScriptLxc(
     {
       connection: args.connection,
       create: create.apply((cmd) => `bash -c '${cmd.replace(/'/g, "'\"'\"'")}'`),
-      delete: pulumi.interpolate`pct destroy ${ctid} --purge 2>/dev/null || true`,
+      update: "echo 0",
+      delete: pulumi.interpolate`pct stop ${ctid} && pct destroy ${ctid} --purge`,
       triggers: [...Object.values(args.vars), ...Object.keys(args.vars)],
     },
     opts,
