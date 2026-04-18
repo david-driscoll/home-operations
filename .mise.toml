@@ -11,7 +11,7 @@ AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
 AUTHENTIK_URL = "op://Eris/Authentik Token/url"
 
 [tools]
-python = "3.14.3"
+python = "3.14.4"
 kubectl = "1.35.4"
 powershell-core = "7.5.1"
 1password-cli = "2.30.3"
