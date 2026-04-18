@@ -4,7 +4,7 @@ import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, truncate, rm } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
-import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
+import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
 import { basename, dirname, join } from "path";
@@ -39,8 +39,8 @@ export function copyFileToRemote(
     remotePath: Input<string>;
     connection: types.input.remote.ConnectionArgs;
     parent?: Resource;
-    dependsOn?: Input<Resource[]>;
-  }
+    dependsOn?: Input<Input<Resource>[]>;
+  },
 ) {
   return output(name)
     .apply((name) => output({ name, id: md5Output({ input: args.content }).result }))
@@ -55,7 +55,7 @@ export function copyFileToRemote(
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
           triggers: [id, remotePath],
         },
-        mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) })
+        mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
       );
 
       return new remote.CopyToRemote(
@@ -72,10 +72,49 @@ export function copyFileToRemote(
             dependsOn: output(args.dependsOn)
               .apply((d) => d ?? [])
               .apply((d) => [...d, mkdir]),
-          }
-        )
+          },
+        ),
       );
     });
+}
+
+export function pushLxcDefinition(
+  name: Input<string>,
+  args: {
+    definition: Input<ApplicationDefinitionSchema>;
+    vmId: Input<number>;
+    connection: types.input.remote.ConnectionArgs;
+    parent?: Resource;
+    dependsOn?: Input<Resource>[];
+  },
+) {
+  const content = output(args.definition).apply((def) => yaml.stringify(def, { lineWidth: 0 }));
+  const vmId = output(args.vmId);
+
+  const hostCopy = copyFileToRemote(
+    output(name).apply((n) => `${n}-lxc-def`),
+    {
+      content,
+      remotePath: output(name).apply((n) => `/tmp/app-defs/${n}.yaml`),
+      connection: args.connection,
+      parent: args.parent,
+      dependsOn: args.dependsOn,
+    },
+  );
+
+  return all([name, hostCopy, vmId, args.dependsOn]).apply(
+    ([n, copy, id, dependsOn]) =>
+      new remote.Command(
+        `${n}-push-lxc-def`,
+        {
+          connection: args.connection,
+          create: `pct push ${id} /tmp/app-defs/${n}.yaml /etc/app-definition.yaml`,
+          update: `pct push ${id} /tmp/app-defs/${n}.yaml /etc/app-definition.yaml`,
+          triggers: [content],
+        },
+        mergeOptions({ parent: args.parent }, { dependsOn: [...(dependsOn ?? []), copy] }),
+      ),
+  );
 }
 
 export function removeUndefinedProperties<T>(obj: T): T {
@@ -89,7 +128,7 @@ export function removeUndefinedProperties<T>(obj: T): T {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
-        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const)
+        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const),
     ) as T;
   }
   return obj;
@@ -108,14 +147,14 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
                 ...e,
               };
             }),
-          (a, b) => a.name === b.name
+          (a, b) => a.name === b.name,
         ),
         "external-endpoints": unique(
           (a["external-endpoints"] ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-          (a, b) => a.name === b.name
+          (a, b) => a.name === b.name,
         ),
       },
-      { lineWidth: 0 }
+      { lineWidth: 0 },
     );
   });
 
@@ -176,34 +215,36 @@ export function toGatusKey(group: string, name: string) {
   return `${group.replace(/[\s\/_,.#+&]+/g, "-")}_${name.replace(/[\s\/_,.#+&]+/g, "-")}`.toLowerCase();
 }
 
-export function clientIdPair(resourceName: string, options: {
-  clientId?: Input<string>;
-  clientSecret?: Input<string>;
-  options: ResourceOptions
-}) {
-
-        const clientId = options.clientId
-          ? output(options.clientId)
-          : new RandomString(
-              `${resourceName}-client-id`,
-              {
-                length: 16,
-                upper: false,
-                special: false,
-              },
-              options.options
-            ).result;
-        const clientSecret = options.clientSecret
-          ? output(options.clientSecret)
-          : new RandomPassword(
-              `${resourceName}-client-secret`,
-              {
-                length: 32,
-                upper: false,
-                special: false,
-              },
-              options.options
-          ).result;
+export function clientIdPair(
+  resourceName: string,
+  options: {
+    clientId?: Input<string>;
+    clientSecret?: Input<string>;
+    options: ResourceOptions;
+  },
+) {
+  const clientId = options.clientId
+    ? output(options.clientId)
+    : new RandomString(
+        `${resourceName}-client-id`,
+        {
+          length: 16,
+          upper: false,
+          special: false,
+        },
+        options.options,
+      ).result;
+  const clientSecret = options.clientSecret
+    ? output(options.clientSecret)
+    : new RandomPassword(
+        `${resourceName}-client-secret`,
+        {
+          length: 32,
+          upper: false,
+          special: false,
+        },
+        options.options,
+      ).result;
 
   return { clientId, clientSecret };
 }

@@ -24,7 +24,7 @@ import { TailscaleAclManager } from "./tailscale/manager.ts";
 import { TailscaleService } from "@openapi/tailscale-grants.js";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { remote } from "@pulumi/command";
-import { Tailscale } from "@components/constants.ts";
+import { dns, Tailscale } from "@components/constants.ts";
 
 const globals = new GlobalResources({}, {});
 // Generate SFTP server host key and a single client key (authorized key)
@@ -156,26 +156,6 @@ lunaDockgeRuntime.addHostMount("/data");
 lunaDockgeRuntime.addHostMount(`/mnt/pve/${lunaBackupMount}`, "/spike/backup");
 lunaDockgeRuntime.addHostMount(`/mnt/pve/${lunaDataMount}`, "/spike/data");
 
-// const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
-//   globals,
-//   outputs,
-//   host: celestiaHost,
-//   vmId: 301,
-//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-//   cluster: celestiaCluster,
-//   dockge: celestiaDockgeRuntime,
-// });
-
-// const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
-//   globals,
-//   outputs,
-//   host: lunaHost,
-//   vmId: 401,
-//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-//   cluster: lunaCluster,
-//   dockge: lunaDockgeRuntime,
-// });
-
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
   credential: dockgeCredential,
@@ -202,7 +182,7 @@ const primaryDns = getTailscaleIp("adguard-home");
 const secondaryDns = alphaSiteDockgeRuntime.tailscaleIpAddress;
 const unifiDns = "100.111.0.1";
 
-updateTailscaleAcls({
+const tailscale = updateTailscaleAcls({
   globals,
   services: tailscaleServices,
   hosts: [
@@ -216,17 +196,17 @@ updateTailscaleAcls({
     [celestiaDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleIpAddress],
     [lunaHost.tailscaleName, lunaHost.tailscaleIpAddress],
     [lunaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleIpAddress],
-    [spikeVm.tailscaleName, spikeVm.tailscaleIpAddress],
     [twilightSparkleHost.tailscaleName, twilightSparkleHost.tailscaleIpAddress],
+    [spikeVm.tailscaleName, spikeVm.tailscaleIpAddress],
   ],
-  internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress /*, celestiaPbs.ipAddress, lunaPbs.ipAddress*/],
+  internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
   tests: {
     dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
     proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
     taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
     kubernetesDevices: ["sgc", "equestria"],
   },
-  dnsServers: [primaryDns, secondaryDns, unifiDns],
+  dnsServers: [primaryDns, secondaryDns, unifiDns, ...dns.internalIps],
 });
 
 // const users = await tailscale.
@@ -259,6 +239,34 @@ pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]
     dnsParent,
   );
 });
+
+const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
+  globals,
+  outputs,
+  host: celestiaHost,
+  vmId: 301,
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  cluster: celestiaCluster,
+  dockge: celestiaDockgeRuntime,
+  dependsOn: [tailscale.acl],
+});
+celestiaPbs.addHostMount("/data");
+celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
+celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
+
+const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
+  globals,
+  outputs,
+  host: lunaHost,
+  vmId: 401,
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  cluster: lunaCluster,
+  dockge: lunaDockgeRuntime,
+  dependsOn: [tailscale.acl],
+});
+lunaPbs.addHostMount("/data");
+lunaPbs.addHostMount(`/mnt/pve/${lunaBackupMount}`, "/spike/backup");
+lunaPbs.addHostMount(`/mnt/pve/${lunaDataMount}`, "/spike/data");
 
 // TODO: add code to ensure tailscale ips is set for all important services
 

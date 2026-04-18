@@ -119,6 +119,7 @@ export class TailscaleAclManager {
 
           const destinations = (p: string, user: string | undefined) => {
             return dst
+              .filter((u) => !!u)
               .map((u) => u.replace(/^host\:/, ""))
               .filter((dest) => dest !== autogroups.internet)
               .map((d) => (d === autogroups.internet ? d : `${d}:${p ?? "443"}`));
@@ -126,6 +127,7 @@ export class TailscaleAclManager {
 
           return [
             ...(testSources.accept ?? [])
+              .filter((u) => !!u)
               .map((u) => u.replace(/^host\:/, ""))
               .flatMap((user) =>
                 ip.map((port) => {
@@ -138,6 +140,7 @@ export class TailscaleAclManager {
                 }),
               ),
             ...(testSources.deny ?? [])
+              .filter((u) => !!u)
               .map((u) => u.replace(/^host\:/, ""))
               .flatMap((user) =>
                 ip.map((port) => {

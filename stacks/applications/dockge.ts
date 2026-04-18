@@ -83,50 +83,31 @@ export async function dockgeApplications(globals: GlobalResources, outputs: Auth
     },
   });
 
-  // if (clusterDefinition.key === "celestia" || clusterDefinition.key === "luna") {
-  //   await applicationManager.createApplication({
-  //     metadata: { name: "pbs", namespace: clusterDefinition.key },
-  //     spec: {
-  //       name: "Proxmox Backup Server",
-  //       category: clusterDefinition.title,
-  //       description: `Proxmox Backup Server for ${clusterDefinition.title}`,
-  //       url: `https://pbs.${clusterDefinition.rootDomain}`,
-  //       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-  //       authentik: {
-  //         proxy: {
-  //           mode: "forward_single",
-  //           externalHost: `https://pbs.${clusterDefinition.rootDomain}`,
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
-
-  // if (clusterDefinition.key === "alpha-site") {
-  //   await applicationManager.createApplication({
-  //     metadata: { name: "pdm", namespace: clusterDefinition.key },
-  //     spec: {
-  //       name: "Proxmox Datacenter Manager",
-  //       category: clusterDefinition.title,
-  //       description: `Proxmox Datacenter Manager for ${clusterDefinition.title}`,
-  //       url: `https://pdm.${clusterDefinition.rootDomain}`,
-  //       icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-  //       authentik: {
-  //         proxy: {
-  //           mode: "forward_single",
-  //           externalHost: `https://pdm.${clusterDefinition.rootDomain}`,
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
-
   for (const stack of stacks) {
     const definition = await readDefinition(ssh, stack);
     if (!definition) {
       continue;
     }
     await applicationManager.createApplication(definition);
+  }
+
+  // Enumerate LXC containers on the Proxmox host and register any app definitions found.
+  const proxmoxSsh = new NodeSSH();
+  try {
+    const proxmoxData = await op.getItemByTitle(`ProxmoxHost: ${clusterDefinition.title}`);
+    await proxmoxSsh.connect({
+      debug: (msg) => pulumi.log.debug(`Proxmox SSH: ${msg}`),
+      host: proxmoxData.sections.ssh.fields.hostname.value,
+      username: proxmoxData.sections.ssh.fields.username.value ?? "root",
+    });
+    const lxcDefinitions = await readLxcDefinitions(proxmoxSsh);
+    for (const definition of lxcDefinitions) {
+      await applicationManager.createApplication(definition);
+    }
+  } catch (error) {
+    pulumi.log.warn(`LXC discovery skipped for ${clusterDefinition.title}: ${error}`);
+  } finally {
+    proxmoxSsh.dispose();
   }
 
   addUptimeGatus(
@@ -214,4 +195,55 @@ async function readDefinition(ssh: NodeSSH, stackName: string): Promise<Applicat
     pulumi.log.error(`Failed to read definition.yaml for ${stackName}: ${error}`);
     throw error;
   }
+}
+
+/**
+ * Enumerate all running LXC containers on a Proxmox host and return any
+ * ApplicationDefinitionSchema found at /etc/app-definition.yaml inside each.
+ */
+async function readLxcDefinitions(proxmoxSsh: NodeSSH): Promise<ApplicationDefinitionSchema[]> {
+  const listResult = await proxmoxSsh.execCommand("pct list");
+  if (listResult.stderr) {
+    pulumi.log.warn(`Error listing LXC containers: ${listResult.stderr}`);
+    return [];
+  }
+
+  // pct list output: header line followed by "VMID  Status  Lock  Name" rows
+  const vmIds = listResult.stdout
+    .split("\n")
+    .slice(1)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .flatMap((line) => {
+      const parts = line.split(/\s+/);
+      const vmId = parseInt(parts[0], 10);
+      const status = parts[1];
+      return !isNaN(vmId) && status === "running" ? [vmId] : [];
+    });
+
+  pulumi.log.info(`Found running LXC containers: ${vmIds.join(", ")}`);
+
+  const definitions: ApplicationDefinitionSchema[] = [];
+  for (const vmId of vmIds) {
+    if (!Number.isInteger(vmId) || vmId <= 0) {
+      pulumi.log.warn(`Skipping invalid LXC VM ID: ${vmId}`);
+      continue;
+    }
+    const result = await proxmoxSsh.execCommand(
+      `pct exec ${vmId} -- sh -c 'test -f /etc/app-definition.yaml && cat /etc/app-definition.yaml || echo FILE_NOT_FOUND'`,
+    );
+    const content = result.stdout.trim();
+    if (!content || content === "FILE_NOT_FOUND") {
+      continue;
+    }
+    try {
+      const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
+      pulumi.log.info(`Found app definition in LXC ${vmId}: ${parsed.metadata.name}`);
+      definitions.push(parsed);
+    } catch (error) {
+      pulumi.log.warn(`Failed to parse /etc/app-definition.yaml from LXC ${vmId}: ${error}`);
+    }
+  }
+
+  return definitions;
 }

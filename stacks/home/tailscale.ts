@@ -63,11 +63,12 @@ export function updateTailscaleAcls(args: {
     ];
 
     for (const service of services) {
-      manager.setService(service, [tag.dockge, tag.proxmox, tag.operator]);
+      manager.setService(service, [tag.dockge, tag.backups, tag.proxmox, tag.operator]);
     }
 
     configureProxmoxAccess(manager);
     configureDockgeAccess(manager);
+    configurePbsAccess(manager);
     configureKubernetesAccess(manager, clusters);
 
     createGroupGrants(manager);
@@ -99,8 +100,8 @@ export function updateTailscaleAcls(args: {
     manager.setGrant(
       {
         src: [autogroups.admin],
-        dst: [tag.proxmox, tag.dockge],
-        ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.proxmoxManagement, ...ports.nfs],
+        dst: [tag.proxmox, tag.backups, tag.dockge],
+        ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.proxmoxManagement, ...ports.proxmoxBackupServer, ...ports.nfs],
       },
       { accept: testData.knownAdminUsers },
     );
@@ -108,7 +109,7 @@ export function updateTailscaleAcls(args: {
     manager.setSshRule(
       {
         src: [autogroups.admin],
-        dst: [tag.proxmox, tag.dockge],
+        dst: [tag.proxmox, tag.backups, tag.dockge],
         users: ["root"],
         action: "check",
       },
@@ -394,7 +395,7 @@ export function updateTailscaleAcls(args: {
       { accept: [tag.egress] },
     );
 
-    new tailscale.Acl(
+    const acl = new tailscale.Acl(
       "acl",
       {
         acl: pulumi.output(manager.getJson()),
@@ -403,16 +404,16 @@ export function updateTailscaleAcls(args: {
       cro,
     );
 
-    new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers,  }, cro);
+    new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers }, cro);
     // new tailscale.DnsSearchPaths("dns-search-paths", { searchPaths: [args.globals.searchDomain] }, { provider: args.globals.tailscaleProvider });
 
-    return manager;
+    return { acl, manager };
   });
 }
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
-  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox]);
+  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.backups, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox]);
   manager.setExitNode(tag.proxmox);
   manager.setRoute(subnets.home, [tag.proxmox]);
 
@@ -421,6 +422,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
     { accept: [tag.proxmox], deny: testData.knownNormalUsers },
   );
   manager.setGrant({ src: [tag.proxmox], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.proxmox], dst: [tag.backups], ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs] }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [tag.observability], ip: ports.observability }, { accept: [tag.proxmox], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.proxmox], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.proxmox] });
 
@@ -433,14 +435,9 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
 function configureDockgeAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
   manager.setTagOwner(tag.dockge, [tag.apps]);
-  manager.setExitNode(tag.dockge);
-
   manager.setService(tag.apps, [tag.dockge]);
 
-  manager.setGrant(
-    { src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement, ...ports.nfs] },
-    { accept: [tag.dockge], deny: testData.knownNormalUsers },
-  );
+  manager.setGrant({ src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.nfs] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [autogroups.member, autogroups.tagged], dst: [tag.dockge], ip: ports.web }, { accept: testData.knownNormalUsers.concat(testData.knownAdminUsers) });
   manager.setGrant({ src: [tag.dockge], dst: [tag.observability], ip: ports.observability }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
@@ -450,6 +447,20 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
     testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map((z) => [z, { accept: [`root`] }] as const)),
   );
   manager.setSshRule({ src: [tag.dockge], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
+}
+
+function configurePbsAccess(manager: TailscaleAclManager) {
+  const testData = manager.testData;
+  manager.setTagOwner(tag.backups, [tag.apps, tag.backups]);
+  manager.setService(tag.apps, [tag.backups]);
+
+  manager.setGrant({ src: [tag.backups], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs] }, { accept: [tag.backups], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.backups], dst: [tag.backups], ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs] }, { accept: [tag.backups], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.backups], dst: [tag.observability], ip: ports.observability }, { accept: [tag.backups], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.backups], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.backups] });
+
+  const rules = Object.fromEntries(testData.knownAdminUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const));
+  manager.setSshRule({ src: [tag.backups], dst: [tag.backups, tag.proxmox], users: ["root"], action: "accept" }, rules);
 }
 
 interface KubernetesCluster {

@@ -54,7 +54,7 @@ export function installTailscaleLxc(options: {
   connection: types.input.remote.ConnectionArgs;
   globals: GlobalResources;
   name: pulumi.Input<string>;
-  ipAddress: pulumi.Input<string>;
+  ipAddress?: pulumi.Input<string>;
   parent: pulumi.Resource;
   dependsOn?: pulumi.Resource[];
   vmId: pulumi.Input<number>;
@@ -72,18 +72,19 @@ export function installTailscaleLxc(options: {
     options.dependsOn = options.dependsOn ?? [];
 
     const depends = [];
+
+    if (pulumi.runtime.isDryRun()) {
+      return pulumi.unknown as remote.Command;
+    }
+
     const lxcConfig = new remote.Command(
       `${name}-lxc-tun`,
       {
         connection: options.connection,
         create: pulumi.interpolate`pct set ${options.vmId} --dev2 /dev/net/tun`,
       },
-      { parent: options.parent, dependsOn: [] },
+      { parent: options.parent, dependsOn: options.dependsOn },
     );
-
-    if (pulumi.runtime.isDryRun()) {
-      return pulumi.unknown as remote.Command;
-    }
 
     const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${options.args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${options.args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
       options.args.ssh ? "--ssh" : "--ssh=false"
@@ -159,7 +160,9 @@ export function installTailscaleLxc(options: {
 
     const deviceInfo = await getDevice({ hostname: name }, { parent: options.parent, provider: options.globals.tailscaleProvider });
 
-    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { ipv4: ipAddress } });
+    if (ipAddress) {
+      await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { ipv4: ipAddress } });
+    }
     await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { keyExpiryDisabled: true } });
 
     return new DeviceTags(

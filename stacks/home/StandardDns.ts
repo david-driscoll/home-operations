@@ -9,16 +9,15 @@ import { dns } from "@components/constants.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
-  public readonly ipAddress: Output<string>;
   public readonly unifi: unifi.dns.Record;
   public readonly cloudflare: cloudflare.DnsRecord;
-  // public readonly adguard: adguard.Rewrite;
+  public readonly adguard: adguard.Rewrite;
 
   constructor(
     name: string,
     args: {
       hostname: Input<string>;
-      ipAddress: Input<string>;
+      ipAddress?: Input<string>;
       type: "A" | "CNAME";
       record?: Input<string>;
     },
@@ -27,12 +26,19 @@ export class StandardDns extends ComponentResource {
   ) {
     super("custom:resource:StandardDns", name, {}, mergeOptions(cro, { deleteBeforeReplace: true }));
 
+    const record =
+      args.record ??
+      args.ipAddress ??
+      (() => {
+        throw new Error("Either ipAddress or record must be provided");
+      })();
+
     this.unifi = new unifi.dns.Record(
       `${name}-unifi`,
       {
         name: args.hostname,
         type: args.type,
-        value: args.record ?? args.ipAddress,
+        value: record,
       },
       {
         parent: this,
@@ -46,7 +52,7 @@ export class StandardDns extends ComponentResource {
       {
         name: args.hostname,
         zoneId: globals.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!),
-        content: args.record ?? args.ipAddress,
+        content: record,
         type: args.type,
         ttl: 1,
       },
@@ -61,7 +67,7 @@ export class StandardDns extends ComponentResource {
       `${name}-adguard`,
       {
         domain: args.hostname,
-        answer: args.ipAddress,
+        answer: record,
       },
       {
         parent: this,
@@ -70,7 +76,6 @@ export class StandardDns extends ComponentResource {
       },
     );
     this.hostname = output(args.hostname);
-    this.ipAddress = output(args.ipAddress);
     addGatusDnsRecord(name, args);
   }
 }
@@ -81,7 +86,7 @@ function addGatusDnsRecord(
   name: string,
   args: {
     hostname: Input<string>;
-    ipAddress: Input<string>;
+    ipAddress?: Input<string>;
     type: "A" | "CNAME";
     record?: Input<string>;
   },
@@ -123,10 +128,6 @@ export function createDnsSection(dns: StandardDns): OnePasswordItemSectionInput 
       hostname: {
         type: TypeEnum.String,
         value: dns.hostname,
-      },
-      ipAddress: {
-        type: TypeEnum.String,
-        value: dns.ipAddress,
       },
     },
   };

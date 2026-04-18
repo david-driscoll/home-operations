@@ -1,10 +1,10 @@
 import { FullItem } from "@1password/connect";
-import { getTailscaleSection, clientIdPair } from "@components/helpers.ts";
+import { getTailscaleSection, clientIdPair, pushLxcDefinition } from "@components/helpers.ts";
 import { getTailscaleClient, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { remote, types } from "@pulumi/command";
 import { GetDeviceResult, getDeviceOutput } from "@pulumi/tailscale";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, runtime, unknown } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import * as authentik from "@pulumi/authentik";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -12,17 +12,12 @@ import { ClusterDefinition, GlobalResources } from "../../components/globals.ts"
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { getContainerHostnames } from "./helper.ts";
-import { CommunityScriptLxcVars, POST_PBS_INSTALL_URL, runCommunityScriptLxc, runCommunityScriptTool } from "./lxc.ts";
+import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
+import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
-
-export interface PbsPostInstallArgs {
-  /** Set to false to skip post-install entirely. Defaults to true. */
-  enabled?: boolean;
-  /** Reboot the container after post-install completes. Handled via pct reboot. Defaults to false. */
-  rebootAfter?: boolean;
-}
+import { Tailscale } from "@components/constants.ts";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
@@ -34,63 +29,35 @@ export interface ProxmoxBackupServerLxcArgs {
   host: ProxmoxHost;
   vmId: number;
   ipAddress?: TailscaleIp;
-  tailscaleIpAddress?: TailscaleIp;
-  tailscaleArgs?: {
-    advertiseTags: string[];
-    acceptDns?: Input<boolean>;
-    acceptRoutes?: Input<boolean>;
-    ssh?: Input<boolean>;
-    advertiseExitNode?: Input<boolean>;
-    relayServerPort?: Input<number>;
-  };
+  tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   lxcVars?: Partial<Omit<CommunityScriptLxcVars, "ctid" | "hostname">>;
-  /** Post-install configuration. Runs after Tailscale is set up. */
-  postInstall?: PbsPostInstallArgs;
-}
-
-function toBase64(value: Output<string>) {
-  return value.apply((text) => Buffer.from(text, "utf8").toString("base64"));
-}
-
-function deriveContainerTailscaleIp(hostIp: TailscaleIp, lastOctet: number): TailscaleIp {
-  const [first, second, third] = hostIp.split(".");
-  if (!first || !second || !third) {
-    throw new Error(`Unable to derive container Tailscale IP from ${hostIp}`);
-  }
-  return `${first}.${second}.${third}.${lastOctet}` as TailscaleIp;
+  dependsOn?: Input<Resource>[];
 }
 
 export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly hostname: Output<string>;
-  public readonly device: Output<GetDeviceResult>;
+  public readonly tailscaleHostname: Output<string>;
   public readonly dns: StandardDns;
-  public readonly ipAddress: Output<TailscaleIp>;
-  public readonly sshKey: tls.PrivateKey;
   public readonly oidcClientId: Output<string>;
   public readonly oidcClientSecret: Output<string>;
   public readonly oidcIssuerUrl: Output<string>;
+  private readonly mountPoints: remote.Command[] = [];
+  private resources!: Input<Resource>[];
+  private readonly lxcName: string;
 
-  constructor(name: string, args: ProxmoxBackupServerLxcArgs, opts?: ComponentResourceOptions) {
+  constructor(
+    name: string,
+    private readonly args: ProxmoxBackupServerLxcArgs,
+    opts?: ComponentResourceOptions,
+  ) {
     super("home:proxmox:ProxmoxBackupServerLxc", name, {}, mergeOptions(opts, { parent: args.host }));
 
+    this.lxcName = name;
+
     const cro = { parent: this };
-    const tailscaleOptions = {
-      advertiseTags: args.tailscaleArgs?.advertiseTags ?? [],
-      ...(args.tailscaleArgs ?? {}),
-      acceptDns: true,
-      acceptRoutes: false,
-      ssh: true,
-      advertiseExitNode: false,
-    };
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("pbs", args.host, args.globals);
     this.hostname = hostname;
-    this.sshKey = new tls.PrivateKey(
-      `${name}-ssh-key`,
-      {
-        algorithm: "ED25519",
-      },
-      cro,
-    );
+    this.tailscaleHostname = tailscaleHostname;
 
     const createPbsLxc = runCommunityScriptLxc(
       `${name}-create-pbs`,
@@ -101,74 +68,121 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
           ctid: args.vmId,
           hostname: name,
           unprivileged: 1,
-          cpu: 4,
-          ram: 8192,
-          disk: 128,
-          os: "debian",
-          version: 13,
+          cpu: 2,
+          ram: 2048,
+          disk: 32,
+          // os: "debian",
+          // version: 13,
           ipv6_method: "none",
           mount_fs: "nfs",
           ...(args.ipAddress ? { net: `${args.ipAddress}/16`, gateway: "10.10.0.1" } : {}),
           ...(args.lxcVars ?? {}),
-        },
+        } as CommunityScriptLxcVars,
       },
       cro,
     );
 
-    const mountHostData = new remote.Command(
-      `${name}-mount-host-data`,
-      {
-        connection: args.host.remoteConnection,
-        create: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then mkdir -p /data && pct set ${args.vmId} -mp0 /data,mp=/data; else echo "Skipping /data mount until CT ${args.vmId} exists"; fi`,
-        update: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then mkdir -p /data && pct set ${args.vmId} -mp0 /data,mp=/data; else echo "Skipping /data mount until CT ${args.vmId} exists"; fi`,
-      },
-      mergeOptions(cro, { dependsOn: createPbsLxc ? [createPbsLxc] : [] }),
-    );
+    this.resources = [createPbsLxc, ...(args.dependsOn ?? [])];
 
     const setHostname = new remote.Command(
       `${name}-set-hostname`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
-        update: interpolate`if pct config ${args.vmId} >/dev/null 2>&1; then pct exec ${args.vmId} -- hostnamectl set-hostname ${name}; else echo "Skipping hostname update until CT ${args.vmId} exists"; fi`,
+        create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
       },
-      mergeOptions(cro, { dependsOn: [mountHostData] }),
+      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
 
-    const deviceInfo = installTailscaleLxc({
-      connection: args.host.remoteConnection,
-      name: tailscaleName,
-      ipAddress: args.tailscaleIpAddress ?? deriveContainerTailscaleIp(args.host.tailscaleIpAddress, 200 + args.vmId),
-      parent: this,
-      vmId: args.vmId,
-      globals: args.globals,
-      dependsOn: [setHostname],
-      args: tailscaleOptions,
-    });
+    // Inline the post-install actions without whiptail / curl dependency:
+    //  1. Fix Debian apt sources (auto-detects bookworm vs trixie)
+    //  2. Disable pbs-enterprise repo, enable pbs-no-subscription
+    //  3. Remove subscription nag
+    //  4. apt update + dist-upgrade
+    const postInstallScript = `set -euo pipefail
+CODENAME="$(awk -F'=' '/^VERSION_CODENAME=/{print $2}' /etc/os-release)"
+case "$CODENAME" in
+bookworm)
+  cat >/etc/apt/sources.list <<'__SOURCES__'
+deb http://deb.debian.org/debian bookworm main contrib
+deb http://deb.debian.org/debian bookworm-updates main contrib
+deb http://security.debian.org/debian-security bookworm-security main contrib
+__SOURCES__
+  if [ -f /etc/apt/sources.list.d/pbs-enterprise.list ]; then
+    sed -i 's/^deb /# deb /' /etc/apt/sources.list.d/pbs-enterprise.list
+  else
+    echo '# deb https://enterprise.proxmox.com/debian/pbs bookworm pbs-enterprise' >/etc/apt/sources.list.d/pbs-enterprise.list
+  fi
+  if ! grep -rq 'pbs-no-subscription' /etc/apt/sources.list.d/ 2>/dev/null; then
+    echo 'deb http://download.proxmox.com/debian/pbs bookworm pbs-no-subscription' >/etc/apt/sources.list.d/pbs-install-repo.list
+  fi
+  ;;
+trixie)
+  rm -f /etc/apt/sources.list.d/*.list
+  cat >/etc/apt/sources.list.d/debian.sources <<'__SOURCES__'
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: trixie trixie-updates
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-    const authorizedKeyBase64 = toBase64(output(this.sshKey.publicKeyOpenssh).apply((key) => `${key.trim()}\n`));
-    const sshConfigBase64 = toBase64(output(["PubkeyAuthentication yes", "PasswordAuthentication no", "KbdInteractiveAuthentication no", "PermitRootLogin prohibit-password", ""].join("\n")));
-    const configureRootSshCommand = all([authorizedKeyBase64, sshConfigBase64]).apply(([authorizedKey, sshConfig]) =>
-      [
-        `pct exec ${args.vmId} -- bash -lc "install -d -m 700 /root/.ssh`,
-        `printf '%s' '${authorizedKey}' | base64 -d > /root/.ssh/authorized_keys`,
-        `chmod 600 /root/.ssh/authorized_keys`,
-        `install -d -m 755 /etc/ssh/sshd_config.d`,
-        `printf '%s' '${sshConfig}' | base64 -d > /etc/ssh/sshd_config.d/99-root-key-only.conf`,
-        `chmod 644 /etc/ssh/sshd_config.d/99-root-key-only.conf`,
-        `systemctl enable --now ssh`,
-        `(systemctl restart ssh || systemctl restart sshd)"`,
-      ].join(" && "),
-    );
-    const configureRootSsh = new remote.Command(
-      `${name}-configure-root-ssh`,
+Types: deb
+URIs: http://security.debian.org/debian-security/
+Suites: trixie-security
+Components: main contrib non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+__SOURCES__
+  if [ -f /etc/apt/sources.list.d/pbs-enterprise.sources ]; then
+    sed -i '/^Enabled:/d' /etc/apt/sources.list.d/pbs-enterprise.sources
+    echo 'Enabled: false' >>/etc/apt/sources.list.d/pbs-enterprise.sources
+  else
+    cat >/etc/apt/sources.list.d/pbs-enterprise.sources <<'__SOURCES__'
+Types: deb
+URIs: https://enterprise.proxmox.com/debian/pbs
+Suites: trixie
+Components: pbs-enterprise
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+Enabled: false
+__SOURCES__
+  fi
+  if ! grep -rq 'pbs-no-subscription' /etc/apt/sources.list.d/ 2>/dev/null; then
+    cat >/etc/apt/sources.list.d/proxmox.sources <<'__SOURCES__'
+Types: deb
+URIs: http://download.proxmox.com/debian/pbs
+Suites: trixie
+Components: pbs-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+__SOURCES__
+  fi
+  ;;
+*)
+  echo "Unsupported PBS codename: $CODENAME" >&2; exit 1 ;;
+esac
+
+# Remove subscription nag
+echo 'DPkg::Post-Invoke { "if [ -s /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js ] && ! grep -q -F NoMoreNagging /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js; then sed -i '"'"'/data\\.status/{s/\\!//;s/active/NoMoreNagging/}'"'"' /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js; fi"; };' >/etc/apt/apt.conf.d/no-nag-script
+apt --reinstall install proxmox-widget-toolkit -y -q &>/dev/null || true
+
+apt-get update -q
+apt-get -y dist-upgrade -q
+echo "PBS post-install complete"`;
+
+    const postInstallRun = new remote.Command(
+      `${name}-post-install`,
       {
         connection: args.host.remoteConnection,
-        create: configureRootSshCommand,
-        update: configureRootSshCommand,
-        triggers: [output(this.sshKey.publicKeyFingerprintSha256)],
+        create: interpolate`pct exec ${args.vmId} -- bash << '__POST_INSTALL__'\n${postInstallScript}\n__POST_INSTALL__`,
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+    );
+
+    const postInstallReboot = new remote.Command(
+      `${name}-post-install-reboot`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct reboot ${args.vmId}`,
+        triggers: [postInstallRun.id],
+      },
+      mergeOptions(cro, { dependsOn: [postInstallRun] }),
     );
 
     const cluster = output(args.cluster);
@@ -176,6 +190,24 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
     const signingKey = new ApplicationCertificate(name, { globals: args.globals }, cro);
     const issuerUrl = cluster.apply((c) => `https://${c.authentikDomain}/application/o/${name}/`);
     const externalUrl = cluster.apply((c) => `https://pbs.${c.rootDomain}`);
+
+    const deviceInfo = installTailscaleLxc({
+      connection: args.host.remoteConnection,
+      parent: this,
+      name: tailscaleName,
+      globals: args.globals,
+      installTailscale: true,
+      args: {
+        ...args.tailscaleArgs,
+        advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.apps, Tailscale.tag.backups]),
+        acceptDns: true,
+        acceptRoutes: false,
+        ssh: true,
+      },
+      vmId: args.vmId,
+      dependsOn: [setHostname, createPbsLxc, postInstallRun, postInstallReboot],
+    });
+    this.resources.push(deviceInfo);
 
     this.oidcClientId = clientId;
     this.oidcClientSecret = clientSecret;
@@ -218,7 +250,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
       },
       [],
     );
-    new StandardDns(`${name}-external`, { hostname: externalHostname, ipAddress: args.dockge.ipAddress, type: "A" }, args.globals, cro);
+    this.dns = new StandardDns(`${name}-external`, { hostname: externalHostname, ipAddress: args.dockge.tailscaleIpAddress, record: args.dockge.hostname, type: "CNAME" }, args.globals, cro);
 
     const realmId = "authentik";
     const oidcScript = interpolate`
@@ -245,58 +277,11 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       `${name}-configure-oidc`,
       {
         connection: args.host.remoteConnection,
-        create: oidcScript.apply((s) => `bash -seuo pipefail <<'__PBS_OIDC__'\n${s.trim()}\n__PBS_OIDC__`),
+        create: all([output(args.vmId), oidcScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_OIDC__'\n${script.trim()}\n__PBS_OIDC__`),
         triggers: [clientId, issuerUrl],
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
-
-    // const postInstallRun = runCommunityScriptTool(
-    //   `${name}-post-install`,
-    //   {
-    //     connection: args.host.remoteConnection,
-    //     vmId: args.vmId,
-    //     script: "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh",
-    //   },
-    //   mergeOptions(cro, { dependsOn: [tailscaleSet] }),
-    // );
-
-    // if (args.postInstall?.rebootAfter) {
-    //   new remote.Command(
-    //     `${name}-post-install-reboot`,
-    //     {
-    //       connection: args.host.remoteConnection,
-    //       create: interpolate`pct reboot ${args.vmId}`,
-    //       update: interpolate`pct reboot ${args.vmId}`,
-    //       triggers: [postInstallRun],
-    //     },
-    //     mergeOptions(cro, { dependsOn: postInstallRun ? [postInstallRun] : [tailscaleSet] }),
-    //   );
-    // }
-
-    const ipAddress = (this.ipAddress = args.ipAddress
-      ? output(args.ipAddress)
-      : (new remote.Command(
-          `${name}-get-ip-address`,
-          {
-            connection: args.host.remoteConnection,
-            create: interpolate`pct exec ${args.vmId} -- ip -4 addr show dev eth0 | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}' | head -n1`,
-          },
-          mergeOptions(cro, { dependsOn: [setHostname] }),
-        ).stdout as Output<TailscaleIp>));
-
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [setHostname] }));
-
-    this.device = runtime.isDryRun()
-      ? (output(unknown) as ReturnType<typeof getDeviceOutput>)
-      : getDeviceOutput(
-          { name: tailscaleName },
-          {
-            provider: args.globals.tailscaleProvider,
-            parent: this,
-            dependsOn: [],
-          },
-        );
 
     new OnePasswordItem(
       `${args.host.name}-pbs`,
@@ -310,26 +295,66 @@ echo "PBS OIDC configured for realm: $REALM_ID"
             fields: {
               hostname: { type: TypeEnum.String, value: hostname },
               username: { type: TypeEnum.String, value: "root" },
-              privateKey: { type: TypeEnum.Concealed, value: this.sshKey.privateKeyOpenssh },
-              publicKey: { type: TypeEnum.String, value: this.sshKey.publicKeyOpenssh },
-              fingerprint: { type: TypeEnum.String, value: this.sshKey.publicKeyFingerprintSha256 },
             },
           },
         },
         fields: {
           hostname: { type: TypeEnum.String, value: this.hostname },
-          ipAddress: { type: TypeEnum.String, value: this.ipAddress },
           webUrl: { type: TypeEnum.String, value: interpolate`https://${this.hostname}:8007` },
         },
       },
-      mergeOptions(cro, { dependsOn: [] }),
+      mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
+
+    const definition = all([cluster, this.oidcClientId, this.oidcClientSecret]).apply(
+      ([c, clientId, clientSecret]) =>
+        ({
+          apiVersion: "home.driscoll.tech/v1",
+          kind: "ApplicationDefinition",
+          metadata: { name: this.lxcName },
+          spec: {
+            name: `Proxmox Backup Server - ${this.args.host.title}`,
+            slug: this.lxcName,
+            category: "Infrastructure",
+            url: `https://pbs.${c.rootDomain}`,
+            authentik: {
+              oauth2: {
+                clientId,
+                clientSecret,
+                clientType: "confidential",
+                allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
+                includeClaimsInIdToken: true,
+              },
+            },
+          },
+        }) as ApplicationDefinitionSchema,
+    );
+
+    pushLxcDefinition(`${this.lxcName}-app-def`, {
+      definition,
+      vmId: this.args.vmId,
+      connection: this.args.host.remoteConnection,
+      parent: this,
+      dependsOn: [...this.resources],
+    });
+  }
+
+  public addHostMount(path: string, containerPath?: string) {
+    const mp = new remote.Command(
+      `${this.args.host.name}-pbs-${path.replace(/^\/+|\/+$/g, "").replace(/\//g, "-")}-mount`,
+      {
+        connection: this.args.host.remoteConnection,
+        create: interpolate`pct set ${this.args.vmId} -mp${this.mountPoints.length} ${path},mp=${containerPath ?? path}`,
+      },
+      { parent: this, dependsOn: [...this.mountPoints, ...this.resources] },
+    );
+    this.mountPoints.push(mp);
+    return mp;
   }
 }
 
 export function getProxmoxBackupServerLxcProperties(instance: ProxmoxBackupServerLxc) {
   return output({
     hostname: instance.hostname,
-    ipAddress: instance.ipAddress,
   });
 }

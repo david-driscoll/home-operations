@@ -3,9 +3,6 @@ import { remote, types } from "@pulumi/command";
 import { NodeSSH } from "node-ssh";
 import { awaitOutput } from "@components/helpers.ts";
 
-/** Community-scripts post-install tool for Proxmox Backup Server. */
-export const POST_PBS_INSTALL_URL = "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh";
-
 /**
  * Variables passed to community-scripts ProxmoxVE LXC creation scripts.
  * Keys are the var_* suffixes in snake_case (e.g. `ipv6_method`, `mount_fs`).

@@ -166,7 +166,7 @@ export class DockgeLxc extends ComponentResource {
       }),
     );
 
-    const ipAddress = (this.ipAddress = args.ipAddress
+    this.ipAddress = args.ipAddress
       ? output(args.ipAddress)
       : args.host.remote
         ? this.tailscaleIpAddress
@@ -177,7 +177,7 @@ export class DockgeLxc extends ComponentResource {
               create: interpolate`pct exec ${args.vmId} -- hostname -I`,
             },
             mergeOptions(cro, { dependsOn: [setHostname] }),
-          ).stdout.apply((z) => z.split(" ")[0]) as Output<TailscaleIp>));
+          ).stdout.apply((z) => z.split(" ")[0]) as Output<TailscaleIp>);
 
     this.credential = output(args.credential);
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
@@ -186,7 +186,12 @@ export class DockgeLxc extends ComponentResource {
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
 
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress, type: "A" }, args.globals, mergeOptions(cro, { dependsOn: [...depends, setHostname], deleteBeforeReplace: true }));
+    this.dns = new StandardDns(
+      name,
+      { hostname: this.hostname, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" },
+      args.globals,
+      mergeOptions(cro, { dependsOn: [...depends, setHostname], deleteBeforeReplace: true }),
+    );
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
@@ -598,7 +603,7 @@ ${middlewareYaml}  services:
             `${stackName}-${host.replace(/\./g, "_")}`,
             {
               hostname: interpolate`${host}`,
-              ipAddress: this.ipAddress,
+              ipAddress: this.tailscaleIpAddress,
               type: "CNAME",
               record: this.hostname,
             },
