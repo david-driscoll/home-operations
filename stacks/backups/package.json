@@ -20,7 +20,7 @@
     "refresh": "op run --no-masking -- pulumi refresh --yes"
   },
   "dependencies": {
-    "@muhlba91/pulumi-proxmoxve": "^7.7.0",
+    "@muhlba91/pulumi-proxmoxve": "^8.0.0",
     "@pulumi/command": "^1.1.3",
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/std": "^2.2.0",
