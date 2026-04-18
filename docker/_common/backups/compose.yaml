@@ -24,6 +24,7 @@ services:
       - NUGET_PACKAGES=/workspace/.nuget/packages
       - XDG_DATA_HOME=/tmp
       - TMPDIR=/tmp
+      - RCLONE_CONFIG=/tmp/rclone.conf
     env_file:
       - .env
     cpus: 1
