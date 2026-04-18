@@ -3,6 +3,12 @@ services:
     container_name: authentik-outpost
     image: ghcr.io/goauthentik/proxy:2026.2.2@sha256:c5d94719cf629d1b4a06475450f71a5aacdf49f7c1003caad42da32e3aa28234
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -T 5 -O - http://127.0.0.1:9000/outpost.goauthentik.io/ping >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     dns:
       - 100.100.100.100
     # env is set in each app stack for the secret.
@@ -12,6 +18,7 @@ services:
       - path: .env-token
         required: false
     labels:
+      autoheal: true
       # Enable Traefik
       traefik.enable: true
 

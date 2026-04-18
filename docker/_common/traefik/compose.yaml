@@ -8,6 +8,7 @@ services:
     command:
       - --configfile=/config/config.yaml
     labels:
+      autoheal: true
       # Enable Traefik for itself
       traefik.enable: true
       # Dashboard configuration

@@ -15,6 +15,7 @@ services:
     environment:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     labels:
+      autoheal: true
       traefik.enable: true
       traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
       traefik.http.routers.alloy.entrypoints: websecure
@@ -43,6 +44,7 @@ services:
       - --storage.tsdb.retention.size=20GB
       - --web.enable-lifecycle
     labels:
+      autoheal: true
       traefik.enable: true
       traefik.http.routers.prometheus.rule: Host(`prometheus.${CLUSTER_DOMAIN}`)
       traefik.http.routers.prometheus.entrypoints: websecure,tailscale
@@ -76,6 +78,7 @@ services:
     volumes:
       - ./config/blackbox.yml:/config/blackbox.yml:ro
     labels:
+      autoheal: true
       traefik.enable: false
     networks:
       - dockge_default
@@ -89,7 +92,8 @@ services:
       - "--path.rootfs=/host"
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)(\
+        $$|/)"
       - "--collector.netclass.ignored-devices=^(veth.*|br.*|docker.*|lo)$$"
       - "--collector.nfs"
       - "--collector.nfsd"
@@ -100,6 +104,7 @@ services:
     network_mode: host
     pid: host
     labels:
+      autoheal: true
       traefik.enable: false
 
   cadvisor:
@@ -122,6 +127,7 @@ services:
       - /dev/disk/:/dev/disk:ro
     labels:
       traefik.enable: false
+      autoheal: true
     networks:
       - dockge_default
 
