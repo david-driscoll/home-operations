@@ -26,7 +26,7 @@ packages:
   adguard:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/gmichels/adguard, 1.6.2]
+    parameters: [registry.terraform.io/gmichels/adguard, 1.7.0]
   pbs:
     source: terraform-provider
     version: 0.14.0
