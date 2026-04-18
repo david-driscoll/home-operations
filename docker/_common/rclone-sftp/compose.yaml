@@ -1,5 +1,6 @@
 services:
   rclone-sftp:
+    user: "65534:65534"
     container_name: rclone-sftp
     image: rclone/rclone:1.73.3@sha256:66af24d7c8809af336dc16068149257cf447c80f8c60aa9f5679153f42017b85
     restart: unless-stopped
@@ -8,9 +9,8 @@ services:
     env_file:
       - path: .env
     command: >-
-      serve sftp ${DATA_ROOT}
-      --addr :${SFTP_PORT}
-      --authorized-keys /config/ssh/authorized_keys
+      serve sftp ${DATA_ROOT} --addr :${SFTP_PORT} --authorized-keys
+      /config/ssh/authorized_keys
     volumes:
       - ${DATA_ROOT}:${DATA_ROOT}:rw
       - ./keys:/config/ssh:ro
