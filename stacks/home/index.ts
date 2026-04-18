@@ -215,7 +215,7 @@ const tailscale = updateTailscaleAcls({
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
-// createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, globals });
+createBackupJobs({ source: celestiaDockgeRuntime, destination: lunaDockgeRuntime, globals });
 
 const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(

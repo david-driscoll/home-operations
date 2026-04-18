@@ -116,26 +116,41 @@ app.Run();
 
 static async Task DownloadRclone()
 {
-    var rcloneItem = Path.Combine(Path.GetTempPath(), "rclone.zip");
-
+    try
     {
-        var client = new HttpClient();
-        var rcloneUrl = "https://downloads.rclone.org/v1.72.0/rclone-v1.72.0-linux-amd64.zip";
-        Console.WriteLine($"Downloading rclone from {rcloneUrl} to {rcloneItem}");
-        using var rcloneStream = await client.GetStreamAsync(rcloneUrl);
-        using var writeStream = System.IO.File.OpenWrite(rcloneItem);
-        await rcloneStream.CopyToAsync(writeStream);
-        await rcloneStream.FlushAsync();
-        await writeStream.FlushAsync();
-    }
+        var rclonePath = Path.Combine("/workspace", "rclone");
+        if (System.IO.File.Exists(rclonePath))
+        {
+            Console.WriteLine($"Rclone already exists at {rclonePath}, skipping download");
+            return;
+        }
+        var rcloneItem = Path.Combine("/workspace", "rclone.zip");
 
-    using var archive = ZipFile.OpenRead(rcloneItem);
-    var entry = archive.Entries.Where(z => z.Name == "rclone").Single();
-    entry.ExtractToFile(Path.Combine(Path.GetTempPath(), "rclone"), true);
-    Console.WriteLine($"Extracted rclone to {Path.Combine(Path.GetTempPath(), "rclone")}");
-    await Cli.Wrap("chmod")
-        .WithArguments($"+x {Path.Combine(Path.GetTempPath(), "rclone")}")
-        .ExecuteAsync();
+        {
+            var client = new HttpClient();
+            var rcloneUrl = "https://downloads.rclone.org/v1.72.0/rclone-v1.72.0-linux-amd64.zip";
+            Console.WriteLine($"Downloading rclone from {rcloneUrl} to {rcloneItem}");
+            using var rcloneStream = await client.GetStreamAsync(rcloneUrl);
+            using var writeStream = System.IO.File.OpenWrite(rcloneItem);
+            await rcloneStream.CopyToAsync(writeStream);
+            await rcloneStream.FlushAsync();
+            await writeStream.FlushAsync();
+        }
+
+        using var archive = ZipFile.OpenRead(rcloneItem);
+        var entry = archive.Entries.Where(z => z.Name == "rclone").Single();
+        entry.ExtractToFile(destinationFileName: Path.Combine("/workspace", "rclone"), true);
+        Console.WriteLine($"Extracted rclone to {Path.Combine("/workspace", "rclone")}");
+        await Cli.Wrap("chmod")
+            .WithArguments($"+x {Path.Combine("/workspace", "rclone")}")
+            .ExecuteAsync();
+
+        Console.WriteLine($"Rclone is ready at {Path.Combine("/workspace", "rclone")}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error checking for existing rclone binary: {ex.Message}");
+    }
 }
 
 static async Task Rclone(RCloneJob job)
@@ -146,7 +161,7 @@ static async Task Rclone(RCloneJob job)
     Console.WriteLine($"Starting Rclone job {job.Name}");
     try
     {
-        item = await Cli.Wrap(Path.Combine(Path.GetTempPath(), "rclone"))
+        item = await Cli.Wrap(Path.Combine("/workspace", "rclone"))
         .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
         .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
         .WithEnvironmentVariables(

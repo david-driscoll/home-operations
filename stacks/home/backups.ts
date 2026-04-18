@@ -6,12 +6,12 @@ import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
 import { BackupPlanManager } from "./jobs.ts";
 
-export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, globals }: { celestiaDockgeRuntime: DockgeLxc; lunaDockgeRuntime: DockgeLxc; globals: GlobalResources }) {
+export function createBackupJobs({ source, destination, globals }: { source: DockgeLxc; destination: DockgeLxc; globals: GlobalResources }) {
   const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {
     globals: globals,
-    source: celestiaDockgeRuntime,
-    localBackup: celestiaDockgeRuntime,
-    remoteBackup: lunaDockgeRuntime,
+    source: source,
+    localBackup: source,
+    remoteBackup: destination,
   });
 
   celestiaBackupManager.createBackrestPlan("immich", {
@@ -33,8 +33,8 @@ export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, glo
     title: "Home Operations",
     bucket: "home-operations",
     // backblazeSecret: "Backblaze home-operations",
-    source: celestiaDockgeRuntime,
-    destination: lunaDockgeRuntime,
+    source: source,
+    destination: destination,
     globals,
   });
   createMinioBucketBackupJob({
@@ -42,8 +42,8 @@ export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, glo
     bucket: "stargate-command-db",
     restoreBucket: "stargate-command-db-restore",
     // backblazeSecret: "Backblaze S3 Stargate Command Database",
-    source: celestiaDockgeRuntime,
-    destination: lunaDockgeRuntime,
+    source: source,
+    destination: destination,
     globals,
   });
   createMinioBucketBackupJob({
@@ -51,8 +51,8 @@ export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, glo
     bucket: "equestria-db",
     restoreBucket: "equestria-db-restore",
     // backblazeSecret: "Backblaze S3 Equestria Database",
-    source: celestiaDockgeRuntime,
-    destination: lunaDockgeRuntime,
+    source: source,
+    destination: destination,
     globals,
   });
 
@@ -80,7 +80,7 @@ export function createBackupJobs({ celestiaDockgeRuntime, lunaDockgeRuntime, glo
   });
 
   // Backup Thanos bucket to Celestia and Luna
-  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: celestiaDockgeRuntime, destination: lunaDockgeRuntime, globals });
+  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: source, destination: destination, globals });
 
   // await alphaSiteBackupManager.updateBackrestConfig();
   // TODO: Handle luna backrest config
