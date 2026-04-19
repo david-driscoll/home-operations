@@ -62,7 +62,7 @@ export const Tailscale = {
 
   ports: {
     any: ["*"] as TailscaleNetworkCapability[],
-    web: ["tcp:443", "tcp:80", "udp:443", "udp:80", "tcp:8443", "tcp:7687", "udp:7687"] as TailscaleNetworkCapability[],
+    web: ["tcp:443", "udp:443", "tcp:80", "udp:80", "tcp:8443", "udp:8443", "tcp:7687", "udp:7687"] as TailscaleNetworkCapability[],
     dns: ["tcp:53", "udp:53", "tcp:853", "udp:853", "udp:784", "tcp:443"] as TailscaleNetworkCapability[],
     ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
     dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
