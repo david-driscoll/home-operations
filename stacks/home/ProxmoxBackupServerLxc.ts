@@ -326,6 +326,14 @@ echo "PBS OIDC configured for realm: $REALM_ID"
                 includeClaimsInIdToken: true,
               },
             },
+            gatus: [
+              {
+                name: `pbs-${c.key}`,
+                url: `https://${c.rootDomain}/`,
+                method: "GET",
+                conditions: ["[STATUS] == 200"],
+              },
+            ],
           },
         }) as ApplicationDefinitionSchema,
     );
