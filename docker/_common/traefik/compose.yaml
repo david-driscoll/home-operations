@@ -27,8 +27,10 @@ services:
       - 80:80
       - 443:443
       - 5443:5443
+      - 8443:8443
       - 2022:2022/tcp
-      - 7687:7687/tcp
+      - 7687:7687
+      - 8082:8082/tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
