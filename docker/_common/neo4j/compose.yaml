@@ -12,6 +12,8 @@ services:
       NEO4J_server_memory_pagecache_size: 2G
       NEO4J_server_memory_heap_max__size: 2G
       NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_server_bolt_advertised__address: ${APP}.${CLUSTER_DOMAIN}:443
+      NEO4J_server_http_advertised__address: ${APP}.${CLUSTER_DOMAIN}:443
     labels:
       traefik.enable: true
 
