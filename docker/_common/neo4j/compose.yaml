@@ -34,10 +34,11 @@ services:
       traefik.tcp.routers.${APP}-bolt-tailscale.rule: HostSNI(`${APP}-${host}.${tailscaleDomain}`)
       traefik.tcp.routers.${APP}-bolt-tailscale.entrypoints: bolt
       traefik.tcp.routers.${APP}-bolt-tailscale.tls.certresolver: le
+      traefik.tcp.routers.${APP}-bolt-tailscale.service: ${APP}-bolt
 
       # Service port for HTTP (Neo4j Browser)
       traefik.http.services.${APP}.loadbalancer.server.port: 7474
-      traefik.http.services.${APP}-bolt.loadbalancer.server.port: 7687
+      traefik.tcp.services.${APP}-bolt.loadbalancer.server.port: 7687
 
       # Health check
       traefik.http.services.${APP}.loadbalancer.healthcheck.path: "/"
