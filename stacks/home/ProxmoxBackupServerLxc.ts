@@ -23,7 +23,7 @@ export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
   outputs: AuthentikOutputs;
   /** Cluster definition used to derive the OIDC issuer URL and Traefik CNAME hostname. */
-  cluster: Input<Pick<ClusterDefinition, "authentikDomain" | "rootDomain">>;
+  cluster: Input<ClusterDefinition>;
   /** When provided, a Traefik dynamic config for PBS is written to this Dockge instance. */
   dockge: DockgeLxc;
   host: ProxmoxHost;
@@ -313,9 +313,9 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           kind: "ApplicationDefinition",
           metadata: { name: this.lxcName },
           spec: {
-            name: `Proxmox Backup Server - ${this.args.host.title}`,
+            name: `Proxmox Backup Server - ${c.title}`,
             slug: this.lxcName,
-            category: "Infrastructure",
+            category: c.title,
             url: `https://pbs.${c.rootDomain}`,
             authentik: {
               oauth2: {
