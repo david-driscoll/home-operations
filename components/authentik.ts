@@ -362,38 +362,35 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
-    return this.cluster.apply((cluster) => {
-      const resourceName = this.resolveResourceName(definition);
-      const args: authentik.ApplicationArgs = {
-        name: definition.spec.name,
-        slug: resourceName,
-        group: definition.spec.category === "System" || cluster.title === definition.spec.category ? "System: " + cluster.title : definition.spec.category,
-        metaIcon: definition.spec.icon,
-        metaPublisher: cluster.title,
-        metaDescription: definition.spec.description || "",
-        metaLaunchUrl: definition.spec.url,
-        openInNewTab: true,
-      };
+    const resourceName = this.resolveResourceName(definition);
+    const args: authentik.ApplicationArgs = {
+      name: definition.spec.name,
+      slug: resourceName,
+      group: this.cluster.apply((cluster) => (definition.spec.category === "System" || cluster.title === definition.spec.category ? "System: " + cluster.title : definition.spec.category)),
+      metaIcon: definition.spec.icon,
+      metaPublisher: this.cluster.title,
+      metaDescription: definition.spec.description || "",
+      metaLaunchUrl: definition.spec.url,
+      openInNewTab: true,
+    };
 
-      if (provider) {
-        args.protocolProvider = provider.id.apply((id) => parseFloat(id));
-      }
+    if (provider) {
+      args.protocolProvider = provider.id.apply((id) => parseFloat(id));
+    }
 
-      const app = new authentik.Application(resourceName, args, {
-        parent: this.applicationsComponent,
-        deleteBeforeReplace: true,
-      });
-
-      // Add group bindings for access control
-      if (definition.spec.access_policy?.groups) {
-        for (const groupName of definition.spec.access_policy.groups) {
-          const group = this.authentik.groups[groupName];
-          addPolicyBindingToApplication(app, { group: group });
-        }
-      }
-
-      return app;
+    const app = new authentik.Application(resourceName, args, {
+      parent: this.applicationsComponent,
+      deleteBeforeReplace: true,
     });
+
+    // Add group bindings for access control
+    if (definition.spec.access_policy?.groups) {
+      for (const groupName of definition.spec.access_policy.groups) {
+        addPolicyBindingToApplication(app, { group: this.authentik.apply((z) => z.groups[groupName]) });
+      }
+    }
+
+    return app;
   }
 
   private addGatusInstances(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {

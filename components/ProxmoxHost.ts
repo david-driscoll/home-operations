@@ -307,16 +307,14 @@ net.ipv6.conf.all.forwarding = 1
     // );
   }
   public addUptimeGatus() {
-    return this.cluster.apply((cluster) => {
-      addUptimeGatus(
-        `${cluster.key}`,
-        this.args.globals,
-        {
-          endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
-        },
-        this.applicationManager,
-      );
-    });
+    addUptimeGatus(
+      this.name,
+      this.args.globals,
+      {
+        endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+      },
+      this.applicationManager,
+    );
   }
 }
 

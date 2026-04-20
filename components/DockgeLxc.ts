@@ -552,36 +552,35 @@ ${middlewareYaml}  services:
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       })
       .apply((stacks) => {
-        return this.createOutpost().apply((outpost) => stacks);
+        this.createOutpost();
+        return stacks;
       });
   }
 
   private createOutpost() {
     const applicationManager = this.args.host.applicationManager;
-    return this.cluster.apply((clusterDefinition) => {
-      return new authentik.Outpost(
-        clusterDefinition.key,
-        {
-          type: "proxy",
-          name: `Outpost for ${clusterDefinition.title}`,
-          config: jsonStringify(
-            {
-              authentik_host: interpolate`https://${clusterDefinition.authentikDomain}/`,
-              authentik_host_insecure: false,
-              // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
-              authentik_host_browser: interpolate`https://${clusterDefinition.authentikDomain}/`,
-              // log_level: "trace",
-              object_naming_template: `authentik-outpost`,
-              docker_network: "dockge_default",
-            },
-            undefined,
-            2,
-          ),
-          protocolProviders: applicationManager.proxyProviders,
-        },
-        { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
-      );
-    });
+    return new authentik.Outpost(
+      this.args.host.name,
+      {
+        type: "proxy",
+        name: `Outpost for ${this.args.host.title}`,
+        config: jsonStringify(
+          {
+            authentik_host: interpolate`https://${this.cluster.authentikDomain}/`,
+            authentik_host_insecure: false,
+            // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
+            authentik_host_browser: interpolate`https://${this.cluster.authentikDomain}/`,
+            // log_level: "trace",
+            object_naming_template: `authentik-outpost`,
+            docker_network: "dockge_default",
+          },
+          undefined,
+          2,
+        ),
+        protocolProviders: applicationManager.proxyProviders,
+      },
+      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
+    );
   }
 
   private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
