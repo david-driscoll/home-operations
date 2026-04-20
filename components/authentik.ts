@@ -90,21 +90,21 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {
-    return (definition.spec.slug ?? (definition.metadata.namespace ?? this.cluster.key) === this.cluster.key)
-      ? `${this.cluster.key}-${definition.metadata.name}`
-      : `${this.cluster.key}-${definition.metadata.namespace}-${definition.metadata.name}`;
+    return this.cluster.key.apply((clusterKey) =>
+      (definition.spec.slug ?? (definition.metadata.namespace ?? clusterKey) === clusterKey)
+        ? `${clusterKey}-${definition.metadata.name}`
+        : `${clusterKey}-${definition.metadata.namespace}-${definition.metadata.name}`,
+    );
   }
 
   private createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
-    const resourceName = this.resolveResourceName(definition);
-    const providerName = `Provider for ${definition.spec.name} (${this.cluster.title})`;
     const opts = { parent: this.providersComponent, deleteBeforeReplace: true };
 
     // Proxy Provider
     if (authentikDefinition.proxy) {
       return {
         provider: new authentik.ProviderProxy(
-          resourceName,
+          definition.metadata.name,
           {
             // name: providerName,
             authorizationFlow: authentikDefinition.proxy.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -136,11 +136,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // OAuth2 Provider
     if (authentikDefinition.oauth2) {
       const oauth2 = authentikDefinition.oauth2;
-      const { clientId, clientSecret } = clientIdPair(resourceName, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
-      const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
+      const { clientId, clientSecret } = clientIdPair(definition.metadata.name, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
+      const signingKey = new ApplicationCertificate(definition.metadata.name, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(
-        resourceName,
+        definition.metadata.name,
         {
           // name: providerName,
           authorizationFlow: oauth2.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -171,22 +171,22 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       );
 
       const oidcCredentials = new OnePasswordItem(
-        `${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
+        `${definition.metadata.name}-${definition.metadata.name}-oidc-credentials`,
         {
           category: CategoryEnum.APICredential,
           title: pulumi.interpolate`${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
-            authorization_url: { value: `https://${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
-            token_url: { value: `https://${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
-            userinfo_url: { value: `https://${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
-            revoke_url: { value: `https://${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
-            issuer: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/`, type: TypeEnum.String },
-            end_session_url: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/end-session/`, type: TypeEnum.String },
-            jwks_url: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/jwks/`, type: TypeEnum.String },
+            authorization_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
+            token_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
+            userinfo_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
+            revoke_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
+            issuer: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/`, type: TypeEnum.String },
+            end_session_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/end-session/`, type: TypeEnum.String },
+            jwks_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/jwks/`, type: TypeEnum.String },
             openid_configuration_url: {
-              value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/.well-known/openid-configuration`,
+              value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/.well-known/openid-configuration`,
               type: TypeEnum.String,
             },
           }),
@@ -201,7 +201,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.ldap) {
     //   return {
     //     provider: new authentik.ProviderLdap(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         bindFlow: this.authentik.flows.authenticationFlow,
@@ -225,7 +225,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.saml) {
     //   return {
     //     provider: new authentik.ProviderSaml(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: authentikDefinition.saml.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -254,7 +254,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.rac) {
     //   return {
     //     provider: new authentik.ProviderRac(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: this.authentik.flows.implicitConsentFlow,
@@ -272,7 +272,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.radius) {
     //   return {
     //     provider: new authentik.ProviderRadius(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: this.authentik.flows.implicitConsentFlow,
@@ -290,7 +290,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.ssf) {
     //   return {
     //     provider: new authentik.ProviderSsf(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.ssf),
@@ -305,7 +305,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.scim) {
     //   return {
     //     provider: new authentik.ProviderScim(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.scim),
@@ -321,7 +321,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.microsoftEntra) {
     //   return {
     //     provider: new authentik.ProviderMicrosoftEntra(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.microsoftEntra),
@@ -337,7 +337,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.googleWorkspace) {
     //   return {
     //     provider: new authentik.ProviderGoogleWorkspace(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.googleWorkspace),
@@ -378,7 +378,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       args.protocolProvider = provider.id.apply((id) => parseFloat(id));
     }
 
-    const app = new authentik.Application(resourceName, args, {
+    const app = new authentik.Application(definition.metadata.name, args, {
       parent: this.applicationsComponent,
       deleteBeforeReplace: true,
     });
