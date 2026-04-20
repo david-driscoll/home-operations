@@ -275,7 +275,7 @@ net.ipv6.conf.all.forwarding = 1
 
     this.applicationManager = new AuthentikApplicationManager({
       globals: args.globals,
-
+      clusterKey: name,
       outputs: args.authentikOutputs,
       authentikCredential: "Authentik Outputs",
       cluster: cluster,

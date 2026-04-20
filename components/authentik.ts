@@ -15,6 +15,7 @@ import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
+  clusterKey: string;
   outputs: pulumi.Input<AuthentikOutputs>;
   cluster: pulumi.Input<ClusterDefinition>;
   authentikCredential: pulumi.Input<string>;
@@ -90,21 +91,21 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {
-    return this.cluster.key.apply((clusterKey) =>
-      (definition.spec.slug ?? (definition.metadata.namespace ?? clusterKey) === clusterKey)
-        ? `${clusterKey}-${definition.metadata.name}`
-        : `${clusterKey}-${definition.metadata.namespace}-${definition.metadata.name}`,
+    return definition.spec.slug ?? (definition.metadata.namespace ?? this.args.clusterKey) === this.args.clusterKey
+      ? `${this.args.clusterKey}-${definition.metadata.name}`
+      : `${this.args.clusterKey}-${definition.metadata.namespace}-${definition.metadata.name}`;
     );
   }
 
   private createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
     const opts = { parent: this.providersComponent, deleteBeforeReplace: true };
+    const resourceName = this.resolveResourceName(definition);
 
     // Proxy Provider
     if (authentikDefinition.proxy) {
       return {
         provider: new authentik.ProviderProxy(
-          definition.metadata.name,
+          resourceName,
           {
             // name: providerName,
             authorizationFlow: authentikDefinition.proxy.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -136,11 +137,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // OAuth2 Provider
     if (authentikDefinition.oauth2) {
       const oauth2 = authentikDefinition.oauth2;
-      const { clientId, clientSecret } = clientIdPair(definition.metadata.name, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
-      const signingKey = new ApplicationCertificate(definition.metadata.name, { globals: this.args.globals }, { parent: this });
+      const { clientId, clientSecret } = clientIdPair(resourceName, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
+      const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(
-        definition.metadata.name,
+        resourceName,
         {
           // name: providerName,
           authorizationFlow: oauth2.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -171,7 +172,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       );
 
       const oidcCredentials = new OnePasswordItem(
-        `${definition.metadata.name}-${definition.metadata.name}-oidc-credentials`,
+        `${resourceName}-oidc-credentials`,
         {
           category: CategoryEnum.APICredential,
           title: pulumi.interpolate`${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
@@ -378,7 +379,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       args.protocolProvider = provider.id.apply((id) => parseFloat(id));
     }
 
-    const app = new authentik.Application(definition.metadata.name, args, {
+    const app = new authentik.Application(resourceName, args, {
       parent: this.applicationsComponent,
       deleteBeforeReplace: true,
     });
