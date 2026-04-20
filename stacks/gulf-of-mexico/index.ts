@@ -31,7 +31,7 @@ const host = new ProxmoxHost("luna", {
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
 });
-const tailscaleManager = TailscaleAclManager.default({ parent: host });
+const tailscaleManager = TailscaleAclManager.default({ parent: host, provider: globals.tailscaleProvider });
 
 const dockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
@@ -62,7 +62,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
 pbs.addHostMount("/data");
 
 host.addUptimeGatus();
-TailscaleAclManager.applyAcl(tailscaleManager, { parent: host });
+TailscaleAclManager.applyAcl(tailscaleManager, { parent: host, provider: globals.tailscaleProvider });
 
 export const luna = {
   proxmox: getProxmoxProperties(host),

@@ -31,7 +31,7 @@ const host = new ProxmoxHost("skystar", {
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
 });
-const tailscaleManager = TailscaleAclManager.default({ parent: host });
+const tailscaleManager = TailscaleAclManager.default({ parent: host, provider: globals.tailscaleProvider });
 
 const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   globals,
@@ -62,7 +62,7 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
 pbs.addHostMount("/data");
 
 host.addUptimeGatus();
-TailscaleAclManager.applyAcl(tailscaleManager, { parent: host });
+TailscaleAclManager.applyAcl(tailscaleManager, { parent: host, provider: globals.tailscaleProvider });
 
 export const skystar = {
   proxmox: getProxmoxProperties(host),
