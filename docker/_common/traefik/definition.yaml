@@ -22,3 +22,7 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
+    - url: "tcp://internal.${CLUSTER_DOMAIN}:7687"
+      interval: 30s
+      conditions:
+        - "[CONNECTED] == true"
