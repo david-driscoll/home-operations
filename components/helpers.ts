@@ -12,7 +12,7 @@ import { md5Output } from "@pulumi/std/md5.js";
 import { unique } from "moderndash";
 import { tmpdir } from "os";
 import { RandomPassword, RandomString } from "@pulumi/random";
-import { ProxmoxHost } from "./ProxmoxHost.ts";
+import type { ProxmoxHost } from "./ProxmoxHost.ts";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
