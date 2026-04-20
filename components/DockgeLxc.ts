@@ -678,7 +678,7 @@ ${middlewareYaml}  services:
           }
         });
       } else if (file === "definition.yaml") {
-        replacedContent.apply(([content]) => {
+        replacedContent.apply((content) => {
           // intercept definition file and create the client id / client secret and inject that into the yaml.
           const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
           const oauth2 = parsed.spec.authentik?.oauth2;
