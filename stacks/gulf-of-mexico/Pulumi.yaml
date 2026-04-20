@@ -1,0 +1,12 @@
+name: gulf-of-mexico
+description: Remote Proxmox host at friend's house (luna machine)
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+    nodeargs: "--import tsx/esm"
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript

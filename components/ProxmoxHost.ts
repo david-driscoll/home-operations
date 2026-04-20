@@ -2,17 +2,20 @@ import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOption
 import proxmox, { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { createPeerRelayRule, updateTailscaleProxmox } from "../../components/tailscale.js";
-import { OPClient } from "../../components/op.ts";
-import { getHostnames } from "./helper.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
+import { OPClient } from "./op.ts";
+import { getHostnames } from "./helpers.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { TruenasVm } from "./TruenasVm.ts";
-import { copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
+import * as yaml from "yaml";
+import type { TruenasVm } from "./TruenasVm.ts";
+import { addUptimeGatus, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
 import { Tailscale } from "@components/constants.ts";
+import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
+import { GatusDefinition } from "@openapi/application-definition.js";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -32,6 +35,7 @@ export interface ProxmoxHostArgs {
   shortName?: string;
   peerRelay?: boolean;
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
+  authentikOutputs: AuthentikOutputs;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -48,15 +52,22 @@ export class ProxmoxHost extends ComponentResource {
   public readonly arch: Output<string>;
   public readonly remote: boolean;
   public readonly dns: StandardDns;
+  public readonly cluster: Output<ClusterDefinition>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
   public readonly shortName?: string;
+  public readonly applicationManager: AuthentikApplicationManager;
 
-  constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
+  constructor(
+    name: string,
+    private args: ProxmoxHostArgs,
+    opts?: ComponentResourceOptions,
+  ) {
     super("home:proxmox:ProxmoxHost", name, opts);
 
     this.name = name;
     const cluster = output(args.cluster);
+    this.cluster = cluster;
     this.title = output(args.title ?? cluster.title);
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
@@ -261,6 +272,17 @@ net.ipv6.conf.all.forwarding = 1
       },
       cro,
     );
+
+    this.applicationManager = new AuthentikApplicationManager({
+      globals: args.globals,
+
+      outputs: args.authentikOutputs,
+      authentikCredential: "Authentik Outputs",
+      cluster: cluster,
+      loadFromResource(application, kind, { name }) {
+        throw new Error("Not implemented");
+      },
+    });
   }
 
   public addNfsMount(hostname: Input<string>, remotePath: string) {
@@ -283,6 +305,18 @@ net.ipv6.conf.all.forwarding = 1
     //     provider: this.pveProvider,
     //   },
     // );
+  }
+  public addUptimeGatus() {
+    return this.cluster.apply((cluster) => {
+      addUptimeGatus(
+        `${cluster.key}`,
+        this.args.globals,
+        {
+          endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+        },
+        this.applicationManager,
+      );
+    });
   }
 }
 

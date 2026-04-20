@@ -3,7 +3,7 @@ import * as kubernetes from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "@components/globals.ts";
 import { Roles } from "@components/constants.ts";
-import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "./tailscale/manager.ts";
+import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "../../components/tailscale/manager.ts";
 import { awaitOutput } from "@components/helpers.ts";
 import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 
@@ -38,7 +38,7 @@ export function updateTailscaleAcls(args: {
     aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
     aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
     // aclsJson = applyAllEdits(aclsJson, ["nodeAttrs"], []);
-    aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
+    // aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
 
     const manager = new TailscaleAclManager(aclsJson, hosts, tests);
     const testData = manager.testData;
@@ -63,7 +63,7 @@ export function updateTailscaleAcls(args: {
     ];
 
     for (const service of services) {
-      manager.setService(service, [tag.dockge, tag.backups, tag.proxmox, tag.operator]);
+      manager.setService(service, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
     }
 
     configureProxmoxAccess(manager);

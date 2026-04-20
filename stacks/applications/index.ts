@@ -1,7 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import { GlobalResources, createClusterDefinition } from "../../components/globals.ts";
-import { dockgeApplications } from "./dockge.ts";
 import { kubernetesApplications } from "./kubernetes.ts";
 import { OPClient } from "../../components/op.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
@@ -29,17 +28,12 @@ if (clusterDefinition.key === "sgc" || clusterDefinition.key === "equestria") {
       flowInvalidation: outputs.flows.providerLogoutFlow,
       flowUserSettings: outputs.flows.userSettingsFlow,
     },
-    { deleteBeforeReplace: true }
+    { deleteBeforeReplace: true },
   );
 }
 
 switch (clusterDefinition.type) {
-  case "dockge":
-    await dockgeApplications(globals, outputs, clusterDefinition);
-    break;
   case "kubernetes":
     await kubernetesApplications(globals, outputs, clusterDefinition);
     break;
-  default:
-    throw new Error(`Unknown cluster definition ${clusterDefinition}`);
 }

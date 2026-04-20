@@ -1,45 +1,31 @@
 import * as pulumi from "@pulumi/pulumi";
-import * as pbs from "@pulumi/pbs";
-import * as random from "@pulumi/random";
-import * as firewall from "@pulumi/terrifi";
-import { ClusterDefinition, createClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
-import { getProxmoxProperties, ProxmoxHost } from "./ProxmoxHost.js";
-import { DockgeLxc, getDockageProperties } from "./DockgeLxc.ts";
-import { ProxmoxBackupServerLxc, getProxmoxBackupServerLxcProperties } from "./ProxmoxBackupServerLxc.ts";
-import { TruenasVm } from "./TruenasVm.ts";
+import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
+import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
+import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
+import { TruenasVm } from "../../components/TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
 import { updateTailscaleAcls } from "./tailscale.ts";
 import { getDeviceOutput } from "@pulumi/tailscale";
-import { configureAdGuard } from "./adguard.ts";
-import { gatusDnsRecords } from "./StandardDns.ts";
-import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
-import { OnePasswordItem } from "@openapi/aliases.js";
+import { gatusDnsRecords } from "../../components/StandardDns.ts";
+import { addUptimeGatus } from "@components/helpers.ts";
 import * as tls from "@pulumi/tls";
-import { endpoint } from "@muhlba91/pulumi-proxmoxve/config/vars.js";
-import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { createBackupJobs } from "./backups.ts";
-import { TailscaleAclManager } from "./tailscale/manager.ts";
 import { TailscaleService } from "@openapi/tailscale-grants.js";
 import { AuthentikOutputs } from "@components/authentik.ts";
-import { remote } from "@pulumi/command";
 import { dns, Tailscale } from "@components/constants.ts";
 
 const globals = new GlobalResources({}, {});
-// Generate SFTP server host key and a single client key (authorized key)
-const sftpClientKey = new tls.PrivateKey("rclone-sftp-client", { algorithm: "ED25519" });
-// Export for client usage (e.g., rclone-jobs)
-export const sftpClientPublicKey = tls.getPublicKeyOutput({ privateKeyPem: sftpClientKey.privateKeyPem }).publicKeyOpenssh;
 
 const op = new OPClient();
 
 const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
+const sftpClientKey = pulumi.output(op.getItemByTitle("Rclone SFTP Key"));
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
 const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
 const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
-const lunaCluster = pulumi.output(op.getItemByTitle("Cluster: Luna")).apply(createClusterDefinition);
 const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
 const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
 const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
@@ -61,6 +47,7 @@ const minioBucket = new minio.S3Bucket(
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
   globals: globals,
+  authentikOutputs: outputs,
   internalIpAddress: "10.10.10.100",
   tailscaleIpAddress: "100.111.10.100",
   macAddress: "58:47:ca:7b:a9:9d",
@@ -81,6 +68,7 @@ const spikeVm = new TruenasVm("spike", {
 
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,
+  authentikOutputs: outputs,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
   macAddress: "c8:ff:bf:03:cc:4c",
@@ -95,22 +83,9 @@ const celestiaHost = new ProxmoxHost("celestia", {
 const celestiaBackupMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/backup/");
 const celestiaDataMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
 
-const lunaHost = new ProxmoxHost("luna", {
-  globals: globals,
-  tailscaleIpAddress: "100.111.10.104",
-  macAddress: "c8:ff:bf:03:c9:1e",
-  proxmox: mainProxmoxCredentials,
-  truenas: spikeVm,
-  remote: true,
-  cluster: lunaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  tailscaleSubnetRoutes: [Tailscale.subnets.home],
-});
-const lunaBackupMount = lunaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/backup/");
-const lunaDataMount = lunaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
-
 const alphaSiteHost = new ProxmoxHost("alpha-site", {
   globals: globals,
+  authentikOutputs: outputs,
   internalIpAddress: "10.10.10.200",
   tailscaleIpAddress: "100.111.10.200",
   macAddress: "e4:5f:01:90:36:22",
@@ -141,21 +116,6 @@ celestiaDockgeRuntime.addHostMount("/data");
 celestiaDockgeRuntime.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaDockgeRuntime.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
 
-const lunaDockgeRuntime = new DockgeLxc("luna-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: lunaHost,
-  vmId: 400,
-  cluster: lunaCluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  createDockerLxc: true,
-  registerTailscaleService,
-});
-lunaDockgeRuntime.addHostMount("/data");
-lunaDockgeRuntime.addHostMount(`/mnt/pve/${lunaBackupMount}`, "/spike/backup");
-lunaDockgeRuntime.addHostMount(`/mnt/pve/${lunaDataMount}`, "/spike/data");
-
 const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   globals,
   credential: dockgeCredential,
@@ -182,6 +142,8 @@ const primaryDns = getTailscaleIp("adguard-home");
 const secondaryDns = alphaSiteDockgeRuntime.tailscaleIpAddress;
 const unifiDns = "100.111.0.1";
 
+const lunaDockgeIp = getTailscaleIp("luna-dockge");
+
 const tailscale = updateTailscaleAcls({
   globals,
   services: tailscaleServices,
@@ -194,15 +156,15 @@ const tailscale = updateTailscaleAcls({
     [alphaSiteDockgeRuntime.tailscaleName, alphaSiteDockgeRuntime.tailscaleIpAddress],
     [celestiaHost.tailscaleName, celestiaHost.tailscaleIpAddress],
     [celestiaDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleIpAddress],
-    [lunaHost.tailscaleName, lunaHost.tailscaleIpAddress],
-    [lunaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleIpAddress],
+    // ["luna", lunaHostIp],
+    // ["luna-dockge", lunaDockgeIp],
     [twilightSparkleHost.tailscaleName, twilightSparkleHost.tailscaleIpAddress],
     [spikeVm.tailscaleName, spikeVm.tailscaleIpAddress],
   ],
-  internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, lunaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
+  internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
   tests: {
-    dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, lunaDockgeRuntime.tailscaleName],
-    proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, lunaHost.tailscaleName, twilightSparkleHost.tailscaleName],
+    dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, "luna-dockge"],
+    proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, "luna", twilightSparkleHost.tailscaleName],
     taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
     kubernetesDevices: ["sgc", "equestria"],
   },
@@ -213,11 +175,12 @@ const tailscale = updateTailscaleAcls({
 // console.log(users);
 
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-lunaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
-createBackupJobs({ source: celestiaDockgeRuntime, destination: lunaDockgeRuntime, globals });
+// NOTE: createBackupJobs (celestia→luna) has been removed from this stack.
+// Luna now lives in stacks/gulf-of-mexico. Re-wire backup jobs using a
+// cross-stack reference or static connection once gulf-of-mexico is stable.
 
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), lunaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
+const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
   stacks.reduce(
     (prev, curr) => ({
       endpoints: [...prev.endpoints, ...curr.endpoints],
@@ -254,21 +217,9 @@ celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
 
-const lunaPbs = new ProxmoxBackupServerLxc("luna-pbs", {
-  globals,
-  outputs,
-  host: lunaHost,
-  vmId: 401,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: lunaCluster,
-  dockge: lunaDockgeRuntime,
-  dependsOn: [tailscale.acl],
-});
-lunaPbs.addHostMount("/data");
-lunaPbs.addHostMount(`/mnt/pve/${lunaBackupMount}`, "/spike/backup");
-lunaPbs.addHostMount(`/mnt/pve/${lunaDataMount}`, "/spike/data");
-
-// TODO: add code to ensure tailscale ips is set for all important services
+celestiaHost.addUptimeGatus();
+alphaSiteHost.addUptimeGatus();
+twilightSparkleHost.addUptimeGatus();
 
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
@@ -276,9 +227,4 @@ export const celestia = {
   proxmox: getProxmoxProperties(celestiaHost),
   dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
-};
-export const luna = {
-  proxmox: getProxmoxProperties(lunaHost),
-  dockge: getDockageProperties(lunaDockgeRuntime),
-  backup: lunaHost.backupVolumes!,
 };

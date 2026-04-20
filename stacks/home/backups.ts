@@ -1,10 +1,10 @@
-import { DockgeLxc } from "./DockgeLxc.ts";
+import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import * as pulumi from "@pulumi/pulumi";
-import { ProxmoxHost } from "./ProxmoxHost.ts";
+import { ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { CategoryEnum, OnePasswordItem as OPI, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
-import { BackupPlanManager } from "./jobs.ts";
+import { BackupPlanManager } from "../../components/jobs.ts";
 
 export function createBackupJobs({ source, destination, globals }: { source: DockgeLxc; destination: DockgeLxc; globals: GlobalResources }) {
   const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {

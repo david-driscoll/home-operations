@@ -8,10 +8,10 @@ import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, l
 import * as tls from "@pulumi/tls";
 import * as authentik from "@pulumi/authentik";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
-import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { getContainerHostnames } from "./helper.ts";
+import { getContainerHostnames } from "./helpers.ts";
 import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
@@ -306,45 +306,36 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
 
-    const definition = all([cluster, this.oidcClientId, this.oidcClientSecret]).apply(
-      ([c, clientId, clientSecret]) =>
-        ({
-          apiVersion: "home.driscoll.tech/v1",
-          kind: "ApplicationDefinition",
-          metadata: { name: this.lxcName },
-          spec: {
-            name: `Proxmox Backup Server - ${c.title}`,
-            slug: this.lxcName,
-            category: c.title,
-            url: `https://pbs.${c.rootDomain}`,
-            authentik: {
-              oauth2: {
-                clientId,
-                clientSecret,
-                clientType: "confidential",
-                allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
-                includeClaimsInIdToken: true,
-              },
+    all([cluster, this.oidcClientId, this.oidcClientSecret]).apply(([c, clientId, clientSecret]) =>
+      args.host.applicationManager.createApplication({
+        apiVersion: "home.driscoll.tech/v1",
+        kind: "ApplicationDefinition",
+        metadata: { name: this.lxcName },
+        spec: {
+          name: `Proxmox Backup Server - ${c.title}`,
+          slug: this.lxcName,
+          category: c.title,
+          url: `https://pbs.${c.rootDomain}`,
+          authentik: {
+            oauth2: {
+              clientId,
+              clientSecret,
+              clientType: "confidential",
+              allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
+              includeClaimsInIdToken: true,
             },
-            gatus: [
-              {
-                name: `pbs-${c.key}`,
-                url: `https://${c.rootDomain}/`,
-                method: "GET",
-                conditions: ["[STATUS] == 200"],
-              },
-            ],
           },
-        }) as ApplicationDefinitionSchema,
+          gatus: [
+            {
+              name: `pbs-${c.key}`,
+              url: `https://pbs.${c.rootDomain}/`,
+              method: "GET",
+              conditions: ["[STATUS] == 200"],
+            },
+          ],
+        },
+      }),
     );
-
-    pushLxcDefinition(`${this.lxcName}-app-def`, {
-      definition,
-      vmId: this.args.vmId,
-      connection: this.args.host.remoteConnection,
-      parent: this,
-      dependsOn: [...this.resources],
-    });
   }
 
   public addHostMount(path: string, containerPath?: string) {

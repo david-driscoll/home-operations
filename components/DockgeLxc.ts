@@ -1,10 +1,9 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import { remote, types } from "@pulumi/command";
-import { getContainerLegacyOutput } from "@muhlba91/pulumi-proxmoxve";
-import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { getContainerHostnames } from "./helper.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { getContainerHostnames } from "./helpers.ts";
 import { createDnsSection } from "./StandardDns.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { RandomPassword, RandomString } from "@pulumi/random";
@@ -13,7 +12,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { awaitOutput, BackupTask, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
 import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
@@ -25,6 +24,7 @@ import { Command } from "@pulumi/command/remote/index.js";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { runCommunityScriptLxc } from "./lxc.ts";
 import { Tailscale } from "@components/constants.ts";
+import * as authentik from "@pulumi/authentik";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../../docker");
@@ -41,7 +41,7 @@ export interface DockgeLxcArgs {
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
-  sftpKey: tls.PrivateKey;
+  sftpKey: Input<OPClientItem>;
   registerTailscaleService(service: string): void;
 }
 export interface ExternalServiceOpts {
@@ -218,11 +218,14 @@ export class DockgeLxc extends ComponentResource {
 
     const keyWrites: any[] = [];
 
+    const privateKeyPem = output(args.sftpKey).apply((k) => k.fields?.["private key"]?.value?.trim() + "\n");
+    const publicKeyPem = output(args.sftpKey).apply((k) => k.fields?.["public key"]?.value?.trim() + "\n");
+
     keyWrites.push(
       copyFileToRemote(`${name}-sftp-authorized-keys`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/authorized_keys`,
-        content: output(args.sftpKey.publicKeyOpenssh).apply((k) => `${k.trim()}\n`),
+        content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -232,21 +235,18 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-sftp-host-key`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/host_key`,
-        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
+        content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
     );
-
-    // Derive server public key (OpenSSH) for clients
-    const sftpHostPublicKey = tls.getPublicKeyOutput({ privateKeyPem: args.sftpKey.privateKeyPem }).publicKeyOpenssh;
 
     // Write client private key for rclone-jobs client
     keyWrites.push(
       copyFileToRemote(`${name}-jobs-client-key`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519`,
-        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
+        content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -255,7 +255,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-backrest-client-key`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/id_ed25519`,
-        content: output(args.sftpKey.privateKeyPem).apply((k) => k.trim() + "\n"),
+        content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -266,7 +266,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-jobs-client-pub`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519.pub`,
-        content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
+        content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -275,7 +275,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-backrest-client-pub`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/id_ed25519.pub`,
-        content: output(args.sftpKey.publicKeyPem).apply((k) => k.trim() + "\n"),
+        content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -286,7 +286,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-jobs-server-pub`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/server_host_key.pub`,
-        content: output(sftpHostPublicKey).apply((k) => k.trim() + "\n"),
+        content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -297,7 +297,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-jobs-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -308,7 +308,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-backrest-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/known_hosts`,
-        content: all([this.tailscaleHostname, sftpHostPublicKey]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
       }),
@@ -380,6 +380,35 @@ export class DockgeLxc extends ComponentResource {
       },
       { dependsOn: this.resources },
     );
+
+    cluster.apply((clusterDefinition) => {
+      // Register Proxmox UIs as Authentik forward-proxy applications.
+      // Traffic is routed through this cluster's Dockge Traefik ingress.
+      return args.host.applicationManager.createApplication({
+        metadata: { name: "pve", namespace: clusterDefinition.key },
+        spec: {
+          name: "Proxmox VE",
+          category: clusterDefinition.title,
+          description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
+          url: `https://pve.${clusterDefinition.rootDomain}`,
+          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+          authentik: {
+            proxy: {
+              mode: "forward_single",
+              externalHost: `https://pve.${clusterDefinition.rootDomain}`,
+            },
+          },
+          gatus: [
+            {
+              name: "Proxmox VE",
+              url: `https://pve.${clusterDefinition.rootDomain}`,
+              method: "GET",
+              conditions: ["[STATUS] == 200"],
+            },
+          ],
+        },
+      });
+    });
   }
   public createBackupJob(job: BackupTask) {
     return this.backupJobManager.createBackupJob(job);
@@ -521,7 +550,38 @@ ${middlewareYaml}  services:
       .apply((z) => {
         z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
+      })
+      .apply((stacks) => {
+        return this.createOutpost().apply((outpost) => stacks);
       });
+  }
+
+  private createOutpost() {
+    const applicationManager = this.args.host.applicationManager;
+    return this.cluster.apply((clusterDefinition) => {
+      return new authentik.Outpost(
+        clusterDefinition.key,
+        {
+          type: "proxy",
+          name: `Outpost for ${clusterDefinition.title}`,
+          config: jsonStringify(
+            {
+              authentik_host: interpolate`https://${clusterDefinition.authentikDomain}/`,
+              authentik_host_insecure: false,
+              // container_image: "ghcr.io/goauthentik/proxy:2025.8.4",
+              authentik_host_browser: interpolate`https://${clusterDefinition.authentikDomain}/`,
+              // log_level: "trace",
+              object_naming_template: `authentik-outpost`,
+              docker_network: "dockge_default",
+            },
+            undefined,
+            2,
+          ),
+          protocolProviders: applicationManager.proxyProviders,
+        },
+        { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
+      );
+    });
   }
 
   private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
@@ -547,95 +607,107 @@ ${middlewareYaml}  services:
     return filesMap;
   }
 
-  private async createStack(
+  private createStack(
     hostname: string,
     stackName: string,
     files: Map<string, string>,
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>,
-  ): Promise<{ name: string; path: string; compose?: remote.Command }> {
+  ): Output<{ name: string; path: string; compose?: remote.Command }> {
     const copyFiles = [];
-    const cluster = await awaitOutput(this.cluster);
-    const tailscaleDomain = await awaitOutput(this.args.globals.tailscaleDomain);
+    const cluster = this.cluster;
+    const tailscaleDomain = this.args.globals.tailscaleDomain;
     replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
 
     let hasCompose = false;
     let hasInit = false;
 
     for (const [relativeFilePath, absoluteFilePath] of files) {
-      const content = await readFile(absoluteFilePath, "utf-8");
+      const content = output(readFile(absoluteFilePath, "utf-8"));
       const file = relativeFilePath;
-      let replacedContent = replacements.reduce((p, r) => r(p), output(content));
+      let replacedContent = replacements.reduce((p, r) => r(p), content);
 
       if (file.endsWith("init.sh")) {
         hasInit = true;
       } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
-        const content = await awaitOutput(replacedContent);
+        const content = replacedContent;
         const hostRegex = /Host\(`(.*?)`\)/g;
-        const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
-        for (const host of hosts) {
-          if (host.indexOf(tailscaleDomain) > -1) {
-            // this is a service domain
-            const service = host.replace(`.${tailscaleDomain}`, "");
-            log.info(`Creating Tailscale DNS entry for service ${service}`);
 
-            new remote.Command(
-              `${stackName}-tailscale-service-${service}`,
+        all([replacedContent, tailscaleDomain]).apply(([content, tailscaleDomain]) => {
+          const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
+          for (const host of hosts) {
+            if (host.indexOf(tailscaleDomain) > -1) {
+              // this is a service domain
+              const service = host.replace(`.${tailscaleDomain}`, "");
+              log.info(`Creating Tailscale DNS entry for service ${service}`);
+
+              new remote.Command(
+                `${stackName}-tailscale-service-${service}`,
+                {
+                  connection: this.remoteConnection,
+                  create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
+                  delete: interpolate`tailscale serve clear svc:${service}`,
+                },
+                {
+                  parent: this,
+                  dependsOn: dependsOn,
+                },
+              );
+
+              this.registerTailscaleService(service);
+
+              continue;
+            }
+
+            new StandardDns(
+              `${stackName}-${host.replace(/\./g, "_")}`,
               {
-                connection: this.remoteConnection,
-                create: interpolate`tailscale serve --service=svc:${service} --https=443 --yes 127.0.0.1:8443`,
-                delete: interpolate`tailscale serve clear svc:${service}`,
+                hostname: interpolate`${host}`,
+                ipAddress: this.tailscaleIpAddress,
+                type: "CNAME",
+                record: this.hostname,
               },
+              this.args.globals,
               {
-                parent: this,
                 dependsOn: dependsOn,
+                parent: this,
+                protect: stackName === "adguard",
               },
             );
-
-            this.registerTailscaleService(service);
-
-            continue;
           }
-
-          new StandardDns(
-            `${stackName}-${host.replace(/\./g, "_")}`,
-            {
-              hostname: interpolate`${host}`,
-              ipAddress: this.tailscaleIpAddress,
-              type: "CNAME",
-              record: this.hostname,
-            },
-            this.args.globals,
-            {
-              dependsOn: dependsOn,
-              parent: this,
-              protect: stackName === "adguard",
-            },
-          );
-        }
+        });
       } else if (file === "definition.yaml") {
-        // intercept definition file and create the client id / client secret and inject that into the yaml.
-        const parsed = yaml.parse(await awaitOutput(replacedContent)) as ApplicationDefinitionSchema;
-        const oauth2 = parsed.spec.authentik?.oauth2;
-        if (oauth2) {
-          const clientId = new RandomString(
-            `${cluster.key}-${stackName}-client-id`,
-            {
-              length: 16,
-              upper: false,
-              special: false,
-            },
-            { parent: this, dependsOn: dependsOn },
-          );
-          const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this, dependsOn: dependsOn });
-          const [clientIdResult, clientSecretResult] = await awaitOutput(all([clientId.id, clientSecret.result]));
+        replacedContent.apply(([content]) => {
+          // intercept definition file and create the client id / client secret and inject that into the yaml.
+          const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
+          const oauth2 = parsed.spec.authentik?.oauth2;
+          if (oauth2) {
+            const clientId = new RandomString(
+              `${cluster.key}-${stackName}-client-id`,
+              {
+                length: 16,
+                upper: false,
+                special: false,
+              },
+              { parent: this, dependsOn: dependsOn },
+            );
+            const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this, dependsOn: dependsOn });
 
-          oauth2.clientId = clientIdResult;
-          oauth2.clientSecret = clientSecretResult;
-          replacedContent = output(yaml.stringify(parsed));
-        }
+            return all([clientId.id, clientSecret.result])
+              .apply(([id, secret]) => {
+                oauth2.clientId = id;
+                oauth2.clientSecret = secret;
+                return parsed;
+              })
+              .apply((yy) => this.args.host.applicationManager.createApplication(yy));
+          } else {
+            return this.args.host.applicationManager.createApplication(parsed);
+          }
+        });
+
+        continue;
       }
 
       copyFiles.push(
@@ -676,9 +748,9 @@ ${middlewareYaml}  services:
         mergeOptions({ parent: this }, { dependsOn: composeDeps, deleteBeforeReplace: true }),
       );
 
-      return { name: stackName, path, compose };
+      return output({ name: stackName, path, compose });
     }
-    return { name: stackName, path };
+    return output({ name: stackName, path });
   }
 }
 
