@@ -64,7 +64,6 @@ pbs.addHostMount("/data");
 host.addUptimeGatus();
 
 exportNodeStateToOnePassword(
-  "ocracoke",
   [
     {
       name: host.tailscaleName,

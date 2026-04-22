@@ -175,7 +175,6 @@ alphaSiteHost.addUptimeGatus();
 twilightSparkleHost.addUptimeGatus();
 
 exportNodeStateToOnePassword(
-  "home",
   [
     {
       name: twilightSparkleHost.tailscaleName,
@@ -227,4 +226,3 @@ export const celestia = {
   dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
 };
-

@@ -30,25 +30,28 @@ export interface AggregatedNodeExport {
  * Discovers all Tailscale node exports from 1Password items tagged 'tailscale-export'.
  * Each source stack writes its node IPs + registered services into its own item.
  */
-export function discoverNodeExports(): pulumi.Output<AggregatedNodeExport[]> {
+export function discoverNodeExports() {
   const opClient = new OPClient();
 
   return pulumi.output(opClient.findItemsByTag("tailscale-export")).apply((items) =>
     items.map((item) => {
-      const stackName = item.fields?.["stackName"]?.value || item.title || "unknown";
-      const jsonStr = item.fields?.["json"]?.value || "{}";
-
-      let parsed: { nodes?: AggregatedNodeExport["nodes"]; services?: string[] } = {};
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch (e) {
-        pulumi.log.warn(`Failed to parse Tailscale export JSON for stack '${stackName}': ${e}`);
-      }
+      const services = item.fields?.["services"]?.value?.split(",") ?? [];
+      const stackName = item.fields?.["stackName"]?.value!;
+      const hosts = Object.fromEntries(
+        Object.entries(item.sections ?? {}).map(([name, section]) => [
+          name,
+          {
+            ip: section.fields?.["ip"]?.value!,
+            internalIp: section.fields?.["internalIp"]?.value,
+            nodeType: section.fields?.["nodeType"]?.value!,
+          },
+        ]),
+      );
 
       return {
         stackName,
-        nodes: parsed.nodes ?? [],
-        services: parsed.services ?? [],
+        hosts,
+        services,
       };
     }),
   );
@@ -65,7 +68,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
 
   const currentAcl = tailscale.getAclOutput({ provider: globals.tailscaleProvider });
   const primaryDns = getTailscaleIp("adguard-home", globals);
-  const secondaryDns = getTailscaleIp("alpha-site-dockge", globals);
+  const secondaryDns = getTailscaleIp("dockge-as", globals);
   const idpIp = getTailscaleIp("idp", globals);
   const unifiDns = "100.111.0.1";
 
@@ -78,17 +81,29 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       ["unifi-dns", unifiDns],
     ];
     for (const exp of allExports) {
-      for (const node of exp.nodes) {
-        hosts.push([node.name, node.ip]);
+      for (const [name, { ip }] of Object.entries(exp.hosts)) {
+        hosts.push([name, ip]);
       }
     }
 
     // ── Aggregate services, internalIps, and test device lists ───────────
     const services = allExports.flatMap((exp) => exp.services);
-    const internalIps = allExports.flatMap((exp) => exp.nodes.filter((n) => n.internalIp).map((n) => n.internalIp!)) as TailscaleIp[];
+    const internalIps = allExports.flatMap((exp) =>
+      Object.values(exp.hosts)
+        .filter((n) => n.internalIp)
+        .map((n) => n.internalIp!),
+    ) as TailscaleIp[];
 
-    const proxmoxDevices = allExports.flatMap((exp) => exp.nodes.filter((n) => n.nodeType === "proxmox").map((n) => n.name));
-    const dockgeDevices = allExports.flatMap((exp) => exp.nodes.filter((n) => n.nodeType === "dockge").map((n) => n.name));
+    const proxmoxDevices = allExports.flatMap((exp) =>
+      Object.entries(exp.hosts)
+        .filter(([_, n]) => n.nodeType === "proxmox")
+        .map(([name, _]) => name),
+    );
+    const dockgeDevices = allExports.flatMap((exp) =>
+      Object.entries(exp.hosts)
+        .filter(([_, n]) => n.nodeType === "dockge")
+        .map(([name, _]) => name),
+    );
     const tests = {
       proxmoxDevices,
       dockgeDevices,

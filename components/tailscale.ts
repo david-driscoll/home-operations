@@ -12,7 +12,7 @@ import { ClientCredentials } from "simple-oauth2";
 import { copyFileToRemote } from "./helpers.ts";
 import { DeviceTags, getDevice, getDeviceOutput } from "@pulumi/tailscale";
 import { TailscaleCidr } from "@openapi/tailscale-grants.js";
-import { OnePasswordItem } from "@dynamic/1password/OnePasswordItem.ts";
+import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 
 /**
@@ -85,29 +85,37 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
  * @param services   - Tailscale service identifiers registered by this stack (e.g., 'svc:adguard-home')
  * @param cro        - Pulumi resource options (parent, provider, etc.)
  */
-export function exportNodeStateToOnePassword(stackName: string, nodeState: NodeInfo[], services: string[], cro: pulumi.ResourceOptions) {
-  const resolvedJson = pulumi
-    .all(
-      nodeState.map((n) =>
-        pulumi.all([pulumi.output(n.name), pulumi.output(n.ip), pulumi.output(n.internalIp ?? null)]).apply(([name, ip, internalIp]) => ({
-          name,
-          ip,
-          ...(internalIp !== null && { internalIp }),
-          ...(n.nodeType && { nodeType: n.nodeType }),
-        })),
-      ),
-    )
-    .apply((nodes) => JSON.stringify({ nodes, services }));
+export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: string[], cro: pulumi.ResourceOptions) {
+  const hostsSection: OnePasswordItemSectionInput = {
+    fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
+  };
 
   return new OnePasswordItem(
-    `${stackName}-tailnet`,
+    `${pulumi.runtime.getStack()}-tailnet`,
     {
       category: FullItem.CategoryEnum.SecureNote,
-      title: `Tailscale Export - ${stackName}`,
+      title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
       tags: ["tailscale-export"],
+      sections: pulumi.output(nodeState).apply((nodes) =>
+        Object.fromEntries(
+          nodes.map(
+            (z) =>
+              [
+                z.name,
+                {
+                  fields: {
+                    ip: { value: z.ip },
+                    internalIp: { value: z.internalIp },
+                    nodeType: { value: z.nodeType ?? "unknown" },
+                  },
+                },
+              ] as const,
+          ),
+        ),
+      ),
       fields: {
-        stackName: { value: stackName },
-        json: { value: resolvedJson },
+        name: { value: pulumi.runtime.getStack() },
+        services: { value: services.join(",") },
       },
     },
     cro,

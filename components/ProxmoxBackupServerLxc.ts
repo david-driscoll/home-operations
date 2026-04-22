@@ -1,9 +1,9 @@
 import { FullItem } from "@1password/connect";
-import { getTailscaleSection, clientIdPair, pushLxcDefinition } from "@components/helpers.ts";
+import { getTailscaleSection, clientIdPair, pushLxcDefinition, BackupTask, toGatusKey, copyFileToRemote } from "@components/helpers.ts";
 import { getTailscaleClient, getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { remote, types } from "@pulumi/command";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, runtime, unknown } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import * as authentik from "@pulumi/authentik";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -13,10 +13,13 @@ import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
-import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
+import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { Tailscale } from "@components/constants.ts";
+import { BackupJobManager, BackupPlanManager } from "./backups.ts";
+import { BackrestPlan } from "@openapi/backrest.js";
+import { kebabCase } from "moderndash";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;

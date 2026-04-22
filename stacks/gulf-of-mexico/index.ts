@@ -64,7 +64,6 @@ pbs.addHostMount("/data");
 host.addUptimeGatus();
 
 exportNodeStateToOnePassword(
-  "gulf-of-mexico",
   [
     {
       name: host.tailscaleName,
