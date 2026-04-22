@@ -27,7 +27,7 @@ import { Tailscale } from "@components/constants.ts";
 import * as authentik from "@pulumi/authentik";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const dockerPath = resolve(__dirname, "../../docker");
+const dockerPath = resolve(__dirname, "../docker");
 
 export type OPClientItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -151,7 +151,7 @@ export class DockgeLxc extends ComponentResource {
       vmId: args.vmId,
       dependsOn: [...depends],
     });
-    depends.push(deviceInfo);
+    depends.push(deviceInfo.apply((z) => z.resource));
 
     // update hostname on machine
     const setHostname = new remote.Command(
@@ -563,7 +563,7 @@ ${middlewareYaml}  services:
       this.args.host.name,
       {
         type: "proxy",
-        name: `Outpost for ${this.args.host.title}`,
+        name: interpolate`Outpost for ${this.args.host.title}`,
         config: jsonStringify(
           {
             authentik_host: interpolate`https://${this.cluster.authentikDomain}/`,

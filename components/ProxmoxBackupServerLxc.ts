@@ -1,10 +1,9 @@
 import { FullItem } from "@1password/connect";
 import { getTailscaleSection, clientIdPair, pushLxcDefinition } from "@components/helpers.ts";
-import { getTailscaleClient, installTailscaleLxc } from "@components/tailscale.ts";
+import { getTailscaleClient, getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { remote, types } from "@pulumi/command";
-import { GetDeviceResult, getDeviceOutput } from "@pulumi/tailscale";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, runtime, unknown } from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
 import * as authentik from "@pulumi/authentik";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -41,6 +40,8 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly oidcClientId: Output<string>;
   public readonly oidcClientSecret: Output<string>;
   public readonly oidcIssuerUrl: Output<string>;
+  public readonly tailscaleName: Output<string>;
+  public readonly tailscaleIpAddress: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
   private resources!: Input<Resource>[];
   private readonly lxcName: string;
@@ -58,6 +59,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("pbs", args.host, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
+    this.tailscaleName = tailscaleName;
 
     const createPbsLxc = runCommunityScriptLxc(
       `${name}-create-pbs`,
@@ -89,6 +91,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
       {
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
+        update: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
@@ -207,7 +210,7 @@ echo "PBS post-install complete"`;
       vmId: args.vmId,
       dependsOn: [setHostname, createPbsLxc, postInstallRun, postInstallReboot],
     });
-    this.resources.push(deviceInfo);
+    this.resources.push(deviceInfo.apply((z) => z.resource));
 
     this.oidcClientId = clientId;
     this.oidcClientSecret = clientSecret;
@@ -283,6 +286,28 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
 
+    // Install jq
+    const installJq = new remote.Command(
+      `${name}-install-jq`,
+      {
+        connection: args.host.remoteConnection,
+        create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
+      },
+      mergeOptions(cro, { dependsOn: [] }),
+    );
+
+    // Copy Tailscale cron script
+    const tailscaleCron = new remote.CopyToRemote(
+      `${name}-tailscale-cron`,
+      {
+        connection: { host: tailscaleHostname, user: "root" },
+        remotePath: "/etc/cron.weekly/tailscale",
+        source: new asset.FileAsset("scripts/tailscale-pbs.sh"),
+      },
+      mergeOptions(cro, { dependsOn: [...this.resources, installJq] }),
+    );
+    this.resources.push(tailscaleCron);
+
     new OnePasswordItem(
       `${args.host.name}-pbs`,
       {
@@ -305,6 +330,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       },
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
+    this.tailscaleIpAddress = getTailscaleIp(tailscaleName, args.globals);
 
     all([cluster, this.oidcClientId, this.oidcClientSecret]).apply(([c, clientId, clientSecret]) =>
       args.host.applicationManager.createApplication({

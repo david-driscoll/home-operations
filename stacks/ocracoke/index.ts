@@ -7,8 +7,7 @@ import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.
 import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
-import { tag, TailscaleAclManager } from "@components/tailscale/manager.ts";
-import * as tailscale from "@pulumi/tailscale";
+import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -31,7 +30,8 @@ const host = new ProxmoxHost("skystar", {
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
 });
-const tailscaleManager = TailscaleAclManager.default({ parent: host, provider: globals.tailscaleProvider });
+
+const tailscaleServices: string[] = [];
 
 const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   globals,
@@ -43,7 +43,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   registerTailscaleService(service) {
-    tailscaleManager.apply((z) => z.setService(`svc:${service}`, [tag.dockge, tag.apps]));
+    tailscaleServices.push(`svc:${service}`);
   },
 });
 dockgeRuntime.addHostMount("/data");
@@ -62,10 +62,34 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
 pbs.addHostMount("/data");
 
 host.addUptimeGatus();
-TailscaleAclManager.applyAcl(tailscaleManager, { parent: host, provider: globals.tailscaleProvider });
+
+exportNodeStateToOnePassword(
+  "ocracoke",
+  [
+    {
+      name: host.tailscaleName,
+      ip: host.tailscaleIpAddress,
+      nodeType: "proxmox",
+    },
+    {
+      name: dockgeRuntime.tailscaleName,
+      ip: dockgeRuntime.tailscaleIpAddress,
+      internalIp: dockgeRuntime.ipAddress,
+      nodeType: "dockge",
+    },
+    {
+      name: pbs.tailscaleName,
+      ip: pbs.tailscaleIpAddress,
+      nodeType: "pbs",
+    },
+  ],
+  tailscaleServices,
+  { parent: host },
+);
 
 export const skystar = {
   proxmox: getProxmoxProperties(host),
   dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
+

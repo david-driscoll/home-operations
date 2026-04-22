@@ -7,14 +7,12 @@ import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.
 import { TruenasVm } from "../../components/TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
-import { updateTailscaleAcls } from "./tailscale.ts";
-import { getDeviceOutput } from "@pulumi/tailscale";
 import { gatusDnsRecords } from "../../components/StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
 import * as tls from "@pulumi/tls";
-import { TailscaleService } from "@openapi/tailscale-grants.js";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
+import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -98,8 +96,8 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
 });
 
-const tailscaleServices: TailscaleService[] = [];
-const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}` as TailscaleService);
+const tailscaleServices: string[] = [];
+const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}`);
 
 const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
@@ -128,51 +126,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   sftpKey: sftpClientKey,
   registerTailscaleService,
 });
-
-function getTailscaleIp(name: string) {
-  return getDeviceOutput({ hostname: name }, { provider: globals.tailscaleProvider })
-    .apply((ip) => {
-      pulumi.log.info(`Got Tailscale IP for ${name}: ${ip.addresses.join(", ")}`);
-      return ip;
-    })
-    .apply((z) => z.addresses[0]);
-}
-
-const primaryDns = getTailscaleIp("adguard-home");
-const secondaryDns = alphaSiteDockgeRuntime.tailscaleIpAddress;
-const unifiDns = "100.111.0.1";
-
-const lunaDockgeIp = getTailscaleIp("luna-dockge");
-
-const tailscale = updateTailscaleAcls({
-  globals,
-  services: tailscaleServices,
-  hosts: [
-    ["idp", getTailscaleIp("idp")],
-    ["primary-dns", primaryDns],
-    ["secondary-dns", secondaryDns],
-    ["unifi-dns", unifiDns],
-    [alphaSiteHost.tailscaleName, alphaSiteHost.tailscaleIpAddress],
-    [alphaSiteDockgeRuntime.tailscaleName, alphaSiteDockgeRuntime.tailscaleIpAddress],
-    [celestiaHost.tailscaleName, celestiaHost.tailscaleIpAddress],
-    [celestiaDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleIpAddress],
-    // ["luna", lunaHostIp],
-    // ["luna-dockge", lunaDockgeIp],
-    [twilightSparkleHost.tailscaleName, twilightSparkleHost.tailscaleIpAddress],
-    [spikeVm.tailscaleName, spikeVm.tailscaleIpAddress],
-  ],
-  internalIps: [spikeVm.ipAddress, celestiaDockgeRuntime.ipAddress, alphaSiteDockgeRuntime.ipAddress],
-  tests: {
-    dockgeDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaDockgeRuntime.tailscaleName, "luna-dockge"],
-    proxmoxDevices: [alphaSiteHost.tailscaleName, celestiaHost.tailscaleName, "luna", twilightSparkleHost.tailscaleName],
-    taggedDevices: [alphaSiteDockgeRuntime.tailscaleName, celestiaHost.tailscaleName, twilightSparkleHost.tailscaleName],
-    kubernetesDevices: ["sgc", "equestria"],
-  },
-  dnsServers: [primaryDns, secondaryDns, unifiDns, ...dns.internalIps],
-});
-
-// const users = await tailscale.
-// console.log(users);
 
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
@@ -211,7 +164,7 @@ const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
   cluster: celestiaCluster,
   dockge: celestiaDockgeRuntime,
-  dependsOn: [tailscale.acl],
+  dependsOn: [],
 });
 celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
@@ -221,6 +174,52 @@ celestiaHost.addUptimeGatus();
 alphaSiteHost.addUptimeGatus();
 twilightSparkleHost.addUptimeGatus();
 
+exportNodeStateToOnePassword(
+  "home",
+  [
+    {
+      name: twilightSparkleHost.tailscaleName,
+      ip: twilightSparkleHost.tailscaleIpAddress,
+      nodeType: "proxmox",
+    },
+    {
+      name: celestiaHost.tailscaleName,
+      ip: celestiaHost.tailscaleIpAddress,
+      nodeType: "proxmox",
+    },
+    {
+      name: alphaSiteHost.tailscaleName,
+      ip: alphaSiteHost.tailscaleIpAddress,
+      nodeType: "proxmox",
+    },
+    {
+      name: celestiaDockgeRuntime.tailscaleName,
+      ip: celestiaDockgeRuntime.tailscaleIpAddress,
+      internalIp: celestiaDockgeRuntime.ipAddress,
+      nodeType: "dockge",
+    },
+    {
+      name: celestiaPbs.tailscaleName,
+      ip: celestiaPbs.tailscaleIpAddress,
+      nodeType: "pbs",
+    },
+    {
+      name: alphaSiteDockgeRuntime.tailscaleName,
+      ip: alphaSiteDockgeRuntime.tailscaleIpAddress,
+      internalIp: alphaSiteDockgeRuntime.ipAddress,
+      nodeType: "dockge",
+    },
+    {
+      name: spikeVm.tailscaleName,
+      ip: spikeVm.tailscaleIpAddress,
+      internalIp: spikeVm.ipAddress,
+      nodeType: "truenas",
+    },
+  ],
+  tailscaleServices,
+  { parent: alphaSiteHost },
+);
+
 export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
 export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
 export const celestia = {
@@ -228,3 +227,4 @@ export const celestia = {
   dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
 };
+

@@ -18,7 +18,6 @@ export interface AuthentikResourcesArgs {
   clusterKey: string;
   outputs: pulumi.Input<AuthentikOutputs>;
   cluster: pulumi.Input<ClusterDefinition>;
-  authentikCredential: pulumi.Input<string>;
   loadFromResource<T>(application: ApplicationDefinitionSchema, type: "authentik" | "uptime" | "gatus", from: { type: string; name: string }): Promise<T>;
 }
 type RolesKeys = keyof typeof Roles;
@@ -56,13 +55,13 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     private readonly args: AuthentikResourcesArgs,
     private readonly opts?: pulumi.ComponentResourceOptions,
   ) {
-    super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
+    super("custom:resource:AuthentikResourceManager", `${args.clusterKey}-authentik-resource-manager`, {}, opts);
 
     this.authentik = pulumi.output(args.outputs);
     this.cluster = pulumi.output(args.cluster);
-    this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", "providers", {}, { parent: this });
-    this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", "applications", {}, { parent: this });
-    this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", "outposts", {}, { parent: this });
+    this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", `${args.clusterKey}-providers`, {}, { parent: this });
+    this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", `${args.clusterKey}-applications`, {}, { parent: this });
+    this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", `${args.clusterKey}-outposts`, {}, { parent: this });
   }
 
   public createApplication(application: ApplicationDefinitionSchema) {
@@ -74,30 +73,36 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           : pulumi.output(application.spec.authentik)
         ).apply((authentik) => ({ application, authentik })),
       )
-      .apply(({ application, authentik }) => {
+      .apply(async ({ application, authentik }) => {
         if (authentik) {
-          const result = this.createProvider(application, authentik);
+          const result = await this.createProvider(application, authentik);
           if (result.isProxy && result.provider) {
             this.proxyProviders.push(result.provider.id.apply((id) => parseFloat(id)));
           }
           return { application, result: result };
         }
-        return { application };
+        return {
+          application,
+          result: {
+            provider: undefined,
+          },
+        };
       })
-      .apply(({ application, result }) => {
+      .apply(async ({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        return application.spec.gatus ? this.addGatusInstances(application, application.spec.gatus).apply((defs) => ({ app, gatus: defs, ...result })) : { app, gatus: [], ...result };
+        return application.spec.gatus
+          ? await awaitOutput(this.addGatusInstances(application, application.spec.gatus).apply((defs) => Object.assign(result, { app, gatus: defs })))
+          : Object.assign(result, { app, gatus: [] });
       });
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {
-    return definition.spec.slug ?? (definition.metadata.namespace ?? this.args.clusterKey) === this.args.clusterKey
+    return (definition.spec.slug ?? (definition.metadata.namespace ?? this.args.clusterKey) === this.args.clusterKey)
       ? `${this.args.clusterKey}-${definition.metadata.name}`
       : `${this.args.clusterKey}-${definition.metadata.namespace}-${definition.metadata.name}`;
-    );
   }
 
-  private createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
+  private async createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
     const opts = { parent: this.providersComponent, deleteBeforeReplace: true };
     const resourceName = this.resolveResourceName(definition);
 
@@ -130,7 +135,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           },
           opts,
         ),
-        isProxy: true,
+        isProxy: true as const,
       };
     }
 
@@ -195,7 +200,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         { parent: provider },
       );
 
-      return { provider, oidcCredentials, isProxy: false, clientId, clientSecret };
+      return { provider, oidcCredentials, isProxy: false as const, clientId: await awaitOutput(clientId), clientSecret: await awaitOutput(clientSecret) };
     }
 
     // // LDAP Provider

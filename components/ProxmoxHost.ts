@@ -150,16 +150,6 @@ export class ProxmoxHost extends ComponentResource {
         cro,
       );
 
-      // Install jq
-      const installJq = new remote.Command(
-        `${name}-install-jq`,
-        {
-          connection: connection,
-          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
-        },
-        mergeOptions(cro, { dependsOn: [] }),
-      );
-
       // TODO: make work at somepoint
       // const script = new Purrl(`${name}-alloy-script`, {
       //   name: "install-alloystack.sh",
@@ -185,33 +175,13 @@ export class ProxmoxHost extends ComponentResource {
       //   },
       //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
       // );
-
-      const tailscaleForwardingConfig = copyFileToRemote(`${name}-tailscale-forwarding-config`, {
-        connection,
-        remotePath: "/etc/sysctl.d/99-tailscale.conf",
-        content: `net.ipv4.ip_forward = 1
-net.ipv6.conf.all.forwarding = 1
-`,
-        parent: this,
-      });
-
-      const tailscaleForwarding = new remote.Command(
-        `${name}-tailscale-forwarding`,
-        {
-          connection,
-          create: "sysctl -p /etc/sysctl.d/99-tailscale.conf",
-          triggers: [tailscaleForwardingConfig.id],
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleForwardingConfig] }),
-      );
-
-      const deviceInfo = updateTailscaleProxmox({
+      updateTailscaleProxmox({
         connection,
         parent: this,
         name: this.tailscaleName,
         ipAddress: this.tailscaleIpAddress,
         globals: args.globals,
-        dependsOn: [tailscaleForwarding],
+        dependsOn: [],
         args: {
           ...args.tailscaleArgs,
           advertiseTags: [Tailscale.tag.proxmox, Tailscale.tag.exitNode, ...(args.peerRelay ? [Tailscale.tag.peerRelay] : [])].concat(args.tailscaleTags ?? []),
@@ -225,6 +195,16 @@ net.ipv6.conf.all.forwarding = 1
         },
       });
       // Configure SSH environment
+
+      // Install jq
+      const installJq = new remote.Command(
+        `${name}-install-jq`,
+        {
+          connection: connection,
+          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
+        },
+        mergeOptions(cro, { dependsOn: [] }),
+      );
 
       // Copy Tailscale cron script
       const tailscaleCron = new remote.CopyToRemote(
@@ -277,7 +257,6 @@ net.ipv6.conf.all.forwarding = 1
       globals: args.globals,
       clusterKey: name,
       outputs: args.authentikOutputs,
-      authentikCredential: "Authentik Outputs",
       cluster: cluster,
       loadFromResource(application, kind, { name }) {
         throw new Error("Not implemented");

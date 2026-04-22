@@ -52,7 +52,6 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly tailscaleIpAddress: TailscaleIp;
   public readonly tailscaleName: pulumi.Output<string>;
   public readonly macAddress: string;
-  // public readonly device: pulumi.Output<GetDeviceResult>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
@@ -77,17 +76,6 @@ export class TruenasVm extends pulumi.ComponentResource {
       user: credentialItem.apply((z) => z.fields?.username?.value!),
       password: credentialItem.apply((z) => z.fields?.credential?.value!),
     });
-    // const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName: pulumi.output(name), globals: args.globals });
-
-    // Get Tailscale device
-    // this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] }).apply(async (result) => {
-    //   try {
-    //     await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
-    //   } catch (e) {
-    //     pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
-    //   }
-    //   return result;
-    // });
 
     const truenasInfo = new OnePasswordItem(
       `${args.host.name}-truenas`,
