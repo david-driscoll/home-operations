@@ -1,5 +1,5 @@
 import { FullItem } from "@1password/connect";
-import { getTailscaleSection, clientIdPair, pushLxcDefinition, BackupTask, toGatusKey, copyFileToRemote } from "@components/helpers.ts";
+import { getTailscaleSection, clientIdPair, pushLxcDefinition, BackupTask, copyFileToRemote } from "@components/helpers.ts";
 import { getTailscaleClient, getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { remote, types } from "@pulumi/command";
@@ -10,7 +10,7 @@ import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { getContainerHostnames } from "./helpers.ts";
+import { getContainerHostnames, toGatusKey } from "./helpers.ts";
 import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
@@ -234,19 +234,6 @@ echo "PBS post-install complete"`;
       cro,
     );
 
-    new authentik.Application(
-      name,
-      {
-        slug: name,
-        name: interpolate`Proxmox Backup Server`,
-        protocolProvider: oidcProvider.id.apply((id) => parseFloat(id)),
-        metaLaunchUrl: externalUrl,
-        openInNewTab: true,
-        group: "Infrastructure",
-      },
-      cro,
-    );
-
     const externalHostname = externalUrl.apply((u) => new URL(u).hostname);
     args.dockge.registerExternalService(
       {
@@ -339,10 +326,11 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       args.host.applicationManager.createApplication({
         apiVersion: "home.driscoll.tech/v1",
         kind: "ApplicationDefinition",
-        metadata: { name: this.lxcName },
+        metadata: { name: `pbs` },
         spec: {
-          name: `Proxmox Backup Server - ${c.title}`,
+          name: `Proxmox Backup Server`,
           slug: this.lxcName,
+          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
           category: c.title,
           url: `https://pbs.${c.rootDomain}`,
           authentik: {
@@ -356,7 +344,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           },
           gatus: [
             {
-              name: `pbs-${c.key}`,
+              name: `${c.key}-pbs`,
               url: `https://pbs.${c.rootDomain}/`,
               method: "GET",
               conditions: ["[STATUS] == 200"],
