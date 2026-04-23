@@ -1,11 +1,8 @@
-import { ClusterDefinition, GlobalResources, OnePasswordItem } from "../../components/globals.ts";
-import { OnePasswordItem as OPItem } from "../../dynamic/1password/OnePasswordItem.ts";
-import { OPClient } from "../../components/op.ts";
-import { createBackupDatastores, ProxmoxBackupServer } from "../backups/ProxmoxBackupServer.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap } from "@pulumi/pulumi";
-import { B2Backend, RcloneBackend, RcloneOperation } from "../../types/rclone.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { OPClient } from "./op.ts";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
+import { BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";

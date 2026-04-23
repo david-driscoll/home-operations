@@ -1,50 +1,131 @@
-import * as tailscale from "@pulumi/tailscale";
-import * as kubernetes from "@pulumi/kubernetes";
+/**
+ * Central Tailscale ACL management for unifi-network stack.
+ * Discovers all node exports from 1Password (tagged 'tailscale-export'),
+ * aggregates them, and owns all ACL / DNS rules across every stack.
+ */
 import * as pulumi from "@pulumi/pulumi";
-import { GlobalResources } from "@components/globals.ts";
-import { Roles } from "@components/constants.ts";
+import * as tailscale from "@pulumi/tailscale";
+import { GlobalResources } from "../../components/globals.ts";
+import { OPClient } from "../../components/op.ts";
+import { getTailscaleIp } from "../../components/tailscale.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "../../components/tailscale/manager.ts";
-import { awaitOutput } from "@components/helpers.ts";
-import { TailscaleCidr, TailscaleIp, TailscaleIpSet, TailscaleSelector, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
+import { dns, Roles } from "../../components/constants.ts";
+import { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 
-type TestsData = {
-  taggedDevices: pulumi.Input<string>[];
-  dockgeDevices: pulumi.Input<string>[];
-  kubernetesDevices: pulumi.Input<string>[];
-  proxmoxDevices: pulumi.Input<string>[];
-};
+interface KubernetesCluster {
+  tag: TailscaleTags;
+  serviceNetwork: TailscaleCidr;
+  clusterNetwork: TailscaleCidr;
+  publicIps: TailscaleIp[];
+  kubeApiIp: TailscaleIp;
+}
 
-type TestsDataPopulated = TestsData & {
-  knownNormalUsers: pulumi.Input<string>[];
-  knownAdminUsers: pulumi.Input<string>[];
-};
+export interface AggregatedNodeExport {
+  stackName: string;
+  nodes: Array<{ name: string; ip: string; internalIp?: string; nodeType?: string }>;
+  services: string[];
+}
 
-export function updateTailscaleAcls(args: {
-  globals: GlobalResources;
-  services: pulumi.Input<TailscaleService>[];
-  hosts: [pulumi.Input<string>, pulumi.Input<string>][];
-  internalIps: pulumi.Input<TailscaleIp>[];
-  tests: TestsData;
-  dnsServers: pulumi.Input<string>[];
-}) {
-  const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:TailscaleAcls", "tailscale-acls", {});
-  const cro = { parent: tailscaleParent, provider: args.globals.tailscaleProvider };
-  const currentAcl = tailscale.getAclOutput({ provider: args.globals.tailscaleProvider });
+/**
+ * Discovers all Tailscale node exports from 1Password items tagged 'tailscale-export'.
+ * Each source stack writes its node IPs + registered services into its own item.
+ */
+export function discoverNodeExports() {
+  const opClient = new OPClient();
 
-  return pulumi.all([currentAcl.hujson, args.hosts, args.services, args.internalIps, args.tests]).apply(([hujson, hosts, services, internalIps, tests]) => {
+  return pulumi.output(opClient.findItemsByTag("tailscale-export")).apply((items) =>
+    items.map((item) => {
+      const services = item.fields?.["services"]?.value?.split(",") ?? [];
+      const stackName = item.fields?.["stackName"]?.value!;
+      const hosts = Object.fromEntries(
+        Object.entries(item.sections ?? {}).map(([name, section]) => [
+          name,
+          {
+            ip: section.fields?.["ip"]?.value!,
+            internalIp: section.fields?.["internalIp"]?.value,
+            nodeType: section.fields?.["nodeType"]?.value!,
+          },
+        ]),
+      );
+
+      return {
+        stackName,
+        hosts,
+        services,
+      };
+    }),
+  );
+}
+
+/**
+ * Applies centralized Tailscale ACLs using the aggregated node data from all stacks.
+ * Replaces all stack-specific ACL calls (formerly in home/tailscale.ts).
+ */
+export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any> {
+  const nodeExports = discoverNodeExports();
+  const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:CentralizedAcls", "centralized-acls", {});
+  const cro = { parent: tailscaleParent, provider: globals.tailscaleProvider };
+
+  const currentAcl = tailscale.getAclOutput({ provider: globals.tailscaleProvider });
+  const primaryDns = getTailscaleIp("adguard-home", globals);
+  const secondaryDns = getTailscaleIp("dockge-as", globals);
+  const idpIp = getTailscaleIp("idp", globals);
+  const unifiDns = "100.111.0.1";
+
+  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, idpIp]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, idpAddr]) => {
+    // ── Build hosts map from all exported stacks ──────────────────────────
+    const hosts: [string, string][] = [
+      ["idp", idpAddr],
+      ["primary-dns", primaryDnsIp],
+      ["secondary-dns", secondaryDnsIp],
+      ["unifi-dns", unifiDns],
+    ];
+    for (const exp of allExports) {
+      for (const [name, { ip }] of Object.entries(exp.hosts)) {
+        hosts.push([name, ip]);
+      }
+    }
+
+    // ── Aggregate services, internalIps, and test device lists ───────────
+    const services = allExports.flatMap((exp) => exp.services);
+    const internalIps = allExports.flatMap((exp) =>
+      Object.values(exp.hosts)
+        .filter((n) => n.internalIp)
+        .map((n) => n.internalIp!),
+    ) as TailscaleIp[];
+
+    const proxmoxDevices = allExports.flatMap((exp) =>
+      Object.entries(exp.hosts)
+        .filter(([_, n]) => n.nodeType === "proxmox")
+        .map(([name, _]) => name),
+    );
+    const dockgeDevices = allExports.flatMap((exp) =>
+      Object.entries(exp.hosts)
+        .filter(([_, n]) => n.nodeType === "dockge")
+        .map(([name, _]) => name),
+    );
+    const tests = {
+      proxmoxDevices,
+      dockgeDevices,
+      kubernetesDevices: ["sgc", "equestria"],
+      taggedDevices: [...proxmoxDevices, ...dockgeDevices],
+    };
+
+    const dnsServers = [primaryDnsIp, secondaryDnsIp, unifiDns, ...dns.internalIps];
+
+    // ── Initialise ACL manager ────────────────────────────────────────────
     let aclsJson = applyAllEdits(hujson, ["tagOwners"], {});
     aclsJson = applyAllEdits(aclsJson, ["grants"], []);
     aclsJson = applyAllEdits(aclsJson, ["tests"], []);
     aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
     aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
-    // aclsJson = applyAllEdits(aclsJson, ["nodeAttrs"], []);
-    // aclsJson = applyAllEdits(aclsJson, ["autoApprovers"], { exitNode: [], routes: {}, services: {} });
 
     const manager = new TailscaleAclManager(aclsJson, hosts, tests);
     const testData = manager.testData;
     Object.values(tag).forEach((t) => manager.setTagOwner(t));
     Object.values(groups).forEach((t) => manager.setGroup(t));
 
+    // ── Kubernetes clusters ───────────────────────────────────────────────
     const clusters: KubernetesCluster[] = [
       {
         tag: tag.sgc,
@@ -62,17 +143,19 @@ export function updateTailscaleAcls(args: {
       },
     ];
 
+    // ── Register Dockge services from all stacks ──────────────────────────
     for (const service of services) {
-      manager.setService(service, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
+      manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
     }
 
+    // ── Per-role access rules ─────────────────────────────────────────────
     configureProxmoxAccess(manager);
     configureDockgeAccess(manager);
     configurePbsAccess(manager);
     configureKubernetesAccess(manager, clusters);
-
     createGroupGrants(manager);
 
+    // ── General member/admin grants ───────────────────────────────────────
     manager.setGrant(
       "default-apps-access",
       {
@@ -88,13 +171,9 @@ export function updateTailscaleAcls(args: {
       {
         src: [tag.mediaDevice, groups.friendsAndFamily, autogroups.admin],
         dst: [tag.peerRelay],
-        app: {
-          "tailscale.com/cap/relay": [],
-        },
+        app: { "tailscale.com/cap/relay": [] },
       },
-      {
-        accept: ["debs-apple-tv"],
-      },
+      { accept: ["debs-apple-tv"] },
     );
 
     manager.setGrant(
@@ -166,41 +245,25 @@ export function updateTailscaleAcls(args: {
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );
 
+    // ── Drive access ──────────────────────────────────────────────────────
     manager.setGrant(
       "member-drive-access",
       {
         src: [autogroups.member],
         dst: [autogroups.self],
-        app: {
-          "tailscale.com/cap/drive": [
-            {
-              access: "rw",
-              shares: ["*"],
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/drive": [{ access: "rw", shares: ["*"] }] },
       },
       { accept: testData.knownNormalUsers },
     );
 
-    manager.setNodeAttr({
-      target: ["*"],
-      attr: ["drive:access"],
-    });
+    manager.setNodeAttr({ target: ["*"], attr: ["drive:access"] });
 
     manager.setGrant(
       "shared-drive-access",
       {
         src: [groups.friendsAndFamily],
         dst: [tag.sharedDrive],
-        app: {
-          "tailscale.com/cap/drive": [
-            {
-              access: "rw",
-              shares: ["shared"],
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/drive": [{ access: "rw", shares: ["shared"] }] },
       },
       { accept: testData.knownNormalUsers },
     );
@@ -212,22 +275,10 @@ export function updateTailscaleAcls(args: {
         dst: [tag.sharedDrive],
         app: {
           "tailscale.com/cap/drive": [
-            {
-              access: "ro",
-              shares: ["*"],
-            },
-            {
-              access: "rw",
-              shares: ["family"],
-            },
-            {
-              access: "rw",
-              shares: ["opencloud"],
-            },
-            {
-              access: "ro",
-              shares: ["media"],
-            },
+            { access: "ro", shares: ["*"] },
+            { access: "rw", shares: ["family"] },
+            { access: "rw", shares: ["opencloud"] },
+            { access: "ro", shares: ["media"] },
           ],
         },
       },
@@ -239,18 +290,7 @@ export function updateTailscaleAcls(args: {
       {
         src: [autogroups.admin],
         dst: [tag.sharedDrive],
-        app: {
-          "tailscale.com/cap/drive": [
-            {
-              access: "rw",
-              shares: ["*"],
-            },
-            // {
-            //   access: "rw",
-            //   shares: ["backup", "media"],
-            // },
-          ],
-        },
+        app: { "tailscale.com/cap/drive": [{ access: "rw", shares: ["*"] }] },
       },
       { accept: testData.knownNormalUsers },
     );
@@ -260,30 +300,19 @@ export function updateTailscaleAcls(args: {
       {
         src: [groups.mediaManagers],
         dst: [tag.sharedDrive],
-        app: {
-          "tailscale.com/cap/drive": [
-            {
-              access: "rw",
-              shares: ["media"],
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/drive": [{ access: "rw", shares: ["media"] }] },
       },
       { accept: testData.knownNormalUsers },
     );
 
-    manager.setNodeAttr({
-      target: [tag.sharedDrive],
-      attr: ["drive:share", "drive:access"],
-    });
+    manager.setNodeAttr({ target: [tag.sharedDrive], attr: ["drive:share", "drive:access"] });
 
+    // ── App capability grants ─────────────────────────────────────────────
     manager.setGrant(
       "member-golink-defaults",
       {
         src: [autogroups.member],
-        app: {
-          "tailscale.com/cap/golink": [{ admin: true }],
-        },
+        app: { "tailscale.com/cap/golink": [{ admin: true }] },
       },
       { accept: testData.knownNormalUsers },
     );
@@ -297,15 +326,9 @@ export function updateTailscaleAcls(args: {
           "tailscale.com/cap/tsidp": [
             {
               includeInUserInfo: true,
-
-              // STS
               resources: ["*"],
               users: ["*"],
-
-              extraClaims: {
-                groups: [Roles.Users],
-                entitlements: [Roles.Users],
-              },
+              extraClaims: { groups: [Roles.Users], entitlements: [Roles.Users] },
             },
           ],
         },
@@ -318,16 +341,7 @@ export function updateTailscaleAcls(args: {
       {
         src: [groups.friendsAndFamily],
         dst: ["*"],
-        app: {
-          "tailscale.com/cap/tsidp": [
-            {
-              extraClaims: {
-                groups: [Roles.Family],
-                entitlements: [Roles.Family],
-              },
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/tsidp": [{ extraClaims: { groups: [Roles.Family], entitlements: [Roles.Family] } }] },
       },
       { accept: testData.knownNormalUsers },
     );
@@ -337,24 +351,12 @@ export function updateTailscaleAcls(args: {
       {
         src: [groups.friendsAndFamily],
         dst: ["*"],
-        app: {
-          "tailscale.com/cap/tsidp": [
-            {
-              extraClaims: {
-                groups: [Roles.Friends],
-                entitlements: [Roles.Friends],
-              },
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/tsidp": [{ extraClaims: { groups: [Roles.Friends], entitlements: [Roles.Friends] } }] },
       },
       { accept: testData.knownNormalUsers },
     );
 
-    manager.setNodeAttr({
-      target: [autogroups.admin],
-      attr: ["drive:share", "drive:access"],
-    });
+    manager.setNodeAttr({ target: [autogroups.admin], attr: ["drive:share", "drive:access"] });
 
     manager.setGrant(
       "tsidp-admin",
@@ -366,10 +368,7 @@ export function updateTailscaleAcls(args: {
             {
               allow_admin_ui: true,
               allow_dcr: true,
-              extraClaims: {
-                entitlements: [Roles.Admins],
-                groups: [Roles.Admins],
-              },
+              extraClaims: { entitlements: [Roles.Admins], groups: [Roles.Admins] },
               includeInUserInfo: true,
             },
           ],
@@ -383,18 +382,12 @@ export function updateTailscaleAcls(args: {
       {
         src: [tag.egress],
         dst: ["*"],
-        app: {
-          "tailscale.com/cap/tsidp": [
-            {
-              allow_admin_ui: true,
-              allow_dcr: true,
-            },
-          ],
-        },
+        app: { "tailscale.com/cap/tsidp": [{ allow_admin_ui: true, allow_dcr: true }] },
       },
       { accept: [tag.egress] },
     );
 
+    // ── Create ACL + DNS resources ────────────────────────────────────────
     const acl = new tailscale.Acl(
       "acl",
       {
@@ -404,12 +397,13 @@ export function updateTailscaleAcls(args: {
       cro,
     );
 
-    new tailscale.DnsNameservers("dns-nameservers", { nameservers: args.dnsServers }, cro);
-    // new tailscale.DnsSearchPaths("dns-search-paths", { searchPaths: [args.globals.searchDomain] }, { provider: args.globals.tailscaleProvider });
+    new tailscale.DnsNameservers("dns-nameservers", { nameservers: dnsServers }, cro);
 
     return { acl, manager };
   });
 }
+
+// ── Private helpers (migrated from stacks/home/tailscale.ts) ──────────────────
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
@@ -461,14 +455,6 @@ function configurePbsAccess(manager: TailscaleAclManager) {
 
   const rules = Object.fromEntries(testData.knownAdminUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const));
   manager.setSshRule({ src: [tag.backups], dst: [tag.backups, tag.proxmox], users: ["root"], action: "accept" }, rules);
-}
-
-interface KubernetesCluster {
-  tag: TailscaleTags;
-  serviceNetwork: TailscaleCidr;
-  clusterNetwork: TailscaleCidr;
-  publicIps: TailscaleIp[];
-  kubeApiIp: TailscaleIp;
 }
 
 function configureKubernetesAccess(manager: TailscaleAclManager, clusters: KubernetesCluster[]) {
@@ -551,16 +537,11 @@ function createGroupGrants(manager: TailscaleAclManager) {
       {
         src: [`group:${role}`],
         dst: ["*"],
-
         app: {
           "tailscale.com/cap/tsidp": [
             {
               includeInUserInfo: true,
-
-              extraClaims: {
-                groups: [role],
-                entitlements: [role],
-              },
+              extraClaims: { groups: [role], entitlements: [role] },
             },
           ],
         },

@@ -2,17 +2,20 @@ import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOption
 import proxmox, { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
-import { createPeerRelayRule, updateTailscaleProxmox } from "../../components/tailscale.js";
-import { OPClient } from "../../components/op.ts";
-import { getHostnames } from "./helper.ts";
+import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
+import { OPClient } from "./op.ts";
+import { getHostnames } from "./helpers.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import { TruenasVm } from "./TruenasVm.ts";
-import { copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
+import * as yaml from "yaml";
+import type { TruenasVm } from "./TruenasVm.ts";
+import { addUptimeGatus, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
 import { Tailscale } from "@components/constants.ts";
+import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
+import { GatusDefinition } from "@openapi/application-definition.js";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -32,6 +35,7 @@ export interface ProxmoxHostArgs {
   shortName?: string;
   peerRelay?: boolean;
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
+  authentikOutputs: AuthentikOutputs;
 }
 
 export class ProxmoxHost extends ComponentResource {
@@ -48,15 +52,22 @@ export class ProxmoxHost extends ComponentResource {
   public readonly arch: Output<string>;
   public readonly remote: boolean;
   public readonly dns: StandardDns;
+  public readonly cluster: Output<ClusterDefinition>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
   public readonly shortName?: string;
+  public readonly applicationManager: AuthentikApplicationManager;
 
-  constructor(name: string, args: ProxmoxHostArgs, opts?: ComponentResourceOptions) {
+  constructor(
+    name: string,
+    private args: ProxmoxHostArgs,
+    opts?: ComponentResourceOptions,
+  ) {
     super("home:proxmox:ProxmoxHost", name, opts);
 
     this.name = name;
     const cluster = output(args.cluster);
+    this.cluster = cluster;
     this.title = output(args.title ?? cluster.title);
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
@@ -139,16 +150,6 @@ export class ProxmoxHost extends ComponentResource {
         cro,
       );
 
-      // Install jq
-      const installJq = new remote.Command(
-        `${name}-install-jq`,
-        {
-          connection: connection,
-          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
-        },
-        mergeOptions(cro, { dependsOn: [] }),
-      );
-
       // TODO: make work at somepoint
       // const script = new Purrl(`${name}-alloy-script`, {
       //   name: "install-alloystack.sh",
@@ -174,33 +175,13 @@ export class ProxmoxHost extends ComponentResource {
       //   },
       //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
       // );
-
-      const tailscaleForwardingConfig = copyFileToRemote(`${name}-tailscale-forwarding-config`, {
-        connection,
-        remotePath: "/etc/sysctl.d/99-tailscale.conf",
-        content: `net.ipv4.ip_forward = 1
-net.ipv6.conf.all.forwarding = 1
-`,
-        parent: this,
-      });
-
-      const tailscaleForwarding = new remote.Command(
-        `${name}-tailscale-forwarding`,
-        {
-          connection,
-          create: "sysctl -p /etc/sysctl.d/99-tailscale.conf",
-          triggers: [tailscaleForwardingConfig.id],
-        },
-        mergeOptions(cro, { dependsOn: [tailscaleForwardingConfig] }),
-      );
-
-      const deviceInfo = updateTailscaleProxmox({
+      updateTailscaleProxmox({
         connection,
         parent: this,
         name: this.tailscaleName,
         ipAddress: this.tailscaleIpAddress,
         globals: args.globals,
-        dependsOn: [tailscaleForwarding],
+        dependsOn: [],
         args: {
           ...args.tailscaleArgs,
           advertiseTags: [Tailscale.tag.proxmox, Tailscale.tag.exitNode, ...(args.peerRelay ? [Tailscale.tag.peerRelay] : [])].concat(args.tailscaleTags ?? []),
@@ -214,6 +195,16 @@ net.ipv6.conf.all.forwarding = 1
         },
       });
       // Configure SSH environment
+
+      // Install jq
+      const installJq = new remote.Command(
+        `${name}-install-jq`,
+        {
+          connection: connection,
+          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
+        },
+        mergeOptions(cro, { dependsOn: [] }),
+      );
 
       // Copy Tailscale cron script
       const tailscaleCron = new remote.CopyToRemote(
@@ -261,6 +252,16 @@ net.ipv6.conf.all.forwarding = 1
       },
       cro,
     );
+
+    this.applicationManager = new AuthentikApplicationManager({
+      globals: args.globals,
+      clusterKey: name,
+      outputs: args.authentikOutputs,
+      cluster: cluster,
+      loadFromResource(application, kind, { name }) {
+        throw new Error("Not implemented");
+      },
+    });
   }
 
   public addNfsMount(hostname: Input<string>, remotePath: string) {
@@ -283,6 +284,16 @@ net.ipv6.conf.all.forwarding = 1
     //     provider: this.pveProvider,
     //   },
     // );
+  }
+  public addUptimeGatus() {
+    addUptimeGatus(
+      this.name,
+      this.args.globals,
+      {
+        endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+      },
+      this.applicationManager,
+    );
   }
 }
 

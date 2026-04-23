@@ -48,13 +48,13 @@ docker/         # Docker/Dockge stack configs per cluster
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `components/globals.ts` | Provider wiring and shared credentials |
-| `components/op.ts` | 1Password Connect client |
-| `stacks/home/index.ts` | Canonical stack usage example |
+| File                        | Purpose                                    |
+| --------------------------- | ------------------------------------------ |
+| `components/globals.ts`     | Provider wiring and shared credentials     |
+| `components/op.ts`          | 1Password Connect client                   |
+| `stacks/home/index.ts`      | Canonical stack usage example              |
 | `stacks/authentik/index.ts` | Example: writing outputs back to 1Password |
-| `.mise.toml` | Tool versions and env var setup |
+| `.mise.toml`                | Tool versions and env var setup            |
 
 ## Safety
 
@@ -62,3 +62,7 @@ docker/         # Docker/Dockge stack configs per cluster
 - Run `pulumi preview` before every `pulumi up`, especially for DNS/provider changes.
 - Test risky changes against a non-production stack (alpha-site) first.
 - Code can create/modify 1Password items — be intentional when touching `OPClient` or stacks that persist outputs.
+
+## See also
+
+Read AGENTS.md

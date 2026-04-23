@@ -15,11 +15,10 @@ import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
-  outputs: AuthentikOutputs;
-  cluster: ClusterDefinition;
-  authentikCredential: pulumi.Input<string>;
+  clusterKey: string;
+  outputs: pulumi.Input<AuthentikOutputs>;
+  cluster: pulumi.Input<ClusterDefinition>;
   loadFromResource<T>(application: ApplicationDefinitionSchema, type: "authentik" | "uptime" | "gatus", from: { type: string; name: string }): Promise<T>;
-  createGatus(name: string, definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]): Promise<void>;
 }
 type RolesKeys = keyof typeof Roles;
 type RolesValues = (typeof Roles)[RolesKeys];
@@ -45,60 +44,67 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly applicationsComponent: pulumi.ComponentResource;
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly proxyProviders: pulumi.Output<number>[] = [];
-  public readonly uptimeInstances: pulumi.Output<pulumi.Input<GatusDefinition>>[] = [];
-  public readonly cluster: ClusterDefinition;
-  private readonly authentik: AuthentikOutputs;
+  public get uptimeInstances() {
+    return this._uptimeInstances;
+  }
+  private _uptimeInstances: pulumi.Output<GatusDefinition[]> = pulumi.output([]);
+  public readonly cluster: pulumi.Output<ClusterDefinition>;
+  private readonly authentik: pulumi.Output<AuthentikOutputs>;
 
-  constructor(private readonly args: AuthentikResourcesArgs, private readonly opts?: pulumi.ComponentResourceOptions) {
-    super("custom:resource:AuthentikResourceManager", "authentik-resource-manager", {}, opts);
+  constructor(
+    private readonly args: AuthentikResourcesArgs,
+    private readonly opts?: pulumi.ComponentResourceOptions,
+  ) {
+    super("custom:resource:AuthentikResourceManager", `${args.clusterKey}-authentik-resource-manager`, {}, opts);
 
-    this.authentik = args.outputs;
-    this.cluster = args.cluster;
-    this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", "providers", {}, { parent: this });
-    this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", "applications", {}, { parent: this });
-    this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", "outposts", {}, { parent: this });
+    this.authentik = pulumi.output(args.outputs);
+    this.cluster = pulumi.output(args.cluster);
+    this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", `${args.clusterKey}-providers`, {}, { parent: this });
+    this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", `${args.clusterKey}-applications`, {}, { parent: this });
+    this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", `${args.clusterKey}-outposts`, {}, { parent: this });
   }
 
-  public async createApplication(application: ApplicationDefinitionSchema) {
-
-    let authentik = application.spec.authentik;
-    if (application.spec.authentikFrom) {
-      // for docker this is a file
-      // for kubernetes it's a config map or secret.
-      authentik = await this.args.loadFromResource<AuthentikDefinition>(application, "authentik", application.spec.authentikFrom);
-    }
-
-    let result: Partial<pulumi.Unwrap<ReturnType<AuthentikApplicationManager["createProvider"]>>> = {};
-    if (authentik) {
-      result = await awaitOutput(pulumi.output(this.createProvider(application, authentik)));
-      if (result.isProxy && result.provider) {
-        this.proxyProviders.push(result.provider.id.apply((id) => parseFloat(id)));
-      }
-    }
-
-    const app = this.createAuthentikApplication(application, result?.provider);
-
-    let gatus = application.spec.gatus;
-
-    if (gatus) {
-      await this.createGatus(application, gatus);
-      // we have to save to k8s secret
-      // that secret needs to be mounted as a directory for gatus
-    }
-
-    return { app, ...result };
+  public createApplication(application: ApplicationDefinitionSchema) {
+    return pulumi
+      .output(application)
+      .apply((application) =>
+        (application.spec.authentikFrom
+          ? pulumi.output(this.args.loadFromResource<ApplicationDefinitionSchema["spec"]["authentik"]>(application, "authentik", application.spec.authentikFrom))
+          : pulumi.output(application.spec.authentik)
+        ).apply((authentik) => ({ application, authentik })),
+      )
+      .apply(async ({ application, authentik }) => {
+        if (authentik) {
+          const result = await this.createProvider(application, authentik);
+          if (result.isProxy && result.provider) {
+            this.proxyProviders.push(result.provider.id.apply((id) => parseFloat(id)));
+          }
+          return { application, result: result };
+        }
+        return {
+          application,
+          result: {
+            provider: undefined,
+          },
+        };
+      })
+      .apply(async ({ application, result }) => {
+        const app = this.createAuthentikApplication(application, result?.provider);
+        return application.spec.gatus
+          ? await awaitOutput(this.addGatusInstances(application, application.spec.gatus).apply((defs) => Object.assign(result, { app, gatus: defs })))
+          : Object.assign(result, { app, gatus: [] });
+      });
   }
 
   private resolveResourceName(definition: ApplicationDefinitionSchema) {
-    return definition.spec.slug ?? (definition.metadata.namespace ?? this.cluster.key) === this.cluster.key
-      ? `${this.cluster.key}-${definition.metadata.name}`
-      : `${this.cluster.key}-${definition.metadata.namespace}-${definition.metadata.name}`;
+    return (definition.spec.slug ?? (definition.metadata.namespace ?? this.args.clusterKey) === this.args.clusterKey)
+      ? `${this.args.clusterKey}-${definition.metadata.name}`
+      : `${this.args.clusterKey}-${definition.metadata.namespace}-${definition.metadata.name}`;
   }
 
-  private createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
-    const resourceName = this.resolveResourceName(definition);
-    const providerName = `Provider for ${definition.spec.name} (${this.cluster.title})`;
+  private async createProvider(definition: ApplicationDefinitionSchema, authentikDefinition: AuthentikDefinition) {
     const opts = { parent: this.providersComponent, deleteBeforeReplace: true };
+    const resourceName = this.resolveResourceName(definition);
 
     // Proxy Provider
     if (authentikDefinition.proxy) {
@@ -127,9 +133,9 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
             skipPathRegex: authentikDefinition.proxy.skipPathRegex,
             propertyMappings: this.resolvePropertyMappings(authentikDefinition.proxy.propertyMappings),
           },
-          opts
+          opts,
         ),
-        isProxy: true,
+        isProxy: true as const,
       };
     }
 
@@ -167,41 +173,41 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           subMode: oauth2.subMode,
           propertyMappings: this.resolvePropertyMappings(oauth2.propertyMappings),
         },
-        opts
+        opts,
       );
 
       const oidcCredentials = new OnePasswordItem(
-        `${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
+        `${resourceName}-oidc-credentials`,
         {
           category: CategoryEnum.APICredential,
           title: pulumi.interpolate`${this.cluster.key}-${definition.metadata.name}-oidc-credentials`,
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
-            authorization_url: { value: `https://${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
-            token_url: { value: `https://${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
-            userinfo_url: { value: `https://${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
-            revoke_url: { value: `https://${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
-            issuer: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/`, type: TypeEnum.String },
-            end_session_url: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/end-session/`, type: TypeEnum.String },
-            jwks_url: { value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/jwks/`, type: TypeEnum.String },
+            authorization_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
+            token_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
+            userinfo_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
+            revoke_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
+            issuer: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/`, type: TypeEnum.String },
+            end_session_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/end-session/`, type: TypeEnum.String },
+            jwks_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/jwks/`, type: TypeEnum.String },
             openid_configuration_url: {
-              value: `https://${this.cluster.authentikDomain}/application/o/${resourceName}/.well-known/openid-configuration`,
+              value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/.well-known/openid-configuration`,
               type: TypeEnum.String,
             },
           }),
         },
-        { parent: provider }
+        { parent: provider },
       );
 
-      return { provider, oidcCredentials, isProxy: false, clientId, clientSecret };
+      return { provider, oidcCredentials, isProxy: false as const, clientId: await awaitOutput(clientId), clientSecret: await awaitOutput(clientSecret) };
     }
 
     // // LDAP Provider
     // if (authentikDefinition.ldap) {
     //   return {
     //     provider: new authentik.ProviderLdap(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         bindFlow: this.authentik.flows.authenticationFlow,
@@ -225,7 +231,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.saml) {
     //   return {
     //     provider: new authentik.ProviderSaml(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: authentikDefinition.saml.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
@@ -254,7 +260,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.rac) {
     //   return {
     //     provider: new authentik.ProviderRac(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: this.authentik.flows.implicitConsentFlow,
@@ -272,7 +278,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.radius) {
     //   return {
     //     provider: new authentik.ProviderRadius(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         authorizationFlow: this.authentik.flows.implicitConsentFlow,
@@ -290,7 +296,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.ssf) {
     //   return {
     //     provider: new authentik.ProviderSsf(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.ssf),
@@ -305,7 +311,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.scim) {
     //   return {
     //     provider: new authentik.ProviderScim(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.scim),
@@ -321,7 +327,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.microsoftEntra) {
     //   return {
     //     provider: new authentik.ProviderMicrosoftEntra(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.microsoftEntra),
@@ -337,7 +343,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // if (authentikDefinition.googleWorkspace) {
     //   return {
     //     provider: new authentik.ProviderGoogleWorkspace(
-    //       resourceName,
+    //       definition.metadata.name,
     //       {
     //         name: providerName,
     //         ...removeUndefinedProperties(authentikDefinition.googleWorkspace),
@@ -361,12 +367,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       .apply(([mappings, scopeNames]) => scopeNames.map((scopeName) => mappings[scopeName.replace(/\//g, "~1")]));
   }
 
-  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource): authentik.Application {
+  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
     const resourceName = this.resolveResourceName(definition);
     const args: authentik.ApplicationArgs = {
       name: definition.spec.name,
       slug: resourceName,
-      group: definition.spec.category === "System" || this.cluster.title === definition.spec.category ? 'System: ' + this.cluster.title : definition.spec.category,
+      group: this.cluster.apply((cluster) => (definition.spec.category === "System" || cluster.title === definition.spec.category ? "System: " + cluster.title : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
@@ -386,35 +392,38 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // Add group bindings for access control
     if (definition.spec.access_policy?.groups) {
       for (const groupName of definition.spec.access_policy.groups) {
-        const group = this.authentik.groups[groupName];
-        addPolicyBindingToApplication(app, { group: group });
+        addPolicyBindingToApplication(app, { group: this.authentik.apply((z) => z.groups[groupName]) });
       }
     }
 
     return app;
   }
 
-  private async createGatus(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
-    const resourceName = this.resolveResourceName(definition);
-    for (let i = 0; i < gatusDefinitions.length; i++) {
-      const endpoint = gatusDefinitions[i];
-      endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
-      endpoint.group ??= definition.spec.category;
-      endpoint.group = endpoint.group === "System" || endpoint.group === this.cluster.title ? `Cluster: ${this.cluster.title}` : endpoint.group;
-      endpoint.interval ??= "2m";
-      endpoint.timeout ??= "60s";
-      endpoint.alerts ??= [];
-      endpoint.alerts.push({
-        enabled: true,
-        type: "pushover",
+  private addGatusInstances(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
+    return this.cluster
+      .apply((cluster) => {
+        return pulumi.all(
+          gatusDefinitions.map((endpoint, i) => {
+            endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+            endpoint.group ??= definition.spec.category;
+            endpoint.group = endpoint.group === "System" || endpoint.group === cluster.title ? `Cluster: ${cluster.title}` : endpoint.group;
+            endpoint.interval ??= "2m";
+            endpoint.timeout ??= "60s";
+            endpoint.alerts ??= [];
+            endpoint.alerts.push({
+              enabled: true,
+              type: "pushover",
+            });
+
+            const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
+            return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
+          }),
+        );
+      })
+      .apply((defs) => {
+        this._uptimeInstances = this._uptimeInstances.apply((existing) => [...existing, ...defs]);
+        return defs;
       });
-
-      const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
-      gatusDefinitions[i] = yaml.parse(await replaceOnePasswordPlaceholders(op, yamlString));
-    }
-
-    this.uptimeInstances.push(...gatusDefinitions.map((e) => pulumi.output(e)));
-    return await this.args.createGatus(resourceName, definition, gatusDefinitions);
   }
 }
 

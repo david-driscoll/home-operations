@@ -32,8 +32,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 
-  let currentGatusValues: Record<string, string> = {};
-
   // TODO: clear out old keys that are no longer used
   const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
   const namespaceList = await coreApi.listNamespace();
@@ -62,7 +60,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const applicationManager = new AuthentikApplicationManager({
     globals,
     outputs,
-    authentikCredential: "Authentik Outputs",
+    clusterKey: clusterDefinition.key,
     cluster: clusterDefinition,
     async loadFromResource(application, kind, from) {
       let data: { [key: string]: string };
@@ -87,29 +85,28 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         throw new Error(`Unknown application kind ${kind}`);
       }
     },
-    async createGatus(name, definition, gatusDefinitions) {
-      currentGatusValues[`${name}.yaml`] = yaml.stringify({ endpoints: gatusDefinitions });
-    },
   });
 
   for (const app of applications) {
-    const result = await applicationManager.createApplication(app);
-    if (result.oidcCredentials) {
-      new pk8s.core.v1.Secret(
-        `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
-        {
-          metadata: {
-            name: `${app.metadata!.name!}-oidc-credentials`,
-            namespace: app.metadata.namespace ?? clusterDefinition.key,
+    applicationManager.createApplication(app).apply((res) => {
+      if (res.provider && res.isProxy === false) {
+        new pk8s.core.v1.Secret(
+          `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+          {
+            metadata: {
+              name: `${app.metadata!.name!}-oidc-credentials`,
+              namespace: app.metadata.namespace ?? clusterDefinition.key,
+            },
+            stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
           },
-          stringData: result.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
-        },
-        {
-          parent: applicationManager,
-          provider,
-        },
-      );
-    }
+          {
+            parent: applicationManager,
+            provider,
+            dependsOn: [res.provider],
+          },
+        );
+      }
+    });
   }
 
   const volsyncBackupJobs = pulumi
@@ -201,7 +198,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     {
       serviceConnection: serviceConnection.serviceConnectionKubernetesId,
       type: "proxy",
-      name: `Outpost for ${clusterDefinition.title}`,
+      name: pulumi.interpolate`Outpost for ${clusterDefinition.title}`,
       config: pulumi.jsonStringify(
         {
           authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,

@@ -1,23 +1,37 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
-import { writeFile, truncate, rm } from "fs/promises";
+import { writeFile, rm } from "fs/promises";
 import * as yaml from "yaml";
 import { remote, types } from "@pulumi/command";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
-import { basename, dirname, join } from "path";
+import { dirname, join } from "path";
 import { md5Output } from "@pulumi/std/md5.js";
 import { unique } from "moderndash";
 import { tmpdir } from "os";
 import { RandomPassword, RandomString } from "@pulumi/random";
+import type { ProxmoxHost } from "./ProxmoxHost.ts";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
 
 export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
+}
+
+export function getHostnames(name: string, globals: GlobalResources) {
+  const hostname = interpolate`${name}.host.${globals.searchDomain}`;
+  const tailscaleHostname = interpolate`${name}.${globals.tailscaleDomain}`;
+  return { hostname, tailscaleHostname };
+}
+
+export function getContainerHostnames(name: string, host: ProxmoxHost, globals: GlobalResources) {
+  const hostname = interpolate`${host.shortName ?? host.name}.${globals.searchDomain}`;
+  const tailscaleName = interpolate`${name}-${host.shortName ?? host.name}`;
+  const tailscaleHostname = interpolate`${tailscaleName}.${globals.tailscaleDomain}`;
+  return { hostname, tailscaleName, tailscaleHostname };
 }
 
 export function writeTempFile(fileName: Input<string>, content: Input<string>) {

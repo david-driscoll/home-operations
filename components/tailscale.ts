@@ -1,21 +1,39 @@
 import { OPClient } from "./op.ts";
-import { readFile } from "fs/promises";
 import type { components, paths } from "../types/tailscale.ts";
 import createClient, { Client } from "openapi-fetch";
-import path, { dirname } from "path";
+import { dirname } from "path";
 import * as unifi from "@pulumiverse/unifi";
 import * as random from "@pulumi/random";
 import { fileURLToPath } from "url";
-import axios from "axios";
 import { GlobalResources } from "./globals.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClientCredentials } from "simple-oauth2";
-import { awaitOutput, copyFileToRemote } from "./helpers.ts";
-import { output } from "sdks/pbs/bin/types/index.js";
-import { Tailscale } from "./constants.ts";
-import { DeviceKey, DeviceTags, getDevice, getDeviceOutput, GetDeviceResult, getDevicesOutput } from "@pulumi/tailscale";
+import { copyFileToRemote } from "./helpers.ts";
+import { DeviceTags, getDevice, getDeviceOutput } from "@pulumi/tailscale";
 import { TailscaleCidr } from "@openapi/tailscale-grants.js";
+import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
+import { FullItem } from "@1password/connect";
+
+/**
+ * Tailscale node state exported by individual stacks to 1Password
+ */
+export interface TailscaleNodeState {
+  deviceId: string;
+  name: string;
+  hostname: string;
+  ip: string;
+  tags: string[];
+}
+
+/**
+ * 1Password export format for Tailscale node state
+ * This wraps TailscaleNodeState with metadata for 1Password item structure
+ */
+export interface TailscaleNodeExport {
+  stackName: string;
+  nodes: TailscaleNodeState[];
+}
 
 export async function getTailscaleClient(): Promise<Client<paths>> {
   const __filename = fileURLToPath(import.meta.url);
@@ -39,8 +57,70 @@ export async function getTailscaleClient(): Promise<Client<paths>> {
   return client;
 }
 
-/** Community-scripts add-tailscale-lxc.sh URL */
-const ADD_TAILSCALE_LXC_URL = "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/add-tailscale-lxc.sh";
+export interface NodeInfo {
+  name: pulumi.Input<string>;
+  ip: pulumi.Input<string>;
+  /** Non-Tailscale internal IP (e.g., 10.10.x.x) — used for subnet access grants */
+  internalIp?: pulumi.Input<string>;
+  /** Device role — used to categorize nodes for ACL test cases */
+  nodeType?: "proxmox" | "dockge" | "pbs" | "truenas";
+}
+
+export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResources): pulumi.Output<string> {
+  return getDeviceOutput({ name: pulumi.interpolate`${name}.${globals.tailscaleDomain}` }, { provider: globals.tailscaleProvider })
+    .apply((ip) => {
+      pulumi.log.info(`Got Tailscale IP for ${name}: ${ip.addresses.join(", ")}`);
+      return ip;
+    })
+    .apply((z) => z.addresses[0]);
+}
+
+/**
+ * Export Tailscale node state to a 1Password item with the 'tailscale-export' tag.
+ * Resolves all Pulumi inputs before serializing to JSON so the stored value is
+ * a plain JSON string (not "[object Object]").
+ *
+ * @param stackName  - Stack name (e.g., 'home', 'gulf-of-mexico')
+ * @param nodeState  - Nodes to export (name + tailscale IP, optional internal IP + type)
+ * @param services   - Tailscale service identifiers registered by this stack (e.g., 'svc:adguard-home')
+ * @param cro        - Pulumi resource options (parent, provider, etc.)
+ */
+export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: string[], cro: pulumi.ResourceOptions) {
+  const hostsSection: OnePasswordItemSectionInput = {
+    fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
+  };
+
+  return new OnePasswordItem(
+    `${pulumi.runtime.getStack()}-tailnet`,
+    {
+      category: FullItem.CategoryEnum.SecureNote,
+      title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
+      tags: ["tailscale-export"],
+      sections: pulumi.output(nodeState).apply((nodes) =>
+        Object.fromEntries(
+          nodes.map(
+            (z) =>
+              [
+                z.name,
+                {
+                  fields: {
+                    ip: { value: z.ip },
+                    internalIp: { value: z.internalIp },
+                    nodeType: { value: z.nodeType ?? "unknown" },
+                  },
+                },
+              ] as const,
+          ),
+        ),
+      ),
+      fields: {
+        name: { value: pulumi.runtime.getStack() },
+        services: { value: services.join(",") },
+      },
+    },
+    cro,
+  );
+}
 
 /**
  * Installs Tailscale on an LXC container using community-scripts.
@@ -74,7 +154,7 @@ export function installTailscaleLxc(options: {
     const depends = [];
 
     if (pulumi.runtime.isDryRun()) {
-      return pulumi.unknown as remote.Command;
+      return pulumi.unknown as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
     const lxcConfig = new remote.Command(
@@ -156,26 +236,64 @@ export function installTailscaleLxc(options: {
       { parent: options.parent, dependsOn: [...depends] },
     );
     depends.push(tailscaleSet);
-    await awaitOutput(tailscaleSet.id);
+    return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, depends);
+  });
 
-    const deviceInfo = await getDevice({ hostname: name }, { parent: options.parent, provider: options.globals.tailscaleProvider });
+  return deviceInfo;
+}
+
+function updateTailscaleDeviceInfo(
+  waitsFor: pulumi.Output<string>,
+  name: string,
+  ipAddress: string | undefined,
+  tags: pulumi.Input<string[]>,
+  client: Client<paths>,
+  globals: GlobalResources,
+  parent: pulumi.Resource,
+  dependsOn: pulumi.Resource[],
+) {
+  return pulumi.all([globals.tailscaleDomain, waitsFor]).apply(async ([tailscaleDomain, _]) => {
+    const deviceInfo = await getDevice({ name: `${name}.${tailscaleDomain}` }, { provider: globals.tailscaleProvider, parent: parent });
+    if (!deviceInfo) {
+      throw new Error(`Device with name ${name}.${tailscaleDomain} not found in Tailscale API`);
+    }
+    // const deviceInfo = deviceInfos.devices[0];
 
     if (ipAddress) {
       await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { ipv4: ipAddress } });
     }
     await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { keyExpiryDisabled: true } });
 
-    return new DeviceTags(
+    const resource = new DeviceTags(
       `${name}-device-tags`,
       {
         deviceId: deviceInfo.nodeId!,
-        tags: args.advertiseTags,
+        tags: tags,
       },
-      { parent: options.parent, provider: options.globals.tailscaleProvider, dependsOn: [], retainOnDelete: true },
+      { parent: parent, provider: globals.tailscaleProvider, dependsOn: dependsOn, retainOnDelete: true },
     );
-  });
 
-  return deviceInfo;
+    const tailscaleForwardingConfig = copyFileToRemote(`${name}-tailscale-forwarding-config`, {
+      connection: { host: `${name}.${tailscaleDomain}`, user: "root" },
+      remotePath: "/etc/sysctl.d/99-tailscale.conf",
+      content: `net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+`,
+      parent: parent,
+    });
+
+    const tailscaleForwarding = new remote.Command(
+      `${name}-tailscale-forwarding`,
+      {
+        connection: { host: `${name}.${tailscaleDomain}`, user: "root" },
+        create: "sysctl -p /etc/sysctl.d/99-tailscale.conf",
+        triggers: [tailscaleForwardingConfig.id],
+      },
+      { parent: parent, dependsOn: [resource, tailscaleForwardingConfig] },
+    );
+
+    return { resource, deviceInfo };
+  });
 }
 
 export function updateTailscaleProxmox(options: {
@@ -218,21 +336,7 @@ export function updateTailscaleProxmox(options: {
       return pulumi.output(pulumi.unknown) as unknown as paths["/tailnet/{tailnet}/devices"]["get"]["responses"]["200"]["content"]["application/json"];
     }
 
-    await awaitOutput(tailscaleSet.id);
-
-    const deviceInfo = await getDevice({ hostname: name }, { parent: options.parent, provider: options.globals.tailscaleProvider });
-    await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId! } }, body: { ipv4: ipAddress } });
-    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId! } }, body: { keyExpiryDisabled: true } });
-
-    new DeviceTags(
-      `${name}-device-tags`,
-      {
-        deviceId: deviceInfo.nodeId!,
-        tags: args.advertiseTags,
-      },
-      { parent: options.parent, provider: options.globals.tailscaleProvider, dependsOn: [tailscaleSet], retainOnDelete: true },
-    );
-    return deviceInfo;
+    return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, options.dependsOn);
   });
 
   return deviceInfo;

@@ -100,6 +100,13 @@ export class OPClient {
     return items.map((item) => this.mapItem(item, item.id));
   }
 
+  public async findItemsByTag(tag: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    const allItems = await this.client.listItems(vaultUuid);
+    const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
+    return filtered.map((item) => this.mapItem(item, item.id));
+  }
+
   public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
     const sections = Object.entries(item.sections ?? {}).map(([key, s]) => ({ id: key, label: key }));
     const fields = Object.entries(item.fields ?? {}).map(([fieldKey, field]) => ({

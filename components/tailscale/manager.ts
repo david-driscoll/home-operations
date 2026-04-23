@@ -1,9 +1,7 @@
-import * as tailscale from "@pulumi/tailscale";
 import * as pulumi from "@pulumi/pulumi";
-import { Tailscale } from "../../../components/constants.ts";
+import { Tailscale } from "../constants.ts";
 import {
   PolicyFile,
-  TailscaleAutoApprovers,
   TailscaleAutogroups,
   TailscaleCidr,
   TailscaleGrant,
@@ -16,13 +14,13 @@ import {
   TailscaleSshRule,
   TailscaleSshTest,
   TailscaleSshUser,
-  TailscaleTagOwners,
   TailscaleTags,
   TailscaleTest,
-  TailscaleTestSelector,
 } from "@openapi/tailscale-grants.js";
 import * as parser from "jsonc-parser";
 import { awaitOutput } from "@components/helpers.ts";
+import { getAclOutput } from "@pulumi/tailscale";
+import * as tailscale from "@pulumi/tailscale";
 
 export const { groups, autogroups, tag, subnets, ports } = Tailscale;
 
@@ -66,6 +64,21 @@ type TestsDataPopulated = TestsData & {
 };
 
 export class TailscaleAclManager {
+  public static default(opts?: pulumi.InvokeOptions) {
+    return getAclOutput(opts).apply((acls) => {
+      return new TailscaleAclManager(acls.hujson, [], { dockgeDevices: [], kubernetesDevices: [], proxmoxDevices: [], taggedDevices: [] });
+    });
+  }
+  public static applyAcl(manager: pulumi.Output<TailscaleAclManager>, cro: pulumi.ComponentResourceOptions) {
+    return new tailscale.Acl(
+      "acl",
+      {
+        acl: manager.apply((z) => z.getJson()),
+        overwriteExistingContent: true,
+      },
+      cro,
+    );
+  }
   acls: string;
   updates: ((context: TailscaleAclContext) => pulumi.Output<string>)[] = [];
   testData: TestsDataPopulated;

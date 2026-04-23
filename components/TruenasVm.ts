@@ -5,11 +5,11 @@ import * as random from "@pulumi/random";
 
 export type { CustomResourceOptions } from "@pulumi/pulumi";
 
-import { OPClient } from "../../components/op.ts";
+import { OPClient } from "./op.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { GlobalResources } from "../../components/globals.ts";
-import { getTruenasClient } from "../../components/truenas.ts";
-import TrueNASResourceManager from "../../components/truenas/truenas-manager.ts";
+import { GlobalResources } from "./globals.ts";
+import { getTruenasClient } from "./truenas.ts";
+import TrueNASResourceManager from "./truenas/truenas-manager.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { Dataset } from "@components/truenas/index.ts";
@@ -52,7 +52,6 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly tailscaleIpAddress: TailscaleIp;
   public readonly tailscaleName: pulumi.Output<string>;
   public readonly macAddress: string;
-  // public readonly device: pulumi.Output<GetDeviceResult>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
@@ -77,17 +76,6 @@ export class TruenasVm extends pulumi.ComponentResource {
       user: credentialItem.apply((z) => z.fields?.username?.value!),
       password: credentialItem.apply((z) => z.fields?.credential?.value!),
     });
-    // const tailscaleSet = installTailscale({ connection, name, parent: this, tailscaleName: pulumi.output(name), globals: args.globals });
-
-    // Get Tailscale device
-    // this.device = getDeviceOutput({ hostname: name }, { provider: args.globals.tailscaleProvider, parent: this, dependsOn: [tailscaleSet] }).apply(async (result) => {
-    //   try {
-    //     await tailscale.paths["/device/{deviceId}/ip"].post({ deviceId: result.nodeId }, { ipv4: args.tailscaleIpAddress });
-    //   } catch (e) {
-    //     pulumi.log.error(`Error setting IP address for device ${args.tailscaleIpAddress}: ${e}`, this);
-    //   }
-    //   return result;
-    // });
 
     const truenasInfo = new OnePasswordItem(
       `${args.host.name}-truenas`,
