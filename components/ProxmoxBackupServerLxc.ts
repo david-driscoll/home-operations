@@ -40,9 +40,6 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly tailscaleHostname: Output<string>;
   public readonly dns: StandardDns;
-  public readonly oidcClientId: Output<string>;
-  public readonly oidcClientSecret: Output<string>;
-  public readonly oidcIssuerUrl: Output<string>;
   public readonly tailscaleName: Output<string>;
   public readonly tailscaleIpAddress: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
@@ -192,9 +189,7 @@ echo "PBS post-install complete"`;
     );
 
     const cluster = output(args.cluster);
-    const { clientId, clientSecret } = clientIdPair(name, { options: cro });
     const signingKey = new ApplicationCertificate(name, { globals: args.globals }, cro);
-    const issuerUrl = cluster.apply((c) => `https://${c.authentikDomain}/application/o/${name}/`);
     const externalUrl = cluster.apply((c) => `https://pbs.${c.rootDomain}`);
 
     const deviceInfo = installTailscaleLxc({
@@ -215,25 +210,6 @@ echo "PBS post-install complete"`;
     });
     this.resources.push(deviceInfo.apply((z) => z.resource));
 
-    this.oidcClientId = clientId;
-    this.oidcClientSecret = clientSecret;
-    this.oidcIssuerUrl = issuerUrl;
-
-    const oidcProvider = new authentik.ProviderOauth2(
-      name,
-      {
-        authorizationFlow: args.outputs.flows.implicitConsentFlow,
-        authenticationFlow: args.outputs.flows.authenticationFlow,
-        invalidationFlow: args.outputs.flows.providerLogoutFlow,
-        clientId,
-        clientSecret,
-        signingKey: signingKey.signingKey.id,
-        allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
-        includeClaimsInIdToken: true,
-      },
-      cro,
-    );
-
     const externalHostname = externalUrl.apply((u) => new URL(u).hostname);
     args.dockge.registerExternalService(
       {
@@ -245,12 +221,48 @@ echo "PBS post-install complete"`;
     );
     this.dns = new StandardDns(`${name}-external`, { hostname: externalHostname, ipAddress: args.dockge.tailscaleIpAddress, record: args.dockge.hostname, type: "CNAME" }, args.globals, cro);
 
+    const oidc = all([cluster])
+      .apply(([c]) =>
+        args.host.applicationManager.createApplication({
+          apiVersion: "home.driscoll.tech/v1",
+          kind: "ApplicationDefinition",
+          metadata: { name: `pbs` },
+          spec: {
+            name: `Proxmox Backup Server`,
+            // slug: this.lxcName,
+            icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
+            category: c.title,
+            url: `https://pbs.${c.rootDomain}`,
+            authentik: {
+              oauth2: {
+                clientType: "confidential",
+                allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
+                includeClaimsInIdToken: true,
+              },
+            },
+            gatus: [
+              {
+                name: `${c.key}-pbs`,
+                url: `https://pbs.${c.rootDomain}/`,
+                method: "GET",
+                conditions: ["[STATUS] == 200"],
+              },
+            ],
+          },
+        }),
+      )
+      .apply((a) => {
+        if (!(a.provider && !a.isProxy)) {
+          throw new Error("Failed to create OIDC application in Authentik");
+        }
+        return a;
+      })!;
     const realmId = "authentik";
     const oidcScript = interpolate`
 REALM_ID="${realmId}"
-ISSUER_URL="${issuerUrl}"
-CLIENT_ID="${clientId}"
-CLIENT_SECRET="${clientSecret}"
+ISSUER_URL="${oidc.config.issuerUrl}"
+CLIENT_ID="${oidc.clientId}"
+CLIENT_SECRET="${oidc.clientSecret}"
 
 if proxmox-backup-manager openid list 2>/dev/null | grep -q "\\"$REALM_ID\\""; then
   proxmox-backup-manager openid update "$REALM_ID" \\
@@ -271,7 +283,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       {
         connection: args.host.remoteConnection,
         create: all([output(args.vmId), oidcScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_OIDC__'\n${script.trim()}\n__PBS_OIDC__`),
-        triggers: [clientId, issuerUrl],
+        triggers: [oidc.clientId, oidc.clientSecret, oidc.config.issuerUrl],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
@@ -321,38 +333,6 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
     this.tailscaleIpAddress = getTailscaleIp(tailscaleName, args.globals);
-
-    all([cluster, this.oidcClientId, this.oidcClientSecret]).apply(([c, clientId, clientSecret]) =>
-      args.host.applicationManager.createApplication({
-        apiVersion: "home.driscoll.tech/v1",
-        kind: "ApplicationDefinition",
-        metadata: { name: `pbs` },
-        spec: {
-          name: `Proxmox Backup Server`,
-          slug: this.lxcName,
-          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
-          category: c.title,
-          url: `https://pbs.${c.rootDomain}`,
-          authentik: {
-            oauth2: {
-              clientId,
-              clientSecret,
-              clientType: "confidential",
-              allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
-              includeClaimsInIdToken: true,
-            },
-          },
-          gatus: [
-            {
-              name: `${c.key}-pbs`,
-              url: `https://pbs.${c.rootDomain}/`,
-              method: "GET",
-              conditions: ["[STATUS] == 200"],
-            },
-          ],
-        },
-      }),
-    );
   }
 
   public addHostMount(path: string, containerPath?: string) {

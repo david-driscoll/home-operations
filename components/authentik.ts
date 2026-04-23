@@ -176,6 +176,8 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         opts,
       );
 
+      const providerConfig = authentik.getProviderOauth2ConfigOutput({ id: provider.id }, { parent: provider });
+
       const oidcCredentials = new OnePasswordItem(
         `${resourceName}-oidc-credentials`,
         {
@@ -184,15 +186,14 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
-            authorization_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/authorize/`, type: TypeEnum.String },
-            token_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/token/`, type: TypeEnum.String },
-            userinfo_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/userinfo/`, type: TypeEnum.String },
-            revoke_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/revoke/`, type: TypeEnum.String },
-            issuer: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/`, type: TypeEnum.String },
-            end_session_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/end-session/`, type: TypeEnum.String },
-            jwks_url: { value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/jwks/`, type: TypeEnum.String },
+            authorization_url: { value: providerConfig.authorizeUrl, type: TypeEnum.String },
+            token_url: { value: providerConfig.tokenUrl, type: TypeEnum.String },
+            userinfo_url: { value: providerConfig.userInfoUrl, type: TypeEnum.String },
+            issuer: { value: providerConfig.issuerUrl, type: TypeEnum.String },
+            end_session_url: { value: providerConfig.logoutUrl, type: TypeEnum.String },
+            jwks_url: { value: providerConfig.jwksUrl, type: TypeEnum.String },
             openid_configuration_url: {
-              value: pulumi.interpolate`https://${this.cluster.authentikDomain}/application/o/${definition.metadata.name}/.well-known/openid-configuration`,
+              value: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
               type: TypeEnum.String,
             },
           }),
@@ -200,7 +201,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         { parent: provider },
       );
 
-      return { provider, oidcCredentials, isProxy: false as const, clientId: await awaitOutput(clientId), clientSecret: await awaitOutput(clientSecret) };
+      return { provider, config: providerConfig, oidcCredentials, isProxy: false as const, clientId: await awaitOutput(clientId), clientSecret: await awaitOutput(clientSecret) };
     }
 
     // // LDAP Provider
