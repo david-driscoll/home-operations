@@ -6,35 +6,35 @@ import { GlobalResources } from "@components/globals.ts";
 import * as minio from "@pulumi/minio";
 import { BackupPlanManager } from "../../components/jobs.ts";
 
-export function createBackupJobs({ source, destination, globals }: { source: DockgeLxc; destination: DockgeLxc; globals: GlobalResources }) {
-  const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {
-    globals: globals,
-    source: source,
-    localBackup: source,
-    remoteBackup: destination,
-  });
+export function createBackupJobs({ globals }: { globals: GlobalResources }) {
+  // const celestiaBackupManager = new BackupPlanManager("celestia-backup-plan-manager", {
+  //   globals: globals,
+  //   source: source,
+  //   localBackup: source,
+  //   remoteBackup: destination,
+  // });
 
-  celestiaBackupManager.createBackrestPlan("immich", {
-    title: "Immich",
-    paths: ["/spike/data/immich/"],
-    repository: "immich",
-    planConfig: {
-      excludes: ["/spike/data/immich/backups", "/spike/data/immich/encoded-video"],
-    },
-  });
+  // celestiaBackupManager.createBackrestPlan("immich", {
+  //   title: "Immich",
+  //   paths: ["/spike/data/immich/"],
+  //   repository: "immich",
+  //   planConfig: {
+  //     excludes: ["/spike/data/immich/backups", "/spike/data/immich/encoded-video"],
+  //   },
+  // });
 
-  celestiaBackupManager.createBackrestPlan("pgdump", {
-    title: "Postgres Dumps",
-    paths: ["/spike/data/pgdump/"],
-    repository: "pgdump",
-  });
+  // celestiaBackupManager.createBackrestPlan("pgdump", {
+  //   title: "Postgres Dumps",
+  //   paths: ["/spike/data/pgdump/"],
+  //   repository: "pgdump",
+  // });
 
   createMinioBucketBackupJob({
     title: "Home Operations",
     bucket: "home-operations",
     // backblazeSecret: "Backblaze home-operations",
-    source: source,
-    destination: destination,
+    // source: source,
+    // destination: destination,
     globals,
   });
   createMinioBucketBackupJob({
@@ -42,8 +42,8 @@ export function createBackupJobs({ source, destination, globals }: { source: Doc
     bucket: "stargate-command-db",
     restoreBucket: "stargate-command-db-restore",
     // backblazeSecret: "Backblaze S3 Stargate Command Database",
-    source: source,
-    destination: destination,
+    // source: source,
+    // destination: destination,
     globals,
   });
   createMinioBucketBackupJob({
@@ -51,88 +51,65 @@ export function createBackupJobs({ source, destination, globals }: { source: Doc
     bucket: "equestria-db",
     restoreBucket: "equestria-db-restore",
     // backblazeSecret: "Backblaze S3 Equestria Database",
-    source: source,
-    destination: destination,
+    // source: source,
+    // destination: destination,
     globals,
   });
 
-  const thanosStorage = new minio.S3Bucket(
-    `thanos-storage`,
-    {
-      acl: "private",
-    },
-    {
-      provider: globals.truenasMinioProvider,
-      protect: true,
-      retainOnDelete: true,
-    },
-  );
-
-  const thanosMinioSecret = new OPI("thanos-minio-secret", {
-    title: "Thanos S3 Storage",
-    category: CategoryEnum.APICredential,
-    fields: {
-      username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
-      password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
-      bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
-      endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
-    },
-  });
-
   // Backup Thanos bucket to Celestia and Luna
-  createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: source, destination: destination, globals });
+  // createMinioBucketBackupJob({ title: "Thanos Storage", bucket: thanosStorage.bucket, source: source, destination: destination, globals });
 
   // await alphaSiteBackupManager.updateBackrestConfig();
   // TODO: Handle luna backrest config
-  celestiaBackupManager.updateBackrestConfig();
+  // celestiaBackupManager.updateBackrestConfig();
 }
 
 function createMinioBucketBackupJob({
-  title,
+  // title,
   bucket,
-  backblazeSecret,
-  source,
-  destination,
+  // backblazeSecret,
+  // source,
+  // destination,
   globals,
   restoreBucket: restoreBucket,
 }: {
-  source: DockgeLxc;
-  destination: DockgeLxc;
+  // source: DockgeLxc;
+  // destination: DockgeLxc;
   title: pulumi.Input<string>;
   bucket: pulumi.Input<string>;
   globals: GlobalResources;
   backblazeSecret?: pulumi.Input<string>;
   restoreBucket?: pulumi.Input<string>;
 }) {
-  source.createBackupJob({
-    name: pulumi.interpolate`Backup ${title}`,
-    schedule: "0 10 * * *",
-    sourceType: "local",
-    source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-    destinationType: "local",
-    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
-  });
+  // source.createBackupJob({
+  //   name: pulumi.interpolate`Backup ${title}`,
+  //   schedule: "0 10 * * *",
+  //   sourceType: "local",
+  //   source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+  //   destinationType: "local",
+  //   destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
+  // });
 
-  if (backblazeSecret) {
-    source.createBackupJob({
-      name: pulumi.interpolate`Replicate ${title} to B2`,
-      schedule: "0 8 */4 * *",
-      sourceType: "local",
-      source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-      destinationType: "b2",
-      destination: pulumi.interpolate`/`,
-      destinationSecret: backblazeSecret,
-    });
-  }
+  // if (backblazeSecret) {
+  //   source.createBackupJob({
+  //     name: pulumi.interpolate`Replicate ${title} to B2`,
+  //     schedule: "0 8 */4 * *",
+  //     sourceType: "local",
+  //     source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
+  //     destinationType: "b2",
+  //     destination: pulumi.interpolate`/`,
+  //     destinationSecret: backblazeSecret,
+  //   });
+  // }
 
-  destination.createBackupJob({
-    name: pulumi.interpolate`Replicate ${title}`,
-    schedule: "0 3 * * *",
-    sourceType: "sftp",
-    source: pulumi.interpolate`${source.tailscaleHostname}/spike/${bucket}/`,
-    destinationType: "local",
-    destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
-  });
+  // destination.createBackupJob({
+  //   name: pulumi.interpolate`Replicate ${title}`,
+  //   schedule: "0 3 * * *",
+  //   sourceType: "sftp",
+  //   source: pulumi.interpolate`${source.tailscaleHostname}/spike/${bucket}/`,
+  //   destinationType: "local",
+  //   destination: pulumi.interpolate`/data/backup/spike/${bucket}/`,
+  // });
 
   if (restoreBucket) {
     pulumi.all([bucket, restoreBucket]).apply(([bucket, restoreBucket]) => {
@@ -149,16 +126,16 @@ function createMinioBucketBackupJob({
           import: restoreBucket,
         },
       );
-      source.createBackupJob({
-        name: pulumi.interpolate`Sync ${bucket} from ${restoreBucket}`,
-        schedule: "*/10 * * * *",
-        sourceType: "s3",
-        source: pulumi.interpolate`${bucket}/`,
-        sourceSecret: globals.truenasMinioCredential.title!,
-        destinationType: "s3",
-        destination: pulumi.interpolate`${minioBucket.bucket}/`,
-        destinationSecret: globals.truenasMinioCredential.title!,
-      });
+      // source.createBackupJob({
+      //   name: pulumi.interpolate`Sync ${bucket} from ${restoreBucket}`,
+      //   schedule: "*/10 * * * *",
+      //   sourceType: "s3",
+      //   source: pulumi.interpolate`${bucket}/`,
+      //   sourceSecret: globals.truenasMinioCredential.title!,
+      //   destinationType: "s3",
+      //   destination: pulumi.interpolate`${minioBucket.bucket}/`,
+      //   destinationSecret: globals.truenasMinioCredential.title!,
+      // });
     });
   }
 }

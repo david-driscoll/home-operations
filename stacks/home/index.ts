@@ -13,6 +13,8 @@ import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
+import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { createBackupJobs } from "./backups.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -63,6 +65,31 @@ const spikeVm = new TruenasVm("spike", {
   tailscaleIpAddress: "100.111.10.10",
   macAddress: "bc:24:11:7c:e5:c5",
 });
+
+const thanosStorage = new minio.S3Bucket(
+  `thanos-storage`,
+  {
+    acl: "private",
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
+    retainOnDelete: true,
+  },
+);
+
+const thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
+  title: "Thanos S3 Storage",
+  category: CategoryEnum.APICredential,
+  fields: {
+    username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
+    password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
+    bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
+    endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
+  },
+});
+
+createBackupJobs({ globals });
 
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,

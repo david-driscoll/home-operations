@@ -176,7 +176,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         opts,
       );
 
-      const providerConfig = authentik.getProviderOauth2ConfigOutput({ id: provider.id }, { parent: provider });
+      const providerConfig = authentik.getProviderOauth2ConfigOutput({ name: provider.name }, { parent: provider });
 
       const oidcCredentials = new OnePasswordItem(
         `${resourceName}-oidc-credentials`,
