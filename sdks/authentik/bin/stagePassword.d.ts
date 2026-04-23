@@ -70,3 +70,4 @@ export interface StagePasswordArgs {
     name?: pulumi.Input<string>;
     stagePasswordId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stagePassword.d.ts.map

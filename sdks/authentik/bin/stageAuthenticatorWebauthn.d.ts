@@ -127,3 +127,4 @@ export interface StageAuthenticatorWebauthnArgs {
      */
     userVerification?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageAuthenticatorWebauthn.d.ts.map

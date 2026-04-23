@@ -43,3 +43,4 @@ export interface PropertyMappingProviderGoogleWorkspaceArgs {
     name?: pulumi.Input<string>;
     propertyMappingProviderGoogleWorkspaceId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingProviderGoogleWorkspace.d.ts.map

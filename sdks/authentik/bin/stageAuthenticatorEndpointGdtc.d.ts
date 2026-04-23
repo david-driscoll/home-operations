@@ -58,3 +58,4 @@ export interface StageAuthenticatorEndpointGdtcArgs {
     name?: pulumi.Input<string>;
     stageAuthenticatorEndpointGdtcId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageAuthenticatorEndpointGdtc.d.ts.map

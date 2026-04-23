@@ -88,3 +88,4 @@ export interface PolicyReputationArgs {
      */
     threshold?: pulumi.Input<number>;
 }
+//# sourceMappingURL=policyReputation.d.ts.map

@@ -72,3 +72,4 @@ export interface EnterpriseLicenseArgs {
     enterpriseLicenseId?: pulumi.Input<string>;
     key: pulumi.Input<string>;
 }
+//# sourceMappingURL=enterpriseLicense.d.ts.map

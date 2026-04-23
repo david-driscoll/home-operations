@@ -88,3 +88,4 @@ export interface PolicyDummyArgs {
      */
     waitMin?: pulumi.Input<number>;
 }
+//# sourceMappingURL=policyDummy.d.ts.map

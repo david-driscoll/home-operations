@@ -43,3 +43,4 @@ export interface PropertyMappingSourceKerberosArgs {
     name?: pulumi.Input<string>;
     propertyMappingSourceKerberosId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingSourceKerberos.d.ts.map

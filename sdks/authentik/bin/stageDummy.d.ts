@@ -40,3 +40,4 @@ export interface StageDummyArgs {
     name?: pulumi.Input<string>;
     stageDummyId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageDummy.d.ts.map

@@ -110,8 +110,8 @@ export async function getPackage() : Promise<string | undefined> {
 			const monitor = runtime.getMonitor();
 			const params = new resproto.Parameterization();
 			params.setName("terrifi");
-			params.setVersion("0.2.0");
-			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC4yLjAifX0="), c => c.charCodeAt(0)));
+			params.setVersion("0.8.0");
+			params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC44LjAifX0="), c => c.charCodeAt(0)));
 
 			const req = new resproto.RegisterPackageRequest();
 			req.setName("terraform-provider");

@@ -372,7 +372,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     const resourceName = this.resolveResourceName(definition);
     const args: authentik.ApplicationArgs = {
       name: definition.spec.name,
-      slug: resourceName,
+      slug: new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
       group: this.cluster.apply((cluster) => (definition.spec.category === "System" || cluster.title === definition.spec.category ? "System: " + cluster.title : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,

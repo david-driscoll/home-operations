@@ -70,3 +70,4 @@ export interface BlueprintArgs {
     name?: pulumi.Input<string>;
     path?: pulumi.Input<string>;
 }
+//# sourceMappingURL=blueprint.d.ts.map

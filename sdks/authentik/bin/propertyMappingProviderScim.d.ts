@@ -43,3 +43,4 @@ export interface PropertyMappingProviderScimArgs {
     name?: pulumi.Input<string>;
     propertyMappingProviderScimId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingProviderScim.d.ts.map

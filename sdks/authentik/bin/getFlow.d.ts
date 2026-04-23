@@ -30,3 +30,4 @@ export interface GetFlowOutputArgs {
     id?: pulumi.Input<string>;
     slug?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getFlow.d.ts.map

@@ -40,3 +40,4 @@ export interface RbacRoleArgs {
     name?: pulumi.Input<string>;
     rbacRoleId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=rbacRole.d.ts.map

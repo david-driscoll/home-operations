@@ -55,3 +55,4 @@ export interface StageSourceArgs {
     source?: pulumi.Input<string>;
     stageSourceId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageSource.d.ts.map

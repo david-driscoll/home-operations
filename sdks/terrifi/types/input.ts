@@ -5,6 +5,114 @@ import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
+export interface DeviceConfigNetwork {
+    /**
+     * Primary DNS server.
+     */
+    dns1?: pulumi.Input<string>;
+    /**
+     * Secondary DNS server.
+     */
+    dns2?: pulumi.Input<string>;
+    /**
+     * Default gateway IPv4 address. Required when `type = static`.
+     */
+    gateway?: pulumi.Input<string>;
+    /**
+     * Static IPv4 address. Required when `type = static`.
+     */
+    ip?: pulumi.Input<string>;
+    /**
+     * Subnet mask (e.g. `255.255.255.0`). Required when `type = static`.
+     */
+    netmask?: pulumi.Input<string>;
+    /**
+     * Addressing mode: `dhcp` or `static`.
+     */
+    type: pulumi.Input<string>;
+}
+
+export interface DeviceRadio24 {
+    /**
+     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     */
+    channel?: pulumi.Input<string>;
+    /**
+     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     */
+    channelWidth?: pulumi.Input<number>;
+    /**
+     * Minimum RSSI threshold for client association (dBm, -90 to -67).
+     */
+    minRssi?: pulumi.Input<number>;
+    /**
+     * Whether the minimum RSSI client association threshold is enabled.
+     */
+    minRssiEnabled?: pulumi.Input<boolean>;
+    /**
+     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     */
+    transmitPower?: pulumi.Input<string>;
+    /**
+     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     */
+    transmitPowerMode?: pulumi.Input<string>;
+}
+
+export interface DeviceRadio5 {
+    /**
+     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     */
+    channel?: pulumi.Input<string>;
+    /**
+     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     */
+    channelWidth?: pulumi.Input<number>;
+    /**
+     * Minimum RSSI threshold for client association (dBm, -90 to -67).
+     */
+    minRssi?: pulumi.Input<number>;
+    /**
+     * Whether the minimum RSSI client association threshold is enabled.
+     */
+    minRssiEnabled?: pulumi.Input<boolean>;
+    /**
+     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     */
+    transmitPower?: pulumi.Input<string>;
+    /**
+     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     */
+    transmitPowerMode?: pulumi.Input<string>;
+}
+
+export interface DeviceRadio6 {
+    /**
+     * Channel number or `auto`. Valid channels depend on the radio band and country.
+     */
+    channel?: pulumi.Input<string>;
+    /**
+     * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
+     */
+    channelWidth?: pulumi.Input<number>;
+    /**
+     * Minimum RSSI threshold for client association (dBm, -90 to -67).
+     */
+    minRssi?: pulumi.Input<number>;
+    /**
+     * Whether the minimum RSSI client association threshold is enabled.
+     */
+    minRssiEnabled?: pulumi.Input<boolean>;
+    /**
+     * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
+     */
+    transmitPower?: pulumi.Input<string>;
+    /**
+     * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
+     */
+    transmitPowerMode?: pulumi.Input<string>;
+}
+
 export interface FirewallPolicyDestination {
     /**
      * Client device MAC addresses to match. Use the `mac` attribute from `terrifi.ClientDevice` resources.
@@ -54,7 +162,15 @@ export interface FirewallPolicySchedule {
      */
     date?: pulumi.Input<string>;
     /**
-     * Schedule mode. Valid values: `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`.
+     * End date of the schedule range (e.g. `2026-12-31`). Required for `CUSTOM` mode.
+     */
+    dateEnd?: pulumi.Input<string>;
+    /**
+     * Start date of the schedule range (e.g. `2026-01-01`). Required for `CUSTOM` mode.
+     */
+    dateStart?: pulumi.Input<string>;
+    /**
+     * Schedule mode. Valid values: `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, `CUSTOM`.
      */
     mode?: pulumi.Input<string>;
     /**

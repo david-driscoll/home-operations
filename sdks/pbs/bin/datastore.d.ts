@@ -384,3 +384,4 @@ export interface DatastoreArgs {
      */
     verifyNew?: pulumi.Input<boolean>;
 }
+//# sourceMappingURL=datastore.d.ts.map

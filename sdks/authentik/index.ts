@@ -358,6 +358,11 @@ export type ProviderSsf = import("./providerSsf").ProviderSsf;
 export const ProviderSsf: typeof import("./providerSsf").ProviderSsf = null as any;
 utilities.lazyLoad(exports, ["ProviderSsf"], () => require("./providerSsf"));
 
+export { ProviderWsFederationArgs, ProviderWsFederationState } from "./providerWsFederation";
+export type ProviderWsFederation = import("./providerWsFederation").ProviderWsFederation;
+export const ProviderWsFederation: typeof import("./providerWsFederation").ProviderWsFederation = null as any;
+utilities.lazyLoad(exports, ["ProviderWsFederation"], () => require("./providerWsFederation"));
+
 export { RacEndpointArgs, RacEndpointState } from "./racEndpoint";
 export type RacEndpoint = import("./racEndpoint").RacEndpoint;
 export const RacEndpoint: typeof import("./racEndpoint").RacEndpoint = null as any;
@@ -690,6 +695,8 @@ const _module = {
                 return new ProviderScim(name, <any>undefined, { urn })
             case "authentik:index/providerSsf:ProviderSsf":
                 return new ProviderSsf(name, <any>undefined, { urn })
+            case "authentik:index/providerWsFederation:ProviderWsFederation":
+                return new ProviderWsFederation(name, <any>undefined, { urn })
             case "authentik:index/racEndpoint:RacEndpoint":
                 return new RacEndpoint(name, <any>undefined, { urn })
             case "authentik:index/rbacInitialPermissions:RbacInitialPermissions":
@@ -832,6 +839,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/providerRadius", _modu
 pulumi.runtime.registerResourceModule("authentik", "index/providerSaml", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/providerScim", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/providerSsf", _module)
+pulumi.runtime.registerResourceModule("authentik", "index/providerWsFederation", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/racEndpoint", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/rbacInitialPermissions", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/rbacPermissionRole", _module)

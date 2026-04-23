@@ -32,3 +32,4 @@ export interface GetPropertyMappingProviderScimOutputArgs {
     managedLists?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getPropertyMappingProviderScim.d.ts.map

@@ -57,6 +57,8 @@ export declare class Flow extends pulumi.CustomResource {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     readonly layout: pulumi.Output<string | undefined>;
@@ -129,6 +131,8 @@ export interface FlowState {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     layout?: pulumi.Input<string>;
@@ -193,6 +197,8 @@ export interface FlowArgs {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     layout?: pulumi.Input<string>;
@@ -207,3 +213,4 @@ export interface FlowArgs {
     slug: pulumi.Input<string>;
     title: pulumi.Input<string>;
 }
+//# sourceMappingURL=flow.d.ts.map

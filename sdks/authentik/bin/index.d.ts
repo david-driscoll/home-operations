@@ -209,6 +209,9 @@ export declare const ProviderScim: typeof import("./providerScim").ProviderScim;
 export { ProviderSsfArgs, ProviderSsfState } from "./providerSsf";
 export type ProviderSsf = import("./providerSsf").ProviderSsf;
 export declare const ProviderSsf: typeof import("./providerSsf").ProviderSsf;
+export { ProviderWsFederationArgs, ProviderWsFederationState } from "./providerWsFederation";
+export type ProviderWsFederation = import("./providerWsFederation").ProviderWsFederation;
+export declare const ProviderWsFederation: typeof import("./providerWsFederation").ProviderWsFederation;
 export { RacEndpointArgs, RacEndpointState } from "./racEndpoint";
 export type RacEndpoint = import("./racEndpoint").RacEndpoint;
 export declare const RacEndpoint: typeof import("./racEndpoint").RacEndpoint;
@@ -344,3 +347,4 @@ export declare const User: typeof import("./user").User;
 import * as config from "./config";
 import * as types from "./types";
 export { config, types, };
+//# sourceMappingURL=index.d.ts.map

@@ -46,3 +46,4 @@ export interface StagePromptArgs {
     stagePromptId?: pulumi.Input<string>;
     validationPolicies?: pulumi.Input<pulumi.Input<string>[]>;
 }
+//# sourceMappingURL=stagePrompt.d.ts.map

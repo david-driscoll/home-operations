@@ -39,7 +39,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly action: pulumi.Output<string>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
      */
     declare public readonly connectionStateType: pulumi.Output<string>;
     /**
@@ -47,7 +47,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly connectionStates: pulumi.Output<string[] | undefined>;
     /**
-     * Whether to automatically create a corresponding allow-respond rule.
+     * Whether to automatically create a corresponding allow-respond rule. Not supported when the destination zone is the external zone — UniFi handles WAN return traffic at the stateful firewall level automatically.
      */
     declare public readonly createAllowRespond: pulumi.Output<boolean | undefined>;
     /**
@@ -83,7 +83,7 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`. Default: `all`.
+     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
      */
     declare public readonly protocol: pulumi.Output<string>;
     /**
@@ -164,7 +164,7 @@ export interface FirewallPolicyState {
      */
     action?: pulumi.Input<string>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
      */
     connectionStateType?: pulumi.Input<string>;
     /**
@@ -172,7 +172,7 @@ export interface FirewallPolicyState {
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Whether to automatically create a corresponding allow-respond rule.
+     * Whether to automatically create a corresponding allow-respond rule. Not supported when the destination zone is the external zone — UniFi handles WAN return traffic at the stateful firewall level automatically.
      */
     createAllowRespond?: pulumi.Input<boolean>;
     /**
@@ -208,7 +208,7 @@ export interface FirewallPolicyState {
      */
     name?: pulumi.Input<string>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`. Default: `all`.
+     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
      */
     protocol?: pulumi.Input<string>;
     /**
@@ -234,7 +234,7 @@ export interface FirewallPolicyArgs {
      */
     action: pulumi.Input<string>;
     /**
-     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`. Default: `ALL`.
+     * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
      */
     connectionStateType?: pulumi.Input<string>;
     /**
@@ -242,7 +242,7 @@ export interface FirewallPolicyArgs {
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[]>;
     /**
-     * Whether to automatically create a corresponding allow-respond rule.
+     * Whether to automatically create a corresponding allow-respond rule. Not supported when the destination zone is the external zone — UniFi handles WAN return traffic at the stateful firewall level automatically.
      */
     createAllowRespond?: pulumi.Input<boolean>;
     /**
@@ -274,7 +274,7 @@ export interface FirewallPolicyArgs {
      */
     name?: pulumi.Input<string>;
     /**
-     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`. Default: `all`.
+     * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
      */
     protocol?: pulumi.Input<string>;
     /**

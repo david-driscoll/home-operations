@@ -387,3 +387,4 @@ export interface SourceOauthArgs {
      */
     uuid?: pulumi.Input<string>;
 }
+//# sourceMappingURL=sourceOauth.d.ts.map

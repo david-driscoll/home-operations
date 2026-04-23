@@ -43,3 +43,4 @@ export interface PropertyMappingProviderRadiusArgs {
     name?: pulumi.Input<string>;
     propertyMappingProviderRadiusId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingProviderRadius.d.ts.map

@@ -40,3 +40,4 @@ export interface StageUserDeleteArgs {
     name?: pulumi.Input<string>;
     stageUserDeleteId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageUserDelete.d.ts.map

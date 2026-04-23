@@ -376,3 +376,4 @@ export interface ProviderSamlArgs {
     urlSsoRedirect?: pulumi.Input<string>;
     verificationKp?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerSaml.d.ts.map

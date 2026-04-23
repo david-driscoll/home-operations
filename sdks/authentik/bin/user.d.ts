@@ -41,6 +41,10 @@ export declare class User extends pulumi.CustomResource {
      */
     readonly path: pulumi.Output<string | undefined>;
     /**
+     * Generated.
+     */
+    readonly roles: pulumi.Output<string[]>;
+    /**
      * Allowed values:
      *   - `internal`
      *   - `external`
@@ -90,6 +94,10 @@ export interface UserState {
      */
     path?: pulumi.Input<string>;
     /**
+     * Generated.
+     */
+    roles?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
      * Allowed values:
      *   - `internal`
      *   - `external`
@@ -131,6 +139,10 @@ export interface UserArgs {
      */
     path?: pulumi.Input<string>;
     /**
+     * Generated.
+     */
+    roles?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
      * Allowed values:
      *   - `internal`
      *   - `external`
@@ -142,3 +154,4 @@ export interface UserArgs {
     userId?: pulumi.Input<string>;
     username: pulumi.Input<string>;
 }
+//# sourceMappingURL=user.d.ts.map

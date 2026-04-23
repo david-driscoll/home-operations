@@ -32,3 +32,4 @@ export interface GetProviderOauth2ConfigOutputArgs {
     name?: pulumi.Input<string>;
     providerId?: pulumi.Input<number>;
 }
+//# sourceMappingURL=getProviderOauth2Config.d.ts.map

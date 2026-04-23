@@ -45,3 +45,4 @@ export interface GetGroupsOutputArgs {
     ordering?: pulumi.Input<string>;
     search?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getGroups.d.ts.map

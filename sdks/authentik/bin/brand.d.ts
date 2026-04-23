@@ -124,3 +124,4 @@ export interface BrandArgs {
     flowUserSettings?: pulumi.Input<string>;
     webCertificate?: pulumi.Input<string>;
 }
+//# sourceMappingURL=brand.d.ts.map

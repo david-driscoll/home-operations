@@ -23,3 +23,4 @@ export interface GetWebauthnDeviceTypeOutputArgs {
     description?: pulumi.Input<string>;
     id?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getWebauthnDeviceType.d.ts.map

@@ -46,3 +46,4 @@ export interface CertificateKeyPairArgs {
     keyData?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
 }
+//# sourceMappingURL=certificateKeyPair.d.ts.map

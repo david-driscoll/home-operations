@@ -67,3 +67,4 @@ export interface GetBrandOutputArgs {
     id?: pulumi.Input<string>;
     webCertificate?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getBrand.d.ts.map

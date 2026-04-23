@@ -85,3 +85,4 @@ export interface OutpostArgs {
      */
     type?: pulumi.Input<string>;
 }
+//# sourceMappingURL=outpost.d.ts.map

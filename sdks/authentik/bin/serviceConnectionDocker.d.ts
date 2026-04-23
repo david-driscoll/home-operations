@@ -70,3 +70,4 @@ export interface ServiceConnectionDockerArgs {
      */
     url?: pulumi.Input<string>;
 }
+//# sourceMappingURL=serviceConnectionDocker.d.ts.map

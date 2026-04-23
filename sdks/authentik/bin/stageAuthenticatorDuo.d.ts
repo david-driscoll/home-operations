@@ -70,3 +70,4 @@ export interface StageAuthenticatorDuoArgs {
     name?: pulumi.Input<string>;
     stageAuthenticatorDuoId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageAuthenticatorDuo.d.ts.map

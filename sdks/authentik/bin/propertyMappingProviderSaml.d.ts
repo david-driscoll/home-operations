@@ -49,3 +49,4 @@ export interface PropertyMappingProviderSamlArgs {
     propertyMappingProviderSamlId?: pulumi.Input<string>;
     samlName: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingProviderSaml.d.ts.map

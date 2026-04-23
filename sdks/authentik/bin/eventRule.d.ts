@@ -91,3 +91,4 @@ export interface EventRuleArgs {
     severity?: pulumi.Input<string>;
     transports: pulumi.Input<pulumi.Input<string>[]>;
 }
+//# sourceMappingURL=eventRule.d.ts.map

@@ -136,3 +136,4 @@ export interface PolicyBindingArgs {
      */
     user?: pulumi.Input<number>;
 }
+//# sourceMappingURL=policyBinding.d.ts.map

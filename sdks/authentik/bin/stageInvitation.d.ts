@@ -52,3 +52,4 @@ export interface StageInvitationArgs {
     name?: pulumi.Input<string>;
     stageInvitationId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageInvitation.d.ts.map

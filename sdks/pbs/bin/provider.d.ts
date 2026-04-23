@@ -81,3 +81,4 @@ export declare namespace Provider {
         };
     }
 }
+//# sourceMappingURL=provider.d.ts.map

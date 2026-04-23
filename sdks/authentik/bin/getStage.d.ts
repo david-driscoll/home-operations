@@ -22,3 +22,4 @@ export interface GetStageOutputArgs {
     id?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getStage.d.ts.map

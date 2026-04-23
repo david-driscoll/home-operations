@@ -109,3 +109,4 @@ export interface ApplicationArgs {
      */
     uuid?: pulumi.Input<string>;
 }
+//# sourceMappingURL=application.d.ts.map

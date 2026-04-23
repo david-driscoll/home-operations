@@ -16,3 +16,4 @@ export declare const token: string | undefined;
  * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
  */
 export declare const url: string | undefined;
+//# sourceMappingURL=vars.d.ts.map

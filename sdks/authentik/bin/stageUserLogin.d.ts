@@ -142,3 +142,4 @@ export interface StageUserLoginArgs {
      */
     terminateOtherSessions?: pulumi.Input<boolean>;
 }
+//# sourceMappingURL=stageUserLogin.d.ts.map

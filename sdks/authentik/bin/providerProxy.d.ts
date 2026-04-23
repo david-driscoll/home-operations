@@ -198,3 +198,4 @@ export interface ProviderProxyArgs {
     refreshTokenValidity?: pulumi.Input<string>;
     skipPathRegex?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerProxy.d.ts.map

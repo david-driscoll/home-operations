@@ -27,3 +27,4 @@ export interface GetSourceOutputArgs {
     managed?: pulumi.Input<string>;
     slug?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getSource.d.ts.map

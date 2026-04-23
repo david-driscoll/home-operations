@@ -44,7 +44,7 @@ export declare class ProviderScim extends pulumi.CustomResource {
      */
     readonly dryRun: pulumi.Output<boolean | undefined>;
     readonly excludeUsersServiceAccount: pulumi.Output<boolean | undefined>;
-    readonly filterGroup: pulumi.Output<string | undefined>;
+    readonly groupFilters: pulumi.Output<string[] | undefined>;
     readonly name: pulumi.Output<string>;
     readonly propertyMappings: pulumi.Output<string[] | undefined>;
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
@@ -105,7 +105,7 @@ export interface ProviderScimState {
      */
     dryRun?: pulumi.Input<boolean>;
     excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
@@ -158,7 +158,7 @@ export interface ProviderScimArgs {
      */
     dryRun?: pulumi.Input<boolean>;
     excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
@@ -178,3 +178,4 @@ export interface ProviderScimArgs {
     token?: pulumi.Input<string>;
     url: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerScim.d.ts.map

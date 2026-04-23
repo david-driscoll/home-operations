@@ -32,3 +32,4 @@ export interface GetPropertyMappingSourceLdapOutputArgs {
     managedLists?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getPropertyMappingSourceLdap.d.ts.map

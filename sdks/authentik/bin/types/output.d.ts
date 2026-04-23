@@ -47,3 +47,4 @@ export interface GetUsersUser {
     username: string;
     uuid: string;
 }
+//# sourceMappingURL=output.d.ts.map

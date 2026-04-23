@@ -124,3 +124,4 @@ export interface StageAuthenticatorSmsArgs {
      */
     verifyOnly?: pulumi.Input<boolean>;
 }
+//# sourceMappingURL=stageAuthenticatorSms.d.ts.map

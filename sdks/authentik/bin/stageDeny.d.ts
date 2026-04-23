@@ -43,3 +43,4 @@ export interface StageDenyArgs {
     name?: pulumi.Input<string>;
     stageDenyId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageDeny.d.ts.map

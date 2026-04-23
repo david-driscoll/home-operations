@@ -43,3 +43,4 @@ export interface PropertyMappingSourceOauthArgs {
     name?: pulumi.Input<string>;
     propertyMappingSourceOauthId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingSourceOauth.d.ts.map

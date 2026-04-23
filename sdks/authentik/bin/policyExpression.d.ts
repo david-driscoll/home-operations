@@ -55,3 +55,4 @@ export interface PolicyExpressionArgs {
     name?: pulumi.Input<string>;
     policyExpressionId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=policyExpression.d.ts.map

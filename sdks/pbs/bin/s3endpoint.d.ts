@@ -142,3 +142,4 @@ export interface S3EndpointArgs {
      */
     secretKey: pulumi.Input<string>;
 }
+//# sourceMappingURL=s3endpoint.d.ts.map

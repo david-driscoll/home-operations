@@ -100,12 +100,15 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
+     *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
      *   - `authentik.enterprise.providers.radius`
      *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
@@ -225,12 +228,17 @@ export class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -347,12 +355,15 @@ export interface PolicyEventMatcherState {
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
+     *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
      *   - `authentik.enterprise.providers.radius`
      *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
@@ -472,12 +483,17 @@ export interface PolicyEventMatcherState {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -560,12 +576,15 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik.blueprints`
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
+     *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
      *   - `authentik.enterprise.providers.microsoft_entra`
      *   - `authentik.enterprise.providers.radius`
      *   - `authentik.enterprise.providers.scim`
      *   - `authentik.enterprise.providers.ssf`
+     *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
      *   - `authentik.enterprise.search`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
@@ -685,12 +704,17 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`

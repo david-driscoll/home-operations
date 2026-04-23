@@ -26,3 +26,4 @@ export interface GetProviderSamlMetadataOutputArgs {
     name?: pulumi.Input<string>;
     providerId?: pulumi.Input<number>;
 }
+//# sourceMappingURL=getProviderSamlMetadata.d.ts.map

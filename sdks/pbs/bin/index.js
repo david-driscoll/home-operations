@@ -12,14 +12,26 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookNotification = exports.VerifyJob = exports.SyncJob = exports.SmtpNotification = exports.SendmailNotification = exports.S3Endpoint = exports.Remote = exports.PruneJob = exports.NotificationMatcher = exports.MetricsServer = exports.GotifyNotification = exports.getVerifyJobsOutput = exports.getVerifyJobs = exports.getVerifyJobOutput = exports.getVerifyJob = exports.getSyncJobsOutput = exports.getSyncJobs = exports.getSyncJobOutput = exports.getSyncJob = exports.getS3EndpointsOutput = exports.getS3Endpoints = exports.getS3EndpointOutput = exports.getS3Endpoint = exports.getRemoteStoresOutput = exports.getRemoteStores = exports.getRemoteNamespacesOutput = exports.getRemoteNamespaces = exports.getRemoteGroupsOutput = exports.getRemoteGroups = exports.getPruneJobsOutput = exports.getPruneJobs = exports.getPruneJobOutput = exports.getPruneJob = exports.getNotificationMatchersOutput = exports.getNotificationMatchers = exports.getNotificationMatcherOutput = exports.getNotificationMatcher = exports.getNotificationEndpointsOutput = exports.getNotificationEndpoints = exports.getNotificationEndpointOutput = exports.getNotificationEndpoint = exports.getMetricsServersOutput = exports.getMetricsServers = exports.getMetricsServerOutput = exports.getMetricsServer = exports.getDatastoresOutput = exports.getDatastores = exports.getDatastoreOutput = exports.getDatastore = exports.Datastore = void 0;
 exports.types = exports.config = void 0;
-const pulumi = require("@pulumi/pulumi");
-const utilities = require("./utilities");
+const pulumi = __importStar(require("@pulumi/pulumi"));
+const utilities = __importStar(require("./utilities"));
 exports.Datastore = null;
 utilities.lazyLoad(exports, ["Datastore"], () => require("./datastore"));
 exports.getDatastore = null;
@@ -104,9 +116,9 @@ utilities.lazyLoad(exports, ["VerifyJob"], () => require("./verifyJob"));
 exports.WebhookNotification = null;
 utilities.lazyLoad(exports, ["WebhookNotification"], () => require("./webhookNotification"));
 // Export sub-modules:
-const config = require("./config");
+const config = __importStar(require("./config"));
 exports.config = config;
-const types = require("./types");
+const types = __importStar(require("./types"));
 exports.types = types;
 const _module = {
     version: utilities.getVersion(),

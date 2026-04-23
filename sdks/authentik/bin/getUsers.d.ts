@@ -60,3 +60,4 @@ export interface GetUsersOutputArgs {
     username?: pulumi.Input<string>;
     uuid?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getUsers.d.ts.map

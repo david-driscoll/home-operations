@@ -79,3 +79,4 @@ export interface StageRedirectArgs {
     targetFlow?: pulumi.Input<string>;
     targetStatic?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageRedirect.d.ts.map

@@ -45,6 +45,10 @@ export class ClientDevice extends pulumi.CustomResource {
      */
     declare public readonly deviceTypeId: pulumi.Output<number | undefined>;
     /**
+     * The MAC address of the access point to lock this client to (e.g. `aa:bb:cc:dd:ee:ff`). When set, the client will only connect to this AP.
+     */
+    declare public readonly fixedApMac: pulumi.Output<string | undefined>;
+    /**
      * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
      */
     declare public readonly fixedIp: pulumi.Output<string | undefined>;
@@ -93,6 +97,7 @@ export class ClientDevice extends pulumi.CustomResource {
             resourceInputs["blocked"] = state?.blocked;
             resourceInputs["clientGroupIds"] = state?.clientGroupIds;
             resourceInputs["deviceTypeId"] = state?.deviceTypeId;
+            resourceInputs["fixedApMac"] = state?.fixedApMac;
             resourceInputs["fixedIp"] = state?.fixedIp;
             resourceInputs["localDnsRecord"] = state?.localDnsRecord;
             resourceInputs["mac"] = state?.mac;
@@ -109,6 +114,7 @@ export class ClientDevice extends pulumi.CustomResource {
             resourceInputs["blocked"] = args?.blocked;
             resourceInputs["clientGroupIds"] = args?.clientGroupIds;
             resourceInputs["deviceTypeId"] = args?.deviceTypeId;
+            resourceInputs["fixedApMac"] = args?.fixedApMac;
             resourceInputs["fixedIp"] = args?.fixedIp;
             resourceInputs["localDnsRecord"] = args?.localDnsRecord;
             resourceInputs["mac"] = args?.mac;
@@ -139,6 +145,10 @@ export interface ClientDeviceState {
      * The device type ID (fingerprint override) to set a custom icon for this client device. Use `terrifi list-device-types` to list IDs as CSV, or `terrifi list-device-types --html` to generate a browsable page with icons and fuzzy search.
      */
     deviceTypeId?: pulumi.Input<number>;
+    /**
+     * The MAC address of the access point to lock this client to (e.g. `aa:bb:cc:dd:ee:ff`). When set, the client will only connect to this AP.
+     */
+    fixedApMac?: pulumi.Input<string>;
     /**
      * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
      */
@@ -189,6 +199,10 @@ export interface ClientDeviceArgs {
      * The device type ID (fingerprint override) to set a custom icon for this client device. Use `terrifi list-device-types` to list IDs as CSV, or `terrifi list-device-types --html` to generate a browsable page with icons and fuzzy search.
      */
     deviceTypeId?: pulumi.Input<number>;
+    /**
+     * The MAC address of the access point to lock this client to (e.g. `aa:bb:cc:dd:ee:ff`). When set, the client will only connect to this AP.
+     */
+    fixedApMac?: pulumi.Input<string>;
     /**
      * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
      */

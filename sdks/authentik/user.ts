@@ -58,6 +58,10 @@ export class User extends pulumi.CustomResource {
      */
     declare public readonly path: pulumi.Output<string | undefined>;
     /**
+     * Generated.
+     */
+    declare public readonly roles: pulumi.Output<string[]>;
+    /**
      * Allowed values:
      *   - `internal`
      *   - `external`
@@ -89,6 +93,7 @@ export class User extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["password"] = state?.password;
             resourceInputs["path"] = state?.path;
+            resourceInputs["roles"] = state?.roles;
             resourceInputs["type"] = state?.type;
             resourceInputs["userId"] = state?.userId;
             resourceInputs["username"] = state?.username;
@@ -104,6 +109,7 @@ export class User extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["password"] = args?.password ? pulumi.secret(args.password) : undefined;
             resourceInputs["path"] = args?.path;
+            resourceInputs["roles"] = args?.roles;
             resourceInputs["type"] = args?.type;
             resourceInputs["userId"] = args?.userId;
             resourceInputs["username"] = args?.username;
@@ -144,6 +150,10 @@ export interface UserState {
      * Defaults to `users`.
      */
     path?: pulumi.Input<string>;
+    /**
+     * Generated.
+     */
+    roles?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Allowed values:
      *   - `internal`
@@ -186,6 +196,10 @@ export interface UserArgs {
      * Defaults to `users`.
      */
     path?: pulumi.Input<string>;
+    /**
+     * Generated.
+     */
+    roles?: pulumi.Input<pulumi.Input<string>[]>;
     /**
      * Allowed values:
      *   - `internal`

@@ -36,3 +36,4 @@ export interface GetGroupOutputArgs {
     name?: pulumi.Input<string>;
     pk?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getGroup.d.ts.map

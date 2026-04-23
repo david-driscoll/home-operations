@@ -151,3 +151,4 @@ export interface ProviderGoogleWorkspaceArgs {
      */
     userDeleteAction?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerGoogleWorkspace.d.ts.map

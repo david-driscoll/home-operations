@@ -43,3 +43,4 @@ export interface PropertyMappingProviderMicrosoftEntraArgs {
     name?: pulumi.Input<string>;
     propertyMappingProviderMicrosoftEntraId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingProviderMicrosoftEntra.d.ts.map

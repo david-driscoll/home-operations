@@ -65,7 +65,7 @@ export class Network extends pulumi.CustomResource {
      */
     declare public readonly networkGroup: pulumi.Output<string>;
     /**
-     * The purpose of the network. Must be `corporate`.
+     * The purpose of the network. One of: `corporate`, `vlan-only`.
      */
     declare public readonly purpose: pulumi.Output<string>;
     /**
@@ -166,7 +166,7 @@ export interface NetworkState {
      */
     networkGroup?: pulumi.Input<string>;
     /**
-     * The purpose of the network. Must be `corporate`.
+     * The purpose of the network. One of: `corporate`, `vlan-only`.
      */
     purpose?: pulumi.Input<string>;
     /**
@@ -220,7 +220,7 @@ export interface NetworkArgs {
      */
     networkGroup?: pulumi.Input<string>;
     /**
-     * The purpose of the network. Must be `corporate`.
+     * The purpose of the network. One of: `corporate`, `vlan-only`.
      */
     purpose: pulumi.Input<string>;
     /**

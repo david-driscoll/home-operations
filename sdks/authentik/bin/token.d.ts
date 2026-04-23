@@ -116,3 +116,4 @@ export interface TokenArgs {
     tokenId?: pulumi.Input<string>;
     user: pulumi.Input<number>;
 }
+//# sourceMappingURL=token.d.ts.map

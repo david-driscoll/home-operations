@@ -82,3 +82,4 @@ export interface GroupArgs {
      */
     users?: pulumi.Input<pulumi.Input<number>[]>;
 }
+//# sourceMappingURL=group.d.ts.map

@@ -868,3 +868,4 @@ export interface PolicyGeoipArgs {
     name?: pulumi.Input<string>;
     policyGeoipId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=policyGeoip.d.ts.map

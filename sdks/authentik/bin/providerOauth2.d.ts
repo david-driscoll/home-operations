@@ -277,3 +277,4 @@ export interface ProviderOauth2Args {
      */
     subMode?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerOauth2.d.ts.map

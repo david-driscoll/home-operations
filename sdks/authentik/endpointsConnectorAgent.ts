@@ -55,7 +55,7 @@ export class EndpointsConnectorAgent extends pulumi.CustomResource {
      */
     declare public readonly enabled: pulumi.Output<boolean | undefined>;
     declare public readonly endpointsConnectorAgentId: pulumi.Output<string>;
-    declare public readonly jwtFederationProviders: pulumi.Output<string[] | undefined>;
+    declare public readonly jwtFederationProviders: pulumi.Output<number[] | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
      * Defaults to `4000`.
@@ -150,7 +150,7 @@ export interface EndpointsConnectorAgentState {
      */
     enabled?: pulumi.Input<boolean>;
     endpointsConnectorAgentId?: pulumi.Input<string>;
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
     name?: pulumi.Input<string>;
     /**
      * Defaults to `4000`.
@@ -197,7 +197,7 @@ export interface EndpointsConnectorAgentArgs {
      */
     enabled?: pulumi.Input<boolean>;
     endpointsConnectorAgentId?: pulumi.Input<string>;
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
     name?: pulumi.Input<string>;
     /**
      * Defaults to `4000`.

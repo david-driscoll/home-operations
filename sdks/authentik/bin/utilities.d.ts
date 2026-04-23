@@ -3,3 +3,4 @@ export declare function getEnvBoolean(...vars: string[]): boolean | undefined;
 export declare function getEnvNumber(...vars: string[]): number | undefined;
 export declare function getVersion(): string;
 export declare function getPackage(): Promise<string | undefined>;
+//# sourceMappingURL=utilities.d.ts.map

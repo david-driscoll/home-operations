@@ -76,3 +76,4 @@ export interface StageConsentArgs {
     name?: pulumi.Input<string>;
     stageConsentId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageConsent.d.ts.map

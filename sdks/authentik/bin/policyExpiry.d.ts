@@ -67,3 +67,4 @@ export interface PolicyExpiryArgs {
     name?: pulumi.Input<string>;
     policyExpiryId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=policyExpiry.d.ts.map

@@ -46,3 +46,4 @@ export interface RbacInitialPermissionsArgs {
     rbacInitialPermissionsId?: pulumi.Input<string>;
     role: pulumi.Input<string>;
 }
+//# sourceMappingURL=rbacInitialPermissions.d.ts.map

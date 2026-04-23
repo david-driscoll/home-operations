@@ -36,3 +36,4 @@ export interface GetPropertyMappingProviderScopeOutputArgs {
     name?: pulumi.Input<string>;
     scopeName?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getPropertyMappingProviderScope.d.ts.map

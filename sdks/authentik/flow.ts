@@ -74,6 +74,8 @@ export class Flow extends pulumi.CustomResource {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     declare public readonly layout: pulumi.Output<string | undefined>;
@@ -192,6 +194,8 @@ export interface FlowState {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     layout?: pulumi.Input<string>;
@@ -257,6 +261,8 @@ export interface FlowArgs {
      *   - `content_right`
      *   - `sidebar_left`
      *   - `sidebar_right`
+     *   - `sidebar_left_frame_background`
+     *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
     layout?: pulumi.Input<string>;

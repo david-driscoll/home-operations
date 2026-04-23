@@ -139,3 +139,4 @@ export interface ProviderMicrosoftEntraArgs {
      */
     userDeleteAction?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerMicrosoftEntra.d.ts.map

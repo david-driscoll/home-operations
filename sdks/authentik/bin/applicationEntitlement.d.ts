@@ -55,3 +55,4 @@ export interface ApplicationEntitlementArgs {
     attributes?: pulumi.Input<string>;
     name?: pulumi.Input<string>;
 }
+//# sourceMappingURL=applicationEntitlement.d.ts.map

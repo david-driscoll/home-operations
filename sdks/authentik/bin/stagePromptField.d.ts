@@ -169,3 +169,4 @@ export interface StagePromptFieldArgs {
      */
     type: pulumi.Input<string>;
 }
+//# sourceMappingURL=stagePromptField.d.ts.map

@@ -109,3 +109,4 @@ export interface EventTransportArgs {
     webhookMappingHeaders?: pulumi.Input<string>;
     webhookUrl?: pulumi.Input<string>;
 }
+//# sourceMappingURL=eventTransport.d.ts.map

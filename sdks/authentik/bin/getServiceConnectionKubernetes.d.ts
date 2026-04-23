@@ -31,3 +31,4 @@ export interface GetServiceConnectionKubernetesOutputArgs {
     name: pulumi.Input<string>;
     verifySsl?: pulumi.Input<boolean>;
 }
+//# sourceMappingURL=getServiceConnectionKubernetes.d.ts.map

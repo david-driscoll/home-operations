@@ -43,3 +43,4 @@ export interface PropertyMappingNotificationArgs {
     name?: pulumi.Input<string>;
     propertyMappingNotificationId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=propertyMappingNotification.d.ts.map

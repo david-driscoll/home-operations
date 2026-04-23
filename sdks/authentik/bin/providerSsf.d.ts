@@ -67,3 +67,4 @@ export interface ProviderSsfArgs {
     providerSsfId?: pulumi.Input<string>;
     signingKey?: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerSsf.d.ts.map

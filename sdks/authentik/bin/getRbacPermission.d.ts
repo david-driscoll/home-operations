@@ -24,3 +24,4 @@ export interface GetRbacPermissionOutputArgs {
     codename: pulumi.Input<string>;
     id?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getRbacPermission.d.ts.map

@@ -15,6 +15,11 @@ export type ClientGroup = import("./clientGroup").ClientGroup;
 export const ClientGroup: typeof import("./clientGroup").ClientGroup = null as any;
 utilities.lazyLoad(exports, ["ClientGroup"], () => require("./clientGroup"));
 
+export { DeviceArgs, DeviceState } from "./device";
+export type Device = import("./device").Device;
+export const Device: typeof import("./device").Device = null as any;
+utilities.lazyLoad(exports, ["Device"], () => require("./device"));
+
 export { DnsRecordArgs, DnsRecordState } from "./dnsRecord";
 export type DnsRecord = import("./dnsRecord").DnsRecord;
 export const DnsRecord: typeof import("./dnsRecord").DnsRecord = null as any;
@@ -39,6 +44,11 @@ export { FirewallZoneArgs, FirewallZoneState } from "./firewallZone";
 export type FirewallZone = import("./firewallZone").FirewallZone;
 export const FirewallZone: typeof import("./firewallZone").FirewallZone = null as any;
 utilities.lazyLoad(exports, ["FirewallZone"], () => require("./firewallZone"));
+
+export { GetDeviceArgs, GetDeviceResult, GetDeviceOutputArgs } from "./getDevice";
+export const getDevice: typeof import("./getDevice").getDevice = null as any;
+export const getDeviceOutput: typeof import("./getDevice").getDeviceOutput = null as any;
+utilities.lazyLoad(exports, ["getDevice","getDeviceOutput"], () => require("./getDevice"));
 
 export { NetworkArgs, NetworkState } from "./network";
 export type Network = import("./network").Network;
@@ -71,6 +81,8 @@ const _module = {
                 return new ClientDevice(name, <any>undefined, { urn })
             case "terrifi:index/clientGroup:ClientGroup":
                 return new ClientGroup(name, <any>undefined, { urn })
+            case "terrifi:index/device:Device":
+                return new Device(name, <any>undefined, { urn })
             case "terrifi:index/dnsRecord:DnsRecord":
                 return new DnsRecord(name, <any>undefined, { urn })
             case "terrifi:index/firewallGroup:FirewallGroup":
@@ -92,6 +104,7 @@ const _module = {
 };
 pulumi.runtime.registerResourceModule("terrifi", "index/clientDevice", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/clientGroup", _module)
+pulumi.runtime.registerResourceModule("terrifi", "index/device", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallGroup", _module)
 pulumi.runtime.registerResourceModule("terrifi", "index/firewallPolicy", _module)

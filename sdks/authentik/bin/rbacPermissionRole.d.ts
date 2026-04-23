@@ -122,12 +122,17 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -258,12 +263,17 @@ export interface RbacPermissionRoleState {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -386,12 +396,17 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -403,3 +418,4 @@ export interface RbacPermissionRoleArgs {
     rbacPermissionRoleId?: pulumi.Input<string>;
     role: pulumi.Input<string>;
 }
+//# sourceMappingURL=rbacPermissionRole.d.ts.map

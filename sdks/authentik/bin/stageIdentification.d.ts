@@ -115,3 +115,4 @@ export interface StageIdentificationArgs {
     userFields?: pulumi.Input<pulumi.Input<string>[]>;
     webauthnStage?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageIdentification.d.ts.map

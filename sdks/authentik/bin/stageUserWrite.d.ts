@@ -115,3 +115,4 @@ export interface StageUserWriteArgs {
      */
     userType?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageUserWrite.d.ts.map

@@ -32,6 +32,7 @@ export class TaskSchedule extends pulumi.CustomResource {
         return obj['__pulumiType'] === TaskSchedule.__pulumiType;
     }
 
+    declare public readonly actorName: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -139,12 +140,17 @@ export class TaskSchedule extends pulumi.CustomResource {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -175,6 +181,7 @@ export class TaskSchedule extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as TaskScheduleState | undefined;
+            resourceInputs["actorName"] = state?.actorName;
             resourceInputs["appModel"] = state?.appModel;
             resourceInputs["crontab"] = state?.crontab;
             resourceInputs["modelId"] = state?.modelId;
@@ -191,6 +198,7 @@ export class TaskSchedule extends pulumi.CustomResource {
             if (args?.modelId === undefined && !opts.urn) {
                 throw new Error("Missing required property 'modelId'");
             }
+            resourceInputs["actorName"] = args?.actorName;
             resourceInputs["appModel"] = args?.appModel;
             resourceInputs["crontab"] = args?.crontab;
             resourceInputs["modelId"] = args?.modelId;
@@ -206,6 +214,7 @@ export class TaskSchedule extends pulumi.CustomResource {
  * Input properties used for looking up and filtering TaskSchedule resources.
  */
 export interface TaskScheduleState {
+    actorName?: pulumi.Input<string>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -313,12 +322,17 @@ export interface TaskScheduleState {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -341,6 +355,7 @@ export interface TaskScheduleState {
  * The set of arguments for constructing a TaskSchedule resource.
  */
 export interface TaskScheduleArgs {
+    actorName?: pulumi.Input<string>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -448,12 +463,17 @@ export interface TaskScheduleArgs {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_lifecycle.lifecyclerule`
+     *   - `authentik_lifecycle.lifecycleiteration`
+     *   - `authentik_lifecycle.review`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovider`
      *   - `authentik_providers_microsoft_entra.microsoftentraprovidermapping`
      *   - `authentik_providers_ssf.ssfprovider`
+     *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`

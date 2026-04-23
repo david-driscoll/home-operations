@@ -61,7 +61,7 @@ export class ProviderScim extends pulumi.CustomResource {
      */
     declare public readonly dryRun: pulumi.Output<boolean | undefined>;
     declare public readonly excludeUsersServiceAccount: pulumi.Output<boolean | undefined>;
-    declare public readonly filterGroup: pulumi.Output<string | undefined>;
+    declare public readonly groupFilters: pulumi.Output<string[] | undefined>;
     declare public readonly name: pulumi.Output<string>;
     declare public readonly propertyMappings: pulumi.Output<string[] | undefined>;
     declare public readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
@@ -100,7 +100,7 @@ export class ProviderScim extends pulumi.CustomResource {
             resourceInputs["compatibilityMode"] = state?.compatibilityMode;
             resourceInputs["dryRun"] = state?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = state?.excludeUsersServiceAccount;
-            resourceInputs["filterGroup"] = state?.filterGroup;
+            resourceInputs["groupFilters"] = state?.groupFilters;
             resourceInputs["name"] = state?.name;
             resourceInputs["propertyMappings"] = state?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = state?.propertyMappingsGroups;
@@ -121,7 +121,7 @@ export class ProviderScim extends pulumi.CustomResource {
             resourceInputs["compatibilityMode"] = args?.compatibilityMode;
             resourceInputs["dryRun"] = args?.dryRun;
             resourceInputs["excludeUsersServiceAccount"] = args?.excludeUsersServiceAccount;
-            resourceInputs["filterGroup"] = args?.filterGroup;
+            resourceInputs["groupFilters"] = args?.groupFilters;
             resourceInputs["name"] = args?.name;
             resourceInputs["propertyMappings"] = args?.propertyMappings;
             resourceInputs["propertyMappingsGroups"] = args?.propertyMappingsGroups;
@@ -172,7 +172,7 @@ export interface ProviderScimState {
      */
     dryRun?: pulumi.Input<boolean>;
     excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
@@ -226,7 +226,7 @@ export interface ProviderScimArgs {
      */
     dryRun?: pulumi.Input<boolean>;
     excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
     name?: pulumi.Input<string>;
     propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;

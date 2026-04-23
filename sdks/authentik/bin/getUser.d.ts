@@ -38,3 +38,4 @@ export interface GetUserOutputArgs {
     pk?: pulumi.Input<number>;
     username?: pulumi.Input<string>;
 }
+//# sourceMappingURL=getUser.d.ts.map

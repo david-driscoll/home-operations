@@ -61,7 +61,7 @@ export class SystemSettings extends pulumi.CustomResource {
      */
     declare public readonly eventRetention: pulumi.Output<string | undefined>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     declare public readonly flags: pulumi.Output<string | undefined>;
     declare public readonly footerLinks: pulumi.Output<{[key: string]: string}[] | undefined>;
@@ -177,7 +177,7 @@ export interface SystemSettingsState {
      */
     eventRetention?: pulumi.Input<string>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     flags?: pulumi.Input<string>;
     footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
@@ -241,7 +241,7 @@ export interface SystemSettingsArgs {
      */
     eventRetention?: pulumi.Input<string>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
      */
     flags?: pulumi.Input<string>;
     footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;

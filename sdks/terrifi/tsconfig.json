@@ -1,27 +1,35 @@
 {
     "compilerOptions": {
+        // Output
         "outDir": "bin",
-        "target": "ES2020",
-        "module": "commonjs",
-        "moduleResolution": "node",
         "declaration": true,
+        "declarationMap": true,
         "sourceMap": true,
         "stripInternal": true,
-        "experimentalDecorators": true,
+        // Environment
+        "target": "ES2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "moduleDetection": "force",
+        "types": ["node"],
+        // Type Checking
+        "strict": true,
         "noFallthroughCasesInSwitch": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true
+        "noImplicitReturns": true,
+        "skipLibCheck": true
     },
     "files": [
         "clientDevice.ts",
         "clientGroup.ts",
         "config/index.ts",
         "config/vars.ts",
+        "device.ts",
         "dnsRecord.ts",
         "firewallGroup.ts",
         "firewallPolicy.ts",
         "firewallPolicyOrder.ts",
         "firewallZone.ts",
+        "getDevice.ts",
         "index.ts",
         "network.ts",
         "provider.ts",

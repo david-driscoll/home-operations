@@ -22,3 +22,4 @@ export declare const timeout: number | undefined;
  * The username for authentication (alternative to API token)
  */
 export declare const username: string | undefined;
+//# sourceMappingURL=vars.d.ts.map

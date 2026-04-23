@@ -118,3 +118,4 @@ export interface StageCaptchaArgs {
     scoreMinThreshold?: pulumi.Input<number>;
     stageCaptchaId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageCaptcha.d.ts.map

@@ -76,3 +76,4 @@ export interface StageAuthenticatorTotpArgs {
     name?: pulumi.Input<string>;
     stageAuthenticatorTotpId?: pulumi.Input<string>;
 }
+//# sourceMappingURL=stageAuthenticatorTotp.d.ts.map

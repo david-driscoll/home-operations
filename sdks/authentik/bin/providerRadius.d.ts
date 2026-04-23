@@ -79,3 +79,4 @@ export interface ProviderRadiusArgs {
     providerRadiusId?: pulumi.Input<string>;
     sharedSecret: pulumi.Input<string>;
 }
+//# sourceMappingURL=providerRadius.d.ts.map

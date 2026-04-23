@@ -79,3 +79,4 @@ export interface StageAuthenticatorStaticArgs {
      */
     tokenLength?: pulumi.Input<number>;
 }
+//# sourceMappingURL=stageAuthenticatorStatic.d.ts.map
