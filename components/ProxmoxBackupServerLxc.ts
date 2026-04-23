@@ -238,7 +238,7 @@ echo "PBS post-install complete"`;
       name,
       {
         slug: name,
-        name: interpolate`Proxmox Backup Server - ${args.host.title}`,
+        name: interpolate`Proxmox Backup Server`,
         protocolProvider: oidcProvider.id.apply((id) => parseFloat(id)),
         metaLaunchUrl: externalUrl,
         openInNewTab: true,

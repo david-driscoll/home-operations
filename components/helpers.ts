@@ -54,6 +54,7 @@ export function copyFileToRemote(
     connection: types.input.remote.ConnectionArgs;
     parent?: Resource;
     dependsOn?: Input<Input<Resource>[]>;
+    triggers?: Input<any>[];
   },
 ) {
   return output(name)
@@ -67,7 +68,7 @@ export function copyFileToRemote(
         {
           connection: args.connection,
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
-          triggers: [id, remotePath],
+          triggers: [id, remotePath, ...(args.triggers ?? [])],
         },
         mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
       );
@@ -78,7 +79,7 @@ export function copyFileToRemote(
           connection: args.connection,
           remotePath,
           source: fileAsset,
-          triggers: [id, args.remotePath],
+          triggers: [id, args.remotePath, ...(args.triggers ?? [])],
         },
         mergeOptions(
           { parent: args.parent },

@@ -69,7 +69,7 @@ export interface NodeInfo {
 export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResources): pulumi.Output<string> {
   return getDeviceOutput({ name: pulumi.interpolate`${name}.${globals.tailscaleDomain}` }, { provider: globals.tailscaleProvider })
     .apply((ip) => {
-      pulumi.log.info(`Got Tailscale IP for ${name}: ${ip.addresses.join(", ")}`);
+      pulumi.log.info(`Got Tailscale IP for ${ip.name}: ${ip.addresses.join(", ")}`);
       return ip;
     })
     .apply((z) => z.addresses[0]);
@@ -200,6 +200,7 @@ export function installTailscaleLxc(options: {
         connection: options.connection,
         parent: options.parent,
         dependsOn: options.dependsOn,
+        triggers: [restartLxc.id],
       });
 
       const copyAuthKey = new remote.Command(
