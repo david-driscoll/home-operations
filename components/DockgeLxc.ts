@@ -622,7 +622,24 @@ ${middlewareYaml}  services:
     let hasCompose = false;
     let hasInit = false;
 
-    for (const [relativeFilePath, absoluteFilePath] of files) {
+    const definitions = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "definition.yaml");
+    const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
+
+    const waitForApplications = output(definitions)
+      .apply((defs) =>
+        defs.map(async ([, absoluteFilePath]) => {
+          const content = await readFile(absoluteFilePath, "utf-8");
+          // intercept definition file and create the client id / client secret and inject that into the yaml.
+          const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
+          return this.args.host.applicationManager.createApplication(parsed);
+        }),
+      )
+      .apply((z) => output(z))
+      .apply((z) => z.map((z) => z.app));
+
+    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => a.concat(b));
+
+    for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
       const file = relativeFilePath;
       let replacedContent = replacements.reduce((p, r) => r(p), content);
@@ -678,34 +695,6 @@ ${middlewareYaml}  services:
           }
         });
       } else if (file === "definition.yaml") {
-        replacedContent.apply((content) => {
-          // intercept definition file and create the client id / client secret and inject that into the yaml.
-          const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
-          const oauth2 = parsed.spec.authentik?.oauth2;
-          if (oauth2) {
-            const clientId = new RandomString(
-              `${cluster.key}-${stackName}-client-id`,
-              {
-                length: 16,
-                upper: false,
-                special: false,
-              },
-              { parent: this, dependsOn: dependsOn },
-            );
-            const clientSecret = new RandomPassword(`${cluster.key}-${stackName}-client-secret`, { length: 32, special: true }, { parent: this, dependsOn: dependsOn });
-
-            return all([clientId.id, clientSecret.result])
-              .apply(([id, secret]) => {
-                oauth2.clientId = id;
-                oauth2.clientSecret = secret;
-                return parsed;
-              })
-              .apply((yy) => this.args.host.applicationManager.createApplication(yy));
-          } else {
-            return this.args.host.applicationManager.createApplication(parsed);
-          }
-        });
-
         continue;
       }
 

@@ -1,0 +1,78 @@
+{
+  "workspaces": [
+    {
+      "name": "stacks",
+      "path": "stacks",
+      "areas": [
+        {
+          "name": "applications",
+          "applyTo": "applications/**"
+        },
+        {
+          "name": "@home-operations/authentik",
+          "applyTo": "authentik/**"
+        },
+        {
+          "name": "gulf-of-mexico",
+          "applyTo": "gulf-of-mexico/**"
+        },
+        {
+          "name": "backups",
+          "applyTo": "backups/**"
+        },
+        {
+          "name": "home",
+          "applyTo": "home/**"
+        },
+        {
+          "name": "ocracoke",
+          "applyTo": "ocracoke/**"
+        },
+        {
+          "name": "unifi-network",
+          "applyTo": "unifi-network/**"
+        }
+      ]
+    },
+    {
+      "name": "sdks",
+      "path": "sdks",
+      "areas": [
+        {
+          "name": "@pulumi/adguard",
+          "applyTo": "adguard/**"
+        },
+        {
+          "name": "@pulumi/b2",
+          "applyTo": "b2/**"
+        },
+        {
+          "name": "@pulumi/terrifi",
+          "applyTo": "terrifi/**"
+        },
+        {
+          "name": "@pulumi/pbs",
+          "applyTo": "pbs/**"
+        },
+        {
+          "name": "@pulumi/unifi",
+          "applyTo": "unifi/**"
+        },
+        {
+          "name": "@pulumi/authentik",
+          "applyTo": "authentik/**"
+        }
+      ]
+    }
+  ],
+  "areas": [
+    {
+      "name": "components",
+      "applyTo": "components/**"
+    },
+    {
+      "name": "dynamic",
+      "applyTo": "dynamic/**"
+    }
+  ]
+}

@@ -25,3 +25,4 @@ gh = "2.90.0"
 "npm:typescript" = "5.9.3"
 node = "24.15.0"
 pulumi = "latest"
+"github:eljulians/skillfile" = { version = "v1.5.0", bin = "skillfile" }

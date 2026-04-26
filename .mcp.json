@@ -1,12 +1,3 @@
 {
-  "mcpServers": {
-    "pulumi": {
-      "command": "npx",
-      "args": [
-        "@pulumi/mcp-server",
-        "stdio"
-      ],
-      "type": "stdio"
-    }
-  }
+  "mcpServers": {}
 }
