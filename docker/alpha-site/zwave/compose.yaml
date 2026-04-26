@@ -1,7 +1,7 @@
 services:
   zwave-js-ui:
     container_name: zwave-js-ui
-    image: zwavejs/zwave-js-ui:11.16.0@sha256:06f6b940fffb3c7012dc05e3c2c93daeccb6f6573bd03987058d513a4e085eee
+    image: zwavejs/zwave-js-ui:11.16.1@sha256:7e9310af641165c85826465908b3219f88943dbf662d462beed7d4d05112b542
     restart: unless-stopped
     dns:
       - 100.100.100.100
