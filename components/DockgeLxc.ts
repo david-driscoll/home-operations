@@ -385,7 +385,7 @@ export class DockgeLxc extends ComponentResource {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
       return args.host.applicationManager.createApplication({
-        metadata: { name: "pve", namespace: clusterDefinition.key },
+        metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
         spec: {
           name: "Proxmox VE",
           category: clusterDefinition.title,
@@ -628,9 +628,10 @@ ${middlewareYaml}  services:
     const waitForApplications = output(definitions)
       .apply((defs) =>
         defs.map(async ([, absoluteFilePath]) => {
-          const content = await readFile(absoluteFilePath, "utf-8");
+          const content = output(readFile(absoluteFilePath, "utf-8"));
+          let replacedContent = replacements.reduce((p, r) => r(p), content);
           // intercept definition file and create the client id / client secret and inject that into the yaml.
-          const parsed = yaml.parse(content) as ApplicationDefinitionSchema;
+          const parsed = yaml.parse(await awaitOutput(replacedContent)) as ApplicationDefinitionSchema;
           return this.args.host.applicationManager.createApplication(parsed);
         }),
       )
