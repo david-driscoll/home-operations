@@ -460,6 +460,9 @@ function configurePbsAccess(manager: TailscaleAclManager) {
 function configureKubernetesAccess(manager: TailscaleAclManager, clusters: KubernetesCluster[]) {
   const testData = manager.testData;
   const clusterTags = clusters.map((z) => z.tag);
+  const rules = Object.fromEntries(
+    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const)),
+  );
 
   manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive]);
   manager.setNodeAttr({ target: [tag.operator], attr: ["funnel"] });
@@ -476,6 +479,8 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   for (const cluster of clusters) {
     manager.setRoute(cluster.serviceNetwork, [cluster.tag]);
     manager.setRoute(cluster.clusterNetwork, [cluster.tag]);
+    manager.setGrant({ src: [cluster.tag], dst: [tag.dockge, tag.proxmox, tag.backups], ip: [...ports.ssh] }, { accept: [cluster.tag], deny: testData.knownNormalUsers });
+    manager.setSshRule({ src: [cluster.tag], dst: [tag.dockge, tag.proxmox, tag.backups], users: ["root"], action: "accept" }, rules);
 
     manager.setGrant(
       {
@@ -521,13 +526,13 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   manager.setGrant({ src: [tag.management], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.management], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
-  manager.setGrant({ src: [tag.management], dst: [tag.dockge, tag.proxmox], ip: [...ports.ssh, ...ports.nut, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
+  manager.setGrant(
+    { src: [tag.management], dst: [tag.dockge, tag.proxmox, tag.backups], ip: [...ports.ssh, ...ports.nut, ...ports.nfs] },
+    { accept: [tag.management], deny: testData.knownNormalUsers },
+  );
   manager.setGrant({ src: [tag.observability], dst: [tag.observability], ip: ports.observability }, { accept: [tag.observability], deny: testData.knownNormalUsers });
 
-  const rules = Object.fromEntries(
-    testData.knownNormalUsers.map((user) => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map((z) => [z, { check: [`root`] }] as const)),
-  );
-  manager.setSshRule({ src: [tag.management], dst: [tag.dockge, tag.proxmox], users: ["root"], action: "accept" }, rules);
+  manager.setSshRule({ src: [tag.management], dst: [tag.dockge, tag.proxmox, tag.backups], users: ["root"], action: "accept" }, rules);
 }
 
 function createGroupGrants(manager: TailscaleAclManager) {
