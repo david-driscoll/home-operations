@@ -26,3 +26,4 @@ gh = "2.92.0"
 node = "24.15.0"
 pulumi = "latest"
 "github:eljulians/skillfile" = { version = "v1.5.0", bin = "skillfile" }
+dotnet = "10.0.203"
