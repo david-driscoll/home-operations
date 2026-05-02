@@ -9,5 +9,6 @@
       "text": "Focus on repo conventions and maintainability."
     }
   ],
-  "chat.promptFiles": true
+  "chat.promptFiles": true,
+  "snyk.advanced.autoSelectOrganization": true
 }
