@@ -41,6 +41,7 @@ export interface DockgeLxcArgs {
   cluster: Input<ClusterDefinition>;
   credential: Input<OPClientItem>;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
+  legacyTun?: boolean;
   sftpKey: Input<OPClientItem>;
   registerTailscaleService(service: string): void;
 }
@@ -141,6 +142,7 @@ export class DockgeLxc extends ComponentResource {
       ipAddress: this.tailscaleIpAddress,
       globals: args.globals,
       installTailscale: args.createDockerLxc ?? false,
+      legacyTun: args.legacyTun,
       args: {
         ...args.tailscaleArgs,
         advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),

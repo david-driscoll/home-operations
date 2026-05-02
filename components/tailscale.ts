@@ -139,6 +139,10 @@ export function installTailscaleLxc(options: {
   dependsOn?: pulumi.Resource[];
   vmId: pulumi.Input<number>;
   installTailscale: boolean;
+  // Some ARM64 Proxmox builds (e.g. jiangcuo) have mknod stubbed out, making
+  // the pct devN passthrough mechanism unusable. Set legacyTun to fall back to
+  // raw lxc.mount.entry + lxc.cgroup2.devices.allow instead of --dev2.
+  legacyTun?: boolean;
   args: {
     advertiseTags: string[];
     acceptDns?: pulumi.Input<boolean>;
@@ -157,11 +161,15 @@ export function installTailscaleLxc(options: {
       return pulumi.unknown as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
+    const tunCreate = options.legacyTun
+      ? pulumi.interpolate`grep -q 'lxc.mount.entry: /dev/net/tun' /etc/pve/lxc/${options.vmId}.conf || echo 'lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' >> /etc/pve/lxc/${options.vmId}.conf; grep -q 'lxc.cgroup2.devices.allow: c 10:200 rwm' /etc/pve/lxc/${options.vmId}.conf || echo 'lxc.cgroup2.devices.allow: c 10:200 rwm' >> /etc/pve/lxc/${options.vmId}.conf`
+      : pulumi.interpolate`pct set ${options.vmId} --dev2 /dev/net/tun`;
+
     const lxcConfig = new remote.Command(
       `${name}-lxc-tun`,
       {
         connection: options.connection,
-        create: pulumi.interpolate`pct set ${options.vmId} --dev2 /dev/net/tun`,
+        create: tunCreate,
       },
       { parent: options.parent, dependsOn: options.dependsOn },
     );
@@ -176,6 +184,7 @@ export function installTailscaleLxc(options: {
         {
           connection: options.connection,
           create: pulumi.interpolate`pct exec ${options.vmId} -- sh -lc 'curl -fsSL https://tailscale.com/install.sh | sh'`,
+          triggers: [lxcConfig.create],
         },
         { parent: options.parent, dependsOn: [lxcConfig] },
       );
@@ -187,7 +196,7 @@ export function installTailscaleLxc(options: {
           connection: options.connection,
           create: pulumi.interpolate`pct reboot ${options.vmId}`,
           update: "echo 0",
-          triggers: [installTailscale.create, lxcConfig.create],
+          triggers: [lxcConfig.create, installTailscale.create],
         },
         { parent: options.parent, dependsOn: [installTailscale] },
       );
@@ -200,7 +209,7 @@ export function installTailscaleLxc(options: {
         connection: options.connection,
         parent: options.parent,
         dependsOn: options.dependsOn,
-        triggers: [restartLxc.id],
+        triggers: [lxcConfig.create, restartLxc.create],
       });
 
       const copyAuthKey = new remote.Command(
@@ -208,7 +217,7 @@ export function installTailscaleLxc(options: {
         {
           connection: options.connection,
           create: pulumi.interpolate`pct push ${options.vmId} /tmp/authkey /tmp/authkey`,
-          triggers: [authKey.id],
+          triggers: [lxcConfig.create, authKey.id],
         },
         { parent: options.parent, dependsOn: [authKey, ...depends] },
       );
@@ -220,6 +229,7 @@ export function installTailscaleLxc(options: {
         {
           connection: options.connection,
           create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/authkey ${tailscaleArgs} --reset`,
+          triggers: [lxcConfig.create, copyAuthKey.id],
         },
         { parent: options.parent, dependsOn: [...depends] },
       );
@@ -232,7 +242,7 @@ export function installTailscaleLxc(options: {
       {
         connection: options.connection,
         create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale set ${options.args.relayServerPort ? pulumi.interpolate`--relay-server-port=${options.args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update`,
-        triggers: [],
+        triggers: [lxcConfig.create],
       },
       { parent: options.parent, dependsOn: [...depends] },
     );

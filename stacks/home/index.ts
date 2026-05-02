@@ -152,6 +152,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   registerTailscaleService,
+  legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
 });
 
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
