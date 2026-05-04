@@ -365,7 +365,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     return pulumi
       .output(mappings)
       .apply((maps) => pulumi.all([this.authentik.scopeMappings, maps]))
-      .apply(([mappings, scopeNames]) => scopeNames.map((scopeName) => mappings[scopeName.replace(/\//g, "~1")]));
+      .apply(([mappings, scopeNames]) => scopeNames.map((scopeName) => mappings[scopeName.replace(/\//g, "~1")]).filter((mapping): mapping is string => !!mapping));
   }
 
   private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
