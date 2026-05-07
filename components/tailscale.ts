@@ -357,11 +357,10 @@ export function createPeerRelayRule(fwdIp: pulumi.Input<string>, globals: Global
   return pulumi.output(fwdIp).apply((ip) => {
     const ipDash = ip.replace(/\./g, "-");
     const relayPort = new random.RandomInteger(`tailscale-relay-port-${ipDash}`, { min: 40000, max: 60000 });
-    const forwardPort = new random.RandomInteger(`tailscale-unifi-port-${ipDash}`, { min: 40000, max: 60000 });
     const portForward = new unifi.port.Forward(
       `tailscale-port-forward-${ipDash}`,
       {
-        dstPort: forwardPort.result.apply((p) => p.toString()),
+        dstPort: relayPort.result.apply((p) => p.toString()),
         portForwardInterface: "wan",
         protocol: "tcp_udp",
         srcIp: "any",
