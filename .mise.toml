@@ -1,3 +1,6 @@
+[settings]
+experimental = true
+
 [env]
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 AWS_ACCESS_KEY_ID = "op://Eris/minio root user/username"
