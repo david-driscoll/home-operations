@@ -44,20 +44,25 @@ export class OPClient {
     const vaults = await this.client.listVaults();
     const personalVault = vaults.find((v) => v.name === vaultName);
     if (!personalVault) {
-      throw new Error("No vault found in 1Password Connect");
+      throw new Error(`No vault found in 1Password Connect (value: ${vaultName})`);
     }
     return personalVault.id!;
   }
 
   public async createItem(item: OPClientItemInput) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(
-      await this.client.createItem(vaultUuid, {
-        ...this.mapToFullItem(item),
-        vault: { id: vaultUuid },
-      } as any),
-      undefined
-    );
+    try {
+      return this.mapItem(
+        await this.client.createItem(vaultUuid, {
+          ...this.mapToFullItem(item),
+          vault: { id: vaultUuid },
+        } as any),
+        undefined,
+      );
+    } catch (e) {
+      console.error(`Error creating item (value: ${item.title})`, e);
+      throw e;
+    }
   }
 
   public async updateItem(id: string, item: OPClientItemInput) {
@@ -70,19 +75,29 @@ export class OPClient {
       } as any);
       return this.mapItem(result, id);
     } catch (e) {
-      console.error("Error updating item", e);
+      console.error(`Error updating item (value: ${id})`, e);
       throw e;
     }
   }
 
   public async deleteItem(id: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.client.deleteItem(vaultUuid, id);
+    try {
+      return this.client.deleteItem(vaultUuid, id);
+    } catch (e) {
+      console.error(`Error deleting item (value: ${id})`, e);
+      throw e;
+    }
   }
 
   public async getItemById(itemId: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    return this.mapItem(await this.client.getItemById(vaultUuid, itemId), itemId);
+    try {
+      return this.mapItem(await this.client.getItemById(vaultUuid, itemId), itemId);
+    } catch (e) {
+      console.error(`Error getting item by ID (value: ${itemId})`, e);
+      throw e;
+    }
   }
 
   public async getItemByTitle(itemTitle: string) {
@@ -90,21 +105,31 @@ export class OPClient {
     try {
       return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemTitle), undefined);
     } catch (e) {
-      return this.mapItem(await this.client.getItemById(vaultUuid, itemTitle), undefined);
+      return this.getItemById(itemTitle);
     }
   }
 
   public async listItemsByTitleContains(contains: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    const items = await this.client.listItemsByTitleContains(vaultUuid, contains);
-    return items.map((item) => this.mapItem(item, item.id));
+    try {
+      const items = await this.client.listItemsByTitleContains(vaultUuid, contains);
+      return items.map((item) => this.mapItem(item, item.id));
+    } catch (e) {
+      console.error(`Error listing items by title contains (value: ${contains})`, e);
+      throw e;
+    }
   }
 
   public async findItemsByTag(tag: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
-    const allItems = await this.client.listItems(vaultUuid);
-    const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
-    return filtered.map((item) => this.mapItem(item, item.id));
+    try {
+      const allItems = await this.client.listItems(vaultUuid);
+      const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
+      return filtered.map((item) => this.mapItem(item, item.id));
+    } catch (e) {
+      console.error(`Error finding items by tag (value: ${tag})`, e);
+      throw e;
+    }
   }
 
   public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
@@ -120,7 +145,7 @@ export class OPClient {
         ...field,
         section: { id: sectionKey },
         label: fieldKey,
-      }))
+      })),
     );
 
     const files = Object.entries(item.files ?? {}).map(([fileKey, file]) => ({
@@ -135,7 +160,7 @@ export class OPClient {
         ...file,
         section: { id: sectionKey },
         name: fileKey,
-      }))
+      })),
     );
 
     const result = removeUndefinedProperties({
@@ -154,7 +179,7 @@ export class OPClient {
 
   public mapItem(
     item: Omit<FullItem, "vault" | "extractOTP">,
-    id: string | undefined
+    id: string | undefined,
   ): {
     id: string;
     title: string;
