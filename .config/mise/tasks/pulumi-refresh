@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#MISE description="Update Pulumi stacks"
+#MISE description="Refresh Pulumi stacks"
 
 for dir in stacks/*/; do
   echo "Running in $(basename "$dir")..."
   pushd "stacks/$(basename "$dir")" > /dev/null || continue
-  mise exec -- npm run cancel && mise exec -- npm run up || echo "Failed in $dir"
+  mise exec -- npm run cancel && mise exec -- npm run refresh || echo "Failed in $dir"
   popd > /dev/null || continue
 done
