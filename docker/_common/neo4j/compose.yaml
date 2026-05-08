@@ -50,6 +50,87 @@ services:
     networks:
       - dockge_default
 
+  neo4j-cypher:
+    container_name: neo4j-cypher
+    image: mcp/neo4j-cypher:latest
+    restart: unless-stopped
+    depends_on:
+      - neo4j
+    environment:
+      TZ: ${TIMEZONE}
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_TRANSPORT: "http"
+      NEO4J_MCP_SERVER_HOST: "0.0.0.0"
+      NEO4J_MCP_SERVER_PORT: "8000"
+      NEO4J_MCP_SERVER_PATH: "/mcp/cypher"
+      NEO4J_MCP_SERVER_ALLOWED_HOSTS: "localhost,127.0.0.1"
+    labels:
+      traefik.enable: true
+      traefik.http.routers.${APP}-mcp-cypher.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/cypher`)
+      traefik.http.routers.${APP}-mcp-cypher.entrypoints: websecure
+      traefik.http.routers.${APP}-mcp-cypher.tls.certresolver: le
+      traefik.http.routers.${APP}-mcp-cypher.middlewares: ${APP}-mcp-cypher-strip
+      # traefik.http.middlewares.${APP}-mcp-cypher-strip.stripprefix.prefixes: /mcp/cypher
+      traefik.http.services.${APP}-mcp-cypher.loadbalancer.server.port: 8000
+    networks:
+      - dockge_default
+
+  neo4j-data-modeling:
+    container_name: neo4j-data-modeling
+    image: mcp/neo4j-data-modeling:latest
+    restart: unless-stopped
+    depends_on:
+      - neo4j
+    environment:
+      TZ: ${TIMEZONE}
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_TRANSPORT: "http"
+      NEO4J_MCP_SERVER_HOST: "0.0.0.0"
+      NEO4J_MCP_SERVER_PORT: "8001"
+      NEO4J_MCP_SERVER_PATH: "/mcp/data-modeling"
+      NEO4J_MCP_SERVER_ALLOWED_HOSTS: "localhost,127.0.0.1"
+    labels:
+      traefik.enable: true
+      traefik.http.routers.${APP}-mcp-data-modeling.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/data-modeling`)
+      traefik.http.routers.${APP}-mcp-data-modeling.entrypoints: websecure
+      traefik.http.routers.${APP}-mcp-data-modeling.tls.certresolver: le
+      traefik.http.routers.${APP}-mcp-data-modeling.middlewares: ${APP}-mcp-data-modeling-strip
+      # traefik.http.middlewares.${APP}-mcp-data-modeling-strip.stripprefix.prefixes: /mcp/data-modeling
+      traefik.http.services.${APP}-mcp-data-modeling.loadbalancer.server.port: 8001
+    networks:
+      - dockge_default
+
+  neo4j-memory:
+    container_name: neo4j-memory
+    image: mcp/neo4j-memory:latest
+    restart: unless-stopped
+    depends_on:
+      - neo4j
+    environment:
+      TZ: ${TIMEZONE}
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      NEO4J_TRANSPORT: "http"
+      NEO4J_MCP_SERVER_HOST: "0.0.0.0"
+      NEO4J_MCP_SERVER_PORT: "8002"
+      NEO4J_MCP_SERVER_PATH: "/mcp/memory"
+      NEO4J_MCP_SERVER_ALLOWED_HOSTS: "localhost,127.0.0.1"
+    labels:
+      traefik.enable: true
+      traefik.http.routers.${APP}-mcp-memory.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/memory`)
+      traefik.http.routers.${APP}-mcp-memory.entrypoints: websecure
+      traefik.http.routers.${APP}-mcp-memory.tls.certresolver: le
+      traefik.http.routers.${APP}-mcp-memory.middlewares: ${APP}-mcp-memory-strip
+      # traefik.http.middlewares.${APP}-mcp-memory-strip.stripprefix.prefixes: /mcp/memory
+      traefik.http.services.${APP}-mcp-memory.loadbalancer.server.port: 8002
+    networks:
+      - dockge_default
+
 networks:
   dockge_default:
     external: true
