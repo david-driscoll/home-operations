@@ -11,7 +11,7 @@ export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly unifi: unifi.dns.Record;
   public readonly cloudflare: cloudflare.DnsRecord;
-  public readonly adguard: adguard.Rewrite;
+  // public readonly adguard: adguard.Rewrite;
 
   constructor(
     name: string,
@@ -63,18 +63,18 @@ export class StandardDns extends ComponentResource {
       },
     );
 
-    this.adguard = new adguard.Rewrite(
-      `${name}-adguard`,
-      {
-        domain: args.hostname,
-        answer: record,
-      },
-      {
-        parent: this,
-        provider: globals.adguardProvider,
-        deleteBeforeReplace: true,
-      },
-    );
+    // this.adguard = new adguard.Rewrite(
+    //   `${name}-adguard`,
+    //   {
+    //     domain: args.hostname,
+    //     answer: record,
+    //   },
+    //   {
+    //     parent: this,
+    //     provider: globals.adguardProvider,
+    //     deleteBeforeReplace: true,
+    //   },
+    // );
     this.hostname = output(args.hostname);
     addGatusDnsRecord(name, args);
   }
