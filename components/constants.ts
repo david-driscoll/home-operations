@@ -30,7 +30,7 @@ const dnsServers = {
     internal: true,
   },
   "Stargate Command": {
-    ips: ["10.10.209.201"],
+    ips: ["10.10.209.202"],
     uptime: true,
     use: true,
     internal: true,
