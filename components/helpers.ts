@@ -7,7 +7,7 @@ import { remote, types } from "@pulumi/command";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
-import { MD5 } from 'crypto-js'
+import { hash } from 'node:crypto'
 import { dirname, join } from "path";
 import { unique } from "moderndash";
 import { tmpdir } from "os";
@@ -58,7 +58,7 @@ export function copyFileToRemote(
   },
 ) {
   return output(name)
-    .apply((name) => output({ name, id: output(args.content).apply((c) => MD5(c).toString()) }))
+    .apply((name) => output({ name, id: output(args.content).apply((c) => hash("md5", c, 'hex')), }))
     .apply(({ name, id }) => {
       const tempFilePath = writeTempFile(name, args.content);
       const remotePath = output(args.remotePath);
