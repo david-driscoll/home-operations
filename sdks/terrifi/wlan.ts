@@ -33,6 +33,10 @@ export class Wlan extends pulumi.CustomResource {
     }
 
     /**
+     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     */
+    declare public readonly application: pulumi.Output<string>;
+    /**
      * Whether the WLAN is enabled. Default: `true`.
      */
     declare public readonly enabled: pulumi.Output<boolean>;
@@ -48,6 +52,10 @@ export class Wlan extends pulumi.CustomResource {
      * The ID of the network to associate with this WLAN.
      */
     declare public readonly networkId: pulumi.Output<string>;
+    /**
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     */
+    declare public readonly optimizeIotConnectivity: pulumi.Output<boolean>;
     /**
      * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
      */
@@ -90,10 +98,12 @@ export class Wlan extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as WlanState | undefined;
+            resourceInputs["application"] = state?.application;
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["hideSsid"] = state?.hideSsid;
             resourceInputs["name"] = state?.name;
             resourceInputs["networkId"] = state?.networkId;
+            resourceInputs["optimizeIotConnectivity"] = state?.optimizeIotConnectivity;
             resourceInputs["passphrase"] = state?.passphrase;
             resourceInputs["security"] = state?.security;
             resourceInputs["site"] = state?.site;
@@ -106,10 +116,12 @@ export class Wlan extends pulumi.CustomResource {
             if (args?.networkId === undefined && !opts.urn) {
                 throw new Error("Missing required property 'networkId'");
             }
+            resourceInputs["application"] = args?.application;
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["hideSsid"] = args?.hideSsid;
             resourceInputs["name"] = args?.name;
             resourceInputs["networkId"] = args?.networkId;
+            resourceInputs["optimizeIotConnectivity"] = args?.optimizeIotConnectivity;
             resourceInputs["passphrase"] = args?.passphrase ? pulumi.secret(args.passphrase) : undefined;
             resourceInputs["security"] = args?.security;
             resourceInputs["site"] = args?.site;
@@ -130,6 +142,10 @@ export class Wlan extends pulumi.CustomResource {
  */
 export interface WlanState {
     /**
+     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     */
+    application?: pulumi.Input<string>;
+    /**
      * Whether the WLAN is enabled. Default: `true`.
      */
     enabled?: pulumi.Input<boolean>;
@@ -145,6 +161,10 @@ export interface WlanState {
      * The ID of the network to associate with this WLAN.
      */
     networkId?: pulumi.Input<string>;
+    /**
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     */
+    optimizeIotConnectivity?: pulumi.Input<boolean>;
     /**
      * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
      */
@@ -180,6 +200,10 @@ export interface WlanState {
  */
 export interface WlanArgs {
     /**
+     * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
+     */
+    application?: pulumi.Input<string>;
+    /**
      * Whether the WLAN is enabled. Default: `true`.
      */
     enabled?: pulumi.Input<boolean>;
@@ -195,6 +219,10 @@ export interface WlanArgs {
      * The ID of the network to associate with this WLAN.
      */
     networkId: pulumi.Input<string>;
+    /**
+     * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
+     */
+    optimizeIotConnectivity?: pulumi.Input<boolean>;
     /**
      * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
      */

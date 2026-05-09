@@ -1,6 +1,6 @@
 {
     "name": "@pulumi/terrifi",
-    "version": "0.8.0",
+    "version": "0.9.2",
     "description": "A Pulumi provider dynamically bridged from terrifi.",
     "repository": "https://github.com/alexklibisz/terraform-provider-terrifi",
     "main": "bin/index.js",
@@ -20,8 +20,8 @@
         "version": "0.14.0",
         "parameterization": {
             "name": "terrifi",
-            "version": "0.8.0",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC44LjAifX0="
+            "version": "0.9.2",
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2FsZXhrbGliaXN6L3RlcnJpZmkiLCJ2ZXJzaW9uIjoiMC45LjIifX0="
         }
     }
 }
