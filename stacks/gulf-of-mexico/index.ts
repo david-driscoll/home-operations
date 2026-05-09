@@ -33,33 +33,33 @@ const host = new ProxmoxHost("luna", {
 
 const tailscaleServices: string[] = [];
 
-const dockgeRuntime = new DockgeLxc("luna-dockge", {
-  globals,
-  credential: dockgeCredential,
-  host: host,
-  vmId: 400,
-  cluster: cluster,
-  tailscaleArgs: { acceptRoutes: false },
-  sftpKey: sftpClientKey,
-  createDockerLxc: true,
-  registerTailscaleService(service) {
-    tailscaleServices.push(`svc:${service}`);
-  },
-});
-dockgeRuntime.addHostMount("/data");
-dockgeRuntime.deployStacks({ dependsOn: [] });
+// const dockgeRuntime = new DockgeLxc("luna-dockge", {
+//   globals,
+//   credential: dockgeCredential,
+//   host: host,
+//   vmId: 400,
+//   cluster: cluster,
+//   tailscaleArgs: { acceptRoutes: false },
+//   sftpKey: sftpClientKey,
+//   createDockerLxc: true,
+//   registerTailscaleService(service) {
+//     tailscaleServices.push(`svc:${service}`);
+//   },
+// });
+// dockgeRuntime.addHostMount("/data");
+// dockgeRuntime.deployStacks({ dependsOn: [] });
 
-const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
-  globals,
-  outputs,
-  host: host,
-  vmId: 401,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: cluster,
-  dockge: dockgeRuntime,
-  dependsOn: [],
-});
-pbs.addHostMount("/data");
+// const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
+//   globals,
+//   outputs,
+//   host: host,
+//   vmId: 401,
+//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+//   cluster: cluster,
+//   dockge: dockgeRuntime,
+//   dependsOn: [],
+// });
+// pbs.addHostMount("/data");
 
 host.addUptimeGatus();
 
@@ -70,17 +70,17 @@ exportNodeStateToOnePassword(
       ip: host.tailscaleIpAddress,
       nodeType: "proxmox",
     },
-    {
-      name: dockgeRuntime.tailscaleName,
-      ip: dockgeRuntime.tailscaleIpAddress,
-      internalIp: dockgeRuntime.ipAddress,
-      nodeType: "dockge",
-    },
-    {
-      name: pbs.tailscaleName,
-      ip: pbs.tailscaleIpAddress,
-      nodeType: "pbs",
-    },
+    // {
+    //   name: dockgeRuntime.tailscaleName,
+    //   ip: dockgeRuntime.tailscaleIpAddress,
+    //   internalIp: dockgeRuntime.ipAddress,
+    //   nodeType: "dockge",
+    // },
+    // {
+    //   name: pbs.tailscaleName,
+    //   ip: pbs.tailscaleIpAddress,
+    //   nodeType: "pbs",
+    // },
   ],
   tailscaleServices,
   { parent: host },
@@ -88,6 +88,6 @@ exportNodeStateToOnePassword(
 
 export const luna = {
   proxmox: getProxmoxProperties(host),
-  dockge: getDockageProperties(dockgeRuntime),
+  // dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
