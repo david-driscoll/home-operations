@@ -4,7 +4,6 @@ import * as pk8s from "@pulumi/kubernetes";
 import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
 import { GlobalResources, KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
-import { base64encodeOutput } from "@pulumi/std";
 import * as kubernetes from "@kubernetes/client-node";
 import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
@@ -369,7 +368,7 @@ function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapIt
   "clusters": [
     {
       "cluster": {
-        "certificate-authority-data": "${credential.fields.certificate.apply((z) => base64encodeOutput({ input: z.value! }).result)}",
+        "certificate-authority-data": "${credential.fields.certificate.apply((z) => Buffer.from(z.value!, "utf8").toString("base64"))}",
         "server": "https://${credential.fields.cluster_api.value}:6443"
       },
       "name": "${credential.fields.cluster.value}"
