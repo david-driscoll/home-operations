@@ -52,7 +52,7 @@ services:
 
   neo4j-cypher:
     container_name: neo4j-cypher
-    image: mcp/neo4j-cypher:latest
+    image: mcp/neo4j-cypher:latest@sha256:b252997d16d37633a5a1b30e21ac0bf368b1c64e5895e4005313c84d77a05310
     restart: unless-stopped
     depends_on:
       - neo4j
@@ -79,7 +79,7 @@ services:
 
   neo4j-data-modeling:
     container_name: neo4j-data-modeling
-    image: mcp/neo4j-data-modeling:latest
+    image: mcp/neo4j-data-modeling:latest@sha256:3c72de00df50d42a0950615755f596d75ebcf970afb82b9046d7c931ca920265
     restart: unless-stopped
     depends_on:
       - neo4j
@@ -106,7 +106,7 @@ services:
 
   neo4j-memory:
     container_name: neo4j-memory
-    image: mcp/neo4j-memory:latest
+    image: mcp/neo4j-memory:latest@sha256:0f04105a1006ea5305521c0ae2b74509b23df5f90459fdd77f9214c5ccd7d2d6
     restart: unless-stopped
     depends_on:
       - neo4j
