@@ -24,6 +24,7 @@
     "sdks/*"
   ],
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "@types/ssh2": "^1.15.5",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
@@ -40,6 +41,7 @@
     "@pulumi/unifi": "file:sdks/unifi",
     "@pulumiverse/purrl": "^0.6.2",
     "confbox": "^0.2.2",
+    "crypto-js": "^4.2.0",
     "diff": "^9.0.0",
     "jsonc-morph": "^0.3.0",
     "jsonc-parser": "^3.3.1",
