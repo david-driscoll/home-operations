@@ -93,7 +93,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 mode: "ALWAYS",
               },
             },
-            { provider: globals.unifiFirewallProvider },
+            { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
           );
         }
       }
@@ -123,7 +123,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 mode: "ALWAYS",
               },
             },
-            { provider: globals.unifiFirewallProvider },
+            { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
           );
         }
       }
