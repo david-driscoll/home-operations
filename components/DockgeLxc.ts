@@ -554,12 +554,12 @@ ${middlewareYaml}  services:
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       })
       .apply((stacks) => {
-        this.createOutpost();
+        this.createOutpost(stacks);
         return stacks;
       });
   }
 
-  private async createOutpost() {
+  private async createOutpost(depends: Input<Resource[]> = []) {
     const applicationManager = this.args.host.applicationManager;
 
     const outpost = new authentik.Outpost(
@@ -581,7 +581,7 @@ ${middlewareYaml}  services:
         ),
         protocolProviders: applicationManager.proxyProviders,
       },
-      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
+      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true, dependsOn: depends },
     );
 
     const op = new OPClient();
