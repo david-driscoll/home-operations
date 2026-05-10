@@ -40,9 +40,9 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         if (ipDetails.domain !== "att.com") continue;
         if (ipDetails.country_code !== "US") continue;
 
-        if (ipDetails.ip_version === "4") {
+        if (ipDetails.ip_version === "4" && ipv4IpsToDrop.findIndex((i) => i.ip === ip && i.port === port) === -1) {
           ipv4IpsToDrop.push({ ip, port });
-        } else if (ipDetails.ip_version === "6") {
+        } else if (ipDetails.ip_version === "6" && ipv6IpsToDrop.findIndex((i) => i.ip === ip && i.port === port) === -1) {
           ipv6IpsToDrop.push({ ip, port });
         }
       }
