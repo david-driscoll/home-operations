@@ -1,0 +1,25 @@
+services:
+  traefik:
+    container_name: speedtest
+    image: ghcr.io/librespeed/speedtest:latest
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    labels:
+      # Enable Traefik for itself
+      traefik.enable: true
+      # Dashboard configuration
+      traefik.http.routers.librespeed.rule: Host(`librespeed.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.librespeed.entrypoints: websecure
+      traefik.http.routers.librespeed.service: librespeed
+      traefik.http.routers.librespeed.tls.certresolver: le
+
+      traefik.http.services.librespeed.loadbalancer.server.port: 8080
+    networks:
+      - dockge_default
+x-dockge:
+  urls:
+    - https://librespeed.${CLUSTER_DOMAIN}
+networks:
+  dockge_default:
+    external: true
