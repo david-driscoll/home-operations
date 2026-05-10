@@ -71,7 +71,7 @@ services:
       traefik.http.routers.${APP}-mcp-cypher.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/cypher`)
       traefik.http.routers.${APP}-mcp-cypher.entrypoints: websecure
       traefik.http.routers.${APP}-mcp-cypher.tls.certresolver: le
-      traefik.http.routers.${APP}-mcp-cypher.middlewares: ${APP}-mcp-cypher-strip
+      # traefik.http.routers.${APP}-mcp-cypher.middlewares: ${APP}-mcp-cypher-strip
       # traefik.http.middlewares.${APP}-mcp-cypher-strip.stripprefix.prefixes: /mcp/cypher
       traefik.http.services.${APP}-mcp-cypher.loadbalancer.server.port: 8000
     networks:
