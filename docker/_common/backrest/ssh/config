@@ -1,4 +1,4 @@
-Host celestia
-    HostName celestia.${searchDomain}
+Host ${CLUSTER_KEY}
+    HostName ${CLUSTER_KEY}.${searchDomain}
     IdentityFile /root/.ssh/id_ed25519
     Port 2022

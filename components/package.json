@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@1password/connect": "^1.4.2",
+    "@goauthentik/api": "^2026.2.3-rc1",
     "@pulumi/cloudflare": "^6.10.0",
     "@pulumi/minio": "^0.16.6",
     "@pulumi/random": "^4.18.4",

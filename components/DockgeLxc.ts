@@ -25,6 +25,7 @@ import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { runCommunityScriptLxc } from "./lxc.ts";
 import { Tailscale } from "@components/constants.ts";
 import * as authentik from "@pulumi/authentik";
+import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
@@ -558,9 +559,10 @@ ${middlewareYaml}  services:
       });
   }
 
-  private createOutpost() {
+  private async createOutpost() {
     const applicationManager = this.args.host.applicationManager;
-    return new authentik.Outpost(
+
+    const outpost = new authentik.Outpost(
       this.args.host.name,
       {
         type: "proxy",
@@ -582,6 +584,28 @@ ${middlewareYaml}  services:
       },
       { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
     );
+
+    const op = new OPClient();
+    const authentikToken = await op.getItemByTitle("Authentik Token");
+    const clientConfig = new authentikApi.Configuration({
+      accessToken: authentikToken.fields.credential.value,
+      basePath: `${authentikToken.fields.url.value}/api/v3/`,
+    });
+
+    const authentikCoreApi = new authentikApi.CoreApi(clientConfig);
+    const outpostId = await awaitOutput(outpost.id);
+    const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
+    const clusterKey = await awaitOutput(this.cluster.key);
+
+    const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
+    const environmentConfig = copyFileToRemote(`${clusterKey}-authentik-outpost-token`, {
+      connection: {
+        host: this.tailscaleHostname,
+        user: "root",
+      },
+      remotePath: `/opt/stacks/authentik-outpost/.env-token`,
+      content: envValues,
+    });
   }
 
   private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
