@@ -90,7 +90,9 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
 await DownloadRclone();
 
 var builder = Host.CreateApplicationBuilder(args);
-await foreach (var grouping in GetRCloneJobs().GroupBy(z => z.Schedule))
+var jobs = GetRCloneJobs().GroupBy(z => z.Schedule);
+var hasJob = await jobs.AnyAsync();
+await foreach (var grouping in jobs)
 {
     var dele = CreateJobDelegate(grouping);
     // instant run for now.
@@ -111,7 +113,14 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
 }
 
 var app = builder.Build();
-await app.UseNCronJobAsync();
+if (hasJob)
+{
+    await app.UseNCronJobAsync();
+}
+else
+{
+    Console.WriteLine("No backup jobs found.");
+}
 app.Run();
 
 static async Task DownloadRclone()
