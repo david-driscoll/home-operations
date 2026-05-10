@@ -15,7 +15,7 @@ AUTHENTIK_URL = "op://Eris/Authentik Token/url"
 # PULUMI_DEBUG_PROMISE_LEAKS = "1"
 
 [tools]
-python = "3.14.4"
+python = "3.14.5"
 kubectl = "1.36.0"
 powershell-core = "7.6.1"
 1password-cli = "2.34.0"
