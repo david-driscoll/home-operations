@@ -220,19 +220,18 @@ export function installTailscaleLxc(options: {
       // Step 2: Copy auth key to container
       const authKey = copyFileToRemote(`${name}-authkey`, {
         content: tailscaleAuthkey.key,
-        remotePath: "/tmp/authkey",
+        remotePath: pulumi.interpolate`/tmp/${name}-authkey`,
         connection: options.connection,
         parent: options.parent,
         dependsOn: [...depends],
         triggers: [lxcConfig.create, restartLxc.create],
       });
-      depends.push(authKey);
 
       const copyAuthKey = new remote.Command(
         `${name}-copy-authkey`,
         {
           connection: options.connection,
-          create: pulumi.interpolate`pct push ${options.vmId} /tmp/authkey /tmp/authkey`,
+          create: pulumi.interpolate`pct push ${options.vmId} /tmp/${name}-authkey /tmp/${name}-authkey`,
           triggers: [lxcConfig.create, authKey.id],
         },
         { parent: options.parent, dependsOn: [...depends] },
@@ -244,7 +243,7 @@ export function installTailscaleLxc(options: {
         `${name}-tailscale-up-lxc`,
         {
           connection: options.connection,
-          create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/authkey ${tailscaleArgs} --reset`,
+          create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/${name}-authkey ${tailscaleArgs} --reset`,
           triggers: [lxcConfig.create, copyAuthKey.id],
         },
         { parent: options.parent, dependsOn: [...depends] },
