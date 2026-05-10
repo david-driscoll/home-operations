@@ -21,7 +21,6 @@ export interface TruenasVmArgs {
   globals: GlobalResources;
   host: ProxmoxHost;
   ipAddress: pulumi.Input<TailscaleIp>;
-  macAddress: string;
   tailscaleIpAddress: TailscaleIp;
 }
 
@@ -51,7 +50,6 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly ipAddress: pulumi.Output<TailscaleIp>;
   public readonly tailscaleIpAddress: TailscaleIp;
   public readonly tailscaleName: pulumi.Output<string>;
-  public readonly macAddress: string;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
@@ -63,7 +61,6 @@ export class TruenasVm extends pulumi.ComponentResource {
     this.ipAddress = pulumi.output(args.ipAddress);
     this.tailscaleIpAddress = args.tailscaleIpAddress;
     this.tailscaleName = pulumi.interpolate`${name}`;
-    this.macAddress = args.macAddress;
     this.credential = pulumi.output(args.credential);
     const credentialItem = this.credential.apply(async (title) => opClient.getItemByTitle(title));
     this.globals = args.globals;

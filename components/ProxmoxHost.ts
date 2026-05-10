@@ -26,7 +26,6 @@ export interface ProxmoxHostArgs {
   tailscaleIpAddress: TailscaleIp;
   tailscaleTags?: TailscaleTags[];
   tailscaleSubnetRoutes: TailscaleCidr[];
-  macAddress: string;
   remote: boolean;
   internalIpAddress?: TailscaleIp;
   installTailscale?: boolean;
@@ -36,15 +35,14 @@ export interface ProxmoxHostArgs {
   peerRelay?: boolean;
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
   authentikOutputs: AuthentikOutputs;
+  vmIdRange: { start: number; end: number };
 }
 
 export class ProxmoxHost extends ComponentResource {
   public readonly name: string;
   public readonly internalIpAddress: TailscaleIp;
   public readonly tailscaleIpAddress: TailscaleIp;
-  public readonly macAddress: string;
   public readonly pveProvider: ProxmoxVEProvider;
-  public readonly rootPveProvider: ProxmoxVEProvider;
   public readonly backupVolumes?: Output<pulumi.Unwrap<ReturnType<TruenasVm["addClusterBackup"]>>>;
   public readonly tailscaleHostname: Output<string>;
   public readonly tailscaleName: Output<string>;
@@ -57,7 +55,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly title: Output<string>;
   public readonly shortName?: string;
   public readonly applicationManager: AuthentikApplicationManager;
-
+  public readonly vmIdRange: { randomVmIds: true; randomVmIdStart: number; randomVmIdEnd: number };
   constructor(
     name: string,
     private args: ProxmoxHostArgs,
@@ -78,7 +76,6 @@ export class ProxmoxHost extends ComponentResource {
       this.internalIpAddress = args.internalIpAddress;
     }
     this.tailscaleIpAddress = args.tailscaleIpAddress;
-    this.macAddress = args.macAddress;
     this.remote = args.remote;
     this.shortName = args.shortName;
 
@@ -95,33 +92,18 @@ export class ProxmoxHost extends ComponentResource {
 
     this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
 
+    this.vmIdRange = {
+      randomVmIds: true,
+      randomVmIdStart: args.vmIdRange.start,
+      randomVmIdEnd: args.vmIdRange.end,
+    };
     // Create ProxmoxVE Provider
     this.pveProvider = new ProxmoxVEProvider(
       `${name}-pve-provider`,
       {
-        randomVmIds: true,
-        randomVmIdStart: 1000,
-        randomVmIdEnd: 1999,
+        ...this.vmIdRange,
         endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
         apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
-        ssh: {
-          username: "root",
-          password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
-        },
-      },
-      cro,
-    );
-    // Create ProxmoxVE Provider
-    this.rootPveProvider = new ProxmoxVEProvider(
-      `${name}-root-pve-provider`,
-      {
-        randomVmIds: true,
-        randomVmIdStart: 1000,
-        randomVmIdEnd: 1999,
-        endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
-        username: "root@pam",
-        password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
-        // apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
         ssh: {
           username: "root",
           password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
@@ -306,7 +288,6 @@ export function getProxmoxProperties(instance: ProxmoxHost) {
     name: instance.name,
     hostname: instance.hostname,
     ipAddress: instance.internalIpAddress,
-    macAddress: instance.macAddress,
     remoteConnection: instance.remoteConnection!,
   };
 }

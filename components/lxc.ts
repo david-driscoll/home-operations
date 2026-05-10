@@ -9,7 +9,7 @@ import { awaitOutput } from "@components/helpers.ts";
  * Any var supported by the target script can be included — no code changes needed.
  */
 export type CommunityScriptLxcVars = {
-  ctid: pulumi.Input<number>;
+  ctid?: pulumi.Input<number>;
   hostname: pulumi.Input<string>;
   sshKeys?: pulumi.Input<pulumi.Input<string>[]>;
   /** Storage pool for container rootfs. Defaults to "local-lvm" if not specified. */

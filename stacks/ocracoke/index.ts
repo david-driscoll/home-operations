@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
 import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
@@ -12,23 +13,26 @@ import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 const globals = new GlobalResources({}, {});
 
 const op = new OPClient();
+const vmRange = { start: 500, end: 599 };
 
 const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
 const sftpClientKey = pulumi.output(op.getItemByTitle("Rclone SFTP Key"));
 const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
 const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
 const cluster = pulumi.output(op.getItemByTitle("Cluster: Skystar")).apply(createClusterDefinition);
+const dockgeId = new random.RandomInteger("skystar-dockge-id", { min: vmRange.start, max: vmRange.start + 50, keepers: { clusterId: cluster.key } });
+const pbsId = new random.RandomInteger("skystar-pbs-id", { min: vmRange.start + 51, max: vmRange.end, seed: dockgeId.result.apply((z) => z.toString()), keepers: { clusterId: cluster.key } });
 
 const host = new ProxmoxHost("skystar", {
   globals: globals,
   authentikOutputs: outputs,
   tailscaleIpAddress: "100.111.10.105",
-  macAddress: "xx:xx:xx:xx:xx:xx",
   proxmox: mainProxmoxCredentials,
   remote: true,
   cluster: cluster,
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
+  vmIdRange: vmRange,
 });
 
 const tailscaleServices: string[] = [];
@@ -37,7 +41,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   globals,
   credential: dockgeCredential,
   host: host,
-  vmId: 500,
+  vmId: dockgeId.result,
   cluster: cluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
@@ -53,7 +57,7 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
   globals,
   outputs,
   host: host,
-  vmId: 501,
+  vmId: pbsId.result,
   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
   cluster: cluster,
   dockge: dockgeRuntime,
@@ -91,4 +95,3 @@ export const skystar = {
   dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
-

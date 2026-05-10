@@ -29,7 +29,7 @@ export interface ProxmoxBackupServerLxcArgs {
   /** When provided, a Traefik dynamic config for PBS is written to this Dockge instance. */
   dockge: DockgeLxc;
   host: ProxmoxHost;
-  vmId: number;
+  vmId: Input<number>;
   ipAddress?: TailscaleIp;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   lxcVars?: Partial<Omit<CommunityScriptLxcVars, "ctid" | "hostname">>;

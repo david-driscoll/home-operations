@@ -35,7 +35,7 @@ export interface DockgeLxcArgs {
   createDockerLxc?: boolean;
   globals: GlobalResources;
   host: ProxmoxHost;
-  vmId: number;
+  vmId: Input<number>;
   ipAddress?: TailscaleIp;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;

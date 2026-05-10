@@ -14,7 +14,7 @@ import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { createBackupJobs } from "./backups.ts";
+import { createBackupJobs } from "../backups/backups.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -50,12 +50,12 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   authentikOutputs: outputs,
   internalIpAddress: "10.10.10.100",
   tailscaleIpAddress: "100.111.10.100",
-  macAddress: "58:47:ca:7b:a9:9d",
   proxmox: mainProxmoxCredentials,
   remote: false,
   cluster: celestiaCluster,
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [],
+  vmIdRange: { start: 102, end: 199 },
 });
 const spikeVm = new TruenasVm("spike", {
   credential: globals.truenasCredential.apply((z) => z.title!),
@@ -63,7 +63,6 @@ const spikeVm = new TruenasVm("spike", {
   host: twilightSparkleHost,
   ipAddress: pulumi.output("10.10.10.10"),
   tailscaleIpAddress: "100.111.10.10",
-  macAddress: "bc:24:11:7c:e5:c5",
 });
 
 const thanosStorage = new minio.S3Bucket(
@@ -96,7 +95,6 @@ const celestiaHost = new ProxmoxHost("celestia", {
   authentikOutputs: outputs,
   internalIpAddress: "10.10.10.103",
   tailscaleIpAddress: "100.111.10.103",
-  macAddress: "c8:ff:bf:03:cc:4c",
   proxmox: mainProxmoxCredentials,
   truenas: spikeVm,
   remote: false,
@@ -104,6 +102,7 @@ const celestiaHost = new ProxmoxHost("celestia", {
   peerRelay: true,
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
+  vmIdRange: { start: 302, end: 399 },
 });
 const celestiaBackupMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/backup/");
 const celestiaDataMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
@@ -113,7 +112,6 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   authentikOutputs: outputs,
   internalIpAddress: "10.10.10.200",
   tailscaleIpAddress: "100.111.10.200",
-  macAddress: "e4:5f:01:90:36:22",
   proxmox: alphaSiteProxmoxCredentials,
   installTailscale: false,
   remote: false,
@@ -121,6 +119,7 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   shortName: "as",
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
+  vmIdRange: { start: 101, end: 199 },
 });
 
 const tailscaleServices: string[] = [];
