@@ -50,7 +50,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
     tailscaleServices.push(`svc:${service}`);
   },
 });
-dockgeRuntime.addHostMount("/data");
+// dockgeRuntime.addHostMount("/data");
 dockgeRuntime.deployStacks({ dependsOn: [] });
 
 const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
@@ -63,7 +63,7 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
   dockge: dockgeRuntime,
   dependsOn: [],
 });
-pbs.addHostMount("/data");
+// pbs.addHostMount("/data");
 
 host.addUptimeGatus();
 
