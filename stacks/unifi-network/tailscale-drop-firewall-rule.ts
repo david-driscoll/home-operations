@@ -40,9 +40,9 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         if (ipDetails.domain !== "att.com") continue;
         if (ipDetails.country_code !== "US") continue;
 
-        if (ipDetails.ip_version === "4") {
+        if (ipDetails.ip_version === "4" && ipv4IpsToDrop.findIndex((i) => i.ip === ip) === -1) {
           ipv4IpsToDrop.push({ ip, port });
-        } else if (ipDetails.ip_version === "6") {
+        } else if (ipDetails.ip_version === "6" && ipv6IpsToDrop.findIndex((i) => i.ip === ip) === -1) {
           ipv6IpsToDrop.push({ ip, port });
         }
       }
@@ -70,7 +70,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       if (ipv4IpsToDrop.length > 0) {
         for (const { ip, port } of ipv4IpsToDrop) {
           const firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv4-${device.hostname}_${ip.replace(/\./g, "-")}`,
+            `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}`,
             {
               enabled: true,
 
@@ -101,7 +101,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       if (ipv6IpsToDrop.length > 0) {
         for (const { ip, port } of ipv6IpsToDrop) {
           const firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv6-${device.hostname}_${ip.replace(/:/g, "-")}`,
+            `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}`,
             {
               enabled: true,
 
