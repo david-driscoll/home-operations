@@ -605,6 +605,7 @@ ${middlewareYaml}  services:
       },
       remotePath: `/opt/stacks/authentik-outpost/.env-token`,
       content: envValues,
+      parent: applicationManager.outpostsComponent,
     });
   }
 
