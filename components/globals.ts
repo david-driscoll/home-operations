@@ -68,7 +68,6 @@ export class GlobalResources extends ComponentResource {
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
-  public readonly tailscaleAuthKey: TailnetKey;
   public readonly truenasCredential: Output<OnePasswordItem>;
   public readonly truenasMinioCredential: Output<OnePasswordItem>;
   public readonly truenasMinioProvider: MinioProvider;
@@ -139,20 +138,6 @@ export class GlobalResources extends ComponentResource {
       host: interpolate`dockge-luna.${this.tailscaleDomain}`,
       user: "root",
     };
-
-    this.tailscaleAuthKey = new TailnetKey(
-      "tailnetkey",
-      {
-        reusable: true,
-        preauthorized: true,
-        ephemeral: false,
-        // expiry: Math.floor(60 * 60), // 1 hour in seconds
-        recreateIfInvalid: "always",
-        tags: [Tailscale.tag.dockge, Tailscale.tag.proxmox, Tailscale.tag.apps],
-        description: "Proxmox Management Key",
-      },
-      mergeOptions(cro, { provider: this.tailscaleProvider }),
-    );
 
     this.truenasMinioProvider = new MinioProvider(
       "truenas-minio",

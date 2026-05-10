@@ -10,10 +10,11 @@ import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClientCredentials } from "simple-oauth2";
 import { copyFileToRemote } from "./helpers.ts";
-import { DeviceTags, getDevice, getDeviceOutput } from "@pulumi/tailscale";
+import { DeviceTags, getDevice, getDeviceOutput, TailnetKey } from "@pulumi/tailscale";
 import { TailscaleCidr } from "@openapi/tailscale-grants.js";
 import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
+import { Tailscale } from "./constants.ts";
 
 /**
  * Tailscale node state exported by individual stacks to 1Password
@@ -184,7 +185,7 @@ export function installTailscaleLxc(options: {
         {
           connection: options.connection,
           create: pulumi.interpolate`pct exec ${options.vmId} -- sh -lc 'curl -fsSL https://tailscale.com/install.sh | sh'`,
-          triggers: [lxcConfig.create],
+          triggers: [lxcConfig.create, options.vmId],
         },
         { parent: options.parent, dependsOn: [lxcConfig] },
       );
@@ -202,15 +203,30 @@ export function installTailscaleLxc(options: {
       );
       depends.push(installTailscale, restartLxc);
 
+      const tailscaleAuthkey = new TailnetKey(
+        `${name}-authkey`,
+        {
+          reusable: true,
+          preauthorized: true,
+          ephemeral: false,
+          // expiry: Math.floor(60 * 60), // 1 hour in seconds
+          recreateIfInvalid: "always",
+          tags: args.advertiseTags,
+          description: "Proxmox Management Key",
+        },
+        { parent: options.parent, dependsOn: options.dependsOn, provider: options.globals.tailscaleProvider },
+      );
+
       // Step 2: Copy auth key to container
       const authKey = copyFileToRemote(`${name}-authkey`, {
-        content: options.globals.tailscaleAuthKey.key,
+        content: tailscaleAuthkey.key,
         remotePath: "/tmp/authkey",
         connection: options.connection,
         parent: options.parent,
-        dependsOn: options.dependsOn,
+        dependsOn: [...depends],
         triggers: [lxcConfig.create, restartLxc.create],
       });
+      depends.push(authKey);
 
       const copyAuthKey = new remote.Command(
         `${name}-copy-authkey`,
@@ -219,7 +235,7 @@ export function installTailscaleLxc(options: {
           create: pulumi.interpolate`pct push ${options.vmId} /tmp/authkey /tmp/authkey`,
           triggers: [lxcConfig.create, authKey.id],
         },
-        { parent: options.parent, dependsOn: [authKey, ...depends] },
+        { parent: options.parent, dependsOn: [...depends] },
       );
       depends.push(copyAuthKey);
 
@@ -338,7 +354,6 @@ export function updateTailscaleProxmox(options: {
         connection: options.connection,
         create: pulumi.interpolate`tailscale set ${args.relayServerPort ? pulumi.interpolate`--relay-server-port=${args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update `,
         triggers: [],
-        // environment: { TS_AUTHKEY: globals.tailscaleAuthKey.key },
       },
       { parent: options.parent, dependsOn: [] },
     );
