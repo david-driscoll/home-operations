@@ -1,3 +1,3 @@
 [env]
 PULUMI_STACK = "gulf-of-mexico"
-PULUMI_BACKEND_URL = "s3://home-operations/home?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true"
+PULUMI_BACKEND_URL = "s3://home-operations/gulf-of-mexico?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true"
