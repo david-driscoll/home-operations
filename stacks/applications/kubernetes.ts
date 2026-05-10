@@ -197,7 +197,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     {
       serviceConnection: serviceConnection.serviceConnectionKubernetesId,
       type: "proxy",
-      name: pulumi.interpolate`Outpost for ${clusterDefinition.title}`,
       config: pulumi.jsonStringify(
         {
           authentik_host: pulumi.interpolate`https://${clusterDefinition.authentikDomain}/`,

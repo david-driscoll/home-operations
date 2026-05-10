@@ -566,7 +566,6 @@ ${middlewareYaml}  services:
       this.args.host.name,
       {
         type: "proxy",
-        name: interpolate`Outpost for ${this.args.host.title}`,
         config: jsonStringify(
           {
             authentik_host: interpolate`https://${this.cluster.authentikDomain}/`,
