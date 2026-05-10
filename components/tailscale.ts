@@ -10,7 +10,7 @@ import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClientCredentials } from "simple-oauth2";
 import { copyFileToRemote } from "./helpers.ts";
-import { DeviceTags, getDevice, getDeviceOutput, TailnetKey } from "@pulumi/tailscale";
+import { DeviceTags, getDevice, getDeviceOutput, GetDeviceResult, TailnetKey } from "@pulumi/tailscale";
 import { TailscaleCidr } from "@openapi/tailscale-grants.js";
 import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
@@ -68,6 +68,10 @@ export interface NodeInfo {
 }
 
 export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResources): pulumi.Output<string> {
+  if (pulumi.runtime.isDryRun()) {
+    return pulumi.output(pulumi.unknown) as pulumi.Output<string>;
+  }
+
   return getDeviceOutput({ name: pulumi.interpolate`${name}.${globals.tailscaleDomain}` }, { provider: globals.tailscaleProvider })
     .apply((ip) => {
       pulumi.log.info(`Got Tailscale IP for ${ip.name}: ${ip.addresses.join(", ")}`);
@@ -208,7 +212,7 @@ export function installTailscaleLxc(options: {
         {
           reusable: true,
           preauthorized: true,
-          ephemeral: false,
+          ephemeral: true,
           // expiry: Math.floor(60 * 60), // 1 hour in seconds
           recreateIfInvalid: "always",
           tags: args.advertiseTags,
@@ -262,6 +266,10 @@ export function installTailscaleLxc(options: {
       { parent: options.parent, dependsOn: [...depends] },
     );
     depends.push(tailscaleSet);
+    if (pulumi.runtime.isDryRun()) {
+      return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
+    }
+
     return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, depends);
   });
 
@@ -358,7 +366,7 @@ export function updateTailscaleProxmox(options: {
     );
 
     if (pulumi.runtime.isDryRun()) {
-      return pulumi.output(pulumi.unknown) as unknown as paths["/tailnet/{tailnet}/devices"]["get"]["responses"]["200"]["content"]["application/json"];
+      return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
     return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, options.dependsOn);

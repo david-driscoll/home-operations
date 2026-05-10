@@ -12,6 +12,7 @@ CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "op://Eris/Eris 1Password Connect Access Token/credential"
 AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
 AUTHENTIK_URL = "op://Eris/Authentik Token/url"
+# PULUMI_DEBUG_PROMISE_LEAKS = "1"
 
 [tools]
 python = "3.14.4"
