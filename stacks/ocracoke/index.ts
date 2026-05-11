@@ -53,16 +53,18 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
 // dockgeRuntime.addHostMount("/data");
 dockgeRuntime.deployStacks({ dependsOn: [] });
 
-const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
-  globals,
-  outputs,
-  host: host,
-  vmId: pbsId.result,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-  cluster: cluster,
-  dockge: dockgeRuntime,
-  dependsOn: [],
-});
+// machine does not have drives yet
+// const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
+//   globals,
+//   outputs,
+//   host: host,
+//   vmId: pbsId.result,
+//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+//   cluster: cluster,
+//   dockge: dockgeRuntime,
+//   dependsOn: [],
+//   tags: [  ],
+// });
 // pbs.addHostMount("/data");
 
 host.addUptimeGatus();
@@ -80,11 +82,11 @@ exportNodeStateToOnePassword(
       internalIp: dockgeRuntime.ipAddress,
       nodeType: "dockge",
     },
-    {
-      name: pbs.tailscaleName,
-      ip: pbs.tailscaleIpAddress,
-      nodeType: "pbs",
-    },
+    // {
+    //   name: pbs.tailscaleName,
+    //   ip: pbs.tailscaleIpAddress,
+    //   nodeType: "pbs",
+    // },
   ],
   tailscaleServices,
   { parent: host },

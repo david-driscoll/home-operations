@@ -17,7 +17,6 @@ import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { Tailscale } from "@components/constants.ts";
-import { BackupJobManager, BackupPlanManager } from "./backups.ts";
 import { BackrestPlan } from "@openapi/backrest.js";
 import { kebabCase } from "moderndash";
 
@@ -34,6 +33,7 @@ export interface ProxmoxBackupServerLxcArgs {
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   lxcVars?: Partial<Omit<CommunityScriptLxcVars, "ctid" | "hostname">>;
   dependsOn?: Input<Resource>[];
+  tags: Input<string[]>;
 }
 
 export class ProxmoxBackupServerLxc extends ComponentResource {
@@ -315,17 +315,18 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       {
         category: FullItem.CategoryEnum.SecureNote,
         title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
-        tags: ["pbs", "lxc", "backup"],
+        tags: output(args.tags).apply((tags) => [...tags, "pbs", "lxc", "backup"]),
         sections: {
           // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
-              hostname: { type: TypeEnum.String, value: hostname },
+              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
               username: { type: TypeEnum.String, value: "root" },
             },
           },
         },
         fields: {
+          cluster: { type: TypeEnum.String, value: cluster.title },
           hostname: { type: TypeEnum.String, value: this.hostname },
           webUrl: { type: TypeEnum.String, value: interpolate`https://${this.hostname}:8007` },
         },

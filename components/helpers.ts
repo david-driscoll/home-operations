@@ -226,6 +226,15 @@ export type BackupTask = {
   token?: Input<string>;
 };
 
+
+export type RepositoryBackupTask = {
+  name: Input<string>;
+  repository: Input<string>;
+  schedule?: Input<string>;
+  sourceType: Input<"b2" | "s3" | "local" | "sftp">;
+  destinationType: Input<"b2" | "s3" | "local" | "sftp">;
+};
+
 export function toGatusKey(group: string, name: string) {
   return `${group.replace(/[\s\/_,.#+&]+/g, "-")}_${name.replace(/[\s\/_,.#+&]+/g, "-")}`.toLowerCase();
 }

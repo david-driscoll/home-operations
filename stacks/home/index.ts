@@ -192,6 +192,7 @@ const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
   cluster: celestiaCluster,
   dockge: celestiaDockgeRuntime,
   dependsOn: [],
+  tags: ['backup-source']
 });
 celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");

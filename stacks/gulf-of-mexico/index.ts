@@ -69,6 +69,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
   cluster: cluster,
   dockge: dockgeRuntime,
   dependsOn: [],
+  tags: ['backup-destination']
 });
 pbs.addHostMount("/data");
 

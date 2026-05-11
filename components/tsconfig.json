@@ -10,7 +10,8 @@
   "include": [
     "**/*.ts",
     "../dynamic/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "../stacks/backups/BackupPlanManager.ts"
   ],
   "references": []
 }
