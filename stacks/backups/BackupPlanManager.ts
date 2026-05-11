@@ -11,7 +11,7 @@ import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import * as minio from "@pulumi/minio";
 
 export interface PbsDetails {
-  connection: { host: string; username: string };
+  connection: types.input.remote.ConnectionArgs;
   cluster: ClusterDefinition;
   tags: string[];
   title: string;
@@ -292,7 +292,7 @@ export class BackupPlanManager extends ComponentResource {
         const ssh = new NodeSSH();
         await ssh.connect({
           host: connection.host,
-          username: connection.username,
+          username: connection.user,
         });
 
         const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;

@@ -33,6 +33,5 @@
     "../../components/**/*.ts",
     "../../dynamic/**/*.ts",
     "../../types/**/*.ts",
-    "../backups/BackupPlanManager.ts"
   ]
 }

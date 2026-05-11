@@ -62,7 +62,7 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   return {
     connection: {
       host: item.sections.ssh.fields.hostname.value!,
-      username: item.sections.ssh.fields.username.value!,
+      user: item.sections.ssh.fields.username.value!,
     },
     cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
     tags: item.tags,

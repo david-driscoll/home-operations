@@ -34,7 +34,6 @@
     "../../dynamic/**/*.ts",
     "../../types/**/*.ts",
     "../home/jobs.ts",
-    "../home/backup-jobs.ts",
-    "../backups/BackupPlanManager.ts"
+    "../home/backup-jobs.ts"
   ]
 }

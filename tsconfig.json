@@ -29,7 +29,6 @@
   "include": [
     "components/**/*.ts",
     "components/**/*.mts",
-    "types/**/*.ts",
-    "stacks/backups/BackupPlanManager.ts",
+    "types/**/*.ts"
   ],
 }

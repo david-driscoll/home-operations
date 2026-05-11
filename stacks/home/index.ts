@@ -14,7 +14,6 @@ import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { createBackupJobs } from "../backups/backups.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -87,8 +86,6 @@ const thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
     endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
   },
 });
-
-createBackupJobs({ globals });
 
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,
@@ -192,7 +189,7 @@ const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
   cluster: celestiaCluster,
   dockge: celestiaDockgeRuntime,
   dependsOn: [],
-  tags: ['backup-source']
+  tags: ["backup-source"],
 });
 celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
