@@ -56,7 +56,7 @@ backupPlanManager.createMinioBucketBackupJob({
   globals,
 });
 
-backupPlanManager.updateBackrestConfig();
+backupPlanManager.finalize();
 
 async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   return {

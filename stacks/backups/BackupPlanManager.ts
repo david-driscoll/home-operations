@@ -290,7 +290,7 @@ export class BackupPlanManager extends ComponentResource {
     });
   }
 
-  public updateBackrestConfig() {
+  public finalize() {
     all([this.source, this.destinations, this.repos, this.jobs]).apply(async ([source, destinations, repos, jobs]) => {
       await updateBackrestConfiguration(source.connection, async (ssh, updatedConfig) => {
         for (const plan of this.plans.values()) {
