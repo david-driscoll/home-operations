@@ -2,7 +2,7 @@ import { ClusterDefinition, GlobalResources } from "../../components/globals.ts"
 import { OPClient } from "../../components/op.ts";
 import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
+import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
@@ -247,7 +247,6 @@ export class BackupPlanManager extends ComponentResource {
       });
     });
   }
-
   private async getVolsyncPassword(): Promise<string> {
     if (this.volsyncPassword) {
       return this.volsyncPassword;
@@ -261,8 +260,38 @@ export class BackupPlanManager extends ComponentResource {
     return (this.volsyncPassword = volsyncItem.fields.credential.value!);
   }
 
+  private createUptime({ cluster }: PbsDetails) {
+    return all([this.jobs]).apply(([jobs]) => {
+      const groupName = `Jobs: ${cluster.title}`;
+      return addUptimeGatus(`backup-jobs-${cluster.key}`, this.globals, {
+        endpoints: [],
+        "external-endpoints": jobs.map(
+          (job) =>
+            ({
+              enabled: true,
+              name: job.task.name,
+              token: toGatusKey(groupName, job.task.name),
+              group: groupName,
+              heartbeat: {
+                interval: "25h",
+              },
+              alerts: [
+                {
+                  type: "pushover",
+                  enabled: true,
+                  "success-threshold": 1,
+                  "failure-threshold": 1,
+                  "minimum-reminder-interval": "24h",
+                },
+              ],
+            }) as ExternalEndpoint,
+        ),
+      });
+    });
+  }
+
   public updateBackrestConfig() {
-    all([this.source, this.destinations, this.repos]).apply(async ([source, destinations, repos]) => {
+    all([this.source, this.destinations, this.repos, this.jobs]).apply(async ([source, destinations, repos, jobs]) => {
       await updateBackrestConfiguration(source.connection, async (ssh, updatedConfig) => {
         for (const plan of this.plans.values()) {
           const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
@@ -283,9 +312,11 @@ export class BackupPlanManager extends ComponentResource {
             updatedConfig.plans.push(plan);
           }
         }
+        this.createUptime(source);
       });
       for (const destination of destinations) {
         await updateBackrestConfiguration(destination.connection, async (ssh, updatedConfig) => {});
+        this.createUptime(destination);
       }
 
       async function updateBackrestConfiguration(connection: typeof source.connection, func: (ssh: NodeSSH, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>) {
