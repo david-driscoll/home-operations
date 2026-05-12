@@ -56,8 +56,6 @@ backupPlanManager.createMinioBucketBackupJob({
   globals,
 });
 
-backupPlanManager.finalize();
-
 async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   return {
     connection: {
@@ -69,3 +67,5 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
     title: item.title,
   };
 }
+
+backupPlanManager.finalize();
