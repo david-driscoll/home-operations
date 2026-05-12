@@ -153,31 +153,10 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
 
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
-// NOTE: createBackupJobs (celestia→luna) has been removed from this stack.
-// Luna now lives in stacks/gulf-of-mexico. Re-wire backup jobs using a
-// cross-stack reference or static connection once gulf-of-mexico is stable.
-
-const externalEndpoints = pulumi.all([celestiaDockgeRuntime.createBackupUptime(), alphaSiteDockgeRuntime.createBackupUptime()]).apply((stacks) =>
-  stacks.reduce(
-    (prev, curr) => ({
-      endpoints: [...prev.endpoints, ...curr.endpoints],
-      "external-endpoints": [...prev["external-endpoints"], ...curr["external-endpoints"]],
-    }),
-    { endpoints: [], "external-endpoints": [] },
-  ),
-);
 
 const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
-pulumi.all([externalEndpoints, gatusDnsRecords]).apply(async ([other, endpoints]) => {
-  return addUptimeGatus(
-    `dns`,
-    globals,
-    {
-      endpoints: [...endpoints, ...other.endpoints],
-      "external-endpoints": [...other["external-endpoints"]],
-    },
-    dnsParent,
-  );
+pulumi.all([gatusDnsRecords]).apply(async ([endpoints]) => {
+  return addUptimeGatus(`dns`, globals, { endpoints: [...endpoints] }, dnsParent);
 });
 
 const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {

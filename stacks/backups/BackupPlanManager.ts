@@ -9,6 +9,7 @@ import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definiti
 import { NodeSSH } from "node-ssh";
 import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import * as minio from "@pulumi/minio";
+import { CopyToRemote } from "@pulumi/command/remote/index.js";
 
 export interface PbsDetails {
   connection: types.input.remote.ConnectionArgs;
@@ -26,6 +27,7 @@ export class BackupPlanManager extends ComponentResource {
   source: Output<PbsDetails>;
   destinations: Output<PbsDetails[]>;
   jobs: Output<{ task: Omit<BackupTask, "token">; detail: PbsDetails }[]> = output([]);
+  private depends: Output<CopyToRemote[]> = output([]);
 
   constructor(
     name: string,
@@ -114,24 +116,31 @@ export class BackupPlanManager extends ComponentResource {
         //   });
         // }
 
-        this.createBackupJob(source, {
-          name: interpolate`Backup ${title}`,
-          schedule: "0 15 * * *",
-          sourceType: "local",
-          source: path,
-          destinationType: "local",
-          destination: interpolate`/data/backup/${repository}/`,
-        });
-        for (const destination of destinations) {
-          this.createBackupJob(destination, {
-            name: interpolate`Replicate ${title} to ${destination.title}`,
-            schedule: "0 3 * * *",
-            sourceType: "sftp",
-            source: interpolate`${source.connection.host}/${repository}`,
+        const jobs = [];
+        jobs.push(
+          this.createBackupJob(source, {
+            name: interpolate`Backup ${title}`,
+            schedule: "0 15 * * *",
+            sourceType: "local",
+            source: path,
             destinationType: "local",
             destination: interpolate`/data/backup/${repository}/`,
-          });
+          }),
+        );
+        for (const destination of destinations) {
+          jobs.push(
+            this.createBackupJob(destination, {
+              name: interpolate`Replicate ${title} to ${destination.title}`,
+              schedule: "0 3 * * *",
+              sourceType: "sftp",
+              source: interpolate`${source.connection.host}/${repository}`,
+              destinationType: "local",
+              destination: interpolate`/data/backup/${repository}/`,
+            }),
+          );
         }
+
+        return all(jobs).apply((z) => z.flat());
       },
     );
   }
@@ -149,23 +158,28 @@ export class BackupPlanManager extends ComponentResource {
     backblazeSecret?: Input<string>;
     restoreBucket?: Input<string>;
   }) {
-    this.createBackupJob(this.source, {
-      name: interpolate`Backup ${title}`,
-      schedule: "0 10 * * *",
-      sourceType: "local",
-      source: interpolate`/spike/data/minio/${bucket}/`,
-      destinationType: "local",
-      destination: interpolate`/data/backup/spike/${bucket}/`,
-    });
+    const jobs: Output<CopyToRemote[]>[] = [];
+    jobs.push(
+      this.createBackupJob(this.source, {
+        name: interpolate`Backup ${title}`,
+        schedule: "0 10 * * *",
+        sourceType: "local",
+        source: interpolate`/spike/data/minio/${bucket}/`,
+        destinationType: "local",
+        destination: interpolate`/data/backup/spike/${bucket}/`,
+      }),
+    );
 
-    this.createBackupJob(this.destinations, {
-      name: interpolate`Replicate ${title}`,
-      schedule: "0 3 * * *",
-      sourceType: "sftp",
-      source: interpolate`${this.source.connection.host}/spike/${bucket}/`,
-      destinationType: "local",
-      destination: interpolate`/data/backup/spike/${bucket}/`,
-    });
+    jobs.push(
+      this.createBackupJob(this.destinations, {
+        name: interpolate`Replicate ${title}`,
+        schedule: "0 3 * * *",
+        sourceType: "sftp",
+        source: interpolate`${this.source.connection.host}/spike/${bucket}/`,
+        destinationType: "local",
+        destination: interpolate`/data/backup/spike/${bucket}/`,
+      }),
+    );
 
     // if (backblazeSecret) {
     //   source.createBackupJob({
@@ -180,7 +194,7 @@ export class BackupPlanManager extends ComponentResource {
     // }
 
     if (restoreBucket) {
-      all([bucket, restoreBucket]).apply(([bucket, restoreBucket]) => {
+      return all([bucket, restoreBucket]).apply(([bucket, restoreBucket]) => {
         const minioBucket = new minio.S3Bucket(
           `${restoreBucket}-minio-bucket`,
           {
@@ -195,57 +209,70 @@ export class BackupPlanManager extends ComponentResource {
           },
         );
 
-        this.createBackupJob(this.source, {
-          name: interpolate`Sync ${bucket} from ${restoreBucket}`,
-          schedule: "*/10 * * * *",
-          sourceType: "s3",
-          source: interpolate`${bucket}/`,
-          sourceSecret: globals.truenasMinioCredential.title!,
-          destinationType: "s3",
-          destination: interpolate`${minioBucket.bucket}/`,
-          destinationSecret: globals.truenasMinioCredential.title!,
-        });
+        jobs.push(
+          this.createBackupJob(this.source, {
+            name: interpolate`Sync ${bucket} from ${restoreBucket}`,
+            schedule: "*/10 * * * *",
+            sourceType: "s3",
+            source: interpolate`${bucket}/`,
+            sourceSecret: globals.truenasMinioCredential.title!,
+            destinationType: "s3",
+            destination: interpolate`${minioBucket.bucket}/`,
+            destinationSecret: globals.truenasMinioCredential.title!,
+          }),
+        );
 
-        this.createBackupJob(this.destinations, {
-          name: interpolate`Replicate ${bucket} from ${restoreBucket}`,
-          schedule: "0 3 * * *",
-          sourceType: "s3",
-          source: interpolate`${minioBucket.bucket}/`,
-          sourceSecret: globals.truenasMinioCredential.title!,
-          destinationType: "local",
-          destination: interpolate`/data/backup/spike/${minioBucket.bucket}/`,
-          destinationSecret: globals.truenasMinioCredential.title!,
-        });
+        jobs.push(
+          this.createBackupJob(this.destinations, {
+            name: interpolate`Replicate ${bucket} from ${restoreBucket}`,
+            schedule: "0 3 * * *",
+            sourceType: "s3",
+            source: interpolate`${minioBucket.bucket}/`,
+            sourceSecret: globals.truenasMinioCredential.title!,
+            destinationType: "local",
+            destination: interpolate`/data/backup/spike/${minioBucket.bucket}/`,
+            destinationSecret: globals.truenasMinioCredential.title!,
+          }),
+        );
+
+        return all(jobs).apply((z) => z.flat());
       });
     }
+    return all(jobs).apply((z) => z.flat());
   }
 
   public createBackupJob(details: Input<PbsDetails | PbsDetails[]>, args: Omit<BackupTask, "token">) {
     const d = output(details).apply((z) => (Array.isArray(z) ? z : [z]));
     this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail) => ({ detail, task }))));
-    return all([args, d]).apply(([job, details]) => {
-      return details.map(({ cluster, connection }) => {
-        const groupName = `Jobs: ${cluster.title}`;
-        const token = toGatusKey(groupName, job.name);
+    const result = all([args, d])
+      .apply(([job, details]) => {
+        return details.map(({ cluster, connection }) => {
+          const groupName = `Jobs: ${cluster.title}`;
+          const token = toGatusKey(groupName, job.name);
 
-        return copyFileToRemote(`backup-job-${kebabCase(job.name)}-${token}`, {
-          content: jsonStringify({ ...job, token }, undefined, 2),
-          parent: this,
-          connection: connection,
-          remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
-          dependsOn: [
-            new remote.Command(
-              `backup-job-${kebabCase(job.name)}-${token}-remove`,
-              {
-                connection: connection,
-                delete: interpolate`rm -f /opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
-              },
-              { parent: this },
-            ),
-          ],
+          return copyFileToRemote(`backup-job-${kebabCase(job.name)}-${token}`, {
+            content: jsonStringify({ ...job, token }, undefined, 2),
+            parent: this,
+            connection: connection,
+            remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
+            dependsOn: [
+              new remote.Command(
+                `backup-job-${kebabCase(job.name)}-${token}-remove`,
+                {
+                  connection: connection,
+                  delete: interpolate`rm -f /opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
+                },
+                { parent: this },
+              ),
+            ],
+          });
         });
-      });
-    });
+      })
+      .apply((z) => all(z).apply((x) => x));
+
+    this.depends = all([this.depends, result]).apply(([d, r]) => [...d, ...r]);
+
+    return result;
   }
   private async getVolsyncPassword(): Promise<string> {
     if (this.volsyncPassword) {
@@ -263,35 +290,40 @@ export class BackupPlanManager extends ComponentResource {
   private createUptime({ cluster }: PbsDetails) {
     return all([this.jobs]).apply(([jobs]) => {
       const groupName = `Jobs: ${cluster.title}`;
-      return addUptimeGatus(`backup-jobs-${cluster.key}`, this.globals, {
-        endpoints: [],
-        "external-endpoints": jobs.map(
-          (job) =>
-            ({
-              enabled: true,
-              name: job.task.name,
-              token: toGatusKey(groupName, job.task.name),
-              group: groupName,
-              heartbeat: {
-                interval: "25h",
-              },
-              alerts: [
-                {
-                  type: "pushover",
-                  enabled: true,
-                  "success-threshold": 1,
-                  "failure-threshold": 1,
-                  "minimum-reminder-interval": "24h",
+      return addUptimeGatus(
+        `backup-jobs-${cluster.key}`,
+        this.globals,
+        {
+          endpoints: [],
+          "external-endpoints": jobs.map(
+            (job) =>
+              ({
+                enabled: true,
+                name: job.task.name,
+                token: toGatusKey(groupName, job.task.name),
+                group: groupName,
+                heartbeat: {
+                  interval: "25h",
                 },
-              ],
-            }) as ExternalEndpoint,
-        ),
-      });
+                alerts: [
+                  {
+                    type: "pushover",
+                    enabled: true,
+                    "success-threshold": 1,
+                    "failure-threshold": 1,
+                    "minimum-reminder-interval": "24h",
+                  },
+                ],
+              }) as ExternalEndpoint,
+          ),
+        },
+        this,
+      );
     });
   }
 
   public finalize() {
-    all([this.source, this.destinations, this.repos, this.jobs]).apply(async ([source, destinations, repos, jobs]) => {
+    all([this.depends, this.source, this.destinations, this.repos]).apply(async ([depends, source, destinations, repos]) => {
       await updateBackrestConfiguration(source.connection, async (ssh, updatedConfig) => {
         for (const plan of this.plans.values()) {
           const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);

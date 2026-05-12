@@ -1,4 +1,4 @@
-import { BackupPlanManager } from "stacks/backups/BackupPlanManager.ts";
+import { BackupPlanManager } from "./BackupPlanManager.ts";
 import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
