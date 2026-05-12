@@ -32,7 +32,6 @@
     "./*.ts",
     "../../components/**/*.ts",
     "../../dynamic/**/*.ts",
-    "../../types/**/*.ts",
-    "../backups/backups.ts"
+    "../../types/**/*.ts"
   ]
 }

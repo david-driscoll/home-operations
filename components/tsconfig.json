@@ -10,7 +10,7 @@
   "include": [
     "**/*.ts",
     "../dynamic/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
   ],
   "references": []
 }

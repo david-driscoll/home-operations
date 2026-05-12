@@ -18,7 +18,6 @@ import { OPClient } from "@components/op.ts";
 import { glob } from "glob";
 import * as yaml from "yaml";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { BackupJobManager } from "./jobs.ts";
 import { unique } from "moderndash";
 import { Command } from "@pulumi/command/remote/index.js";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
@@ -65,7 +64,6 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
-  private backupJobManager: BackupJobManager;
   private readonly ensureDynamicDir: Resource;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
@@ -375,14 +373,6 @@ export class DockgeLxc extends ComponentResource {
     );
 
     this.resources = [...depends, dockgeInfo];
-    this.backupJobManager = new BackupJobManager(
-      `${name}-backup-job-manager`,
-      {
-        cluster: this,
-        globals: this.args.globals,
-      },
-      { dependsOn: this.resources },
-    );
 
     cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
@@ -412,13 +402,6 @@ export class DockgeLxc extends ComponentResource {
         },
       });
     });
-  }
-  public createBackupJob(job: BackupTask) {
-    return this.backupJobManager.createBackupJob(job);
-  }
-
-  public createBackupUptime(): Output<{ "external-endpoints": ExternalEndpoint[]; endpoints: GatusDefinition[] }> {
-    return this.backupJobManager.createUptime();
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]): ReturnType<typeof copyFileToRemote> {

@@ -29,6 +29,6 @@
   "include": [
     "components/**/*.ts",
     "components/**/*.mts",
-    "types/**/*.ts",
+    "types/**/*.ts"
   ],
 }
