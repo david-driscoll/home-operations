@@ -125,7 +125,7 @@ export class OPClient {
     try {
       const allItems = await this.client.listItems(vaultUuid);
       const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
-      return filtered.map((item) => this.mapItem(item, item.id));
+      return Promise.all(filtered.map((z) => this.getItemByTitle(z.title!)));
     } catch (e) {
       console.error(`Error finding items by tag (value: ${tag})`, e);
       throw e;

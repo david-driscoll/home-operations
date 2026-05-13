@@ -57,15 +57,27 @@ backupPlanManager.createMinioBucketBackupJob({
 });
 
 async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
-  return {
-    connection: {
-      host: item.sections.ssh.fields.hostname.value!,
-      user: item.sections.ssh.fields.username.value!,
-    },
-    cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
-    tags: item.tags,
-    title: item.title,
-  };
+  try {
+    const dockgeItem = await op.getItemByTitle(item.fields.dockge.value!);
+    return {
+      backupServerConnection: {
+        host: item.sections.ssh.fields.hostname.value!,
+        user: item.sections.ssh.fields.username.value!,
+      },
+      dockgeConnection: {
+        host: dockgeItem.sections.ssh.fields.hostname.value!,
+        user: dockgeItem.sections.ssh.fields.username.value!,
+      },
+      cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
+      tags: item.tags,
+      title: item.title,
+    };
+  } catch (error) {
+    pulumi.log.error(`Error getting backup server details: ${error}`);
+    pulumi.log.error(`Item details: ${JSON.stringify(item)}`);
+
+    throw error;
+  }
 }
 
 backupPlanManager.finalize();

@@ -326,7 +326,8 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           },
         },
         fields: {
-          cluster: { type: TypeEnum.String, value: cluster.title },
+          cluster: { type: TypeEnum.String, value: cluster.itemTitle },
+          dockge: { type: TypeEnum.String, value: args.dockge.hostname },
           hostname: { type: TypeEnum.String, value: this.hostname },
           webUrl: { type: TypeEnum.String, value: interpolate`https://${this.hostname}:8007` },
         },

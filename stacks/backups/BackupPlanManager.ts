@@ -1,6 +1,6 @@
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
@@ -12,7 +12,8 @@ import * as minio from "@pulumi/minio";
 import { CopyToRemote } from "@pulumi/command/remote/index.js";
 
 export interface PbsDetails {
-  connection: types.input.remote.ConnectionArgs;
+  backupServerConnection: types.input.remote.ConnectionArgs;
+  dockgeConnection: types.input.remote.ConnectionArgs;
   cluster: ClusterDefinition;
   tags: string[];
   title: string;
@@ -133,7 +134,7 @@ export class BackupPlanManager extends ComponentResource {
               name: interpolate`Replicate ${title} to ${destination.title}`,
               schedule: "0 3 * * *",
               sourceType: "sftp",
-              source: interpolate`${source.connection.host}/${repository}`,
+              source: interpolate`${source.dockgeConnection.host}/${repository}`,
               destinationType: "local",
               destination: interpolate`/data/backup/${repository}/`,
             }),
@@ -175,7 +176,7 @@ export class BackupPlanManager extends ComponentResource {
         name: interpolate`Replicate ${title}`,
         schedule: "0 3 * * *",
         sourceType: "sftp",
-        source: interpolate`${this.source.connection.host}/spike/${bucket}/`,
+        source: interpolate`${this.source.dockgeConnection.host}/spike/${bucket}/`,
         destinationType: "local",
         destination: interpolate`/data/backup/spike/${bucket}/`,
       }),
@@ -246,21 +247,21 @@ export class BackupPlanManager extends ComponentResource {
     this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail) => ({ detail, task }))));
     const result = all([args, d])
       .apply(([job, details]) => {
-        return details.map(({ cluster, connection }) => {
+        return details.map(({ cluster, dockgeConnection: connection }) => {
           const groupName = `Jobs: ${cluster.title}`;
           const token = toGatusKey(groupName, job.name);
 
-          return copyFileToRemote(`backup-job-${kebabCase(job.name)}-${token}`, {
+          return copyFileToRemote(`backup-job-${token}`, {
             content: jsonStringify({ ...job, token }, undefined, 2),
             parent: this,
             connection: connection,
-            remotePath: interpolate`/opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
+            remotePath: interpolate`/opt/stacks/backups/jobs/${token}.json`,
             dependsOn: [
               new remote.Command(
-                `backup-job-${kebabCase(job.name)}-${token}-remove`,
+                `backup-job-${token}-remove`,
                 {
                   connection: connection,
-                  delete: interpolate`rm -f /opt/stacks/backups/jobs/${kebabCase(job.name)}-${token}.json`,
+                  delete: interpolate`rm -f /opt/stacks/backups/jobs/${token}.json`,
                 },
                 { parent: this },
               ),
@@ -323,87 +324,96 @@ export class BackupPlanManager extends ComponentResource {
   }
 
   public finalize() {
-    all([this.depends, this.source, this.destinations, this.repos]).apply(async ([depends, source, destinations, repos]) => {
-      await updateBackrestConfiguration(source.connection, async (ssh, updatedConfig) => {
-        for (const plan of this.plans.values()) {
-          const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
-          if (jobIndex >= 0) {
-            updatedConfig.plans[jobIndex] = {
-              ...updatedConfig.plans[jobIndex],
-              paths: plan.paths,
-              excludes: plan.excludes,
-              iexcludes: plan.iexcludes,
-              schedule: plan.schedule,
-              retention: plan.retention,
-              hooks: plan.hooks,
-              backupFlags: plan.backupFlags,
-              skipIfUnchanged: plan.skipIfUnchanged,
-              repo: plan.repo,
-            };
-          } else {
-            updatedConfig.plans.push(plan);
-          }
-        }
-        this.createUptime(source);
+    all([this.source, this.destinations]).apply(async ([source, destinations]) => {
+      await updateBackrestConfiguration(source.dockgeConnection, async (ssh, updatedConfig) => {
+        await updateRepos(updatedConfig, this.repos);
+        await updatePlans(updatedConfig, this.plans);
       });
+      this.createUptime(source);
       for (const destination of destinations) {
-        await updateBackrestConfiguration(destination.connection, async (ssh, updatedConfig) => {});
+        await updateBackrestConfiguration(destination.dockgeConnection, async (ssh, updatedConfig) => await updateRepos(updatedConfig, this.repos));
         this.createUptime(destination);
       }
-
-      async function updateBackrestConfiguration(connection: typeof source.connection, func: (ssh: NodeSSH, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>) {
-        const ssh = new NodeSSH();
-        await ssh.connect({
-          host: connection.host,
-          username: connection.user,
-        });
-
-        const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
-        let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
-        try {
-          updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
-        } catch (e) {
-          log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
-        }
-        updatedConfig.repos = updatedConfig.repos || [];
-        updatedConfig.plans = updatedConfig.plans || [];
-
-        for (const repo of repos.values()) {
-          const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-          if (jobIndex >= 0) {
-            updatedConfig.repos[jobIndex] = {
-              ...updatedConfig.repos[jobIndex],
-              uri: repo.uri,
-              password: repo.password,
-              env: repo.env,
-              flags: repo.flags,
-              prunePolicy: repo.prunePolicy,
-              checkPolicy: repo.checkPolicy,
-              hooks: repo.hooks,
-              commandPrefix: repo.commandPrefix,
-              autoUnlock: repo.autoUnlock,
-            };
-          } else {
-            updatedConfig.repos.push({
-              ...repo,
-              autoInitialize: true,
-            });
-          }
-        }
-
-        await func(ssh, updatedConfig);
-
-        const newConfig = JSON.stringify(updatedConfig);
-        if (currentConfig.trim() === newConfig.trim()) {
-          ssh.dispose();
-          return;
-        }
-
-        await ssh.execCommand(`echo '${newConfig}' > /opt/stacks/backrest/config/config.json`);
-        await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
-
-        ssh.dispose();
-      }
     });
+  }
+}
+
+async function updateBackrestConfiguration(
+  connection: UnwrappedObject<PbsDetails["dockgeConnection"]>,
+  func: (ssh: NodeSSH, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>,
+) {
+  const ssh = new NodeSSH();
+  await ssh.connect({
+    host: connection.host,
+    username: connection.user,
+  });
+
+  const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+  let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
+  try {
+    updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
+  } catch (e) {
+    log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
+    log.warn(`Current config content: ${currentConfig}`);
+  }
+  updatedConfig.repos = updatedConfig.repos || [];
+  updatedConfig.plans = updatedConfig.plans || [];
+
+  await func(ssh, updatedConfig);
+
+  const newConfig = JSON.stringify(updatedConfig);
+  if (currentConfig.trim() === newConfig.trim()) {
+    ssh.dispose();
+    return;
+  }
+
+  await ssh.execCommand(`echo '${newConfig}' > /opt/stacks/backrest/config/config.json`);
+  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
+
+  ssh.dispose();
+}
+function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: Map<string, BackrestRepository>) {
+  for (const repo of repos.values()) {
+    const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+    if (jobIndex >= 0) {
+      updatedConfig.repos[jobIndex] = {
+        ...updatedConfig.repos[jobIndex],
+        uri: repo.uri,
+        password: repo.password,
+        env: repo.env,
+        flags: repo.flags,
+        prunePolicy: repo.prunePolicy,
+        checkPolicy: repo.checkPolicy,
+        hooks: repo.hooks,
+        commandPrefix: repo.commandPrefix,
+        autoUnlock: repo.autoUnlock,
+      };
+    } else {
+      updatedConfig.repos.push({
+        ...repo,
+        autoInitialize: true,
+      });
+    }
+  }
+}
+function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: Map<string, BackrestPlan>) {
+  for (const plan of plans.values()) {
+    const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+    if (jobIndex >= 0) {
+      updatedConfig.plans[jobIndex] = {
+        ...updatedConfig.plans[jobIndex],
+        paths: plan.paths,
+        excludes: plan.excludes,
+        iexcludes: plan.iexcludes,
+        schedule: plan.schedule,
+        retention: plan.retention,
+        hooks: plan.hooks,
+        backupFlags: plan.backupFlags,
+        skipIfUnchanged: plan.skipIfUnchanged,
+        repo: plan.repo,
+      };
+    } else {
+      updatedConfig.plans.push(plan);
+    }
   }
 }

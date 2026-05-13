@@ -17,6 +17,7 @@ export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefin
 
 export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
   return {
+    itemTitle: item.title,
     type: item.fields.type.value as any,
     authentikDomain: item.fields.authentikDomain.value!,
     key: item.fields.key.value!,
@@ -30,6 +31,7 @@ export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
 }
 
 export interface DockgeClusterDefinition {
+  itemTitle: string;
   type: "dockge";
   key: string;
   title: string;
@@ -41,6 +43,7 @@ export interface DockgeClusterDefinition {
 }
 
 export interface KubernetesClusterDefinition {
+  itemTitle: string;
   type: "kubernetes";
   key: string;
   title: string;
