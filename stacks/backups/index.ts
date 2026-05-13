@@ -66,7 +66,7 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
       },
       dockgeConnection: {
         host: dockgeItem.sections.ssh.fields.hostname.value!,
-        user: dockgeItem.sections.ssh.fields.username.value!,
+        user: "root",
       },
       cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
       tags: item.tags,
