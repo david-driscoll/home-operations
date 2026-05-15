@@ -34,7 +34,7 @@
     "@pulumi/authentik": "file:sdks/authentik",
     "@pulumi/b2": "file:sdks/b2",
     "@pulumi/github": "^6.8.0",
-    "@pulumi/http": "^0.1.2",
+    "@pulumi/http": "^0.2.0",
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/terrifi": "file:sdks/terrifi",
