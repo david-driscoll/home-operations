@@ -162,7 +162,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
 
   addUptimeGatus(
-    `${clusterDefinition.key}`,
+    `cluster-${clusterDefinition.key}`,
     globals,
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),

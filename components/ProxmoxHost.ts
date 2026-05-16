@@ -269,7 +269,7 @@ export class ProxmoxHost extends ComponentResource {
   }
   public addUptimeGatus() {
     addUptimeGatus(
-      this.name,
+      `proxmox-${this.name}`,
       this.args.globals,
       {
         endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
