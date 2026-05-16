@@ -128,18 +128,16 @@ export class BackupPlanManager extends ComponentResource {
             destination: interpolate`/data/backup/${repository}/`,
           }),
         );
-        for (const destination of destinations) {
-          jobs.push(
-            this.createBackupJob(destination, {
-              name: interpolate`Replicate ${title} to ${destination.title}`,
-              schedule: "0 3 * * *",
-              sourceType: "sftp",
-              source: interpolate`${source.dockgeConnection.host}/${repository}`,
-              destinationType: "local",
-              destination: interpolate`/data/backup/${repository}/`,
-            }),
-          );
-        }
+        jobs.push(
+          this.createBackupJob(destinations, {
+            name: interpolate`Replicate ${title}`,
+            schedule: "0 3 * * *",
+            sourceType: "sftp",
+            source: interpolate`${source.dockgeConnection.host}/${repository}`,
+            destinationType: "local",
+            destination: interpolate`/data/backup/${repository}/`,
+          }),
+        );
 
         return all(jobs).apply((z) => z.flat());
       },
@@ -244,12 +242,12 @@ export class BackupPlanManager extends ComponentResource {
 
   public createBackupJob(details: Input<PbsDetails | PbsDetails[]>, args: Omit<BackupTask, "token">) {
     const d = output(details).apply((z) => (Array.isArray(z) ? z : [z]));
-    this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail, index) => ({ detail, task: { ...task, name: `${task.name}-${index}` } }))));
+    this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail) => ({ detail, task: { ...task, name: `${task.name} to ${detail.cluster.title}` } }))));
     const result = all([args, d])
       .apply(([job, details]) => {
         return details.map(({ cluster, dockgeConnection: connection }, index) => {
           const groupName = `Jobs: ${cluster.title}`;
-          const token = toGatusKey(groupName, `${job.name}-${index}`);
+          const token = toGatusKey(groupName, job.name);
 
           return copyFileToRemote(`backup-job-${token}`, {
             content: jsonStringify({ ...job, token }, undefined, 2),
@@ -300,7 +298,7 @@ export class BackupPlanManager extends ComponentResource {
             (job) =>
               ({
                 enabled: true,
-                name: job.task.name,
+                name: `${job.task.name} to ${cluster.title}`,
                 token: toGatusKey(groupName, job.task.name),
                 group: groupName,
                 heartbeat: {
