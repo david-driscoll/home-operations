@@ -7,7 +7,7 @@ import { remote, types } from "@pulumi/command";
 import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { GlobalResources } from "./globals.ts";
 import { mkdirSync } from "fs";
-import { hash } from 'node:crypto'
+import { hash } from "node:crypto";
 import { dirname, join } from "path";
 import { unique } from "moderndash";
 import { tmpdir } from "os";
@@ -58,7 +58,7 @@ export function copyFileToRemote(
   },
 ) {
   return output(name)
-    .apply((name) => output({ name, id: output(args.content).apply((c) => hash("md5", c, 'hex')), }))
+    .apply((name) => output({ name, id: output(args.content).apply((c) => hash("md5", c, "hex")) }))
     .apply(({ name, id }) => {
       const tempFilePath = writeTempFile(name, args.content);
       const remotePath = output(args.remotePath);
@@ -178,7 +178,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
       host: interpolate`dockge-as.${globals.tailscaleDomain}`,
       user: "root",
     },
-    remotePath: `/opt/stacks/uptime/config/${name}.yaml`,
+    remotePath: `/opt/stacks/uptime/config/uptime-${name}.yaml`,
     content,
     parent,
   });
@@ -225,7 +225,6 @@ export type BackupTask = {
   destinationSecret?: Input<string>;
   token?: Input<string>;
 };
-
 
 export type RepositoryBackupTask = {
   name: Input<string>;
