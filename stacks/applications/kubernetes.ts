@@ -5,16 +5,11 @@ import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authe
 import { GlobalResources, KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as kubernetes from "@kubernetes/client-node";
-import { addUptimeGatus, awaitOutput, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
-import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
-import { ApplicationDefinitionSchema, AuthentikDefinition, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
+import { from, map, lastValueFrom, toArray, concatMap } from "rxjs";
+import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
-import * as jsondiffpatch from "jsondiffpatch";
-import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
-import { group, kebabCase } from "moderndash";
-import { NodeSSH } from "node-ssh";
-import { BackrestRepository } from "@openapi/backrest.js";
-import { remote, types } from "@pulumi/command";
+import { kebabCase } from "moderndash";
 
 const op = new OPClient();
 
@@ -108,80 +103,13 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     });
   }
 
-  const volsyncBackupJobs = pulumi
-    .output(
-      lastValueFrom(
-        from(namespaceNames).pipe(
-          concatMap((ns) =>
-            from(
-              coreApi.listNamespacedSecret({
-                namespace: ns,
-                labelSelector: "volsync=true",
-              }),
-            ),
-          ),
-          map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
-          mergeMap((lists) => from(lists)),
-          map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
-          toArray(),
-        ),
-      ),
-    )
-    .apply((jobs) => Array.from(new Set(jobs)))
-    .apply((jobs) => {
-      pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`);
-      return jobs;
-    });
-
-  const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
-    pulumi.all(
-      jobs.map((job) => {
-        return createBackupTask(job, {
-          schedule: "0 10 * * *", // 10 am daily
-          sourceType: "local",
-          source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
-          destinationType: "local",
-          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-        });
-      }),
-    ),
-  );
-
-  const lunaJobs = volsyncBackupJobs.apply((jobs) =>
-    pulumi.all(
-      jobs.map((job) => {
-        return createBackupTask(job, {
-          schedule: "0 3 * * *", // 3 am daily
-          sourceType: "sftp",
-          source: pulumi.interpolate`${globals.localBackupServerConnection.host}/${clusterDefinition.key}/volsync/${job}`,
-          destinationType: "local",
-          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-        });
-      }),
-    ),
-  );
-
   addUptimeGatus(
     `cluster-${clusterDefinition.key}`,
     globals,
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
-      "external-endpoints": pulumi.all([celestiaJobs, lunaJobs]).apply((jobs) => jobs.flat().map((z) => z.externalEndpoint)),
     },
     applicationManager,
-  );
-
-  celestiaJobs.apply((jobs) =>
-    insertVolsyncRepos(
-      globals.localBackupServerConnection,
-      jobs.map((j) => j.volsyncRepo),
-    ),
-  );
-  lunaJobs.apply((jobs) =>
-    insertVolsyncRepos(
-      globals.remoteBackupServerConnection,
-      jobs.map((j) => j.volsyncRepo),
-    ),
   );
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
@@ -232,132 +160,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
 
   return {};
-
-  async function insertVolsyncRepos(connection: types.input.remote.ConnectionArgs, repos: Omit<BackrestRepository, "guid">[]) {
-    const ssh = new NodeSSH();
-    const localBackupServerHost = await awaitOutput(pulumi.output(connection.host))!;
-    await ssh.connect({
-      host: localBackupServerHost,
-      username: "root",
-    });
-
-    const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
-    let updatedConfig: { repos: BackrestRepository[] } = { repos: [] };
-    try {
-      updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[] };
-    } catch (e) {
-      pulumi.log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
-    }
-
-    updatedConfig.repos = updatedConfig.repos || [];
-    for (let i = updatedConfig.repos.length - 1; i >= 0; i--) {
-      if (updatedConfig.repos[i].id.startsWith("spike-")) {
-        updatedConfig.repos.splice(i, 1);
-      }
-    }
-    for (const repo of repos) {
-      const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-      if (jobIndex >= 0) {
-        updatedConfig.repos[jobIndex] = {
-          ...updatedConfig.repos[jobIndex],
-          uri: repo.uri,
-          password: repo.password,
-          env: repo.env,
-          flags: repo.flags,
-          prunePolicy: repo.prunePolicy,
-          checkPolicy: repo.checkPolicy,
-          hooks: repo.hooks,
-          commandPrefix: repo.commandPrefix,
-          autoUnlock: repo.autoUnlock,
-        };
-      } else {
-        updatedConfig.repos.push({
-          ...repo,
-          autoInitialize: true,
-        });
-      }
-    }
-    const newConfig = JSON.stringify(updatedConfig);
-    if (currentConfig.trim() === newConfig.trim()) {
-      ssh.dispose();
-      return;
-    }
-
-    await ssh.execCommand(`echo '${JSON.stringify(updatedConfig)}' > /opt/stacks/backrest/config/config.json`);
-
-    ssh.dispose();
-  }
-
-  function getVolsyncRepo(job: string, password: string): Omit<BackrestRepository, "guid"> {
-    return {
-      id: `volsync-${clusterDefinition.key}-${job}`,
-      uri: `/backup/${clusterDefinition.key}/volsync/${job}`,
-      password: password,
-      prunePolicy: {
-        schedule: {
-          maxFrequencyDays: 30,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        maxUnusedPercent: 10,
-      },
-      checkPolicy: {
-        schedule: {
-          maxFrequencyDays: 30,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        readDataSubsetPercent: 10,
-      },
-      autoUnlock: true,
-      commandPrefix: {
-        ioNice: "IO_BEST_EFFORT_LOW",
-        cpuNice: "CPU_LOW",
-      },
-    };
-  }
-
-  function createBackupTask(job: string, task: Omit<BackupTask, "name" | "token">) {
-    const title = `Backup ${clusterDefinition.title} Volsync ${job}`;
-    const groupName = `Jobs: Celestia`;
-    const token = toGatusKey(groupName, title);
-    const backupTask: BackupTask = {
-      ...task,
-      name: title,
-      token: token,
-    };
-    return pulumi
-      .all([
-        backupTask,
-        copyFileToRemote(`${clusterDefinition.key}-celestia-backup-${job}`, {
-          content: pulumi.jsonStringify(backupTask, undefined, 2),
-          remotePath: pulumi.interpolate`/opt/stacks/backups/jobs/${clusterDefinition.key}-${job}-sync.json`,
-          connection: globals.localBackupServerConnection,
-          parent: applicationManager,
-        }),
-      ])
-      .apply(([task, r]) => {
-        let intervalDays = 1;
-        if (task.schedule) {
-          const parts = task.schedule.split(" ");
-          if (parts[2]?.indexOf("/") > -1) {
-            intervalDays = parseInt(parts[2].split("/")[1], 10);
-          }
-        }
-        return {
-          file: r,
-          backupTask,
-          volsyncRepo: getVolsyncRepo(job, volsyncPassword),
-          externalEndpoint: {
-            enabled: true,
-            token: token,
-            name: title,
-            group: groupName,
-            heartbeat: {
-              interval: `${intervalDays * 24 + 1}h`,
-            },
-          } as ExternalEndpoint,
-        };
-      });
-  }
 }
 
 function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {

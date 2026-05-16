@@ -1,7 +1,8 @@
 import { BackupPlanManager } from "./BackupPlanManager.ts";
-import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { createClusterDefinition, GlobalResources, KubernetesClusterDefinition } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
+import { kubernetesBackups } from "./kubernetes-backups.ts";
 
 const globals = new GlobalResources({}, {});
 const op = new OPClient();
@@ -20,6 +21,12 @@ const backupPlanManager = new BackupPlanManager("backup-plan-manager", {
   source: backupDetails.source,
   destinations: backupDetails.destinations,
 });
+
+const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition);
+const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition);
+
+sgcCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
+equestriaCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
 
 backupPlanManager.createBackrestPlan("immich", {
   title: "Immich",
