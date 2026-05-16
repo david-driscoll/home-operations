@@ -29,5 +29,6 @@ gh = "2.92.0"
 "npm:typescript" = "5.9.3"
 node = "24.15.0"
 pulumi = "3.239.0"
+"github:microsoft/apm" = { version = "v0.13.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.6.2", bin = "skillfile" }
-dotnet = "10.0.203"
+dotnet = { postinstall = "dotnet tool restore && dotnet restore", version = "10.0.203" }
