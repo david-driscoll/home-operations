@@ -85,34 +85,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
     ),
   );
 
-  return {};
-
-  function getVolsyncRepo(job: string, password: string): Omit<BackrestRepository, "guid"> {
-    return {
-      id: `volsync-${clusterDefinition.key}-${job}`,
-      uri: `/backup/${clusterDefinition.key}/volsync/${job}`,
-      password: password,
-      prunePolicy: {
-        schedule: {
-          maxFrequencyDays: 30,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        maxUnusedPercent: 10,
-      },
-      checkPolicy: {
-        schedule: {
-          maxFrequencyDays: 30,
-          clock: "CLOCK_LAST_RUN_TIME",
-        },
-        readDataSubsetPercent: 10,
-      },
-      autoUnlock: true,
-      commandPrefix: {
-        ioNice: "IO_BEST_EFFORT_LOW",
-        cpuNice: "CPU_LOW",
-      },
-    };
-  }
+  return pulumi.all([celestiaJobs, lunaJobs]).apply(([celestia, luna]) => celestia.concat(luna));
 }
 
 function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {
