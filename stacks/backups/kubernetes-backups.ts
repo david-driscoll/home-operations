@@ -59,7 +59,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
     pulumi.all(
       jobs.map((job) => {
         return planManager.createBackupJob(planManager.source, {
-          name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
+          name: pulumi.interpolate`${clusterDefinition.key}-volsync-source-${job}`,
           schedule: "0 10 * * *", // 10 am daily
           sourceType: "local",
           source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
@@ -74,7 +74,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
     pulumi.all(
       jobs.map((job) => {
         return planManager.createBackupJob(planManager.destinations, {
-          name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
+          name: pulumi.interpolate`${clusterDefinition.key}-volsync-destination-${job}`,
           schedule: "0 3 * * *", // 3 am daily
           sourceType: "sftp",
           source: pulumi.interpolate`${planManager.source.dockgeConnection.host}/${clusterDefinition.key}/volsync/${job}`,

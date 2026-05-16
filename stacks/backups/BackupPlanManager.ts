@@ -244,12 +244,12 @@ export class BackupPlanManager extends ComponentResource {
 
   public createBackupJob(details: Input<PbsDetails | PbsDetails[]>, args: Omit<BackupTask, "token">) {
     const d = output(details).apply((z) => (Array.isArray(z) ? z : [z]));
-    this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail) => ({ detail, task }))));
+    this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail, index) => ({ detail, task: { ...task, name: `${task.name}-${index}` } }))));
     const result = all([args, d])
       .apply(([job, details]) => {
-        return details.map(({ cluster, dockgeConnection: connection }) => {
+        return details.map(({ cluster, dockgeConnection: connection }, index) => {
           const groupName = `Jobs: ${cluster.title}`;
-          const token = toGatusKey(groupName, job.name);
+          const token = toGatusKey(groupName, `${job.name}-${index}`);
 
           return copyFileToRemote(`backup-job-${token}`, {
             content: jsonStringify({ ...job, token }, undefined, 2),
