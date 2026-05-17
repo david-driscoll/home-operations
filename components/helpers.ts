@@ -196,7 +196,6 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
     remotePath: `/opt/stacks/uptime/config/uptime-${name}.yaml`,
     content,
     parent,
-    withRemoveCommand: true,
   });
 }
 
