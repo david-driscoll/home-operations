@@ -415,7 +415,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
               enabled: true,
               type: "pushover",
             });
-            pulumi.log.info(`Creating uptime monitoring for ${endpoint.name} in application ${definition.metadata.name} in cluster ${cluster.title}`);
 
             const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
             return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);

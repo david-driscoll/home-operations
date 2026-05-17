@@ -1,11 +1,12 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate } from "@pulumi/pulumi";
+import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate, all, getStack } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumiverse/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { dns } from "@components/constants.ts";
+import { addUptimeGatus } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -79,8 +80,15 @@ export class StandardDns extends ComponentResource {
     addGatusDnsRecord(name, args);
   }
 }
+const gatusDnsRecords: Output<GatusDefinition>[] = [];
 
-export const gatusDnsRecords: Output<GatusDefinition>[] = [];
+export function createGatusDnsUptime(globals: GlobalResources, options: { parent?: ComponentResource }) {
+  const dnsParent = new ComponentResource("custom:home:StandardDnsParent", "standard-dns", options ?? {});
+
+  all([gatusDnsRecords]).apply(async ([endpoints]) => {
+    return addUptimeGatus(`dns-${getStack()}`, globals, { endpoints: [...endpoints] }, dnsParent);
+  });
+}
 
 function addGatusDnsRecord(
   name: string,

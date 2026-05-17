@@ -9,6 +9,8 @@ import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
+import { createGatusDnsUptime } from "@components/StandardDns.ts";
+import { addUptimeGatus } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -69,7 +71,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
   cluster: cluster,
   dockge: dockgeRuntime,
   dependsOn: [],
-  tags: ['backup-destination']
+  tags: ["backup-destination"],
 });
 pbs.addHostMount("/data");
 
@@ -103,3 +105,5 @@ export const luna = {
   dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
+
+createGatusDnsUptime(globals, { parent: host });

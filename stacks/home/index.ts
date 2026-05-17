@@ -7,7 +7,7 @@ import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.
 import { TruenasVm } from "../../components/TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
-import { gatusDnsRecords } from "../../components/StandardDns.ts";
+import { createGatusDnsUptime } from "../../components/StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
 import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
@@ -154,11 +154,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
 celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
 alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
-const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
-pulumi.all([gatusDnsRecords]).apply(async ([endpoints]) => {
-  return addUptimeGatus(`dns`, globals, { endpoints: [...endpoints] }, dnsParent);
-});
-
 const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
   globals,
   outputs,
@@ -230,3 +225,5 @@ export const celestia = {
   dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
 };
+
+createGatusDnsUptime(globals, { parent: alphaSiteHost });

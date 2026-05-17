@@ -61,7 +61,10 @@ export function copyFileToRemote(
   return output(name)
     .apply((name) => output({ name, id: output(args.content).apply((c) => hash("md5", c, "hex")) }))
     .apply(({ name, id }) => {
-      const tempFilePath = writeTempFile(name, args.content);
+      const tempFilePath = writeTempFile(name, args.content).apply((path) => {
+        log.info(`Written temporary file for ${name} at ${path}`);
+        return path;
+      });
       const remotePath = output(args.remotePath);
       const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
       const mkdir = new remote.Command(
@@ -93,7 +96,7 @@ export function copyFileToRemote(
           connection: args.connection,
           remotePath,
           source: fileAsset,
-          triggers: [id, args.remotePath, ...(args.triggers ?? [])],
+          triggers: [id, tempFilePath, args.remotePath, ...internalDeps.map((z) => z.create), ...(args.triggers ?? [])],
         },
         mergeOptions(
           { parent: args.parent },
@@ -167,7 +170,7 @@ export function removeUndefinedProperties<T>(obj: T): T {
 export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; "external-endpoints"?: Input<ExternalEndpoint[]> }, parent?: Resource) {
   const content = output(args).apply(async (a) => {
     log.info(`Generating Gatus config for ${name} with ${a.endpoints?.length ?? 0} endpoints and ${a["external-endpoints"]?.length ?? 0} external endpoints`);
-    return yaml.stringify(
+    const y = yaml.stringify(
       {
         endpoints: unique(
           (a.endpoints ?? [])
@@ -187,6 +190,8 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
       },
       { lineWidth: 0 },
     );
+    log.info(`Generated Gatus config for ${name}:\n${y}`);
+    return y;
   });
 
   return copyFileToRemote(`gatus-${name}`, {

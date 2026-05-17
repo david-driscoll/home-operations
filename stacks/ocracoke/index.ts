@@ -9,6 +9,8 @@ import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
+import { addUptimeGatus } from "@components/helpers.ts";
+import { createGatusDnsUptime } from "@components/StandardDns.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -97,3 +99,7 @@ export const skystar = {
   dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
+
+const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
+
+createGatusDnsUptime(globals, { parent: host });

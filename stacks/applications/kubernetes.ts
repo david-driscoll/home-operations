@@ -110,7 +110,6 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     globals,
     {
       endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => {
-        pulumi.log.info(`Found ${instances.length} uptime instances for cluster ${clusterDefinition.key}`);
         return instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
       }),
     },
