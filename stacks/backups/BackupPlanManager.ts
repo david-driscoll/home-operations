@@ -245,7 +245,7 @@ export class BackupPlanManager extends ComponentResource {
     this.jobs = all([d, this.jobs, args]).apply(([details, jobs, task]) => jobs.concat(...details.map((detail) => ({ detail, task: { ...task, name: `${task.name} to ${detail.cluster.title}` } }))));
     const result = all([args, d])
       .apply(([job, details]) => {
-        return details.map(({ cluster, dockgeConnection: connection }, index) => {
+        return details.map(({ cluster, dockgeConnection: connection }) => {
           const groupName = `Jobs: ${cluster.title}`;
           const token = toGatusKey(groupName, job.name);
 
