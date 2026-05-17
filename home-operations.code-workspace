@@ -46,6 +46,32 @@
 			"vs-kubernetes.local-tunnel-debug-provider": "",
 			"checkForMinikubeUpgrade": true,
 			"imageBuildTool": "Docker"
-		}
+		},
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#c1698b",
+			"activityBar.background": "#c1698b",
+			"activityBar.foreground": "#15202b",
+			"activityBar.inactiveForeground": "#15202b99",
+			"activityBarBadge.background": "#3a5a25",
+			"activityBarBadge.foreground": "#e7e7e7",
+			"commandCenter.border": "#15202b99",
+			"editorGroup.border": "#c1698b",
+			"panel.border": "#c1698b",
+			"sash.hoverBorder": "#c1698b",
+			"sideBar.border": "#c1698b",
+			"statusBar.background": "#c1698b",
+			"statusBar.debuggingBackground": "#69c19f",
+			"statusBar.debuggingForeground": "#15202b",
+			"statusBar.foreground": "#15202b",
+			"statusBarItem.hoverBackground": "#af4870",
+			"statusBarItem.remoteBackground": "#c1698b",
+			"statusBarItem.remoteForeground": "#15202b",
+			"tab.activeBorder": "#c1698b",
+			"titleBar.activeBackground": "#d08da7",
+			"titleBar.activeForeground": "#15202b",
+			"titleBar.inactiveBackground": "#d08da799",
+			"titleBar.inactiveForeground": "#15202b99"
+		},
+		"peacock.color": "#c1698b"
 	}
 }
