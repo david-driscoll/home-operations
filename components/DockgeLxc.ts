@@ -686,6 +686,7 @@ ${middlewareYaml}  services:
                 {
                   parent: this,
                   dependsOn: dependsOn,
+                  deleteBeforeReplace: true,
                 },
               );
 
