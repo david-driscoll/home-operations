@@ -100,6 +100,4 @@ export const skystar = {
   backup: host.backupVolumes!,
 };
 
-const dnsParent = new pulumi.ComponentResource("custom:home:StandardDnsParent", "standard-dns", {});
-
 createGatusDnsUptime(globals, { parent: host });
