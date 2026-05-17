@@ -226,6 +226,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -236,6 +237,7 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -247,6 +249,7 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
     keyWrites.push(
@@ -256,6 +259,7 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -267,6 +271,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
     keyWrites.push(
@@ -276,6 +281,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -287,6 +293,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -298,6 +305,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 
@@ -309,6 +317,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this,
         dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
       }),
     );
 

@@ -55,6 +55,7 @@ export function copyFileToRemote(
     parent?: Resource;
     dependsOn?: Input<Input<Resource>[]>;
     triggers?: Input<any>[];
+    withRemoveCommand?: boolean;
   },
 ) {
   return output(name)
@@ -70,8 +71,21 @@ export function copyFileToRemote(
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
           triggers: [id, remotePath, ...(args.triggers ?? [])],
         },
-        mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
+        mergeOptions({ parent: args.parent, deleteBeforeReplace: true }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
       );
+
+      const internalDeps = [mkdir];
+      if (args.withRemoveCommand) {
+        const remove = new remote.Command(
+          `${name}-${id}-remove`,
+          {
+            connection: args.connection,
+            delete: interpolate`rm -f ${remotePath}`,
+          },
+          { parent: args.parent, deleteBeforeReplace: true },
+        );
+        internalDeps.push(remove);
+      }
 
       return new remote.CopyToRemote(
         `${name}-${id}`,
@@ -82,11 +96,11 @@ export function copyFileToRemote(
           triggers: [id, args.remotePath, ...(args.triggers ?? [])],
         },
         mergeOptions(
-          { parent: args.parent },
+          { parent: args.parent, deleteBeforeReplace: true },
           {
             dependsOn: output(args.dependsOn)
               .apply((d) => d ?? [])
-              .apply((d) => [...d, mkdir]),
+              .apply((d) => [...d, ...internalDeps]),
           },
         ),
       );
@@ -114,6 +128,7 @@ export function pushLxcDefinition(
       connection: args.connection,
       parent: args.parent,
       dependsOn: args.dependsOn,
+      withRemoveCommand: true,
     },
   );
 
@@ -181,6 +196,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
     remotePath: `/opt/stacks/uptime/config/uptime-${name}.yaml`,
     content,
     parent,
+    withRemoveCommand: true,
   });
 }
 

@@ -212,7 +212,7 @@ export function installTailscaleLxc(options: {
         {
           reusable: true,
           preauthorized: true,
-          ephemeral: true,
+          ephemeral: false,
           // expiry: Math.floor(60 * 60), // 1 hour in seconds
           recreateIfInvalid: "always",
           tags: args.advertiseTags,

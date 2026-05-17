@@ -254,16 +254,7 @@ export class BackupPlanManager extends ComponentResource {
             parent: this,
             connection: connection,
             remotePath: interpolate`/opt/stacks/backups/jobs/${token}.json`,
-            dependsOn: [
-              new remote.Command(
-                `backup-job-${token}-remove`,
-                {
-                  connection: connection,
-                  delete: interpolate`rm -f /opt/stacks/backups/jobs/${token}.json`,
-                },
-                { parent: this },
-              ),
-            ],
+            withRemoveCommand: true,
           });
         });
       })
