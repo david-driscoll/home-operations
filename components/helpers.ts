@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, Input, interpolate, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
+import { all, asset, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, rm } from "fs/promises";
 import * as yaml from "yaml";
@@ -166,6 +166,7 @@ export function removeUndefinedProperties<T>(obj: T): T {
 
 export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; "external-endpoints"?: Input<ExternalEndpoint[]> }, parent?: Resource) {
   const content = output(args).apply(async (a) => {
+    log.info(`Generating Gatus config for ${name} with ${a.endpoints?.length ?? 0} endpoints and ${a["external-endpoints"]?.length ?? 0} external endpoints`);
     return yaml.stringify(
       {
         endpoints: unique(
@@ -188,7 +189,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
     );
   });
 
-  return copyFileToRemote(`uptime-${name}`, {
+  return copyFileToRemote(`gatus-${name}`, {
     connection: {
       host: interpolate`dockge-as.${globals.tailscaleDomain}`,
       user: "root",
