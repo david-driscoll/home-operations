@@ -96,7 +96,7 @@ export function copyFileToRemote(
           connection: args.connection,
           remotePath,
           source: fileAsset,
-          triggers: [id, tempFilePath, args.remotePath, ...internalDeps.map((z) => z.create), ...(args.triggers ?? [])],
+          triggers: [id, args.remotePath, ...(args.triggers ?? [])],
         },
         mergeOptions(
           { parent: args.parent },
