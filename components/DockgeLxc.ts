@@ -380,7 +380,7 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo];
 
-    cluster.apply((clusterDefinition) => {
+    const applications = cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
       return args.host.applicationManager.createApplication({

@@ -71,7 +71,7 @@ export function copyFileToRemote(
           create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
           triggers: [id, remotePath, ...(args.triggers ?? [])],
         },
-        mergeOptions({ parent: args.parent, deleteBeforeReplace: true }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
+        mergeOptions({ parent: args.parent }, { dependsOn: output(args.dependsOn).apply((d) => d ?? []) }),
       );
 
       const internalDeps = [mkdir];
@@ -82,7 +82,7 @@ export function copyFileToRemote(
             connection: args.connection,
             delete: interpolate`rm -f ${remotePath}`,
           },
-          { parent: args.parent, deleteBeforeReplace: true },
+          { parent: args.parent },
         );
         internalDeps.push(remove);
       }
@@ -96,7 +96,7 @@ export function copyFileToRemote(
           triggers: [id, args.remotePath, ...(args.triggers ?? [])],
         },
         mergeOptions(
-          { parent: args.parent, deleteBeforeReplace: true },
+          { parent: args.parent },
           {
             dependsOn: output(args.dependsOn)
               .apply((d) => d ?? [])

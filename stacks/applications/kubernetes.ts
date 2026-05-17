@@ -82,25 +82,27 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   });
 
   for (const app of applications) {
-    applicationManager.createApplication(app).apply((res) => {
-      if (res.provider && res.isProxy === false) {
-        new pk8s.core.v1.Secret(
-          `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
-          {
-            metadata: {
-              name: `${app.metadata!.name!}-oidc-credentials`,
-              namespace: app.metadata.namespace ?? clusterDefinition.key,
+    await awaitOutput(
+      applicationManager.createApplication(app).apply((res) => {
+        if (res.provider && res.isProxy === false) {
+          new pk8s.core.v1.Secret(
+            `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+            {
+              metadata: {
+                name: `${app.metadata!.name!}-oidc-credentials`,
+                namespace: app.metadata.namespace ?? clusterDefinition.key,
+              },
+              stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
             },
-            stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
-          },
-          {
-            parent: applicationManager,
-            provider,
-            dependsOn: [res.provider],
-          },
-        );
-      }
-    });
+            {
+              parent: applicationManager,
+              provider,
+              dependsOn: [res.provider],
+            },
+          );
+        }
+      }),
+    );
   }
 
   addUptimeGatus(
