@@ -380,7 +380,9 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo];
 
-    const applications = cluster.apply((clusterDefinition) => {
+    const pveDns = new StandardDns(name, { hostname: interpolate`pve.${cluster.rootDomain}`, ipAddress: output(this.args.host.internalIpAddress), type: "A" }, args.globals, cro);
+    this.registerExternalService({ name, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8007 }, []);
+    cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
       return args.host.applicationManager.createApplication({
