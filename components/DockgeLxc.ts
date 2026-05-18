@@ -668,7 +668,10 @@ ${middlewareYaml}  services:
             if (!docs || "empty" in docs) {
               return [];
             }
-            return docs.map((doc) => this.args.host.applicationManager.createApplication(doc as unknown as ApplicationDefinitionSchema));
+            return docs.map((doc) => {
+              const app = this.args.host.applicationManager.createApplication(doc.toJS() as unknown as ApplicationDefinitionSchema);
+              return app;
+            });
           });
         }),
       )
