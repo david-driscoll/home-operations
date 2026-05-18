@@ -410,7 +410,7 @@ export class DockgeLxc extends ComponentResource {
     });
   }
 
-  public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]): ReturnType<typeof copyFileToRemote> {
+  public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
     const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
 
     const content = interpolate`http:
@@ -440,7 +440,7 @@ ${middlewareYaml}  services:
 
     this.registerTailscaleService(opts.name);
 
-    return copyFileToRemote(`${opts.name}-traefik-route`, {
+    const file = copyFileToRemote(`${opts.name}-traefik-route`, {
       connection: this.remoteConnection,
       remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
       content: content,
@@ -448,6 +448,8 @@ ${middlewareYaml}  services:
       triggers: [content, opts.name, opts.port, opts.hostname],
       dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
     });
+
+    return { file, dns: pveDns };
   }
 
   public addHostMount(path: string, containerPath?: string) {
@@ -652,16 +654,21 @@ ${middlewareYaml}  services:
 
     const waitForApplications = output(definitions)
       .apply((defs) =>
-        defs.map(async ([, absoluteFilePath]) => {
+        defs.map(([, absoluteFilePath]) => {
           const content = output(readFile(absoluteFilePath, "utf-8"));
           let replacedContent = replacements.reduce((p, r) => r(p), content);
           // intercept definition file and create the client id / client secret and inject that into the yaml.
-          const parsed = yaml.parse(await awaitOutput(replacedContent)) as ApplicationDefinitionSchema;
-          return this.args.host.applicationManager.createApplication(parsed);
+          return replacedContent.apply((content) => {
+            const docs = yaml.parseAllDocuments(content);
+            if (!docs || "empty" in docs) {
+              return [];
+            }
+            return docs.map((doc) => this.args.host.applicationManager.createApplication(doc as unknown as ApplicationDefinitionSchema));
+          });
         }),
       )
       .apply((z) => output(z))
-      .apply((z) => z.map((z) => z.app));
+      .apply((z) => z.flat().map((z) => z.app));
 
     dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => a.concat(b));
 

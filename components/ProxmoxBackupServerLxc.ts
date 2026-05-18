@@ -205,8 +205,8 @@ echo "PBS post-install complete"`;
     this.resources.push(deviceInfo.apply((z) => z.resource));
 
     const externalHostname = externalUrl.apply((u) => new URL(u).hostname);
-    args.dockge.registerExternalService({ name, hostname: externalHostname, port: 8007 }, []);
-    this.dns = new StandardDns(`${name}-external`, { hostname: externalHostname, ipAddress: args.dockge.tailscaleIpAddress, record: args.dockge.hostname, type: "CNAME" }, args.globals, cro);
+    const { dns } = args.dockge.registerExternalService({ name, hostname: externalHostname, port: 8007 }, []);
+    this.dns = dns;
 
     const oidc = all([cluster])
       .apply(([c]) =>
