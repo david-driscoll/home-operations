@@ -33,7 +33,7 @@ export interface ProxmoxBackupServerLxcArgs {
 export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly tailscaleHostname: Output<string>;
-  public readonly dns: StandardDns;
+  public readonly dns: Output<StandardDns>;
   public readonly tailscaleName: Output<string>;
   public readonly tailscaleIpAddress: Output<string>;
   private readonly mountPoints: remote.Command[] = [];

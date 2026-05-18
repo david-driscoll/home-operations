@@ -43,7 +43,7 @@ export interface DockgeLxcArgs {
   registerTailscaleService(service: string): void;
 }
 export interface ExternalServiceOpts {
-  name: string;
+  name: Input<string>;
   hostname: Input<string>;
   port: Input<number>;
   middleware?: string[];
@@ -379,7 +379,7 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo];
 
-    this.registerExternalService({ name, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8007 }, []);
+    this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8007 }, []);
     cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
@@ -411,9 +411,10 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
-    const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
+    return output(opts).apply((opts) => {
+      const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
 
-    const content = interpolate`http:
+      const content = interpolate`http:
   routers:
     ${opts.name}:
       rule: "Host(\`${opts.hostname}\`)"
@@ -433,23 +434,27 @@ ${middlewareYaml}  services:
     ${opts.name}-tailscale:
       loadBalancer:
         servers:
-          - url: http://${opts.name}-${this.cluster.key}.${this.args.globals.tailscaleDomain}:${opts.port}
+          - url: http://${this.tailscaleHostname}:${opts.port}
 `;
 
-    const pveDns = new StandardDns(opts.name, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this, dependsOn: dependsOn ?? [] });
+      const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
+        parent: this,
+        dependsOn: dependsOn ?? [],
+      });
 
-    this.registerTailscaleService(opts.name);
+      this.registerTailscaleService(opts.name);
 
-    const file = copyFileToRemote(`${opts.name}-traefik-route`, {
-      connection: this.remoteConnection,
-      remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
-      content: content,
-      parent: this,
-      triggers: [content, opts.name, opts.port, opts.hostname],
-      dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
+      const file = copyFileToRemote(`${opts.name}-traefik-route`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
+        content: content,
+        parent: this,
+        triggers: [content, opts.name, opts.port, opts.hostname],
+        dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
+      });
+
+      return { file, dns: dns };
     });
-
-    return { file, dns: pveDns };
   }
 
   public addHostMount(path: string, containerPath?: string) {
