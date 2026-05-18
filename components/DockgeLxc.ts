@@ -48,7 +48,6 @@ export interface ExternalServiceOpts {
   port: Input<number>;
   middleware?: string[];
   certResolver?: string;
-  entrypoints?: string[];
 }
 
 export class DockgeLxc extends ComponentResource {
@@ -380,7 +379,6 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo];
 
-    const pveDns = new StandardDns(name, { hostname: interpolate`pve.${cluster.rootDomain}`, ipAddress: output(this.args.host.internalIpAddress), type: "A" }, args.globals, cro);
     this.registerExternalService({ name, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8007 }, []);
     cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
@@ -413,32 +411,41 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]): ReturnType<typeof copyFileToRemote> {
-    const entrypoints = opts.entrypoints ?? ["websecure"];
-    const certResolver = opts.certResolver ?? "le";
-    const entrypointsYaml = entrypoints.map((ep) => `        - ${ep}`).join("\n");
     const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
 
     const content = interpolate`http:
   routers:
     ${opts.name}:
       rule: "Host(\`${opts.hostname}\`)"
-      entryPoints:
-${entrypointsYaml}
+      entryPoints: [websecure]
       service: ${opts.name}
       tls:
-        certResolver: ${certResolver}
+        certResolver: "le"
+    ${opts.name}-tailscale:
+      rule: "Host(\`${opts.name}-${this.cluster.key}.${this.args.globals.tailscaleDomain}\`)"
+      entryPoints: [tailscale]
+      service: ${opts.name}
 ${middlewareYaml}  services:
     ${opts.name}:
       loadBalancer:
         servers:
-          - url: http://${this.cluster.rootDomain}:${opts.port}
+          - url: http://${opts.hostname}:${opts.port}
+    ${opts.name}-tailscale:
+      loadBalancer:
+        servers:
+          - url: http://${opts.name}-${this.cluster.key}.${this.args.globals.tailscaleDomain}:${opts.port}
 `;
+
+    const pveDns = new StandardDns(opts.name, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this, dependsOn: dependsOn ?? [] });
+
+    this.registerTailscaleService(opts.name);
 
     return copyFileToRemote(`${opts.name}-traefik-route`, {
       connection: this.remoteConnection,
       remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
       content: content,
       parent: this,
+      triggers: [content, opts.name, opts.port, opts.hostname],
       dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
     });
   }
