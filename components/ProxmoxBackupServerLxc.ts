@@ -223,7 +223,7 @@ echo "PBS post-install complete"`;
             authentik: {
               oauth2: {
                 clientType: "confidential",
-                allowedRedirectUris: [{ matching_mode: "regex", url: "https://.*\\?oidccode" }],
+                allowedRedirectUris: [{ matching_mode: "strict", url: `https://pbs.${c.rootDomain}/oidccode` }],
                 includeClaimsInIdToken: true,
               },
             },
