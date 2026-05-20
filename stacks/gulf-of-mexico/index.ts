@@ -60,7 +60,6 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   },
 });
 dockgeRuntime.addHostMount("/data");
-dockgeRuntime.deployStacks({ dependsOn: [] });
 
 const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
   globals,
@@ -75,6 +74,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
 });
 pbs.addHostMount("/data");
 
+dockgeRuntime.deployStacks({ dependsOn: [pbs] });
 host.addUptimeGatus();
 
 exportNodeStateToOnePassword(

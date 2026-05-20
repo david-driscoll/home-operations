@@ -151,9 +151,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
 });
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [] });
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
-
 const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
   globals,
   outputs,
@@ -168,6 +165,9 @@ const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
 celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
+
+celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs] });
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
 
 celestiaHost.addUptimeGatus();
 alphaSiteHost.addUptimeGatus();
@@ -218,8 +218,14 @@ exportNodeStateToOnePassword(
   { parent: alphaSiteHost },
 );
 
-export const alphaSite = { proxmox: getProxmoxProperties(alphaSiteHost), backup: alphaSiteHost.backupVolumes! };
-export const twilightSparkle = { proxmox: getProxmoxProperties(twilightSparkleHost) };
+export const alphaSite = {
+  proxmox: getProxmoxProperties(alphaSiteHost),
+  // dockge: getDockageProperties(alphaSiteDockgeRuntime),
+  backup: alphaSiteHost.backupVolumes!,
+};
+export const twilightSparkle = {
+  proxmox: getProxmoxProperties(twilightSparkleHost),
+};
 export const celestia = {
   proxmox: getProxmoxProperties(celestiaHost),
   dockge: getDockageProperties(celestiaDockgeRuntime),

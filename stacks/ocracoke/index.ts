@@ -53,7 +53,6 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   },
 });
 // dockgeRuntime.addHostMount("/data");
-dockgeRuntime.deployStacks({ dependsOn: [] });
 
 // machine does not have drives yet
 // const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
@@ -69,6 +68,7 @@ dockgeRuntime.deployStacks({ dependsOn: [] });
 // });
 // pbs.addHostMount("/data");
 
+dockgeRuntime.deployStacks({ dependsOn: [] });
 host.addUptimeGatus();
 
 exportNodeStateToOnePassword(

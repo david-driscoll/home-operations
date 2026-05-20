@@ -690,6 +690,7 @@ ${middlewareYaml}  services:
       } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
         const content = replacedContent;
+        const tailscaleServices: Resource[] = [];
         const hostRegex = /Host\(`(.*?)`\)/g;
 
         all([replacedContent, tailscaleDomain]).apply(([content, tailscaleDomain]) => {
@@ -700,7 +701,7 @@ ${middlewareYaml}  services:
               const service = host.replace(`.${tailscaleDomain}`, "");
               log.info(`Creating Tailscale DNS entry for service ${service}`);
 
-              new remote.Command(
+              const tailscaleService = new remote.Command(
                 `${stackName}-tailscale-service-${service}`,
                 {
                   connection: this.remoteConnection,
@@ -709,11 +710,12 @@ ${middlewareYaml}  services:
                 },
                 {
                   parent: this,
-                  dependsOn: dependsOn,
+                  dependsOn: tailscaleServices,
                   deleteBeforeReplace: true,
                 },
               );
 
+              tailscaleServices.push(tailscaleService);
               this.registerTailscaleService(service);
 
               continue;
@@ -731,7 +733,7 @@ ${middlewareYaml}  services:
               {
                 dependsOn: dependsOn,
                 parent: this,
-                protect: stackName === "adguard",
+                // protect: stackName === "adguard",
               },
             );
           }
