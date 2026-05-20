@@ -379,7 +379,7 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo];
 
-    this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8007 }, []);
+    this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8006 }, []);
     cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
@@ -416,25 +416,25 @@ export class DockgeLxc extends ComponentResource {
 
       const content = interpolate`http:
   routers:
-    ${opts.name}:
+    dynamic-${opts.name}:
       rule: "Host(\`${opts.hostname}\`)"
       entryPoints: [websecure]
-      service: ${opts.name}
+      service: dynamic-${opts.name}
       tls:
         certResolver: "le"
-    ${opts.name}-tailscale:
-      rule: "Host(\`${opts.name}-${this.cluster.key}.${this.args.globals.tailscaleDomain}\`)"
+    dynamic-${opts.name}-tailscale:
+      rule: "Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)"
       entryPoints: [tailscale]
-      service: ${opts.name}
+      service: dynamic-${opts.name}
 ${middlewareYaml}  services:
-    ${opts.name}:
+    dynamic-${opts.name}:
       loadBalancer:
         servers:
           - url: http://${opts.hostname}:${opts.port}
-    ${opts.name}-tailscale:
+    dynamic-${opts.name}-tailscale:
       loadBalancer:
         servers:
-          - url: http://${this.tailscaleHostname}:${opts.port}
+          - url: http://${this.args.host.tailscaleHostname}:${opts.port}
 `;
 
       const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
