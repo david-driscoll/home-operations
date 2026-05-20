@@ -602,7 +602,7 @@ ${middlewareYaml}  services:
     const clusterKey = await awaitOutput(this.cluster.key);
 
     const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
-    const environmentConfig = copyFileToRemote(`${clusterKey}-authentik-outpost-token`, {
+    const environmentConfig = copyFileToRemote(`${clusterKey}-outpost-token`, {
       connection: {
         host: this.tailscaleHostname,
         user: "root",
@@ -611,7 +611,7 @@ ${middlewareYaml}  services:
       content: envValues,
       parent: applicationManager.outpostsComponent,
       dependsOn: [outpost],
-      triggers: [outpost.id],
+      triggers: [outpost.id, outpostToken.key],
     });
   }
 
