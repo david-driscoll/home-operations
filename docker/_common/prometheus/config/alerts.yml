@@ -1,0 +1,136 @@
+groups:
+  - name: docker-containers
+    interval: 30s
+    rules:
+      # Alert when a Docker container has stopped running (not seen for 5 minutes)
+      - alert: DockerContainerDown
+        expr: |
+          time() - container_last_seen{name!="", name!~".*POD.*"}
+          > 300
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is down"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} has not been seen for more than 5 minutes."
+
+      # Alert when a Docker container health check is reporting unhealthy
+      - alert: DockerContainerUnhealthy
+        expr: |
+          container_health_status{status="unhealthy", name!=""}
+          == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is unhealthy"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} is reporting an unhealthy health check status."
+
+      # Alert when a container is restarting frequently (more than 3 times in 1 hour)
+      # This catches crash-looping containers that may not show as "down" between restarts.
+      - alert: DockerContainerRestartingFrequently
+        expr: |
+          changes(container_start_time_seconds{name!="", name!~".*POD.*"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting frequently"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} has restarted {{ $value | printf \"%.0f\" }} times in the last hour. This may indicate a crash loop."
+
+      # Alert when OOM events are detected in a container
+      - alert: DockerContainerOomKilled
+        expr: |
+          increase(container_oom_events_total{name!="", name!~".*POD.*"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} was OOM killed"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} was killed by the Out-Of-Memory killer. It is likely under-resourced."
+
+      # Alert when a container with a memory limit is using over 80% of it
+      - alert: DockerContainerHighMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{name!="", name!~".*POD.*"}
+            / container_spec_memory_limit_bytes{name!="", name!~".*POD.*"}
+            * 100
+          ) > 80
+          and
+          container_spec_memory_limit_bytes{name!="", name!~".*POD.*"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} has high memory usage"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} is using {{ $value | printf \"%.1f\" }}% of its memory limit."
+
+      # Alert when a container with a memory limit is using over 90% of it (critical)
+      - alert: DockerContainerMemoryUsageCritical
+        expr: |
+          (
+            container_memory_working_set_bytes{name!="", name!~".*POD.*"}
+            / container_spec_memory_limit_bytes{name!="", name!~".*POD.*"}
+            * 100
+          ) > 90
+          and
+          container_spec_memory_limit_bytes{name!="", name!~".*POD.*"} > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} memory usage is critical"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} is using {{ $value | printf \"%.1f\" }}% of its memory limit and is at risk of OOM."
+
+      # Alert when a container with a CPU limit has sustained high CPU utilization
+      - alert: DockerContainerHighCpuUsage
+        expr: |
+          (
+            sum by (instance, name) (rate(container_cpu_usage_seconds_total{name!="", name!~".*POD.*"}[5m]))
+            / sum by (instance, name) (container_spec_cpu_quota{name!="", name!~".*POD.*"} / container_spec_cpu_period{name!="", name!~".*POD.*"})
+            * 100
+          ) > 80
+          and
+          sum by (instance, name) (container_spec_cpu_quota{name!="", name!~".*POD.*"}) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} has high CPU usage"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} is using {{ $value | printf \"%.1f\" }}% of its CPU limit for more than 5 minutes."
+
+      # Alert when a container is being heavily CPU throttled
+      # This indicates the container is hitting its CPU limit and work is being queued.
+      - alert: DockerContainerCpuThrottling
+        expr: |
+          (
+            rate(container_cpu_cfs_throttled_periods_total{name!="", name!~".*POD.*"}[5m])
+            / rate(container_cpu_cfs_periods_total{name!="", name!~".*POD.*"}[5m])
+            * 100
+          ) > 25
+          and
+          rate(container_cpu_cfs_periods_total{name!="", name!~".*POD.*"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is CPU throttled"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} is being CPU throttled {{ $value | printf \"%.1f\" }}% of the time. Consider increasing its CPU limit."
+
+      # Alert when a container's filesystem (volume) usage exceeds 80% based on inodes
+      - alert: DockerContainerVolumeUsageHigh
+        expr: |
+          (
+            (1 - sum by (instance, name) (container_fs_inodes_free{name!="", name!~".*POD.*"})
+               / sum by (instance, name) (container_fs_inodes_total{name!="", name!~".*POD.*"}))
+            * 100
+          ) > 80
+          and
+          sum by (instance, name) (container_fs_inodes_total{name!="", name!~".*POD.*"}) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} volume inode usage is high"
+          description: "Container {{ $labels.name }} on {{ $labels.host }} has used {{ $value | printf \"%.1f\" }}% of its filesystem inodes."

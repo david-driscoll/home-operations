@@ -8,6 +8,7 @@ global:
 
 rule_files:
   - /etc/prometheus/watchdog.yml
+  - /etc/prometheus/alerts.yml
 
 remote_write:
   - url: http://thanos-receive.${tailscaleDomain}:19291/api/v1/receive
