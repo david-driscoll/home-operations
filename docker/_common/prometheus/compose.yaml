@@ -1,5 +1,4 @@
 services:
-
   alloy:
     user: "65534:65534"
     container_name: alloy
@@ -125,6 +124,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+      - /etc/machine-id:/etc/machine-id:ro
     labels:
       traefik.enable: false
       autoheal: true

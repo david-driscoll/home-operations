@@ -320,6 +320,17 @@ export class DockgeLxc extends ComponentResource {
       }),
     );
 
+    keyWrites.push(
+      copyFileToRemote(`${name}-machine-id`, {
+        connection: this.remoteConnection,
+        remotePath: "/etc/machine-id",
+        content: interpolate`${name}`,
+        parent: this,
+        dependsOn: [ensureKeysDir],
+        withRemoveCommand: true,
+      }),
+    );
+
     // Set restrictive permissions on the keys
     new remote.Command(
       `${name}-sftp-keys-perms`,
