@@ -7,8 +7,8 @@ global:
     region: "home"
 
 rule_files:
-  - /etc/prometheus/alerts/*.yml
-  - /etc/prometheus/alerts/*.yaml
+  - /etc/prometheus/rules/*.yml
+  - /etc/prometheus/rules/*.yaml
 
 remote_write:
   - url: http://thanos-receive.${tailscaleDomain}:19291/api/v1/receive
