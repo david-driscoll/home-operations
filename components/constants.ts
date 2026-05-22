@@ -26,7 +26,7 @@ const dnsServers = {
   Discord: {
     ips: ["10.10.0.1"],
     uptime: true,
-    use: true,
+    use: false,
     internal: true,
   },
   "Stargate Command": {

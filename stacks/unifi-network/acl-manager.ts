@@ -70,7 +70,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
   const primaryDns = getTailscaleIp("adguard-home", globals);
   const secondaryDns = getTailscaleIp("dockge-as", globals);
   const idpIp = getTailscaleIp("idp", globals);
-  const unifiDns = "100.111.0.1";
+  // const unifiDns = "100.111.0.1";
 
   return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, idpIp]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, idpAddr]) => {
     // ── Build hosts map from all exported stacks ──────────────────────────
@@ -78,7 +78,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       ["idp", idpAddr],
       ["primary-dns", primaryDnsIp],
       ["secondary-dns", secondaryDnsIp],
-      ["unifi-dns", unifiDns],
+      // ["unifi-dns", unifiDns],
     ];
     for (const exp of allExports) {
       for (const [name, { ip }] of Object.entries(exp.hosts)) {
@@ -111,7 +111,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       taggedDevices: [...proxmoxDevices, ...dockgeDevices],
     };
 
-    const dnsServers = [primaryDnsIp, secondaryDnsIp, unifiDns, ...dns.internalIps];
+    const dnsServers = [primaryDnsIp, secondaryDnsIp, ...dns.internalIps];
 
     // ── Initialise ACL manager ────────────────────────────────────────────
     let aclsJson = applyAllEdits(hujson, ["tagOwners"], {});
@@ -199,7 +199,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "default-dns",
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
-        dst: ["host:primary-dns", "host:secondary-dns", "host:unifi-dns"],
+        dst: ["host:primary-dns", "host:secondary-dns"],
         ip: ports.dns,
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
