@@ -775,6 +775,7 @@ ${middlewareYaml}  services:
           content: replacedContent,
           parent: stackParent,
           dependsOn: dependsOn,
+          deleteBeforeReplace: true,
         }),
       );
     }
