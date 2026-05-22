@@ -792,7 +792,11 @@ ${middlewareYaml}  services:
             triggers: [new Date().getTime()], // always run
             create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
           },
-          mergeOptions({ parent: stackParent }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
+          {
+            parent: stackParent,
+            dependsOn: copyFiles,
+            deleteBeforeReplace: true,
+          },
         );
         composeDeps.push(initCommand);
       }
@@ -804,7 +808,11 @@ ${middlewareYaml}  services:
           triggers: copyFiles.map((f) => f.id),
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
-        mergeOptions({ parent: stackParent }, { dependsOn: composeDeps, deleteBeforeReplace: true }),
+        {
+          parent: stackParent,
+          dependsOn: composeDeps,
+          deleteBeforeReplace: true,
+        },
       );
 
       return output({ name: stackName, path, compose });
