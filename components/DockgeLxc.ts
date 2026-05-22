@@ -668,7 +668,7 @@ ${middlewareYaml}  services:
     let hasInit = false;
 
     const stackParent = new remote.Command(
-      `${stackName}-delete-on-remove`,
+      `${this.shortName}-${stackName}-delete-on-remove`,
       {
         connection: this.remoteConnection,
         delete: interpolate`rm -rf /opt/stacks/${stackName}`,
@@ -769,7 +769,7 @@ ${middlewareYaml}  services:
       }
 
       copyFiles.push(
-        copyFileToRemote(`${hostname}-${stackName}-${file.replace(/\//g, "-")}-copy-file`, {
+        copyFileToRemote(`${this.shortName}-${stackName}-${file.replace(/\//g, "-")}-copy-file`, {
           connection: this.remoteConnection,
           remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
           content: replacedContent,
@@ -785,7 +785,7 @@ ${middlewareYaml}  services:
       const composeDeps: Input<Resource>[] = [...copyFiles];
       if (hasInit) {
         const initCommand = new remote.Command(
-          `${hostname}-${stackName}-init`,
+          `${this.shortName}-${stackName}-init`,
           {
             connection: this.remoteConnection,
             triggers: [new Date().getTime()], // always run
@@ -797,7 +797,7 @@ ${middlewareYaml}  services:
       }
 
       const compose = new remote.Command(
-        `${hostname}-${stackName}-compose`,
+        `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
           triggers: copyFiles.map((f) => f.id),
