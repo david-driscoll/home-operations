@@ -665,6 +665,19 @@ ${middlewareYaml}  services:
     let hasCompose = false;
     let hasInit = false;
 
+    const stackParent = new remote.Command(
+      `${name}-delete-on-remove`,
+      {
+        connection: this.remoteConnection,
+        delete: interpolate`rm -rf /opt/stacks/${stackName}`,
+      },
+      {
+        parent: this,
+        dependsOn: dependsOn,
+        deleteBeforeReplace: true,
+      },
+    );
+
     const definitions = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "definition.yaml");
     const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
 
@@ -720,7 +733,7 @@ ${middlewareYaml}  services:
                   delete: interpolate`tailscale serve clear svc:${service}`,
                 },
                 {
-                  parent: this,
+                  parent: stackParent,
                   dependsOn: tailscaleServices,
                   deleteBeforeReplace: true,
                 },
@@ -743,7 +756,7 @@ ${middlewareYaml}  services:
               this.args.globals,
               {
                 dependsOn: dependsOn,
-                parent: this,
+                parent: stackParent,
                 // protect: stackName === "adguard",
               },
             );
@@ -758,7 +771,7 @@ ${middlewareYaml}  services:
           connection: this.remoteConnection,
           remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
           content: replacedContent,
-          parent: this,
+          parent: stackParent,
           dependsOn: dependsOn,
         }),
       );
@@ -776,7 +789,7 @@ ${middlewareYaml}  services:
             triggers: [new Date().getTime()], // always run
             create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
           },
-          mergeOptions({ parent: this }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
+          mergeOptions({ parent: stackParent }, { dependsOn: copyFiles, deleteBeforeReplace: true }),
         );
         composeDeps.push(initCommand);
       }
@@ -788,7 +801,7 @@ ${middlewareYaml}  services:
           triggers: copyFiles.map((f) => f.id),
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
-        mergeOptions({ parent: this }, { dependsOn: composeDeps, deleteBeforeReplace: true }),
+        mergeOptions({ parent: stackParent }, { dependsOn: composeDeps, deleteBeforeReplace: true }),
       );
 
       return output({ name: stackName, path, compose });
