@@ -666,7 +666,7 @@ ${middlewareYaml}  services:
     let hasInit = false;
 
     const stackParent = new remote.Command(
-      `${name}-delete-on-remove`,
+      `${stackName}-delete-on-remove`,
       {
         connection: this.remoteConnection,
         delete: interpolate`rm -rf /opt/stacks/${stackName}`,
