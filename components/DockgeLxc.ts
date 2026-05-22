@@ -66,6 +66,7 @@ export class DockgeLxc extends ComponentResource {
   private readonly mountPoints: remote.Command[] = [];
   registerTailscaleService: (service: string) => void;
   private readonly resources: Input<Resource>[];
+  private readonly dockerParent: ComponentResource<any>;
   constructor(
     name: string,
     private readonly args: DockgeLxcArgs,
@@ -74,6 +75,7 @@ export class DockgeLxc extends ComponentResource {
 
     const cro = { parent: this };
     const cluster = output(args.cluster);
+    this.dockerParent = new ComponentResource("home:dockge:DockgeLxcDockerParent", `${name}-docker`, {}, cro);
     this.cluster = cluster;
     this.shortName = args.host.shortName ?? name;
     this.registerTailscaleService = args.registerTailscaleService;
@@ -223,7 +225,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/authorized_keys`,
         content: publicKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -234,7 +236,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/host_key`,
         content: privateKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -246,7 +248,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519`,
         content: privateKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -256,7 +258,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/id_ed25519`,
         content: privateKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -268,7 +270,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/id_ed25519.pub`,
         content: publicKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -278,7 +280,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/id_ed25519.pub`,
         content: publicKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -290,7 +292,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/server_host_key.pub`,
         content: publicKeyPem,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -302,7 +304,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/known_hosts`,
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -314,7 +316,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/known_hosts`,
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -325,7 +327,7 @@ export class DockgeLxc extends ComponentResource {
         connection: this.remoteConnection,
         remotePath: "/etc/machine-id",
         content: interpolate`${name}`,
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         withRemoveCommand: true,
       }),
@@ -672,7 +674,7 @@ ${middlewareYaml}  services:
         delete: interpolate`rm -rf /opt/stacks/${stackName}`,
       },
       {
-        parent: this,
+        parent: this.dockerParent,
         dependsOn: dependsOn,
         deleteBeforeReplace: true,
       },
@@ -756,7 +758,7 @@ ${middlewareYaml}  services:
               this.args.globals,
               {
                 dependsOn: dependsOn,
-                parent: stackParent,
+                parent: this,
                 // protect: stackName === "adguard",
               },
             );
