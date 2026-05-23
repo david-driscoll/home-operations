@@ -142,7 +142,7 @@ function addGatusDnsRecord(
       output({
         name: args.hostname,
         url: ip,
-        group: `DNS @ ${server}`,
+        group: `DNS @  ${server}`,
         dns: {
           "query-name": args.hostname,
           "query-type": args.type,
