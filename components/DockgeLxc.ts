@@ -190,7 +190,7 @@ export class DockgeLxc extends ComponentResource {
     });
 
     this.dns = this.hostname.apply((g) => {
-      return new StandardDns(name, { hostname: g, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" }, args.globals, cro);
+      return StandardDns.create(name, { hostname: g, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" }, args.globals, cro);
     });
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
@@ -474,7 +474,7 @@ export class DockgeLxc extends ComponentResource {
         },
       }).apply((z) => yaml.stringify(z));
 
-      const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this });
+      const dns = StandardDns.create(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this });
 
       this.registerTailscaleService(opts.name);
 
@@ -487,7 +487,7 @@ export class DockgeLxc extends ComponentResource {
         dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
       });
 
-      return { file, dns: dns };
+      return output({ file, dns: dns });
     });
   }
 
@@ -770,7 +770,7 @@ export class DockgeLxc extends ComponentResource {
               continue;
             }
 
-            new StandardDns(
+            StandardDns.create(
               `${stackName}-${host.replace(/\./g, "_")}`,
               {
                 hostname: host,

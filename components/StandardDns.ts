@@ -32,12 +32,14 @@ export class StandardDns extends ComponentResource {
         throw new Error("Either ipAddress or record must be provided");
       })();
 
-    const unifiRecords = unifi.dns.getRecordsOutput({});
-    const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id);
-    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, name: { exact: args.hostname } });
-    const cloudflareRecordId = cloudflareRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id);
+    const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
+    const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id).apply((id) => (id ? `default:${id}` : undefined));
+    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, name: { exact: args.hostname } }, { provider: globals.cloudflareProvider });
+    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply((z) => z.results.find((r) => r.name === args.hostname)?.id)]).apply(([zoneId, id]) =>
+      id ? `${zoneId}/${id}` : undefined,
+    );
     const [unifiId, cloudflareId] = await awaitOutput(all([unifiRecordId, cloudflareRecordId]));
-    return new StandardDns(name, { hostname: args.hostname, ipAddress: args.ipAddress, type: args.type, record }, globals, cro);
+    return new StandardDns(name, { hostname: args.hostname, ipAddress: args.ipAddress, type: args.type, record, unifiId, cloudflareId }, globals, cro);
   }
 
   private constructor(
@@ -61,7 +63,8 @@ export class StandardDns extends ComponentResource {
       (() => {
         throw new Error("Either ipAddress or record must be provided");
       })();
-    const unifiRecord = new unifi.dns.Record(
+
+    this.unifi = new unifi.dns.Record(
       `${name}-unifi`,
       {
         name: args.hostname,
