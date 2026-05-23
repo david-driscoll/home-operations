@@ -470,7 +470,7 @@ export class DockgeLxc extends ComponentResource {
           type: "A",
         },
         this.args.globals,
-        { parent: this },
+        { parent: this.dockerParent },
       );
 
       this.registerTailscaleService(opts.name);
@@ -778,7 +778,7 @@ export class DockgeLxc extends ComponentResource {
               },
               this.args.globals,
               {
-                parent: this,
+                parent: this.dockerParent,
                 // protect: stackName === "adguard",
               },
             );

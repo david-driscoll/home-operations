@@ -1,7 +1,7 @@
 import { GlobalResources } from "@components/globals.ts";
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate, all, getStack } from "@pulumi/pulumi";
+import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate, all, getStack, log } from "@pulumi/pulumi";
 import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumiverse/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
@@ -34,7 +34,8 @@ export class StandardDns extends ComponentResource {
 
     const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
     const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id).apply((id) => (id ? `default:${id}` : undefined));
-    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, name: { exact: args.hostname } }, { provider: globals.cloudflareProvider });
+    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, content: { exact: record } }, { provider: globals.cloudflareProvider });
+    cloudflareRecords.apply((r) => log.info(`Cloudflare records for ${record}: ${r.results.map((rec) => rec.name).join(", ")}`));
     const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply((z) => z.results.find((r) => r.name === args.hostname)?.id)]).apply(([zoneId, id]) =>
       id ? `${zoneId}/${id}` : undefined,
     );
