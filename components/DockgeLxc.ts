@@ -45,11 +45,7 @@ export interface DockgeLxcArgs {
 export interface ExternalServiceOpts {
   name: Input<string>;
   hostname: Input<string>;
-  /** Backend hostname used in the Traefik service URL. Defaults to `hostname` when omitted. */
-  backendHostname?: Input<string>;
-  port: Input<number>;
-  /** URL scheme for the backend. Defaults to `http`. Use `https` for services with TLS backends (e.g. PBS). */
-  scheme?: string;
+  backend: Input<string>;
   middleware?: string[];
   certResolver?: string;
 }
@@ -397,7 +393,14 @@ export class DockgeLxc extends ComponentResource {
 
     this.resources = [...depends, dockgeInfo, ...keyWrites, deleteDockerDaemon, stacksDirectory];
 
-    this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8006 }, []);
+    this.registerExternalService(
+      {
+        name: interpolate`pve-${cluster.key}`,
+        hostname: interpolate`pve.${cluster.rootDomain}`,
+        backend: interpolate`https://pve.${cluster.rootDomain}:8006`,
+      },
+      [],
+    );
     cluster.apply((clusterDefinition) => {
       // Register Proxmox UIs as Authentik forward-proxy applications.
       // Traffic is routed through this cluster's Dockge Traefik ingress.
@@ -430,35 +433,30 @@ export class DockgeLxc extends ComponentResource {
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
     return output(opts).apply((opts) => {
-      const scheme = opts.scheme ?? "http";
-      const backendHost = opts.backendHostname ?? opts.hostname;
       const content = output({
-        middlewares: opts.middleware ?? [],
         http: {
-          [`host-${opts.name}:`]: {
-            rule: `Host(\`${opts.hostname}\`)`,
-            entryPoints: ["websecure"],
-            service: `host-${opts.name}`,
-            tls: {
-              certResolver: opts.certResolver ?? "le",
+          routers: {
+            [`host-${opts.name}:`]: {
+              rule: `Host(\`${opts.hostname}\`)`,
+              entryPoints: ["websecure"],
+              service: `host-${opts.name}`,
+              ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
+              tls: {
+                certResolver: opts.certResolver ?? "le",
+              },
+            },
+            [`host-${opts.name}-tailscale:`]: {
+              rule: `Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
+              entryPoints: ["tailscale"],
+              service: `host-${opts.name}`,
+              ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
             },
           },
-          [`host-${opts.name}-tailscale:`]: {
-            rule: `Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
-            entryPoints: ["tailscale"],
-            service: `host-${opts.name}-tailscale`,
-            ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
-          },
-        },
-        services: {
-          [`host-${opts.name}:`]: {
-            loadBalancer: {
-              servers: [{ url: `http://${opts.hostname}:${opts.port}` }],
-            },
-          },
-          [`host-${opts.name}-tailscale:`]: {
-            loadBalancer: {
-              servers: [{ url: `${scheme}://${backendHost}:${opts.port}` }],
+          services: {
+            [`host-${opts.name}:`]: {
+              loadBalancer: {
+                servers: [{ url: opts.backend }],
+              },
             },
           },
         },
