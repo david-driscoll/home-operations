@@ -6,7 +6,7 @@ import * as adguard from "@pulumi/adguard";
 import * as unifi from "@pulumiverse/unifi";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { dns } from "@components/constants.ts";
-import { addUptimeGatus } from "./helpers.ts";
+import { addUptimeGatus, awaitOutput } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -14,13 +14,41 @@ export class StandardDns extends ComponentResource {
   public readonly cloudflare: cloudflare.DnsRecord;
   // public readonly adguard: adguard.Rewrite;
 
-  constructor(
+  public static async create(
     name: string,
     args: {
       hostname: string;
       ipAddress?: Input<string>;
       type: "A" | "CNAME";
       record?: Input<string>;
+    },
+    globals: GlobalResources,
+    cro: ComponentResourceOptions,
+  ) {
+    const record =
+      args.record ??
+      args.ipAddress ??
+      (() => {
+        throw new Error("Either ipAddress or record must be provided");
+      })();
+
+    const unifiRecords = unifi.dns.getRecordsOutput({});
+    const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id);
+    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, name: { exact: args.hostname } });
+    const cloudflareRecordId = cloudflareRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id);
+    const [unifiId, cloudflareId] = await awaitOutput(all([unifiRecordId, cloudflareRecordId]));
+    return new StandardDns(name, { hostname: args.hostname, ipAddress: args.ipAddress, type: args.type, record }, globals, cro);
+  }
+
+  private constructor(
+    name: string,
+    args: {
+      hostname: string;
+      ipAddress?: Input<string>;
+      type: "A" | "CNAME";
+      record?: Input<string>;
+      unifiId: string | undefined;
+      cloudflareId: string | undefined;
     },
     globals: GlobalResources,
     cro: ComponentResourceOptions,
@@ -33,8 +61,7 @@ export class StandardDns extends ComponentResource {
       (() => {
         throw new Error("Either ipAddress or record must be provided");
       })();
-
-    this.unifi = new unifi.dns.Record(
+    const unifiRecord = new unifi.dns.Record(
       `${name}-unifi`,
       {
         name: args.hostname,
@@ -45,6 +72,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.unifiProvider,
         deleteBeforeReplace: true,
+        import: args.unifiId,
       },
     );
 
@@ -61,6 +89,7 @@ export class StandardDns extends ComponentResource {
         parent: this,
         provider: globals.cloudflareProvider,
         deleteBeforeReplace: true,
+        import: args.cloudflareId,
       },
     );
 

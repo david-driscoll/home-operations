@@ -77,6 +77,8 @@ export class GlobalResources extends ComponentResource {
   public readonly gateway: Output<string>;
   public readonly adguardCredential: Output<OnePasswordItem>;
   public readonly adguardProvider: AdguardProvider;
+  public readonly cloudflareZoneId: Output<string>;
+  public readonly cloudFlareAccountId: Output<string>;
   // public readonly backblazeProvider: BackblazeProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
@@ -104,6 +106,8 @@ export class GlobalResources extends ComponentResource {
     );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
+    this.cloudflareZoneId = this.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!);
+    this.cloudFlareAccountId = this.cloudflareCredential.apply((z) => z.fields?.accountId?.value!);
     this.unifiProvider = new UnifiProvider(
       "unifi",
       {
