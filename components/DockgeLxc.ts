@@ -694,8 +694,7 @@ export class DockgeLxc extends ComponentResource {
     );
 
     const definitions = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "definition.yaml");
-    const compose = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "compose.yaml");
-    const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml" && relativeFilePath !== "compose.yaml");
+    const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
 
     const waitForApplications = output(definitions)
       .apply((defs) =>
