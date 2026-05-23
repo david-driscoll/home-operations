@@ -697,7 +697,7 @@ export class DockgeLxc extends ComponentResource {
         delete: interpolate`rm -rf /opt/stacks/${stackName}`,
       },
       {
-        parent: this.dockerParent,
+        parent: this,
         dependsOn: dependsOn,
         deleteBeforeReplace: true,
       },
@@ -758,7 +758,7 @@ export class DockgeLxc extends ComponentResource {
                   delete: interpolate`tailscale serve clear svc:${service}`,
                 },
                 {
-                  parent: stackParent,
+                  parent: this,
                   dependsOn: tailscaleServices,
                   deleteBeforeReplace: true,
                 },

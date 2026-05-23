@@ -24,8 +24,8 @@ services:
     environment:
       TZ: ${TIMEZONE}
     volumes:
-      - ./config/config.json:/etc/zot/config.json
-      - ./config/credentials.json:/etc/credentials/credentials.json
+      - ./config:/etc/zot
+      # - ./config/credentials.json:/etc/credentials/credentials.json
       - ./data:/var/lib/registry
     networks:
       - dockge_default
