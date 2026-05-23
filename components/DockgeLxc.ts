@@ -471,7 +471,7 @@ export class DockgeLxc extends ComponentResource {
         remotePath: interpolate`/opt/stacks-data/dockge/dynamic/${opts.name}.yaml`,
         content: content,
         parent: this,
-        triggers: [content, opts.name, opts.port, opts.hostname],
+        triggers: [content, opts.name, opts.backend, opts.hostname],
         dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
       });
 
