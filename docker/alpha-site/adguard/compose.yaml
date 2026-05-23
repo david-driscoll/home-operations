@@ -36,9 +36,9 @@ services:
       traefik.http.routers.adguard-doh.service: adguard-doh
       traefik.http.services.adguard-doh.loadbalancer.server.port: 443
     volumes:
-      - ./workdir:/opt/adguardhome/work
-      - ./confdir:/opt/adguardhome/conf
-      - ./letsencrypt:/etc/letsencrypt
+      - /opt/stacks-data/${APP}/workdir:/opt/adguardhome/work
+      - /opt/stacks-data/${APP}/confdir:/opt/adguardhome/conf
+      - /opt/stacks-data/${APP}/letsencrypt:/etc/letsencrypt
     networks:
       - dockge_default
 networks:

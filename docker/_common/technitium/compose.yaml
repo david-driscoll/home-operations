@@ -49,7 +49,7 @@ services:
       - "8053:8053/udp"
       - "5380:5380/tcp"
     volumes:
-      - ./config:/etc/dns
+      - /opt/stacks-data/${APP}/config:/etc/dns
     networks:
       - dockge_default
     sysctls:

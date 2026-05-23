@@ -22,8 +22,8 @@ services:
 
       traefik.http.services.uptime.loadbalancer.server.port: 9595
     volumes:
-      - ./config/:/config/
-      - ./data/:/data/
+      - /opt/stacks-data/${APP}/config/:/config/
+      - /opt/stacks-data/${APP}/data/:/data/
     networks:
       - dockge_default
     ports:

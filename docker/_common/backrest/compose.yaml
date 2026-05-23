@@ -22,7 +22,7 @@ services:
       traefik.http.services.backrest.loadbalancer.server.port: 9898
     volumes:
       - ./data:/data
-      - ./config:/config
+      - /opt/stacks-data/${APP}/config:/config
       - ./cache:/cache
       - ./rclone:/root/.config/rclone
       - /data/backup:/backup

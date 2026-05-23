@@ -41,7 +41,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt:/letsencrypt
       - ./config.yaml:/config/config.yaml
-      - ./dynamic:/config/dynamic
+      - /opt/stacks-data/${APP}/dynamic:/config/dynamic
     networks:
       - dockge_default
 x-dockge:

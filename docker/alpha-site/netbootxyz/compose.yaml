@@ -23,8 +23,8 @@ services:
       - traefik.http.routers.netbootxyz-pxe.priority=1
       - traefik.http.routers.netbootxyz-pxe.service=netbootxyz-pxe
       - traefik.http.services.netbootxyz-pxe.loadbalancer.server.port=80
-    # volumes:
-    #   - /path/to/config:/config # optional
+    volumes:
+      - /opt/stacks-data/${APP}:/config # optional
     #   - /path/to/assets:/assets # optional
     ports:
       - 1234:3000 # optional, destination should match ${WEB_APP_PORT} variable above.

@@ -4,11 +4,10 @@ services:
     image: ghcr.io/goauthentik/proxy:2026.2.3@sha256:e37186957e16a956e078302af73ced7045c956fcd2574107b4acdb6f929e4d36
     restart: unless-stopped
     healthcheck:
-      test:
-        [
+      test: [
           "CMD-SHELL",
           "wget -q -T 5 -O - http://127.0.0.1:9000/outpost.goauthentik.io/ping
-            >/dev/null || exit 1",
+          >/dev/null || exit 1",
         ]
       interval: 30s
       timeout: 10s

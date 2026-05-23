@@ -18,7 +18,7 @@ services:
       traefik.http.services.${APP}.loadbalancer.server.port: 8809
     volumes:
       - /data/uhf/recordings/:/recordings
-      - ./uhf-db:/var/lib/uhf-server
+      - /opt/stacks-data/${APP}:/var/lib/uhf-server
     environment:
       PORT: "8809"
     command: uhf-server --port 8809 --recordings-dir /recordings

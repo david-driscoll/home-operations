@@ -433,28 +433,39 @@ export class DockgeLxc extends ComponentResource {
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
     return output(opts).apply((opts) => {
-      const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
       const scheme = opts.scheme ?? "http";
       const backendHost = opts.backendHostname ?? opts.hostname;
-
-      const content = interpolate`http:
-  routers:
-    dynamic-${opts.name}:
-      rule: "Host(\`${opts.hostname}\`)"
-      entryPoints: [websecure]
-      service: dynamic-${opts.name}
-      tls:
-        certResolver: "le"
-    dynamic-${opts.name}-tailscale:
-      rule: "Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)"
-      entryPoints: [tailscale]
-      service: dynamic-${opts.name}
-${middlewareYaml}  services:
-    dynamic-${opts.name}:
-      loadBalancer:
-        servers:
-          - url: ${scheme}://${backendHost}:${opts.port}
-`;
+      const content = output({
+        middlewares: opts.middleware ?? [],
+        http: {
+          [`host-${opts.name}:`]: {
+            rule: `Host(\`${opts.hostname}\`)`,
+            entryPoints: ["websecure"],
+            service: `host-${opts.name}`,
+            tls: {
+              certResolver: opts.certResolver ?? "le",
+            },
+          },
+          [`host-${opts.name}-tailscale:`]: {
+            rule: `Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
+            entryPoints: ["tailscale"],
+            service: `host-${opts.name}-tailscale`,
+            ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
+          },
+        },
+        services: {
+          [`host-${opts.name}:`]: {
+            loadBalancer: {
+              servers: [{ url: `http://${opts.hostname}:${opts.port}` }],
+            },
+          },
+          [`host-${opts.name}-tailscale:`]: {
+            loadBalancer: {
+              servers: [{ url: `${scheme}://${backendHost}:${opts.port}` }],
+            },
+          },
+        },
+      }).apply((z) => yaml.stringify(z));
 
       const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
         parent: this,
@@ -465,7 +476,7 @@ ${middlewareYaml}  services:
 
       const file = copyFileToRemote(`${opts.name}-traefik-route`, {
         connection: this.remoteConnection,
-        remotePath: interpolate`/opt/stacks/traefik/dynamic/${opts.name}.yaml`,
+        remotePath: interpolate`/opt/stacks-data/dockge/dynamic/${opts.name}.yaml`,
         content: content,
         parent: this,
         triggers: [content, opts.name, opts.port, opts.hostname],
@@ -677,6 +688,8 @@ ${middlewareYaml}  services:
       `${this.shortName}-delete-${stackName}-on-remove`,
       {
         connection: this.remoteConnection,
+        create: interpolate`mkdir -p /opt/stacks/${stackName}/ && mkdir -p /opt/stacks-data/${stackName}/`,
+        update: interpolate`mkdir -p /opt/stacks/${stackName}/ && mkdir -p /opt/stacks-data/${stackName}/`,
         delete: interpolate`rm -rf /opt/stacks/${stackName}`,
       },
       {

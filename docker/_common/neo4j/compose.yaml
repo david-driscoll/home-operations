@@ -45,7 +45,7 @@ services:
       traefik.http.services.${APP}.loadbalancer.healthcheck.port: 7474
       traefik.http.services.${APP}.loadbalancer.healthcheck.interval: 30s
     volumes:
-      - ./neo4j-data:/data
+      - /opt/stacks-data/${APP}/neo4j-data:/data
       - ./neo4j-logs:/logs
     networks:
       - dockge_default
