@@ -816,7 +816,7 @@ export class DockgeLxc extends ComponentResource {
         `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
-          triggers: copyFiles.map((f) => f.source),
+          triggers: [...copyFiles.map((f) => f.id), ...copyFiles.map((f) => f.remotePath)],
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         {
