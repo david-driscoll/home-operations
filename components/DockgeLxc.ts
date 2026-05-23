@@ -142,7 +142,7 @@ export class DockgeLxc extends ComponentResource {
       legacyTun: args.legacyTun,
       args: {
         ...args.tailscaleArgs,
-        advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.dockge, Tailscale.tag.apps]),
+        advertiseTags: [...(args.tailscaleArgs?.advertiseTags ?? []), Tailscale.tag.dockge, Tailscale.tag.apps],
         acceptDns: true,
         acceptRoutes: false,
         ssh: true,
@@ -334,23 +334,27 @@ export class DockgeLxc extends ComponentResource {
     );
 
     // Set restrictive permissions on the keys
-    new remote.Command(
-      `${name}-sftp-keys-perms`,
-      {
-        connection: this.remoteConnection,
-        triggers: keyWrites.map((k) => k.id),
-        create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts || true`,
-      },
-      mergeOptions(cro, { dependsOn: keyWrites }),
+    keyWrites.push(
+      new remote.Command(
+        `${name}-sftp-keys-perms`,
+        {
+          connection: this.remoteConnection,
+          triggers: keyWrites.map((k) => k.id),
+          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts || true`,
+        },
+        mergeOptions(cro, { dependsOn: keyWrites }),
+      ),
     );
 
-    new remote.Command(
-      `${name}-install-tools`,
-      {
-        connection: this.remoteConnection,
-        create: interpolate`apt-get update && apt-get install -y restic`,
-      },
-      mergeOptions(cro, { dependsOn: depends }),
+    keyWrites.push(
+      new remote.Command(
+        `${name}-install-tools`,
+        {
+          connection: this.remoteConnection,
+          create: interpolate`apt-get update && apt-get install -y restic`,
+        },
+        mergeOptions(cro, { dependsOn: depends }),
+      ),
     );
 
     this.tailscaleName = tailscaleName;
@@ -390,7 +394,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.resources = [...depends, dockgeInfo];
+    this.resources = [...depends, dockgeInfo, ...keyWrites];
 
     this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8006 }, []);
     cluster.apply((clusterDefinition) => {
@@ -452,7 +456,7 @@ ${middlewareYaml}  services:
 
       const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
         parent: this,
-        dependsOn: dependsOn ?? [],
+        dependsOn: [...this.resources, ...(dependsOn ?? [])],
       });
 
       this.registerTailscaleService(opts.name);
@@ -497,11 +501,11 @@ ${middlewareYaml}  services:
       },
       {
         parent: this,
-        dependsOn: [...this.resources],
+        dependsOn: output(args.dependsOn).apply((z) => [...this.resources, ...(z ?? [])]),
       },
     );
 
-    args.dependsOn = output(args.dependsOn).apply((z) => z.concat(createDockerNetwork));
+    args.dependsOn = all([args.dependsOn, this.resources]).apply(([z, r]) => [...r, ...z, createDockerNetwork]);
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(this.args.host.shortName ?? this.args.host.name)),
@@ -561,7 +565,7 @@ ${middlewareYaml}  services:
               files,
               path,
               replacements,
-              output(args.dependsOn).apply((z) => z.concat(this.mountPoints)),
+              output(args.dependsOn).apply((z) => [...z, ...this.mountPoints]),
             );
           }),
         ),
@@ -704,7 +708,7 @@ ${middlewareYaml}  services:
       .apply((z) => output(z))
       .apply((z) => z.flat().map((z) => z.app));
 
-    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => a.concat(b));
+    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b]);
 
     for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
