@@ -462,7 +462,16 @@ export class DockgeLxc extends ComponentResource {
         },
       }).apply((z) => yaml.stringify(z));
 
-      const dns = StandardDns.create(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this });
+      const dns = StandardDns.create(
+        `${opts.name}-dns-service`,
+        {
+          hostname: opts.hostname,
+          ipAddress: this.tailscaleIpAddress,
+          type: "A",
+        },
+        this.args.globals,
+        { parent: this },
+      );
 
       this.registerTailscaleService(opts.name);
 
@@ -728,7 +737,6 @@ export class DockgeLxc extends ComponentResource {
         hasInit = true;
       } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
-        const content = replacedContent;
         const tailscaleServices: Resource[] = [];
         const hostRegex = /Host\(`(.*?)`\)/g;
 
@@ -761,7 +769,7 @@ export class DockgeLxc extends ComponentResource {
             }
 
             StandardDns.create(
-              `${stackName}-${host.replace(/\./g, "_")}`,
+              `${stackName}-dns-${host.replace(/\./g, "_")}`,
               {
                 hostname: host,
                 ipAddress: this.tailscaleIpAddress,

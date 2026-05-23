@@ -91,7 +91,7 @@ export class ProxmoxHost extends ComponentResource {
     this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
     this.dns = this.hostname.apply((g) => {
-      return StandardDns.create(name, { hostname: g, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
+      return StandardDns.create(`${name}-dns`, { hostname: g, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
     });
 
     this.vmIdRange = {
