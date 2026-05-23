@@ -49,7 +49,7 @@ export class ProxmoxHost extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
-  public readonly dns: StandardDns;
+  public readonly dns: Output<StandardDns>;
   public readonly cluster: Output<ClusterDefinition>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly title: Output<string>;
@@ -90,7 +90,9 @@ export class ProxmoxHost extends ComponentResource {
     const apiCredential = output(args.proxmox);
     this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
 
-    this.dns = new StandardDns(name, { hostname: this.hostname, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
+    this.dns = this.hostname.apply((g) => {
+      return new StandardDns(name, { hostname: g, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
+    });
 
     this.vmIdRange = {
       randomVmIds: true,

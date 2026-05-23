@@ -59,7 +59,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly tailscaleIpAddress: Output<TailscaleIp>;
   public readonly hostname: Output<string>;
   public readonly device?: ReturnType<typeof installTailscaleLxc>;
-  public readonly dns: StandardDns;
+  public readonly dns: Output<StandardDns>;
   public readonly ipAddress: Output<TailscaleIp>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
@@ -189,12 +189,9 @@ export class DockgeLxc extends ComponentResource {
       password: this.credential.apply((z) => z.fields?.password?.value!),
     });
 
-    this.dns = new StandardDns(
-      name,
-      { hostname: this.hostname, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" },
-      args.globals,
-      mergeOptions(cro, { dependsOn: [...depends, setHostname], deleteBeforeReplace: true }),
-    );
+    this.dns = this.hostname.apply((g) => {
+      return new StandardDns(name, { hostname: g, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" }, args.globals, cro);
+    });
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
     const sftpKeysDir = "/opt/stacks-data/rclone-sftp/keys";
@@ -477,10 +474,7 @@ export class DockgeLxc extends ComponentResource {
         },
       }).apply((z) => yaml.stringify(z));
 
-      const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
-        parent: this,
-        dependsOn: [...this.resources, ...(dependsOn ?? [])],
-      });
+      const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, { parent: this });
 
       this.registerTailscaleService(opts.name);
 
@@ -779,14 +773,13 @@ export class DockgeLxc extends ComponentResource {
             new StandardDns(
               `${stackName}-${host.replace(/\./g, "_")}`,
               {
-                hostname: interpolate`${host}`,
+                hostname: host,
                 ipAddress: this.tailscaleIpAddress,
                 type: "CNAME",
                 record: this.hostname,
               },
               this.args.globals,
               {
-                dependsOn: dependsOn,
                 parent: this,
                 // protect: stackName === "adguard",
               },

@@ -17,7 +17,7 @@ export class StandardDns extends ComponentResource {
   constructor(
     name: string,
     args: {
-      hostname: Input<string>;
+      hostname: string;
       ipAddress?: Input<string>;
       type: "A" | "CNAME";
       record?: Input<string>;
