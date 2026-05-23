@@ -45,7 +45,11 @@ export interface DockgeLxcArgs {
 export interface ExternalServiceOpts {
   name: Input<string>;
   hostname: Input<string>;
+  /** Backend hostname used in the Traefik service URL. Defaults to `hostname` when omitted. */
+  backendHostname?: Input<string>;
   port: Input<number>;
+  /** URL scheme for the backend. Defaults to `http`. Use `https` for services with TLS backends (e.g. PBS). */
+  scheme?: string;
   middleware?: string[];
   certResolver?: string;
 }
@@ -430,6 +434,8 @@ export class DockgeLxc extends ComponentResource {
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
     return output(opts).apply((opts) => {
       const middlewareYaml = opts.middleware?.length ? `      middlewares:\n${opts.middleware.map((m) => `        - ${m}`).join("\n")}\n` : "";
+      const scheme = opts.scheme ?? "http";
+      const backendHost = opts.backendHostname ?? opts.hostname;
 
       const content = interpolate`http:
   routers:
@@ -447,11 +453,7 @@ ${middlewareYaml}  services:
     dynamic-${opts.name}:
       loadBalancer:
         servers:
-          - url: http://${opts.hostname}:${opts.port}
-    dynamic-${opts.name}-tailscale:
-      loadBalancer:
-        servers:
-          - url: http://${this.args.host.tailscaleHostname}:${opts.port}
+          - url: ${scheme}://${backendHost}:${opts.port}
 `;
 
       const dns = new StandardDns(`${opts.name}-service`, { hostname: opts.hostname, ipAddress: this.tailscaleIpAddress, type: "A" }, this.args.globals, {
