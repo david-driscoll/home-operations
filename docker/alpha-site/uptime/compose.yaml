@@ -24,6 +24,7 @@ services:
     volumes:
       - /opt/stacks-data/${APP}/config/:/config/
       - /opt/stacks-data/${APP}/data/:/data/
+      - /opt/stacks/config/default.yaml:/config/default.yaml
     networks:
       - dockge_default
     ports:
