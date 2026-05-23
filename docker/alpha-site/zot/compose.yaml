@@ -26,7 +26,7 @@ services:
     volumes:
       - ./config/config.json:/etc/zot/config.json
       - ./config/credentials.json:/etc/credentials/credentials.json
-      - /opt/stacks-data/${APP}/data:/var/lib/registry
+      - ./data:/var/lib/registry
     networks:
       - dockge_default
 networks:
