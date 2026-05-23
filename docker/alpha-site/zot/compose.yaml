@@ -24,7 +24,7 @@ services:
     environment:
       TZ: ${TIMEZONE}
     volumes:
-      - ./config:/etc/zot
+      - ./config:/etc/zot/config
       # - ./config/credentials.json:/etc/credentials/credentials.json
       - ./data:/var/lib/registry
     networks:
