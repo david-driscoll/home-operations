@@ -390,7 +390,7 @@ export class DockgeLxc extends ComponentResource {
       cro,
     );
 
-    new remote.Command(
+    const deleteDockerDaemon = new remote.Command(
       `${name}-delete-docker-daemon`,
       {
         connection: this.remoteConnection,
@@ -399,7 +399,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    new remote.Command(
+    const stacksDirectory = new remote.Command(
       `${name}-stacks-directory`,
       {
         connection: this.remoteConnection,
@@ -408,7 +408,7 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.resources = [...depends, dockgeInfo, ...keyWrites];
+    this.resources = [...depends, dockgeInfo, ...keyWrites, deleteDockerDaemon, stacksDirectory];
 
     this.registerExternalService({ name: interpolate`pve-${cluster.key}`, hostname: interpolate`pve.${cluster.rootDomain}`, port: 8006 }, []);
     cluster.apply((clusterDefinition) => {
