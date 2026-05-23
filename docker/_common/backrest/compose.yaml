@@ -30,6 +30,7 @@ services:
       - ./ssh:/root/.ssh:ro
       - /spike/backup:/spike/backup:ro
       - /spike/data:/spike/data:ro
+      - /opt/stacks-data:/opt/stacks-data:ro
     environment:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json

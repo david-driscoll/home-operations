@@ -16,6 +16,8 @@ const backupDetails = pulumi
     return { source, destinations };
   });
 
+const dockgeDetails = pulumi.output(op.findItemsByTag("dockge")).apply((items) => pulumi.all(items.map(getDockgeServerDetails)));
+
 const backupPlanManager = new BackupPlanManager("backup-plan-manager", {
   globals,
   source: backupDetails.source,
@@ -27,6 +29,16 @@ const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).
 
 sgcCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
 equestriaCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
+
+dockgeDetails.apply((details) => {
+  for (const detail of details) {
+    backupPlanManager.createBackrestPlan(`dockge-${detail.name}`, {
+      title: detail.title,
+      path: "/opt/stacks-data/",
+      repository: `dockge-${detail.name}`,
+    });
+  }
+});
 
 backupPlanManager.createBackrestPlan("immich", {
   title: "Immich",
@@ -75,6 +87,22 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
         host: dockgeItem.sections.ssh.fields.hostname.value!,
         user: "root",
       },
+      cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
+      tags: item.tags,
+      title: item.title,
+    };
+  } catch (error) {
+    pulumi.log.error(`Error getting backup server details: ${error}`);
+    pulumi.log.error(`Item details: ${JSON.stringify(item)}`);
+
+    throw error;
+  }
+}
+
+async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
+  try {
+    return {
+      name: item.fields.name.value!,
       cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
       tags: item.tags,
       title: item.title,

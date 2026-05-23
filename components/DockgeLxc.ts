@@ -381,6 +381,7 @@ export class DockgeLxc extends ComponentResource {
           },
         },
         fields: {
+          name: { type: TypeEnum.String, value: name },
           hostname: { type: TypeEnum.String, value: this.hostname },
           ipAddress: { type: TypeEnum.String, value: this.ipAddress },
           tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
