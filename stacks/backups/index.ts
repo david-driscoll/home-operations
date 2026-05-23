@@ -43,6 +43,12 @@ backupPlanManager.createBackrestPlan("pgdump", {
   repository: "pgdump",
 });
 
+backupPlanManager.createBackrestPlan("stacks-data", {
+  title: "Docker Stacks Data",
+  path: "/opt/stacks-data/",
+  repository: "stacks-data",
+});
+
 backupPlanManager.createMinioBucketBackupJob({
   title: "Home Operations",
   bucket: "home-operations",
