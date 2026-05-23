@@ -203,7 +203,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
       host: interpolate`dockge-as.${globals.tailscaleDomain}`,
       user: "root",
     },
-    remotePath: `/opt/stacks/uptime/config/uptime-${name}.yaml`,
+    remotePath: `/opt/stacks-data/uptime/config/uptime-${name}.yaml`,
     content,
     parent,
   });

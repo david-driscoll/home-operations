@@ -13,7 +13,7 @@ services:
       /config/ssh/authorized_keys
     volumes:
       - ${DATA_ROOT}:${DATA_ROOT}:rw
-      - ./keys:/config/ssh:ro
+      - /opt/stacks-data/${APP}/keys:/config/ssh:ro
     tmpfs:
       - /.cache:uid=65534,gid=65534
     networks:

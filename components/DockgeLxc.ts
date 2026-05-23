@@ -197,9 +197,9 @@ export class DockgeLxc extends ComponentResource {
     );
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
-    const sftpKeysDir = "/opt/stacks/rclone-sftp/keys";
-    const jobsKeysDir = "/opt/stacks/backups/keys";
-    const backrestSshDir = "/opt/stacks/backrest/ssh";
+    const sftpKeysDir = "/opt/stacks-data/rclone-sftp/keys";
+    const jobsKeysDir = "/opt/stacks-data/backups/keys";
+    const backrestSshDir = "/opt/stacks-data/backrest/ssh";
 
     const ensureKeysDir = new remote.Command(
       `${name}-ensure-sftp-keys-dir`,
@@ -214,7 +214,7 @@ export class DockgeLxc extends ComponentResource {
       `${name}-traefik-dynamic-dir`,
       {
         connection: this.remoteConnection,
-        create: "mkdir -p /opt/stacks/traefik/dynamic",
+        create: "mkdir -p /opt/stacks-data/traefik/dynamic",
       },
       mergeOptions(cro, { dependsOn: depends }),
     );
@@ -395,6 +395,15 @@ export class DockgeLxc extends ComponentResource {
       {
         connection: this.remoteConnection,
         create: interpolate`rm -f /etc/docker/daemon.json`,
+      },
+      mergeOptions(cro, { dependsOn: depends }),
+    );
+
+    new remote.Command(
+      `${name}-stacks-directory`,
+      {
+        connection: this.remoteConnection,
+        create: interpolate`mkdir -p /opt/stacks/ && mkdir -p /opt/stacks-data/`,
       },
       mergeOptions(cro, { dependsOn: depends }),
     );

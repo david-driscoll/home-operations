@@ -253,7 +253,7 @@ export class BackupPlanManager extends ComponentResource {
             content: jsonStringify({ ...job, token }, undefined, 2),
             parent: this,
             connection: connection,
-            remotePath: interpolate`/opt/stacks/backups/jobs/${token}.json`,
+            remotePath: interpolate`/opt/stacks-data/backups/jobs/${token}.json`,
             withRemoveCommand: true,
           });
         });
@@ -337,7 +337,7 @@ async function updateBackrestConfiguration(
     username: connection.user,
   });
 
-  const currentConfig = (await ssh.execCommand("cat /opt/stacks/backrest/config/config.json")).stdout;
+  const currentConfig = (await ssh.execCommand("cat /opt/stacks-data/backrest/config/config.json")).stdout;
   let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
   try {
     updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
@@ -356,7 +356,7 @@ async function updateBackrestConfiguration(
     return;
   }
 
-  await ssh.execCommand(`echo '${newConfig}' > /opt/stacks/backrest/config/config.json`);
+  await ssh.execCommand(`echo '${newConfig}' > /opt/stacks-data/backrest/config/config.json`);
   await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
 
   ssh.dispose();
