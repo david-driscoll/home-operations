@@ -228,7 +228,6 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -239,7 +238,6 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -251,7 +249,6 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
     keyWrites.push(
@@ -261,7 +258,6 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -273,7 +269,6 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
     keyWrites.push(
@@ -283,7 +278,6 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -295,7 +289,6 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -307,7 +300,6 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -319,7 +311,6 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -330,7 +321,6 @@ export class DockgeLxc extends ComponentResource {
         content: interpolate`${name}`,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
-        withRemoveCommand: true,
       }),
     );
 
@@ -704,7 +694,8 @@ export class DockgeLxc extends ComponentResource {
     );
 
     const definitions = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "definition.yaml");
-    const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
+    const compose = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath === "compose.yaml");
+    const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml" && relativeFilePath !== "compose.yaml");
 
     const waitForApplications = output(definitions)
       .apply((defs) =>
@@ -728,6 +719,8 @@ export class DockgeLxc extends ComponentResource {
       .apply((z) => z.flat().map((z) => z.app));
 
     dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b]);
+
+    const triggers = [];
 
     for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
@@ -797,7 +790,6 @@ export class DockgeLxc extends ComponentResource {
           content: replacedContent,
           parent: stackParent,
           dependsOn: dependsOn,
-          deleteBeforeReplace: true,
         }),
       );
     }
@@ -827,7 +819,7 @@ export class DockgeLxc extends ComponentResource {
         `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
-          triggers: copyFiles.map((f) => f.id),
+          triggers: copyFiles.map((f) => f.source),
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         {
