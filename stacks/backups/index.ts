@@ -103,7 +103,6 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   try {
     return {
       name: item.fields.name.value!,
-      cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
       tags: item.tags,
       title: item.title,
     };
