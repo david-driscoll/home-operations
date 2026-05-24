@@ -392,43 +392,6 @@ export class DockgeLxc extends ComponentResource {
     );
 
     this.resources = [...depends, dockgeInfo, ...keyWrites, deleteDockerDaemon, stacksDirectory];
-
-    this.registerExternalService(
-      {
-        name: interpolate`pve-${cluster.key}`,
-        hostname: interpolate`pve.${cluster.rootDomain}`,
-        backend: interpolate`https://${args.host.internalIpAddress}:8006`,
-      },
-      [],
-    );
-    cluster.apply((clusterDefinition) => {
-      // Register Proxmox UIs as Authentik forward-proxy applications.
-      // Traffic is routed through this cluster's Dockge Traefik ingress.
-      return args.host.applicationManager.createApplication({
-        metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
-        spec: {
-          name: "Proxmox VE",
-          category: clusterDefinition.title,
-          description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
-          url: `https://pve.${clusterDefinition.rootDomain}`,
-          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-          authentik: {
-            proxy: {
-              mode: "forward_single",
-              externalHost: `https://pve.${clusterDefinition.rootDomain}`,
-            },
-          },
-          gatus: [
-            {
-              name: "Proxmox VE",
-              url: `https://pve.${clusterDefinition.rootDomain}`,
-              method: "GET",
-              conditions: ["[STATUS] == 200"],
-            },
-          ],
-        },
-      });
-    });
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {

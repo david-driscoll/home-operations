@@ -246,6 +246,29 @@ export class ProxmoxHost extends ComponentResource {
         throw new Error("Not implemented");
       },
     });
+
+    cluster.apply((clusterDefinition) => {
+      // Register Proxmox UIs as Authentik forward-proxy applications.
+      // Traffic is routed through this cluster's Dockge Traefik ingress.
+      return this.applicationManager.createApplication({
+        metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
+        spec: {
+          name: "Proxmox VE",
+          category: clusterDefinition.title,
+          description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
+          url: `https://${this.tailscaleHostname}:8006/`,
+          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+          gatus: [
+            {
+              name: "Proxmox VE",
+              url: `https://${this.tailscaleHostname}:8006/`,
+              method: "GET",
+              conditions: ["[STATUS] == 200"],
+            },
+          ],
+        },
+      });
+    });
   }
 
   public addNfsMount(hostname: Input<string>, remotePath: string) {
