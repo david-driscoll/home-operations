@@ -1,0 +1,442 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.apm
+.claude
+.claude/settings.local.json
+.claude/worktrees
+.config
+.config/dotnet-tools.json
+.config/mise
+.config/mise/tasks
+.config/mise/tasks/pulumi-cancel
+.config/mise/tasks/pulumi-refresh
+.config/mise/tasks/pulumi-up
+.editorconfig
+.github
+.github/agents
+.github/agents/context-architect.agent.md
+.github/agents/context7.agent.md
+.github/agents/devops-expert.agent.md
+.github/agents/se-gitops-ci-specialist.agent.md
+.github/agents/se-system-architecture-reviewer.agent.md
+.github/agents/se-ux-ui-designer.agent.md
+.github/copilot-instructions.md
+.github/instructions
+.github/instructions/context7.instructions.md
+.github/instructions/copilot-sdk-csharp.instructions.md
+.github/instructions/devops-core-principles.instructions.md
+.github/instructions/docker-dockge-memory.instructions.md
+.github/instructions/html-css-style-color-guide.instructions.md
+.github/instructions/kubernetes-deployment-best-practices.instructions.md
+.github/instructions/kubernetes-manifests.instructions.md
+.github/instructions/task-implementation.instructions.md
+.github/prompts
+.github/prompts/breakdown-feature-implementation.prompt.md
+.github/prompts/remember.prompt.md
+.github/prompts/suggest-awesome-github-copilot-agents.prompt.md
+.github/prompts/suggest-awesome-github-copilot-instructions.prompt.md
+.github/prompts/suggest-awesome-github-copilot-prompts.prompt.md
+.github/prompts/suggest-awesome-github-copilot-skills.prompt.md
+.github/renovate.json5
+.github/skills
+.github/skills/create-k8s-deployment
+.github/skills/create-k8s-deployment/SKILL.md
+.github/skills/triage-alerts
+.github/skills/triage-alerts/SKILL.md
+.gitignore
+.mcp.json
+.mise.toml
+.tasks
+.vscode
+.vscode/launch.json
+.vscode/mcp.json
+.vscode/settings.json
+AGENTS.md
+CLAUDE.md
+Pulumi.yaml
+agentrc.config.json
+apm.yml
+components
+components/.DS_Store
+components/DockgeLxc.ts
+components/ProxmoxBackupServerLxc.ts
+components/ProxmoxHost.ts
+components/StandardDns.ts
+components/TruenasVm.ts
+components/authentik
+components/authentik/application-certificate.ts
+components/authentik/authentication-stages.ts
+components/authentik/authenticator-stages.ts
+components/authentik/consent-stages.ts
+components/authentik/default-flows.ts
+components/authentik/default-stages.ts
+components/authentik/extension-methods.ts
+components/authentik/fields.ts
+components/authentik/flows.ts
+components/authentik/groups.ts
+components/authentik/invalidation-stages.ts
+components/authentik/policies.ts
+components/authentik/property-mappings.ts
+components/authentik/shared-component-resource.ts
+components/authentik/stage-prompts.ts
+components/authentik.ts
+components/constants.ts
+components/globals.ts
+components/helpers.ts
+components/lxc.ts
+components/op.ts
+components/package.json
+components/tailscale
+components/tailscale/manager.ts
+components/tailscale.json
+components/tailscale.ts
+components/truenas
+components/truenas/index.ts
+components/truenas/truenas-client.ts
+components/truenas/truenas-manager.ts
+components/truenas/truenas-types.ts
+components/truenas.ts
+components/tsconfig.json
+components/unifi.ts
+docker
+docker/_common
+docker/_common/authentik-outpost
+docker/_common/authentik-outpost/.env
+docker/_common/authentik-outpost/compose.yaml
+docker/_common/autoheal
+docker/_common/autoheal/compose.yaml
+docker/_common/backrest
+docker/_common/backrest/compose.yaml
+docker/_common/backrest/definition.yaml
+docker/_common/backrest/ssh
+docker/_common/backups
+docker/_common/backups/.env
+docker/_common/backups/Playground.cs
+docker/_common/backups/compose.yaml
+docker/_common/backups/ssh
+docker/_common/docker-socket-proxy
+docker/_common/docker-socket-proxy/compose.yaml
+docker/_common/dockge
+docker/_common/dockge/compose.yaml
+docker/_common/dockge/definition.yaml
+docker/_common/librespeed
+docker/_common/librespeed/compose.yaml
+docker/_common/librespeed/definition.yaml
+docker/_common/neo4j
+docker/_common/neo4j/.env
+docker/_common/neo4j/compose.yaml
+docker/_common/openspeedtest
+docker/_common/openspeedtest/compose.yaml
+docker/_common/openspeedtest/definition.yaml
+docker/_common/prometheus
+docker/_common/prometheus/compose.yaml
+docker/_common/prometheus/config
+docker/_common/prometheus/definition.yaml
+docker/_common/prometheus/init.sh
+docker/_common/rclone-sftp
+docker/_common/rclone-sftp/.env
+docker/_common/rclone-sftp/compose.yaml
+docker/_common/technitium
+docker/_common/technitium/.env
+docker/_common/technitium/compose.yaml
+docker/_common/technitium/definition.yaml
+docker/_common/traefik
+docker/_common/traefik/.env
+docker/_common/traefik/compose.yaml
+docker/_common/traefik/config.yaml
+docker/_common/traefik/definition.yaml
+docker/_common/traefik/dynamic
+docker/alpha-site
+docker/alpha-site/.mise.toml
+docker/alpha-site/adguard
+docker/alpha-site/adguard/compose.yaml
+docker/alpha-site/adguard/definition.yaml
+docker/alpha-site/backrest
+docker/alpha-site/backrest/.ignore
+docker/alpha-site/backups
+docker/alpha-site/backups/.ignore
+docker/alpha-site/librespeed
+docker/alpha-site/librespeed/.ignore
+docker/alpha-site/lmstudio
+docker/alpha-site/lmstudio/.ignore
+docker/alpha-site/neo4j
+docker/alpha-site/neo4j/.ignore
+docker/alpha-site/netbootxyz
+docker/alpha-site/netbootxyz/compose.yaml
+docker/alpha-site/netbootxyz/definition.yaml
+docker/alpha-site/nut
+docker/alpha-site/nut/compose.yaml
+docker/alpha-site/nut/config
+docker/alpha-site/nut/definition.yaml
+docker/alpha-site/openspeedtest
+docker/alpha-site/openspeedtest/.ignore
+docker/alpha-site/prometheus
+docker/alpha-site/prometheus/config
+docker/alpha-site/prometheus-exporters
+docker/alpha-site/prometheus-exporters/.env
+docker/alpha-site/prometheus-exporters/compose.yaml
+docker/alpha-site/rclone-sftp
+docker/alpha-site/rclone-sftp/.ignore
+docker/alpha-site/technitium
+docker/alpha-site/technitium/.ignore
+docker/alpha-site/uptime
+docker/alpha-site/uptime/compose.yaml
+docker/alpha-site/uptime/config
+docker/alpha-site/uptime/definition.yaml
+docker/alpha-site/zigbee-poe
+docker/alpha-site/zigbee-poe/compose.yaml
+docker/alpha-site/zigbee-poe/definition.yaml
+docker/alpha-site/zot
+docker/alpha-site/zot/compose.yaml
+docker/alpha-site/zot/config
+docker/alpha-site/zot/definition.yaml
+docker/alpha-site/zwave
+docker/alpha-site/zwave/compose.yaml
+docker/alpha-site/zwave/definition.yaml
+docker/celestia
+docker/celestia/.mise.toml
+docker/celestia/pdm
+docker/celestia/pdm/.ignore
+docker/celestia/pdm/compose.yaml
+docker/celestia/pdm/definition.yaml
+docker/celestia/uhf
+
+=== STACK DETECTION (manifest files) ===
+
+--- package-lock.json ---
+{
+  "name": "home-operations",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "home-operations",
+      "version": "1.0.0",
+      "license": "ISC",
+      "workspaces": [
+        "components/",
+        "dynamic/",
+        "stacks/*",
+        "sdks/*"
+      ],
+      "dependencies": {
+        "@pulumi/adguard": "file:sdks/adguard",
+        "@pulumi/authentik": "file:sdks/authentik",
+        "@pulumi/b2": "file:sdks/b2",
+        "@pulumi/github": "^6.8.0",
+        "@pulumi/http": "^0.2.0",
+        "@pulumi/kubernetes": "^4.23.0",
+        "@pulumi/pbs": "file:sdks/pbs",
+        "@pulumi/terrifi": "file:sdks/terrifi",
+        "@pulumi/unifi": "file:sdks/unifi",
+        "@pulumiverse/purrl": "^0.6.2",
+        "confbox": "^0.2.2",
+        "crypto-js": "^4.2.0",
+        "diff": "^9.0.0",
+        "jsonc-morph": "^0.3.0",
+        "jsonc-parser": "^3.3.1",
+        "jsondiffpatch": "^0.7.3",
+        "moderndash": "^4.0.0",
+        "private-ip": "^3.0.2"
+      },
+      "devDependencies": {
+        "@types/crypto-js": "^4.2.2",
+        "@types/ssh2": "^1.15.5",
+        "tsx": "^4.19.3",
+        "typescript": "^5.9.2"
+      }
+    },
+    "components": {
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "@1password/connect": "^1.4.2",
+        "@goauthentik/api": "^2026.2.3-rc1",
+        "@pulumi/cloudflare": "^6.10.0",
+        "@pulumi/minio": "^0.16.6",
+        "@pulumi/random": "^4.18.4",
+        "@pulumi/tailscale": "^0.27.0",
+        "@pulumi/tls": "^5.2.2",
+        "@pulumiverse/unifi": "^0.2.0",
+        "crypto-js": "^4.2.0",
+        "node-unifi": "^2.5.1",
+        "openapi-fetch": "^0.17.0",
+        "vscode-ws-jsonrpc": "^3.5.0"
+      },
+      "devDependencies": {
+        "@types/crypto-js": "^4.2.2",
+        "@types/node-unifi": "^2.5.1",
+        "openapi-typescript": "^7.13.0"
+      }
+    },
+    "dynamic": {
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "jsondiffpatch": "^0.7.3"
+      }
+    },
+    "node_modules/@1password/connect": {
+      "version": "1.4.2",
+      "resolved": "https://registry.npmjs.org/@1password/connect/-/connect-1.4.2.tgz",
+      "integrity": "sha512-CxcDQIr76nloWwGWRrmz/U7DuU65WKrN/yarq45LrC3L6b/pC7bZyskvougadG32fRwBieLJX143lTI8T1bAtQ==",
+      "license": "MIT",
+      "dependencies": {
+        "axios": "^1.10.0",
+
+[TRUNCATED] Showing first 80 of 6774 lines.
+--- package.json ---
+{
+  "name": "home-operations",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/david-driscoll/home-operations#readme",
+  "bugs": {
+    "url": "https://github.com/david-driscoll/home-operations/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david-driscoll/home-operations.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "workspaces": [
+    "components/",
+    "dynamic/",
+    "stacks/*",
+    "sdks/*"
+  ],
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/ssh2": "^1.15.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@pulumi/adguard": "file:sdks/adguard",
+    "@pulumi/authentik": "file:sdks/authentik",
+    "@pulumi/b2": "file:sdks/b2",
+    "@pulumi/github": "^6.8.0",
+    "@pulumi/http": "^0.2.0",
+    "@pulumi/kubernetes": "^4.23.0",
+    "@pulumi/pbs": "file:sdks/pbs",
+    "@pulumi/terrifi": "file:sdks/terrifi",
+    "@pulumi/unifi": "file:sdks/unifi",
+    "@pulumiverse/purrl": "^0.6.2",
+    "confbox": "^0.2.2",
+    "crypto-js": "^4.2.0",
+    "diff": "^9.0.0",
+    "jsonc-morph": "^0.3.0",
+    "jsonc-parser": "^3.3.1",
+    "jsondiffpatch": "^0.7.3",
+    "moderndash": "^4.0.0",
+    "private-ip": "^3.0.2"
+  }
+}
+
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+Found: .editorconfig
+Found: tsconfig.json
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+No .env.example or .env.template found. Identify required environment variables by searching the code and config for environment variable reads.
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+stacks/applications/kubernetes.ts:29: // TODO: clear out old keys that are no longer used
+stacks/backups/BackupPlanManager.ts:107: // TODO: Google Drive?
+stacks/backups/kubernetes-backups.ts:26: // TODO: clear out old keys that are no longer used
+components/ProxmoxHost.ts:137: // TODO: make work at somepoint
+components/constants.ts:1: // TODO: Pull from tailscale???
+
+=== GIT RECENT COMMITS (last 20) ===
+fbe2f5c omg
+ee17654 dynamic traefik configs
+e6c7963 gatus config
+f577d9f updates
+6af69ad hostname?
+773f64c I think it's working now
+826144b probably fighting itself
+5eb3af7 dns updates
+cbe753d updates
+f56b9e6 uptime config
+0b7c97d docker services
+9a9adb7 register external services
+1889ae6 proper triggers
+0c91f27 gatus
+bef3767 zot config
+701b71b backup updates
+3819f8b backups
+a61f659 updates
+c318996 zot
+89c6f43 the final dns countdown
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+  54 components/DockgeLxc.ts
+  48 .mise.toml
+  48 package-lock.json
+  24 stacks/home/index.ts
+  21 components/helpers.ts
+  19 .github/renovate.json5
+  18 components/tailscale.ts
+  17 components/ProxmoxBackupServerLxc.ts
+  17 docker/_common/neo4j/compose.yaml
+  17 docker/_common/traefik/compose.yaml
+  16 docker/_common/prometheus/compose.yaml
+  13 stacks/home/DockgeLxc.ts
+  13 stacks/home/ProxmoxHost.ts
+  12 stacks/applications/kubernetes.ts
+  12 stacks/backups/BackupPlanManager.ts
+  12 stacks/unifi-network/tailscale-drop-firewall-rule.ts
+  11 components/StandardDns.ts
+  11 components/authentik.ts
+  11 docker/_common/backups/compose.yaml
+  11 Pulumi.yaml
+
+=== MONOREPO SIGNALS ===
+package.json has 'workspaces' field (npm/yarn workspaces monorepo)
+
+=== CODE METRICS ===
+Total files scanned: 508
+Total lines of code: 79895
+
+Files by language:
+  TypeScript: 313
+  Other: 188
+  JavaScript: 6
+  C#: 1
+
+Top 10 largest files:
+types/tailscale.d.ts: 388.8KB
+package-lock.json: 242.3KB
+components/tailscale.json: 226.2KB
+playbook/pulumi-operator.ipynb: 120.3KB
+sdks/authentik/index.ts: 65.4KB
+components/truenas/truenas-types.ts: 47.0KB
+sdks/unifi/types/output.ts: 35.5KB
+sdks/authentik/policyEventMatcher.ts: 34.2KB
+components/DockgeLxc.ts: 32.1KB
+.github/skills/create-k8s-deployment/SKILL.md: 30.3KB
+
+=== CI/CD PIPELINES ===
+No CI/CD pipelines detected.
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===

@@ -10,3 +10,6 @@ node_modules/
 .github/instructions/nx.instructions.md
 _home-operations-pulumi/
 
+
+# APM dependencies
+apm_modules/
