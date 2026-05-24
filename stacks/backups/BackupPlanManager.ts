@@ -281,7 +281,7 @@ export class BackupPlanManager extends ComponentResource {
     return all([this.jobs]).apply(([jobs]) => {
       const groupName = `Jobs: ${cluster.title}`;
       return addUptimeGatus(
-        `backup-jobs-${cluster.key}`,
+        `backups-${cluster.key}`,
         this.globals,
         {
           endpoints: [],

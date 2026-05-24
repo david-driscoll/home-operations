@@ -34,8 +34,15 @@ export class StandardDns extends ComponentResource {
 
     const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
     const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id).apply((id) => (id ? `default:${id}` : undefined));
-    const cloudflareRecords = cloudflare.getDnsRecordsOutput({ zoneId: globals.cloudflareZoneId, name: { exact: args.hostname } }, { provider: globals.cloudflareProvider });
-    cloudflareRecords.apply((r) => log.info(`Cloudflare records for ${name}: ${r.results.map((rec) => rec.name).join(", ")}`));
+    const cloudflareRecords = cloudflare.getDnsRecordsOutput(
+      {
+        zoneId: globals.cloudflareZoneId,
+        name: { exact: all([args.hostname, globals.searchDomain]).apply(([h, s]) => h.replace(`.${s}`, "")) },
+        maxItems: 100,
+      },
+      { provider: globals.cloudflareProvider },
+    );
+    cloudflareRecords.apply((r) => log.info(`Cloudflare records for ${name}: ${r.results.map((rec) => rec.name).join(", ")}`, globals));
     const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply((z) => z.results.find((r) => r.name === args.hostname)?.id)]).apply(([zoneId, id]) =>
       id ? `${zoneId}/${id}` : undefined,
     );
