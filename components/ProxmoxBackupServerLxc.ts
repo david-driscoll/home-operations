@@ -268,17 +268,17 @@ if proxmox-backup-manager openid list 2>/dev/null | grep -q "\\"$REALM_ID\\""; t
   proxmox-backup-manager openid update "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
-    --client-secret "$CLIENT_SECRET" \\
+    --client-key "$CLIENT_SECRET" \\
     --username-claim email \\
     --scopes "openid,email,profile"
 else
-  proxmox-backup-manager openid register "$REALM_ID" \\
+  proxmox-backup-manager openid create "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
-    --client-secret "$CLIENT_SECRET" \\
+    --client-key "$CLIENT_SECRET" \\
     --username-claim email \\
     --scopes "openid,email,profile" \\
-    --autocreate-users true
+    --autocreate true
 fi
 echo "PBS OIDC configured for realm: $REALM_ID"
 `;
@@ -329,17 +329,17 @@ if proxmox-backup-manager openid list 2>/dev/null | grep -q "\\"$REALM_ID\\""; t
   proxmox-backup-manager openid update "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
-    --client-secret "$CLIENT_SECRET" \\
+    --client-key "$CLIENT_SECRET" \\
     --username-claim email \\
     --scopes "openid,email,profile"
 else
-  proxmox-backup-manager openid register "$REALM_ID" \\
+  proxmox-backup-manager openid create "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
-    --client-secret "$CLIENT_SECRET" \\
+    --client-key "$CLIENT_SECRET" \\
     --username-claim email \\
     --scopes "openid,email,profile" \\
-    --autocreate-users true
+    --autocreate true
 fi
 echo "PBS TSIDP realm configured"
 `;
