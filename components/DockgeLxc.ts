@@ -793,6 +793,7 @@ export class DockgeLxc extends ComponentResource {
           connection: this.remoteConnection,
           remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
           content: replacedContent,
+          triggers: [replacedContent, absoluteFilePath],
           parent: stackParent,
           dependsOn: dependsOn,
         }),
