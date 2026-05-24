@@ -136,31 +136,6 @@ export class ProxmoxHost extends ComponentResource {
         cro,
       );
 
-      // TODO: make work at somepoint
-      // const script = new Purrl(`${name}-alloy-script`, {
-      //   name: "install-alloystack.sh",
-      //   url: "https://raw.githubusercontent.com/IT-BAER/alloy-aio/main/alloy_setup.sh",
-      //   method: "GET",
-      //   responseCodes: ["200"],
-      // });
-
-      // const filePath = writeTempFile(`${name}-alloystack-script`, script.response);
-
-      // const alloyScriptOnServer = new remote.CopyToRemote(`${name}-copy-alloystack-script`, {
-      //   connection: connection,
-      //   remotePath: "/tmp/install-alloystack.sh",
-      //   source: filePath.apply((path) => new asset.FileAsset(path)),
-      // });
-
-      // const installAlloyStack = new remote.Command(
-      //   `${name}-install-alloystack`,
-      //   {
-      //     connection: connection,
-      //     create: interpolate`chmod +x /tmp/install-alloystack.sh && /tmp/install-alloystack.sh --loki-url "http://loki.${args.globals.tailscaleDomain}:3100/loki/api/v1/push" --prometheus-url "http://thanos-receive.${args.globals.tailscaleDomain}:19291/api/v1/receive"`,
-      //     logging: Logging.StdoutAndStderr,
-      //   },
-      //   mergeOptions(cro, { dependsOn: [alloyScriptOnServer] })
-      // );
       updateTailscaleProxmox({
         connection,
         parent: this,
@@ -211,6 +186,88 @@ export class ProxmoxHost extends ComponentResource {
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
         },
         mergeOptions(cro, { dependsOn: [tailscaleCron] }),
+      );
+
+      // Install Alloy on this Proxmox host for metrics and log forwarding
+      const installAlloy = new remote.Command(
+        `${name}-install-alloy`,
+        {
+          connection,
+          create: [
+            "mkdir -p /etc/apt/keyrings",
+            "wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor > /etc/apt/keyrings/grafana.gpg",
+            'echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | tee /etc/apt/sources.list.d/grafana.list',
+            "apt-get update -qq",
+            "apt-get install -y alloy",
+          ].join(" && "),
+        },
+        mergeOptions(cro, { dependsOn: [tailscaleSetCert] }),
+      );
+
+      const alloyConfig = interpolate`logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+// Systemd journal logs → Loki
+loki.source.journal "default" {
+  forward_to = [loki.write.default.receiver]
+  labels = {
+    cluster     = "${cluster.apply((c) => c.key)}",
+    environment = "homelab",
+    region      = "home",
+    hostname    = "${name}",
+    job         = "proxmox/journal",
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki.${args.globals.tailscaleDomain}:3100/loki/api/v1/push"
+  }
+}
+
+// Host metrics via built-in node_exporter → Thanos
+prometheus.exporter.unix "node" {}
+
+prometheus.scrape "node" {
+  targets    = prometheus.exporter.unix.node.targets
+  forward_to = [prometheus.remote_write.thanos.receiver]
+}
+
+prometheus.remote_write "thanos" {
+  endpoint {
+    url = "http://thanos-receive.${args.globals.tailscaleDomain}:19291/api/v1/receive"
+    queue_config {
+      max_samples_per_send = 10000
+    }
+  }
+  external_labels = {
+    cluster     = "${cluster.apply((c) => c.key)}",
+    environment = "homelab",
+    region      = "home",
+    hostname    = "${name}",
+  }
+}
+`;
+
+      const copyAlloyConfig = new remote.CopyToRemote(
+        `${name}-alloy-config`,
+        {
+          connection,
+          remotePath: "/etc/alloy/config.alloy",
+          source: alloyConfig.apply((c) => new asset.StringAsset(c)),
+        },
+        mergeOptions(cro, { dependsOn: [installAlloy] }),
+      );
+
+      new remote.Command(
+        `${name}-enable-alloy`,
+        {
+          connection,
+          create: "systemctl enable alloy && systemctl restart alloy",
+        },
+        mergeOptions(cro, { dependsOn: [copyAlloyConfig] }),
       );
     }
     const proxmoxInfo = new OnePasswordItem(

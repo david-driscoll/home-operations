@@ -1,0 +1,89 @@
+groups:
+  - name: proxmox-hosts
+    interval: 60s
+    rules:
+      # Alert when pve_exporter cannot reach a Proxmox host (host is down or API unreachable)
+      - alert: ProxmoxHostUnreachable
+        expr: |
+          pve_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox host {{ $labels.id }} is unreachable"
+          description: "The Proxmox VE API on {{ $labels.id }} ({{ $labels.instance }}) has been unreachable for more than 2 minutes."
+
+      # Alert when pve_exporter itself is down (cannot scrape)
+      - alert: ProxmoxExporterDown
+        expr: |
+          up{job="proxmox"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox exporter is down for {{ $labels.instance }}"
+          description: "The prometheus-pve-exporter cannot be scraped for {{ $labels.instance }} — the host may be down or the API credentials are invalid."
+
+      # Alert when a Proxmox node is using more than 85% CPU for 10 minutes
+      - alert: ProxmoxNodeHighCPU
+        expr: |
+          pve_cpu_usage_ratio{type="node"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox node {{ $labels.id }} has high CPU usage"
+          description: "Proxmox node {{ $labels.id }} CPU usage is {{ $value | humanizePercentage }} (threshold: 85%)."
+
+      # Alert when a Proxmox node is using more than 90% memory for 10 minutes
+      - alert: ProxmoxNodeHighMemory
+        expr: |
+          (
+            pve_memory_usage_bytes{type="node"}
+            / pve_memory_size_bytes{type="node"}
+          ) > 0.90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox node {{ $labels.id }} has high memory usage"
+          description: "Proxmox node {{ $labels.id }} memory usage is {{ $value | humanizePercentage }} (threshold: 90%)."
+
+      # Alert when a Proxmox storage pool is more than 85% full
+      - alert: ProxmoxStorageFull
+        expr: |
+          (
+            pve_disk_usage_bytes{type="storage"}
+            / pve_disk_size_bytes{type="storage"}
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox storage {{ $labels.id }} is almost full"
+          description: "Proxmox storage {{ $labels.id }} on {{ $labels.instance }} is {{ $value | humanizePercentage }} full (threshold: 85%)."
+
+      # Alert when a Proxmox storage pool is more than 95% full (critical)
+      - alert: ProxmoxStorageCritical
+        expr: |
+          (
+            pve_disk_usage_bytes{type="storage"}
+            / pve_disk_size_bytes{type="storage"}
+          ) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox storage {{ $labels.id }} is critically full"
+          description: "Proxmox storage {{ $labels.id }} on {{ $labels.instance }} is {{ $value | humanizePercentage }} full (threshold: 95%)."
+
+      # Alert when a VM or LXC that should be running has stopped
+      - alert: ProxmoxVMDown
+        expr: |
+          pve_up{type=~"qemu|lxc"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox VM/LXC {{ $labels.name }} is not running"
+          description: "VM or LXC {{ $labels.name }} ({{ $labels.id }}) on {{ $labels.instance }} has been stopped for more than 5 minutes."
