@@ -253,6 +253,9 @@ export class ProxmoxHost extends ComponentResource {
       // Register Proxmox VE as a native Authentik OAuth2 OIDC application.
       // This replaces the previous forward-proxy registration.
       const pveRedirectUri = interpolate`https://${this.tailscaleHostname}:8006/`;
+      // PVE sends whatever URL the user accessed it from as redirect_uri (no override possible).
+      // Include both the Tailscale direct URL and the external Traefik-proxied URL.
+      const pveExternalUri = `https://pve.${clusterDefinition.rootDomain}`;
       const oidcApp = this.applicationManager.createApplication({
         metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
         spec: {
@@ -264,7 +267,10 @@ export class ProxmoxHost extends ComponentResource {
           authentik: {
             oauth2: {
               clientType: "confidential",
-              allowedRedirectUris: [{ matching_mode: "strict", url: pveRedirectUri }],
+              allowedRedirectUris: [
+                { matching_mode: "strict", url: pveRedirectUri },
+                { matching_mode: "strict", url: pveExternalUri },
+              ],
               includeClaimsInIdToken: true,
               propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
             },
@@ -298,7 +304,7 @@ export class ProxmoxHost extends ComponentResource {
             client_name: `Proxmox VE (${clusterDefinition.title})`,
             client_id: tsidpClientId,
             client_secret: tsidpClientSecret.result,
-            redirect_uris: [pveRedirectUri],
+            redirect_uris: [pveRedirectUri, pveExternalUri],
           }),
           headers: { "Content-Type": "application/json" },
         },

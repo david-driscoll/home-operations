@@ -39,7 +39,7 @@ const host = new ProxmoxHost("luna", {
   proxmox: mainProxmoxCredentials,
   remote: true,
   cluster: cluster,
-  tailscaleArgs: { acceptRoutes: false },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: vmRange,
 });
