@@ -209,7 +209,7 @@ echo "PBS post-install complete"`;
       {
         name,
         hostname: externalHostname,
-        backend: interpolate`https://${externalHostname}:8007`,
+        backend: interpolate`https://${tailscaleHostname}:8007`,
       },
       [],
     );
