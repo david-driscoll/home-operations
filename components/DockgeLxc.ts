@@ -397,7 +397,7 @@ export class DockgeLxc extends ComponentResource {
       {
         name: interpolate`pve-${cluster.key}`,
         hostname: interpolate`pve.${cluster.rootDomain}`,
-        backend: interpolate`https://${args.host.internalIpAddress}:8006`,
+        backend: interpolate`https://${args.host.tailscaleHostname}:8006`,
       },
       [],
     );
