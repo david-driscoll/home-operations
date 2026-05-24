@@ -432,7 +432,7 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
-    return all([output(opts), this.args.globals.tailscaleDomain]).apply(([opts, tailscaleDomain]) => {
+    return output(opts).apply((opts) => {
       const content = output({
         http: {
           routers: {
@@ -446,7 +446,7 @@ export class DockgeLxc extends ComponentResource {
               },
             },
             [`host-${opts.name}-tailscale`]: {
-              rule: `Host(\`${opts.name}.${tailscaleDomain}\`)`,
+              rule: interpolate`Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
               entryPoints: ["tailscale"],
               service: `host-${opts.name}`,
               ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
