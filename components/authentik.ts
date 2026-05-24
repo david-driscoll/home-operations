@@ -182,7 +182,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         `${resourceName}-oidc-credentials`,
         {
           category: CategoryEnum.APICredential,
-          title: pulumi.interpolate`${this.cluster.key}-${resourceName}-oidc-credentials`,
+          title: pulumi.interpolate`${resourceName}-oidc-credentials`,
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
