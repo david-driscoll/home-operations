@@ -680,7 +680,11 @@ export class DockgeLxc extends ComponentResource {
     const copyFiles = [];
     const cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
-    replacements = [...replacements, replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName)];
+    // Prepend stack-specific substitutions so they run BEFORE the vaultRegex resolver.
+    // vaultRegex is the last item in the inherited replacements array; if APP/STACK_NAME
+    // were appended after it, op:// paths like "op://Eris/${CLUSTER_KEY}-${APP}-oidc-credentials/..."
+    // would still contain "${APP}" when the resolver runs and the regex would fail to match.
+    replacements = [replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName), ...replacements];
 
     let hasCompose = false;
     let hasInit = false;
