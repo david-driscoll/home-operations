@@ -475,7 +475,7 @@ export class DockgeLxc extends ComponentResource {
 
       this.registerTailscaleService(opts.name);
 
-      const file = copyFileToRemote(`${opts.name}-traefik-route`, {
+      const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,
         remotePath: interpolate`/opt/stacks-data/dockge/dynamic/${opts.name}.yaml`,
         content: content,
