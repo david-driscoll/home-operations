@@ -403,7 +403,8 @@ __PBS_GROUPS__`;
       {
         connection: args.host.remoteConnection,
         create: groupsScript,
-        triggers: [],
+        update: groupsScript,
+        triggers: [groupsScript],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
