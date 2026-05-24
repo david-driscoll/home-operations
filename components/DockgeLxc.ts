@@ -397,7 +397,7 @@ export class DockgeLxc extends ComponentResource {
       {
         name: interpolate`pve-${cluster.key}`,
         hostname: interpolate`pve.${cluster.rootDomain}`,
-        backend: interpolate`https://pve.${cluster.rootDomain}:8006`,
+        backend: interpolate`https://${args.host.internalIpAddress}:8006`,
       },
       [],
     );
@@ -432,11 +432,11 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
-    return output(opts).apply((opts) => {
+    return all([output(opts), this.args.globals.tailscaleDomain]).apply(([opts, tailscaleDomain]) => {
       const content = output({
         http: {
           routers: {
-            [`host-${opts.name}:`]: {
+            [`host-${opts.name}`]: {
               rule: `Host(\`${opts.hostname}\`)`,
               entryPoints: ["websecure"],
               service: `host-${opts.name}`,
@@ -445,15 +445,15 @@ export class DockgeLxc extends ComponentResource {
                 certResolver: opts.certResolver ?? "le",
               },
             },
-            [`host-${opts.name}-tailscale:`]: {
-              rule: `Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
+            [`host-${opts.name}-tailscale`]: {
+              rule: `Host(\`${opts.name}.${tailscaleDomain}\`)`,
               entryPoints: ["tailscale"],
               service: `host-${opts.name}`,
               ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
             },
           },
           services: {
-            [`host-${opts.name}:`]: {
+            [`host-${opts.name}`]: {
               loadBalancer: {
                 servers: [{ url: opts.backend }],
               },
