@@ -198,7 +198,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
     return y;
   });
 
-  return copyFileToRemote(`uptime-${name}`, {
+  return copyFileToRemote(`gatus-${name}`, {
     connection: {
       host: interpolate`dockge-as.${globals.tailscaleDomain}`,
       user: "root",
