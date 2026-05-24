@@ -477,7 +477,7 @@ export class DockgeLxc extends ComponentResource {
 
       const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,
-        remotePath: interpolate`/opt/stacks-data/dockge/dynamic/${opts.name}.yaml`,
+        remotePath: interpolate`/opt/stacks-data/traefik/dynamic/${opts.name}.yaml`,
         content: content,
         parent: this,
         triggers: [content, opts.name, opts.backend, opts.hostname],
