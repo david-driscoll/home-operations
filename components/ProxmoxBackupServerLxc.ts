@@ -13,7 +13,6 @@ import { StandardDns } from "./StandardDns.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
-import { getUsersOutput } from "@pulumi/authentik";
 import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
@@ -356,21 +355,12 @@ echo "PBS TSIDP realm configured"
     // Pre-create PBS groups with ACLs.
     // PBS does not support groups-claim in OIDC, so groups must be configured manually.
     // New OIDC users start with no permissions until an admin adds them to a group.
-    // Pre-populate the admins group with current Authentik and Tailscale admin users so
-    // they have access immediately without waiting for a manual group assignment.
-    const authentikAdmins = getUsersOutput({ groupsByNames: ["admins"] }, { parent: this });
+    // Pre-populate the admins group with current Tailscale admin users so they have
+    // access immediately without waiting for a manual group assignment.
+    // NOTE: Authentik admin pre-population is omitted — terraform-provider-authentik
+    // v2026.2.0 has a bug in dataSourceUsersRead (groupsByNames causes a Go panic).
     const tailscaleAdmins = getTailscaleUsersOutput({ role: "admin" }, { provider: args.globals.tailscaleProvider, parent: this });
-    const groupsScript = all([output(args.vmId), authentikAdmins, tailscaleAdmins]).apply(([vmId, authAdmins, tsAdmins]) => {
-      const authentikEntries = authAdmins.users
-        .map(u => {
-          const userId = `${u.email}@authentik`;
-          return [
-            `proxmox-backup-manager user create "${userId}" 2>/dev/null || true`,
-            `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`,
-          ].join("\n");
-        })
-        .join("\n");
-
+    const groupsScript = all([output(args.vmId), tailscaleAdmins]).apply(([vmId, tsAdmins]) => {
       const tsidpEntries = tsAdmins.users
         .map(u => {
           const userId = `${u.loginName}@tsidp`;
@@ -389,9 +379,6 @@ proxmox-backup-manager group create users --comment "Read-only users" 2>/dev/nul
 # Assign ACLs at root path
 proxmox-backup-manager acl update / --group admins --role Admin 2>/dev/null || true
 proxmox-backup-manager acl update / --group users  --role Audit 2>/dev/null || true
-
-# Pre-populate admins group with current Authentik admin users
-${authentikEntries}
 
 # Pre-populate admins group with current Tailscale admin users
 ${tsidpEntries}
