@@ -589,8 +589,8 @@ export class DockgeLxc extends ComponentResource {
         z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
       })
-      .apply((stacks) => {
-        this.createOutpost(stacks);
+      .apply(async (stacks) => {
+        await this.createOutpost(stacks);
         return stacks;
       });
   }
