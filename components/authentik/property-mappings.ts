@@ -52,6 +52,10 @@ elif ak_is_group_member(request.user, name="media-managers"):
 else:
     return {"ggrequestz_role": "user"}`,
     },
+    proxmox_groups: {
+      description: "Proxmox group membership claim — returns all group names for use with PVE/PBS OIDC group mapping",
+      expression: `return {"groups": [g.name for g in request.user.ak_groups.all()]}`,
+    },
   };
 
   constructor(opts?: pulumi.ComponentResourceOptions) {

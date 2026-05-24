@@ -3,6 +3,9 @@ import { getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { remote } from "@pulumi/command";
 import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
+import * as pulumi from "@pulumi/pulumi";
+import * as purrl from "@pulumiverse/purrl";
+import * as random from "@pulumi/random";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
@@ -232,6 +235,7 @@ echo "PBS post-install complete"`;
                 clientType: "confidential",
                 allowedRedirectUris: [{ matching_mode: "strict", url: `https://pbs.${c.rootDomain}/oidccode` }],
                 includeClaimsInIdToken: true,
+                propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
               },
             },
             gatus: [
@@ -262,12 +266,16 @@ if proxmox-backup-manager openid list 2>/dev/null | grep -q "\\"$REALM_ID\\""; t
   proxmox-backup-manager openid update "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
-    --client-secret "$CLIENT_SECRET"
+    --client-secret "$CLIENT_SECRET" \\
+    --username-claim email \\
+    --scopes "openid,email,profile"
 else
   proxmox-backup-manager openid register "$REALM_ID" \\
     --issuer-url "$ISSUER_URL" \\
     --client-id "$CLIENT_ID" \\
     --client-secret "$CLIENT_SECRET" \\
+    --username-claim email \\
+    --scopes "openid,email,profile" \\
     --autocreate-users true
 fi
 echo "PBS OIDC configured for realm: $REALM_ID"
@@ -278,6 +286,90 @@ echo "PBS OIDC configured for realm: $REALM_ID"
         connection: args.host.remoteConnection,
         create: all([output(args.vmId), oidcScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_OIDC__'\n${script.trim()}\n__PBS_OIDC__`),
         triggers: [oidc.clientId, oidc.clientSecret, oidc.config.issuerUrl],
+      },
+      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+    );
+
+    // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PBS
+    const tsidpClientId = pulumi.interpolate`pbs-${args.globals.tailscaleDomain}`;
+    const tsidpClientSecret = new random.RandomPassword(
+      `${name}-tsidp-client-secret`,
+      { length: 32, special: false },
+      cro,
+    );
+    const pbsRedirectUri = cluster.apply((c) => `https://pbs.${c.rootDomain}/oidccode`);
+    const tsidpDcr = new purrl.Purrl(
+      `${name}-tsidp-dcr`,
+      {
+        name: `PBS TSIDP Dynamic Client Registration`,
+        responseCodes: ["201"],
+        url: pulumi.interpolate`https://idp.${args.globals.tailscaleDomain}/register`,
+        method: "POST",
+        body: pulumi.jsonStringify({
+          client_name: pulumi.interpolate`Proxmox Backup Server (${cluster.apply((c) => c.title)})`,
+          client_id: tsidpClientId,
+          client_secret: tsidpClientSecret.result,
+          redirect_uris: [pbsRedirectUri],
+        }),
+        headers: { "Content-Type": "application/json" },
+      },
+      cro,
+    );
+
+    const tsidpRealm = "tsidp";
+    const tsidpScript = pulumi.interpolate`
+REALM_ID="${tsidpRealm}"
+ISSUER_URL="https://idp.${args.globals.tailscaleDomain}"
+CLIENT_ID="${tsidpClientId}"
+CLIENT_SECRET="${tsidpClientSecret.result}"
+
+if proxmox-backup-manager openid list 2>/dev/null | grep -q "\\"$REALM_ID\\""; then
+  proxmox-backup-manager openid update "$REALM_ID" \\
+    --issuer-url "$ISSUER_URL" \\
+    --client-id "$CLIENT_ID" \\
+    --client-secret "$CLIENT_SECRET" \\
+    --username-claim email \\
+    --scopes "openid,email,profile"
+else
+  proxmox-backup-manager openid register "$REALM_ID" \\
+    --issuer-url "$ISSUER_URL" \\
+    --client-id "$CLIENT_ID" \\
+    --client-secret "$CLIENT_SECRET" \\
+    --username-claim email \\
+    --scopes "openid,email,profile" \\
+    --autocreate-users true
+fi
+echo "PBS TSIDP realm configured"
+`;
+    new remote.Command(
+      `${name}-configure-tsidp`,
+      {
+        connection: args.host.remoteConnection,
+        create: all([output(args.vmId), tsidpScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_TSIDP__'\n${script.trim()}\n__PBS_TSIDP__`),
+        triggers: [tsidpClientSecret.result],
+      },
+      mergeOptions(cro, { dependsOn: [createPbsLxc, tsidpDcr, ...(args.dependsOn ?? [])] }),
+    );
+
+    // Pre-create PBS groups with ACLs.
+    // PBS does not support groups-claim in OIDC, so groups must be configured manually.
+    // New OIDC users start with no permissions until an admin adds them to a group.
+    const groupsScript = all([output(args.vmId)]).apply(([vmId]) => `pct exec ${vmId} -- bash << '__PBS_GROUPS__'
+# Create groups (idempotent)
+proxmox-backup-manager group create admins --comment "Administrators" 2>/dev/null || true
+proxmox-backup-manager group create users --comment "Read-only users" 2>/dev/null || true
+
+# Assign ACLs at root path
+proxmox-backup-manager acl update / --group admins --role Admin 2>/dev/null || true
+proxmox-backup-manager acl update / --group users  --role Audit 2>/dev/null || true
+echo "PBS groups and ACLs configured"
+__PBS_GROUPS__`);
+    new remote.Command(
+      `${name}-configure-groups`,
+      {
+        connection: args.host.remoteConnection,
+        create: groupsScript,
+        triggers: [],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );

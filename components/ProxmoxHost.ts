@@ -2,6 +2,8 @@ import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOption
 import proxmox, { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
 import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+import * as purrl from "@pulumiverse/purrl";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
 import { OPClient } from "./op.ts";
@@ -248,26 +250,129 @@ export class ProxmoxHost extends ComponentResource {
     });
 
     cluster.apply((clusterDefinition) => {
-      // Register Proxmox UIs as Authentik forward-proxy applications.
-      // Traffic is routed through this cluster's Dockge Traefik ingress.
-      return this.applicationManager.createApplication({
+      // Register Proxmox VE as a native Authentik OAuth2 OIDC application.
+      // This replaces the previous forward-proxy registration.
+      const pveRedirectUri = interpolate`https://${this.tailscaleHostname}:8006/`;
+      const oidcApp = this.applicationManager.createApplication({
         metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
         spec: {
           name: "Proxmox VE",
           category: clusterDefinition.title,
           description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
-          url: `https://${this.tailscaleHostname}:8006/`,
+          url: interpolate`https://${this.tailscaleHostname}:8006/`,
           icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+          authentik: {
+            oauth2: {
+              clientType: "confidential",
+              allowedRedirectUris: [{ matching_mode: "strict", url: pveRedirectUri }],
+              includeClaimsInIdToken: true,
+              propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
+            },
+          },
           gatus: [
             {
               name: "Proxmox VE",
-              url: `https://${this.tailscaleHostname}:8006/`,
+              url: interpolate`https://${this.tailscaleHostname}:8006/`,
               method: "GET",
               conditions: ["[STATUS] == 200"],
             },
           ],
         },
       });
+
+      // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PVE
+      const tsidpClientId = interpolate`pve-${clusterDefinition.key}-${args.globals.tailscaleDomain}`;
+      const tsidpClientSecret = new random.RandomPassword(
+        `${name}-pve-tsidp-client-secret`,
+        { length: 32, special: false },
+        { parent: this },
+      );
+      const tsidpDcr = new purrl.Purrl(
+        `${name}-pve-tsidp-dcr`,
+        {
+          name: `PVE TSIDP Dynamic Client Registration`,
+          responseCodes: ["201"],
+          url: interpolate`https://idp.${args.globals.tailscaleDomain}/register`,
+          method: "POST",
+          body: pulumi.jsonStringify({
+            client_name: `Proxmox VE (${clusterDefinition.title})`,
+            client_id: tsidpClientId,
+            client_secret: tsidpClientSecret.result,
+            redirect_uris: [pveRedirectUri],
+          }),
+          headers: { "Content-Type": "application/json" },
+        },
+        { parent: this },
+      );
+
+      // Configure both OIDC realms and groups via pveum (idempotent)
+      const oidcClientId = oidcApp.apply((a) => a.clientId);
+      const oidcClientSecret = oidcApp.apply((a) => a.clientSecret);
+      const oidcIssuerUrl = oidcApp.apply((a) => a.config.issuerUrl);
+      const realmScript = interpolate`
+AUTHENTIK_ISSUER="${oidcIssuerUrl}"
+AUTHENTIK_CLIENT_ID="${oidcClientId}"
+AUTHENTIK_CLIENT_SECRET="${oidcClientSecret}"
+TSIDP_CLIENT_ID="${tsidpClientId}"
+TSIDP_CLIENT_SECRET="${tsidpClientSecret.result}"
+TSIDP_ISSUER="https://idp.${args.globals.tailscaleDomain}"
+
+configure_realm() {
+  local realm="$1"
+  local issuer="$2"
+  local client_id="$3"
+  local client_key="$4"
+  local comment="$5"
+
+  if pveum realm list --output-format json 2>/dev/null | grep -q "\\"$realm\\""; then
+    pveum realm modify "$realm" \\
+      --issuer-url "$issuer" \\
+      --client-id "$client_id" \\
+      --client-key "$client_key" \\
+      --username-claim email \\
+      --scopes "openid email profile" \\
+      --groups-claim groups \\
+      --groups-autocreate 1 \\
+      --groups-overwrite 1
+  else
+    pveum realm add "$realm" --type openid \\
+      --issuer-url "$issuer" \\
+      --client-id "$client_id" \\
+      --client-key "$client_key" \\
+      --username-claim email \\
+      --scopes "openid email profile" \\
+      --groups-claim groups \\
+      --groups-autocreate 1 \\
+      --groups-overwrite 1 \\
+      --autocreate 1 \\
+      --comment "$comment"
+  fi
+}
+
+configure_realm "authentik" "$AUTHENTIK_ISSUER" "$AUTHENTIK_CLIENT_ID" "$AUTHENTIK_CLIENT_SECRET" "Authentik SSO"
+configure_realm "tsidp"     "$TSIDP_ISSUER"     "$TSIDP_CLIENT_ID"     "$TSIDP_CLIENT_SECRET"     "Tailscale TSIDP (backup)"
+
+# Create groups and assign ACLs (idempotent; PVE appends -<realmid> suffix to OIDC group names)
+for grp in admins-authentik users-authentik admins-tsidp users-tsidp; do
+  pveum group add "$grp" 2>/dev/null || true
+done
+
+pveum acl modify / --groups admins-authentik --roles Administrator --propagate 1
+pveum acl modify / --groups users-authentik  --roles PVEAuditor    --propagate 1
+pveum acl modify / --groups admins-tsidp     --roles Administrator --propagate 1
+pveum acl modify / --groups users-tsidp      --roles PVEAuditor    --propagate 1
+
+echo "PVE OIDC realms, groups, and ACLs configured"
+`;
+      new remote.Command(
+        `${name}-configure-pve-oidc`,
+        {
+          connection: this.remoteConnection,
+          create: realmScript,
+          triggers: [oidcClientId, oidcClientSecret, oidcIssuerUrl, tsidpClientSecret.result],
+        },
+        { parent: this, dependsOn: [tsidpDcr] },
+      );
     });
   }
 
