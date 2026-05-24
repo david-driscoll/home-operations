@@ -118,16 +118,18 @@ export class BackupPlanManager extends ComponentResource {
         // }
 
         const jobs = [];
-        jobs.push(
-          this.createBackupJob(source, {
-            name: interpolate`Backup ${title}`,
-            schedule: "0 15 * * *",
-            sourceType: "local",
-            source: path,
-            destinationType: "local",
-            destination: interpolate`/data/backup/${repository}/`,
-          }),
-        );
+        // I don't think this is needed to backup
+        // as backrest should handle creating this repository
+        // jobs.push(
+        //   this.createBackupJob(source, {
+        //     name: interpolate`Backup ${title}`,
+        //     schedule: "0 15 * * *",
+        //     sourceType: "local",
+        //     source: path,
+        //     destinationType: "local",
+        //     destination: interpolate`/data/backup/${repository}/`,
+        //   }),
+        // );
         jobs.push(
           this.createBackupJob(destinations, {
             name: interpolate`Replicate ${title}`,
