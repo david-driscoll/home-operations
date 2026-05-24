@@ -432,7 +432,7 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
-    return all([output(opts), this.args.globals.tailscaleDomain]).apply(([opts, tailscaleDomain]) => {
+    return output(opts).apply((opts) => {
       const content = output({
         http: {
           routers: {
