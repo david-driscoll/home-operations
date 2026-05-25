@@ -682,10 +682,7 @@ export class DockgeLxc extends ComponentResource {
             if (!docs || "empty" in docs) {
               return [];
             }
-            return docs.map((doc) => {
-              const app = this.args.host.applicationManager.createApplication(doc.toJS() as unknown as ApplicationDefinitionSchema);
-              return app;
-            });
+            return docs.map((doc) => this.args.host.applicationManager.createApplication(doc.toJS() as unknown as ApplicationDefinitionSchema));
           });
         }),
       )
