@@ -235,7 +235,7 @@ echo "PBS post-install complete"`;
             authentik: {
               oauth2: {
                 clientType: "confidential",
-                allowedRedirectUris: [{ matching_mode: "strict", url: `https://pbs.${c.rootDomain}/oidccode` }],
+                allowedRedirectUris: [{ matching_mode: "strict", url: `https://pbs.${c.rootDomain}` }],
                 includeClaimsInIdToken: true,
                 propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
               },
@@ -286,7 +286,8 @@ echo "PBS OIDC configured for realm: $REALM_ID"
       `${name}-configure-oidc`,
       {
         connection: args.host.remoteConnection,
-        create: all([output(args.vmId), oidcScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_OIDC__'\n${script.trim()}\n__PBS_OIDC__`),
+        create: interpolate`pct exec ${args.vmId} -- bash << '__PBS_OIDC__'\n${oidcScript}\n__PBS_OIDC__`,
+        delete: interpolate`pct exec ${args.vmId} -- proxmox-backup-manager openid delete ${realmId}`,
         triggers: [oidc.clientId, oidc.clientSecret, oidc.config.issuerUrl],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
@@ -343,7 +344,8 @@ echo "PBS TSIDP realm configured"
       `${name}-configure-tsidp`,
       {
         connection: args.host.remoteConnection,
-        create: all([output(args.vmId), tsidpScript]).apply(([vmId, script]) => `pct exec ${vmId} -- bash << '__PBS_TSIDP__'\n${script.trim()}\n__PBS_TSIDP__`),
+        create: interpolate`pct exec ${args.vmId} -- bash << '__PBS_TSIDP__'\n${tsidpScript}\n__PBS_TSIDP__`,
+        delete: interpolate`pct exec ${args.vmId} -- proxmox-backup-manager openid delete ${tsidpRealm}`,
         triggers: [tsidpClientSecret.result],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, tsidpDcr, ...(args.dependsOn ?? [])] }),
