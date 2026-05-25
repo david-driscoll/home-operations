@@ -296,7 +296,6 @@ echo "PBS OIDC configured for realm: $REALM_ID"
     // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PBS
     const tsidpClientId = pulumi.interpolate`pbs-${args.globals.tailscaleDomain}`;
     const tsidpClientSecret = new random.RandomPassword(`${name}-tsidp-client-secret`, { length: 32, special: false }, cro);
-    const pbsRedirectUri = cluster.apply((c) => `https://pbs.${c.rootDomain}/oidccode`);
     const tsidpDcr = new purrl.Purrl(
       `${name}-tsidp-dcr`,
       {
@@ -308,7 +307,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           client_name: pulumi.interpolate`Proxmox Backup Server (${cluster.apply((c) => c.title)})`,
           client_id: tsidpClientId,
           client_secret: tsidpClientSecret.result,
-          redirect_uris: [pbsRedirectUri],
+          redirect_uris: [interpolate`https://pbs.${c.rootDomain}`, interpolate`https://pbs.${args.globals.tailscaleDomain}`],
         }),
         headers: { "Content-Type": "application/json" },
       },
