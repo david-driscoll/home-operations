@@ -551,11 +551,17 @@ export class DockgeLxc extends ComponentResource {
       .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
         z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
-        return output(z.filter((z) => !!z.compose).map((z) => z.compose!));
-      })
-      .apply(async (stacks) => {
-        await this.createOutpost(stacks);
-        return stacks;
+        const composes = output(z.filter((z) => !!z.compose).map((z) => z.compose!));
+
+        // Wait for ALL applications to be registered before creating the outpost.
+        // proxyProviders is populated inside async .apply() callbacks in createApplication(),
+        // so creating the outpost before those callbacks complete sends an empty providers
+        // list which Authentik rejects with 400 Bad Request.
+        all(z.map((s) => s.waitForApplications)).apply(async () => {
+          await this.createOutpost(composes);
+        });
+
+        return composes;
       });
   }
 
@@ -640,7 +646,7 @@ export class DockgeLxc extends ComponentResource {
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>,
-  ): Output<{ name: string; path: string; compose?: remote.Command }> {
+  ): Output<{ name: string; path: string; compose?: remote.Command; waitForApplications: Output<Resource[]> }> {
     const copyFiles = [];
     const cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
@@ -800,9 +806,9 @@ export class DockgeLxc extends ComponentResource {
         },
       );
 
-      return output({ name: stackName, path, compose });
+      return output({ name: stackName, path, compose, waitForApplications });
     }
-    return output({ name: stackName, path });
+    return output({ name: stackName, path, waitForApplications });
   }
 }
 
