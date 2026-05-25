@@ -7,7 +7,7 @@ import * as purrl from "@pulumiverse/purrl";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
 import { OPClient } from "./op.ts";
-import { getHostnames } from "./helpers.ts";
+import { clientIdPair, getHostnames } from "./helpers.ts";
 import { createDnsSection, StandardDns } from "./StandardDns.ts";
 import * as yaml from "yaml";
 import type { TruenasVm } from "./TruenasVm.ts";
@@ -18,6 +18,7 @@ import { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-gr
 import { Tailscale } from "@components/constants.ts";
 import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
 import { GatusDefinition } from "@openapi/application-definition.js";
+import { getProviderOauth2ConfigOutput, ProviderOauth2 } from "@pulumi/authentik";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -251,15 +252,14 @@ prometheus.remote_write "thanos" {
 }
 `;
 
-      const copyAlloyConfig = new remote.CopyToRemote(
-        `${name}-alloy-config`,
-        {
-          connection,
-          remotePath: "/etc/alloy/config.alloy",
-          source: alloyConfig.apply((c) => new asset.StringAsset(c)),
-        },
-        mergeOptions(cro, { dependsOn: [installAlloy] }),
-      );
+      const copyAlloyConfig = copyFileToRemote(`${name}-alloy-config`, {
+        connection,
+        remotePath: "/etc/alloy/config.alloy",
+        dependsOn: [installAlloy],
+        content: alloyConfig,
+        triggers: [alloyConfig],
+        parent: this,
+      });
 
       new remote.Command(
         `${name}-enable-alloy`,
@@ -313,43 +313,40 @@ prometheus.remote_write "thanos" {
       // PVE sends whatever URL the user accessed it from as redirect_uri (no override possible).
       // Include both the Tailscale direct URL and the external Traefik-proxied URL.
       const pveExternalUri = `https://pve.${clusterDefinition.rootDomain}`;
-      const oidcApp = this.applicationManager.createApplication({
-        metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
-        spec: {
-          name: "Proxmox VE",
-          category: clusterDefinition.title,
-          description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
-          url: interpolate`https://${this.tailscaleHostname}:8006/`,
-          icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
-          authentik: {
-            oauth2: {
-              clientType: "confidential",
-              allowedRedirectUris: [
-                { matching_mode: "strict", url: pveRedirectUri },
-                { matching_mode: "strict", url: pveExternalUri },
-              ],
-              includeClaimsInIdToken: true,
-              propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
+      const oidcApp = this.applicationManager.createApplication(
+        output({
+          metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
+          spec: {
+            name: "Proxmox VE",
+            category: clusterDefinition.title,
+            description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
+            url: interpolate`https://${this.tailscaleHostname}:8006/`,
+            icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+            authentik: {
+              oauth2: {
+                clientType: "confidential",
+                allowedRedirectUris: [
+                  { matching_mode: "strict", url: pveRedirectUri },
+                  { matching_mode: "strict", url: pveExternalUri },
+                ],
+                includeClaimsInIdToken: true,
+                propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
+              },
             },
+            gatus: [
+              {
+                name: "Proxmox VE",
+                url: interpolate`https://${this.tailscaleHostname}:8006/`,
+                method: "GET",
+                conditions: ["[STATUS] == 200"],
+              },
+            ],
           },
-          gatus: [
-            {
-              name: "Proxmox VE",
-              url: interpolate`https://${this.tailscaleHostname}:8006/`,
-              method: "GET",
-              conditions: ["[STATUS] == 200"],
-            },
-          ],
-        },
-      });
+        }),
+      );
 
       // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PVE
-      const tsidpClientId = interpolate`pve-${clusterDefinition.key}-${args.globals.tailscaleDomain}`;
-      const tsidpClientSecret = new random.RandomPassword(
-        `${name}-pve-tsidp-client-secret`,
-        { length: 32, special: false },
-        { parent: this },
-      );
+      const tsidpClient = clientIdPair(`${name}-tsidp`, { options: { parent: this } });
       const tsidpDcr = new purrl.Purrl(
         `${name}-pve-tsidp-dcr`,
         {
@@ -359,8 +356,8 @@ prometheus.remote_write "thanos" {
           method: "POST",
           body: pulumi.jsonStringify({
             client_name: `Proxmox VE (${clusterDefinition.title})`,
-            client_id: tsidpClientId,
-            client_secret: tsidpClientSecret.result,
+            client_id: tsidpClient.clientId,
+            client_secret: tsidpClient.clientSecret,
             redirect_uris: [pveRedirectUri, pveExternalUri],
           }),
           headers: { "Content-Type": "application/json" },
@@ -368,16 +365,15 @@ prometheus.remote_write "thanos" {
         { parent: this },
       );
 
-      // Configure both OIDC realms and groups via pveum (idempotent)
-      const oidcClientId = oidcApp.apply((a) => a.clientId);
-      const oidcClientSecret = oidcApp.apply((a) => a.clientSecret);
-      const oidcIssuerUrl = oidcApp.apply((a) => a.config.issuerUrl);
+      const appProvider: Output<ProviderOauth2> = oidcApp.apply((a) => a.provider! as unknown as ProviderOauth2);
+      const providerConfig = getProviderOauth2ConfigOutput({ name: appProvider.name }, { parent: this });
+
       const realmScript = interpolate`
-AUTHENTIK_ISSUER="${oidcIssuerUrl}"
-AUTHENTIK_CLIENT_ID="${oidcClientId}"
-AUTHENTIK_CLIENT_SECRET="${oidcClientSecret}"
-TSIDP_CLIENT_ID="${tsidpClientId}"
-TSIDP_CLIENT_SECRET="${tsidpClientSecret.result}"
+AUTHENTIK_ISSUER="${providerConfig.issuerUrl}"
+AUTHENTIK_CLIENT_ID="${appProvider.clientId}"
+AUTHENTIK_CLIENT_SECRET="${appProvider.clientSecret}"
+TSIDP_CLIENT_ID="${tsidpClient.clientId}"
+TSIDP_CLIENT_SECRET="${tsidpClient.clientSecret}"
 TSIDP_ISSUER="https://idp.${args.globals.tailscaleDomain}"
 
 configure_realm() {
@@ -432,7 +428,7 @@ echo "PVE OIDC realms, groups, and ACLs configured"
         {
           connection: this.remoteConnection,
           create: realmScript,
-          triggers: [oidcClientId, oidcClientSecret, oidcIssuerUrl, tsidpClientSecret.result],
+          triggers: [appProvider.clientId, appProvider.clientSecret, providerConfig.issuerUrl, tsidpClient.clientSecret],
         },
         { parent: this, dependsOn: [tsidpDcr] },
       );

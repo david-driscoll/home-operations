@@ -64,7 +64,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", `${args.clusterKey}-outposts`, {}, { parent: this });
   }
 
-  public createApplication(application: ApplicationDefinitionSchema) {
+  public createApplication(application: pulumi.Input<ApplicationDefinitionSchema>) {
     return pulumi
       .output(application)
       .apply((application) =>
