@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, CustomResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
+import { all, asset, ComponentResource, CustomResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, rm } from "fs/promises";
 import * as yaml from "yaml";
@@ -17,26 +17,35 @@ import type { ProxmoxHost } from "./ProxmoxHost.ts";
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
 
-const mkdirs = new Map<string, remote.Command>();
-function mkdirOutput({ remotePath, connection, parent }: { remotePath: string; connection: types.input.remote.ConnectionArgs; parent?: Resource }) {
-  const dir = dirname(remotePath);
-  if (mkdirs.has(dir)) {
-    return mkdirs.get(dir)!;
-  }
+const mkdirs = new Map<string, Map<string, remote.Command>>();
+const mkdirParent = new ComponentResource("home-operations:helpers:mkdirs", "mkdirs", {});
+function mkdirOutput({ remotePath, connection }: { remotePath: string; connection: types.input.remote.ConnectionArgs }) {
+  return output(connection.host).apply((host) => {
+    const dir = dirname(remotePath);
+    if (mkdirs.has(host)) {
+      const hostMap = mkdirs.get(host)!;
+      if (hostMap.has(dir)) {
+        return hostMap.get(dir)!;
+      }
+    }
 
-  const mkdir = new remote.Command(
-    `${remotePath.replace(/\//g, "-")}-mkdir`,
-    {
-      connection: connection,
-      create: interpolate`mkdir -p ${dir}`,
-      triggers: [remotePath],
-    },
-    {
-      parent,
-    },
-  );
-  mkdirs.set(dir, mkdir);
-  return mkdir;
+    const mkdir = new remote.Command(
+      `${host}-${remotePath.replace(/\//g, "-")}-mkdir`,
+      {
+        connection: connection,
+        create: interpolate`mkdir -p ${dir}`,
+        triggers: [remotePath],
+      },
+      {
+        parent: mkdirParent,
+      },
+    );
+    if (!mkdirs.has(host)) {
+      mkdirs.set(host, new Map());
+    }
+    mkdirs.get(host)!.set(dir, mkdir);
+    return mkdir;
+  });
 }
 
 export function getTempFilePath(fileName: string) {
@@ -87,7 +96,7 @@ export function copyFileToRemote(
       const tempFilePath = writeTempFile(name, args.content);
       const remotePath = output(args.remotePath);
       const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-      const mkdir = remotePath.apply((path) => mkdirOutput({ remotePath: path, connection: args.connection, parent: args.parent }));
+      const mkdir = remotePath.apply((path) => mkdirOutput({ remotePath: path, connection: args.connection }));
 
       const internalDeps: remote.Command[] = [];
       if (args.withRemoveCommand) {
