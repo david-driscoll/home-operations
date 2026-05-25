@@ -27,6 +27,9 @@ accessLog:
 entryPoints:
   web:
     address: ":80"
+    http:
+      middlewares:
+        - compress@file
     transport:
       respondingTimeouts:
         readTimeout: "0s"
@@ -35,11 +38,16 @@ entryPoints:
     http:
       tls:
         certResolver: le
+      middlewares:
+        - compress@file
     transport:
       respondingTimeouts:
         readTimeout: "0s"
   tailscale:
     address: ":8443"
+    http:
+      middlewares:
+        - compress@file
     transport:
       respondingTimeouts:
         readTimeout: "0s"
