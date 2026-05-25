@@ -52,6 +52,7 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   proxmox: mainProxmoxCredentials,
   remote: false,
   cluster: celestiaCluster,
+  peerRelay: true,
   tailscaleArgs: { acceptRoutes: false },
   tailscaleSubnetRoutes: [],
   vmIdRange: { start: 102, end: 199 },
