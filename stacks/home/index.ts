@@ -166,8 +166,16 @@ celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs] });
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
+const pveHosts = [twilightSparkleHost, celestiaHost, alphaSiteHost];
+const proxmoxBlackboxTargets = `[${pveHosts.map((h) => `"https://${h.tailscaleIpAddress}:8006"`).join(", ")}]`;
+const proxmoxPveTargets = `[${pveHosts.map((h) => `"${h.tailscaleIpAddress}:8006"`).join(", ")}]`;
+const pveVariables = {
+  PROXMOX_BLACKBOX_TARGETS: proxmoxBlackboxTargets,
+  PROXMOX_PVE_TARGETS: proxmoxPveTargets,
+};
+
+celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: pveVariables });
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: pveVariables });
 
 celestiaHost.addUptimeGatus();
 alphaSiteHost.addUptimeGatus();

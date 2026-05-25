@@ -137,10 +137,7 @@ scrape_configs:
     params:
       module: [http_2xx_insecure]
     static_configs:
-      - targets:
-          - https://100.111.10.100:8006  # twilight-sparkle PVE
-          - https://100.111.10.103:8006  # celestia PVE
-          - https://100.111.10.200:8006  # alpha-site PVE (via subnet router)
+      - targets: ${PROXMOX_BLACKBOX_TARGETS}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -156,10 +153,7 @@ scrape_configs:
     params:
       module: [default]
     static_configs:
-      - targets:
-          - 100.111.10.100:8006  # twilight-sparkle PVE
-          - 100.111.10.103:8006  # celestia PVE
-          - 100.111.10.200:8006  # alpha-site PVE (via subnet router)
+      - targets: ${PROXMOX_PVE_TARGETS}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

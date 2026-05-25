@@ -464,7 +464,7 @@ export class DockgeLxc extends ComponentResource {
     return mp;
   }
 
-  public deployStacks(args: { dependsOn: Input<Resource[]> }): Output<Command[]> {
+  public deployStacks(args: { dependsOn: Input<Resource[]>; variables?: Record<string, Input<string>> }): Output<Command[]> {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
@@ -500,6 +500,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.args.globals.searchDomain}:9595`),
+      ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
       (input: Input<string>) => {
         return output(input).apply(async (str) => {
           const matches = str.matchAll(vaultRegex);
