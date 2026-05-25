@@ -227,7 +227,7 @@ echo "PBS post-install complete"`;
           kind: "ApplicationDefinition",
           metadata: { name: `pbs` },
           spec: {
-            name: `Proxmox Backup Server`,
+            name: `${c.title} PBS`,
             // slug: this.lxcName,
             icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
             category: c.title,
@@ -294,11 +294,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
 
     // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PBS
     const tsidpClientId = pulumi.interpolate`pbs-${args.globals.tailscaleDomain}`;
-    const tsidpClientSecret = new random.RandomPassword(
-      `${name}-tsidp-client-secret`,
-      { length: 32, special: false },
-      cro,
-    );
+    const tsidpClientSecret = new random.RandomPassword(`${name}-tsidp-client-secret`, { length: 32, special: false }, cro);
     const pbsRedirectUri = cluster.apply((c) => `https://pbs.${c.rootDomain}/oidccode`);
     const tsidpDcr = new purrl.Purrl(
       `${name}-tsidp-dcr`,
@@ -363,12 +359,9 @@ echo "PBS TSIDP realm configured"
     const tailscaleAdmins = getTailscaleUsersOutput({ role: "admin" }, { provider: args.globals.tailscaleProvider, parent: this });
     const groupsScript = all([output(args.vmId), tailscaleAdmins]).apply(([vmId, tsAdmins]) => {
       const tsidpEntries = tsAdmins.users
-        .map(u => {
+        .map((u) => {
           const userId = `${u.loginName}@tsidp`;
-          return [
-            `proxmox-backup-manager user create "${userId}" 2>/dev/null || true`,
-            `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`,
-          ].join("\n");
+          return [`proxmox-backup-manager user create "${userId}" 2>/dev/null || true`, `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`].join("\n");
         })
         .join("\n");
 
