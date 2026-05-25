@@ -98,7 +98,7 @@ services:
       traefik.http.routers.${APP}-mcp-data-modeling.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/data-modeling`)
       traefik.http.routers.${APP}-mcp-data-modeling.entrypoints: websecure
       traefik.http.routers.${APP}-mcp-data-modeling.tls.certresolver: le
-      traefik.http.routers.${APP}-mcp-data-modeling.middlewares: ${APP}-mcp-data-modeling-strip
+      # traefik.http.routers.${APP}-mcp-data-modeling.middlewares: ${APP}-mcp-data-modeling-strip
       # traefik.http.middlewares.${APP}-mcp-data-modeling-strip.stripprefix.prefixes: /mcp/data-modeling
       traefik.http.services.${APP}-mcp-data-modeling.loadbalancer.server.port: 8001
     networks:
@@ -125,7 +125,7 @@ services:
       traefik.http.routers.${APP}-mcp-memory.rule: Host(`${APP}.${CLUSTER_DOMAIN}`) && PathPrefix(`/mcp/memory`)
       traefik.http.routers.${APP}-mcp-memory.entrypoints: websecure
       traefik.http.routers.${APP}-mcp-memory.tls.certresolver: le
-      traefik.http.routers.${APP}-mcp-memory.middlewares: ${APP}-mcp-memory-strip
+      # traefik.http.routers.${APP}-mcp-memory.middlewares: ${APP}-mcp-memory-strip
       # traefik.http.middlewares.${APP}-mcp-memory-strip.stripprefix.prefixes: /mcp/memory
       traefik.http.services.${APP}-mcp-memory.loadbalancer.server.port: 8002
     networks:
