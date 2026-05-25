@@ -614,6 +614,7 @@ export class DockgeLxc extends ComponentResource {
       dependsOn: [outpost],
       triggers: [outpost.id, outpostToken.key],
     });
+    return environmentConfig;
   }
 
   private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
