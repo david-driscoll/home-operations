@@ -558,15 +558,19 @@ export class DockgeLxc extends ComponentResource {
         // so creating the outpost before those callbacks complete sends an empty providers
         // list which Authentik rejects with 400 Bad Request.
         all(z.map((s) => s.waitForApplications)).apply(async () => {
-          await this.createOutpost(composes);
+          await this.createOutpost(await awaitOutput(composes));
         });
 
         return composes;
       });
   }
 
-  private async createOutpost(depends: Input<Resource[]> = []) {
+  private async createOutpost(depends: Resource[]) {
     const applicationManager = this.args.host.applicationManager;
+
+    if (depends.length === 0) {
+      return;
+    }
 
     const outpost = new authentik.Outpost(
       this.args.host.name,
