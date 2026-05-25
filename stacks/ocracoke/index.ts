@@ -68,7 +68,13 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
 // });
 // pbs.addHostMount("/data");
 
-dockgeRuntime.deployStacks({ dependsOn: [] });
+dockgeRuntime.deployStacks({
+  dependsOn: [],
+  variables: {
+    PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
+    PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
+  },
+});
 host.addUptimeGatus();
 
 exportNodeStateToOnePassword(
