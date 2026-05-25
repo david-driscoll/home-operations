@@ -38,9 +38,8 @@ services:
       - 100.100.100.100
     command:
       - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=2d
-      - --storage.tsdb.retention.size=20GB
+      - --enable-feature=agent
+      - --storage.agent.path=/prometheus
       - --web.enable-lifecycle
     labels:
       autoheal: true
