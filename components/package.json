@@ -21,7 +21,7 @@
     "@1password/connect": "^1.4.2",
     "@goauthentik/api": "^2026.2.3-rc1",
     "@pulumi/cloudflare": "^6.10.0",
-    "@pulumi/minio": "^0.16.6",
+    "@pulumi/minio": "^0.17.0",
     "@pulumi/random": "^4.18.4",
     "@pulumi/tailscale": "^0.28.0",
     "@pulumi/tls": "^5.2.2",
