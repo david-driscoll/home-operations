@@ -1,5 +1,5 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap } from "@pulumi/pulumi";
+import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { getContainerHostnames } from "./helpers.ts";
@@ -22,10 +22,12 @@ import { runCommunityScriptLxc } from "./lxc.ts";
 import { Tailscale } from "@components/constants.ts";
 import * as authentik from "@pulumi/authentik";
 import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
+import { AuthentikApplicationManager } from "./authentik.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
 
+type ApplicationReturn = Unwrap<ReturnType<AuthentikApplicationManager["createApplication"]>>;
 export type OPClientItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface DockgeLxcArgs {
@@ -464,7 +466,7 @@ export class DockgeLxc extends ComponentResource {
     return mp;
   }
 
-  public deployStacks(args: { dependsOn: Input<Resource[]>; variables?: Record<string, Input<string>> }): Output<Command[]> {
+  public deployStacks(args: { dependsOn: Input<Resource[]>; variables?: Record<string, Input<string>> }) {
     const op = new OPClient();
     const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
@@ -551,24 +553,15 @@ export class DockgeLxc extends ComponentResource {
       .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
         z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
-        const composes = output(z.filter((z) => !!z.compose).map((z) => z.compose!));
-
-        // Wait for ALL applications to be registered before creating the outpost.
-        // proxyProviders is populated inside async .apply() callbacks in createApplication(),
-        // so creating the outpost before those callbacks complete sends an empty providers
-        // list which Authentik rejects with 400 Bad Request.
-        all(z.map((s) => s.waitForApplications)).apply(async () => {
-          await this.createOutpost(await awaitOutput(composes));
-        });
-
-        return composes;
+        return output(this.createOutpost(z.flatMap((z) => z.applications)));
       });
   }
 
-  private async createOutpost(depends: Resource[]) {
+  private async createOutpost(depends: ApplicationReturn[]) {
     const applicationManager = this.args.host.applicationManager;
+    const proxyProviders = depends.filter((z) => z.isProxy).map((z) => z.provider);
 
-    if (depends.length === 0) {
+    if (proxyProviders.length === 0) {
       return;
     }
 
@@ -589,9 +582,9 @@ export class DockgeLxc extends ComponentResource {
           undefined,
           2,
         ),
-        protocolProviders: applicationManager.proxyProviders,
+        protocolProviders: proxyProviders.map((z) => z.id.apply(parseFloat)),
       },
-      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true, dependsOn: depends },
+      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true, dependsOn: proxyProviders },
     );
 
     const op = new OPClient();
@@ -651,7 +644,7 @@ export class DockgeLxc extends ComponentResource {
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>,
-  ): Output<{ name: string; path: string; compose?: remote.Command; waitForApplications: Output<Resource[]> }> {
+  ): Output<{ name: string; path: string; compose?: remote.Command; applications: ApplicationReturn[] }> {
     const copyFiles = [];
     const cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
@@ -698,9 +691,9 @@ export class DockgeLxc extends ComponentResource {
         }),
       )
       .apply((z) => output(z))
-      .apply((z) => z.flat().map((z) => z.app));
+      .apply((z) => z.flat().map((z) => z));
 
-    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b]);
+    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map((z) => z.app)]);
 
     const triggers = [];
 
@@ -806,14 +799,14 @@ export class DockgeLxc extends ComponentResource {
         },
         {
           parent: stackParent,
-          dependsOn: dependsOn.apply((deps) => [...deps, ...composeDeps]),
+          dependsOn: all([waitForApplications, dependsOn]).apply(([waitForApplicationsDeps, dependsOnDeps]) => [...waitForApplicationsDeps.map((z) => z.app), ...dependsOnDeps, ...composeDeps]),
           deleteBeforeReplace: true,
         },
       );
 
-      return output({ name: stackName, path, compose, waitForApplications });
+      return waitForApplications.apply((applications) => ({ name: stackName, path, compose, applications }));
     }
-    return output({ name: stackName, path, waitForApplications });
+    return waitForApplications.apply((applications) => ({ name: stackName, path, applications }));
   }
 }
 

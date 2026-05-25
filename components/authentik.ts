@@ -43,7 +43,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
   private readonly applicationsComponent: pulumi.ComponentResource;
   public readonly outpostsComponent: pulumi.ComponentResource;
-  public readonly proxyProviders: pulumi.Output<number>[] = [];
   public get uptimeInstances() {
     return this._uptimeInstances;
   }
@@ -76,23 +75,21 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       .apply(async ({ application, authentik }) => {
         if (authentik) {
           const result = await this.createProvider(application, authentik);
-          if (result.isProxy && result.provider) {
-            this.proxyProviders.push(result.provider.id.apply((id) => parseFloat(id)));
-          }
           return { application, result: result };
         }
         return {
           application,
           result: {
             provider: undefined,
+            isProxy: false as const,
           },
         };
       })
       .apply(async ({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
         return application.spec.gatus
-          ? await awaitOutput(this.addGatusInstances(application, application.spec.gatus).apply((defs) => Object.assign(result, { app, gatus: defs })))
-          : Object.assign(result, { app, gatus: [] });
+          ? await awaitOutput(this.addGatusInstances(application, application.spec.gatus).apply((defs) => Object.assign(result, { definition: application, app, gatus: defs })))
+          : Object.assign(result, { definition: application, app, gatus: [] });
       });
   }
 
