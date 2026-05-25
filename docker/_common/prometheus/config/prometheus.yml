@@ -129,3 +129,35 @@ scrape_configs:
         target_label: hostname
         replacement: '${1}'  # Use the value of instance as hostname
         regex: '([^:]+).*'
+
+  # Blackbox HTTP probes for Proxmox VE web UIs (uses self-signed certs)
+  - job_name: 'blackbox-proxmox'
+    scrape_interval: 2m
+    metrics_path: /probe
+    params:
+      module: [http_2xx_insecure]
+    static_configs:
+      - targets: ${PROXMOX_BLACKBOX_TARGETS}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Proxmox VE metrics via prometheus-pve-exporter
+  - job_name: 'proxmox'
+    scrape_interval: 2m
+    metrics_path: /pve
+    params:
+      module: [default]
+    static_configs:
+      - targets: ${PROXMOX_PVE_TARGETS}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: pve-exporter:9221

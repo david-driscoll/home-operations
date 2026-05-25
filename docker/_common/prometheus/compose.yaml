@@ -13,6 +13,9 @@ services:
       - /etc/alloy/config.alloy
     environment:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    ports:
+      - "4317:4317"
+      - "4318:4318"
     labels:
       autoheal: true
       traefik.enable: true
@@ -65,6 +68,27 @@ services:
       - node-exporter
       - cadvisor
       - blackbox-exporter
+      - pve-exporter
+
+  pve-exporter:
+    container_name: pve-exporter
+    image: prompve/prometheus-pve-exporter:3.9.0@sha256:e1e61099c4c4b385bbf88eff61886a5ff4d84be5e88ed7af6c77f98e783de978
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    command:
+      - --config.file=/etc/pve/pve.yml
+    environment:
+      - PVE_USER=${PVE_USER}
+      - PVE_TOKEN_NAME=${PVE_TOKEN_NAME}
+      - PVE_TOKEN_VALUE=${PVE_TOKEN_VALUE}
+    volumes:
+      - ./config/pve.yml:/etc/pve/pve.yml:ro
+    labels:
+      autoheal: true
+      traefik.enable: false
+    networks:
+      - dockge_default
 
   blackbox-exporter:
     user: "65534:65534"

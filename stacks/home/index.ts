@@ -166,8 +166,20 @@ celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs] });
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [] });
+// Celestia monitors twilight-sparkle + itself; alpha-site monitors only itself
+const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
+const celestiaPveVariables = {
+  PROXMOX_BLACKBOX_TARGETS: `[${celestiaPveHosts.map((h) => `"https://${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
+  PROXMOX_PVE_TARGETS: `[${celestiaPveHosts.map((h) => `"${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
+};
+
+const alphaSitePveVariables = {
+  PROXMOX_BLACKBOX_TARGETS: `["https://${alphaSiteHost.tailscaleIpAddress}:8006"]`,
+  PROXMOX_PVE_TARGETS: `["${alphaSiteHost.tailscaleIpAddress}:8006"]`,
+};
+
+celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables });
+alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: alphaSitePveVariables });
 
 celestiaHost.addUptimeGatus();
 alphaSiteHost.addUptimeGatus();
