@@ -106,6 +106,7 @@ const celestiaBackupMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/st
 const celestiaDataMount = celestiaHost.addNfsMount(spikeVm.ipAddress, "/mnt/stash/data/");
 
 const alphaSiteHost = new ProxmoxHost("alpha-site", {
+  title: "Alpha Site",
   globals: globals,
   authentikOutputs: outputs,
   internalIpAddress: "10.10.10.200",
