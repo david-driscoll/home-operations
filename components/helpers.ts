@@ -1,5 +1,5 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
+import { all, asset, CustomResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, rm } from "fs/promises";
 import * as yaml from "yaml";
@@ -16,6 +16,28 @@ import type { ProxmoxHost } from "./ProxmoxHost.ts";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
+
+const mkdirs = new Map<string, remote.Command>();
+function mkdirOutput({ remotePath, connection, parent }: { remotePath: string; connection: types.input.remote.ConnectionArgs; parent?: Resource }) {
+  const dir = dirname(remotePath);
+  if (mkdirs.has(dir)) {
+    return mkdirs.get(dir)!;
+  }
+
+  const mkdir = new remote.Command(
+    `${remotePath.replace(/\//g, "-")}-mkdir`,
+    {
+      connection: connection,
+      create: interpolate`mkdir -p ${dir}`,
+      triggers: [remotePath],
+    },
+    {
+      parent,
+    },
+  );
+  mkdirs.set(dir, mkdir);
+  return mkdir;
+}
 
 export function getTempFilePath(fileName: string) {
   return join(tempDir, fileName);
@@ -65,21 +87,9 @@ export function copyFileToRemote(
       const tempFilePath = writeTempFile(name, args.content);
       const remotePath = output(args.remotePath);
       const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-      const mkdir = new remote.Command(
-        `${name}-${id}-mkdir`,
-        {
-          connection: args.connection,
-          create: interpolate`mkdir -p ${remotePath.apply(dirname)}`,
-          triggers: [id, remotePath, ...(args.triggers ?? [])],
-        },
-        {
-          parent: args.parent,
-          dependsOn: output(args.dependsOn).apply((d) => d ?? []),
-          deleteBeforeReplace: args.deleteBeforeReplace,
-        },
-      );
+      const mkdir = remotePath.apply((path) => mkdirOutput({ remotePath: path, connection: args.connection, parent: args.parent }));
 
-      const internalDeps = [mkdir];
+      const internalDeps: remote.Command[] = [];
       if (args.withRemoveCommand) {
         const remove = new remote.Command(
           `${name}-${id}-remove`,
@@ -107,7 +117,7 @@ export function copyFileToRemote(
           parent: args.parent,
           dependsOn: output(args.dependsOn)
             .apply((d) => d ?? [])
-            .apply((d) => [...d, ...internalDeps]),
+            .apply((d) => [...d, mkdir, ...internalDeps]),
           deleteBeforeReplace: args.deleteBeforeReplace,
         },
       );
