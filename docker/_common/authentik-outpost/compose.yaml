@@ -1,7 +1,7 @@
 services:
   authentik_proxy:
     container_name: authentik-outpost
-    image: ghcr.io/goauthentik/proxy:2026.2.3@sha256:e37186957e16a956e078302af73ced7045c956fcd2574107b4acdb6f929e4d36
+    image: ghcr.io/goauthentik/proxy:2026.5.0@sha256:bfbd9ae0d16e56829d2130127b9edce077ad7f822e381e2fa1b3bfaea854fb92
     restart: unless-stopped
     healthcheck:
       test: [
