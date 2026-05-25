@@ -798,7 +798,7 @@ export class DockgeLxc extends ComponentResource {
         },
         {
           parent: stackParent,
-          dependsOn: composeDeps,
+          dependsOn: dependsOn.apply((deps) => [...deps, ...composeDeps]),
           deleteBeforeReplace: true,
         },
       );
