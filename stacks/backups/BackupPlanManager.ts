@@ -6,7 +6,7 @@ import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@compo
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { NodeSSH } from "node-ssh";
+import SftpClient from "ssh2-sftp-client";
 import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import * as minio from "@pulumi/minio";
 import { CopyToRemote } from "@pulumi/command/remote/index.js";
@@ -23,7 +23,7 @@ export class BackupPlanManager extends ComponentResource {
   plans: Map<string, BackrestPlan> = new Map();
   repos: Map<string, BackrestRepository> = new Map();
   globals: GlobalResources;
-  ssh?: NodeSSH;
+  ssh?: SftpClient;
   volsyncPassword?: string;
   source: Output<PbsDetails>;
   destinations: Output<PbsDetails[]>;
@@ -331,15 +331,15 @@ export class BackupPlanManager extends ComponentResource {
 
 async function updateBackrestConfiguration(
   connection: UnwrappedObject<PbsDetails["dockgeConnection"]>,
-  func: (ssh: NodeSSH, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>,
+  func: (ssh: SftpClient, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>,
 ) {
-  const ssh = new NodeSSH();
+  const ssh = new SftpClient();
   await ssh.connect({
     host: connection.host,
     username: connection.user,
   });
 
-  const currentConfig = (await ssh.execCommand("cat /opt/stacks-data/backrest/config/config.json")).stdout;
+  const currentConfig = (await ssh.get("/opt/stacks-data/backrest/config/config.json")).toString("utf8");
   let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
   try {
     updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
@@ -354,14 +354,14 @@ async function updateBackrestConfiguration(
 
   const newConfig = JSON.stringify(updatedConfig);
   if (currentConfig.trim() === newConfig.trim()) {
-    ssh.dispose();
+    await ssh.end();
     return;
   }
 
-  await ssh.execCommand(`echo '${newConfig}' > /opt/stacks-data/backrest/config/config.json`);
-  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
+  await ssh.put(Buffer.from(newConfig, "utf8"), "/opt/stacks-data/backrest/config/config.json");
+  // await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
 
-  ssh.dispose();
+  await ssh.end();
 }
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: Map<string, BackrestRepository>) {
   for (const repo of repos.values()) {

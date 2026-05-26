@@ -1,5 +1,21 @@
 import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, ComponentResource, CustomResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
+import {
+  all,
+  asset,
+  ComponentResource,
+  ComponentResourceOptions,
+  CustomResourceOptions,
+  Input,
+  Inputs,
+  interpolate,
+  log,
+  mergeOptions,
+  Output,
+  output,
+  Resource,
+  ResourceHook,
+  ResourceOptions,
+} from "@pulumi/pulumi";
 import { GetDeviceResult } from "@pulumi/tailscale";
 import { writeFile, rm } from "fs/promises";
 import * as yaml from "yaml";
@@ -13,6 +29,10 @@ import { unique } from "moderndash";
 import { tmpdir } from "os";
 import { RandomPassword, RandomString } from "@pulumi/random";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
+import SftpClient, { TransferOptions } from "ssh2-sftp-client";
+import { concat, concatAll, concatMap, concatWith, expand, filter, from, lastValueFrom, map, mergeMap, Observable, of, toArray } from "rxjs";
+import { NodeSSH } from "node-ssh";
+import { glob } from "node:fs/promises";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
 mkdirSync(tempDir, { recursive: true });
@@ -75,6 +95,128 @@ export function writeTempFile(fileName: Input<string>, content: Input<string>) {
       return writeFile(filePath, content.padEnd(1024), {});
     })
     .apply(() => filePath);
+}
+
+interface RemoteFileManagerOptions {
+  connection: types.input.remote.ConnectionArgs;
+  root: string;
+  cleanup: boolean;
+}
+
+function observeOutput<T>(output: Output<T>): Observable<T> {
+  return new Observable((subscriber) => {
+    output.apply((value) => {
+      subscriber.next(value);
+      subscriber.complete();
+    });
+    return () => {};
+  });
+}
+
+export class RemoteFileManager extends ComponentResource {
+  ssh: NodeSSH;
+  sftp: SftpClient;
+  folderRoot: string;
+  files = new Set<string>();
+  outputa = new Set<Output<any>>();
+  constructor(name: string, args: RemoteFileManagerOptions, opts?: ComponentResourceOptions) {
+    super(
+      "home-operations:helpers:RemoteFileManager",
+      name,
+      {},
+      {
+        ...opts,
+        hooks: {
+          afterCreate: [new ResourceHook("wait-for-outputs-create", (instance) => this.waitForOutputs()), ...(args.cleanup ? [new ResourceHook("cleanup-create", (instance) => this.cleanup())] : [])],
+          afterUpdate: [new ResourceHook("wait-for-outputs-update", (instance) => this.waitForOutputs()), ...(args.cleanup ? [new ResourceHook("cleanup-update", (instance) => this.cleanup())] : [])],
+          afterDelete: [new ResourceHook("wait-for-outputs-delete", (instance) => this.waitForOutputs()), ...(args.cleanup ? [new ResourceHook("cleanup-delete", (instance) => this.cleanup())] : [])],
+        },
+      },
+    );
+    this.ssh = new NodeSSH();
+    this.sftp = new SftpClient();
+    this.folderRoot = args.root;
+  }
+
+  protected override async initialize(args: RemoteFileManagerOptions) {
+    const connection = await awaitOutput(output(args.connection));
+    await this.sftp.connect({
+      host: connection.host,
+      username: connection.user,
+      retries: 10,
+    });
+    await this.ssh.connect({
+      host: connection.host,
+      username: connection.user,
+    });
+    return {};
+  }
+
+  public copyFile(input: Input<string | Buffer | NodeJS.ReadableStream>, remoteFilePath: Input<string>, options?: Input<TransferOptions>) {
+    const result = all([input, remoteFilePath, options]).apply(([content, remotePath, opts]) => {
+      remotePath = join(this.folderRoot, remotePath);
+      this.files.add(remotePath);
+      return lastValueFrom(concat(from(this.sftp.mkdir(dirname(remotePath), true)), from(this.sftp.put(content, remotePath, opts))));
+    });
+    this.outputa.add(result);
+    return result;
+  }
+
+  public chmod(mode: Input<number | string>, remotePaths: Input<string[]>) {
+    const result = all([remotePaths, mode]).apply(([paths, m]) => {
+      paths = paths.map((path) => join(this.folderRoot, path));
+      return lastValueFrom(from(paths).pipe(mergeMap((path) => this.sftp.chmod(path, m))));
+    });
+    this.outputa.add(result);
+    return result;
+  }
+
+  public exec(command: Input<string>) {
+    const result = output(command).apply((cmd) =>
+      lastValueFrom(
+        from(
+          this.ssh.execCommand(cmd, {
+            cwd: this.folderRoot,
+            onStderr: (chunk) => {
+              log.warn(chunk.toString("utf8"), this);
+            },
+            onStdout: (chunk) => {
+              log.info(chunk.toString("utf8"), this);
+            },
+          }),
+        ),
+      ),
+    );
+    this.outputa.add(result);
+    return result;
+  }
+
+  private waitForOutputs() {
+    return lastValueFrom(from(this.outputa).pipe(mergeMap((o) => observeOutput(o)))).then(() => {});
+  }
+
+  private async cleanup() {
+    function listRemoteFiles(client: SftpClient, path: string): Observable<string> {
+      return from(client.list(path)).pipe(
+        concatMap((files) => {
+          return from(files).pipe(expand((file) => (file.type === "d" ? listRemoteFiles(client, join(path, file.name)) : of(join(path, file.name)))));
+        }),
+      );
+    }
+
+    await this.waitForOutputs();
+
+    const removePaths = listRemoteFiles(this.sftp, this.folderRoot).pipe(
+      filter((path) => !this.files.has(path)),
+      toArray(),
+    );
+
+    return lastValueFrom(removePaths).then((paths) => {
+      log.info(`Cleaning up remote files in ${this.folderRoot}...`);
+      log.info(`Removing remote files:\n${paths.join("\n")}`);
+      // just tracking for now
+    });
+  }
 }
 
 export function copyFileToRemote(

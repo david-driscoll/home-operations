@@ -32,7 +32,6 @@
   "dependencies": {
     "@goauthentik/api": "^2026.2.1",
     "@kubernetes/client-node": "^1.4.0",
-    "node-ssh": "^13.2.1",
     "rxjs": "^7.8.2",
     "yaml": "^2.8.3"
   }

@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { NodeSSH } from "node-ssh";
+import { NodeSSH } from "ssh2-sftp-client";
 import { awaitOutput } from "@components/helpers.ts";
 
 /**

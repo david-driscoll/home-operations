@@ -27,13 +27,19 @@
     "@pulumi/tls": "^5.2.2",
     "@pulumiverse/unifi": "^0.2.0",
     "crypto-js": "^4.2.0",
+    "node-ssh": "^13.2.1",
     "node-unifi": "^2.5.1",
     "openapi-fetch": "^0.17.0",
+    "rxjs": "^7.8.2",
+    "ssh2": "^1.17.0",
+    "ssh2-sftp-client": "^12.1.1",
     "vscode-ws-jsonrpc": "^3.5.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
+    "@types/node-ssh": "^7.0.6",
     "@types/node-unifi": "^2.5.1",
+    "@types/ssh2-sftp-client": "^9.0.6",
     "openapi-typescript": "^7.13.0"
   }
 }

@@ -2,7 +2,7 @@ import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
-import { getContainerHostnames } from "./helpers.ts";
+import { getContainerHostnames, RemoteFileManager } from "./helpers.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
 import { readFile, readdir } from "node:fs/promises";
@@ -23,6 +23,7 @@ import { Tailscale } from "@components/constants.ts";
 import * as authentik from "@pulumi/authentik";
 import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
 import { AuthentikApplicationManager } from "./authentik.ts";
+import { SSHExecCommandResponse } from "node-ssh";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
@@ -62,13 +63,13 @@ export class DockgeLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential: Output<OPClientItem>;
   public readonly cluster: Output<ClusterDefinition>;
-  private readonly ensureDynamicDir: Resource;
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
   registerTailscaleService: (service: string) => void;
   private readonly resources: Input<Resource>[];
   private readonly dockerParent: ComponentResource<any>;
+  routeManager: RemoteFileManager;
   constructor(
     name: string,
     private readonly args: DockgeLxcArgs,
@@ -191,159 +192,65 @@ export class DockgeLxc extends ComponentResource {
       return StandardDns.create(name, { hostname: g, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" }, args.globals, cro);
     });
 
-    // Seed SFTP keys into the rclone-sftp stack path on the remote host
-    const sftpKeysDir = "/opt/stacks-data/rclone-sftp/keys";
-    const jobsKeysDir = "/opt/stacks-data/backups/keys";
-    const backrestSshDir = "/opt/stacks-data/backrest/ssh";
-
-    const ensureKeysDir = new remote.Command(
-      `${name}-ensure-sftp-keys-dir`,
-      {
-        connection: this.remoteConnection,
-        create: interpolate`mkdir -p ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir}`,
-      },
-      mergeOptions(cro, { dependsOn: depends }),
-    );
-
-    this.ensureDynamicDir = new remote.Command(
-      `${name}-traefik-dynamic-dir`,
-      {
-        connection: this.remoteConnection,
-        create: "mkdir -p /opt/stacks-data/traefik/dynamic",
-      },
-      mergeOptions(cro, { dependsOn: depends }),
-    );
-
-    const keyWrites: any[] = [];
-
     const privateKeyPem = output(args.sftpKey).apply((k) => k.fields?.["private key"]?.value?.trim() + "\n");
     const publicKeyPem = output(args.sftpKey).apply((k) => k.fields?.["public key"]?.value?.trim() + "\n");
 
-    keyWrites.push(
-      copyFileToRemote(`${name}-sftp-authorized-keys`, {
+    // Seed SFTP keys into the rclone-sftp stack path on the remote host
+    const sftpKeysDir = "rclone-sftp/keys";
+    const jobsKeysDir = "backups/keys";
+    const backrestSshDir = "backrest/ssh";
+
+    const dataManager = new RemoteFileManager(
+      "sftp",
+      {
         connection: this.remoteConnection,
-        remotePath: interpolate`${sftpKeysDir}/authorized_keys`,
-        content: publicKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
+        root: "/opt/stacks-data/",
+        cleanup: false,
+      },
+      cro,
     );
 
-    keyWrites.push(
-      copyFileToRemote(`${name}-sftp-host-key`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${sftpKeysDir}/host_key`,
-        content: privateKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
+    dataManager.copyFile(`${sftpKeysDir}/authorized_keys`, publicKeyPem);
+    dataManager.copyFile(`${sftpKeysDir}/host_key`, privateKeyPem);
+    dataManager.copyFile(`${sftpKeysDir}/host_key.pub`, publicKeyPem);
+    dataManager.copyFile(
+      `${sftpKeysDir}/known_hosts`,
+      all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
     );
+    dataManager.copyFile(`${jobsKeysDir}/id_ed25519`, privateKeyPem);
+    dataManager.copyFile(`${backrestSshDir}/id_ed25519`, privateKeyPem);
+    dataManager.copyFile(`${jobsKeysDir}/id_ed25519.pub`, publicKeyPem);
+    dataManager.copyFile(`${backrestSshDir}/id_ed25519.pub`, publicKeyPem);
+    dataManager.copyFile(`${jobsKeysDir}/server_host_key.pub`, publicKeyPem);
+    dataManager.copyFile(
+      `${jobsKeysDir}/known_hosts`,
+      all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+    );
+    dataManager.copyFile(
+      `${backrestSshDir}/known_hosts`,
+      all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+    );
+    dataManager.copyFile(`/etc/machine-id`, interpolate`${name}`);
+    dataManager.chmod(700, [sftpKeysDir, jobsKeysDir, backrestSshDir]);
+    dataManager.chmod(600, [
+      `${sftpKeysDir}/host_key`,
+      `${sftpKeysDir}/authorized_keys`,
+      `${jobsKeysDir}/id_ed25519`,
+      `${jobsKeysDir}/id_ed25519.pub`,
+      `${jobsKeysDir}/known_hosts`,
+      `${jobsKeysDir}/server_host_key.pub`,
+      `${backrestSshDir}/id_ed25519`,
+      `${backrestSshDir}/id_ed25519.pub`,
+      `${backrestSshDir}/known_hosts`,
+    ]);
 
-    // Write client private key for rclone-jobs client
-    keyWrites.push(
-      copyFileToRemote(`${name}-jobs-client-key`, {
+    const tools = new remote.Command(
+      `${name}-install-tools`,
+      {
         connection: this.remoteConnection,
-        remotePath: interpolate`${jobsKeysDir}/id_ed25519`,
-        content: privateKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-client-key`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/id_ed25519`,
-        content: privateKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    // Write client private key for rclone-jobs client
-    keyWrites.push(
-      copyFileToRemote(`${name}-jobs-client-pub`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${jobsKeysDir}/id_ed25519.pub`,
-        content: publicKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-client-pub`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/id_ed25519.pub`,
-        content: publicKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    // Write server public key for known_hosts usage by clients
-    keyWrites.push(
-      copyFileToRemote(`${name}-jobs-server-pub`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${jobsKeysDir}/server_host_key.pub`,
-        content: publicKeyPem,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    // Also generate a convenience known_hosts entry using tailscale hostname with port
-    keyWrites.push(
-      copyFileToRemote(`${name}-jobs-known-hosts`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${jobsKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    // Also generate a convenience known_hosts entry using tailscale hostname with port
-    keyWrites.push(
-      copyFileToRemote(`${name}-backrest-known-hosts`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`${backrestSshDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    keyWrites.push(
-      copyFileToRemote(`${name}-machine-id`, {
-        connection: this.remoteConnection,
-        remotePath: "/etc/machine-id",
-        content: interpolate`${name}`,
-        parent: this.dockerParent,
-        dependsOn: [ensureKeysDir],
-      }),
-    );
-
-    // Set restrictive permissions on the keys
-    keyWrites.push(
-      new remote.Command(
-        `${name}-sftp-keys-perms`,
-        {
-          connection: this.remoteConnection,
-          triggers: keyWrites.map((k) => k.id),
-          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts || true`,
-        },
-        mergeOptions(cro, { dependsOn: keyWrites }),
-      ),
-    );
-
-    keyWrites.push(
-      new remote.Command(
-        `${name}-install-tools`,
-        {
-          connection: this.remoteConnection,
-          create: interpolate`apt-get update && apt-get install -y restic`,
-        },
-        mergeOptions(cro, { dependsOn: depends }),
-      ),
+        create: interpolate`apt-get update && apt-get install -y restic`,
+      },
+      mergeOptions(cro, { dependsOn: depends }),
     );
 
     this.tailscaleName = tailscaleName;
@@ -393,7 +300,17 @@ export class DockgeLxc extends ComponentResource {
       mergeOptions(cro, { dependsOn: depends }),
     );
 
-    this.resources = [...depends, dockgeInfo, ...keyWrites, deleteDockerDaemon, stacksDirectory];
+    this.resources = [...depends, dockgeInfo, tools, deleteDockerDaemon, stacksDirectory];
+
+    this.routeManager = new RemoteFileManager(
+      `${name}-route-manager`,
+      {
+        connection: this.remoteConnection,
+        root: "/opt/stacks-data/traefik/dynamic/",
+        cleanup: true,
+      },
+      { parent: this.dockerParent },
+    );
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
@@ -440,14 +357,7 @@ export class DockgeLxc extends ComponentResource {
 
       this.registerTailscaleService(opts.name);
 
-      const file = copyFileToRemote(`${opts.name}-route`, {
-        connection: this.remoteConnection,
-        remotePath: interpolate`/opt/stacks-data/traefik/dynamic/${opts.name}.yaml`,
-        content: content,
-        parent: this,
-        triggers: [content, opts.name, opts.backend, opts.hostname],
-        dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
-      });
+      const file = this.routeManager.copyFile(`${opts.name}.yaml`, content);
 
       return output({ file, dns: dns });
     });
@@ -644,8 +554,7 @@ export class DockgeLxc extends ComponentResource {
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>,
-  ): Output<{ name: string; path: string; compose?: remote.Command; applications: ApplicationReturn[] }> {
-    const copyFiles = [];
+  ): Output<{ name: string; path: string; compose?: SSHExecCommandResponse; applications: ApplicationReturn[] }> {
     const cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
     // Prepend stack-specific substitutions so they run BEFORE the vaultRegex resolver.
@@ -695,7 +604,15 @@ export class DockgeLxc extends ComponentResource {
 
     dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map((z) => z.app)]);
 
-    const triggers = [];
+    const stackFileManager = new RemoteFileManager(
+      `${this.shortName}-${stackName}-files`,
+      {
+        connection: this.remoteConnection,
+        root: `/opt/stacks/${stackName}/`,
+        cleanup: true,
+      },
+      { parent: stackParent },
+    );
 
     for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
@@ -757,54 +674,17 @@ export class DockgeLxc extends ComponentResource {
         continue;
       }
 
-      copyFiles.push(
-        copyFileToRemote(`${this.shortName}-${stackName}-${file.replace(/\//g, "-")}-copy-file`, {
-          connection: this.remoteConnection,
-          remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-          content: replacedContent,
-          triggers: [replacedContent, absoluteFilePath],
-          parent: stackParent,
-          dependsOn: dependsOn,
-        }),
-      );
+      stackFileManager.copyFile(`/opt/stacks/${stackName}/${file}`, replacedContent);
     }
 
     if (hasCompose) {
-      // If the stack has an init.sh, run it before docker compose.
-      // init.sh is designed to be idempotent and is always executed.
-      const composeDeps: Input<Resource>[] = [...copyFiles];
       if (hasInit) {
-        const initCommand = new remote.Command(
-          `${this.shortName}-${stackName}-init`,
-          {
-            connection: this.remoteConnection,
-            triggers: [new Date().getTime()], // always run
-            create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
-          },
-          {
-            parent: stackParent,
-            dependsOn: copyFiles,
-            deleteBeforeReplace: true,
-          },
-        );
-        composeDeps.push(initCommand);
+        stackFileManager.exec(`cd /opt/stacks/${stackName} && bash init.sh`);
       }
 
-      const compose = new remote.Command(
-        `${this.shortName}-${stackName}-compose`,
-        {
-          connection: this.remoteConnection,
-          triggers: [...copyFiles.map((f) => f.id), ...copyFiles.map((f) => f.remotePath)],
-          create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
-        },
-        {
-          parent: stackParent,
-          dependsOn: all([waitForApplications, dependsOn]).apply(([waitForApplicationsDeps, dependsOnDeps]) => [...waitForApplicationsDeps.map((z) => z.app), ...dependsOnDeps, ...composeDeps]),
-          deleteBeforeReplace: true,
-        },
-      );
+      const compose = stackFileManager.exec(`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`);
 
-      return waitForApplications.apply((applications) => ({ name: stackName, path, compose, applications }));
+      return all([compose, waitForApplications]).apply(([compose, applications]) => ({ name: stackName, path, compose, applications }));
     }
     return waitForApplications.apply((applications) => ({ name: stackName, path, applications }));
   }
