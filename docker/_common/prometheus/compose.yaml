@@ -68,7 +68,7 @@ services:
       - node-exporter
       - cadvisor
       - blackbox-exporter
-      - pve-exporter
+      # - pve-exporter
 
   # pve-exporter:
   #   container_name: pve-exporter
