@@ -307,7 +307,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
           client_name: pulumi.interpolate`Proxmox Backup Server (${cluster.apply((c) => c.title)})`,
           client_id: tsidpClientId,
           client_secret: tsidpClientSecret.result,
-          redirect_uris: [interpolate`https://pbs.${c.rootDomain}`, interpolate`https://pbs.${args.globals.tailscaleDomain}`],
+          redirect_uris: [interpolate`https://pbs.${cluster.rootDomain}`, interpolate`https://pbs.${args.globals.tailscaleDomain}`],
         }),
         headers: { "Content-Type": "application/json" },
       },
