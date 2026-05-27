@@ -81,29 +81,28 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
   });
 
-  for (const app of applications) {
-    await awaitOutput(
-      applicationManager.createApplication(app).apply((res) => {
-        if (res.provider && res.isProxy === false) {
-          new pk8s.core.v1.Secret(
-            `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
-            {
-              metadata: {
-                name: `${app.metadata!.name!}-oidc-credentials`,
-                namespace: app.metadata.namespace ?? clusterDefinition.key,
-              },
-              stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+  const createdApplications = applications.map((app) =>
+    applicationManager.createApplication(app).apply((res) => {
+      if (res.provider && res.isProxy === false) {
+        new pk8s.core.v1.Secret(
+          `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+          {
+            metadata: {
+              name: `${app.metadata!.name!}-oidc-credentials`,
+              namespace: app.metadata.namespace ?? clusterDefinition.key,
             },
-            {
-              parent: applicationManager,
-              provider,
-              dependsOn: [res.provider],
-            },
-          );
-        }
-      }),
-    );
-  }
+            stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+          },
+          {
+            parent: applicationManager,
+            provider,
+            dependsOn: [res.provider],
+          },
+        );
+      }
+      return res;
+    }),
+  );
 
   addUptimeGatus(
     `cluster-apps-${clusterDefinition.key}`,
@@ -123,6 +122,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     kubeconfig: generateKubeConfig(outpostCredential),
     verifySsl: true,
   });
+  const proxyProviders = pulumi.all(createdApplications).apply((apps) => apps.filter((z) => z.isProxy).map((z) => z.provider));
 
   const outpost = new authentik.Outpost(
     clusterDefinition.key,
@@ -158,7 +158,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         undefined,
         2,
       ),
-      protocolProviders: applicationManager.proxyProviders,
+      protocolProviders: proxyProviders.apply((apps) => apps.map((z) => z.id.apply(parseFloat))),
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );

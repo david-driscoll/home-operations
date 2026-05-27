@@ -317,9 +317,9 @@ prometheus.remote_write "thanos" {
         output({
           metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
           spec: {
-            name: `${this.title} Proxmox VE`,
+            name: interpolate`${this.title} Proxmox VE`,
             category: clusterDefinition.title,
-            description: `Proxmox Virtual Environment for ${clusterDefinition.title}`,
+            description: interpolate`Proxmox Virtual Environment for ${clusterDefinition.title}`,
             url: interpolate`https://${this.tailscaleHostname}:8006/`,
             icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
             authentik: {
@@ -335,7 +335,7 @@ prometheus.remote_write "thanos" {
             },
             gatus: [
               {
-                name: `${this.title} Proxmox VE`,
+                name: interpolate`${this.title} Proxmox VE`,
                 url: interpolate`https://${this.tailscaleHostname}:8006/`,
                 method: "GET",
                 conditions: ["[STATUS] == 200"],

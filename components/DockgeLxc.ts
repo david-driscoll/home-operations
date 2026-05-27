@@ -219,6 +219,10 @@ export class DockgeLxc extends ComponentResource {
     const privateKeyPem = output(args.sftpKey).apply((k) => k.fields?.["private key"]?.value?.trim() + "\n");
     const publicKeyPem = output(args.sftpKey).apply((k) => k.fields?.["public key"]?.value?.trim() + "\n");
 
+    // Daily trigger: changes each calendar day so Pulumi re-copies key files even if they
+    // went missing on disk (Pulumi state wouldn't notice a missing file otherwise).
+    const dailyTrigger = new Date().toISOString().slice(0, 10);
+
     keyWrites.push(
       copyFileToRemote(`${name}-sftp-authorized-keys`, {
         connection: this.remoteConnection,
@@ -226,6 +230,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -236,6 +241,31 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
+      }),
+    );
+
+    // SFTP server's public key — needed by clients to verify the server identity
+    keyWrites.push(
+      copyFileToRemote(`${name}-sftp-host-key-pub`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${sftpKeysDir}/host_key.pub`,
+        content: publicKeyPem,
+        parent: this.dockerParent,
+        dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
+      }),
+    );
+
+    // Known-hosts entry for the SFTP server itself (used by local rclone config)
+    keyWrites.push(
+      copyFileToRemote(`${name}-sftp-known-hosts`, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`${sftpKeysDir}/known_hosts`,
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
+        parent: this.dockerParent,
+        dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -247,6 +277,7 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
     keyWrites.push(
@@ -256,6 +287,7 @@ export class DockgeLxc extends ComponentResource {
         content: privateKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -267,6 +299,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
     keyWrites.push(
@@ -276,6 +309,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -287,6 +321,7 @@ export class DockgeLxc extends ComponentResource {
         content: publicKeyPem,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -298,6 +333,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -309,6 +345,7 @@ export class DockgeLxc extends ComponentResource {
         content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
@@ -319,17 +356,18 @@ export class DockgeLxc extends ComponentResource {
         content: interpolate`${name}`,
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
+        triggers: [dailyTrigger],
       }),
     );
 
-    // Set restrictive permissions on the keys
+    // Set restrictive permissions on the keys (re-applied whenever key files change)
     keyWrites.push(
       new remote.Command(
         `${name}-sftp-keys-perms`,
         {
           connection: this.remoteConnection,
           triggers: keyWrites.map((k) => k.id),
-          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts && chown -R 65534:65534 ${sftpKeysDir} || true`,
+          create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${sftpKeysDir}/known_hosts ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts && chown -R 65534:65534 ${sftpKeysDir} || true`,
         },
         mergeOptions(cro, { dependsOn: keyWrites }),
       ),

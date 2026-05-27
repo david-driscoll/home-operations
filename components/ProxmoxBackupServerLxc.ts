@@ -222,34 +222,36 @@ echo "PBS post-install complete"`;
 
     const oidc = all([cluster])
       .apply(([c]) =>
-        args.host.applicationManager.createApplication({
-          apiVersion: "home.driscoll.tech/v1",
-          kind: "ApplicationDefinition",
-          metadata: { name: `pbs` },
-          spec: {
-            name: `${c.title} PBS`,
-            // slug: this.lxcName,
-            icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
-            category: c.title,
-            url: `https://pbs.${c.rootDomain}`,
-            authentik: {
-              oauth2: {
-                clientType: "confidential",
-                allowedRedirectUris: [{ matching_mode: "strict", url: `https://pbs.${c.rootDomain}` }],
-                includeClaimsInIdToken: true,
-                propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
+        args.host.applicationManager.createApplication(
+          output({
+            apiVersion: "home.driscoll.tech/v1",
+            kind: "ApplicationDefinition",
+            metadata: { name: `pbs` },
+            spec: {
+              name: interpolate`${c.title} PBS`,
+              // slug: this.lxcName,
+              icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
+              category: c.title,
+              url: interpolate`https://pbs.${c.rootDomain}`,
+              authentik: {
+                oauth2: {
+                  clientType: "confidential",
+                  allowedRedirectUris: [{ matching_mode: "strict", url: interpolate`https://pbs.${c.rootDomain}` }],
+                  includeClaimsInIdToken: true,
+                  propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
+                },
               },
+              gatus: [
+                {
+                  name: interpolate`${c.key}-pbs`,
+                  url: interpolate`https://pbs.${c.rootDomain}/`,
+                  method: "GET",
+                  conditions: ["[STATUS] == 200"],
+                },
+              ],
             },
-            gatus: [
-              {
-                name: `${c.key}-pbs`,
-                url: `https://pbs.${c.rootDomain}/`,
-                method: "GET",
-                conditions: ["[STATUS] == 200"],
-              },
-            ],
-          },
-        }),
+          }),
+        ),
       )
       .apply((a) => {
         if (!(a.provider && !a.isProxy)) {
