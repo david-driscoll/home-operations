@@ -18,15 +18,7 @@
         "UNIFI_NETWORK_VERIFY_SSL": "${UNIFI_VERIFY_SSL:-false}",
         "UNIFI_TOOL_REGISTRATION_MODE": "${UNIFI_TOOL_REGISTRATION_MODE:-lazy}"
       },
-      "args": [
-        "run",
-        "--no-masking",
-        "--",
-        "uvx",
-        "--python-preference",
-        "system",
-        "unifi-network-mcp==0.18.2"
-      ]
+      "args": ["run", "--no-masking", "--", "uvx", "--python-preference", "system", "unifi-network-mcp==0.18.2"]
     },
     "unifi-protect": {
       "type": "stdio",
@@ -44,15 +36,7 @@
         "UNIFI_PROTECT_VERIFY_SSL": "${UNIFI_VERIFY_SSL:-false}",
         "UNIFI_TOOL_REGISTRATION_MODE": "${UNIFI_TOOL_REGISTRATION_MODE:-lazy}"
       },
-      "args": [
-        "run",
-        "--no-masking",
-        "--",
-        "uvx",
-        "--python-preference",
-        "system",
-        "unifi-protect-mcp==0.4.2"
-      ]
+      "args": ["run", "--no-masking", "--", "uvx", "--python-preference", "system", "unifi-protect-mcp==0.4.2"]
     },
     "unifi-access": {
       "type": "stdio",
@@ -72,32 +56,17 @@
         "UNIFI_ACCESS_VERIFY_SSL": "${UNIFI_VERIFY_SSL:-false}",
         "UNIFI_TOOL_REGISTRATION_MODE": "${UNIFI_TOOL_REGISTRATION_MODE:-lazy}"
       },
-      "args": [
-        "run",
-        "--no-masking",
-        "--",
-        "uvx",
-        "--python-preference",
-        "system",
-        "unifi-access-mcp==0.3.1"
-      ]
+      "args": ["run", "--no-masking", "--", "uvx", "--python-preference", "system", "unifi-access-mcp==0.3.1"]
     },
     "kubernetes": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "kubernetes-mcp-server"
-      ]
+      "args": ["-y", "kubernetes-mcp-server"]
     },
     "pulumi": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "@pulumi/mcp-server",
-        "stdio"
-      ]
+      "args": ["-y", "@pulumi/mcp-server", "stdio"]
     },
     "mise": {
       "type": "stdio",
@@ -105,9 +74,7 @@
       "env": {
         "MISE_EXPERIMENTAL": "1"
       },
-      "args": [
-        "mcp"
-      ]
+      "args": ["mcp"]
     },
     "cloudflare-api": {
       "type": "http",
@@ -128,6 +95,10 @@
     "cloudflare-observability": {
       "type": "http",
       "url": "https://observability.mcp.cloudflare.com/mcp"
+    },
+    "lean-ctx": {
+      "args": [],
+      "command": "lean-ctx"
     }
   }
 }

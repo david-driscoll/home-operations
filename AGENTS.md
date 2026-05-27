@@ -131,3 +131,20 @@ Key files to inspect first
 - Prefer specialized MCP tools (Context7, Microsoft-doc, GitHub, Flux) over a generic web search when authoritative docs are available.
 - Resolve library IDs with `mcp_context7_resolve-library-id` before fetching library docs.
 - Never call cluster-modifying tools or Pulumi/Pulumi-Neo tasks without explicit user consent.
+
+<!-- lean-ctx-compression -->
+OUTPUT STYLE: dense
+- Each statement = one atomic fact line
+- Use abbreviations: fn, cfg, impl, deps, req, res, ctx, err, ret
+- Diff lines only (+/-/~), never repeat unchanged code
+- Symbols: → (causes), + (adds), − (removes), ~ (modifies), ∴ (therefore)
+- No narration, no filler, no hedging
+- BUDGET: ≤200 tokens per response unless code block required
+<!-- /lean-ctx-compression -->
+
+<!-- lean-ctx -->
+## lean-ctx
+
+Prefer lean-ctx MCP tools over native equivalents for token savings.
+Full rules: @LEAN-CTX.md
+<!-- /lean-ctx -->
