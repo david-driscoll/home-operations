@@ -42,7 +42,7 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.time=4h
       - --web.enable-lifecycle
     labels:
       autoheal: true
