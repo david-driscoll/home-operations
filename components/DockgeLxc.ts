@@ -506,7 +506,6 @@ export class DockgeLxc extends ComponentResource {
 
   public deployStacks(args: { dependsOn: Input<Resource[]>; variables?: Record<string, Input<string>> }) {
     const op = new OPClient();
-    const authentikToken = output(op.getItemByTitle("Authentik Token"));
     const vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
 
     // update hostname on machine
