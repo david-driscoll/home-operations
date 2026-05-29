@@ -48,7 +48,7 @@ login_response=$(curl -sf --max-time 10 \
   "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")" \
   || die "Login failed")
 
-TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['response']['token'])" \
+TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" \
   || die "Failed to parse login token")
 log "Login successful."
 
@@ -90,7 +90,7 @@ done
 login_response=$(curl -sf --max-time 10 \
   "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")" \
   || die "Re-login after SSO restart failed")
-TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['response']['token'])" \
+TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" \
   || die "Failed to parse re-login token")
 log "Re-login successful after SSO restart."
 
