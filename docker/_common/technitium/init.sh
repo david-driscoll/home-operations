@@ -95,7 +95,18 @@ TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sy
 log "Re-login successful after SSO restart."
 
 # ---------------------------------------------------------------------------
-# 5. Cluster init or join (idempotent — skipped if already in cluster)
+# 5. Configure forwarders (Quad9 over TLS — always applied to keep in sync)
+# ---------------------------------------------------------------------------
+log "Configuring forwarders (Quad9 DoT)..."
+api "settings/set" \
+  --data-urlencode "forwarders=9.9.9.9, 149.112.112.112, [2620:fe::fe], [2620:fe::9]" \
+  --data-urlencode "forwarderProtocol=Tls" \
+  --data-urlencode "concurrentForwarding=true" \
+  >/dev/null || die "Forwarder configuration failed"
+log "Forwarders configured."
+
+# ---------------------------------------------------------------------------
+# 6. Cluster init or join (idempotent — skipped if already in cluster)
 # ---------------------------------------------------------------------------
 cluster_status=$(api "admin/cluster/get" || echo '{"status":"error"}')
 in_cluster=$(echo "$cluster_status" | python3 -c \
