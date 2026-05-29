@@ -13,16 +13,16 @@ groups:
           summary: "Proxmox host {{ $labels.id }} is unreachable"
           description: "The Proxmox VE API on {{ $labels.id }} ({{ $labels.instance }}) has been unreachable for more than 2 minutes."
 
-      # Alert when pve_exporter itself is down (cannot scrape)
-      - alert: ProxmoxExporterDown
-        expr: |
-          up{job="proxmox"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Proxmox exporter is down for {{ $labels.instance }}"
-          description: "The prometheus-pve-exporter cannot be scraped for {{ $labels.instance }} — the host may be down or the API credentials are invalid."
+      # # Alert when pve_exporter itself is down (cannot scrape)
+      # - alert: ProxmoxExporterDown
+      #   expr: |
+      #     up{job="proxmox"} == 0
+      #   for: 2m
+      #   labels:
+      #     severity: critical
+      #   annotations:
+      #     summary: "Proxmox exporter is down for {{ $labels.instance }}"
+      #     description: "The prometheus-pve-exporter cannot be scraped for {{ $labels.instance }} — the host may be down or the API credentials are invalid."
 
       # Alert when a Proxmox node is using more than 85% CPU for 10 minutes
       - alert: ProxmoxNodeHighCPU
