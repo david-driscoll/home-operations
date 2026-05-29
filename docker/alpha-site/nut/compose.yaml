@@ -11,6 +11,8 @@ services:
       - /opt/stacks-data/${APP}:/config
     environment:
       WEB_PORT: 8909
+      # Disable built-in auth since Authentik handles authentication via Traefik middleware
+      AUTH_DISABLED: true
     labels:
       # Enable Traefik
       traefik.enable: true
