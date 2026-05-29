@@ -173,6 +173,7 @@ const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
 const celestiaPveVariables = {
   PROXMOX_BLACKBOX_TARGETS: `[${celestiaPveHosts.map((h) => `"https://${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
   PROXMOX_PVE_TARGETS: `[${celestiaPveHosts.map((h) => `"${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
+  DNS_CLUSTER_IS_PRIMARY: "true",
 };
 
 const alphaSitePveVariables = {
