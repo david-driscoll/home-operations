@@ -17,6 +17,7 @@ import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { Tailscale } from "@components/constants.ts";
+import { PrivateKey } from "@pulumi/tls";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
@@ -415,6 +416,8 @@ __PBS_GROUPS__`;
     );
     this.resources.push(tailscaleCron);
 
+    const backrestPrivateKey = new PrivateKey(`${name}-backrest-private-key`, { algorithm: "ED25519" }, cro);
+
     new OnePasswordItem(
       `${args.host.name}-pbs`,
       {
@@ -427,6 +430,13 @@ __PBS_GROUPS__`;
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
               username: { type: TypeEnum.String, value: "root" },
+            },
+          },
+          backrest: {
+            fields: {
+              publicKey: { type: TypeEnum.String, value: backrestPrivateKey.publicKeyPem },
+              privateKey: { type: TypeEnum.String, value: backrestPrivateKey.privateKeyPem },
+              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id },
             },
           },
         },
