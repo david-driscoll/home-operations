@@ -45,7 +45,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly cluster: pulumi.Output<ClusterDefinition>;
   private readonly authentik: pulumi.Output<AuthentikOutputs>;
-  private readonly _applications: ReturnType<typeof this.createApplication>[] = [];
+  private readonly _applications: pulumi.Unwrap<ReturnType<typeof this.createApplication>>[] = [];
   public get applications() {
     return this._applications;
   }
@@ -87,13 +87,17 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        return pulumi.output(
-          this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
-            const r = Object.assign(result, { definition: application, app, gatus: defs });
+        return pulumi
+          .output(
+            this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
+              const r = Object.assign(result, { definition: application, app, gatus: defs });
+              return r;
+            }),
+          )
+          .apply((r) => {
             (this._applications as any).push(r);
             return r;
-          }),
-        );
+          });
       });
   }
 
