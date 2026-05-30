@@ -57,6 +57,13 @@ api() {
   curl -sf --max-time 15 -X POST "${ADMIN_URL}/api/${method}?token=${TOKEN}" "$@"
 }
 
+api_slow() {
+  # Some endpoints (e.g. admin/sso/set) trigger outbound OIDC discovery requests
+  # that can take >15s. Use a longer timeout for those.
+  local method="$1"; shift
+  curl -sf --max-time 60 -X POST "${ADMIN_URL}/api/${method}?token=${TOKEN}" "$@"
+}
+
 # ---------------------------------------------------------------------------
 # 4. Configure SSO (always applied to fix/update values at runtime)
 # ---------------------------------------------------------------------------
@@ -64,7 +71,7 @@ log "Configuring SSO..."
 # Build the group map: remoteGroup|localGroup (pipe-separated, using "|" as field sep)
 GROUP_MAP="admins|Administrators"
 
-api "admin/sso/set" \
+api_slow "admin/sso/set" \
   --data-urlencode "ssoEnabled=true" \
   --data-urlencode "ssoAuthority=${DNS_SERVER_SSO_AUTHORITY}" \
   --data-urlencode "ssoClientId=${DNS_SERVER_SSO_CLIENT_ID}" \
