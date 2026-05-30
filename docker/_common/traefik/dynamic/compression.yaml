@@ -1,5 +1,0 @@
-http:
-  middlewares:
-    compress:
-      compress:
-        minResponseBodyBytes: 1024

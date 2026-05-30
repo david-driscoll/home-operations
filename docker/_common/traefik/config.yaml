@@ -90,6 +90,12 @@ providers:
     directory: /config/dynamic/
     watch: true
 
+http:
+  middlewares:
+    compress:
+      compress:
+        minResponseBodyBytes: 1024
+
 # Certificate resolvers configuration
 certificatesResolvers:
   le:
