@@ -95,6 +95,17 @@ http:
     compress:
       compress:
         minResponseBodyBytes: 1024
+    errors:
+      errors:
+        status:
+          - "401-599"
+        query: /{status}.html
+        service: error-pages
+  services:
+    error-pages:
+      loadBalancer:
+        servers:
+          - url: "http://error-pages:8080"
 
 # Certificate resolvers configuration
 certificatesResolvers:
