@@ -235,119 +235,119 @@ export interface DatastoreState {
     /**
      * UUID of the filesystem partition for a removable datastore (e.g., `01234567-89ab-cdef-0123-456789abcdef`).
      */
-    backingDevice?: pulumi.Input<string>;
+    backingDevice?: pulumi.Input<string | undefined>;
     /**
      * Description for the datastore.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * Whether the datastore is disabled.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * Certificate fingerprint for secure connections (S3 datastores).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * Garbage collection schedule in cron format (e.g., `daily`, `weekly`, or `0 3 * * 0`).
      */
-    gcSchedule?: pulumi.Input<string>;
+    gcSchedule?: pulumi.Input<string | undefined>;
     /**
      * Number of daily backups to keep when pruning.
      */
-    keepDaily?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number | undefined>;
     /**
      * Number of hourly backups to keep when pruning.
      */
-    keepHourly?: pulumi.Input<number>;
+    keepHourly?: pulumi.Input<number | undefined>;
     /**
      * Number of latest backups to keep when pruning.
      */
-    keepLast?: pulumi.Input<number>;
+    keepLast?: pulumi.Input<number | undefined>;
     /**
      * Number of monthly backups to keep when pruning.
      */
-    keepMonthly?: pulumi.Input<number>;
+    keepMonthly?: pulumi.Input<number | undefined>;
     /**
      * Number of weekly backups to keep when pruning.
      */
-    keepWeekly?: pulumi.Input<number>;
+    keepWeekly?: pulumi.Input<number | undefined>;
     /**
      * Number of yearly backups to keep when pruning.
      */
-    keepYearly?: pulumi.Input<number>;
+    keepYearly?: pulumi.Input<number | undefined>;
     /**
      * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
      */
-    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode>;
+    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode | undefined>;
     /**
      * Unique identifier for the datastore.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Notification delivery mode. Valid values: `legacy-sendmail`, `notification-system`.
      */
-    notificationMode?: pulumi.Input<string>;
+    notificationMode?: pulumi.Input<string | undefined>;
     /**
      * Per-job notification settings overriding datastore defaults.
      */
-    notify?: pulumi.Input<inputs.DatastoreNotify>;
+    notify?: pulumi.Input<inputs.DatastoreNotify | undefined>;
     /**
      * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
      */
-    notifyLevel?: pulumi.Input<string>;
+    notifyLevel?: pulumi.Input<string | undefined>;
     /**
      * User to send datastore notifications to (e.g., `root@pam`).
      */
-    notifyUser?: pulumi.Input<string>;
+    notifyUser?: pulumi.Input<string | undefined>;
     /**
      * Allow overwriting chunks that are currently in use.
      */
-    overwriteInUse?: pulumi.Input<boolean>;
+    overwriteInUse?: pulumi.Input<boolean | undefined>;
     /**
      * Filesystem path to the datastore data. Required for directory datastores and used as the local cache directory for S3 datastores.
      */
-    path?: pulumi.Input<string>;
+    path?: pulumi.Input<string | undefined>;
     /**
      * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
      *
      * @deprecated Deprecated
      */
-    pruneSchedule?: pulumi.Input<string>;
+    pruneSchedule?: pulumi.Input<string | undefined>;
     /**
      * Set to `true` to manage a removable datastore backed by a device UUID.
      */
-    removable?: pulumi.Input<boolean>;
+    removable?: pulumi.Input<boolean | undefined>;
     /**
      * Reuse existing datastore chunks when possible.
      */
-    reuseDatastore?: pulumi.Input<boolean>;
+    reuseDatastore?: pulumi.Input<boolean | undefined>;
     /**
      * S3 bucket name for S3 datastores. The bucket must be created beforehand.
      */
-    s3Bucket?: pulumi.Input<string>;
+    s3Bucket?: pulumi.Input<string | undefined>;
     /**
      * S3 endpoint ID for S3 datastores. Must reference an existing S3 endpoint configuration.
      */
-    s3Client?: pulumi.Input<string>;
+    s3Client?: pulumi.Input<string | undefined>;
     /**
      * Tuning level for performance optimization (0-4).
      *
      * @deprecated Deprecated
      */
-    tuneLevel?: pulumi.Input<number>;
+    tuneLevel?: pulumi.Input<number | undefined>;
     /**
      * Advanced tuning options for datastore behaviour such as chunk order and sync level.
      */
-    tuning?: pulumi.Input<inputs.DatastoreTuning>;
+    tuning?: pulumi.Input<inputs.DatastoreTuning | undefined>;
     /**
      * Verify newly created snapshots immediately after backup.
      */
-    verifyNew?: pulumi.Input<boolean>;
+    verifyNew?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -357,117 +357,117 @@ export interface DatastoreArgs {
     /**
      * UUID of the filesystem partition for a removable datastore (e.g., `01234567-89ab-cdef-0123-456789abcdef`).
      */
-    backingDevice?: pulumi.Input<string>;
+    backingDevice?: pulumi.Input<string | undefined>;
     /**
      * Description for the datastore.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * Whether the datastore is disabled.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * Certificate fingerprint for secure connections (S3 datastores).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * Garbage collection schedule in cron format (e.g., `daily`, `weekly`, or `0 3 * * 0`).
      */
-    gcSchedule?: pulumi.Input<string>;
+    gcSchedule?: pulumi.Input<string | undefined>;
     /**
      * Number of daily backups to keep when pruning.
      */
-    keepDaily?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number | undefined>;
     /**
      * Number of hourly backups to keep when pruning.
      */
-    keepHourly?: pulumi.Input<number>;
+    keepHourly?: pulumi.Input<number | undefined>;
     /**
      * Number of latest backups to keep when pruning.
      */
-    keepLast?: pulumi.Input<number>;
+    keepLast?: pulumi.Input<number | undefined>;
     /**
      * Number of monthly backups to keep when pruning.
      */
-    keepMonthly?: pulumi.Input<number>;
+    keepMonthly?: pulumi.Input<number | undefined>;
     /**
      * Number of weekly backups to keep when pruning.
      */
-    keepWeekly?: pulumi.Input<number>;
+    keepWeekly?: pulumi.Input<number | undefined>;
     /**
      * Number of yearly backups to keep when pruning.
      */
-    keepYearly?: pulumi.Input<number>;
+    keepYearly?: pulumi.Input<number | undefined>;
     /**
      * Maintenance mode configuration allowing `offline` or `read-only` modes with optional message.
      */
-    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode>;
+    maintenanceMode?: pulumi.Input<inputs.DatastoreMaintenanceMode | undefined>;
     /**
      * Unique identifier for the datastore.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Notification delivery mode. Valid values: `legacy-sendmail`, `notification-system`.
      */
-    notificationMode?: pulumi.Input<string>;
+    notificationMode?: pulumi.Input<string | undefined>;
     /**
      * Per-job notification settings overriding datastore defaults.
      */
-    notify?: pulumi.Input<inputs.DatastoreNotify>;
+    notify?: pulumi.Input<inputs.DatastoreNotify | undefined>;
     /**
      * Notification level. Valid values: `info`, `notice`, `warning`, `error`.
      */
-    notifyLevel?: pulumi.Input<string>;
+    notifyLevel?: pulumi.Input<string | undefined>;
     /**
      * User to send datastore notifications to (e.g., `root@pam`).
      */
-    notifyUser?: pulumi.Input<string>;
+    notifyUser?: pulumi.Input<string | undefined>;
     /**
      * Allow overwriting chunks that are currently in use.
      */
-    overwriteInUse?: pulumi.Input<boolean>;
+    overwriteInUse?: pulumi.Input<boolean | undefined>;
     /**
      * Filesystem path to the datastore data. Required for directory datastores and used as the local cache directory for S3 datastores.
      */
-    path?: pulumi.Input<string>;
+    path?: pulumi.Input<string | undefined>;
     /**
      * Prune schedule in cron format (e.g., `daily`, `weekly`, or `0 2 * * *`).
      *
      * @deprecated Deprecated
      */
-    pruneSchedule?: pulumi.Input<string>;
+    pruneSchedule?: pulumi.Input<string | undefined>;
     /**
      * Set to `true` to manage a removable datastore backed by a device UUID.
      */
-    removable?: pulumi.Input<boolean>;
+    removable?: pulumi.Input<boolean | undefined>;
     /**
      * Reuse existing datastore chunks when possible.
      */
-    reuseDatastore?: pulumi.Input<boolean>;
+    reuseDatastore?: pulumi.Input<boolean | undefined>;
     /**
      * S3 bucket name for S3 datastores. The bucket must be created beforehand.
      */
-    s3Bucket?: pulumi.Input<string>;
+    s3Bucket?: pulumi.Input<string | undefined>;
     /**
      * S3 endpoint ID for S3 datastores. Must reference an existing S3 endpoint configuration.
      */
-    s3Client?: pulumi.Input<string>;
+    s3Client?: pulumi.Input<string | undefined>;
     /**
      * Tuning level for performance optimization (0-4).
      *
      * @deprecated Deprecated
      */
-    tuneLevel?: pulumi.Input<number>;
+    tuneLevel?: pulumi.Input<number | undefined>;
     /**
      * Advanced tuning options for datastore behaviour such as chunk order and sync level.
      */
-    tuning?: pulumi.Input<inputs.DatastoreTuning>;
+    tuning?: pulumi.Input<inputs.DatastoreTuning | undefined>;
     /**
      * Verify newly created snapshots immediately after backup.
      */
-    verifyNew?: pulumi.Input<boolean>;
+    verifyNew?: pulumi.Input<boolean | undefined>;
 }

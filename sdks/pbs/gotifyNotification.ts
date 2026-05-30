@@ -105,27 +105,27 @@ export interface GotifyNotificationState {
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * The unique name identifier for the Gotify notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
      */
-    origin?: pulumi.Input<string>;
+    origin?: pulumi.Input<string | undefined>;
     /**
      * Gotify server URL (e.g., `https://gotify.example.com`).
      */
-    server?: pulumi.Input<string>;
+    server?: pulumi.Input<string | undefined>;
     /**
      * Gotify application token for authentication.
      */
-    token?: pulumi.Input<string>;
+    token?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -135,15 +135,15 @@ export interface GotifyNotificationArgs {
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * The unique name identifier for the Gotify notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Gotify server URL (e.g., `https://gotify.example.com`).
      */

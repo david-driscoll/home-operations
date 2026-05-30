@@ -44,5 +44,5 @@ export function getVerifyJobsOutput(args?: GetVerifyJobsOutputArgs, opts?: pulum
  * A collection of arguments for invoking getVerifyJobs.
  */
 export interface GetVerifyJobsOutputArgs {
-    store?: pulumi.Input<string>;
+    store?: pulumi.Input<string | undefined>;
 }

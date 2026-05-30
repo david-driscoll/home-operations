@@ -147,55 +147,55 @@ export interface SmtpNotificationState {
     /**
      * Author name that will appear in the email headers.
      */
-    author?: pulumi.Input<string>;
+    author?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Sender email address. This will appear as the 'From' address in notification emails.
      */
-    fromAddress?: pulumi.Input<string>;
+    fromAddress?: pulumi.Input<string | undefined>;
     /**
      * User(s) from PBS user database to receive notifications. Specify as PBS user IDs.
      */
-    mailtoUsers?: pulumi.Input<pulumi.Input<string>[]>;
+    mailtoUsers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Recipient email address(es). Specify as a list of email strings.
      */
-    mailtos?: pulumi.Input<pulumi.Input<string>[]>;
+    mailtos?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Connection mode for SMTP. Valid values: `insecure` (no encryption), `starttls` (upgrade to TLS), `tls` (direct TLS). Defaults to `insecure`.
      */
-    mode?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the SMTP notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
      */
-    origin?: pulumi.Input<string>;
+    origin?: pulumi.Input<string | undefined>;
     /**
      * SMTP authentication password. Required if the SMTP server requires authentication.
      */
-    password?: pulumi.Input<string>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * SMTP server port. Common values: `25` (unencrypted), `465` (TLS), `587` (STARTTLS). Defaults to `25`.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * SMTP server hostname or IP address.
      */
-    server?: pulumi.Input<string>;
+    server?: pulumi.Input<string | undefined>;
     /**
      * SMTP authentication username. Required if the SMTP server requires authentication.
      */
-    username?: pulumi.Input<string>;
+    username?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -205,15 +205,15 @@ export interface SmtpNotificationArgs {
     /**
      * Author name that will appear in the email headers.
      */
-    author?: pulumi.Input<string>;
+    author?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Sender email address. This will appear as the 'From' address in notification emails.
      */
@@ -221,27 +221,27 @@ export interface SmtpNotificationArgs {
     /**
      * User(s) from PBS user database to receive notifications. Specify as PBS user IDs.
      */
-    mailtoUsers?: pulumi.Input<pulumi.Input<string>[]>;
+    mailtoUsers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Recipient email address(es). Specify as a list of email strings.
      */
-    mailtos?: pulumi.Input<pulumi.Input<string>[]>;
+    mailtos?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Connection mode for SMTP. Valid values: `insecure` (no encryption), `starttls` (upgrade to TLS), `tls` (direct TLS). Defaults to `insecure`.
      */
-    mode?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the SMTP notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * SMTP authentication password. Required if the SMTP server requires authentication.
      */
-    password?: pulumi.Input<string>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * SMTP server port. Common values: `25` (unencrypted), `465` (TLS), `587` (STARTTLS). Defaults to `25`.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * SMTP server hostname or IP address.
      */
@@ -249,5 +249,5 @@ export interface SmtpNotificationArgs {
     /**
      * SMTP authentication username. Required if the SMTP server requires authentication.
      */
-    username?: pulumi.Input<string>;
+    username?: pulumi.Input<string | undefined>;
 }

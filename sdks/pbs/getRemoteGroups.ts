@@ -48,7 +48,7 @@ export function getRemoteGroupsOutput(args: GetRemoteGroupsOutputArgs, opts?: pu
  * A collection of arguments for invoking getRemoteGroups.
  */
 export interface GetRemoteGroupsOutputArgs {
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     remoteName: pulumi.Input<string>;
     store: pulumi.Input<string>;
 }

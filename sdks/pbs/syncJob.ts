@@ -214,95 +214,95 @@ export interface SyncJobState {
     /**
      * Inbound burst rate limit in PBS byte size format (e.g., `20M`). Leave empty for unlimited.
      */
-    burstIn?: pulumi.Input<string>;
+    burstIn?: pulumi.Input<string | undefined>;
     /**
      * Outbound burst rate limit in PBS byte size format (e.g., `20M`). Leave empty for unlimited.
      */
-    burstOut?: pulumi.Input<string>;
+    burstOut?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this sync job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * Only sync encrypted backups. Defaults to `false`.
      */
-    encryptedOnly?: pulumi.Input<boolean>;
+    encryptedOnly?: pulumi.Input<boolean | undefined>;
     /**
      * List of backup group selectors using `group:<name>`, `type:<vm|ct|host>`, or `regex:<pattern>` syntax. Only matching groups will be synced.
      */
-    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Maximum namespace depth that will be traversed when syncing. Must be greater than or equal to 0.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Local namespace where backups will be stored. Optional; supports hierarchical namespaces such as `ns1/sub`.
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * Owner user ID for the synced backups. Optional.
      */
-    owner?: pulumi.Input<string>;
+    owner?: pulumi.Input<string | undefined>;
     /**
      * Inbound transfer rate limit in PBS byte size format (e.g., `10M` for 10 MiB/s). Leave empty for unlimited.
      */
-    rateIn?: pulumi.Input<string>;
+    rateIn?: pulumi.Input<string | undefined>;
     /**
      * Outbound transfer rate limit in PBS byte size format (e.g., `10M`). Leave empty for unlimited.
      */
-    rateOut?: pulumi.Input<string>;
+    rateOut?: pulumi.Input<string | undefined>;
     /**
      * The remote server name (configured in PBS remotes).
      */
-    remote?: pulumi.Input<string>;
+    remote?: pulumi.Input<string | undefined>;
     /**
      * Remote namespace to sync from. Optional; leave empty to sync from the remote root namespace.
      */
-    remoteNamespace?: pulumi.Input<string>;
+    remoteNamespace?: pulumi.Input<string | undefined>;
     /**
      * The datastore name on the remote server.
      */
-    remoteStore?: pulumi.Input<string>;
+    remoteStore?: pulumi.Input<string | undefined>;
     /**
      * Remove backups locally that no longer exist on the remote. Defaults to `false`.
      */
-    removeVanished?: pulumi.Input<boolean>;
+    removeVanished?: pulumi.Input<boolean | undefined>;
     /**
      * Resync snapshots whose data is corrupt. Defaults to `false`.
      */
-    resyncCorrupt?: pulumi.Input<boolean>;
+    resyncCorrupt?: pulumi.Input<boolean | undefined>;
     /**
      * Run the job immediately after the datastore is mounted. Defaults to `false`.
      */
-    runOnMount?: pulumi.Input<boolean>;
+    runOnMount?: pulumi.Input<boolean | undefined>;
     /**
      * When to run the sync job. Uses systemd calendar event format (e.g., `hourly`, `*:00/15`, `Mon,Wed,Fri 02:00`).
      */
-    schedule?: pulumi.Input<string>;
+    schedule?: pulumi.Input<string | undefined>;
     /**
      * The local datastore name where backups will be synced to.
      */
-    store?: pulumi.Input<string>;
+    store?: pulumi.Input<string | undefined>;
     /**
      * Direction of synchronization. Must be either `pull` (default) or `push`.
      */
-    syncDirection?: pulumi.Input<string>;
+    syncDirection?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the sync job.
      */
-    syncJobId?: pulumi.Input<string>;
+    syncJobId?: pulumi.Input<string | undefined>;
     /**
      * Only transfer backups newer than the last N seconds. Set to 0 to disable.
      */
-    transferLast?: pulumi.Input<number>;
+    transferLast?: pulumi.Input<number | undefined>;
     /**
      * Only sync backups that were verified successfully. Defaults to `false`.
      */
-    verifiedOnly?: pulumi.Input<boolean>;
+    verifiedOnly?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -312,43 +312,43 @@ export interface SyncJobArgs {
     /**
      * Inbound burst rate limit in PBS byte size format (e.g., `20M`). Leave empty for unlimited.
      */
-    burstIn?: pulumi.Input<string>;
+    burstIn?: pulumi.Input<string | undefined>;
     /**
      * Outbound burst rate limit in PBS byte size format (e.g., `20M`). Leave empty for unlimited.
      */
-    burstOut?: pulumi.Input<string>;
+    burstOut?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this sync job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Only sync encrypted backups. Defaults to `false`.
      */
-    encryptedOnly?: pulumi.Input<boolean>;
+    encryptedOnly?: pulumi.Input<boolean | undefined>;
     /**
      * List of backup group selectors using `group:<name>`, `type:<vm|ct|host>`, or `regex:<pattern>` syntax. Only matching groups will be synced.
      */
-    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Maximum namespace depth that will be traversed when syncing. Must be greater than or equal to 0.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Local namespace where backups will be stored. Optional; supports hierarchical namespaces such as `ns1/sub`.
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * Owner user ID for the synced backups. Optional.
      */
-    owner?: pulumi.Input<string>;
+    owner?: pulumi.Input<string | undefined>;
     /**
      * Inbound transfer rate limit in PBS byte size format (e.g., `10M` for 10 MiB/s). Leave empty for unlimited.
      */
-    rateIn?: pulumi.Input<string>;
+    rateIn?: pulumi.Input<string | undefined>;
     /**
      * Outbound transfer rate limit in PBS byte size format (e.g., `10M`). Leave empty for unlimited.
      */
-    rateOut?: pulumi.Input<string>;
+    rateOut?: pulumi.Input<string | undefined>;
     /**
      * The remote server name (configured in PBS remotes).
      */
@@ -356,7 +356,7 @@ export interface SyncJobArgs {
     /**
      * Remote namespace to sync from. Optional; leave empty to sync from the remote root namespace.
      */
-    remoteNamespace?: pulumi.Input<string>;
+    remoteNamespace?: pulumi.Input<string | undefined>;
     /**
      * The datastore name on the remote server.
      */
@@ -364,15 +364,15 @@ export interface SyncJobArgs {
     /**
      * Remove backups locally that no longer exist on the remote. Defaults to `false`.
      */
-    removeVanished?: pulumi.Input<boolean>;
+    removeVanished?: pulumi.Input<boolean | undefined>;
     /**
      * Resync snapshots whose data is corrupt. Defaults to `false`.
      */
-    resyncCorrupt?: pulumi.Input<boolean>;
+    resyncCorrupt?: pulumi.Input<boolean | undefined>;
     /**
      * Run the job immediately after the datastore is mounted. Defaults to `false`.
      */
-    runOnMount?: pulumi.Input<boolean>;
+    runOnMount?: pulumi.Input<boolean | undefined>;
     /**
      * When to run the sync job. Uses systemd calendar event format (e.g., `hourly`, `*:00/15`, `Mon,Wed,Fri 02:00`).
      */
@@ -384,7 +384,7 @@ export interface SyncJobArgs {
     /**
      * Direction of synchronization. Must be either `pull` (default) or `push`.
      */
-    syncDirection?: pulumi.Input<string>;
+    syncDirection?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the sync job.
      */
@@ -392,9 +392,9 @@ export interface SyncJobArgs {
     /**
      * Only transfer backups newer than the last N seconds. Set to 0 to disable.
      */
-    transferLast?: pulumi.Input<number>;
+    transferLast?: pulumi.Input<number | undefined>;
     /**
      * Only sync backups that were verified successfully. Defaults to `false`.
      */
-    verifiedOnly?: pulumi.Input<boolean>;
+    verifiedOnly?: pulumi.Input<boolean | undefined>;
 }

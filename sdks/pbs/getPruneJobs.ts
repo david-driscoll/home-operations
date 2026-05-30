@@ -44,5 +44,5 @@ export function getPruneJobsOutput(args?: GetPruneJobsOutputArgs, opts?: pulumi.
  * A collection of arguments for invoking getPruneJobs.
  */
 export interface GetPruneJobsOutputArgs {
-    store?: pulumi.Input<string>;
+    store?: pulumi.Input<string | undefined>;
 }

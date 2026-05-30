@@ -117,32 +117,32 @@ export interface RemoteState {
     /**
      * Authentication ID for the remote server (e.g., `user@pam` or `user@pbs!token`).
      */
-    authId?: pulumi.Input<string>;
+    authId?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this remote.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * X509 certificate fingerprint (SHA256) for TLS verification. Format: `AA:BB:CC:...` (32 pairs of hex digits separated by colons).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * The hostname or IP address of the remote PBS server.
      */
-    host?: pulumi.Input<string>;
+    host?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the remote (3-32 characters).
      */
-    name?: pulumi.Input<string>;
-    password?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * The port number for the remote PBS server (default: 8007).
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -156,11 +156,11 @@ export interface RemoteArgs {
     /**
      * A comment describing this remote.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * X509 certificate fingerprint (SHA256) for TLS verification. Format: `AA:BB:CC:...` (32 pairs of hex digits separated by colons).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * The hostname or IP address of the remote PBS server.
      */
@@ -168,10 +168,10 @@ export interface RemoteArgs {
     /**
      * The unique identifier for the remote (3-32 characters).
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     password: pulumi.Input<string>;
     /**
      * The port number for the remote PBS server (default: 8007).
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
 }

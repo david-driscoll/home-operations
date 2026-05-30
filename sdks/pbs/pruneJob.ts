@@ -154,59 +154,59 @@ export interface PruneJobState {
     /**
      * A comment describing this prune job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * Disable this prune job without deleting it.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Keep daily backups for the last N days.
      */
-    keepDaily?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number | undefined>;
     /**
      * Keep hourly backups for the last N hours.
      */
-    keepHourly?: pulumi.Input<number>;
+    keepHourly?: pulumi.Input<number | undefined>;
     /**
      * Keep the last N backup snapshots, regardless of time.
      */
-    keepLast?: pulumi.Input<number>;
+    keepLast?: pulumi.Input<number | undefined>;
     /**
      * Keep monthly backups for the last N months.
      */
-    keepMonthly?: pulumi.Input<number>;
+    keepMonthly?: pulumi.Input<number | undefined>;
     /**
      * Keep weekly backups for the last N weeks.
      */
-    keepWeekly?: pulumi.Input<number>;
+    keepWeekly?: pulumi.Input<number | undefined>;
     /**
      * Keep yearly backups for the last N years.
      */
-    keepYearly?: pulumi.Input<number>;
+    keepYearly?: pulumi.Input<number | undefined>;
     /**
      * Maximum depth for namespace traversal when pruning.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Namespace filter as a regular expression. Only backups in matching namespaces will be pruned.
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the prune job.
      */
-    pruneJobId?: pulumi.Input<string>;
+    pruneJobId?: pulumi.Input<string | undefined>;
     /**
      * When to run the prune job. Uses systemd calendar event format (e.g., `daily`, `weekly`, `Mon..Fri *-*-* 02:00:00`).
      */
-    schedule?: pulumi.Input<string>;
+    schedule?: pulumi.Input<string | undefined>;
     /**
      * The datastore name where pruning will be performed.
      */
-    store?: pulumi.Input<string>;
+    store?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -216,43 +216,43 @@ export interface PruneJobArgs {
     /**
      * A comment describing this prune job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this prune job without deleting it.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Keep daily backups for the last N days.
      */
-    keepDaily?: pulumi.Input<number>;
+    keepDaily?: pulumi.Input<number | undefined>;
     /**
      * Keep hourly backups for the last N hours.
      */
-    keepHourly?: pulumi.Input<number>;
+    keepHourly?: pulumi.Input<number | undefined>;
     /**
      * Keep the last N backup snapshots, regardless of time.
      */
-    keepLast?: pulumi.Input<number>;
+    keepLast?: pulumi.Input<number | undefined>;
     /**
      * Keep monthly backups for the last N months.
      */
-    keepMonthly?: pulumi.Input<number>;
+    keepMonthly?: pulumi.Input<number | undefined>;
     /**
      * Keep weekly backups for the last N weeks.
      */
-    keepWeekly?: pulumi.Input<number>;
+    keepWeekly?: pulumi.Input<number | undefined>;
     /**
      * Keep yearly backups for the last N years.
      */
-    keepYearly?: pulumi.Input<number>;
+    keepYearly?: pulumi.Input<number | undefined>;
     /**
      * Maximum depth for namespace traversal when pruning.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Namespace filter as a regular expression. Only backups in matching namespaces will be pruned.
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the prune job.
      */

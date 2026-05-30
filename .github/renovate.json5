@@ -143,5 +143,14 @@
       registryUrlTemplate: "https://registry.terraform.io",
       autoReplaceStringTemplate: "parameters: [registry.terraform.io/{{{packageName}}}, {{{newValue}}}]",
     },
+    {
+      description: "Pulumi terraform provider (registry.opentofu.org)",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
+      matchStrings: ["parameters: \\[registry\\.opentofu\\.org/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
+      datasourceTemplate: "terraform-provider",
+      registryUrlTemplate: "https://registry.opentofu.org",
+      autoReplaceStringTemplate: "parameters: [registry.opentofu.org/{{{packageName}}}, {{{newValue}}}]",
+    },
   ],
 }

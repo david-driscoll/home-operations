@@ -9,7 +9,7 @@ export interface DatastoreMaintenanceMode {
     /**
      * Optional message presented for maintenance mode.
      */
-    message?: pulumi.Input<string>;
+    message?: pulumi.Input<string | undefined>;
     /**
      * Maintenance mode type. Valid values: `offline`, `read-only`.
      */
@@ -20,41 +20,41 @@ export interface DatastoreNotify {
     /**
      * Garbage collection notification level. Valid values: `always`, `error`, `never`.
      */
-    gc?: pulumi.Input<string>;
+    gc?: pulumi.Input<string | undefined>;
     /**
      * Prune job notification level. Valid values: `always`, `error`, `never`.
      */
-    prune?: pulumi.Input<string>;
+    prune?: pulumi.Input<string | undefined>;
     /**
      * Sync job notification level. Valid values: `always`, `error`, `never`.
      */
-    sync?: pulumi.Input<string>;
+    sync?: pulumi.Input<string | undefined>;
     /**
      * Verification job notification level. Valid values: `always`, `error`, `never`.
      */
-    verify?: pulumi.Input<string>;
+    verify?: pulumi.Input<string | undefined>;
 }
 
 export interface DatastoreTuning {
     /**
      * Chunk iteration order. Valid values: `inode`, `none`.
      */
-    chunkOrder?: pulumi.Input<string>;
+    chunkOrder?: pulumi.Input<string | undefined>;
     /**
      * Garbage collection access time cutoff in seconds.
      */
-    gcAtimeCutoff?: pulumi.Input<number>;
+    gcAtimeCutoff?: pulumi.Input<number | undefined>;
     /**
      * Enable garbage collection access time safety check.
      */
-    gcAtimeSafetyCheck?: pulumi.Input<boolean>;
+    gcAtimeSafetyCheck?: pulumi.Input<boolean | undefined>;
     /**
      * Garbage collection cache capacity.
      */
-    gcCacheCapacity?: pulumi.Input<number>;
+    gcCacheCapacity?: pulumi.Input<number | undefined>;
     /**
      * Datastore fsync level. Valid values: `none`, `filesystem`, `file`.
      */
-    syncLevel?: pulumi.Input<string>;
+    syncLevel?: pulumi.Input<string | undefined>;
 }
 

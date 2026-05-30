@@ -124,39 +124,39 @@ export interface VerifyJobState {
     /**
      * A comment describing this verification job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Opaque digest returned by PBS for optimistic locking.
      */
-    digest?: pulumi.Input<string>;
+    digest?: pulumi.Input<string | undefined>;
     /**
      * Skip backups that have been recently verified. Defaults to `false`.
      */
-    ignoreVerified?: pulumi.Input<boolean>;
+    ignoreVerified?: pulumi.Input<boolean | undefined>;
     /**
      * Maximum recursion depth when traversing namespace hierarchy.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Namespace to verify. Optional, supports pattern matching (e.g., `ns1`, `ns1/sub`).
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * Number of days after which a backup is considered outdated and needs re-verification. Only applies when `ignore_verified` is `true`.
      */
-    outdatedAfter?: pulumi.Input<number>;
+    outdatedAfter?: pulumi.Input<number | undefined>;
     /**
      * When to run the verification job. Uses systemd calendar event format (e.g., `weekly`, `Mon 03:00`).
      */
-    schedule?: pulumi.Input<string>;
+    schedule?: pulumi.Input<string | undefined>;
     /**
      * The datastore name where backups will be verified.
      */
-    store?: pulumi.Input<string>;
+    store?: pulumi.Input<string | undefined>;
     /**
      * The unique identifier for the verification job.
      */
-    verifyJobId?: pulumi.Input<string>;
+    verifyJobId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -166,23 +166,23 @@ export interface VerifyJobArgs {
     /**
      * A comment describing this verification job.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Skip backups that have been recently verified. Defaults to `false`.
      */
-    ignoreVerified?: pulumi.Input<boolean>;
+    ignoreVerified?: pulumi.Input<boolean | undefined>;
     /**
      * Maximum recursion depth when traversing namespace hierarchy.
      */
-    maxDepth?: pulumi.Input<number>;
+    maxDepth?: pulumi.Input<number | undefined>;
     /**
      * Namespace to verify. Optional, supports pattern matching (e.g., `ns1`, `ns1/sub`).
      */
-    namespace?: pulumi.Input<string>;
+    namespace?: pulumi.Input<string | undefined>;
     /**
      * Number of days after which a backup is considered outdated and needs re-verification. Only applies when `ignore_verified` is `true`.
      */
-    outdatedAfter?: pulumi.Input<number>;
+    outdatedAfter?: pulumi.Input<number | undefined>;
     /**
      * When to run the verification job. Uses systemd calendar event format (e.g., `weekly`, `Mon 03:00`).
      */

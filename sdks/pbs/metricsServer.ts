@@ -156,63 +156,63 @@ export interface MetricsServerState {
     /**
      * InfluxDB bucket name where metrics will be stored. Required for `influxdb-http` type.
      */
-    bucket?: pulumi.Input<string>;
+    bucket?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this metrics server configuration.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Enable or disable metrics export to this server. Defaults to `true`.
      */
-    enable?: pulumi.Input<boolean>;
+    enable?: pulumi.Input<boolean | undefined>;
     /**
      * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to `25000000` (25MB).
      */
-    maxBodySize?: pulumi.Input<number>;
+    maxBodySize?: pulumi.Input<number | undefined>;
     /**
      * Maximum transmission unit for the metrics connection. Defaults to `1500`.
      */
-    mtu?: pulumi.Input<number>;
+    mtu?: pulumi.Input<number | undefined>;
     /**
      * The unique name identifier for the metrics server. This is used to identify the metrics server configuration.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * InfluxDB organization name. Required for `influxdb-http` type.
      */
-    organization?: pulumi.Input<string>;
+    organization?: pulumi.Input<string | undefined>;
     /**
      * The server port. Typical ports: `8089` (InfluxDB UDP), `8086` (InfluxDB HTTP). Can be used instead of `url` for backwards compatibility.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Protocol for InfluxDB UDP connection. Valid values: `udp`, `tcp`. Only applicable for `influxdb-udp` type.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * The server address (hostname or IP) of the metrics server. Can be used instead of `url` for backwards compatibility.
      */
-    server?: pulumi.Input<string>;
+    server?: pulumi.Input<string | undefined>;
     /**
      * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to `5`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * InfluxDB API token for authentication. Required for `influxdb-http` type.
      */
-    token?: pulumi.Input<string>;
+    token?: pulumi.Input<string | undefined>;
     /**
      * The type of metrics server. Valid values: `influxdb-udp`, `influxdb-http`.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
     /**
      * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate `server` and `port` fields. Only applicable for `influxdb-http` type.
      */
-    url?: pulumi.Input<string>;
+    url?: pulumi.Input<string | undefined>;
     /**
      * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to `true`.
      */
-    verifyTls?: pulumi.Input<boolean>;
+    verifyTls?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -222,51 +222,51 @@ export interface MetricsServerArgs {
     /**
      * InfluxDB bucket name where metrics will be stored. Required for `influxdb-http` type.
      */
-    bucket?: pulumi.Input<string>;
+    bucket?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this metrics server configuration.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Enable or disable metrics export to this server. Defaults to `true`.
      */
-    enable?: pulumi.Input<boolean>;
+    enable?: pulumi.Input<boolean | undefined>;
     /**
      * Maximum body size for HTTP requests in bytes. Only applicable for `influxdb-http` type. Defaults to `25000000` (25MB).
      */
-    maxBodySize?: pulumi.Input<number>;
+    maxBodySize?: pulumi.Input<number | undefined>;
     /**
      * Maximum transmission unit for the metrics connection. Defaults to `1500`.
      */
-    mtu?: pulumi.Input<number>;
+    mtu?: pulumi.Input<number | undefined>;
     /**
      * The unique name identifier for the metrics server. This is used to identify the metrics server configuration.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * InfluxDB organization name. Required for `influxdb-http` type.
      */
-    organization?: pulumi.Input<string>;
+    organization?: pulumi.Input<string | undefined>;
     /**
      * The server port. Typical ports: `8089` (InfluxDB UDP), `8086` (InfluxDB HTTP). Can be used instead of `url` for backwards compatibility.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Protocol for InfluxDB UDP connection. Valid values: `udp`, `tcp`. Only applicable for `influxdb-udp` type.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * The server address (hostname or IP) of the metrics server. Can be used instead of `url` for backwards compatibility.
      */
-    server?: pulumi.Input<string>;
+    server?: pulumi.Input<string | undefined>;
     /**
      * HTTP request timeout in seconds. Only applicable for `influxdb-http` type. Defaults to `5`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * InfluxDB API token for authentication. Required for `influxdb-http` type.
      */
-    token?: pulumi.Input<string>;
+    token?: pulumi.Input<string | undefined>;
     /**
      * The type of metrics server. Valid values: `influxdb-udp`, `influxdb-http`.
      */
@@ -274,9 +274,9 @@ export interface MetricsServerArgs {
     /**
      * Full URL for InfluxDB HTTP, including protocol (e.g., `http://influxdb:8086` or `https://influxdb:443`). If specified, this takes precedence over separate `server` and `port` fields. Only applicable for `influxdb-http` type.
      */
-    url?: pulumi.Input<string>;
+    url?: pulumi.Input<string | undefined>;
     /**
      * Whether to verify TLS certificate for HTTPS connections. Only applicable for `influxdb-http` type. Defaults to `true`.
      */
-    verifyTls?: pulumi.Input<boolean>;
+    verifyTls?: pulumi.Input<boolean | undefined>;
 }

@@ -121,43 +121,43 @@ export interface NotificationMatcherState {
     /**
      * A comment describing this notification matcher.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification matcher. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to `false`.
      */
-    invertMatch?: pulumi.Input<boolean>;
+    invertMatch?: pulumi.Input<boolean | undefined>;
     /**
      * List of calendar IDs to match for time-based routing (requires calendar configuration in PBS).
      */
-    matchCalendars?: pulumi.Input<pulumi.Input<string>[]>;
+    matchCalendars?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of `field=value` pairs to match against notification metadata (e.g., `type=prune`, `hostname=server01`).
      */
-    matchFields?: pulumi.Input<pulumi.Input<string>[]>;
+    matchFields?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of severity levels to match. Valid values: `info`, `notice`, `warning`, `error`.
      */
-    matchSeverities?: pulumi.Input<pulumi.Input<string>[]>;
+    matchSeverities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Match mode: `all` (all conditions must match) or `any` (at least one condition must match). Defaults to `all`.
      */
-    mode?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the notification matcher.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
      */
-    origin?: pulumi.Input<string>;
+    origin?: pulumi.Input<string | undefined>;
     /**
      * List of notification target or endpoint names to route matching notifications to.
      */
-    targets?: pulumi.Input<pulumi.Input<string>[]>;
+    targets?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 
 /**
@@ -167,37 +167,37 @@ export interface NotificationMatcherArgs {
     /**
      * A comment describing this notification matcher.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification matcher. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Invert the matching logic (route notifications that DON'T match the criteria). Defaults to `false`.
      */
-    invertMatch?: pulumi.Input<boolean>;
+    invertMatch?: pulumi.Input<boolean | undefined>;
     /**
      * List of calendar IDs to match for time-based routing (requires calendar configuration in PBS).
      */
-    matchCalendars?: pulumi.Input<pulumi.Input<string>[]>;
+    matchCalendars?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of `field=value` pairs to match against notification metadata (e.g., `type=prune`, `hostname=server01`).
      */
-    matchFields?: pulumi.Input<pulumi.Input<string>[]>;
+    matchFields?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of severity levels to match. Valid values: `info`, `notice`, `warning`, `error`.
      */
-    matchSeverities?: pulumi.Input<pulumi.Input<string>[]>;
+    matchSeverities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Match mode: `all` (all conditions must match) or `any` (at least one condition must match). Defaults to `all`.
      */
-    mode?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the notification matcher.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * List of notification target or endpoint names to route matching notifications to.
      */
-    targets?: pulumi.Input<pulumi.Input<string>[]>;
+    targets?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }

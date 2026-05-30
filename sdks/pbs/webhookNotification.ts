@@ -120,39 +120,39 @@ export interface WebhookNotificationState {
     /**
      * Custom request body template. Can use template variables for notification data.
      */
-    body?: pulumi.Input<string>;
+    body?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Custom HTTP headers to include in webhook requests. Specify as key-value pairs.
      */
-    headers?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
+    headers?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
      * HTTP method for webhook requests. Valid values: `post`, `put`. Defaults to `post`.
      */
-    method?: pulumi.Input<string>;
+    method?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the Webhook notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Origin of this configuration as reported by PBS (e.g., `user`, `builtin`).
      */
-    origin?: pulumi.Input<string>;
+    origin?: pulumi.Input<string | undefined>;
     /**
      * Secret for HMAC-SHA256 signature. The signature will be sent in the `X-PBS-Signature` header.
      */
-    secret?: pulumi.Input<string>;
+    secret?: pulumi.Input<string | undefined>;
     /**
      * Webhook URL where notifications will be sent (e.g., `https://hooks.example.com/notify`).
      */
-    url?: pulumi.Input<string>;
+    url?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -162,31 +162,31 @@ export interface WebhookNotificationArgs {
     /**
      * Custom request body template. Can use template variables for notification data.
      */
-    body?: pulumi.Input<string>;
+    body?: pulumi.Input<string | undefined>;
     /**
      * A comment describing this notification target.
      */
-    comment?: pulumi.Input<string>;
+    comment?: pulumi.Input<string | undefined>;
     /**
      * Disable this notification target. Defaults to `false`.
      */
-    disable?: pulumi.Input<boolean>;
+    disable?: pulumi.Input<boolean | undefined>;
     /**
      * Custom HTTP headers to include in webhook requests. Specify as key-value pairs.
      */
-    headers?: pulumi.Input<{[key: string]: pulumi.Input<string>}>;
+    headers?: pulumi.Input<{[key: string]: pulumi.Input<string>} | undefined>;
     /**
      * HTTP method for webhook requests. Valid values: `post`, `put`. Defaults to `post`.
      */
-    method?: pulumi.Input<string>;
+    method?: pulumi.Input<string | undefined>;
     /**
      * The unique name identifier for the Webhook notification target.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Secret for HMAC-SHA256 signature. The signature will be sent in the `X-PBS-Signature` header.
      */
-    secret?: pulumi.Input<string>;
+    secret?: pulumi.Input<string | undefined>;
     /**
      * Webhook URL where notifications will be sent (e.g., `https://hooks.example.com/notify`).
      */

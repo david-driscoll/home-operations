@@ -48,6 +48,6 @@ export function getSyncJobsOutput(args?: GetSyncJobsOutputArgs, opts?: pulumi.In
  * A collection of arguments for invoking getSyncJobs.
  */
 export interface GetSyncJobsOutputArgs {
-    remote?: pulumi.Input<string>;
-    store?: pulumi.Input<string>;
+    remote?: pulumi.Input<string | undefined>;
+    store?: pulumi.Input<string | undefined>;
 }

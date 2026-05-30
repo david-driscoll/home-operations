@@ -129,39 +129,39 @@ export interface S3EndpointState {
     /**
      * Access key for S3 object store.
      */
-    accessKey?: pulumi.Input<string>;
+    accessKey?: pulumi.Input<string | undefined>;
     /**
      * Endpoint to access S3 object store.
      */
-    endpoint?: pulumi.Input<string>;
+    endpoint?: pulumi.Input<string | undefined>;
     /**
      * X509 certificate fingerprint (sha256).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * Use path style bucket addressing over vhost style.
      */
-    pathStyle?: pulumi.Input<boolean>;
+    pathStyle?: pulumi.Input<boolean | undefined>;
     /**
      * Port to access S3 object store.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * S3 provider-specific quirks. Use `['skip-if-none-match-header']` for Backblaze B2 compatibility to handle unsupported S3 headers.
      */
-    providerQuirks?: pulumi.Input<pulumi.Input<string>[]>;
+    providerQuirks?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Region to access S3 object store (3-32 chars, lowercase alphanumeric with dashes/underscores).
      */
-    region?: pulumi.Input<string>;
+    region?: pulumi.Input<string | undefined>;
     /**
      * ID to uniquely identify S3 client config (3-32 chars, alphanumeric with dots, dashes, underscores).
      */
-    s3EndpointId?: pulumi.Input<string>;
+    s3EndpointId?: pulumi.Input<string | undefined>;
     /**
      * S3 secret key.
      */
-    secretKey?: pulumi.Input<string>;
+    secretKey?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -179,23 +179,23 @@ export interface S3EndpointArgs {
     /**
      * X509 certificate fingerprint (sha256).
      */
-    fingerprint?: pulumi.Input<string>;
+    fingerprint?: pulumi.Input<string | undefined>;
     /**
      * Use path style bucket addressing over vhost style.
      */
-    pathStyle?: pulumi.Input<boolean>;
+    pathStyle?: pulumi.Input<boolean | undefined>;
     /**
      * Port to access S3 object store.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * S3 provider-specific quirks. Use `['skip-if-none-match-header']` for Backblaze B2 compatibility to handle unsupported S3 headers.
      */
-    providerQuirks?: pulumi.Input<pulumi.Input<string>[]>;
+    providerQuirks?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Region to access S3 object store (3-32 chars, lowercase alphanumeric with dashes/underscores).
      */
-    region?: pulumi.Input<string>;
+    region?: pulumi.Input<string | undefined>;
     /**
      * ID to uniquely identify S3 client config (3-32 chars, alphanumeric with dots, dashes, underscores).
      */

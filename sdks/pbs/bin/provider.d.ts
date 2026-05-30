@@ -49,27 +49,27 @@ export interface ProviderArgs {
     /**
      * The API token for authentication (format: user@realm:token_name=token_value)
      */
-    apiToken?: pulumi.Input<string>;
+    apiToken?: pulumi.Input<string | undefined>;
     /**
      * The endpoint URL for the Proxmox Backup Server API (e.g., https://pbs.example.com:8007)
      */
-    endpoint?: pulumi.Input<string>;
+    endpoint?: pulumi.Input<string | undefined>;
     /**
      * Whether to skip the TLS verification step. Defaults to false.
      */
-    insecure?: pulumi.Input<boolean>;
+    insecure?: pulumi.Input<boolean | undefined>;
     /**
      * The password for authentication (used with username)
      */
-    password?: pulumi.Input<string>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * Timeout for API requests in seconds. Defaults to 30.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * The username for authentication (alternative to API token)
      */
-    username?: pulumi.Input<string>;
+    username?: pulumi.Input<string | undefined>;
 }
 export declare namespace Provider {
     /**
