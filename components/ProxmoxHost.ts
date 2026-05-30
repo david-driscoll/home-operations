@@ -461,7 +461,9 @@ echo "PVE OIDC realms, groups, and ACLs configured"
       `proxmox-host-${this.name}`,
       this.args.globals,
       {
-        endpoints: pulumi.output(this.applicationManager.uptimeInstances).apply((instances) => instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+        endpoints: pulumi
+          .output(this.applicationManager.applications)
+          .apply((instances) => instances.flatMap((z) => z.gatus).map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
       },
       this.applicationManager,
     );

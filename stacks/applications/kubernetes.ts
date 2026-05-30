@@ -31,7 +31,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const namespaceList = await coreApi.listNamespace();
   const namespaceNames = namespaceList.items.map((ns) => ns.metadata!.name!);
 
-  pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`);
+  pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`, globals);
 
   const applications = await lastValueFrom(
     from(namespaceNames).pipe(
@@ -108,7 +108,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     `cluster-apps-${clusterDefinition.key}`,
     globals,
     {
-      endpoints: pulumi.output(applicationManager.uptimeInstances).apply((instances) => {
+      endpoints: pulumi.output(createdApplications.flatMap((z) => z.gatus)).apply((instances) => {
         return instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
       }),
     },

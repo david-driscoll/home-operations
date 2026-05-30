@@ -82,7 +82,6 @@ dockgeRuntime.deployStacks({
     DNS_CLUSTER_IS_PRIMARY: "false",
   },
 });
-host.addUptimeGatus();
 
 exportNodeStateToOnePassword(
   [
@@ -114,3 +113,4 @@ export const luna = {
 };
 
 createGatusDnsUptime(globals, { parent: host });
+host.addUptimeGatus();

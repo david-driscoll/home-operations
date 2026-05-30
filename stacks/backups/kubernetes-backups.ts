@@ -28,7 +28,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
   const namespaceList = await coreApi.listNamespace();
   const namespaceNames = namespaceList.items.map((ns) => ns.metadata!.name!);
 
-  pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`);
+  pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`, planManager);
 
   const volsyncBackupJobs = pulumi
     .output(
@@ -51,7 +51,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
     )
     .apply((jobs) => Array.from(new Set(jobs)))
     .apply((jobs) => {
-      pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`);
+      pulumi.log.info(`Found VolSync backup jobs: ${jobs.join(", ")}`, planManager);
       return jobs;
     });
 

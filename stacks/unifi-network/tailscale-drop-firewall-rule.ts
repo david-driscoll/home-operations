@@ -54,8 +54,8 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   });
 
   devices.apply(({ devices, peerRelays }) => {
-    pulumi.log.info(`Found ${devices.length} Tailscale devices with AT&T IPs to drop`);
-    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d).join(", ")}`);
+    pulumi.log.info(`Found ${devices.length} Tailscale devices with AT&T IPs to drop`, globals);
+    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d).join(", ")}`, globals);
   });
 
   const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
@@ -63,7 +63,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
 
   return devices.apply(({ devices, peerRelays }) => {
     if (peerRelays.length === 0) {
-      pulumi.log.info("No peer relays found, skipping firewall rule creation");
+      pulumi.log.info("No peer relays found, skipping firewall rule creation", globals);
       return;
     }
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {

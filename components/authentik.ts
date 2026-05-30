@@ -43,12 +43,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
   private readonly applicationsComponent: pulumi.ComponentResource;
   public readonly outpostsComponent: pulumi.ComponentResource;
-  public get uptimeInstances() {
-    return this._uptimeInstances;
-  }
-  private _uptimeInstances: pulumi.Output<GatusDefinition[]> = pulumi.output([]);
   public readonly cluster: pulumi.Output<ClusterDefinition>;
   private readonly authentik: pulumi.Output<AuthentikOutputs>;
+  private readonly _applications: ReturnType<typeof this.createApplication>[] = [];
+  public get applications() {
+    return this._applications;
+  }
 
   constructor(
     private readonly args: AuthentikResourcesArgs,
@@ -85,11 +85,13 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           },
         };
       })
-      .apply(async ({ application, result }) => {
+      .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        return application.spec.gatus
-          ? await awaitOutput(this.addGatusInstances(application, application.spec.gatus).apply((defs) => Object.assign(result, { definition: application, app, gatus: defs })))
-          : Object.assign(result, { definition: application, app, gatus: [] });
+        return this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
+          const r = Object.assign(result, { definition: application, app, gatus: defs });
+          (this._applications as any).push(r);
+          return r;
+        });
       });
   }
 
@@ -398,30 +400,26 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private addGatusInstances(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
-    return this.cluster
-      .apply((cluster) => {
-        return pulumi.all(
-          gatusDefinitions.map((endpoint, i) => {
-            endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
-            endpoint.group ??= definition.spec.category;
-            endpoint.group = endpoint.group === "System" || endpoint.group === cluster.title ? `Cluster: ${cluster.title}` : endpoint.group;
-            endpoint.interval ??= "2m";
-            endpoint.timeout ??= "60s";
-            endpoint.alerts ??= [];
-            endpoint.alerts.push({
-              enabled: true,
-              type: "pushover",
-            });
+    return this.cluster.apply((cluster) => {
+      return pulumi.all(
+        gatusDefinitions.map((endpoint, i) => {
+          pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} for application ${definition.spec.name} in cluster ${cluster.title}`, this);
+          endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+          endpoint.group ??= definition.spec.category;
+          endpoint.group = endpoint.group === "System" || endpoint.group === cluster.title ? `Cluster: ${cluster.title}` : endpoint.group;
+          endpoint.interval ??= "2m";
+          endpoint.timeout ??= "60s";
+          endpoint.alerts ??= [];
+          endpoint.alerts.push({
+            enabled: true,
+            type: "pushover",
+          });
 
-            const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
-            return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
-          }),
-        );
-      })
-      .apply((defs) => {
-        this._uptimeInstances = this._uptimeInstances.apply((existing) => [...existing, ...defs]);
-        return defs;
-      });
+          const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
+          return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
+        }),
+      );
+    });
   }
 }
 

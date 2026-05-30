@@ -231,7 +231,7 @@ export class FlowsManager extends pulumi.ComponentResource {
     );
 
     const response = pulumi.jsonParse(dynamicRegistration.response).apply((responseBody: { client_name: string; client_id: string; client_secret: string }) => {
-      pulumi.log.info(`Tailscale OAuth Dynamic Registration Response: ${JSON.stringify(responseBody)}`);
+      pulumi.log.info(`Tailscale OAuth Dynamic Registration Response: ${JSON.stringify(responseBody)}`, this);
       return responseBody;
     });
 

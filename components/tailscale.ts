@@ -74,7 +74,7 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
 
   return getDeviceOutput({ name: pulumi.interpolate`${name}.${globals.tailscaleDomain}` }, { provider: globals.tailscaleProvider })
     .apply((ip) => {
-      pulumi.log.info(`Got Tailscale IP for ${ip.name}: ${ip.addresses.join(", ")}`);
+      pulumi.log.info(`Got Tailscale IP for ${ip.name}: ${ip.addresses.join(", ")}`, globals);
       return ip;
     })
     .apply((z) => z.addresses[0]);

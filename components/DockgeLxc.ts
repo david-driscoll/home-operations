@@ -589,20 +589,9 @@ export class DockgeLxc extends ComponentResource {
       )
       .apply((z) => z.filter((z) => z !== null).map((z) => z!))
       .apply((z) => {
-        z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
+        z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`), this);
         return output(this.createOutpost(z.flatMap((z) => z.applications)));
       });
-
-    // setup technitium
-    stacks.apply(s => s.find(z => z.includes("technitium")))
-      .apply(found => {
-        if (!found) {
-          return;
-        }
-        
-
-      });
-
 
     return outpost;
   }
@@ -765,7 +754,7 @@ export class DockgeLxc extends ComponentResource {
             if (host.indexOf(tailscaleDomain) > -1) {
               // this is a service domain
               const service = host.replace(`.${tailscaleDomain}`, "");
-              log.info(`Creating Tailscale DNS entry for service ${service}`);
+              log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
               const tailscaleService = new remote.Command(
                 `${stackName}-tailscale-service-${service}`,
