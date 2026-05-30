@@ -9,20 +9,22 @@ services:
       - apparmor=unconfined
     cap_add:
       - ALL
+    environment:
+      PASSWORD: "op://Eris/pdm-root/password"
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
+      - /opt/stacks-data/pdm:/etc/proxmox-datacenter-manager
     labels:
       # Enable Traefik
       traefik.enable: true
 
+      # PDM has native OIDC support — no forward-auth middleware needed
       traefik.http.routers.pdm.rule: Host(`pdm.${searchDomain}`)
-      traefik.http.routers.pdm.middlewares: authentik-outpost@docker
       traefik.http.routers.pdm.entrypoints: websecure
       traefik.http.routers.pdm.service: pdm
       traefik.http.routers.pdm.tls.certresolver: le
 
       traefik.http.routers.pdm-tailscale.rule: Host(`pdm.${tailscaleDomain}`)
-      traefik.http.routers.pdm-tailscale.middlewares: authentik-outpost@docker
       traefik.http.routers.pdm-tailscale.entrypoints: tailscale
       traefik.http.routers.pdm-tailscale.service: pdm
 
