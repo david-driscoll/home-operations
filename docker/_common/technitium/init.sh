@@ -44,24 +44,51 @@ log "Technitium is ready."
 # ---------------------------------------------------------------------------
 # 3. Log in and get auth token
 # ---------------------------------------------------------------------------
-login_response=$(curl -sf --max-time 10 \
-  "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")" \
-  || die "Login failed")
+login_response=$(curl -s --max-time 10 \
+  "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")")
+[ -n "$login_response" ] || die "Login failed: no response from server"
 
-TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" \
-  || die "Failed to parse login token")
+TOKEN=$(echo "$login_response" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if d.get('status') != 'ok':
+    print(d.get('errorMessage', 'unknown error'), file=sys.stderr)
+    sys.exit(1)
+print(d['token'])
+") || die "Login failed"
 log "Login successful."
 
+_api_call() {
+  local max_time="$1" method="$2"; shift 2
+  local response curl_exit
+  response=$(curl -s --max-time "$max_time" -X POST "${ADMIN_URL}/api/${method}?token=${TOKEN}" "$@")
+  curl_exit=$?
+  if [ "$curl_exit" -ne 0 ]; then
+    log "API call failed (${method}, curl exit ${curl_exit})" >&2
+    return "$curl_exit"
+  fi
+  local api_status err_msg
+  api_status=$(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','ok'))" 2>/dev/null || echo "ok")
+  if [ "$api_status" != "ok" ]; then
+    err_msg=$(echo "$response" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(d.get('errorMessage', json.dumps(d)))
+" 2>/dev/null || echo "$response")
+    log "API error (${method}): ${err_msg}" >&2
+    return 1
+  fi
+  echo "$response"
+}
+
 api() {
-  local method="$1"; shift
-  curl -sf --max-time 15 -X POST "${ADMIN_URL}/api/${method}?token=${TOKEN}" "$@"
+  _api_call 15 "$@"
 }
 
 api_slow() {
   # Some endpoints (e.g. admin/sso/set) trigger outbound OIDC discovery requests
   # that can take >15s. Use a longer timeout for those.
-  local method="$1"; shift
-  curl -sf --max-time 60 -X POST "${ADMIN_URL}/api/${method}?token=${TOKEN}" "$@"
+  _api_call 60 "$@"
 }
 
 # ---------------------------------------------------------------------------
@@ -94,18 +121,25 @@ for i in $(seq 1 24); do
 done
 
 # Re-login after restart
-login_response=$(curl -sf --max-time 10 \
-  "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")" \
-  || die "Re-login after SSO restart failed")
-TOKEN=$(echo "$login_response" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" \
-  || die "Failed to parse re-login token")
+login_response=$(curl -s --max-time 10 \
+  "${ADMIN_URL}/api/user/login?user=admin&pass=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "${DNS_SERVER_ADMIN_PASSWORD}")")
+[ -n "$login_response" ] || die "Re-login after SSO restart failed: no response from server"
+
+TOKEN=$(echo "$login_response" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+if d.get('status') != 'ok':
+    print(d.get('errorMessage', 'unknown error'), file=sys.stderr)
+    sys.exit(1)
+print(d['token'])
+") || die "Re-login after SSO restart failed"
 log "Re-login successful after SSO restart."
 
 # ---------------------------------------------------------------------------
 # 5. Configure forwarders (Quad9 over TLS — always applied to keep in sync)
 # ---------------------------------------------------------------------------
 log "Configuring forwarders (Quad9 DoT)..."
-api "settings/set" \
+api_slow "settings/set" \
   --data-urlencode "forwarders=9.9.9.9, 149.112.112.112, [2620:fe::fe], [2620:fe::9]" \
   --data-urlencode "forwarderProtocol=Tls" \
   --data-urlencode "concurrentForwarding=true" \
