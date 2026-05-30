@@ -3,14 +3,18 @@ groups:
     interval: 30s
     rules:
       # Alert when a Docker container has stopped running (not seen for 5 minutes).
-      # Uses max_over_time with a 10m window to avoid the Prometheus staleness issue:
+      # Uses max_over_time to avoid the Prometheus staleness issue:
       # plain `time() - container_last_seen > 300` can never fire because the metric
       # becomes stale at exactly T+300s (the default lookback-delta), so the condition
       # and metric availability are mutually exclusive.
+      # Window must be significantly larger than the detection threshold (300s):
+      # with [10m], max_over_time loses the last value at T+600 and the alert
+      # auto-resolves ~5 min after firing, even if the container is still down.
+      # Using [1h] keeps the alert active for ~55 min before expiring.
       - alert: DockerContainerDown
         expr: |
           (
-            time() - max_over_time(container_last_seen{name!="", name!~".*POD.*"}[10m])
+            time() - max_over_time(container_last_seen{name!="", name!~".*POD.*"}[1h])
           ) > 300
         for: 0m
         labels:
