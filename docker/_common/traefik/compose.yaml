@@ -46,7 +46,7 @@ services:
       - dockge_default
   error-pages:
     container_name: error-pages
-    image: ghcr.io/tarampampam/error-pages@4.2@sha256:7c57706501e6ad4ed91031c5b529591395d7cbd509a311f8210236bb608f6557
+    image: ghcr.io/tarampampam/error-pages@sha256:b8ded6f847df91075429cf79cb9491bfd7d96de69936555498a2ff0614e003e4
     environment:
       # TEMPLATE_NAME: "ghost"
       # disabled/random-on-startup/random-on-each-request/random-hourly/random-daily
