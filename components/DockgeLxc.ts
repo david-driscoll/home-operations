@@ -567,7 +567,7 @@ export class DockgeLxc extends ComponentResource {
       unique([...hostFiles, ...commonFiles].filter((z) => z !== ".keep")),
     );
 
-    return stacks
+    const outpost = stacks
       .apply((stacks) =>
         output(
           stacks.map(async (stackName) => {
@@ -592,6 +592,19 @@ export class DockgeLxc extends ComponentResource {
         z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`));
         return output(this.createOutpost(z.flatMap((z) => z.applications)));
       });
+
+    // setup technitium
+    stacks.apply(s => s.find(z => z.includes("technitium")))
+      .apply(found => {
+        if (!found) {
+          return;
+        }
+        
+
+      });
+
+
+    return outpost;
   }
 
   private async createOutpost(depends: ApplicationReturn[]) {
