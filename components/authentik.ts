@@ -87,11 +87,13 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        return this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
-          const r = Object.assign(result, { definition: application, app, gatus: defs });
-          (this._applications as any).push(r);
-          return r;
-        });
+        return pulumi.output(
+          this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
+            const r = Object.assign(result, { definition: application, app, gatus: defs });
+            (this._applications as any).push(r);
+            return r;
+          }),
+        );
       });
   }
 
@@ -413,7 +415,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
             enabled: true,
             type: "pushover",
           });
-          pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} for application ${definition.spec.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
+          pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
 
           const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
           return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);

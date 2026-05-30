@@ -68,15 +68,16 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
 // });
 // pbs.addHostMount("/data");
 
-dockgeRuntime.deployStacks({
-  dependsOn: [],
-  variables: {
-    PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
-    PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
-    DNS_CLUSTER_IS_PRIMARY: "false",
-  },
-});
-host.addUptimeGatus();
+dockgeRuntime
+  .deployStacks({
+    dependsOn: [],
+    variables: {
+      PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
+      PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
+      DNS_CLUSTER_IS_PRIMARY: "false",
+    },
+  })
+  .apply(() => host.addUptimeGatus());
 
 exportNodeStateToOnePassword(
   [

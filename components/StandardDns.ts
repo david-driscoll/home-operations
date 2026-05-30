@@ -125,7 +125,7 @@ const gatusDnsRecords: Output<GatusDefinition>[] = [];
 export function createGatusDnsUptime(globals: GlobalResources, options: { parent?: ComponentResource }) {
   const dnsParent = new ComponentResource("custom:home:StandardDnsParent", "standard-dns", options ?? {});
 
-  all([gatusDnsRecords]).apply(async ([endpoints]) => {
+  return all([gatusDnsRecords]).apply(async ([endpoints]) => {
     return addUptimeGatus(`dns-${getStack()}`, globals, { endpoints: [...endpoints] }, dnsParent);
   });
 }

@@ -74,14 +74,16 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
 });
 pbs.addHostMount("/data");
 
-dockgeRuntime.deployStacks({
-  dependsOn: [pbs],
-  variables: {
-    PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
-    PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
-    DNS_CLUSTER_IS_PRIMARY: "false",
-  },
-});
+dockgeRuntime
+  .deployStacks({
+    dependsOn: [pbs],
+    variables: {
+      PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
+      PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
+      DNS_CLUSTER_IS_PRIMARY: "false",
+    },
+  })
+  .apply(() => host.addUptimeGatus());
 
 exportNodeStateToOnePassword(
   [
