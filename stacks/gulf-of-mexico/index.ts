@@ -83,7 +83,8 @@ dockgeRuntime
       DNS_CLUSTER_IS_PRIMARY: "false",
     },
   })
-  .apply(() => host.addUptimeGatus());
+  .apply(() => host.addUptimeGatus())
+  .apply(() => createGatusDnsUptime(globals, { parent: host }));
 
 exportNodeStateToOnePassword(
   [
@@ -113,6 +114,3 @@ export const luna = {
   dockge: getDockageProperties(dockgeRuntime),
   backup: host.backupVolumes!,
 };
-
-createGatusDnsUptime(globals, { parent: host });
-host.addUptimeGatus();

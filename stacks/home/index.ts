@@ -181,10 +181,13 @@ const alphaSitePveVariables = {
   PROXMOX_PVE_TARGETS: `["${alphaSiteHost.tailscaleIpAddress}:8006"]`,
 };
 
-celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }).apply(() => celestiaHost.addUptimeGatus());
-alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: alphaSitePveVariables }).apply(() => alphaSiteHost.addUptimeGatus());
-
-pulumi.all([createGatusDnsUptime(globals, { parent: alphaSiteHost }), twilightSparkleHost.addUptimeGatus()]);
+pulumi
+  .all([
+    celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }).apply(() => celestiaHost.addUptimeGatus()),
+    alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: alphaSitePveVariables }).apply(() => alphaSiteHost.addUptimeGatus()),
+    twilightSparkleHost.addUptimeGatus(),
+  ])
+  .apply(() => createGatusDnsUptime(globals, { parent: alphaSiteHost }));
 
 exportNodeStateToOnePassword(
   [
