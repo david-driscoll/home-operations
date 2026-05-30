@@ -434,9 +434,9 @@ __PBS_GROUPS__`;
           },
           backrest: {
             fields: {
-              publicKey: { type: TypeEnum.String, value: backrestPrivateKey.publicKeyPem },
-              privateKey: { type: TypeEnum.String, value: backrestPrivateKey.privateKeyPem },
-              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id },
+              publicKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.publicKeyPem },
+              privateKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.privateKeyPem },
+              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id, },
             },
           },
         },

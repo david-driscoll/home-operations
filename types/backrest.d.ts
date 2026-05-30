@@ -74,13 +74,13 @@ export type IONiceLevel = "IO_DEFAULT" | "IO_BEST_EFFORT_LOW" | "IO_BEST_EFFORT_
 export type CPUNiceLevel = "CPU_DEFAULT" | "CPU_HIGH" | "CPU_LOW";
 
 export interface BackrestConfig {
-  modno?: number;
-  version?: number;
-  instance?: string;
-  repos?: BackrestRepository[];
-  plans?: BackrestPlan[];
-  auth?: Auth;
-  multihost?: Multihost;
+  modno: number;
+  version: number;
+  instance: string;
+  repos: BackrestRepository[];
+  plans: BackrestPlan[];
+  auth: Auth;
+  multihost: Multihost;
 }
 
 export interface PrivateKey {
@@ -96,15 +96,15 @@ export interface Multihost {
 }
 
 export interface MultihostPeer {
-  instanceId?: string;
-  keyId?: string;
-  keyIdVerified?: boolean;
-  permissions?: Permission[];
-  instanceUrl?: string;
+  instanceId: string;
+  keyId: string;
+  keyIdVerified: boolean;
+  permissions: Permission[];
+  instanceUrl: string;
 }
 
 export interface Permission {
-  type?: "PERMISSION_UNKNOWN" | "PERMISSION_READ_OPERATIONS" | "PERMISSION_READ_CONFIG" | "PERMISSION_READ_WRITE_CONFIG";
+  type: "PERMISSION_UNKNOWN" | "PERMISSION_READ_OPERATIONS" | "PERMISSION_READ_CONFIG" | "PERMISSION_READ_WRITE_CONFIG";
   scopes?: string[];
 }
 

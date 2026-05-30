@@ -1,19 +1,22 @@
 import { ClusterDefinition, GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { kebabCase } from "moderndash";
 import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
-import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
+import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import * as minio from "@pulumi/minio";
 import { CopyToRemote } from "@pulumi/command/remote/index.js";
 
 export interface PbsDetails {
   backupServerConnection: types.input.remote.ConnectionArgs;
   dockgeConnection: types.input.remote.ConnectionArgs;
+  publicKey: string;
+  privateKey: string;
+  privateKeyId: string;
   cluster: ClusterDefinition;
   tags: string[];
   title: string;
@@ -316,13 +319,13 @@ export class BackupPlanManager extends ComponentResource {
 
   public finalize() {
     all([this.source, this.destinations]).apply(async ([source, destinations]) => {
-      await updateBackrestConfiguration(source.dockgeConnection, async (ssh, updatedConfig) => {
+      await updateBackrestConfiguration(source, destinations, async (ssh, updatedConfig) => {
         await updateRepos(updatedConfig, this.repos);
         await updatePlans(updatedConfig, this.plans);
       });
       this.createUptime(source);
       for (const destination of destinations) {
-        await updateBackrestConfiguration(destination.dockgeConnection, async (ssh, updatedConfig) => await updateRepos(updatedConfig, this.repos));
+        await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => await updateRepos(updatedConfig, this.repos));
         this.createUptime(destination);
       }
     });
@@ -330,9 +333,11 @@ export class BackupPlanManager extends ComponentResource {
 }
 
 async function updateBackrestConfiguration(
-  connection: UnwrappedObject<PbsDetails["dockgeConnection"]>,
+  details: UnwrappedObject<PbsDetails>,
+  peers: UnwrappedArray<PbsDetails>,
   func: (ssh: NodeSSH, updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }) => Promise<void>,
 ) {
+  const connection = details.dockgeConnection;
   const ssh = new NodeSSH();
   await ssh.connect({
     host: connection.host,
@@ -340,13 +345,69 @@ async function updateBackrestConfiguration(
   });
 
   const currentConfig = (await ssh.execCommand("cat /opt/stacks-data/backrest/config/config.json")).stdout;
-  let updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] } = { repos: [], plans: [] };
+  let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 2, modno: 1, instance: `${details.cluster.title}`, auth: { disabled: true }, multihost: {} };
   try {
-    updatedConfig = JSON.parse(currentConfig) as { repos: BackrestRepository[]; plans: BackrestPlan[] };
+    updatedConfig = JSON.parse(currentConfig) as BackrestConfig;
   } catch (e) {
     log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
     log.warn(`Current config content: ${currentConfig}`);
   }
+
+  if (!updatedConfig.version) {
+    updatedConfig.version = 2;
+  }
+  if (!updatedConfig.modno) {
+    updatedConfig.modno = 1;
+  }
+  if (!updatedConfig.instance) {
+    updatedConfig.instance = details.cluster.key;
+  }
+  if (!updatedConfig.auth) {
+    updatedConfig.auth = { disabled: true };
+  }
+
+  updatedConfig.multihost = {
+    identity: {
+      keyId: details.privateKeyId,
+      ed25519priv: details.privateKey,
+      ed25519pub: details.publicKey,
+    },
+    authorizedClients: peers.map((peer) => ({
+      instanceId: peer.cluster.key,
+      keyId: peer.privateKeyId,
+      keyIdVerified: true,
+      ed25519pub: peer.publicKey,
+      instanceUrl: `https://${peer.backupServerConnection.host}`,
+      permissions: [
+        {
+          type: "PERMISSION_READ_CONFIG",
+          scopes: ["*"],
+        },
+        {
+          type: "PERMISSION_READ_OPERATIONS",
+          scopes: ["*"],
+        },
+      ],
+    })),
+    knownHosts: peers.map((peer) => ({
+      instanceId: peer.cluster.key,
+      keyId: peer.privateKeyId,
+      keyIdVerified: true,
+      ed25519pub: peer.publicKey,
+      instanceUrl: `https://${peer.backupServerConnection.host}`,
+      permissions: [
+        {
+          type: "PERMISSION_READ_CONFIG",
+          scopes: ["*"],
+        },
+        {
+          type: "PERMISSION_READ_OPERATIONS",
+          scopes: ["*"],
+        },
+      ],
+    })),
+  };
+
   updatedConfig.repos = updatedConfig.repos || [];
   updatedConfig.plans = updatedConfig.plans || [];
 

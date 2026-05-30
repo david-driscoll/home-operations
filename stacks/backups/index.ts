@@ -1,4 +1,4 @@
-import { BackupPlanManager } from "./BackupPlanManager.ts";
+import { BackupPlanManager, PbsDetails } from "./BackupPlanManager.ts";
 import { createClusterDefinition, GlobalResources, KubernetesClusterDefinition } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
@@ -75,7 +75,7 @@ backupPlanManager.createMinioBucketBackupJob({
   globals,
 });
 
-async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
+async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>): Promise<PbsDetails> {
   try {
     const dockgeItem = await op.getItemByTitle(item.fields.dockge.value!);
     return {
@@ -90,6 +90,9 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>) {
       cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
       tags: item.tags,
       title: item.title,
+      publicKey: item.sections.backrest.fields.publicKey.value!,
+      privateKey: item.sections.backrest.fields.privateKey.value!,
+      privateKeyId: item.sections.backrest.fields.privateKeyId.value!,
     };
   } catch (error) {
     pulumi.log.error(`Error getting backup server details: ${error}`);
