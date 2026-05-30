@@ -48,7 +48,6 @@ services:
       - "8053:8053/tcp"
       - "8053:8053/udp"
       - "5380:5380/tcp"
-      - "53443:53443/tcp"
     volumes:
       - /opt/stacks-data/${APP}/config:/etc/dns
     networks:

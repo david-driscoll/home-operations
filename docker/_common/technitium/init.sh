@@ -122,11 +122,10 @@ elif [ "${DNS_CLUSTER_IS_PRIMARY:-false}" = "true" ]; then
     >/dev/null || die "Cluster init (primary) failed"
   log "Cluster initialised as primary."
 else
-  log "Joining cluster as SECONDARY (primary: ${DNS_CLUSTER_PRIMARY_IP}:53443)..."
+  log "Joining cluster as SECONDARY (primary: ${DNS_CLUSTER_PRIMARY_URL})..."
   api "admin/cluster/initJoin" \
-    --data-urlencode "primaryNodeUrl=https://${DNS_CLUSTER_PRIMARY_IP}:53443/" \
+    --data-urlencode "primaryNodeUrl=${DNS_CLUSTER_PRIMARY_URL}/" \
     --data-urlencode "primaryNodeIpAddress=${DNS_CLUSTER_PRIMARY_IP}" \
-    --data-urlencode "ignoreCertificateErrors=true" \
     --data-urlencode "primaryNodeUsername=admin" \
     --data-urlencode "primaryNodePassword=${DNS_SERVER_ADMIN_PASSWORD}" \
     --data-urlencode "secondaryNodeIpAddresses=${DNS_CLUSTER_NODE_IP}" \
