@@ -80,7 +80,8 @@ export interface BackrestConfig {
   repos: BackrestRepository[];
   plans: BackrestPlan[];
   auth: Auth;
-  multihost: Multihost;
+  multihost?: Multihost;
+  sync?: any;
 }
 
 export interface PrivateKey {

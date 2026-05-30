@@ -366,47 +366,50 @@ async function updateBackrestConfiguration(
     updatedConfig.auth = { disabled: true };
   }
 
-  updatedConfig.multihost = {
-    // identity: {
-    //   keyId: details.privateKeyId,
-    //   ed25519priv: details.privateKey,
-    //   ed25519pub: details.publicKey,
-    // },
-    // authorizedClients: peers.map((peer) => ({
-    //   instanceId: peer.cluster.key,
-    //   keyId: peer.privateKeyId,
-    //   keyIdVerified: true,
-    //   ed25519pub: peer.publicKey,
-    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
-    //   permissions: [
-    //     {
-    //       type: "PERMISSION_READ_CONFIG",
-    //       scopes: ["*"],
-    //     },
-    //     {
-    //       type: "PERMISSION_READ_OPERATIONS",
-    //       scopes: ["*"],
-    //     },
-    //   ],
-    // })),
-    // knownHosts: peers.map((peer) => ({
-    //   instanceId: peer.cluster.key,
-    //   keyId: peer.privateKeyId,
-    //   keyIdVerified: true,
-    //   ed25519pub: peer.publicKey,
-    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
-    //   permissions: [
-    //     {
-    //       type: "PERMISSION_READ_CONFIG",
-    //       scopes: ["*"],
-    //     },
-    //     {
-    //       type: "PERMISSION_READ_OPERATIONS",
-    //       scopes: ["*"],
-    //     },
-    //   ],
-    // })),
-  };
+  delete updatedConfig.multihost;
+  delete updatedConfig.sync;
+
+  // updatedConfig.multihost = {
+  // identity: {
+  //   keyId: details.privateKeyId,
+  //   ed25519priv: details.privateKey,
+  //   ed25519pub: details.publicKey,
+  // },
+  // authorizedClients: peers.map((peer) => ({
+  //   instanceId: peer.cluster.key,
+  //   keyId: peer.privateKeyId,
+  //   keyIdVerified: true,
+  //   ed25519pub: peer.publicKey,
+  //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+  //   permissions: [
+  //     {
+  //       type: "PERMISSION_READ_CONFIG",
+  //       scopes: ["*"],
+  //     },
+  //     {
+  //       type: "PERMISSION_READ_OPERATIONS",
+  //       scopes: ["*"],
+  //     },
+  //   ],
+  // })),
+  // knownHosts: peers.map((peer) => ({
+  //   instanceId: peer.cluster.key,
+  //   keyId: peer.privateKeyId,
+  //   keyIdVerified: true,
+  //   ed25519pub: peer.publicKey,
+  //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+  //   permissions: [
+  //     {
+  //       type: "PERMISSION_READ_CONFIG",
+  //       scopes: ["*"],
+  //     },
+  //     {
+  //       type: "PERMISSION_READ_OPERATIONS",
+  //       scopes: ["*"],
+  //     },
+  //   ],
+  // })),
+  // };
 
   updatedConfig.repos = updatedConfig.repos || [];
   updatedConfig.plans = updatedConfig.plans || [];
