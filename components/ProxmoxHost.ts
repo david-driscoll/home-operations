@@ -457,7 +457,7 @@ echo "PVE OIDC realms, groups, and ACLs configured"
     // );
   }
   public addUptimeGatus() {
-    addUptimeGatus(
+    return addUptimeGatus(
       `proxmox-host-${this.name}`,
       this.args.globals,
       {
