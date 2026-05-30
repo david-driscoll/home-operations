@@ -367,45 +367,45 @@ async function updateBackrestConfiguration(
   }
 
   updatedConfig.multihost = {
-    identity: {
-      keyId: details.privateKeyId,
-      ed25519priv: details.privateKey,
-      ed25519pub: details.publicKey,
-    },
-    authorizedClients: peers.map((peer) => ({
-      instanceId: peer.cluster.key,
-      keyId: peer.privateKeyId,
-      keyIdVerified: true,
-      ed25519pub: peer.publicKey,
-      instanceUrl: `https://${peer.backupServerConnection.host}`,
-      permissions: [
-        {
-          type: "PERMISSION_READ_CONFIG",
-          scopes: ["*"],
-        },
-        {
-          type: "PERMISSION_READ_OPERATIONS",
-          scopes: ["*"],
-        },
-      ],
-    })),
-    knownHosts: peers.map((peer) => ({
-      instanceId: peer.cluster.key,
-      keyId: peer.privateKeyId,
-      keyIdVerified: true,
-      ed25519pub: peer.publicKey,
-      instanceUrl: `https://${peer.backupServerConnection.host}`,
-      permissions: [
-        {
-          type: "PERMISSION_READ_CONFIG",
-          scopes: ["*"],
-        },
-        {
-          type: "PERMISSION_READ_OPERATIONS",
-          scopes: ["*"],
-        },
-      ],
-    })),
+    // identity: {
+    //   keyId: details.privateKeyId,
+    //   ed25519priv: details.privateKey,
+    //   ed25519pub: details.publicKey,
+    // },
+    // authorizedClients: peers.map((peer) => ({
+    //   instanceId: peer.cluster.key,
+    //   keyId: peer.privateKeyId,
+    //   keyIdVerified: true,
+    //   ed25519pub: peer.publicKey,
+    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+    //   permissions: [
+    //     {
+    //       type: "PERMISSION_READ_CONFIG",
+    //       scopes: ["*"],
+    //     },
+    //     {
+    //       type: "PERMISSION_READ_OPERATIONS",
+    //       scopes: ["*"],
+    //     },
+    //   ],
+    // })),
+    // knownHosts: peers.map((peer) => ({
+    //   instanceId: peer.cluster.key,
+    //   keyId: peer.privateKeyId,
+    //   keyIdVerified: true,
+    //   ed25519pub: peer.publicKey,
+    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+    //   permissions: [
+    //     {
+    //       type: "PERMISSION_READ_CONFIG",
+    //       scopes: ["*"],
+    //     },
+    //     {
+    //       type: "PERMISSION_READ_OPERATIONS",
+    //       scopes: ["*"],
+    //     },
+    //   ],
+    // })),
   };
 
   updatedConfig.repos = updatedConfig.repos || [];
@@ -426,46 +426,46 @@ async function updateBackrestConfiguration(
 }
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: Map<string, BackrestRepository>) {
   for (const repo of repos.values()) {
-    // const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-    // if (jobIndex >= 0) {
-    //   updatedConfig.repos[jobIndex] = {
-    //     ...updatedConfig.repos[jobIndex],
-    //     uri: repo.uri,
-    //     password: repo.password,
-    //     env: repo.env,
-    //     flags: repo.flags,
-    //     prunePolicy: repo.prunePolicy,
-    //     checkPolicy: repo.checkPolicy,
-    //     hooks: repo.hooks,
-    //     commandPrefix: repo.commandPrefix,
-    //     autoUnlock: repo.autoUnlock,
-    //   };
-    // } else {
-    updatedConfig.repos.push({
-      ...repo,
-      autoInitialize: true,
-    });
-    // }
+    const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+    if (jobIndex >= 0) {
+      updatedConfig.repos[jobIndex] = {
+        ...updatedConfig.repos[jobIndex],
+        uri: repo.uri,
+        password: repo.password,
+        env: repo.env,
+        flags: repo.flags,
+        prunePolicy: repo.prunePolicy,
+        checkPolicy: repo.checkPolicy,
+        hooks: repo.hooks,
+        commandPrefix: repo.commandPrefix,
+        autoUnlock: repo.autoUnlock,
+      };
+    } else {
+      updatedConfig.repos.push({
+        ...repo,
+        autoInitialize: true,
+      });
+    }
   }
 }
 function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: Map<string, BackrestPlan>) {
   for (const plan of plans.values()) {
-    // const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
-    // if (jobIndex >= 0) {
-    //   updatedConfig.plans[jobIndex] = {
-    //     ...updatedConfig.plans[jobIndex],
-    //     paths: plan.paths,
-    //     excludes: plan.excludes,
-    //     iexcludes: plan.iexcludes,
-    //     schedule: plan.schedule,
-    //     retention: plan.retention,
-    //     hooks: plan.hooks,
-    //     backupFlags: plan.backupFlags,
-    //     skipIfUnchanged: plan.skipIfUnchanged,
-    //     repo: plan.repo,
-    //   };
-    // } else {
-    updatedConfig.plans.push(plan);
-    // }
+    const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+    if (jobIndex >= 0) {
+      updatedConfig.plans[jobIndex] = {
+        ...updatedConfig.plans[jobIndex],
+        paths: plan.paths,
+        excludes: plan.excludes,
+        iexcludes: plan.iexcludes,
+        schedule: plan.schedule,
+        retention: plan.retention,
+        hooks: plan.hooks,
+        backupFlags: plan.backupFlags,
+        skipIfUnchanged: plan.skipIfUnchanged,
+        repo: plan.repo,
+      };
+    } else {
+      updatedConfig.plans.push(plan);
+    }
   }
 }
