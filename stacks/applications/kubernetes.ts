@@ -81,39 +81,45 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
   });
 
-  const createdApplications = applications.map((app) =>
-    applicationManager.createApplication(app).apply((res) => {
-      if (res.provider && res.isProxy === false) {
-        new pk8s.core.v1.Secret(
-          `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
-          {
-            metadata: {
-              name: `${app.metadata!.name!}-oidc-credentials`,
-              namespace: app.metadata.namespace ?? clusterDefinition.key,
-            },
-            stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
-          },
-          {
-            parent: applicationManager,
-            provider,
-            dependsOn: [res.provider],
-          },
-        );
-      }
-      return res;
-    }),
-  );
-
-  addUptimeGatus(
-    `cluster-apps-${clusterDefinition.key}`,
-    globals,
-    {
-      endpoints: pulumi.output(createdApplications.flatMap((z) => z.gatus)).apply((instances) => {
-        return instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
-      }),
-    },
-    applicationManager,
-  );
+  const createdApplications = pulumi
+    .output(
+      applications.map((app) =>
+        applicationManager.createApplication(app).apply((res) => {
+          if (res.provider && res.isProxy === false) {
+            new pk8s.core.v1.Secret(
+              `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+              {
+                metadata: {
+                  name: `${app.metadata!.name!}-oidc-credentials`,
+                  namespace: app.metadata.namespace ?? clusterDefinition.key,
+                },
+                stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+              },
+              {
+                parent: applicationManager,
+                provider,
+                dependsOn: [res.provider],
+              },
+            );
+          }
+          return res;
+        }),
+      ),
+    )
+    .apply((apps) => {
+      return addUptimeGatus(
+        `cluster-apps-${clusterDefinition.key}`,
+        globals,
+        {
+          endpoints: applicationManager.applications
+            .apply((apps) => apps.flatMap((z) => z.gatus))
+            .apply((instances) => {
+              return instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
+            }),
+        },
+        applicationManager,
+      ).apply(() => apps);
+    });
 
   const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
 
@@ -122,7 +128,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     kubeconfig: generateKubeConfig(outpostCredential),
     verifySsl: true,
   });
-  const proxyProviders = pulumi.all(createdApplications).apply((apps) => apps.filter((z) => z.isProxy).map((z) => z.provider));
+  const proxyProviders = createdApplications.apply((apps) => apps.filter((z) => z.isProxy).map((z) => z.provider));
 
   const outpost = new authentik.Outpost(
     clusterDefinition.key,
