@@ -42,6 +42,7 @@ services:
       - ./letsencrypt:/letsencrypt
       - ./config.yaml:/config/config.yaml
       - /opt/stacks-data/${APP}/dynamic:/config/dynamic
+      - ./dynamic/middlewares.yaml:/config/dynamic/middlewares.yaml
     networks:
       - dockge_default
   error-pages:
