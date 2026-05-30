@@ -35,7 +35,7 @@ services:
       - BACKREST_DATA=/data
       - BACKREST_CONFIG=/config/config.json
       - XDG_CACHE_HOME=/cache
-      - TMPDIR=/tmpx
+      - TMPDIR=/tmp
       - TZ=${TIMEZONE}
     networks:
       - dockge_default
