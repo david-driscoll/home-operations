@@ -11,6 +11,9 @@ import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
 import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
+import { Application } from "sdks/authentik/bin/application.js";
+import { ProviderOauth2 } from "sdks/authentik/bin/providerOauth2.js";
+import { ProviderProxy } from "sdks/authentik/bin/providerProxy.js";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {
@@ -45,7 +48,30 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly cluster: pulumi.Output<ClusterDefinition>;
   private readonly authentik: pulumi.Output<AuthentikOutputs>;
-  private readonly _applications: pulumi.Unwrap<ReturnType<typeof this.createApplication>>[] = [];
+  private _applications: pulumi.Output<
+    ((
+      | {
+          provider: ProviderProxy;
+          isProxy: true;
+          config?: undefined;
+          oidcCredentials?: undefined;
+          clientId?: undefined;
+          clientSecret?: undefined;
+        }
+      | {
+          provider: ProviderOauth2;
+          config: pulumi.Output<authentik.GetProviderOauth2ConfigResult>;
+          oidcCredentials: OnePasswordItem;
+          isProxy: false;
+          clientId: string;
+          clientSecret: string;
+        }
+      | {
+          provider: undefined;
+          isProxy: false;
+        }
+    ) & { definition: ApplicationDefinitionSchema; app: Application; gatus: GatusDefinition[] })[]
+  > = pulumi.output([]);
   public get applications() {
     return this._applications;
   }
@@ -87,17 +113,15 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        return pulumi
-          .output(
-            this.addGatusInstances(application, application.spec.gatus ?? []).apply((defs) => {
-              const r = Object.assign(result, { definition: application, app, gatus: defs });
-              return r;
-            }),
-          )
-          .apply((r) => {
-            (this._applications as any).push(r);
-            return r;
-          });
+        const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply((defs) => {
+          const r = Object.assign(result, { definition: application, app, gatus: defs });
+          return r;
+        });
+        return r;
+      })
+      .apply((result) => {
+        this._applications = this._applications.apply((apps) => [...apps, result]);
+        return result;
       });
   }
 

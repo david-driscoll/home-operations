@@ -457,15 +457,16 @@ echo "PVE OIDC realms, groups, and ACLs configured"
     // );
   }
   public addUptimeGatus() {
-    for (const app of this.applicationManager.applications) {
-      pulumi.log.info(`Adding Gatus endpoints for application ${app.app.name} in cluster ${app.definition.spec.category}`, this);
-    }
     return addUptimeGatus(
       `proxmox-host-${this.name}`,
       this.args.globals,
       {
         endpoints: pulumi
           .output(this.applicationManager.applications)
+          .apply((apps) => {
+            apps.forEach((app) => pulumi.log.info(`Adding Gatus endpoints for application ${app.app.name} in cluster ${app.definition.spec.category}`, this));
+            return apps;
+          })
           .apply((instances) => instances.flatMap((z) => z.gatus).map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
       },
       this.applicationManager,
