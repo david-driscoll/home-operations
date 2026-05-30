@@ -108,9 +108,9 @@ log "Forwarders configured."
 # ---------------------------------------------------------------------------
 # 6. Cluster init or join (idempotent — skipped if already in cluster)
 # ---------------------------------------------------------------------------
-cluster_status=$(api "admin/cluster/get" || echo '{"status":"error"}')
+cluster_status=$(api "admin/cluster/state" || echo '{"status":"error"}')
 in_cluster=$(echo "$cluster_status" | python3 -c \
-  "import sys,json; d=json.load(sys.stdin); print('true' if d.get('response',{}).get('enabled') else 'false')" 2>/dev/null || echo "false")
+  "import sys,json; d=json.load(sys.stdin); print('true' if d.get('response',{}).get('clusterInitialized') else 'false')" 2>/dev/null || echo "false")
 
 if [ "$in_cluster" = "true" ]; then
   log "Already in cluster — skipping cluster init/join."
@@ -126,6 +126,7 @@ else
   api "admin/cluster/initJoin" \
     --data-urlencode "primaryNodeUrl=${DNS_CLUSTER_PRIMARY_URL}/" \
     --data-urlencode "primaryNodeIpAddress=${DNS_CLUSTER_PRIMARY_IP}" \
+    --data-urlencode "ignoreCertificateErrors=true" \
     --data-urlencode "primaryNodeUsername=admin" \
     --data-urlencode "primaryNodePassword=${DNS_SERVER_ADMIN_PASSWORD}" \
     --data-urlencode "secondaryNodeIpAddresses=${DNS_CLUSTER_NODE_IP}" \
