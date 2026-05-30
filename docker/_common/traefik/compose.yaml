@@ -42,7 +42,6 @@ services:
       - ./letsencrypt:/letsencrypt
       - ./config.yaml:/config/config.yaml
       - /opt/stacks-data/${APP}/dynamic:/config/dynamic
-      - ./dynamic/compression.yaml:/config/dynamic/compression.yaml
     networks:
       - dockge_default
 x-dockge:
