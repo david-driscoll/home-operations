@@ -176,10 +176,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       const providerConfig = authentik.getProviderOauth2ConfigOutput({ name: provider.name }, { parent: provider });
 
       const oidcCredentials = new OnePasswordItem(
-        `${resourceName}-oidc-credentials`,
+        `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
         {
           category: CategoryEnum.APICredential,
-          title: pulumi.interpolate`${resourceName}-oidc-credentials`,
+          title: pulumi.interpolate`${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
