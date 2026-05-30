@@ -31,13 +31,29 @@ sgcCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
 equestriaCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
 
 dockgeDetails.apply((details) => {
-  for (const detail of details) {
-    backupPlanManager.createBackrestPlan(`dockge-${detail.name}`, {
-      title: detail.title,
-      path: "/opt/stacks-data/",
-      repository: `dockge-${detail.name}`,
+  return details.map((detail) => {
+    const job = backupPlanManager.createBackupJob(backupPlanManager.source, {
+      name: pulumi.interpolate`Dockge Backup :: ${detail.title}`,
+      schedule: "0 10 * * *",
+      sourceType: "sftp",
+      source: pulumi.interpolate`${detail.hostname}:3022:/opt/stacks-data/`,
+      destinationType: "local",
+      destination: pulumi.interpolate`/data/staging/${detail.name}/`,
     });
-  }
+    const plan = backupPlanManager.createBackrestPlan(detail.name, {
+      title: detail.title,
+      path: pulumi.interpolate`/data/staging/${detail.name}/`,
+      repository: detail.name,
+      planConfig: {
+        schedule: {
+          cron: "0 3 * * *",
+          clock: "CLOCK_LOCAL",
+        },
+      },
+    });
+
+    return [job, plan] as const;
+  });
 });
 
 backupPlanManager.createBackrestPlan("immich", {
@@ -106,6 +122,7 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   try {
     return {
       name: item.fields.name.value!,
+      hostname: item.sections.ssh.fields.hostname.value!,
       tags: item.tags,
       title: item.title,
     };

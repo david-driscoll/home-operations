@@ -426,46 +426,46 @@ async function updateBackrestConfiguration(
 }
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: Map<string, BackrestRepository>) {
   for (const repo of repos.values()) {
-    const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
-    if (jobIndex >= 0) {
-      updatedConfig.repos[jobIndex] = {
-        ...updatedConfig.repos[jobIndex],
-        uri: repo.uri,
-        password: repo.password,
-        env: repo.env,
-        flags: repo.flags,
-        prunePolicy: repo.prunePolicy,
-        checkPolicy: repo.checkPolicy,
-        hooks: repo.hooks,
-        commandPrefix: repo.commandPrefix,
-        autoUnlock: repo.autoUnlock,
-      };
-    } else {
-      updatedConfig.repos.push({
-        ...repo,
-        autoInitialize: true,
-      });
-    }
+    // const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+    // if (jobIndex >= 0) {
+    //   updatedConfig.repos[jobIndex] = {
+    //     ...updatedConfig.repos[jobIndex],
+    //     uri: repo.uri,
+    //     password: repo.password,
+    //     env: repo.env,
+    //     flags: repo.flags,
+    //     prunePolicy: repo.prunePolicy,
+    //     checkPolicy: repo.checkPolicy,
+    //     hooks: repo.hooks,
+    //     commandPrefix: repo.commandPrefix,
+    //     autoUnlock: repo.autoUnlock,
+    //   };
+    // } else {
+    updatedConfig.repos.push({
+      ...repo,
+      autoInitialize: true,
+    });
+    // }
   }
 }
 function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: Map<string, BackrestPlan>) {
   for (const plan of plans.values()) {
-    const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
-    if (jobIndex >= 0) {
-      updatedConfig.plans[jobIndex] = {
-        ...updatedConfig.plans[jobIndex],
-        paths: plan.paths,
-        excludes: plan.excludes,
-        iexcludes: plan.iexcludes,
-        schedule: plan.schedule,
-        retention: plan.retention,
-        hooks: plan.hooks,
-        backupFlags: plan.backupFlags,
-        skipIfUnchanged: plan.skipIfUnchanged,
-        repo: plan.repo,
-      };
-    } else {
-      updatedConfig.plans.push(plan);
-    }
+    // const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+    // if (jobIndex >= 0) {
+    //   updatedConfig.plans[jobIndex] = {
+    //     ...updatedConfig.plans[jobIndex],
+    //     paths: plan.paths,
+    //     excludes: plan.excludes,
+    //     iexcludes: plan.iexcludes,
+    //     schedule: plan.schedule,
+    //     retention: plan.retention,
+    //     hooks: plan.hooks,
+    //     backupFlags: plan.backupFlags,
+    //     skipIfUnchanged: plan.skipIfUnchanged,
+    //     repo: plan.repo,
+    //   };
+    // } else {
+    updatedConfig.plans.push(plan);
+    // }
   }
 }

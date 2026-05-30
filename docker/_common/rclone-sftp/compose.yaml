@@ -9,7 +9,7 @@ services:
     env_file:
       - path: .env
     command: >-
-      serve sftp ${DATA_ROOT} --addr :${SFTP_PORT} --authorized-keys
+      serve sftp ${DATA_ROOT} --addr :2022 --authorized-keys
       /config/ssh/authorized_keys
     volumes:
       - ${DATA_ROOT}:${DATA_ROOT}:rw
@@ -23,6 +23,30 @@ services:
       traefik.tcp.routers.rclone-sftp.rule: HostSNI(`*`)
       traefik.tcp.routers.rclone-sftp.entrypoints: sftp
       traefik.tcp.services.rclone-sftp.loadbalancer.server.port: 2022
+  data-sftp:
+    user: "65534:65534"
+    container_name: data-sftp
+    image: rclone/rclone:1.74.2@sha256:9ce0d49b611d3781233e25334e9e23d7af01e5546da7087f90d55f034ef13637
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    env_file:
+      - path: .env
+    command: >-
+      serve sftp /opt/stacks-data/ --addr :3022 --authorized-keys
+      /config/ssh/authorized_keys
+    volumes:
+      - /opt/stacks-data/:/opt/stacks-data/:rw
+      - /opt/stacks-data/${APP}/keys:/config/ssh:ro
+    tmpfs:
+      - /.cache:uid=65534,gid=65534
+    networks:
+      - dockge_default
+    labels:
+      traefik.enable: true
+      traefik.tcp.routers.data-sftp.rule: HostSNI(`*`)
+      traefik.tcp.routers.data-sftp.entrypoints: data-sftp
+      traefik.tcp.services.data-sftp.loadbalancer.server.port: 3022
 
 networks:
   dockge_default:

@@ -56,6 +56,11 @@ entryPoints:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  data-sftp:
+    address: ":3022"
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   metrics:
     address: ":8082"
   bolt:
