@@ -354,7 +354,7 @@ async function updateBackrestConfiguration(
   }
 
   if (!updatedConfig.version) {
-    updatedConfig.version = 2;
+    updatedConfig.version = 6;
   }
   if (!updatedConfig.modno) {
     updatedConfig.modno = 1;
