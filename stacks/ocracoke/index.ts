@@ -14,7 +14,7 @@ import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
-const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
+// const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const op = new OPClient();
 const vmRange = { start: 500, end: 599 };
@@ -80,8 +80,8 @@ dockgeRuntime
     },
   })
   .apply(() => host.addUptimeGatus())
-  .apply(() => createGatusDnsUptime(globals, { parent: host }))
-  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }));
+  .apply(() => createGatusDnsUptime(globals, { parent: host }));
+// .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }))
 
 exportNodeStateToOnePassword(
   [
