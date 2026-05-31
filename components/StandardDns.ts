@@ -148,7 +148,7 @@ function addGatusDnsRecord(
     });
     gatusDnsRecords.push(
       output({
-        name: output(args.hostname).apply((h) => h.replace(/\./g, "_")),
+        name: output(args.hostname).apply((h) => `${h.replace(/\./g, "_")}-${args.type}`),
         url: ip,
         group: `DNS @ ${server}`,
         dns: {
