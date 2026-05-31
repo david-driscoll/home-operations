@@ -123,6 +123,7 @@ export class BackupPlanDirector extends ComponentResource {
             "--sftp-user=nobody",
             "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
             "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
+            "--sftp-shell-type=none",
           ].join(" "),
         },
         onError: "ON_ERROR_FATAL",
@@ -212,6 +213,7 @@ export class BackupPlanDirector extends ComponentResource {
       "--sftp-user=nobody",
       "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
       "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
+      "--sftp-shell-type=none",
     ].join(" ");
 
     const backrestRepo: BackrestRepository = {
