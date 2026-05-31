@@ -71,28 +71,6 @@ backupPlanManager.createBackrestPlan("pgdump", {
   repository: "pgdump",
 });
 
-backupPlanManager.createMinioBucketBackupJob({
-  title: "Home Operations",
-  bucket: "home-operations",
-  globals,
-});
-
-// restoreBucket cases keep createMinioBucketBackupJob — the S3-to-S3 live sync
-// (every 10 min) is too frequent for a restic snapshot plan and runs as a job.
-backupPlanManager.createMinioBucketBackupJob({
-  title: "Stargate Command Postgres",
-  bucket: "stargate-command-db",
-  restoreBucket: "stargate-command-db-restore",
-  globals,
-});
-
-backupPlanManager.createMinioBucketBackupJob({
-  title: "Equestria Postgres",
-  bucket: "equestria-db",
-  restoreBucket: "equestria-db-restore",
-  globals,
-});
-
 async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>): Promise<PbsDetails> {
   try {
     const dockgeItem = await op.getItemByTitle(item.fields.dockge.value!);

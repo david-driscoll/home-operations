@@ -8,7 +8,6 @@ import { DockgeLxc } from "../../components/DockgeLxc.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
 import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
-import * as minio from "@pulumi/minio";
 import { CopyToRemote } from "@pulumi/command/remote/index.js";
 
 export interface PbsDetails {
@@ -166,79 +165,6 @@ export class BackupPlanManager extends ComponentResource {
         });
       },
     );
-  }
-
-  /**
-   * Create a backrest plan that backs up a minio bucket directly from its live mount.
-   * The bucket data is available read-only at /spike/data/minio/<bucket>/ inside the container.
-   */
-  public createMinioBucketBackrestPlan({ title, bucket }: { title: Input<string>; bucket: Input<string> }) {
-    return output(bucket).apply((resolvedBucket) => {
-      return this.createBackrestPlan(`minio-${resolvedBucket}`, {
-        title,
-        path: `/spike/data/minio/${resolvedBucket}/`,
-        repository: `minio-${resolvedBucket}`,
-        planConfig: {
-          schedule: {
-            cron: "0 10 * * *",
-            clock: "CLOCK_LOCAL",
-          },
-        },
-      });
-    });
-  }
-
-  public createMinioBucketBackupJob({
-    title,
-    bucket,
-    globals,
-    restoreBucket,
-  }: {
-    title: Input<string>;
-    bucket: Input<string>;
-    globals: GlobalResources;
-    backblazeSecret?: Input<string>;
-    restoreBucket?: Input<string>;
-  }) {
-    // Restic backup of the minio bucket via backrest plan
-    this.createMinioBucketBackrestPlan({ title, bucket });
-
-    // S3-to-S3 live sync (runs every 10 min — too frequent for restic snapshots, kept as a job)
-    if (!restoreBucket) {
-      return;
-    }
-
-    const jobs: Output<CopyToRemote[]>[] = [];
-    return all([bucket, restoreBucket]).apply(([resolvedBucket, resolvedRestoreBucket]) => {
-        const minioBucket = new minio.S3Bucket(
-          `${resolvedRestoreBucket}-minio-bucket`,
-          {
-            acl: "private",
-            bucket: interpolate`${restoreBucket}`,
-          },
-          {
-            provider: globals.truenasMinioProvider,
-            protect: true,
-            retainOnDelete: true,
-            import: resolvedRestoreBucket,
-          },
-        );
-
-        jobs.push(
-          this.createBackupJob(this.source, {
-            name: interpolate`Sync ${bucket} from ${restoreBucket}`,
-            schedule: "*/10 * * * *",
-            sourceType: "s3",
-            source: interpolate`${bucket}/`,
-            sourceSecret: globals.truenasMinioCredential.title!,
-            destinationType: "s3",
-            destination: interpolate`${minioBucket.bucket}/`,
-            destinationSecret: globals.truenasMinioCredential.title!,
-          }),
-        );
-
-        return all(jobs).apply((z) => z.flat());
-      });
   }
 
   public createBackupJob(details: Input<PbsDetails | PbsDetails[]>, args: Omit<BackupTask, "token">) {
