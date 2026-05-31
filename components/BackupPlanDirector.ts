@@ -313,7 +313,7 @@ export class BackupPlanDirector extends ComponentResource {
 
   async updateBackrestConfiguration(details: UnwrappedObject<Connection>, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
     const connection = details.connection;
-    let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 2, modno: 1, instance: `${details.cluster.title}`, auth: { disabled: true }, multihost: {} };
+    let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 6, modno: 1, instance: `${details.cluster.title}`, auth: { disabled: true }, multihost: {} };
 
     {
       const ssh = new NodeSSH();
