@@ -37,7 +37,6 @@ export async function kubernetesBackups(planManager: BackupPlanOrchestrator, clu
               }),
             ),
           ),
-          tap((result) => pulumi.log.info(`Found ${result.items.length} secrets in namespace ${result.items[0]?.metadata?.namespace}`, planManager)),
           map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
           mergeMap((lists) => from(lists)),
           map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
@@ -55,7 +54,6 @@ export async function kubernetesBackups(planManager: BackupPlanOrchestrator, clu
     volsyncBackupJobs.apply((jobs) =>
       pulumi.all(
         jobs.map((job) => {
-          pulumi.log.info(`Creating backup job for VolSync job ${job} in celestia`, planManager);
           return planManager.addBackupPlan(
             pulumi.output({
               // name: "pgdump",
