@@ -59,8 +59,8 @@ export function getHostnames(name: string, globals: GlobalResources) {
 }
 
 export function getContainerHostnames(name: string, host: ProxmoxHost, globals: GlobalResources) {
-  const hostname = interpolate`${host.shortName ?? host.name}.${globals.searchDomain}`;
   const tailscaleName = interpolate`${name}-${host.shortName ?? host.name}`;
+  const hostname = interpolate`${tailscaleName}.${globals.searchDomain}`;
   const tailscaleHostname = interpolate`${tailscaleName}.${globals.tailscaleDomain}`;
   return { hostname, tailscaleName, tailscaleHostname };
 }
