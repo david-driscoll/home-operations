@@ -80,7 +80,7 @@ export class BackupPlanDirector extends ComponentResource {
         );
       const depends = backrestItems.plans.map((plan) => {
         return new remote.Command(
-          `backrest-config`,
+          `${plan.id}-backrest-config`,
           {
             connection: destination.connection,
             create: interpolate`mkdir -p "/data/backup/.pull-health/${plan.id}" && chown 65534:65534 "/data/backup/.pull-health/${plan.id}"`,
