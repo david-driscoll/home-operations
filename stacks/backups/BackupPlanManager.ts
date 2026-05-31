@@ -411,7 +411,7 @@ export class BackupPlanManager extends ComponentResource {
         await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
           await provisionRepoDirs(ssh, this.repos);
           // Provision the pull-health marker dir (host path translation: /backup/ → /data/backup/)
-          await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown nobody:nogroup "/data/backup/.pull-health"`);
+          await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
           updateRepos(updatedConfig, destRepos);
           updatePlans(updatedConfig, pullPlans);
         });
@@ -577,6 +577,7 @@ async function provisionRepoDirs(ssh: NodeSSH, repos: Map<string, BackrestReposi
     if (!repo.uri?.startsWith("/backup/")) continue;
     // /backup/<planId>/  →  /data/backup/<planId>/
     const hostPath = repo.uri.replace(/^\/backup\//, "/data/backup/");
-    await ssh.execCommand(`mkdir -p "${hostPath}" && chown nobody:nogroup "${hostPath}"`);
+    // Use numeric UID/GID 65534 (nobody:nogroup) — avoids name resolution issues in LXC namespaces
+    await ssh.execCommand(`mkdir -p "${hostPath}" && chown 65534:65534 "${hostPath}"`);
   }
 }
