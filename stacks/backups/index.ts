@@ -32,18 +32,20 @@ equestriaCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster
 
 dockgeDetails.apply((details) => {
   return details.map((detail) => {
-    const job = backupPlanManager.createBackupJob(backupPlanManager.source, {
-      name: pulumi.interpolate`Dockge Backup :: ${detail.title}`,
-      schedule: "0 10 * * *",
-      sourceType: "sftp",
-      source: pulumi.interpolate`${detail.hostname}:3022:/opt/stacks-data/`,
-      destinationType: "local",
-      destination: pulumi.interpolate`/data/staging/${detail.name}/`,
-    });
-    const plan = backupPlanManager.createBackrestPlan(detail.name, {
+    // Pre-sync: rclone pulls /opt/stacks-data/ from the dockge host into the backrest
+    // container's staging dir before restic snapshots it.  The old createBackupJob
+    // call is replaced by the preSync param on createBackrestPlan.
+    return backupPlanManager.createBackrestPlan(detail.name, {
       title: detail.title,
       path: pulumi.interpolate`/data/staging/${detail.name}/`,
       repository: detail.name,
+      preSync: {
+        sftpHost: detail.hostname,
+        // rclone-sftp serves /data/ as root; /opt/stacks-data/ is mounted at /data/stacks/
+        sourcePath: "/stacks/",
+        // rclone-sftp listens on port 2022 (traefik sftp entrypoint)
+        sftpPort: 2022,
+      },
       planConfig: {
         schedule: {
           cron: "0 3 * * *",
@@ -51,8 +53,6 @@ dockgeDetails.apply((details) => {
         },
       },
     });
-
-    return [job, plan] as const;
   });
 });
 
@@ -77,6 +77,8 @@ backupPlanManager.createMinioBucketBackupJob({
   globals,
 });
 
+// restoreBucket cases keep createMinioBucketBackupJob — the S3-to-S3 live sync
+// (every 10 min) is too frequent for a restic snapshot plan and runs as a job.
 backupPlanManager.createMinioBucketBackupJob({
   title: "Stargate Command Postgres",
   bucket: "stargate-command-db",
@@ -109,6 +111,8 @@ async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>): Pr
       publicKey: item.sections.backrest.fields.publicKey.value!,
       privateKey: item.sections.backrest.fields.privateKey.value!,
       privateKeyId: item.sections.backrest.fields.privateKeyId.value!,
+      // SSH port on the dockge HOST that destinations use for rclone SFTP pull.
+      sshPort: parseInt(dockgeItem.sections.ssh?.fields?.port?.value ?? "2022") || 2022,
     };
   } catch (error) {
     pulumi.log.error(`Error getting backup server details: ${error}`);

@@ -20,6 +20,17 @@ export interface PbsDetails {
   cluster: ClusterDefinition;
   tags: string[];
   title: string;
+  /** SSH port on the dockge HOST used by destinations for rclone SFTP pull. Defaults to 2022. */
+  sshPort?: number;
+}
+
+export interface PreSyncArgs {
+  /** SFTP hostname of the host whose data should be staged before the backup */
+  sftpHost: string;
+  /** Absolute path on the remote host to sync from (e.g. "/opt/stacks-data/") */
+  sourcePath: string;
+  /** SFTP port — defaults to 3022 (dockge default) */
+  sftpPort?: number;
 }
 
 export class BackupPlanManager extends ComponentResource {
@@ -32,6 +43,7 @@ export class BackupPlanManager extends ComponentResource {
   destinations: Output<PbsDetails[]>;
   jobs: Output<{ task: Omit<BackupTask, "token">; detail: PbsDetails }[]> = output([]);
   private depends: Output<CopyToRemote[]> = output([]);
+  private uptimeUrl: Output<string>;
 
   constructor(
     name: string,
@@ -46,6 +58,7 @@ export class BackupPlanManager extends ComponentResource {
     this.globals = args.globals;
     this.source = output(args.source);
     this.destinations = output(args.destinations);
+    this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
   }
 
   public createBackrestPlan(
@@ -56,11 +69,54 @@ export class BackupPlanManager extends ComponentResource {
       repositoryConfig?: Input<Omit<BackrestRepository, "guid" | "uri" | "id" | "password" | "autoUnlock" | "autoInitialize">>;
       path: Input<string>;
       repository?: Input<string>;
-      //   backblazeSecret?: Input<string>;
+      /** Stage data via rclone SFTP before restic snapshots the path */
+      preSync?: PreSyncArgs;
     },
   ) {
-    return all([this.source, this.destinations, output(this.getVolsyncPassword()), output(args)]).apply(
-      ([source, destinations, password, { planConfig, repositoryConfig, path, repository = name, title }]) => {
+    return all([this.source, this.destinations, output(this.getVolsyncPassword()), output(args), this.uptimeUrl]).apply(
+      ([source, destinations, password, { planConfig, repositoryConfig, path, repository = name, title, preSync }, uptimeUrl]) => {
+        const sourceGroup = `Backups: ${source.cluster.title}`;
+        const sourceToken = toGatusKey(sourceGroup, name);
+
+        const hooks: BackrestPlan["hooks"] = [];
+
+        // Pre-sync hook: pull staging data via rclone SFTP before restic snapshots it.
+        // Runs inside the backrest container, so `path` is the container-local destination.
+        // `preSync.sourcePath` is the absolute path on the SFTP host's filesystem.
+        if (preSync) {
+          hooks.push({
+            conditions: ["CONDITION_SNAPSHOT_START"],
+            actionCommand: {
+              command: [
+                "rclone sync",
+                `:sftp:${preSync.sourcePath}`,
+                path,
+                `--sftp-host=${preSync.sftpHost}`,
+                `--sftp-port=${preSync.sftpPort ?? 2022}`,
+                "--sftp-user=nobody",
+                "--sftp-key-file=/root/.ssh/id_ed25519",
+              ].join(" "),
+            },
+            onError: "ON_ERROR_FATAL",
+          });
+        }
+
+        // Uptime heartbeat hooks — report plan outcome to Gatus external endpoint
+        hooks.push({
+          conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
+          actionCommand: {
+            command: `curl -sf -X POST -H 'Authorization: Bearer ${sourceToken}' '${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=true' || true`,
+          },
+          onError: "ON_ERROR_IGNORE",
+        });
+        hooks.push({
+          conditions: ["CONDITION_SNAPSHOT_ERROR"],
+          actionCommand: {
+            command: `curl -sf -X POST -H 'Authorization: Bearer ${sourceToken}' '${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=false' || true`,
+          },
+          onError: "ON_ERROR_IGNORE",
+        });
+
         this.repos.set(name, {
           prunePolicy: {
             schedule: {
@@ -105,56 +161,37 @@ export class BackupPlanManager extends ComponentResource {
           id: name,
           repo: name,
           paths: [path],
+          hooks,
         });
-
-        // TODO: Google Drive?
-        // if (backblazeSecret) {
-        //   this.localBackup.createBackupJob({
-        //     name: interpolate`Backblaze ${title}`,
-        //     schedule: "0 10 */3 * *",
-        //     sourceType: "local",
-        //     source: `/data/backup/${repository}/`,
-        //     destinationType: "b2",
-        //     destination: interpolate`${repository}`,
-        //     destinationSecret: backblazeSecret,
-        //   });
-        // }
-
-        const jobs = [];
-        // I don't think this is needed to backup
-        // as backrest should handle creating this repository
-        // jobs.push(
-        //   this.createBackupJob(source, {
-        //     name: interpolate`Backup ${title}`,
-        //     schedule: "0 15 * * *",
-        //     sourceType: "local",
-        //     source: path,
-        //     destinationType: "local",
-        //     destination: interpolate`/data/backup/${repository}/`,
-        //   }),
-        // );
-        jobs.push(
-          this.createBackupJob(destinations, {
-            name: interpolate`Replicate ${title}`,
-            schedule: "0 3 * * *",
-            sourceType: "sftp",
-            source: interpolate`${source.dockgeConnection.host}/${repository}`,
-            destinationType: "local",
-            destination: interpolate`/data/backup/${repository}/`,
-          }),
-        );
-
-        return all(jobs).apply((z) => z.flat());
       },
     );
+  }
+
+  /**
+   * Create a backrest plan that backs up a minio bucket directly from its live mount.
+   * The bucket data is available read-only at /spike/data/minio/<bucket>/ inside the container.
+   */
+  public createMinioBucketBackrestPlan({ title, bucket }: { title: Input<string>; bucket: Input<string> }) {
+    return output(bucket).apply((resolvedBucket) => {
+      return this.createBackrestPlan(`minio-${resolvedBucket}`, {
+        title,
+        path: `/spike/data/minio/${resolvedBucket}/`,
+        repository: `minio-${resolvedBucket}`,
+        planConfig: {
+          schedule: {
+            cron: "0 10 * * *",
+            clock: "CLOCK_LOCAL",
+          },
+        },
+      });
+    });
   }
 
   public createMinioBucketBackupJob({
     title,
     bucket,
-    // backblazeSecret,
     globals,
-    restoreBucket: restoreBucket,
+    restoreBucket,
   }: {
     title: Input<string>;
     bucket: Input<string>;
@@ -162,45 +199,18 @@ export class BackupPlanManager extends ComponentResource {
     backblazeSecret?: Input<string>;
     restoreBucket?: Input<string>;
   }) {
+    // Restic backup of the minio bucket via backrest plan
+    this.createMinioBucketBackrestPlan({ title, bucket });
+
+    // S3-to-S3 live sync (runs every 10 min — too frequent for restic snapshots, kept as a job)
+    if (!restoreBucket) {
+      return;
+    }
+
     const jobs: Output<CopyToRemote[]>[] = [];
-    jobs.push(
-      this.createBackupJob(this.source, {
-        name: interpolate`Backup ${title}`,
-        schedule: "0 10 * * *",
-        sourceType: "local",
-        source: interpolate`/spike/data/minio/${bucket}/`,
-        destinationType: "local",
-        destination: interpolate`/data/backup/spike/${bucket}/`,
-      }),
-    );
-
-    jobs.push(
-      this.createBackupJob(this.destinations, {
-        name: interpolate`Replicate ${title}`,
-        schedule: "0 3 * * *",
-        sourceType: "sftp",
-        source: interpolate`${this.source.dockgeConnection.host}/spike/${bucket}/`,
-        destinationType: "local",
-        destination: interpolate`/data/backup/spike/${bucket}/`,
-      }),
-    );
-
-    // if (backblazeSecret) {
-    //   source.createBackupJob({
-    //     name: pulumi.interpolate`Replicate ${title} to B2`,
-    //     schedule: "0 8 */4 * *",
-    //     sourceType: "local",
-    //     source: pulumi.interpolate`/spike/data/minio/${bucket}/`,
-    //     destinationType: "b2",
-    //     destination: pulumi.interpolate`/`,
-    //     destinationSecret: backblazeSecret,
-    //   });
-    // }
-
-    if (restoreBucket) {
-      return all([bucket, restoreBucket]).apply(([bucket, restoreBucket]) => {
+    return all([bucket, restoreBucket]).apply(([resolvedBucket, resolvedRestoreBucket]) => {
         const minioBucket = new minio.S3Bucket(
-          `${restoreBucket}-minio-bucket`,
+          `${resolvedRestoreBucket}-minio-bucket`,
           {
             acl: "private",
             bucket: interpolate`${restoreBucket}`,
@@ -209,7 +219,7 @@ export class BackupPlanManager extends ComponentResource {
             provider: globals.truenasMinioProvider,
             protect: true,
             retainOnDelete: true,
-            import: restoreBucket,
+            import: resolvedRestoreBucket,
           },
         );
 
@@ -226,23 +236,8 @@ export class BackupPlanManager extends ComponentResource {
           }),
         );
 
-        jobs.push(
-          this.createBackupJob(this.destinations, {
-            name: interpolate`Replicate ${bucket} from ${restoreBucket}`,
-            schedule: "0 3 * * *",
-            sourceType: "s3",
-            source: interpolate`${minioBucket.bucket}/`,
-            sourceSecret: globals.truenasMinioCredential.title!,
-            destinationType: "local",
-            destination: interpolate`/data/backup/spike/${minioBucket.bucket}/`,
-            destinationSecret: globals.truenasMinioCredential.title!,
-          }),
-        );
-
         return all(jobs).apply((z) => z.flat());
       });
-    }
-    return all(jobs).apply((z) => z.flat());
   }
 
   public createBackupJob(details: Input<PbsDetails | PbsDetails[]>, args: Omit<BackupTask, "token">) {
@@ -269,6 +264,7 @@ export class BackupPlanManager extends ComponentResource {
 
     return result;
   }
+
   private async getVolsyncPassword(): Promise<string> {
     if (this.volsyncPassword) {
       return this.volsyncPassword;
@@ -282,52 +278,144 @@ export class BackupPlanManager extends ComponentResource {
     return (this.volsyncPassword = volsyncItem.fields.credential.value!);
   }
 
-  private createUptime({ cluster }: PbsDetails) {
-    return all([this.jobs]).apply(([jobs]) => {
-      const groupName = `Jobs: ${cluster.title}`;
-      return addUptimeGatus(
-        `backups-${cluster.key}`,
+  private createUptime(source: UnwrappedObject<PbsDetails>, destinations: UnwrappedArray<PbsDetails>) {
+    const makeEndpoint = (groupName: string, planId: string): ExternalEndpoint =>
+      ({
+        enabled: true,
+        name: planId,
+        token: toGatusKey(groupName, planId),
+        group: groupName,
+        heartbeat: { interval: "25h" },
+        alerts: [
+          {
+            type: "pushover",
+            enabled: true,
+            "success-threshold": 1,
+            "failure-threshold": 1,
+            "minimum-reminder-interval": "24h",
+          },
+        ],
+      }) as ExternalEndpoint;
+
+    // Source: one external endpoint per plan
+    const sourceGroup = `Backups: ${source.cluster.title}`;
+    addUptimeGatus(
+      `backups-${source.cluster.key}`,
+      this.globals,
+      { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(sourceGroup, id)) },
+      this,
+    );
+
+    // Destinations: one pull endpoint per plan
+    for (const dest of destinations) {
+      const destGroup = `Backups: ${dest.cluster.title}`;
+      addUptimeGatus(
+        `backups-${dest.cluster.key}`,
         this.globals,
-        {
-          endpoints: [],
-          "external-endpoints": jobs.map(
-            (job) =>
-              ({
-                enabled: true,
-                name: `${job.task.name} to ${cluster.title}`,
-                token: toGatusKey(groupName, job.task.name),
-                group: groupName,
-                heartbeat: {
-                  interval: "25h",
-                },
-                alerts: [
-                  {
-                    type: "pushover",
-                    enabled: true,
-                    "success-threshold": 1,
-                    "failure-threshold": 1,
-                    "minimum-reminder-interval": "24h",
-                  },
-                ],
-              }) as ExternalEndpoint,
-          ),
-        },
+        { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(destGroup, `pull-${id}`)) },
         this,
       );
-    });
+    }
+  }
+
+  /**
+   * Build pull plans for a destination: one plan per source plan.
+   *
+   * Each pull plan:
+   *  - Uses CONDITION_SNAPSHOT_START to rclone-sync the source's restic repo (host path via SFTP)
+   *    into the matching container-local repo path.
+   *  - Snapshots a tiny health-marker file so backrest has something to track.
+   *  - Reports success/failure to Gatus.
+   *
+   * Path translation for rclone:
+   *   source SFTP path  = /data/backup/<planId>/  (host filesystem on source dockge HOST)
+   *   destination path  = /backup/<planId>/        (container-local path on destination)
+   */
+  private buildPullPlans(source: UnwrappedObject<PbsDetails>, destination: UnwrappedObject<PbsDetails>, uptimeUrl: string): Map<string, BackrestPlan> {
+    const pullPlans = new Map<string, BackrestPlan>();
+    const destGroup = `Backups: ${destination.cluster.title}`;
+    const sourceHost = source.dockgeConnection.host as string;
+    const sshPort = source.sshPort ?? 2022;
+
+    for (const planId of this.plans.keys()) {
+      const destToken = toGatusKey(destGroup, `pull-${planId}`);
+
+    // rclone source path: /backup/<planId>/ is the SFTP path served by rclone-sftp on source.
+      // rclone-sftp serves /data/ as its root; /data/backup/ is mounted there, so the
+      // SFTP-visible path is /backup/<planId>/ (not the host path /data/backup/<planId>/).
+      // rclone destination path: /backup/<planId>/ is the container path on destination.
+      const rcloneCmd = [
+        `rclone sync :sftp:/backup/${planId}/ /backup/${planId}/`,
+        `--sftp-host=${sourceHost}`,
+        `--sftp-port=${sshPort}`,
+        "--sftp-user=nobody",
+        "--sftp-key-file=/root/.ssh/id_ed25519",
+      ].join(" ");
+
+      pullPlans.set(`pull-${planId}`, {
+        id: `pull-${planId}`,
+        repo: planId,
+        paths: ["/backup/.pull-health/"],
+        schedule: { cron: "0 4 * * *", clock: "CLOCK_LOCAL" },
+        // policyKeepLastN is safe here: backrest filters forget by --path, so source
+        // snapshots (different paths) are not pruned by this plan's retention.
+        retention: { policyKeepLastN: 3 },
+        hooks: [
+          {
+            conditions: ["CONDITION_SNAPSHOT_START"],
+            actionCommand: {
+              command: `${rcloneCmd} && mkdir -p /backup/.pull-health && date -Iseconds > /backup/.pull-health/${planId}`,
+            },
+            onError: "ON_ERROR_FATAL",
+          },
+          {
+            conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
+            actionCommand: {
+              command: `curl -sf -X POST -H 'Authorization: Bearer ${destToken}' '${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=true' || true`,
+            },
+            onError: "ON_ERROR_IGNORE",
+          },
+          {
+            conditions: ["CONDITION_SNAPSHOT_ERROR"],
+            actionCommand: {
+              command: `curl -sf -X POST -H 'Authorization: Bearer ${destToken}' '${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=false' || true`,
+            },
+            onError: "ON_ERROR_IGNORE",
+          },
+        ],
+      });
+    }
+
+    return pullPlans;
   }
 
   public finalize() {
-    all([this.source, this.destinations]).apply(async ([source, destinations]) => {
+    all([this.source, this.destinations, this.uptimeUrl]).apply(async ([source, destinations, uptimeUrl]) => {
+      // Source: provision repo dirs, write repos + plans
       await updateBackrestConfiguration(source, destinations, async (ssh, updatedConfig) => {
-        await updateRepos(updatedConfig, this.repos);
-        await updatePlans(updatedConfig, this.plans);
+        await provisionRepoDirs(ssh, this.repos);
+        updateRepos(updatedConfig, this.repos);
+        updatePlans(updatedConfig, this.plans);
       });
-      this.createUptime(source);
+
+      // Destinations: provision repo dirs, write repos + pull plans
       for (const destination of destinations) {
-        await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => await updateRepos(updatedConfig, this.repos));
-        this.createUptime(destination);
+        const pullPlans = this.buildPullPlans(source, destination, uptimeUrl);
+
+        // Destination repos use autoInitialize: false — the rclone pull (CONDITION_SNAPSHOT_START)
+        // copies an already-initialized restic repo from the source before backrest touches it.
+        const destRepos = new Map([...this.repos.entries()].map(([k, v]) => [k, { ...v, autoInitialize: false }]));
+
+        await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
+          await provisionRepoDirs(ssh, this.repos);
+          // Provision the pull-health marker dir (host path translation: /backup/ → /data/backup/)
+          await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown nobody:nogroup "/data/backup/.pull-health"`);
+          updateRepos(updatedConfig, destRepos);
+          updatePlans(updatedConfig, pullPlans);
+        });
       }
+
+      this.createUptime(source, destinations);
     });
   }
 }
@@ -442,11 +530,13 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
         hooks: repo.hooks,
         commandPrefix: repo.commandPrefix,
         autoUnlock: repo.autoUnlock,
+        // Preserve caller's autoInitialize choice (false on destinations — rclone sync runs first)
+        autoInitialize: repo.autoInitialize ?? true,
       };
     } else {
       updatedConfig.repos.push({
         ...repo,
-        autoInitialize: true,
+        autoInitialize: repo.autoInitialize ?? true,
       });
     }
   }
@@ -470,5 +560,21 @@ function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: Backre
     } else {
       updatedConfig.plans.push(plan);
     }
+  }
+}
+
+/**
+ * Provision local-path restic repo directories on the host.
+ *
+ * Repo URIs use container paths (/backup/<planId>/).
+ * The container path /backup/ maps to the host path /data/backup/,
+ * so we translate before running SSH commands on the host.
+ */
+async function provisionRepoDirs(ssh: NodeSSH, repos: Map<string, BackrestRepository>) {
+  for (const repo of repos.values()) {
+    if (!repo.uri?.startsWith("/backup/")) continue;
+    // /backup/<planId>/  →  /data/backup/<planId>/
+    const hostPath = repo.uri.replace(/^\/backup\//, "/data/backup/");
+    await ssh.execCommand(`mkdir -p "${hostPath}" && chown nobody:nogroup "${hostPath}"`);
   }
 }
