@@ -28,7 +28,7 @@ export interface PreSyncArgs {
   sftpHost: string;
   /** Absolute path on the remote host to sync from (e.g. "/opt/stacks-data/") */
   sourcePath: string;
-  /** SFTP port — defaults to 3022 (dockge default) */
+  /** SFTP port — defaults to 2022 (rclone-sftp entrypoint) */
   sftpPort?: number;
 }
 
@@ -105,14 +105,14 @@ export class BackupPlanManager extends ComponentResource {
         hooks.push({
           conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
           actionCommand: {
-            command: `curl -sf -X POST -H 'Authorization: Bearer ${sourceToken}' '${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=true' || true`,
+            command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=true" || true`,
           },
           onError: "ON_ERROR_IGNORE",
         });
         hooks.push({
           conditions: ["CONDITION_SNAPSHOT_ERROR"],
           actionCommand: {
-            command: `curl -sf -X POST -H 'Authorization: Bearer ${sourceToken}' '${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=false' || true`,
+            command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=false" || true`,
           },
           onError: "ON_ERROR_IGNORE",
         });
@@ -233,13 +233,13 @@ export class BackupPlanManager extends ComponentResource {
       this,
     );
 
-    // Destinations: one pull endpoint per plan
+    // Destinations: one replication endpoint per plan
     for (const dest of destinations) {
-      const destGroup = `Backups: ${dest.cluster.title}`;
+      const destGroup = `Replicate: ${dest.cluster.title}`;
       addUptimeGatus(
         `backups-${dest.cluster.key}`,
         this.globals,
-        { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(destGroup, `pull-${id}`)) },
+        { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(destGroup, id)) },
         this,
       );
     }
@@ -249,31 +249,34 @@ export class BackupPlanManager extends ComponentResource {
    * Build pull plans for a destination: one plan per source plan.
    *
    * Each pull plan:
-   *  - Uses CONDITION_SNAPSHOT_START to rclone-sync the source's restic repo (host path via SFTP)
-   *    into the matching container-local repo path.
+   *  - Uses CONDITION_SNAPSHOT_START to rclone-sync the source's restic repo via SFTP
+   *    into the matching local repo path on the destination.
    *  - Snapshots a tiny health-marker file so backrest has something to track.
    *  - Reports success/failure to Gatus.
    *
    * Path translation for rclone:
-   *   source SFTP path  = /data/backup/<planId>/  (host filesystem on source dockge HOST)
-   *   destination path  = /backup/<planId>/        (container-local path on destination)
+   *   rclone-sftp serves /data/ as its root, so the SFTP-visible backup path strips /data:
+   *     source repo URI   = /data/backup/<repoId>/  (container/host path on source)
+   *     SFTP-visible path = /backup/<repoId>/        (as seen through rclone-sftp)
+   *     destination path  = /data/backup/<repoId>/   (container path on destination, same as URI)
    */
   private buildPullPlans(source: UnwrappedObject<PbsDetails>, destination: UnwrappedObject<PbsDetails>, uptimeUrl: string): Map<string, BackrestPlan> {
     const pullPlans = new Map<string, BackrestPlan>();
-    const destGroup = `Backups: ${destination.cluster.title}`;
+    const destGroup = `Replicate: ${destination.cluster.title}`;
     const sourceHost = source.dockgeConnection.host as string;
     const sshPort = source.sshPort ?? 2022;
 
-    for (const planId of this.plans.keys()) {
-      const destToken = toGatusKey(destGroup, `pull-${planId}`);
+    for (const [planId, plan] of this.plans.entries()) {
+      const repo = this.repos.get(plan.repo ?? planId);
+      // Derive sync path from the repo URI so that if `repository` overrides `name`,
+      // both the SFTP source path and the local destination path stay consistent.
+      const repoPath = repo?.uri ?? `/data/backup/${planId}/`;
+      // rclone-sftp serves /data/ as root; strip leading /data to get SFTP-visible path.
+      const sftpPath = repoPath.startsWith("/data/") ? repoPath.slice("/data".length) : repoPath;
+      const destToken = toGatusKey(destGroup, planId);
 
-    // rclone source path: /backup/<planId>/ is the SFTP path served by rclone-sftp on source.
-      // rclone-sftp serves /data/ as its root; /data/backup/ is mounted there, so the
-      // SFTP-visible path is /backup/<planId>/ (not the host path /data/backup/<planId>/).
-      // rclone destination path: /data/backup/<planId>/ is the container path on destination
-      // (mount changed to /data/backup:/data/backup so host and container paths are identical).
       const rcloneCmd = [
-        `rclone sync :sftp:/backup/${planId}/ /data/backup/${planId}/`,
+        `rclone sync :sftp:${sftpPath} ${repoPath}`,
         `--sftp-host=${sourceHost}`,
         `--sftp-port=${sshPort}`,
         "--sftp-user=nobody",
@@ -281,8 +284,8 @@ export class BackupPlanManager extends ComponentResource {
         "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
       ].join(" ");
 
-      pullPlans.set(`pull-${planId}`, {
-        id: `pull-${planId}`,
+      pullPlans.set(planId, {
+        id: planId,
         repo: planId,
         paths: ["/data/backup/.pull-health/"],
         schedule: { cron: "0 4 * * *", clock: "CLOCK_LOCAL" },
@@ -300,14 +303,14 @@ export class BackupPlanManager extends ComponentResource {
           {
             conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
             actionCommand: {
-              command: `curl -sf -X POST -H 'Authorization: Bearer ${destToken}' '${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=true' || true`,
+              command: `curl -sf -X POST -H "Authorization: Bearer ${destToken}" "${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=true" || true`,
             },
             onError: "ON_ERROR_IGNORE",
           },
           {
             conditions: ["CONDITION_SNAPSHOT_ERROR"],
             actionCommand: {
-              command: `curl -sf -X POST -H 'Authorization: Bearer ${destToken}' '${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=false' || true`,
+              command: `curl -sf -X POST -H "Authorization: Bearer ${destToken}" "${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=false" || true`,
             },
             onError: "ON_ERROR_IGNORE",
           },
@@ -331,13 +334,14 @@ export class BackupPlanManager extends ComponentResource {
       for (const destination of destinations) {
         const pullPlans = this.buildPullPlans(source, destination, uptimeUrl);
 
-        const destRepos = this.repos;
-
         await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
           await provisionRepoDirs(ssh, this.repos);
           // Provision the pull-health marker dir
-          await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
-          updateRepos(updatedConfig, destRepos);
+          const healthResult = await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
+          if (healthResult.code !== 0) {
+            log.warn(`Failed to provision pull-health dir: ${healthResult.stderr}`);
+          }
+          updateRepos(updatedConfig, this.repos);
           updatePlans(updatedConfig, pullPlans);
         });
       }
@@ -437,8 +441,15 @@ async function updateBackrestConfiguration(
     return;
   }
 
-  await ssh.execCommand(`echo '${newConfig}' > /opt/stacks-data/backrest/config/config.json`);
-  await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
+  const writeResult = await ssh.execCommand(`echo ${Buffer.from(newConfig).toString("base64")} | base64 -d > /opt/stacks-data/backrest/config/config.json`);
+  if (writeResult.code !== 0) {
+    ssh.dispose();
+    throw new Error(`Failed to write backrest config: ${writeResult.stderr}`);
+  }
+  const restartResult = await ssh.execCommand(`docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`, { cwd: `/opt/stacks/backrest/` });
+  if (restartResult.code !== 0) {
+    log.warn(`backrest restart returned non-zero: ${restartResult.stderr}`);
+  }
 
   ssh.dispose();
 }
@@ -502,6 +513,9 @@ async function provisionRepoDirs(ssh: NodeSSH, repos: Map<string, BackrestReposi
   for (const repo of repos.values()) {
     if (!repo.uri?.startsWith("/data/backup/")) continue;
     // Use numeric UID/GID 65534 (nobody:nogroup) — avoids name resolution issues in LXC namespaces
-    await ssh.execCommand(`mkdir -p "${repo.uri}" && chown 65534:65534 "${repo.uri}"`);
+    const result = await ssh.execCommand(`mkdir -p "${repo.uri}" && chown 65534:65534 "${repo.uri}"`);
+    if (result.code !== 0) {
+      log.warn(`provisionRepoDirs: failed for ${repo.uri}: ${result.stderr}`);
+    }
   }
 }
