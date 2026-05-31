@@ -404,7 +404,7 @@ export class BackupPlanDirector extends ComponentResource {
       content: configOutput,
       connection: details.connection,
       remotePath: "/opt/stacks-data/backrest/config/config.json",
-      triggers: [configOutput],
+      triggers: [...items.repos.map((z) => z.uri), ...items.plans.map((z) => z.repo)],
       dependsOn: depends,
       parent: this,
     });
@@ -413,7 +413,7 @@ export class BackupPlanDirector extends ComponentResource {
       `backrest-restart`,
       {
         connection: details.connection,
-        triggers: [configOutput],
+        triggers: [...items.repos.map((z) => z.uri), ...items.plans.map((z) => z.repo)],
         create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
       },
       {
