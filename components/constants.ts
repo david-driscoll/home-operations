@@ -67,7 +67,7 @@ export const Tailscale = {
     ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
     dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
     nfs: ["tcp:2049", "udp:2049", "tcp:111", "udp:111"] as TailscaleNetworkCapability[],
-    dockgeManagement: ["tcp:5001", "udp:5001", "tcp:9595", "tcp:2022", "udp:2022", "tcp:3022", "udp:3022", "tcp:2375", "udp:2375", "tcp:8082"] as TailscaleNetworkCapability[],
+    dockgeManagement: ["tcp:5001", "udp:5001", "tcp:9595", "tcp:2022", "udp:2022", "tcp:2375", "udp:2375", "tcp:8082"] as TailscaleNetworkCapability[],
     observability: ["tcp:9093", "tcp:19291", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],
     nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
     proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],

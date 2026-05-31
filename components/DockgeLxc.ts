@@ -262,7 +262,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-sftp-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${sftpKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n[${h}]:3022 ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         triggers: [dailyTrigger],
@@ -330,7 +330,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-jobs-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${jobsKeysDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n[${h}]:3022 ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         triggers: [dailyTrigger],
@@ -342,7 +342,7 @@ export class DockgeLxc extends ComponentResource {
       copyFileToRemote(`${name}-backrest-known-hosts`, {
         connection: this.remoteConnection,
         remotePath: interpolate`${backrestSshDir}/known_hosts`,
-        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n[${h}]:3022 ${k.trim()}\n`),
+        content: all([this.tailscaleHostname, publicKeyPem]).apply(([h, k]) => `[${h}]:2022 ${k.trim()}\n`),
         parent: this.dockerParent,
         dependsOn: [ensureKeysDir],
         triggers: [dailyTrigger],
