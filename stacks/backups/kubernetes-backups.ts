@@ -6,17 +6,13 @@ import * as kubernetes from "@kubernetes/client-node";
 import { awaitOutput } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap, tap } from "rxjs";
 import { BackrestRepository } from "@openapi/backrest.js";
-import { BackupPlanManager } from "./BackupPlanManager.ts";
+import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 
 const op = new OPClient();
 
-export async function kubernetesBackups(planManager: BackupPlanManager, clusterDefinition: KubernetesClusterDefinition) {
+export async function kubernetesBackups(planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesClusterDefinition) {
   const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
   const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
-  const volsyncPassword = await op.getItemByTitle(`Volsync Password`).then((z) => z.fields.credential.value!);
-  const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
-    kubeconfig: kubeConfigJson,
-  });
 
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(kubeConfigJson);
@@ -24,7 +20,6 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 
   // TODO: clear out old keys that are no longer used
-  const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
   const namespaceList = await coreApi.listNamespace();
   const namespaceNames = namespaceList.items.map((ns) => ns.metadata!.name!);
 
@@ -56,39 +51,25 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
       return jobs;
     });
 
-  const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
+  return volsyncBackupJobs.apply((jobs) =>
     pulumi.all(
       jobs.map((job) => {
         pulumi.log.info(`Creating backup job for VolSync job ${job} in celestia`, planManager);
-        return planManager.createBackupJob(planManager.source, {
-          name: pulumi.interpolate`${clusterDefinition.key}-volsync-source-${job}`,
-          schedule: "0 10 * * *", // 10 am daily
-          sourceType: "local",
-          source: pulumi.interpolate`/spike/backup/${clusterDefinition.key}/volsync/${job}`,
-          destinationType: "local",
-          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-        });
+        return planManager.addBackupPlan(
+          pulumi.output({
+            // name: "pgdump",
+            // title: "Postgres Dumps",
+            // path: "/spike/data/pgdump/",
+            // repository: "pgdump",
+            name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
+            title: `${clusterDefinition.title} VolSync :: ${job}`,
+            repository: `${clusterDefinition.key}-volsync-${job}`,
+            path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
+          }),
+        );
       }),
     ),
   );
-
-  const lunaJobs = volsyncBackupJobs.apply((jobs) =>
-    pulumi.all(
-      jobs.map((job) => {
-        pulumi.log.info(`Creating backup job for VolSync job ${job} in luna`, planManager);
-        return planManager.createBackupJob(planManager.destinations, {
-          name: pulumi.interpolate`${clusterDefinition.key}-volsync-destination-${job}`,
-          schedule: "0 3 * * *", // 3 am daily
-          sourceType: "sftp",
-          source: pulumi.interpolate`${planManager.source.dockgeConnection.host}/${clusterDefinition.key}/volsync/${job}`,
-          destinationType: "local",
-          destination: pulumi.interpolate`/data/backup/${clusterDefinition.key}/volsync/${job}`,
-        });
-      }),
-    ),
-  );
-
-  return pulumi.all([celestiaJobs, lunaJobs]).apply(([celestia, luna]) => celestia.concat(luna));
 }
 
 function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {

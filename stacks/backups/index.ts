@@ -1,107 +1,61 @@
-import { BackupPlanManager, PbsDetails } from "./BackupPlanManager.ts";
 import { createClusterDefinition, GlobalResources, KubernetesClusterDefinition } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
+import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 
-const globals = new GlobalResources({}, {});
 const op = new OPClient();
-
-const backupDetails = pulumi
-  .output(op.findItemsByTag("pbs"))
-  .apply((items) => pulumi.all(items.map(getBackupServerDetails)))
-  .apply((items) => {
-    const source = items.find((item) => item.tags?.includes("backup-source"))!;
-    const destinations = items.filter((item) => item.tags?.includes("backup-destination"));
-    return { source, destinations };
-  });
 
 const dockgeDetails = pulumi.output(op.findItemsByTag("dockge")).apply((items) => pulumi.all(items.map(getDockgeServerDetails)));
 
-const backupPlanManager = new BackupPlanManager("backup-plan-manager", {
-  globals,
-  source: backupDetails.source,
-  destinations: backupDetails.destinations,
-});
+const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
-const sgcCluster = pulumi
-  .output(op.getItemByTitle("Cluster: Stargate Command"))
-  .apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition)
-  .apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
-const equestriaCluster = pulumi
-  .output(op.getItemByTitle("Cluster: Equestria"))
-  .apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition)
-  .apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
+const kubernetesClusters = pulumi
+  .output(op.findItemsByTag("cluster-definition"))
+  .apply((items) => items.filter((item) => item.fields.type.value === "kubernetes").map((c) => createClusterDefinition(c) as KubernetesClusterDefinition))
+  .apply((clusters) => clusters.map((cluster) => kubernetesBackups(backupPlanOrchestrator, cluster)));
 
 const dockgeInstances = dockgeDetails.apply((details) => {
   return details.map((detail) => {
     // Pre-sync: rclone pulls /opt/stacks-data/ from the dockge host into the backrest
     // container's staging dir before restic snapshots it.  The old createBackupJob
     // call is replaced by the preSync param on createBackrestPlan.
-    return backupPlanManager.createBackrestPlan(detail.name, {
-      title: detail.title,
-      path: pulumi.interpolate`/data/staging/${detail.name}/`,
-      repository: detail.name,
-      preSync: {
-        sftpHost: detail.hostname,
-        // rclone-sftp serves /data/ as root; /opt/stacks-data/ is mounted at /data/stacks/
-        sourcePath: "/stacks/",
-        // rclone-sftp listens on port 2022 (traefik sftp entrypoint)
-        sftpPort: 2022,
-      },
-      planConfig: {
-        schedule: {
-          cron: "0 3 * * *",
-          clock: "CLOCK_LOCAL",
+    return backupPlanOrchestrator.addBackupPlan(
+      pulumi.output({
+        name: detail.name,
+        title: detail.title,
+        path: pulumi.interpolate`/data/staging/${detail.name}/`,
+        repository: detail.name,
+        preSync: {
+          sftpHost: detail.hostname,
+          sftpPort: 2022,
+          sourcePath: "/stacks/",
         },
-      },
-    });
+      }),
+    );
   });
 });
 
-backupPlanManager.createBackrestPlan("immich", {
-  title: "Immich",
-  path: "/spike/data/immich/",
-  repository: "immich",
-  planConfig: {
-    excludes: ["/spike/data/immich/backups", "/spike/data/immich/encoded-video"],
-  },
-});
+backupPlanOrchestrator.addBackupPlan(
+  pulumi.output({
+    name: "immich",
+    title: "Immich",
+    path: "/spike/data/immich/",
+    repository: "immich",
+    planConfig: {
+      excludes: ["/spike/data/immich/backups", "/spike/data/immich/encoded-video"],
+    },
+  }),
+);
 
-backupPlanManager.createBackrestPlan("pgdump", {
-  title: "Postgres Dumps",
-  path: "/spike/data/pgdump/",
-  repository: "pgdump",
-});
-
-async function getBackupServerDetails(item: ReturnType<OPClient["mapItem"]>): Promise<PbsDetails> {
-  try {
-    const dockgeItem = await op.getItemByTitle(item.fields.dockge.value!);
-    return {
-      backupServerConnection: {
-        host: item.sections.ssh.fields.hostname.value!,
-        user: item.sections.ssh.fields.username.value!,
-      },
-      dockgeConnection: {
-        host: dockgeItem.sections.ssh.fields.hostname.value!,
-        user: "root",
-      },
-      cluster: createClusterDefinition(await op.getItemByTitle(item.fields.cluster.value!)),
-      tags: item.tags,
-      title: item.title,
-      publicKey: item.sections.backrest.fields.publicKey.value!,
-      privateKey: item.sections.backrest.fields.privateKey.value!,
-      privateKeyId: item.sections.backrest.fields.privateKeyId.value!,
-      // SSH port on the dockge HOST that destinations use for rclone SFTP pull.
-      sshPort: parseInt(dockgeItem.sections.ssh?.fields?.port?.value ?? "2022") || 2022,
-    };
-  } catch (error) {
-    pulumi.log.error(`Error getting backup server details: ${error}`);
-    pulumi.log.error(`Item details: ${JSON.stringify(item)}`);
-
-    throw error;
-  }
-}
+backupPlanOrchestrator.addBackupPlan(
+  pulumi.output({
+    name: "pgdump",
+    title: "Postgres Dumps",
+    path: "/spike/data/pgdump/",
+    repository: "pgdump",
+  }),
+);
 
 async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   try {
@@ -119,7 +73,7 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   }
 }
 
-pulumi.all([sgcCluster, equestriaCluster, dockgeInstances]).apply(() => {
-  pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanManager);
-  backupPlanManager.finalize();
+pulumi.all([kubernetesClusters, dockgeInstances]).apply(() => {
+  pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
+  return backupPlanOrchestrator.savePlan();
 });

@@ -11,8 +11,10 @@ import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { addUptimeGatus } from "@components/helpers.ts";
+import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
+const backupDirector = new BackupPlanDirector("backup-plan-orchestrator", { globals });
 
 const op = new OPClient();
 const vmRange = { start: 400, end: 499 };
@@ -84,7 +86,8 @@ dockgeRuntime
     },
   })
   .apply(() => host.addUptimeGatus())
-  .apply(() => createGatusDnsUptime(globals, { parent: host }));
+  .apply(() => createGatusDnsUptime(globals, { parent: host }))
+  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }));
 
 exportNodeStateToOnePassword(
   [

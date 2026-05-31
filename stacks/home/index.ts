@@ -14,8 +14,10 @@ import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
+const backupDirector = new BackupPlanDirector("backup-plan-orchestrator", { globals });
 
 const op = new OPClient();
 
@@ -26,9 +28,6 @@ const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site 
 const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
 const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
 const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
-const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply(createClusterDefinition);
-const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply(createClusterDefinition);
-
 const minioBucket = new minio.S3Bucket(
   `home-operations-minio-bucket`,
   {
@@ -187,7 +186,8 @@ pulumi
     alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: alphaSitePveVariables }).apply(() => alphaSiteHost.addUptimeGatus()),
     twilightSparkleHost.addUptimeGatus(),
   ])
-  .apply(() => createGatusDnsUptime(globals, { parent: alphaSiteHost }));
+  .apply(() => createGatusDnsUptime(globals, { parent: alphaSiteHost }))
+  .apply(() => backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }));
 
 exportNodeStateToOnePassword(
   [

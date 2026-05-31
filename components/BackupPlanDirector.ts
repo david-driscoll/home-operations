@@ -1,0 +1,477 @@
+import { ClusterDefinition, createClusterDefinition, GlobalResources } from "./globals.ts";
+import { OPClient } from "./op.ts";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonParse, jsonStringify, log, Output, output, Resource, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
+import { remote, types } from "@pulumi/command";
+import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
+import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
+import { NodeSSH } from "node-ssh";
+import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
+import { CopyToRemote } from "@pulumi/command/remote/index.js";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { FullItem } from "@1password/connect";
+import { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
+
+interface Connection {
+  connection: types.input.remote.ConnectionArgs;
+  cluster: ClusterDefinition;
+}
+
+const op = new OPClient();
+
+export class BackupPlanDirector extends ComponentResource {
+  plans: Output<BackupPlanItem[]>;
+  globals: GlobalResources;
+  ssh?: NodeSSH;
+  volsyncPassword?: string;
+  jobs: Output<{ task: Omit<BackupTask, "token">; detail: Connection }[]> = output([]);
+  private uptimeUrl: Output<string>;
+
+  constructor(
+    name: string,
+    args: {
+      globals: GlobalResources;
+    },
+    opts?: ComponentResourceOptions,
+  ) {
+    super("home:backups:BackupPlanDirector", name, {}, opts);
+    this.globals = args.globals;
+    this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
+    this.plans = output(op.getItemByTitle(`Backup Plan`))
+      .apply((item) => jsonParse(item?.fields.plan.value!) as Output<{ plans: BackupPlanItem[] }>)
+      .apply((data) => data.plans);
+  }
+
+  public createSource(source: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>) {
+    return all([source, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([source, plans, uptimeUrl, password]) => {
+      const groupTitle = `Backups: ${source.cluster.title}`;
+      const backrestItems = plans
+        .map((plan) => this.createSourceBackrestPlan(groupTitle, source, plan, uptimeUrl, password))
+        .reduce(
+          (acc, { plan, repo }) => {
+            acc.plans.push(plan);
+            acc.repos.push(repo);
+            return acc;
+          },
+          { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
+        );
+      const uptime = this.createUptime(groupTitle, source, plans);
+      return output(
+        this.updateBackrestConfiguration(
+          source,
+          uptime.apply((u) => [u]),
+          backrestItems,
+        ),
+      ).apply(() => output({ plans, items: backrestItems, uptime }));
+    });
+  }
+
+  public createDestination(destination: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>) {
+    return all([destination, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([destination, plans, uptimeUrl, password]) => {
+      const groupTitle = `Replicate: ${destination.cluster.title}`;
+      const backrestItems = plans
+        .map((plan) => this.createDestinationBackrestPlan(groupTitle, destination, plan, uptimeUrl, password))
+        .reduce(
+          (acc, { plan, repo }) => {
+            acc.plans.push(plan);
+            acc.repos.push(repo);
+            return acc;
+          },
+          { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
+        );
+      const depends = backrestItems.plans.map((plan) => {
+        return new remote.Command(
+          `backrest-config-compose`,
+          {
+            connection: destination.connection,
+            create: interpolate`mkdir -p "/data/backup/.pull-health/${plan.id}" && chown 65534:65534 "/data/backup/.pull-health/${plan.id}"`,
+          },
+          {
+            parent: this,
+          },
+        );
+      });
+      const uptime = this.createUptime(groupTitle, destination, plans);
+      return output(
+        this.updateBackrestConfiguration(
+          destination,
+          uptime.apply((u) => [u, ...depends]),
+          backrestItems,
+        ),
+      ).apply(() => output({ plans, items: backrestItems, uptime }));
+    });
+  }
+
+  private createSourceBackrestPlan(groupTitle: string, detail: Connection, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+    const sourceGroup = `Backups: ${detail.cluster.title}`;
+    const sourceToken = toGatusKey(sourceGroup, plan.name);
+
+    const hooks: BackrestPlan["hooks"] = [];
+
+    // Pre-sync hook: pull staging data via rclone SFTP before restic snapshots it.
+    // Runs inside the backrest container, so `path` is the container-local destination.
+    // `preSync.sourcePath` is the absolute path on the SFTP host's filesystem.
+    if (plan.preSync) {
+      hooks.push({
+        conditions: ["CONDITION_SNAPSHOT_START"],
+        actionCommand: {
+          command: [
+            "rclone sync",
+            `:sftp:${plan.preSync.sourcePath}`,
+            plan.path,
+            `--sftp-host=${plan.preSync.sftpHost}`,
+            `--sftp-port=${plan.preSync.sftpPort ?? 2022}`,
+            "--sftp-user=nobody",
+            "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
+            "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
+          ].join(" "),
+        },
+        onError: "ON_ERROR_FATAL",
+      });
+    }
+
+    // Uptime heartbeat hooks — report plan outcome to Gatus external endpoint
+    hooks.push({
+      conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
+      actionCommand: {
+        command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=true" || true`,
+      },
+      onError: "ON_ERROR_IGNORE",
+    });
+    hooks.push({
+      conditions: ["CONDITION_SNAPSHOT_ERROR"],
+      actionCommand: {
+        command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=false" || true`,
+      },
+      onError: "ON_ERROR_IGNORE",
+    });
+
+    const backrestRepo: BackrestRepository = {
+      prunePolicy: {
+        schedule: {
+          maxFrequencyDays: 30,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        maxUnusedPercent: 10,
+      },
+      checkPolicy: {
+        schedule: {
+          maxFrequencyDays: 7,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        readDataSubsetPercent: 10,
+      },
+      commandPrefix: {
+        ioNice: "IO_BEST_EFFORT_LOW",
+        cpuNice: "CPU_LOW",
+      },
+      ...plan.repositoryConfig,
+      id: plan.name,
+      uri: `/data/backup/${plan.name}/`,
+      password,
+      autoUnlock: true,
+    };
+
+    const backrestPlan: BackrestPlan = {
+      retention: {
+        policyTimeBucketed: {
+          daily: 7,
+          weekly: 4,
+          monthly: 3,
+          keepLastN: 10,
+        },
+      },
+      skipIfUnchanged: true,
+      schedule: {
+        clock: "CLOCK_LAST_RUN_TIME",
+        maxFrequencyDays: 1,
+      },
+      ...plan.planConfig,
+      id: plan.name,
+      repo: plan.name,
+      paths: [plan.path],
+      hooks,
+    };
+
+    return { plan: backrestPlan, repo: backrestRepo };
+  }
+
+  private createDestinationBackrestPlan(groupTitle: string, detail: UnwrappedObject<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+    const pullPlans = new Map<string, BackrestPlan>();
+
+    // Derive sync path from the repo URI so that if `repository` overrides `name`,
+    // both the SFTP source path and the local destination path stay consistent.
+    const repoPath = `/data/backup/${plan.name}/`;
+    // rclone-sftp serves /data/ as root; strip leading /data to get SFTP-visible path.
+    const sftpPath = repoPath.startsWith("/data/") ? repoPath.slice("/data".length) : repoPath;
+    const destToken = toGatusKey(groupTitle, plan.name);
+
+    const rcloneCmd = [
+      `rclone sync :sftp:${sftpPath} /data/backup/${plan.name}/`,
+      `--sftp-host=${detail.connection.host}`,
+      `--sftp-port=2022`,
+      "--sftp-user=nobody",
+      "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
+      "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
+    ].join(" ");
+
+    const backrestRepo: BackrestRepository = {
+      prunePolicy: {
+        schedule: {
+          maxFrequencyDays: 30,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        maxUnusedPercent: 10,
+      },
+      checkPolicy: {
+        schedule: {
+          maxFrequencyDays: 7,
+          clock: "CLOCK_LAST_RUN_TIME",
+        },
+        readDataSubsetPercent: 10,
+      },
+      commandPrefix: {
+        ioNice: "IO_BEST_EFFORT_LOW",
+        cpuNice: "CPU_LOW",
+      },
+      ...plan.repositoryConfig,
+      id: plan.name,
+      uri: `/data/backup/${plan.name}/`,
+      password,
+      autoUnlock: true,
+    };
+
+    const backrestPlan: BackrestPlan = {
+      id: plan.name,
+      repo: plan.name,
+      paths: ["/data/backup/.pull-health/"],
+      schedule: { cron: "0 4 * * *", clock: "CLOCK_LOCAL" },
+      // policyKeepLastN is safe here: backrest filters forget by --path, so source
+      // snapshots (different paths) are not pruned by this plan's retention.
+      retention: { policyKeepLastN: 3 },
+      hooks: [
+        {
+          conditions: ["CONDITION_SNAPSHOT_START"],
+          actionCommand: {
+            command: `${rcloneCmd} && date -Iseconds > /data/backup/.pull-health/${plan.name}/sync_finished`,
+          },
+          onError: "ON_ERROR_FATAL",
+        },
+        {
+          conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
+          actionCommand: {
+            command: `curl -sf -X POST -H "Authorization: Bearer ${destToken}" "${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=true" || true`,
+          },
+          onError: "ON_ERROR_IGNORE",
+        },
+        {
+          conditions: ["CONDITION_SNAPSHOT_ERROR"],
+          actionCommand: {
+            command: `curl -sf -X POST -H "Authorization: Bearer ${destToken}" "${uptimeUrl}/api/v1/endpoints/${destToken}/external?success=false" || true`,
+          },
+          onError: "ON_ERROR_IGNORE",
+        },
+      ],
+    };
+
+    return { plan: backrestPlan, repo: backrestRepo };
+  }
+
+  private async getVolsyncPassword(): Promise<string> {
+    if (this.volsyncPassword) {
+      return this.volsyncPassword;
+    }
+
+    const opClient = new OPClient();
+    const volsyncItem = await opClient.getItemByTitle("Volsync Password");
+    if (!volsyncItem) {
+      throw new Error("Volsync password item not found in 1Password");
+    }
+    return (this.volsyncPassword = volsyncItem.fields.credential.value!);
+  }
+
+  private createUptime(groupTitle: string, detail: UnwrappedObject<Connection>, plans: BackupPlanItem[]) {
+    function makeEndpoint(groupName: string, planId: string): ExternalEndpoint {
+      return {
+        enabled: true,
+        name: planId,
+        token: toGatusKey(groupName, planId),
+        group: groupName,
+        heartbeat: { interval: "25h" },
+        alerts: [
+          {
+            type: "pushover",
+            enabled: true,
+            "success-threshold": 1,
+            "failure-threshold": 1,
+            "minimum-reminder-interval": "24h",
+          },
+        ],
+      } as ExternalEndpoint;
+    }
+    return addUptimeGatus(`backups-${detail.cluster.key}`, this.globals, { endpoints: [], "external-endpoints": [...plans].map((plan) => makeEndpoint(groupTitle, plan.name)) }, this);
+  }
+
+  async updateBackrestConfiguration(details: UnwrappedObject<Connection>, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
+    const connection = details.connection;
+    let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 2, modno: 1, instance: `${details.cluster.title}`, auth: { disabled: true }, multihost: {} };
+
+    {
+      const ssh = new NodeSSH();
+      await ssh.connect({
+        host: connection.host,
+        username: connection.user,
+      });
+
+      const currentConfig = (await ssh.execCommand("cat /opt/stacks-data/backrest/config/config.json")).stdout;
+
+      try {
+        updatedConfig = JSON.parse(currentConfig) as BackrestConfig;
+      } catch (e) {
+        log.warn(`Could not read existing backrest config, starting with empty config: ${e}`);
+        log.warn(`Current config content: ${currentConfig}`);
+      }
+
+      ssh.dispose();
+    }
+
+    if (!updatedConfig.version) {
+      updatedConfig.version = 6;
+    }
+    if (!updatedConfig.modno) {
+      updatedConfig.modno = 1;
+    }
+    if (!updatedConfig.instance) {
+      updatedConfig.instance = details.cluster.key;
+    }
+    if (!updatedConfig.auth) {
+      updatedConfig.auth = { disabled: true };
+    }
+
+    delete updatedConfig.multihost;
+    delete updatedConfig.sync;
+
+    // updatedConfig.multihost = {
+    // identity: {
+    //   keyId: details.privateKeyId,
+    //   ed25519priv: details.privateKey,
+    //   ed25519pub: details.publicKey,
+    // },
+    // authorizedClients: peers.map((peer) => ({
+    //   instanceId: peer.cluster.key,
+    //   keyId: peer.privateKeyId,
+    //   keyIdVerified: true,
+    //   ed25519pub: peer.publicKey,
+    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+    //   permissions: [
+    //     {
+    //       type: "PERMISSION_READ_CONFIG",
+    //       scopes: ["*"],
+    //     },
+    //     {
+    //       type: "PERMISSION_READ_OPERATIONS",
+    //       scopes: ["*"],
+    //     },
+    //   ],
+    // })),
+    // knownHosts: peers.map((peer) => ({
+    //   instanceId: peer.cluster.key,
+    //   keyId: peer.privateKeyId,
+    //   keyIdVerified: true,
+    //   ed25519pub: peer.publicKey,
+    //   instanceUrl: `https://${peer.backupServerConnection.host}`,
+    //   permissions: [
+    //     {
+    //       type: "PERMISSION_READ_CONFIG",
+    //       scopes: ["*"],
+    //     },
+    //     {
+    //       type: "PERMISSION_READ_OPERATIONS",
+    //       scopes: ["*"],
+    //     },
+    //   ],
+    // })),
+    // };
+
+    updatedConfig.repos = updatedConfig.repos || [];
+    updatedConfig.plans = updatedConfig.plans || [];
+
+    updateRepos(updatedConfig, items.repos);
+    updatePlans(updatedConfig, items.plans);
+
+    const configOutput = jsonStringify(updatedConfig);
+
+    const backrestConfig = copyFileToRemote("backrest-config.json", {
+      content: configOutput,
+      connection: details.connection,
+      remotePath: "/opt/stacks-data/backrest/config/config.json",
+      triggers: [configOutput],
+      dependsOn: depends,
+      parent: this,
+    });
+
+    const compose = new remote.Command(
+      `backrest-config-compose`,
+      {
+        connection: details.connection,
+        triggers: [configOutput],
+        create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
+      },
+      {
+        parent: this,
+        dependsOn: backrestConfig,
+      },
+    );
+
+    return compose;
+  }
+}
+
+
+function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: BackrestRepository[]) {
+  for (const repo of repos) {
+    const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+    if (jobIndex >= 0) {
+      // Never change autoInitialize on existing repos — backrest will fail to start if it tries
+      // to re-initialize an already-initialized restic repository.
+      updatedConfig.repos[jobIndex] = {
+        ...updatedConfig.repos[jobIndex],
+        uri: repo.uri,
+        password: repo.password,
+        env: repo.env,
+        flags: repo.flags,
+        prunePolicy: repo.prunePolicy,
+        checkPolicy: repo.checkPolicy,
+        hooks: repo.hooks,
+        commandPrefix: repo.commandPrefix,
+        autoUnlock: repo.autoUnlock,
+      };
+    } else {
+      // New repo: always initialize so backrest can manage it
+      updatedConfig.repos.push({
+        ...repo,
+        autoInitialize: true,
+      });
+    }
+  }
+}
+function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: BackrestPlan[]) {
+  for (const plan of plans) {
+    const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+    if (jobIndex >= 0) {
+      updatedConfig.plans[jobIndex] = {
+        ...updatedConfig.plans[jobIndex],
+        paths: plan.paths,
+        excludes: plan.excludes,
+        iexcludes: plan.iexcludes,
+        schedule: plan.schedule,
+        retention: plan.retention,
+        hooks: plan.hooks,
+        backupFlags: plan.backupFlags,
+        skipIfUnchanged: plan.skipIfUnchanged,
+        repo: plan.repo,
+      };
+    } else {
+      updatedConfig.plans.push(plan);
+    }
+  }
+}
