@@ -521,6 +521,8 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
   for (const repo of repos.values()) {
     const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
     if (jobIndex >= 0) {
+      // Never change autoInitialize on existing repos — backrest will fail to start if it tries
+      // to re-initialize an already-initialized restic repository.
       updatedConfig.repos[jobIndex] = {
         ...updatedConfig.repos[jobIndex],
         uri: repo.uri,
@@ -532,10 +534,9 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
         hooks: repo.hooks,
         commandPrefix: repo.commandPrefix,
         autoUnlock: repo.autoUnlock,
-        // Preserve caller's autoInitialize choice (false on destinations — rclone sync runs first)
-        autoInitialize: repo.autoInitialize ?? true,
       };
     } else {
+      // New repo: honour caller's choice (false for destinations — rclone sync provides the repo)
       updatedConfig.repos.push({
         ...repo,
         autoInitialize: repo.autoInitialize ?? true,
