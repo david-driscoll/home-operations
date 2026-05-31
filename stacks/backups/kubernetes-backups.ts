@@ -4,7 +4,7 @@ import { KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import { awaitOutput } from "@components/helpers.ts";
-import { from, map, mergeMap, lastValueFrom, toArray, concatMap } from "rxjs";
+import { from, map, mergeMap, lastValueFrom, toArray, concatMap, tap } from "rxjs";
 import { BackrestRepository } from "@openapi/backrest.js";
 import { BackupPlanManager } from "./BackupPlanManager.ts";
 
@@ -42,6 +42,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
               }),
             ),
           ),
+          tap((result) => pulumi.log.info(`Found ${result.items.length} secrets in namespace ${result.items[0]?.metadata?.namespace}`, planManager)),
           map((result) => result.items.map((s) => s.data?.RESTIC_REPOSITORY).filter((z): z is string => !!z)),
           mergeMap((lists) => from(lists)),
           map((item) => Buffer.from(item, "base64").toString("utf-8").split("/").pop()!),
@@ -58,6 +59,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
   const celestiaJobs = volsyncBackupJobs.apply((jobs) =>
     pulumi.all(
       jobs.map((job) => {
+        pulumi.log.info(`Creating backup job for VolSync job ${job} in celestia`, planManager);
         return planManager.createBackupJob(planManager.source, {
           name: pulumi.interpolate`${clusterDefinition.key}-volsync-source-${job}`,
           schedule: "0 10 * * *", // 10 am daily
@@ -73,6 +75,7 @@ export async function kubernetesBackups(planManager: BackupPlanManager, clusterD
   const lunaJobs = volsyncBackupJobs.apply((jobs) =>
     pulumi.all(
       jobs.map((job) => {
+        pulumi.log.info(`Creating backup job for VolSync job ${job} in luna`, planManager);
         return planManager.createBackupJob(planManager.destinations, {
           name: pulumi.interpolate`${clusterDefinition.key}-volsync-destination-${job}`,
           schedule: "0 3 * * *", // 3 am daily

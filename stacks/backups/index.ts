@@ -24,13 +24,16 @@ const backupPlanManager = new BackupPlanManager("backup-plan-manager", {
   destinations: backupDetails.destinations,
 });
 
-const sgcCluster = pulumi.output(op.getItemByTitle("Cluster: Stargate Command")).apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition);
-const equestriaCluster = pulumi.output(op.getItemByTitle("Cluster: Equestria")).apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition);
+const sgcCluster = pulumi
+  .output(op.getItemByTitle("Cluster: Stargate Command"))
+  .apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition)
+  .apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
+const equestriaCluster = pulumi
+  .output(op.getItemByTitle("Cluster: Equestria"))
+  .apply((c) => createClusterDefinition(c) as KubernetesClusterDefinition)
+  .apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
 
-sgcCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
-equestriaCluster.apply((cluster) => kubernetesBackups(backupPlanManager, cluster));
-
-dockgeDetails.apply((details) => {
+const dockgeInstances = dockgeDetails.apply((details) => {
   return details.map((detail) => {
     // Pre-sync: rclone pulls /opt/stacks-data/ from the dockge host into the backrest
     // container's staging dir before restic snapshots it.  The old createBackupJob
@@ -116,4 +119,7 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   }
 }
 
-backupPlanManager.finalize();
+pulumi.all([sgcCluster, equestriaCluster, dockgeInstances]).apply(() => {
+  pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanManager);
+  backupPlanManager.finalize();
+});

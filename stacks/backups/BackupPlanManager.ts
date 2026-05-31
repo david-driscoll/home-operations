@@ -226,22 +226,12 @@ export class BackupPlanManager extends ComponentResource {
 
     // Source: one external endpoint per plan
     const sourceGroup = `Backups: ${source.cluster.title}`;
-    addUptimeGatus(
-      `backups-${source.cluster.key}`,
-      this.globals,
-      { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(sourceGroup, id)) },
-      this,
-    );
+    addUptimeGatus(`backups-${source.cluster.key}`, this.globals, { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(sourceGroup, id)) }, this);
 
     // Destinations: one replication endpoint per plan
     for (const dest of destinations) {
       const destGroup = `Replicate: ${dest.cluster.title}`;
-      addUptimeGatus(
-        `backups-${dest.cluster.key}`,
-        this.globals,
-        { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(destGroup, id)) },
-        this,
-      );
+      addUptimeGatus(`backups-${dest.cluster.key}`, this.globals, { endpoints: [], "external-endpoints": [...this.plans.keys()].map((id) => makeEndpoint(destGroup, id)) }, this);
     }
   }
 
@@ -322,32 +312,34 @@ export class BackupPlanManager extends ComponentResource {
   }
 
   public finalize() {
-    all([this.source, this.destinations, this.uptimeUrl]).apply(async ([source, destinations, uptimeUrl]) => {
-      // Source: provision repo dirs, write repos + plans
-      await updateBackrestConfiguration(source, destinations, async (ssh, updatedConfig) => {
-        await provisionRepoDirs(ssh, this.repos);
-        updateRepos(updatedConfig, this.repos);
-        updatePlans(updatedConfig, this.plans);
-      });
-
-      // Destinations: provision repo dirs, write repos + pull plans
-      for (const destination of destinations) {
-        const pullPlans = this.buildPullPlans(source, destination, uptimeUrl);
-
-        await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
+    return this.depends.apply((d) =>
+      all([this.source, this.destinations, this.uptimeUrl]).apply(async ([source, destinations, uptimeUrl]) => {
+        // Source: provision repo dirs, write repos + plans
+        await updateBackrestConfiguration(source, destinations, async (ssh, updatedConfig) => {
           await provisionRepoDirs(ssh, this.repos);
-          // Provision the pull-health marker dir
-          const healthResult = await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
-          if (healthResult.code !== 0) {
-            log.warn(`Failed to provision pull-health dir: ${healthResult.stderr}`);
-          }
           updateRepos(updatedConfig, this.repos);
-          updatePlans(updatedConfig, pullPlans);
+          updatePlans(updatedConfig, this.plans);
         });
-      }
 
-      this.createUptime(source, destinations);
-    });
+        // Destinations: provision repo dirs, write repos + pull plans
+        for (const destination of destinations) {
+          const pullPlans = this.buildPullPlans(source, destination, uptimeUrl);
+
+          await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
+            await provisionRepoDirs(ssh, this.repos);
+            // Provision the pull-health marker dir
+            const healthResult = await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
+            if (healthResult.code !== 0) {
+              log.warn(`Failed to provision pull-health dir: ${healthResult.stderr}`);
+            }
+            updateRepos(updatedConfig, this.repos);
+            updatePlans(updatedConfig, pullPlans);
+          });
+        }
+
+        this.createUptime(source, destinations);
+      }),
+    );
   }
 }
 
