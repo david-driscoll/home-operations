@@ -404,9 +404,7 @@ export class BackupPlanManager extends ComponentResource {
       for (const destination of destinations) {
         const pullPlans = this.buildPullPlans(source, destination, uptimeUrl);
 
-        // Destination repos use autoInitialize: false — the rclone pull (CONDITION_SNAPSHOT_START)
-        // copies an already-initialized restic repo from the source before backrest touches it.
-        const destRepos = new Map([...this.repos.entries()].map(([k, v]) => [k, { ...v, autoInitialize: false }]));
+        const destRepos = this.repos;
 
         await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
           await provisionRepoDirs(ssh, this.repos);
@@ -536,10 +534,10 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
         autoUnlock: repo.autoUnlock,
       };
     } else {
-      // New repo: honour caller's choice (false for destinations — rclone sync provides the repo)
+      // New repo: always initialize so backrest can manage it
       updatedConfig.repos.push({
         ...repo,
-        autoInitialize: repo.autoInitialize ?? true,
+        autoInitialize: true,
       });
     }
   }
