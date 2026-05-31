@@ -25,7 +25,7 @@ services:
       - /opt/stacks-data/${APP}/config:/config
       - ./cache:/cache
       - ./rclone:/root/.config/rclone
-      - /data/backup:/backup
+      - /data/backup:/data/backup
       # - /data/restic:/repos
       - ./ssh:/root/.ssh:ro
       - /spike/backup:/spike/backup:ro

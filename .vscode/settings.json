@@ -10,5 +10,26 @@
     }
   ],
   "chat.promptFiles": true,
-  "snyk.advanced.autoSelectOrganization": true
+  "snyk.advanced.autoSelectOrganization": true,
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#459583",
+    "activityBar.background": "#459583",
+    "activityBar.foreground": "#e7e7e7",
+    "activityBar.inactiveForeground": "#e7e7e799",
+    "activityBarBadge.background": "#d9bee1",
+    "activityBarBadge.foreground": "#15202b",
+    "editorGroup.border": "#459583",
+    "panel.border": "#459583",
+    "sash.hoverBorder": "#459583",
+    "sideBar.border": "#459583",
+    "statusBar.background": "#459583",
+    "statusBar.debuggingBackground": "#954557",
+    "statusBar.debuggingForeground": "#e7e7e7",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#5ab39f",
+    "statusBarItem.remoteBackground": "#459583",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "tab.activeBorder": "#459583"
+  },
+  "peacock.color": "#459583"
 }
