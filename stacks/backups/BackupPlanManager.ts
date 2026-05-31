@@ -94,7 +94,8 @@ export class BackupPlanManager extends ComponentResource {
                 `--sftp-host=${preSync.sftpHost}`,
                 `--sftp-port=${preSync.sftpPort ?? 2022}`,
                 "--sftp-user=nobody",
-                "--sftp-key-file=/root/.ssh/id_ed25519",
+                "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
+                "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
               ].join(" "),
             },
             onError: "ON_ERROR_FATAL",
@@ -349,7 +350,8 @@ export class BackupPlanManager extends ComponentResource {
         `--sftp-host=${sourceHost}`,
         `--sftp-port=${sshPort}`,
         "--sftp-user=nobody",
-        "--sftp-key-file=/root/.ssh/id_ed25519",
+        "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
+        "--sftp-known-hosts-file=/opt/stacks-data/backrest/ssh/known_hosts",
       ].join(" ");
 
       pullPlans.set(`pull-${planId}`, {
