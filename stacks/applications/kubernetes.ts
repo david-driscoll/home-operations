@@ -10,6 +10,8 @@ import { from, map, lastValueFrom, toArray, concatMap } from "rxjs";
 import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
 import { kebabCase } from "moderndash";
+import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { kubernetesBackups } from "./kubernetes-backups.ts";
 
 const op = new OPClient();
 
@@ -168,7 +170,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
+  const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
+  await kubernetesBackups(backupPlanOrchestrator, clusterDefinition);
   return {};
 }
 

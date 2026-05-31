@@ -14,7 +14,7 @@ import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
-const backupDirector = new BackupPlanDirector("backup-plan-orchestrator", { globals });
+const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const op = new OPClient();
 const vmRange = { start: 500, end: 599 };

@@ -1,7 +1,5 @@
-import { createClusterDefinition, GlobalResources, KubernetesClusterDefinition } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
-import { kubernetesBackups } from "./kubernetes-backups.ts";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 
 const op = new OPClient();
@@ -9,11 +7,6 @@ const op = new OPClient();
 const dockgeDetails = pulumi.output(op.findItemsByTag("dockge")).apply((items) => pulumi.all(items.map(getDockgeServerDetails)));
 
 const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
-
-const kubernetesClusters = pulumi
-  .output(op.findItemsByTag("cluster-definition"))
-  .apply((items) => items.filter((item) => item.fields.type.value === "kubernetes").map((c) => createClusterDefinition(c) as KubernetesClusterDefinition))
-  .apply((clusters) => clusters.map((cluster) => kubernetesBackups(backupPlanOrchestrator, cluster)));
 
 const dockgeInstances = dockgeDetails.apply((details) => {
   return details.map((detail) => {
@@ -73,7 +66,7 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
   }
 }
 
-pulumi.all([kubernetesClusters, dockgeInstances]).apply(() => {
+pulumi.all([dockgeInstances]).apply(() => {
   pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
   return backupPlanOrchestrator.savePlan();
 });

@@ -51,23 +51,25 @@ export async function kubernetesBackups(planManager: BackupPlanOrchestrator, clu
       return jobs;
     });
 
-  return volsyncBackupJobs.apply((jobs) =>
-    pulumi.all(
-      jobs.map((job) => {
-        pulumi.log.info(`Creating backup job for VolSync job ${job} in celestia`, planManager);
-        return planManager.addBackupPlan(
-          pulumi.output({
-            // name: "pgdump",
-            // title: "Postgres Dumps",
-            // path: "/spike/data/pgdump/",
-            // repository: "pgdump",
-            name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
-            title: `${clusterDefinition.title} VolSync :: ${job}`,
-            repository: `${clusterDefinition.key}-volsync-${job}`,
-            path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
-          }),
-        );
-      }),
+  return await awaitOutput(
+    volsyncBackupJobs.apply((jobs) =>
+      pulumi.all(
+        jobs.map((job) => {
+          pulumi.log.info(`Creating backup job for VolSync job ${job} in celestia`, planManager);
+          return planManager.addBackupPlan(
+            pulumi.output({
+              // name: "pgdump",
+              // title: "Postgres Dumps",
+              // path: "/spike/data/pgdump/",
+              // repository: "pgdump",
+              name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
+              title: `${clusterDefinition.title} VolSync :: ${job}`,
+              repository: `${clusterDefinition.key}-volsync-${job}`,
+              path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
+            }),
+          );
+        }),
+      ),
     ),
   );
 }

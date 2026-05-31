@@ -14,7 +14,7 @@ import { addUptimeGatus } from "@components/helpers.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
-const backupDirector = new BackupPlanDirector("backup-plan-orchestrator", { globals });
+const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const op = new OPClient();
 const vmRange = { start: 400, end: 499 };
