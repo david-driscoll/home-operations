@@ -9,8 +9,9 @@ services:
     env_file:
       - path: .env
     command: >-
-      serve sftp /data/ --addr :2022 --authorized-keys
-      /config/ssh/authorized_keys
+      serve sftp /data/ --addr :2022
+      --authorized-keys /config/ssh/authorized_keys
+      --key /config/ssh/host_key
     volumes:
       - /data/backup/:/data/backup/:rw
       - /opt/stacks-data/:/data/stacks/:ro
