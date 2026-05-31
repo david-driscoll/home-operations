@@ -139,7 +139,7 @@ export class BackupPlanManager extends ComponentResource {
           },
           ...repositoryConfig,
           id: name,
-          uri: `/backup/${repository}/`,
+          uri: `/data/backup/${repository}/`,
           password,
           autoUnlock: true,
         });
@@ -344,9 +344,10 @@ export class BackupPlanManager extends ComponentResource {
     // rclone source path: /backup/<planId>/ is the SFTP path served by rclone-sftp on source.
       // rclone-sftp serves /data/ as its root; /data/backup/ is mounted there, so the
       // SFTP-visible path is /backup/<planId>/ (not the host path /data/backup/<planId>/).
-      // rclone destination path: /backup/<planId>/ is the container path on destination.
+      // rclone destination path: /data/backup/<planId>/ is the container path on destination
+      // (mount changed to /data/backup:/data/backup so host and container paths are identical).
       const rcloneCmd = [
-        `rclone sync :sftp:/backup/${planId}/ /backup/${planId}/`,
+        `rclone sync :sftp:/backup/${planId}/ /data/backup/${planId}/`,
         `--sftp-host=${sourceHost}`,
         `--sftp-port=${sshPort}`,
         "--sftp-user=nobody",
@@ -357,7 +358,7 @@ export class BackupPlanManager extends ComponentResource {
       pullPlans.set(`pull-${planId}`, {
         id: `pull-${planId}`,
         repo: planId,
-        paths: ["/backup/.pull-health/"],
+        paths: ["/data/backup/.pull-health/"],
         schedule: { cron: "0 4 * * *", clock: "CLOCK_LOCAL" },
         // policyKeepLastN is safe here: backrest filters forget by --path, so source
         // snapshots (different paths) are not pruned by this plan's retention.
@@ -366,7 +367,7 @@ export class BackupPlanManager extends ComponentResource {
           {
             conditions: ["CONDITION_SNAPSHOT_START"],
             actionCommand: {
-              command: `${rcloneCmd} && mkdir -p /backup/.pull-health && date -Iseconds > /backup/.pull-health/${planId}`,
+              command: `${rcloneCmd} && mkdir -p /data/backup/.pull-health && date -Iseconds > /data/backup/.pull-health/${planId}`,
             },
             onError: "ON_ERROR_FATAL",
           },
@@ -408,7 +409,7 @@ export class BackupPlanManager extends ComponentResource {
 
         await updateBackrestConfiguration(destination, [source, ...destinations.filter((d) => d !== destination)], async (ssh, updatedConfig) => {
           await provisionRepoDirs(ssh, this.repos);
-          // Provision the pull-health marker dir (host path translation: /backup/ → /data/backup/)
+          // Provision the pull-health marker dir
           await ssh.execCommand(`mkdir -p "/data/backup/.pull-health" && chown 65534:65534 "/data/backup/.pull-health"`);
           updateRepos(updatedConfig, destRepos);
           updatePlans(updatedConfig, pullPlans);
@@ -567,16 +568,14 @@ function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: Backre
 /**
  * Provision local-path restic repo directories on the host.
  *
- * Repo URIs use container paths (/backup/<planId>/).
- * The container path /backup/ maps to the host path /data/backup/,
- * so we translate before running SSH commands on the host.
+ * Repo URIs now use /data/backup/<planId>/ which is the same on both
+ * host and container (mount: /data/backup:/data/backup), so no path
+ * translation is required.
  */
 async function provisionRepoDirs(ssh: NodeSSH, repos: Map<string, BackrestRepository>) {
   for (const repo of repos.values()) {
-    if (!repo.uri?.startsWith("/backup/")) continue;
-    // /backup/<planId>/  →  /data/backup/<planId>/
-    const hostPath = repo.uri.replace(/^\/backup\//, "/data/backup/");
+    if (!repo.uri?.startsWith("/data/backup/")) continue;
     // Use numeric UID/GID 65534 (nobody:nogroup) — avoids name resolution issues in LXC namespaces
-    await ssh.execCommand(`mkdir -p "${hostPath}" && chown 65534:65534 "${hostPath}"`);
+    await ssh.execCommand(`mkdir -p "${repo.uri}" && chown 65534:65534 "${repo.uri}"`);
   }
 }
