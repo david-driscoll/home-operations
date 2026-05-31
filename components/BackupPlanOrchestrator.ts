@@ -39,12 +39,12 @@ export class BackupPlanOrchestrator extends ComponentResource {
     this.plans = all([this.plans, plan]).apply(([plans, newPlan]) => [...plans, newPlan]);
   }
 
-  public savePlan() {
+  public savePlan(title: string) {
     return new OnePasswordItem(
       `backup-plan`,
       {
         category: FullItem.CategoryEnum.SecureNote,
-        title: `Backup Plan`,
+        title: title,
         tags: ["backup-plan"],
         fields: {
           plan: {

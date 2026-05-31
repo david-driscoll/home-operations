@@ -68,5 +68,5 @@ async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
 
 pulumi.all([dockgeInstances]).apply(() => {
   pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
-  return backupPlanOrchestrator.savePlan();
+  return backupPlanOrchestrator.savePlan("Backup Plan");
 });

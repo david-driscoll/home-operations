@@ -36,9 +36,9 @@ export class BackupPlanDirector extends ComponentResource {
     super("home:backups:BackupPlanDirector", name, {}, opts);
     this.globals = args.globals;
     this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
-    this.plans = output(op.getItemByTitle(`Backup Plan`))
-      .apply((item) => jsonParse(item?.fields.plan.value!) as Output<{ plans: BackupPlanItem[] }>)
-      .apply((data) => data.plans);
+    this.plans = output(op.findItemsByTag("backup-plan"))
+      .apply((items) => output(items.map((item) => jsonParse(item?.fields.plan.value!) as Output<{ plans: BackupPlanItem[] }>)))
+      .apply((plans) => plans.flatMap((p) => p.plans));
   }
 
   public createSource(source: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>) {
@@ -425,7 +425,6 @@ export class BackupPlanDirector extends ComponentResource {
     return compose;
   }
 }
-
 
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: BackrestRepository[]) {
   for (const repo of repos) {

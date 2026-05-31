@@ -172,7 +172,13 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   );
   const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
-  await kubernetesBackups(backupPlanOrchestrator, clusterDefinition);
+  await awaitOutput(
+    pulumi.all([kubernetesBackups(backupPlanOrchestrator, clusterDefinition)]).apply(() => {
+      pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
+      return backupPlanOrchestrator.savePlan(`${clusterDefinition.title} Backup Plan`);
+    }),
+  );
+
   return {};
 }
 
