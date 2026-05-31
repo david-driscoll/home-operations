@@ -410,7 +410,7 @@ export class BackupPlanDirector extends ComponentResource {
     });
 
     const compose = new remote.Command(
-      `backrest-config-compose`,
+      `backrest-restart`,
       {
         connection: details.connection,
         triggers: [configOutput],
