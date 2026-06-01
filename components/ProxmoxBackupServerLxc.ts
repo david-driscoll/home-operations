@@ -449,7 +449,8 @@ __PBS_GROUPS__`;
       },
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
-    this.tailscaleIpAddress = getTailscaleIp(tailscaleName, args.globals);
+
+    this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);
   }
 
   public addHostMount(path: string, containerPath?: string) {
