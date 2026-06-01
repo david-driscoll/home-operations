@@ -158,9 +158,7 @@ export function installTailscaleLxc(options: {
   };
 }) {
   const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
-    options.dependsOn = options.dependsOn ?? [];
-
-    const depends = [];
+    const dependsOn = options.dependsOn ?? [];
 
     if (pulumi.runtime.isDryRun()) {
       return pulumi.unknown as ReturnType<typeof updateTailscaleDeviceInfo>;
@@ -176,7 +174,7 @@ export function installTailscaleLxc(options: {
         connection: options.connection,
         create: tunCreate,
       },
-      { parent: options.parent, dependsOn: options.dependsOn },
+      { parent: options.parent, dependsOn: dependsOn },
     );
 
     const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${options.args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${options.args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
@@ -194,7 +192,7 @@ export function installTailscaleLxc(options: {
         tags: args.advertiseTags,
         description: "Proxmox Management Key",
       },
-      { parent: options.parent, dependsOn: options.dependsOn, provider: options.globals.tailscaleProvider },
+      { parent: options.parent, dependsOn: dependsOn, provider: options.globals.tailscaleProvider },
     );
 
     if (options.installTailscale) {
@@ -219,7 +217,7 @@ export function installTailscaleLxc(options: {
         },
         { parent: options.parent, dependsOn: [installTailscale] },
       );
-      depends.push(installTailscale, restartLxc);
+      dependsOn.push(installTailscale, restartLxc);
 
       // Step 2: Copy auth key to container
       const authKey = copyFileToRemote(`${name}-authkey`, {
@@ -227,7 +225,7 @@ export function installTailscaleLxc(options: {
         remotePath: pulumi.interpolate`/tmp/${name}-authkey`,
         connection: options.connection,
         parent: options.parent,
-        dependsOn: [...depends],
+        dependsOn: [...dependsOn],
         triggers: [lxcConfig.create, restartLxc.create, tailscaleAuthkey.key],
       });
 
@@ -238,9 +236,9 @@ export function installTailscaleLxc(options: {
           create: pulumi.interpolate`pct push ${options.vmId} /tmp/${name}-authkey /tmp/${name}-authkey`,
           triggers: [lxcConfig.create, authKey.id, tailscaleAuthkey.key],
         },
-        { parent: options.parent, dependsOn: [...depends] },
+        { parent: options.parent, dependsOn: [...dependsOn] },
       );
-      depends.push(copyAuthKey);
+      dependsOn.push(copyAuthKey);
 
       // Step 4: Run tailscale up with auth key
       const tailscaleUp = new remote.Command(
@@ -250,9 +248,9 @@ export function installTailscaleLxc(options: {
           create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale up --auth-key=file:/tmp/${name}-authkey ${tailscaleArgs} --reset`,
           triggers: [lxcConfig.create, copyAuthKey.id, tailscaleAuthkey.key],
         },
-        { parent: options.parent, dependsOn: [...depends] },
+        { parent: options.parent, dependsOn: [...dependsOn] },
       );
-      depends.push(tailscaleUp);
+      dependsOn.push(tailscaleUp);
     }
 
     // Step 5: Configure tailscale settings
@@ -263,14 +261,15 @@ export function installTailscaleLxc(options: {
         create: pulumi.interpolate`pct exec ${options.vmId} -- tailscale set ${options.args.relayServerPort ? pulumi.interpolate`--relay-server-port=${options.args.relayServerPort}` : ""} ${tailscaleArgs} --auto-update`,
         triggers: [lxcConfig.create, tailscaleAuthkey.key],
       },
-      { parent: options.parent, dependsOn: [...depends] },
+      { parent: options.parent, dependsOn: [...dependsOn] },
     );
-    depends.push(tailscaleSet);
     if (pulumi.runtime.isDryRun()) {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, depends);
+    return tailscaleSet.stdout
+      .apply(() =>updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn))
+      .apply((z) => z);
   });
 
   return deviceInfo;
@@ -349,7 +348,7 @@ export function updateTailscaleProxmox(options: {
   };
 }) {
   const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
-    options.dependsOn = options.dependsOn ?? [];
+    const dependsOn = options.dependsOn ?? [];
 
     const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
       args.ssh ? "--ssh" : "--ssh=false"
@@ -369,7 +368,9 @@ export function updateTailscaleProxmox(options: {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, options.dependsOn);
+    return tailscaleSet.stdout
+      .apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn))
+      .apply((z) => z);
   });
 
   return deviceInfo;
