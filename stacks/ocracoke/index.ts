@@ -9,12 +9,11 @@ import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
-import { addUptimeGatus } from "@components/helpers.ts";
 import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 
 const globals = new GlobalResources({}, {});
-// const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
+const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const op = new OPClient();
 const vmRange = { start: 500, end: 599 };
@@ -54,25 +53,24 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
     tailscaleServices.push(`svc:${service}`);
   },
 });
-// dockgeRuntime.addHostMount("/data");
+dockgeRuntime.addHostMount("/data");
 
-// machine does not have drives yet
-// const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
-//   globals,
-//   outputs,
-//   host: host,
-//   vmId: pbsId.result,
-//   tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
-//   cluster: cluster,
-//   dockge: dockgeRuntime,
-//   dependsOn: [],
-//   tags: [  ],
-// });
-// pbs.addHostMount("/data");
+const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
+  globals,
+  outputs,
+  host: host,
+  vmId: pbsId.result,
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  cluster: cluster,
+  dockge: dockgeRuntime,
+  dependsOn: [],
+  tags: ["backup-destination"],
+});
+pbs.addHostMount("/data");
 
 dockgeRuntime
   .deployStacks({
-    dependsOn: [],
+    dependsOn: [pbs],
     variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
       PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
@@ -80,8 +78,8 @@ dockgeRuntime
     },
   })
   .apply(() => host.addUptimeGatus())
-  .apply(() => createGatusDnsUptime(globals, { parent: host }));
-// .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }))
+  .apply(() => createGatusDnsUptime(globals, { parent: host }))
+  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }));
 
 exportNodeStateToOnePassword(
   [
@@ -96,11 +94,11 @@ exportNodeStateToOnePassword(
       internalIp: dockgeRuntime.ipAddress,
       nodeType: "dockge",
     },
-    // {
-    //   name: pbs.tailscaleName,
-    //   ip: pbs.tailscaleIpAddress,
-    //   nodeType: "pbs",
-    // },
+    {
+      name: pbs.tailscaleName,
+      ip: pbs.tailscaleIpAddress,
+      nodeType: "pbs",
+    },
   ],
   tailscaleServices,
   { parent: host },
