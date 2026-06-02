@@ -1,4 +1,4 @@
-# Network Server Tool Reference (174 tools)
+# Network Server Tool Reference (176 tools)
 
 Complete reference for `unifi_*` tools. All read tools are always available. Mutating tools require permissions (see main skill for details).
 
@@ -44,10 +44,10 @@ Always available, regardless of registration mode.
 
 | Tool | Type | Description |
 |------|------|-------------|
-| `unifi_get_client_details` | Read | Returns the full raw client object for one client by MAC address — includes all controller-reported fields: IP, hostname, connection stat... |
-| `unifi_list_blocked_clients` | Read | List clients/devices that are currently blocked from the network |
-| `unifi_list_clients` | Read | Returns connected clients with MAC, name, hostname, IP, connection type (wired/wireless), and for wireless clients: SSID, signal dBm, cha... |
-| `unifi_lookup_by_ip` | Read | Quick IP-to-hostname lookup. |
+| `unifi_get_client_details` | Read | Returns client data for one client by MAC address. |
+| `unifi_list_blocked_clients` | Read | Lists clients/devices currently blocked from the network. |
+| `unifi_list_clients` | Read | Returns connected clients with mac, name, hostname, ip, status (online/offline), connection type (wired/wireless), and for wireless clien... |
+| `unifi_lookup_by_ip` | Read | Quick IP-to-client lookup. |
 | `unifi_authorize_guest` | Mutate | Authorize a guest client to access the guest network by MAC address |
 | `unifi_block_client` | Mutate | Block a client/device from the network by MAC address |
 | `unifi_force_reconnect_client` | Mutate | Force a client to reconnect to the network (kick) by MAC address |
@@ -72,7 +72,7 @@ Always available, regardless of registration mode.
 
 | Tool | Type | Description |
 |------|------|-------------|
-| `unifi_get_device_details` | Read | Returns the full raw device object for one device by MAC address — includes radio tables, port tables, system stats, WAN info, firmware d... |
+| `unifi_get_device_details` | Read | Returns device data for one device by MAC address. |
 | `unifi_get_device_radio` | Read | Get radio configuration and live statistics for an access point. |
 | `unifi_get_pdu_outlets` | Read | Return per-outlet state for a UniFi Smart Power PDU (UP6 / USP-Strip). |
 | `unifi_get_rf_scan_results` | Read | Get RF spectrum scan results for an access point. |
@@ -105,12 +105,13 @@ Always available, regardless of registration mode.
 ## Firewall
 
 <!-- AUTO:tools:firewall -->
-12 tools.
+14 tools.
 
 | Tool | Type | Description |
 |------|------|-------------|
 | `unifi_get_firewall_group_details` | Read | Get detailed configuration for a specific firewall group by ID. |
 | `unifi_get_firewall_policy_details` | Read | Get detailed configuration for a specific firewall policy by ID. |
+| `unifi_get_firewall_policy_ordering` | Read | Get user-defined firewall policy ordering for a source/destination firewall zone pair. |
 | `unifi_list_firewall_groups` | Read | List firewall groups (address and port groups) used as reusable objects in firewall policies. |
 | `unifi_list_firewall_policies` | Read | List firewall policies configured on the Unifi Network controller. |
 | `unifi_list_firewall_zones` | Read | List controller firewall zones (V2 API). |
@@ -118,6 +119,7 @@ Always available, regardless of registration mode.
 | `unifi_create_firewall_policy` | Mutate | Create a V2 zone-based firewall policy with schema validation. |
 | `unifi_delete_firewall_group` | Mutate | Delete a firewall group. |
 | `unifi_delete_firewall_policy` | Mutate | Delete a firewall policy by ID. |
+| `unifi_reorder_firewall_policies` | Mutate | Reorder user-defined firewall policies for a source/destination firewall zone pair. |
 | `unifi_toggle_firewall_policy` | Mutate | Enable or disable a specific firewall policy by ID. |
 | `unifi_update_firewall_group` | Mutate | Update an existing firewall group. |
 | `unifi_update_firewall_policy` | Mutate | Update specific fields of an existing V2 zone-based firewall policy by ID. |
@@ -141,8 +143,8 @@ Always available, regardless of registration mode.
 | `unifi_get_network_details` | Read | Get details for a specific network by ID. |
 | `unifi_get_wlan_details` | Read | Get details for a specific WLAN by ID. |
 | `unifi_list_ap_groups` | Read | List all AP groups configured on the controller. |
-| `unifi_list_networks` | Read | Returns all configured networks (LAN, WAN, VLAN-only) with name, purpose, IP subnet, VLAN ID, DHCP settings, and enabled state. |
-| `unifi_list_wlans` | Read | List all configured Wireless LANs (WLANs) on the Unifi Network controller. |
+| `unifi_list_networks` | Read | Returns configured networks (LAN, WAN, VLAN-only) with name, purpose, IP subnet, VLAN ID, DHCP settings, and enabled state. |
+| `unifi_list_wlans` | Read | List configured Wireless LANs (WLANs) on the Unifi Network controller. |
 | `unifi_create_ap_group` | Mutate | Create a new AP group to control which APs broadcast which SSIDs. |
 | `unifi_create_network` | Mutate | Create a new network (LAN/VLAN) with schema validation. |
 | `unifi_create_wlan` | Mutate | Create a new Wireless LAN (WLAN/SSID) with schema validation. |
