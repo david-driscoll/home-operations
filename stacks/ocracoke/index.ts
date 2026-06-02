@@ -45,7 +45,7 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: true },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
 });
@@ -56,7 +56,7 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
   outputs,
   host: host,
   vmId: pbsId.result,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: true, ssh: true },
   cluster: cluster,
   dockge: dockgeRuntime,
   dependsOn: [],

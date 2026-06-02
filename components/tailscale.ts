@@ -227,7 +227,7 @@ export function installTailscaleLxc(options: {
         connection: options.connection,
         parent: options.parent,
         dependsOn: [...dependsOn],
-        triggers: [lxcConfig.create, restartLxc.create, tailscaleAuthkey.key],
+        triggers: [lxcConfig.create, restartLxc.create, tailscaleAuthkey.key, tailscaleArgs],
       });
 
       const copyAuthKey = new remote.Command(
@@ -235,7 +235,7 @@ export function installTailscaleLxc(options: {
         {
           connection: options.connection,
           create: pulumi.interpolate`pct push ${options.vmId} /tmp/${name}-authkey /tmp/${name}-authkey`,
-          triggers: [lxcConfig.create, authKey.id, tailscaleAuthkey.key],
+          triggers: [lxcConfig.create, authKey.id, tailscaleAuthkey.key, tailscaleArgs],
         },
         { parent: options.parent, dependsOn: [...dependsOn] },
       );

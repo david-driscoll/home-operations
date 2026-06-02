@@ -553,7 +553,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_CNAME\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
-      replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.cluster.authentikDomain),
+      replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? `authentik.${this.args.globals.tailscaleDomain}` :  this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.args.globals.searchDomain}:9595`),
       ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
       (input: Input<string>) => {
