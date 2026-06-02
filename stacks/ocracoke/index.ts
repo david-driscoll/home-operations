@@ -11,6 +11,7 @@ import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
+import { awaitOutput } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
@@ -68,18 +69,14 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
 });
 pbs.addHostMount("/data");
 
-dockgeRuntime
-  .deployStacks({
-    dependsOn: [pbs],
-    variables: {
+await awaitOutput(dockgeRuntime.deployStacks({ dependsOn: [pbs], variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
       PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
-      DNS_CLUSTER_IS_PRIMARY: "false",
-    },
-  })
-  .apply(() => host.addUptimeGatus())
-  .apply(() => createGatusDnsUptime(globals, { parent: host }))
-  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }, [pbs]));
+      DNS_CLUSTER_IS_PRIMARY: "false", } }));
+await awaitOutput(host.addUptimeGatus());
+
+await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
+await awaitOutput(backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }, [pbs]));
 
 exportNodeStateToOnePassword(
   [

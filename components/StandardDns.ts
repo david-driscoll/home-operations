@@ -127,7 +127,7 @@ export function createGatusDnsUptime(globals: GlobalResources, options: { parent
 
   return all([gatusDnsRecords]).apply(async ([endpoints]) => {
     return addUptimeGatus(`dns-${getStack()}`, globals, { endpoints: [...endpoints] }, dnsParent);
-  });
+  }).apply(a => a);
 }
 
 function addGatusDnsRecord(

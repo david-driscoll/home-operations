@@ -87,6 +87,7 @@ export class BackupPlanDirector extends ComponentResource {
           },
           {
             parent: this,
+            dependsOn: depends,
           },
         );
       });

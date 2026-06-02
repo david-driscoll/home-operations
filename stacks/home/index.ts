@@ -8,7 +8,7 @@ import { TruenasVm } from "../../components/TruenasVm.ts";
 import * as minio from "@pulumi/minio";
 // import * as b2 from "@pulumi/b2";
 import { createGatusDnsUptime } from "../../components/StandardDns.ts";
-import { addUptimeGatus } from "@components/helpers.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
@@ -180,14 +180,15 @@ const alphaSitePveVariables = {
   PROXMOX_PVE_TARGETS: `["${alphaSiteHost.tailscaleIpAddress}:8006"]`,
 };
 
-pulumi
-  .all([
-    celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }).apply(() => celestiaHost.addUptimeGatus()),
-    alphaSiteDockgeRuntime.deployStacks({ dependsOn: [], variables: alphaSitePveVariables }).apply(() => alphaSiteHost.addUptimeGatus()),
-    twilightSparkleHost.addUptimeGatus(),
-  ])
-  .apply(() => createGatusDnsUptime(globals, { parent: alphaSiteHost }))
-  .apply(() => backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }, [celestiaPbs]));
+await awaitOutput(alphaSiteDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }));
+await awaitOutput(alphaSiteHost.addUptimeGatus());
+
+await awaitOutput(celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }));
+await awaitOutput(celestiaHost.addUptimeGatus());
+
+await awaitOutput(twilightSparkleHost.addUptimeGatus());
+await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
+await awaitOutput(backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }, [celestiaPbs]));
 
 exportNodeStateToOnePassword(
   [
