@@ -478,7 +478,7 @@ export class DockgeLxc extends ComponentResource {
         { parent: this.dockerParent },
       );
 
-      this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, opts.name]);
+      this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${opts.name}`]);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,
@@ -773,7 +773,7 @@ export class DockgeLxc extends ComponentResource {
               );
 
               tailscaleServices.push(tailscaleService);
-              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, tailscaleService]);
+              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${service}`]);
 
               continue;
             }
