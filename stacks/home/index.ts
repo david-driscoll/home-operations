@@ -187,7 +187,7 @@ pulumi
     twilightSparkleHost.addUptimeGatus(),
   ])
   .apply(() => createGatusDnsUptime(globals, { parent: alphaSiteHost }))
-  .apply(() => backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }));
+  .apply(() => backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }, [celestiaPbs]));
 
 exportNodeStateToOnePassword(
   [

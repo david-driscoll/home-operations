@@ -87,7 +87,7 @@ dockgeRuntime
   })
   .apply(() => host.addUptimeGatus())
   .apply(() => createGatusDnsUptime(globals, { parent: host }))
-  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }))
+  .apply(() => backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }, [pbs]))
   ;
 
 exportNodeStateToOnePassword(

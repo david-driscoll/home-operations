@@ -41,7 +41,7 @@ export class BackupPlanDirector extends ComponentResource {
       .apply((plans) => plans.flatMap((p) => p.plans));
   }
 
-  public createSource(source: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>) {
+  public createSource(source: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>, depends: Input<Resource[]>) {
     return all([source, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([source, plans, uptimeUrl, password]) => {
       const groupTitle = `Backups: ${source.cluster.title}`;
       const backrestItems = plans
@@ -58,14 +58,14 @@ export class BackupPlanDirector extends ComponentResource {
       return output(
         this.updateBackrestConfiguration(
           source,
-          uptime.apply((u) => [u]),
+          all([depends, uptime]).apply(([d, u]) => [...d, u]),
           backrestItems,
         ),
       ).apply(() => output({ plans, items: backrestItems, uptime }));
     });
   }
 
-  public createDestination(destination: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>) {
+  public createDestination(destination: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>, depends: Input<Resource[]>) {
     return all([destination, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([destination, plans, uptimeUrl, password]) => {
       const groupTitle = `Replicate: ${destination.cluster.title}`;
       const backrestItems = plans
@@ -78,7 +78,7 @@ export class BackupPlanDirector extends ComponentResource {
           },
           { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
         );
-      const depends = backrestItems.plans.map((plan) => {
+      const destinationPlans = backrestItems.plans.map((plan) => {
         return new remote.Command(
           `${plan.id}-backrest-config`,
           {
@@ -94,7 +94,7 @@ export class BackupPlanDirector extends ComponentResource {
       return output(
         this.updateBackrestConfiguration(
           destination,
-          uptime.apply((u) => [u, ...depends]),
+          all([depends, uptime]).apply(([d, u]) => [...d, ...destinationPlans, u]),
           backrestItems,
         ),
       ).apply(() => output({ plans, items: backrestItems, uptime }));
@@ -418,7 +418,7 @@ export class BackupPlanDirector extends ComponentResource {
       },
       {
         parent: this,
-        dependsOn: backrestConfig,
+        dependsOn: output(depends).apply((x) => [...x, backrestConfig]),
       },
     );
 
