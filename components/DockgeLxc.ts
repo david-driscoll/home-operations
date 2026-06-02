@@ -83,7 +83,6 @@ export class DockgeLxc extends ComponentResource {
     this.cluster = cluster;
     this.shortName = args.host.shortName ?? name;
 
-
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
     this.tailscaleHostname = tailscaleHostname;
@@ -478,6 +477,20 @@ export class DockgeLxc extends ComponentResource {
         { parent: this.dockerParent },
       );
 
+      const tailscaleService = new remote.Command(
+        `${opts.name}-tailscale-service-${opts.backend}`,
+        {
+          connection: this.remoteConnection,
+          create: interpolate`tailscale serve --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
+          delete: interpolate`tailscale serve clear svc:${opts.name}`,
+        },
+        {
+          parent: this,
+          dependsOn: dependsOn,
+          deleteBeforeReplace: true,
+        },
+      );
+
       this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${opts.name}`]);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
@@ -485,7 +498,7 @@ export class DockgeLxc extends ComponentResource {
         remotePath: interpolate`/opt/stacks-data/traefik/dynamic/${opts.name}.yaml`,
         content: content,
         parent: this,
-        triggers: [content, opts.name, opts.backend, opts.hostname],
+        triggers: [content, opts.name, opts.backend, opts.hostname, tailscaleService],
         dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
       });
 
