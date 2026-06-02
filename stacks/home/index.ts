@@ -127,7 +127,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   host: celestiaHost,
   vmId: 300,
   cluster: celestiaCluster,
-  tailscaleArgs: { acceptRoutes: false },
+  tailscaleArgs: { acceptRoutes: true },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
 });
@@ -143,7 +143,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   ipAddress: "10.10.10.9",
   tailscaleIpAddress: "100.111.10.9",
   cluster: alphaSiteCluster,
-  tailscaleArgs: { acceptRoutes: false },
+  tailscaleArgs: { acceptRoutes: true },
   sftpKey: sftpClientKey,
   legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
 });

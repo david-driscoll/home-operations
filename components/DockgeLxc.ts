@@ -147,7 +147,7 @@ export class DockgeLxc extends ComponentResource {
         ...args.tailscaleArgs,
         advertiseTags: [...(args.tailscaleArgs?.advertiseTags ?? []), Tailscale.tag.dockge, Tailscale.tag.apps],
         acceptDns: true,
-        acceptRoutes: false,
+        acceptRoutes: true,
         ssh: true,
       },
       vmId: args.vmId,
@@ -481,7 +481,7 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-tailscale-service-${opts.backend}`,
         {
           connection: this.remoteConnection,
-          create: interpolate`tailscale serve --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
+          create: interpolate`tailscale serve --yes --service=svc:${opts.name} --https=443 127.0.0.1:8443`,
           delete: interpolate`tailscale serve clear svc:${opts.name}`,
         },
         {
@@ -491,6 +491,7 @@ export class DockgeLxc extends ComponentResource {
         },
       );
 
+      tailscaleService.stdout.apply((output) => log.info(`Registering Tailscale service svc:${opts.name} for stack ${opts.backend} with output ${tailscaleService.stdout}`, this));
       this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${opts.name}`]);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
@@ -775,7 +776,7 @@ export class DockgeLxc extends ComponentResource {
                 `${stackName}-tailscale-service-${service}`,
                 {
                   connection: this.remoteConnection,
-                  create: interpolate`tailscale serve --service=svc:${service} --yes --https=443 127.0.0.1:8443`,
+                  create: interpolate`tailscale serve --yes --service=svc:${service} --https=443 127.0.0.1:8443`,
                   delete: interpolate`tailscale serve clear svc:${service}`,
                 },
                 {
@@ -784,9 +785,10 @@ export class DockgeLxc extends ComponentResource {
                   deleteBeforeReplace: true,
                 },
               );
+              tailscaleService.stdout.apply((output) => log.info(`Registering Tailscale service svc:${service} for stack ${stackName} with output ${tailscaleService.stdout}`, this));
+              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${service}`]);
 
               tailscaleServices.push(tailscaleService);
-              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${service}`]);
 
               continue;
             }
