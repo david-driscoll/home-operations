@@ -52,7 +52,7 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptRoutes: true },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
 });
