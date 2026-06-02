@@ -90,7 +90,7 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
  * @param services   - Tailscale service identifiers registered by this stack (e.g., 'svc:adguard-home')
  * @param cro        - Pulumi resource options (parent, provider, etc.)
  */
-export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: string[], cro: pulumi.ResourceOptions) {
+export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: pulumi.Output<string[]>, cro: pulumi.ResourceOptions) {
   const hostsSection: OnePasswordItemSectionInput = {
     fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
   };
@@ -103,8 +103,9 @@ export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: st
       tags: ["tailscale-export"],
       sections: pulumi.output(nodeState).apply((nodes) =>
         Object.fromEntries(
-          nodes.map(
-            (z) =>
+          nodes
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((z) =>
               [
                 z.name,
                 {
@@ -120,7 +121,7 @@ export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: st
       ),
       fields: {
         name: { value: pulumi.runtime.getStack() },
-        services: { value: services.join(",") },
+        services: { value: services.apply((s) => s.sort((a, b) => a.localeCompare(b)).join(",")) },
       },
     },
     cro,

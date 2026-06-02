@@ -46,8 +46,6 @@ const host = new ProxmoxHost("luna", {
   vmIdRange: vmRange,
 });
 
-const tailscaleServices: string[] = [];
-
 const dockgeRuntime = new DockgeLxc("luna-dockge", {
   globals,
   credential: dockgeCredential,
@@ -57,9 +55,6 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
-  registerTailscaleService(service) {
-    tailscaleServices.push(`svc:${service}`);
-  },
 });
 dockgeRuntime.addHostMount("/data");
 
@@ -104,7 +99,7 @@ exportNodeStateToOnePassword(
       nodeType: "pbs",
     },
   ],
-  tailscaleServices,
+  dockgeRuntime.tailscaleServices,
   { parent: host },
 );
 

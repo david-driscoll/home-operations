@@ -39,20 +39,15 @@ const host = new ProxmoxHost("skystar", {
   vmIdRange: vmRange,
 });
 
-const tailscaleServices: string[] = [];
-
 const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   globals,
   credential: dockgeCredential,
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptRoutes: false },
+  tailscaleArgs: { acceptRoutes: true },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
-  registerTailscaleService(service) {
-    tailscaleServices.push(`svc:${service}`);
-  },
 });
 dockgeRuntime.addHostMount("/data");
 
@@ -97,7 +92,7 @@ exportNodeStateToOnePassword(
       nodeType: "pbs",
     },
   ],
-  tailscaleServices,
+  dockgeRuntime.tailscaleServices,
   { parent: host },
 );
 

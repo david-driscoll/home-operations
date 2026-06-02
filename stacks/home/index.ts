@@ -120,8 +120,6 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   vmIdRange: { start: 101, end: 199 },
 });
 
-const tailscaleServices: string[] = [];
-const registerTailscaleService = (service: string) => tailscaleServices.push(`svc:${service}`);
 
 const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
@@ -132,7 +130,6 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
-  registerTailscaleService,
 });
 celestiaDockgeRuntime.addHostMount("/data");
 celestiaDockgeRuntime.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
@@ -148,7 +145,6 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   cluster: alphaSiteCluster,
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
-  registerTailscaleService,
   legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
 });
 
@@ -231,7 +227,7 @@ exportNodeStateToOnePassword(
       nodeType: "truenas",
     },
   ],
-  tailscaleServices,
+  pulumi.all([celestiaDockgeRuntime.tailscaleServices, alphaSiteDockgeRuntime.tailscaleServices]).apply(([celestiaServices, alphaSiteServices]) => [...celestiaServices, ...alphaSiteServices]),
   { parent: alphaSiteHost },
 );
 

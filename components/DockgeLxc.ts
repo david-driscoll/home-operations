@@ -42,7 +42,6 @@ export interface DockgeLxcArgs {
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   legacyTun?: boolean;
   sftpKey: Input<OPClientItem>;
-  registerTailscaleService(service: string): void;
 }
 export interface ExternalServiceOpts {
   name: Input<string>;
@@ -66,9 +65,12 @@ export class DockgeLxc extends ComponentResource {
   public readonly shortName: string | undefined;
   public readonly tailscaleName: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
-  registerTailscaleService: (service: string) => void;
   private readonly resources: Input<Resource>[];
   private readonly dockerParent: ComponentResource<any>;
+  private _tailscaleServices: Output<string[]> = output([]);
+  public get tailscaleServices() {
+    return this._tailscaleServices;
+  }
   constructor(
     name: string,
     private readonly args: DockgeLxcArgs,
@@ -80,7 +82,7 @@ export class DockgeLxc extends ComponentResource {
     this.dockerParent = new ComponentResource("home:dockge:DockgeLxcDockerParent", `${name}-docker`, {}, cro);
     this.cluster = cluster;
     this.shortName = args.host.shortName ?? name;
-    this.registerTailscaleService = args.registerTailscaleService;
+
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
@@ -476,7 +478,7 @@ export class DockgeLxc extends ComponentResource {
         { parent: this.dockerParent },
       );
 
-      this.registerTailscaleService(opts.name);
+      this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, opts.name]);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,
@@ -771,7 +773,7 @@ export class DockgeLxc extends ComponentResource {
               );
 
               tailscaleServices.push(tailscaleService);
-              this.registerTailscaleService(service);
+              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, tailscaleService]);
 
               continue;
             }
