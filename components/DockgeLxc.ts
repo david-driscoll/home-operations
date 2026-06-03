@@ -593,7 +593,6 @@ export class DockgeLxc extends ComponentResource {
               return null;
             }
             return this.createStack(
-              this.args.host.name,
               stackName,
               files,
               path,
@@ -693,7 +692,6 @@ export class DockgeLxc extends ComponentResource {
   }
 
   private createStack(
-    hostname: string,
     stackName: string,
     files: Map<string, string>,
     path: string,
