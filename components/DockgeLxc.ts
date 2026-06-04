@@ -488,6 +488,7 @@ export class DockgeLxc extends ComponentResource {
           dependsOn: dependsOn,
           deleteBeforeReplace: true,
           provider: this.args.globals.tailscaleProvider,
+          replaceOnChanges: ["*"],
         },
       );
 
@@ -781,6 +782,7 @@ export class DockgeLxc extends ComponentResource {
                     dependsOn: tailscaleServices,
                     deleteBeforeReplace: true,
                     provider: this.args.globals.tailscaleProvider,
+                    replaceOnChanges: ["*"],
                   },
                 ),
               );
