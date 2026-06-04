@@ -5,6 +5,7 @@ import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
+import * as tailscale from "@pulumi/tailscale";
 import { readFile, readdir } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -67,10 +68,7 @@ export class DockgeLxc extends ComponentResource {
   private readonly mountPoints: remote.Command[] = [];
   private readonly resources: Input<Resource>[];
   private readonly dockerParent: ComponentResource<any>;
-  private _tailscaleServices: Output<string[]> = output([]);
-  public get tailscaleServices() {
-    return this._tailscaleServices;
-  }
+
   constructor(
     name: string,
     private readonly args: DockgeLxcArgs,
@@ -477,22 +475,19 @@ export class DockgeLxc extends ComponentResource {
         { parent: this.dockerParent },
       );
 
-      const tailscaleService = new remote.Command(
+      const tailscaleService = new tailscale.Service(
         `${opts.name}-tailscale-service-${opts.backend}`,
         {
-          connection: this.remoteConnection,
-          create: interpolate`tailscale serve --yes --service=svc:${opts.name} --https=443 127.0.0.1:8443`,
-          delete: interpolate`tailscale serve clear svc:${opts.name}`,
+          name: `svc:${opts.name}`,
+          ports: ["8443"],
         },
         {
           parent: this,
           dependsOn: dependsOn,
           deleteBeforeReplace: true,
+          provider: this.args.globals.tailscaleProvider,
         },
       );
-
-      tailscaleService.stdout.apply((output) => log.info(`Registering Tailscale service svc:${opts.name} for stack ${opts.backend} with output ${output}`, this));
-      this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${opts.name}`]);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,
@@ -503,7 +498,7 @@ export class DockgeLxc extends ComponentResource {
         dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
       });
 
-      return output({ file, dns: dns });
+      return output({ file, dns: dns, service: tailscaleService });
     });
   }
 
@@ -770,40 +765,40 @@ export class DockgeLxc extends ComponentResource {
               const service = host.replace(`.${tailscaleDomain}`, "");
               log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
-              const tailscaleService = new remote.Command(
-                `${stackName}-tailscale-service-${service}`,
-                {
-                  connection: this.remoteConnection,
-                  create: interpolate`tailscale serve --yes --service=svc:${service} --https=443 127.0.0.1:8443`,
-                  delete: interpolate`tailscale serve clear svc:${service}`,
-                },
-                {
-                  parent: this,
-                  dependsOn: tailscaleServices,
-                  deleteBeforeReplace: true,
-                },
+              copyFiles.push(
+                new tailscale.Service(
+                  `${stackName}-tailscale-service-${service}`,
+                  {
+                    name: `svc:${service}`,
+                    ports: ["8443"],
+                  },
+                  {
+                    parent: this,
+                    dependsOn: tailscaleServices,
+                    deleteBeforeReplace: true,
+                    provider: this.args.globals.tailscaleProvider,
+                  },
+                ),
               );
-              tailscaleService.stdout.apply((output) => log.info(`Registering Tailscale service svc:${service} for stack ${stackName} with output ${output}`, this));
-              this._tailscaleServices = this._tailscaleServices.apply((services) => [...services, `svc:${service}`]);
-
-              tailscaleServices.push(tailscaleService);
 
               continue;
             }
 
-            StandardDns.create(
-              `${stackName}-dns-${host.replace(/\./g, "_")}`,
-              {
-                hostname: host,
-                ipAddress: this.tailscaleIpAddress,
-                type: "CNAME",
-                record: this.hostname,
-              },
-              this.args.globals,
-              {
-                parent: this.dockerParent,
-                // protect: stackName === "adguard",
-              },
+            copyFiles.push(
+              StandardDns.create(
+                `${stackName}-dns-${host.replace(/\./g, "_")}`,
+                {
+                  hostname: host,
+                  ipAddress: this.tailscaleIpAddress,
+                  type: "CNAME",
+                  record: this.hostname,
+                },
+                this.args.globals,
+                {
+                  parent: this.dockerParent,
+                  // protect: stackName === "adguard",
+                },
+              ),
             );
           }
         });

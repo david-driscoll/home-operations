@@ -227,7 +227,6 @@ exportNodeStateToOnePassword(
       nodeType: "truenas",
     },
   ],
-  pulumi.all([celestiaDockgeRuntime.tailscaleServices, alphaSiteDockgeRuntime.tailscaleServices]).apply(([celestiaServices, alphaSiteServices]) => [...celestiaServices, ...alphaSiteServices]),
   { parent: alphaSiteHost },
 );
 

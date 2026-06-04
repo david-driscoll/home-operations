@@ -35,7 +35,7 @@ const host = new ProxmoxHost("skystar", {
   remote: true,
   cluster: cluster,
   tailscaleArgs: { acceptDns: true, acceptRoutes: false },
-  tailscaleSubnetRoutes: [Tailscale.subnets.home],
+  tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
 });
 
@@ -92,7 +92,6 @@ exportNodeStateToOnePassword(
       nodeType: "pbs",
     },
   ],
-  dockgeRuntime.tailscaleServices,
   { parent: host },
 );
 

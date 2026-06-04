@@ -5,6 +5,10 @@
 			"path": "."
 		},
 		{
+			"name": "vault",
+			"path": "../vault",
+		},
+		{
 			"name": "stargate-command-cluster",
 			"path": "../stargate-command-cluster"
 		},
@@ -14,8 +18,18 @@
 		}
 	],
 	"settings": {
+
 		"editor.bracketPairColorization.enabled": true,
 		"files.trimTrailingWhitespace": true,
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"sdks/**": true,
+			"node_modules/**": true,
+		},
 		"sops.defaults.ageKeyFile": "../stargate-command-cluster/age.key",
 		"sops.binPath": "/opt/homebrew/bin/sops",
 		"sops.beta": false,

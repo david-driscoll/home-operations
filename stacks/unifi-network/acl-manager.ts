@@ -111,8 +111,6 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       taggedDevices: [...proxmoxDevices, ...dockgeDevices],
     };
 
-    const dnsServers = [primaryDnsIp, secondaryDnsIp, ...dns.internalIps];
-
     // ── Initialise ACL manager ────────────────────────────────────────────
     let aclsJson = applyAllEdits(hujson, ["tagOwners"], {});
     aclsJson = applyAllEdits(aclsJson, ["grants"], []);
@@ -397,7 +395,34 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       cro,
     );
 
-    new tailscale.DnsNameservers("dns-nameservers", { nameservers: dnsServers }, cro);
+    new tailscale.DnsConfiguration(
+      "dns-nameservers",
+      {
+        overrideLocalDns: false,
+        // splitDns: [
+        //   {
+        //     domain: pulumi.interpolate`driscoll.tech`,
+        //     nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
+        //   },
+        //   {
+        //     domain: pulumi.interpolate`${globals.tailscaleDomain}`,
+        //     nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
+        //   },
+        // ],
+        nameservers: [
+          {
+            address: primaryDnsIp,
+            useWithExitNode: false,
+          },
+          {
+            address: secondaryDnsIp,
+            useWithExitNode: false,
+          },
+          ...dns.internalIps.map((ip) => ({ address: ip, useWithExitNode: false })),
+        ],
+      },
+      cro,
+    );
 
     return { acl, manager };
   });
@@ -431,7 +456,10 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setTagOwner(tag.dockge, [tag.apps]);
   manager.setService(tag.apps, [tag.dockge]);
 
-  manager.setGrant({ src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement, ...ports.nfs] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
+  manager.setGrant(
+    { src: [tag.dockge], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement, ...ports.nfs] },
+    { accept: [tag.dockge], deny: testData.knownNormalUsers },
+  );
   manager.setGrant({ src: [tag.dockge], dst: [tag.backups], ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs] }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [autogroups.member, autogroups.tagged], dst: [tag.dockge], ip: ports.web }, { accept: testData.knownNormalUsers.concat(testData.knownAdminUsers) });

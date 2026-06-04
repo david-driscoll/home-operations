@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "strict": true,
-    "baseUrl": "../..",
     "rootDir": "../..",
     "outDir": "../../bin",
     "allowImportingTsExtensions": true,
@@ -18,13 +17,13 @@
     "skipLibCheck": true,
     "paths": {
       "@components/*": [
-        "./components/*"
+        "../../components/*"
       ],
       "@openapi/*": [
-        "./types/*"
+        "../../types/*"
       ],
       "@dynamic/*": [
-        "./dynamic/*"
+        "../../dynamic/*"
       ]
     }
   },

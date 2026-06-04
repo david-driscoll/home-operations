@@ -6,6 +6,7 @@ import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import * as tls from "@pulumi/tls";
+import * as tailscale from "@pulumi/tailscale";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
@@ -99,7 +100,6 @@ exportNodeStateToOnePassword(
       nodeType: "pbs",
     },
   ],
-  dockgeRuntime.tailscaleServices,
   { parent: host },
 );
 

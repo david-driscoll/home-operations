@@ -11,9 +11,9 @@ import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
 import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
-import { Application } from "sdks/authentik/bin/application.js";
-import { ProviderOauth2 } from "sdks/authentik/bin/providerOauth2.js";
-import { ProviderProxy } from "sdks/authentik/bin/providerProxy.js";
+import { Application } from "../sdks/authentik/bin/application.js";
+import { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
+import { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
 
 const op = new OPClient();
 export interface AuthentikResourcesArgs {

@@ -9,6 +9,7 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "allowImportingTsExtensions": true,
+    "noEmit": true,
     "pretty": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

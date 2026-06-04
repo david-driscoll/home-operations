@@ -87,10 +87,9 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
  *
  * @param stackName  - Stack name (e.g., 'home', 'gulf-of-mexico')
  * @param nodeState  - Nodes to export (name + tailscale IP, optional internal IP + type)
- * @param services   - Tailscale service identifiers registered by this stack (e.g., 'svc:adguard-home')
  * @param cro        - Pulumi resource options (parent, provider, etc.)
  */
-export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: pulumi.Output<string[]>, cro: pulumi.ResourceOptions) {
+export function exportNodeStateToOnePassword(nodeState: NodeInfo[], cro: pulumi.ResourceOptions) {
   const hostsSection: OnePasswordItemSectionInput = {
     fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
   };
@@ -105,23 +104,23 @@ export function exportNodeStateToOnePassword(nodeState: NodeInfo[], services: pu
         Object.fromEntries(
           nodes
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((z) =>
-              [
-                z.name,
-                {
-                  fields: {
-                    ip: { value: z.ip },
-                    internalIp: { value: z.internalIp },
-                    nodeType: { value: z.nodeType ?? "unknown" },
+            .map(
+              (z) =>
+                [
+                  z.name,
+                  {
+                    fields: {
+                      ip: { value: z.ip },
+                      internalIp: { value: z.internalIp },
+                      nodeType: { value: z.nodeType ?? "unknown" },
+                    },
                   },
-                },
-              ] as const,
-          ),
+                ] as const,
+            ),
         ),
       ),
       fields: {
         name: { value: pulumi.runtime.getStack() },
-        services: { value: services.apply((s) => s.sort((a, b) => a.localeCompare(b)).join(",")) },
       },
     },
     cro,

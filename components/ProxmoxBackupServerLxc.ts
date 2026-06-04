@@ -362,7 +362,7 @@ echo "PBS TSIDP realm configured"
     // v2026.2.0 has a bug in dataSourceUsersRead (groupsByNames causes a Go panic).
     const tailscaleAdmins = getTailscaleUsersOutput({ role: "admin" }, { provider: args.globals.tailscaleProvider, parent: this });
     const groupsScript = all([output(args.vmId), tailscaleAdmins]).apply(([vmId, tsAdmins]) => {
-      const tsidpEntries = tsAdmins.users
+      const tsidpEntries = tsAdmins.users!
         .map((u) => {
           const userId = `${u.loginName}@tsidp`;
           return [`proxmox-backup-manager user create "${userId}" 2>/dev/null || true`, `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`].join("\n");
