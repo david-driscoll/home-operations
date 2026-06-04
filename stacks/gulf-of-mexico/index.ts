@@ -42,7 +42,7 @@ const host = new ProxmoxHost("luna", {
   proxmox: mainProxmoxCredentials,
   remote: true,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: true },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: vmRange,
 });
@@ -53,7 +53,7 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
 });
@@ -64,7 +64,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
   outputs,
   host: host,
   vmId: pbsId.result,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: false, ssh: true },
+  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote, ssh: true },
   cluster: cluster,
   dockge: dockgeRuntime,
   dependsOn: [],

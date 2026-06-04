@@ -142,11 +142,11 @@ export class DockgeLxc extends ComponentResource {
       installTailscale: args.createDockerLxc ?? false,
       legacyTun: args.legacyTun,
       args: {
-        ...args.tailscaleArgs,
         advertiseTags: [...(args.tailscaleArgs?.advertiseTags ?? []), Tailscale.tag.dockge, Tailscale.tag.apps],
         acceptDns: true,
-        acceptRoutes: true,
+        acceptRoutes: false,
         ssh: true,
+        ...args.tailscaleArgs,
       },
       vmId: args.vmId,
       dependsOn: [...depends],
@@ -480,6 +480,7 @@ export class DockgeLxc extends ComponentResource {
         {
           name: `svc:${opts.name}`,
           ports: ["8443"],
+          tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
         },
         {
           parent: this,
@@ -771,6 +772,7 @@ export class DockgeLxc extends ComponentResource {
                   {
                     name: `svc:${service}`,
                     ports: ["8443"],
+                    tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
                   },
                   {
                     parent: this,
