@@ -494,7 +494,7 @@ export class DockgeLxc extends ComponentResource {
       );
 
       const tailscaleServe = new remote.Command(
-        `${opts.name}-tailscale-service-${opts.backend}`,
+        `${opts.name}-tailscale-serve-${opts.backend}`,
         {
           connection: this.remoteConnection,
           create: interpolate`tailscale serve --yes --service=svc:${opts.name} --https=443 127.0.0.1:8443`,
@@ -785,7 +785,7 @@ export class DockgeLxc extends ComponentResource {
 
 
               const tailscaleServe = new remote.Command(
-                `${stackName}-tailscale-service-${service}`,
+                `${stackName}-tailscale-serve-${service}`,
                 {
                   connection: this.remoteConnection,
                   create: interpolate`tailscale serve --yes --service=svc:${service} --https=443 127.0.0.1:8443`,
