@@ -480,7 +480,7 @@ export class DockgeLxc extends ComponentResource {
         {
           name: `svc:${opts.name}`,
           comment: `External service for ${opts.name} (${opts.backend})`,
-          ports: ["tcp:8443"],
+          ports: ["tcp:443"],
           tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
         },
         {
@@ -489,6 +489,21 @@ export class DockgeLxc extends ComponentResource {
           deleteBeforeReplace: true,
           provider: this.args.globals.tailscaleProvider,
           replaceOnChanges: ["*"],
+          import: `svc:${opts.name}`,
+        },
+      );
+
+      const tailscaleServe = new remote.Command(
+        `${opts.name}-tailscale-service-${opts.backend}`,
+        {
+          connection: this.remoteConnection,
+          create: interpolate`tailscale serve --yes --service=svc:${opts.name} --https=443 127.0.0.1:8443`,
+          delete: interpolate`tailscale serve clear svc:${opts.name}`,
+        },
+        {
+          parent: this,
+          dependsOn: [...(dependsOn ?? []), tailscaleService],
+          deleteBeforeReplace: true,
         },
       );
 
@@ -768,12 +783,28 @@ export class DockgeLxc extends ComponentResource {
               const service = host.replace(`.${tailscaleDomain}`, "");
               log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
+
+              const tailscaleServe = new remote.Command(
+                `${stackName}-tailscale-service-${service}`,
+                {
+                  connection: this.remoteConnection,
+                  create: interpolate`tailscale serve --yes --service=svc:${service} --https=443 127.0.0.1:8443`,
+                  delete: interpolate`tailscale serve clear svc:${service}`,
+                },
+                {
+                  parent: this,
+                  dependsOn: tailscaleServices,
+                  deleteBeforeReplace: true,
+                },
+              );
+
               copyFiles.push(
+                tailscaleServe,
                 new tailscale.Service(
                   `${stackName}-tailscale-service-${service}`,
                   {
                     name: `svc:${service}`,
-                    ports: ["tcp:8443"],
+                    ports: ["tcp:443"],
                     tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
                     comment: `External service for ${service} (${host})`,
                   },
@@ -783,6 +814,7 @@ export class DockgeLxc extends ComponentResource {
                     deleteBeforeReplace: true,
                     provider: this.args.globals.tailscaleProvider,
                     replaceOnChanges: ["*"],
+                    import: `svc:${service}`,
                   },
                 ),
               );
