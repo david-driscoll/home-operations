@@ -479,7 +479,8 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-tailscale-service-${opts.backend}`,
         {
           name: `svc:${opts.name}`,
-          ports: ["8443"],
+          comment: `External service for ${opts.name} (${opts.backend})`,
+          ports: ["tcp:8443"],
           tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
         },
         {
@@ -771,8 +772,9 @@ export class DockgeLxc extends ComponentResource {
                   `${stackName}-tailscale-service-${service}`,
                   {
                     name: `svc:${service}`,
-                    ports: ["8443"],
+                    ports: ["tcp:8443"],
                     tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
+                    comment: `External service for ${service} (${host})`,
                   },
                   {
                     parent: this,
