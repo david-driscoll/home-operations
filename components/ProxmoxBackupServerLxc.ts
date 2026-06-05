@@ -260,6 +260,18 @@ echo "PBS post-install complete"`;
         }
         return a;
       })!;
+    const rootPassword = args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!);
+    new remote.Command(
+      `${name}-set-root-password`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`echo 'root:${rootPassword}' | pct exec ${args.vmId} -- chpasswd`,
+        update: interpolate`echo 'root:${rootPassword}' | pct exec ${args.vmId} -- chpasswd`,
+        triggers: [rootPassword],
+      },
+      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+    );
+
     const realmId = "authentik";
     const oidcScript = interpolate`
 REALM_ID="${realmId}"
