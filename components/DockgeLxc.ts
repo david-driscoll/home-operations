@@ -496,8 +496,8 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-tailscale-serve-${opts.backend}`,
         {
           connection: this.remoteConnection,
-          create: interpolate`tailscale serve --service=svc:${opts.name} --https=443 127.0.0.1:8443 --yes`,
-          update: interpolate`tailscale serve --service=svc:${opts.name} --https=443 127.0.0.1:8443 --yes`,
+          create: interpolate`tailscale serve --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
+          update: interpolate`tailscale serve --service=svc:${opts.name} --yes --https=443 127.0.0.1:8443`,
           delete: interpolate`tailscale serve clear svc:${opts.name}`,
         },
         {
@@ -806,8 +806,8 @@ export class DockgeLxc extends ComponentResource {
                 `${stackName}-tailscale-serve-${service}`,
                 {
                   connection: this.remoteConnection,
-                  create: interpolate`tailscale serve --service=svc:${service} --https=443 127.0.0.1:8443 --yes`,
-                  update: interpolate`tailscale serve --service=svc:${service} --https=443 127.0.0.1:8443 --yes`,
+                  create: interpolate`tailscale serve --service=svc:${service} --yes --https=443 127.0.0.1:8443`,
+                  update: interpolate`tailscale serve --service=svc:${service} --yes --https=443 127.0.0.1:8443`,
                   delete: interpolate`tailscale serve clear svc:${service}`,
                 },
                 {
