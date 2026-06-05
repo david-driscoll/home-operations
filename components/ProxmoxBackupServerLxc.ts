@@ -6,6 +6,7 @@ import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpo
 import * as pulumi from "@pulumi/pulumi";
 import * as purrl from "@pulumiverse/purrl";
 import * as random from "@pulumi/random";
+import * as pbs from "@pulumi/pbs";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { ClusterDefinition, GlobalResources } from "./globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
@@ -44,6 +45,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   private readonly mountPoints: remote.Command[] = [];
   private resources!: Input<Resource>[];
   private readonly lxcName: string;
+  provider: pbs.Provider;
 
   constructor(
     name: string,
@@ -374,8 +376,8 @@ echo "PBS TSIDP realm configured"
     // v2026.2.0 has a bug in dataSourceUsersRead (groupsByNames causes a Go panic).
     const tailscaleAdmins = getTailscaleUsersOutput({ role: "admin" }, { provider: args.globals.tailscaleProvider, parent: this });
     const groupsScript = all([output(args.vmId), tailscaleAdmins]).apply(([vmId, tsAdmins]) => {
-      const tsidpEntries = tsAdmins.users!
-        .map((u) => {
+      const tsidpEntries = tsAdmins
+        .users!.map((u) => {
           const userId = `${u.loginName}@tsidp`;
           return [`proxmox-backup-manager user create "${userId}" 2>/dev/null || true`, `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`].join("\n");
         })
@@ -448,7 +450,7 @@ __PBS_GROUPS__`;
             fields: {
               publicKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.publicKeyPem },
               privateKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.privateKeyPem },
-              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id, },
+              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id },
             },
           },
         },
@@ -462,7 +464,17 @@ __PBS_GROUPS__`;
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
 
-    this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);
+    this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply((z) => z[0]);
+    this.provider = new pbs.Provider(
+      `${name}-provider`,
+      {
+        username: `root`,
+        password: rootPassword,
+        endpoint: externalUrl.apply((u) => `https://${tailscaleHostname}:8007`),
+        insecure: true,
+      },
+      { parent: this, dependsOn: [createPbsLxc, postInstallRun, postInstallReboot] },
+    );
   }
 
   public addHostMount(path: string, containerPath?: string) {
@@ -476,6 +488,22 @@ __PBS_GROUPS__`;
     );
     this.mountPoints.push(mp);
     return mp;
+  }
+
+  public addDatastore(args: { name: string; path: string; comment: string }) {
+    return new pbs.Datastore(`${this.lxcName}-${args.name}`, {
+      name: args.name,
+      comment: args.comment,
+      path: args.path,
+      gcSchedule: "weekly",
+      pruneSchedule: "weekly",
+      // notificationMode
+      keepDaily: 7,
+      keepMonthly: 6,
+      keepWeekly: 4,
+      keepLast: 5,
+      keepYearly: 1,
+    });
   }
 }
 

@@ -162,6 +162,7 @@ const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
 celestiaPbs.addHostMount("/data");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
 celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
+celestiaPbs.addDatastore({ name: 'testing', path: '/data/testing', comment: 'Testing Datastore behavior' });
 
 // Celestia monitors twilight-sparkle + itself; alpha-site monitors only itself
 const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
