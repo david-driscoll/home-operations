@@ -28,7 +28,7 @@ gh = "2.93.0"
 "npm:typescript" = "5.9.3"
 node = "24.16.0"
 pulumi = "3.245.0"
-"github:microsoft/apm" = { version = "v0.16.0", bin = "apm" }
+"github:microsoft/apm" = { version = "v0.18.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.6.4", bin = "skillfile" }
 "github:yvgude/lean-ctx" = { version = "v3.7.3", bin = "lean-ctx" }
 dotnet = { postinstall = "dotnet tool restore && dotnet restore", version = "10.0.203" }
