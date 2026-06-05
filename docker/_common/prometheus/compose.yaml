@@ -23,9 +23,6 @@ services:
       traefik.http.routers.alloy.entrypoints: websecure
       traefik.http.routers.alloy.tls.certresolver: le
       traefik.http.services.alloy.loadbalancer.server.port: 12345
-      traefik.http.routers.alloy-tailscale.rule: Host(`alloy-${host}.${tailscaleDomain}`)
-      traefik.http.routers.alloy-tailscale.entrypoints: tailscale
-      traefik.http.routers.alloy-tailscale.service: alloy
     volumes:
       - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - ./data/alloy:/var/lib/alloy:rw
@@ -51,10 +48,6 @@ services:
       traefik.http.routers.prometheus.entrypoints: websecure,tailscale
       traefik.http.routers.prometheus.tls.certresolver: le
       traefik.http.routers.prometheus.service: prometheus
-      traefik.http.services.prometheus.loadbalancer.server.port: 9090
-      traefik.http.routers.prometheus-tailscale.rule: Host(`prometheus-${host}.${tailscaleDomain}`)
-      traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
-      traefik.http.routers.prometheus-tailscale.service: prometheus
     extra_hosts:
       - "node-exporter:host-gateway"
     volumes:

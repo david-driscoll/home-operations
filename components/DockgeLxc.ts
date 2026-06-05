@@ -496,7 +496,8 @@ export class DockgeLxc extends ComponentResource {
         `${opts.name}-tailscale-serve-${opts.backend}`,
         {
           connection: this.remoteConnection,
-          create: interpolate`tailscale serve --yes --service=svc:${opts.name} --https=443 127.0.0.1:8443`,
+          create: interpolate`tailscale serve --service=svc:${opts.name} --https=443 127.0.0.1:8443 --yes`,
+          update: interpolate`tailscale serve --service=svc:${opts.name} --https=443 127.0.0.1:8443 --yes`,
           delete: interpolate`tailscale serve clear svc:${opts.name}`,
         },
         {
@@ -512,7 +513,7 @@ export class DockgeLxc extends ComponentResource {
         content: content,
         parent: this,
         triggers: [content, opts.name, opts.backend, opts.hostname, tailscaleService],
-        dependsOn: output([...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
+        dependsOn: output([tailscaleServe, ...this.resources, this.ensureDynamicDir, ...(dependsOn ?? [])]),
       });
 
       return output({ file, dns: dns, service: tailscaleService });
@@ -782,22 +783,7 @@ export class DockgeLxc extends ComponentResource {
               const service = host.replace(`.${tailscaleDomain}`, "");
               log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
-              const tailscaleServe = new remote.Command(
-                `${stackName}-tailscale-serve-${service}`,
-                {
-                  connection: this.remoteConnection,
-                  create: interpolate`tailscale serve --yes --service=svc:${service} --https=443 127.0.0.1:8443`,
-                  delete: interpolate`tailscale serve clear svc:${service}`,
-                },
-                {
-                  parent: this,
-                  dependsOn: tailscaleServices,
-                  deleteBeforeReplace: true,
-                },
-              );
-
               copyFiles.push(
-                tailscaleServe,
                 new tailscale.Service(
                   `${stackName}-tailscale-service-${service}`,
                   {
@@ -815,6 +801,23 @@ export class DockgeLxc extends ComponentResource {
                   },
                 ),
               );
+
+              const tailscaleServe = new remote.Command(
+                `${stackName}-tailscale-serve-${service}`,
+                {
+                  connection: this.remoteConnection,
+                  create: interpolate`tailscale serve --service=svc:${service} --https=443 127.0.0.1:8443 --yes`,
+                  update: interpolate`tailscale serve --service=svc:${service} --https=443 127.0.0.1:8443 --yes`,
+                  delete: interpolate`tailscale serve clear svc:${service}`,
+                },
+                {
+                  parent: this,
+                  dependsOn: tailscaleServices,
+                  deleteBeforeReplace: true,
+                },
+              );
+
+              copyFiles.push(tailscaleServe);
 
               continue;
             }
