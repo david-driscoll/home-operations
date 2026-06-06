@@ -9,13 +9,14 @@ import * as tls from "@pulumi/tls";
 import * as tailscale from "@pulumi/tailscale";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
-import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
+import { TailscaleMonitor } from "@components/tailscale.ts";
 import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/interfaces.ts";
 
 const globals = new GlobalResources({}, {});
+const monitor = new TailscaleMonitor();
 const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const vmRange = { start: 400, end: 499 };
@@ -49,6 +50,7 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
+  monitor,
 });
 dockgeRuntime.addHostMount("/data");
 
@@ -75,7 +77,7 @@ await awaitOutput(host.addUptimeGatus());
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
 await awaitOutput(backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, pbs, cluster }, [pbs]));
 
-exportNodeStateToOnePassword(
+monitor.exportNodeStateToOnePassword(
   [
     {
       name: host.tailscaleName,

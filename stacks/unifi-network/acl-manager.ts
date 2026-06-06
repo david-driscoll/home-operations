@@ -118,9 +118,9 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     ];
 
     // // ── Register Dockge services from all stacks ──────────────────────────
-    // for (const service of services) {
-    //   manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
-    // }
+    for (const service of services) {
+      manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
+    }
 
     // ── Per-role access rules ─────────────────────────────────────────────
     configureProxmoxAccess(manager);

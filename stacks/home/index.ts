@@ -12,12 +12,13 @@ import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
 import * as tls from "@pulumi/tls";
 import { AuthentikOutputs } from "@components/authentik.ts";
 import { dns, Tailscale } from "@components/constants.ts";
-import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
+import { TailscaleMonitor } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
 
 const globals = new GlobalResources({}, {});
+const monitor = new TailscaleMonitor();
 const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
 const outputs = globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs");
@@ -129,6 +130,7 @@ const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
+  monitor,
 });
 celestiaDockgeRuntime.addHostMount("/data");
 celestiaDockgeRuntime.addHostMount(`/mnt/pve/${celestiaBackupMount}`, "/spike/backup");
@@ -145,6 +147,7 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   tailscaleArgs: { acceptRoutes: false },
   sftpKey: sftpClientKey,
   legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
+  monitor,
 });
 
 const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
@@ -195,7 +198,7 @@ await awaitOutput(
   ),
 );
 
-exportNodeStateToOnePassword(
+monitor.exportNodeStateToOnePassword(
   [
     {
       name: twilightSparkleHost.tailscaleName,

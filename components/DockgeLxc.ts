@@ -4,7 +4,7 @@ import { remote, types } from "@pulumi/command";
 import { GlobalResources } from "./globals.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { StandardDns } from "./StandardDns.ts";
-import { installTailscaleLxc } from "@components/tailscale.ts";
+import { installTailscaleLxc, TailscaleMonitor } from "@components/tailscale.ts";
 import * as tailscale from "@pulumi/tailscale";
 import { readFile, readdir } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
@@ -44,6 +44,7 @@ export interface DockgeLxcArgs {
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   legacyTun?: boolean;
   sftpKey: Input<SshKeyDefinition>;
+  monitor: TailscaleMonitor;
 }
 export interface ExternalServiceOpts {
   name: Input<string>;
@@ -69,6 +70,7 @@ export class DockgeLxc extends ComponentResource {
   private readonly mountPoints: remote.Command[] = [];
   private readonly resources: Input<Resource>[];
   private readonly dockerParent: ComponentResource<any>;
+  private readonly monitor: TailscaleMonitor;
 
   constructor(
     name: string,
@@ -77,6 +79,7 @@ export class DockgeLxc extends ComponentResource {
     super("home:dockge:DockgeLxc", name, {}, { parent: args.host });
 
     const cro = { parent: this };
+    this.monitor = args.monitor;
     const cluster = output(args.cluster);
     this.dockerParent = new ComponentResource("home:dockge:DockgeLxcDockerParent", `${name}-docker`, {}, cro);
     this.cluster = cluster;
@@ -507,6 +510,8 @@ export class DockgeLxc extends ComponentResource {
           deleteBeforeReplace: true,
         },
       );
+
+      this.monitor.addService(`svc:${opts.name}`);
 
       const file = copyFileToRemote(`${opts.name}-route`, {
         connection: this.remoteConnection,

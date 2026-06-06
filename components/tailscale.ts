@@ -80,52 +80,52 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
     .apply((z) => z.addresses[0]);
 }
 
-/**
- * Export Tailscale node state to a 1Password item with the 'tailscale-export' tag.
- * Resolves all Pulumi inputs before serializing to JSON so the stored value is
- * a plain JSON string (not "[object Object]").
- *
- * @param stackName  - Stack name (e.g., 'home', 'gulf-of-mexico')
- * @param nodeState  - Nodes to export (name + tailscale IP, optional internal IP + type)
- * @param cro        - Pulumi resource options (parent, provider, etc.)
- */
-export function exportNodeStateToOnePassword(nodeState: NodeInfo[], cro: pulumi.ResourceOptions) {
-  const hostsSection: OnePasswordItemSectionInput = {
-    fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
-  };
+export class TailscaleMonitor {
+  private readonly services: string[] = [];
+  public addService(name: string) {
+    this.services.push(name);
+  }
 
-  return new OnePasswordItem(
-    `${pulumi.runtime.getStack()}-tailnet`,
-    {
-      category: FullItem.CategoryEnum.SecureNote,
-      title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
-      tags: ["tailscale-export"],
-      sections: pulumi.output(nodeState).apply((nodes) =>
-        Object.fromEntries(
-          nodes
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(
-              (z) =>
-                [
-                  z.name,
-                  {
-                    fields: {
-                      ip: { value: z.ip },
-                      internalIp: { value: z.internalIp },
-                      nodeType: { value: z.nodeType ?? "unknown" },
+  public exportNodeStateToOnePassword(nodeState: NodeInfo[], cro: pulumi.ResourceOptions) {
+    const hostsSection: OnePasswordItemSectionInput = {
+      fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
+    };
+
+    return new OnePasswordItem(
+      `${pulumi.runtime.getStack()}-tailnet`,
+      {
+        category: FullItem.CategoryEnum.SecureNote,
+        title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
+        tags: ["tailscale-export"],
+        sections: pulumi.output(nodeState).apply((nodes) =>
+          Object.fromEntries(
+            nodes
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(
+                (z) =>
+                  [
+                    z.name,
+                    {
+                      fields: {
+                        ip: { value: z.ip },
+                        internalIp: { value: z.internalIp },
+                        nodeType: { value: z.nodeType ?? "unknown" },
+                      },
                     },
-                  },
-                ] as const,
-            ),
+                  ] as const,
+              ),
+          ),
         ),
-      ),
-      fields: {
-        name: { value: pulumi.runtime.getStack() },
+        fields: {
+          name: { value: pulumi.runtime.getStack() },
+          services: { value: pulumi.jsonStringify(this.services) },
+        },
       },
-    },
-    cro,
-  );
+      cro,
+    );
+  }
 }
+
 
 /**
  * Installs Tailscale on an LXC container using community-scripts.
