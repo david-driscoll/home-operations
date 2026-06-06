@@ -532,12 +532,6 @@ __PBS_GROUPS__`;
         comment: args.comment,
         path: args.path,
         gcSchedule: "weekly",
-        // notificationMode
-        keepDaily: 7,
-        keepMonthly: 6,
-        keepWeekly: 4,
-        keepLast: 5,
-        keepYearly: 1,
       },
       { parent: this, provider: this.provider, dependsOn: [folder, ...this.mountPoints, ...this.resources] },
     );
