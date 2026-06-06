@@ -91,7 +91,7 @@ export class StandardDns extends ComponentResource {
       `${name}-cloudflare`,
       {
         name: args.hostname,
-        zoneId: globals.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!),
+        zoneId: globals.cloudflareCredential.zoneId,
         content: record,
         type: args.type,
         ttl: 1,

@@ -27,19 +27,11 @@ export interface AggregatedNodeExport {
 }
 
 /**
- * Discovers all Tailscale node exports from 1Password items tagged 'tailscale-export'.
- * Each source stack writes its node IPs + registered services into its own item.
- */
-export function discoverNodeExports(globals: GlobalResources) {
-  return pulumi.output(globals.store.getTailscaleExports());
-}
-
-/**
  * Applies centralized Tailscale ACLs using the aggregated node data from all stacks.
  * Replaces all stack-specific ACL calls (formerly in home/tailscale.ts).
  */
 export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any> {
-  const nodeExports = discoverNodeExports(globals);
+  const nodeExports = globals.store.getTailscaleExports();
   const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:CentralizedAcls", "centralized-acls", {});
   const cro = { parent: tailscaleParent, provider: globals.tailscaleProvider };
 
@@ -80,6 +72,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         .filter(([_, n]) => n.nodeType === "dockge")
         .map(([name, _]) => name),
     );
+    const services = allExports.flatMap((exp) => exp.services);
     const tests = {
       proxmoxDevices,
       dockgeDevices,

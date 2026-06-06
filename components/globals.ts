@@ -1,4 +1,4 @@
-import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions, interpolate } from "@pulumi/pulumi";
+import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions, interpolate, log } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
@@ -54,53 +54,53 @@ export class GlobalResources extends ComponentResource {
       "adguard",
       {
         host: this.adguardCredential.apply((z) => z.meta.urls.find((z) => z.label === "ip-host")?.href!.substring(7)!),
-        username: this.adguardCredential.apply((z) => z.username),
-        password: this.adguardCredential.apply((z) => z.password),
+        username: this.adguardCredential.username,
+        password: this.adguardCredential.password,
         insecure: true,
         scheme: "http",
       },
       cro,
     );
 
-    this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.credential) }, cro);
-    this.cloudflareZoneId = this.cloudflareCredential.apply((z) => z.zoneId);
-    this.cloudFlareAccountId = this.cloudflareCredential.apply((z) => z.accountId);
+    this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.credential }, cro);
+    this.cloudflareZoneId = this.cloudflareCredential.zoneId;
+    this.cloudFlareAccountId = this.cloudflareCredential.accountId;
     this.unifiProvider = new UnifiProvider(
       "unifi",
       {
-        apiUrl: this.unifiCredential.apply((z) => z.hostname),
-        apiKey: this.unifiCredential.apply((z) => z.credential),
+        apiUrl: this.unifiCredential.hostname,
+        apiKey: this.unifiCredential.credential,
       },
       cro,
     );
     this.unifiFirewallProvider = new UnifiFirewallProvider(
       "unifi-firewall",
       {
-        apiUrl: this.unifiCredential.apply((z) => z.hostname),
-        apiKey: this.unifiCredential.apply((z) => z.credential),
+        apiUrl: this.unifiCredential.hostname,
+        apiKey: this.unifiCredential.credential,
       },
       cro,
     );
     this.tailscaleProvider = new TailscaleProvider(
       "tailscale",
       {
-        oauthClientId: this.tailscaleCredential.apply((z) => z.username),
-        oauthClientSecret: this.tailscaleCredential.apply((z) => z.credential),
+        oauthClientId: this.tailscaleCredential.username,
+        oauthClientSecret: this.tailscaleCredential.credential,
       },
       cro,
     );
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
-    this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.hostname);
+    this.tailscaleDomain = this.tailscaleCredential.hostname;
 
     this.truenasMinioProvider = new MinioProvider(
       "truenas-minio",
       {
         minioRegion: "homelab",
         minioInsecure: true,
-        minioUser: this.truenasMinioCredential.apply((z) => z.username),
-        minioPassword: this.truenasMinioCredential.apply((z) => z.credential),
-        minioServer: interpolate`${this.truenasCredential.apply((z) => z.hostname)}:9000`,
+        minioUser: this.truenasMinioCredential.username,
+        minioPassword: this.truenasMinioCredential.credential,
+        minioServer: interpolate`${this.truenasCredential.hostname}:9000`,
       },
       cro,
     );

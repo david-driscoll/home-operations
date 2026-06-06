@@ -1,6 +1,6 @@
 import { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 import { CategoryEnum, OPClient, TypeEnum } from "./op.ts";
-import { all, interpolate, output, Output, secret, Unwrap } from "@pulumi/pulumi";
+import { all, Input, interpolate, log, output, Output, secret, Unwrap } from "@pulumi/pulumi";
 const op = new OPClient();
 
 export * from "./interfaces.ts";
@@ -24,7 +24,7 @@ export class VaultStore {
 
   public getBackupPlans<T>() {
     return output(op.findItemsByTag("backup-plan"))
-      .apply((items) => all(items.map(getSecretItem<{ plans: string }>)).apply((items) => items.map((item) => JSON.parse(item.plans) as T[])))
+      .apply((items) => all(items.map(getSecretItem<{ plan: string }>)).apply((items) => items.map((item) => JSON.parse(item.plan) as {  plans: T[] })))
       .apply((plans) => plans.flat());
   }
 
@@ -35,6 +35,7 @@ export class VaultStore {
         return items.map((item) => {
           return {
             name: item.name as unknown as string,
+            services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
             hosts: Object.entries(item)
               .filter(([key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && "ip" in value)
               .map(([_, value]) => value as { ip: string; internalIp?: string; nodeType: "dockge" | "proxmox" | "pbs" }),
@@ -80,8 +81,9 @@ export class VaultStore {
   }
 
   private readonly vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
-  public replaceOnePasswordPlaceholders(value: string): Output<string> {
-    return all(Array.from(value.matchAll(this.vaultRegex)))
+  public replaceOnePasswordPlaceholders(value: Input<string>): Output<string> {
+    return output(value)
+      .apply((v) => Array.from(v.matchAll(this.vaultRegex)))
       .apply((matches) =>
         all(
           matches
@@ -96,13 +98,11 @@ export class VaultStore {
             continue;
           }
           if (!fieldValue) {
-            console.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
+            log.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
           }
           items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
         }
-        return value.replace(this.vaultRegex, (fullMatch) => {
-          return items.get(fullMatch) || fullMatch;
-        });
+        return output(value).apply((v) => v.replace(this.vaultRegex, (fullMatch) => items.get(fullMatch) || fullMatch));
       });
   }
 }

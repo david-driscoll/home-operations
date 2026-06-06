@@ -19,13 +19,13 @@ import { ApplicationCertificate } from "@components/authentik/application-certif
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { Tailscale } from "@components/constants.ts";
 import { PrivateKey } from "@pulumi/tls";
-import { ClusterDefinition } from "./store/index.ts";
+import { ClusterDefinition, Meta } from "./store/index.ts";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
   outputs: Input<AuthentikOutputs>;
   /** Cluster definition used to derive the OIDC issuer URL and Traefik CNAME hostname. */
-  cluster: Input<ClusterDefinition>;
+  cluster: Input<ClusterDefinition & Meta>;
   /** When provided, a Traefik dynamic config for PBS is written to this Dockge instance. */
   dockge: DockgeLxc;
   host: ProxmoxHost;
@@ -48,7 +48,7 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   private readonly mountPoints: remote.Command[] = [];
   private resources!: Input<Resource>[];
   private readonly lxcName: string;
-  provider: pbs.Provider;
+  public readonly provider: pbs.Provider;
 
   constructor(
     name: string,
@@ -477,7 +477,7 @@ __PBS_GROUPS__`;
         fields: {
           username: { type: TypeEnum.String, value: "root" },
           password: { type: TypeEnum.Concealed, value: rootPassword.result },
-          cluster: { type: TypeEnum.String, value: cluster.itemTitle },
+          cluster: { type: TypeEnum.String, value: cluster.meta.title },
           dockge: { type: TypeEnum.String, value: interpolate`DockgeLxc: ${args.dockge.cluster.title}` },
           hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
           webUrl: { type: TypeEnum.String, value: interpolate`https://${name}.${args.globals.tailscaleDomain}` },
@@ -490,9 +490,9 @@ __PBS_GROUPS__`;
     this.provider = new pbs.Provider(
       `${name}-provider`,
       {
-        username: `root`,
+        username: `root@pam`,
         password: rootPassword.result,
-        endpoint: externalUrl.apply((u) => `https://${tailscaleHostname}:8007`),
+        endpoint: interpolate`https://${tailscaleHostname}:8007`,
         insecure: true,
       },
       { parent: this, dependsOn: [createPbsLxc, postInstallRun, postInstallReboot] },
@@ -513,19 +513,22 @@ __PBS_GROUPS__`;
   }
 
   public addDatastore(args: { name: string; path: string; comment: string }) {
-    return new pbs.Datastore(`${this.lxcName}-${args.name}`, {
-      name: args.name,
-      comment: args.comment,
-      path: args.path,
-      gcSchedule: "weekly",
-      pruneSchedule: "weekly",
-      // notificationMode
-      keepDaily: 7,
-      keepMonthly: 6,
-      keepWeekly: 4,
-      keepLast: 5,
-      keepYearly: 1,
-    });
+    return new pbs.Datastore(
+      `${this.lxcName}-${args.name}`,
+      {
+        name: args.name,
+        comment: args.comment,
+        path: args.path,
+        gcSchedule: "weekly",
+        // notificationMode
+        keepDaily: 7,
+        keepMonthly: 6,
+        keepWeekly: 4,
+        keepLast: 5,
+        keepYearly: 1,
+      },
+      { parent: this, provider: this.provider, dependsOn: [...this.mountPoints, ...this.resources] },
+    );
   }
 }
 

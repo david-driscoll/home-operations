@@ -33,21 +33,6 @@ export interface OPClientItem {
   files: OPClientItemFiles;
 }
 
-export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
-  return {
-    itemTitle: item.title,
-    type: item.fields.type.value as any,
-    authentikDomain: item.fields.authentikDomain.value!,
-    key: item.fields.key.value!,
-    rootDomain: item.fields.rootDomain.value!,
-    secret: item.fields.secret?.value!,
-    title: item.fields.title.value!,
-    background: item.fields.background?.value,
-    favicon: item.fields.favicon?.value,
-    icon: item.fields.icon?.value,
-  };
-}
-
 export type OPClientItemInput = Pick<OPClientItem, "title" | "category"> & Partial<Omit<OPClientItem, "title" | "category">>;
 
 export class OPClient {

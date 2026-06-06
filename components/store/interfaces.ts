@@ -4,7 +4,6 @@ export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefin
 
 export interface DockgeClusterDefinition {
   type: "dockge";
-  itemTitle: string;
   key: string;
   title: string;
   rootDomain: string;
@@ -16,7 +15,6 @@ export interface DockgeClusterDefinition {
 
 export interface KubernetesClusterDefinition {
   type: "kubernetes";
-  itemTitle: string;
   key: string;
   title: string;
   rootDomain: string;

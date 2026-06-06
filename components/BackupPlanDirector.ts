@@ -37,7 +37,7 @@ export class BackupPlanDirector extends ComponentResource {
     super("home:backups:BackupPlanDirector", name, {}, opts);
     this.globals = args.globals;
     this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
-    this.plans = output(args.globals.store.getBackupPlans<BackupPlanItem>());
+    this.plans = args.globals.store.getBackupPlans<BackupPlanItem>().apply((z) => z.flatMap((x) => x.plans));
     this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply((z) => z.credential);
   }
 
@@ -272,6 +272,7 @@ export class BackupPlanDirector extends ComponentResource {
   }
 
   private _createDestinationBackrestPlan(groupTitle: string, detail: UnwrappedObject<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+    log.info(`Creating destination backrest plan for ${detail.cluster.title} and plan ${plan.name}`, this);
     const pullPlans = new Map<string, BackrestPlan>();
 
     // Derive sync path from the repo URI so that if `repository` overrides `name`,
