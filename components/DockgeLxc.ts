@@ -799,6 +799,8 @@ export class DockgeLxc extends ComponentResource {
                 },
               );
 
+      this.monitor.addService(`svc:${service}`);
+
               copyFiles.push(tailscaleServe);
 
               continue;
