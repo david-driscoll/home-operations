@@ -77,7 +77,7 @@ export class BackupPlanDirector extends ComponentResource {
     // update the 1password item to have the proper urls, so it shows up automagically.
     // add the password the item
     // pull that password in here
-    const remotes = this._createRemotes(source.cluster, source.pbs);
+    // const remotes = this._createRemotes(source.cluster, source.pbs);
 
     for (const destination of destinations) {
       // const syncJob = new pbs.SyncJob("", {
@@ -166,7 +166,7 @@ export class BackupPlanDirector extends ComponentResource {
             {
               host: destination.hostname,
               name: destination.cluster.key,
-              authId: destination.username,
+              authId: `${destination.cluster.key}@pam`,
               password: destination.password,
               comment: `Remote for Backrest backups to ${destination.hostname}`,
             },
@@ -272,7 +272,6 @@ export class BackupPlanDirector extends ComponentResource {
   }
 
   private _createDestinationBackrestPlan(groupTitle: string, detail: UnwrappedObject<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
-    log.info(`Creating destination backrest plan for ${detail.cluster.title} and plan ${plan.name}`, this);
     const pullPlans = new Map<string, BackrestPlan>();
 
     // Derive sync path from the repo URI so that if `repository` overrides `name`,
