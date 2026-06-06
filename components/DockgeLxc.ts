@@ -1,7 +1,7 @@
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
@@ -24,6 +24,7 @@ import { Tailscale } from "@components/constants.ts";
 import * as authentik from "@pulumi/authentik";
 import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
 import { AuthentikApplicationManager } from "./authentik.ts";
+import { ClusterDefinition, CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "./store/index.ts";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
@@ -39,10 +40,10 @@ export interface DockgeLxcArgs {
   ipAddress?: TailscaleIp;
   tailscaleIpAddress?: TailscaleIp;
   cluster: Input<ClusterDefinition>;
-  credential: Input<OPClientItem>;
+  credential: Input<PasswordDefinition>;
   tailscaleArgs?: Partial<Parameters<typeof installTailscaleLxc>[0]["args"]>;
   legacyTun?: boolean;
-  sftpKey: Input<OPClientItem>;
+  sftpKey: Input<SshKeyDefinition>;
 }
 export interface ExternalServiceOpts {
   name: Input<string>;
@@ -60,7 +61,7 @@ export class DockgeLxc extends ComponentResource {
   public readonly dns: Output<StandardDns>;
   public readonly ipAddress: Output<TailscaleIp>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
-  public readonly credential: Output<OPClientItem>;
+  public readonly credential;
   public readonly cluster: Output<ClusterDefinition>;
   private readonly ensureDynamicDir: Resource;
   public readonly shortName: string | undefined;
@@ -182,8 +183,8 @@ export class DockgeLxc extends ComponentResource {
     this.credential = output(args.credential);
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.tailscaleHostname,
-      user: this.credential.apply((z) => z.fields?.username?.value!),
-      password: this.credential.apply((z) => z.fields?.password?.value!),
+      user: this.credential.apply((z) => z.username!),
+      password: this.credential.apply((z) => z.password!),
     });
 
     this.dns = this.hostname.apply((g) => {
@@ -215,8 +216,8 @@ export class DockgeLxc extends ComponentResource {
 
     const keyWrites: any[] = [];
 
-    const privateKeyPem = output(args.sftpKey).apply((k) => k.fields?.["private key"]?.value?.trim() + "\n");
-    const publicKeyPem = output(args.sftpKey).apply((k) => k.fields?.["public key"]?.value?.trim() + "\n");
+    const privateKeyPem = output(args.sftpKey).apply((k) => k["private key"]?.trim() + "\n");
+    const publicKeyPem = output(args.sftpKey).apply((k) => k["public key"]?.trim() + "\n");
 
     // Daily trigger: changes each calendar day so Pulumi re-copies key files even if they
     // went missing on disk (Pulumi state wouldn't notice a missing file otherwise).
@@ -397,8 +398,8 @@ export class DockgeLxc extends ComponentResource {
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
             },
           },
         },
@@ -534,9 +535,6 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public deployStacks(args: { dependsOn: Input<Resource[]>; variables?: Record<string, Input<string>> }) {
-    const op = new OPClient();
-    const vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
-
     // update hostname on machine
     const createDockerNetwork = new remote.Command(
       `${this.args.host.name}-create-docker-network`,
@@ -569,27 +567,7 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? interpolate`authentik.${this.args.globals.tailscaleDomain}` : this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`http://uptime.${this.args.globals.searchDomain}:9595`),
       ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
-      (input: Input<string>) => {
-        return output(input).apply(async (str) => {
-          const matches = str.matchAll(vaultRegex);
-          const items = new Map();
-          for (const [, itemTitle, fieldName] of matches) {
-            if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
-              continue;
-            }
-            const item = await op.getItemByTitle(itemTitle);
-            const fieldValue = item.fields?.[fieldName]?.value;
-            if (!fieldValue) {
-              console.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
-            }
-            items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
-          }
-
-          return str.replace(vaultRegex, (fullMatch) => {
-            return items.get(fullMatch) || fullMatch;
-          });
-        });
-      },
+      (input: Input<string>) => output(input).apply((str) => this.args.globals.store.replaceOnePasswordPlaceholders(str)),
     ];
 
     const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
@@ -654,11 +632,10 @@ export class DockgeLxc extends ComponentResource {
       { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true, dependsOn: proxyProviders },
     );
 
-    const op = new OPClient();
-    const authentikToken = await op.getItemByTitle("Authentik Token");
+    const authentikToken = await awaitOutput(this.args.globals.store.getSecretByTitle<{ credential: string; url: string }>("Authentik Token"));
     const clientConfig = new authentikApi.Configuration({
-      accessToken: authentikToken.fields.credential.value,
-      basePath: `${authentikToken.fields.url.value}/api/v3/`,
+      accessToken: authentikToken.credential,
+      basePath: `${authentikToken.url}/api/v3/`,
     });
 
     const authentikCoreApi = new authentikApi.CoreApi(clientConfig);

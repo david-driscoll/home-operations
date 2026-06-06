@@ -1,0 +1,274 @@
+import { OPConnect } from "@1password/connect";
+import { FullItem } from "@1password/connect";
+import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
+import type { ItemFile, ItemUrls } from "@1password/connect/dist/model/models.js";
+import { ClusterDefinition } from "./interfaces.ts";
+
+export const TypeEnum = FullItemAllOfFields.TypeEnum;
+export type TypeEnum = FullItemAllOfFields.TypeEnum;
+export const PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export type PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export const CategoryEnum = FullItem.CategoryEnum;
+export type CategoryEnum = FullItem.CategoryEnum;
+
+export interface OPClientItemFields {
+  [key: string]: FullItemAllOfFields;
+}
+
+export interface OPClientItemFiles {
+  [key: string]: ItemFile;
+}
+
+export interface OPClientItemSections {
+  [key: string]: { fields: OPClientItemFields; files: OPClientItemFiles };
+}
+
+export interface OPClientItem {
+  title: string;
+  category: FullItem.CategoryEnum;
+  urls: ItemUrls[];
+  tags: string[];
+  sections: OPClientItemSections;
+  fields: OPClientItemFields;
+  files: OPClientItemFiles;
+}
+
+export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
+  return {
+    itemTitle: item.title,
+    type: item.fields.type.value as any,
+    authentikDomain: item.fields.authentikDomain.value!,
+    key: item.fields.key.value!,
+    rootDomain: item.fields.rootDomain.value!,
+    secret: item.fields.secret?.value!,
+    title: item.fields.title.value!,
+    background: item.fields.background?.value,
+    favicon: item.fields.favicon?.value,
+    icon: item.fields.icon?.value,
+  };
+}
+
+export type OPClientItemInput = Pick<OPClientItem, "title" | "category"> & Partial<Omit<OPClientItem, "title" | "category">>;
+
+export class OPClient {
+  public client: OPConnect;
+  /**
+   *
+   */
+  constructor() {
+    this.client = new OPConnect({
+      serverURL: process.env.CONNECT_HOST!,
+      token: process.env.CONNECT_TOKEN!,
+      keepAlive: true,
+    });
+  }
+
+  private async getVaultUuid(vaultName: string) {
+    const vaults = await this.client.listVaults();
+    const personalVault = vaults.find((v) => v.name === vaultName);
+    if (!personalVault) {
+      throw new Error(`No vault found in 1Password Connect (value: ${vaultName})`);
+    }
+    return personalVault.id!;
+  }
+
+  public async createItem(item: OPClientItemInput) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      return this.mapItem(
+        await this.client.createItem(vaultUuid, {
+          ...this.mapToFullItem(item),
+          vault: { id: vaultUuid },
+        } as any),
+        undefined,
+      );
+    } catch (e) {
+      console.error(`Error creating item (value: ${item.title})`, e);
+      throw e;
+    }
+  }
+
+  public async updateItem(id: string, item: OPClientItemInput) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      const result = await this.client.updateItem(vaultUuid, {
+        id,
+        ...this.mapToFullItem(item),
+        vault: { id: vaultUuid },
+      } as any);
+      return this.mapItem(result, id);
+    } catch (e) {
+      console.error(`Error updating item (value: ${id})`, e);
+      throw e;
+    }
+  }
+
+  public async deleteItem(id: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      return this.client.deleteItem(vaultUuid, id);
+    } catch (e) {
+      console.error(`Error deleting item (value: ${id})`, e);
+      throw e;
+    }
+  }
+
+  public async getItemById(itemId: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      return this.mapItem(await this.client.getItemById(vaultUuid, itemId), itemId);
+    } catch (e) {
+      console.error(`Error getting item by ID (value: ${itemId})`, e);
+      throw e;
+    }
+  }
+
+  public async getItemByTitle(itemTitle: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemTitle), undefined);
+    } catch (e) {
+      return this.getItemById(itemTitle);
+    }
+  }
+
+  public async listItemsByTitleContains(contains: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      const items = await this.client.listItemsByTitleContains(vaultUuid, contains);
+      return items.map((item) => this.mapItem(item, item.id));
+    } catch (e) {
+      console.error(`Error listing items by title contains (value: ${contains})`, e);
+      throw e;
+    }
+  }
+
+  public async findItemsByTag(tag: string) {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      const allItems = await this.client.listItems(vaultUuid);
+      const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
+      return Promise.all(filtered.map((z) => this.getItemByTitle(z.title!)));
+    } catch (e) {
+      console.error(`Error finding items by tag (value: ${tag})`, e);
+      throw e;
+    }
+  }
+
+  public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
+    const sections = Object.entries(item.sections ?? {}).map(([key, s]) => ({ id: key, label: key }));
+    const fields = Object.entries(item.fields ?? {}).map(([fieldKey, field]) => ({
+      id: fieldKey,
+      ...field,
+      label: fieldKey,
+    }));
+    const sectionFields = Object.entries(item.sections ?? {}).flatMap(([sectionKey, section]) =>
+      Object.entries(section.fields ?? {}).map(([fieldKey, field]) => ({
+        id: `${sectionKey}-${fieldKey}`,
+        ...field,
+        section: { id: sectionKey },
+        label: fieldKey,
+      })),
+    );
+
+    const files = Object.entries(item.files ?? {}).map(([fileKey, file]) => ({
+      id: fileKey,
+      ...file,
+      name: fileKey,
+    }));
+
+    const sectionFiles = Object.entries(item.sections ?? {}).flatMap(([sectionKey, section]) =>
+      Object.entries(section.files ?? {}).map(([fileKey, file]) => ({
+        id: `${sectionKey}-${fileKey}`,
+        ...file,
+        section: { id: sectionKey },
+        name: fileKey,
+      })),
+    );
+
+    const result = removeUndefinedProperties({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      urls: item.urls,
+      tags: item.tags,
+      sections,
+      fields: [...sectionFields, ...fields],
+      files: [...sectionFiles, ...files],
+    });
+    // console.log("mapToFullItem", { input: { fields: item.fields, sections: item.sections }, output: result.fields });
+    return result;
+  }
+
+  public mapItem(
+    item: Omit<FullItem, "vault" | "extractOTP">,
+    id: string | undefined,
+  ): {
+    id: string;
+    title: string;
+    category: FullItem.CategoryEnum;
+    urls: ItemUrls[];
+    tags: string[];
+    sections: {
+      [key: string]: {
+        id: string;
+        fields: { [key: string]: Omit<FullItemAllOfFields, "section" | "label"> };
+        files: { [key: string]: Omit<ItemFile, "section" | "label"> };
+      };
+    };
+    fields: { [key: string]: Omit<FullItemAllOfFields, "section" | "label"> };
+    files: { [key: string]: Omit<ItemFile, "section" | "label"> };
+  } {
+    const fields = item.fields ?? [];
+    const sections = item.sections ?? [];
+    const files = item.files ?? [];
+    const rootFields: [string, FullItemAllOfFields][] = [];
+    const rootFiles: [string, ItemFile][] = [];
+    for (const field of fields) {
+      if (field.value === undefined || (field.section && field.section.id !== "add more")) continue;
+      rootFields.push([field.label!, field] as const);
+    }
+    for (const file of files) {
+      if (file.content === undefined || (file.section && file.section.id !== "add more")) continue;
+      rootFiles.push([file.name!, file] as const);
+    }
+    const sectionParts: [string, { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } }][] = [];
+    for (let section of sections) {
+      if (section.id === undefined || section.id === "add more") {
+        continue;
+      }
+      const sectionFields = fields.filter((f) => f.section?.id === section.id).map((f) => [f.label!, f] as const);
+      const sectionFiles = files.filter((f) => f.section?.id === section.id).map((f) => [f.name!, f] as const);
+      sectionParts.push([section.id!, { id: section.id!, label: section.label ?? section.id!, fields: Object.fromEntries(sectionFields), files: Object.fromEntries(sectionFiles) }] as const);
+    }
+
+    const result = removeUndefinedProperties({
+      id: item.id ?? id!,
+      title: item.title!,
+      category: item.category!,
+      urls: item.urls ?? [],
+      tags: item.tags ?? [],
+      sections: Object.fromEntries(sectionParts),
+      fields: Object.fromEntries(rootFields),
+      files: Object.fromEntries(rootFiles),
+    });
+    return result;
+  }
+}
+
+function removeUndefinedProperties<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.filter((item) => item !== undefined).map((item) => removeUndefinedProperties(item)) as T;
+  }
+  if (typeof obj === "object" && !(obj instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([_, v]) => v !== undefined)
+        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const),
+    ) as T;
+  }
+  return obj;
+}

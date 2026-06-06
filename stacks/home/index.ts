@@ -1,5 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
-import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
@@ -15,19 +15,18 @@ import { dns, Tailscale } from "@components/constants.ts";
 import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
+import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
 
 const globals = new GlobalResources({}, {});
 const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
-const op = new OPClient();
-
-const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
-const sftpClientKey = pulumi.output(op.getItemByTitle("Rclone SFTP Key"));
-const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
-const alphaSiteProxmoxCredentials = pulumi.output(op.getItemByTitle("Alpha Site Proxmox ApiKey"));
-const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
-const celestiaCluster = pulumi.output(op.getItemByTitle("Cluster: Celestia")).apply(createClusterDefinition);
-const alphaSiteCluster = pulumi.output(op.getItemByTitle("Cluster: Alpha Site")).apply(createClusterDefinition);
+const outputs = globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs");
+const sftpClientKey = globals.store.getSecretByTitle<SshKeyDefinition>("Rclone SFTP Key");
+const mainProxmoxCredentials = globals.store.getSecretByTitle<CredentialDefinition & { arch: string }>("Proxmox ApiKey");
+const alphaSiteProxmoxCredentials = globals.store.getSecretByTitle<CredentialDefinition & { arch: string }>("Alpha Site Proxmox ApiKey");
+const dockgeCredential = globals.store.getSecretByTitle<PasswordDefinition>("Dockge Credential");
+const celestiaCluster = globals.store.getCluster("Cluster: Celestia");
+const alphaSiteCluster = globals.store.getCluster("Cluster: Alpha Site");
 const minioBucket = new minio.S3Bucket(
   `home-operations-minio-bucket`,
   {
@@ -57,7 +56,7 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   vmIdRange: { start: 102, end: 199 },
 });
 const spikeVm = new TruenasVm("spike", {
-  credential: globals.truenasCredential.apply((z) => z.title!),
+  credential: globals.truenasCredential.meta.title,
   globals: globals,
   host: twilightSparkleHost,
   ipAddress: pulumi.output("10.10.10.10"),
@@ -185,7 +184,16 @@ await awaitOutput(celestiaHost.addUptimeGatus());
 
 await awaitOutput(twilightSparkleHost.addUptimeGatus());
 await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
-await awaitOutput(backupDirector.createSource({ connection: celestiaDockgeRuntime.remoteConnection, cluster: celestiaCluster }, [celestiaPbs]));
+await awaitOutput(
+  backupDirector.createSource(
+    {
+      connection: celestiaDockgeRuntime.remoteConnection,
+      pbs: celestiaPbs,
+      cluster: celestiaCluster,
+    },
+    [celestiaPbs],
+  ),
+);
 
 exportNodeStateToOnePassword(
   [

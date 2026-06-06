@@ -4,8 +4,7 @@ import * as kubernetes from "@pulumi/kubernetes";
 import * as random from "@pulumi/random";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
-import { OPClientItem, OPClient } from "./op.ts";
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
@@ -14,8 +13,8 @@ import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
 import { Application } from "../sdks/authentik/bin/application.js";
 import { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
+import { ClusterDefinition, VaultStore } from "./store/index.ts";
 
-const op = new OPClient();
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
   clusterKey: string;
@@ -32,22 +31,13 @@ export interface AuthentikOutputs {
   scopeMappings: Record<string, string>;
   flows: { [K in keyof ReturnType<import("./authentik/flows.ts").FlowsManager["createFlows"]>]: string };
 }
-
-export class AuthentikOutputs {
-  constructor(value: OPClientItem) {
-    this.groups = Object.fromEntries(Object.entries(value.sections["groups"].fields).map(([key, value]) => [key, value.value] as const)) as any;
-    this.roles = Object.fromEntries(Object.entries(value.sections["roles"].fields).map(([key, value]) => [key, value.value] as const)) as any;
-    this.scopeMappings = Object.fromEntries(Object.entries(value.sections["scopeMappings"].fields).map(([key, value]) => [key, value.value] as const)) as any;
-    this.flows = Object.fromEntries(Object.entries(value.sections["flows"].fields).map(([key, value]) => [key, value.value] as const)) as any;
-  }
-}
-
 export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
   private readonly applicationsComponent: pulumi.ComponentResource;
   public readonly outpostsComponent: pulumi.ComponentResource;
   public readonly cluster: pulumi.Output<ClusterDefinition>;
   private readonly authentik: pulumi.Output<AuthentikOutputs>;
+  private store: VaultStore;
   private _applications: pulumi.Output<
     ((
       | {
@@ -84,6 +74,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
     this.authentik = pulumi.output(args.outputs);
     this.cluster = pulumi.output(args.cluster);
+    this.store = args.globals.store;
     this.providersComponent = new pulumi.ComponentResource("custom:resource:providers", `${args.clusterKey}-providers`, {}, { parent: this });
     this.applicationsComponent = new pulumi.ComponentResource("custom:resource:applications", `${args.clusterKey}-applications`, {}, { parent: this });
     this.outpostsComponent = new pulumi.ComponentResource("custom:resource:outposts", `${args.clusterKey}-outposts`, {}, { parent: this });
@@ -446,30 +437,9 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
 
           const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
-          return pulumi.output(replaceOnePasswordPlaceholders(op, yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
+          return pulumi.output(this.store.replaceOnePasswordPlaceholders(yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
         }),
       );
     });
   }
-}
-
-const vaultRegex = /op\:\/\/Eris\/([\w| ]+)\/([\w| ]+)/g;
-async function replaceOnePasswordPlaceholders(op: OPClient, value: string): Promise<string> {
-  const matches = value.matchAll(vaultRegex);
-  const items = new Map();
-  for (const [, itemTitle, fieldName] of matches) {
-    if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
-      continue;
-    }
-    const item = await op.getItemByTitle(itemTitle);
-    const fieldValue = item.fields?.[fieldName]?.value;
-    if (!fieldValue) {
-      console.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
-    }
-    items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
-  }
-
-  return value.replace(vaultRegex, (fullMatch) => {
-    return items.get(fullMatch) || fullMatch;
-  });
 }

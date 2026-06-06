@@ -30,31 +30,8 @@ export interface AggregatedNodeExport {
  * Discovers all Tailscale node exports from 1Password items tagged 'tailscale-export'.
  * Each source stack writes its node IPs + registered services into its own item.
  */
-export function discoverNodeExports() {
-  const opClient = new OPClient();
-
-  return pulumi.output(opClient.findItemsByTag("tailscale-export")).apply((items) =>
-    items.map((item) => {
-      const services = item.fields?.["services"]?.value?.split(",") ?? [];
-      const stackName = item.fields?.["stackName"]?.value!;
-      const hosts = Object.fromEntries(
-        Object.entries(item.sections ?? {}).map(([name, section]) => [
-          name,
-          {
-            ip: section.fields?.["ip"]?.value!,
-            internalIp: section.fields?.["internalIp"]?.value,
-            nodeType: section.fields?.["nodeType"]?.value!,
-          },
-        ]),
-      );
-
-      return {
-        stackName,
-        hosts,
-        services,
-      };
-    }),
-  );
+export function discoverNodeExports(globals: GlobalResources) {
+  return pulumi.output(globals.store.getTailscaleExports());
 }
 
 /**
@@ -62,7 +39,7 @@ export function discoverNodeExports() {
  * Replaces all stack-specific ACL calls (formerly in home/tailscale.ts).
  */
 export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any> {
-  const nodeExports = discoverNodeExports();
+  const nodeExports = discoverNodeExports(globals);
   const tailscaleParent = new pulumi.ComponentResource("custom:tailscale:CentralizedAcls", "centralized-acls", {});
   const cro = { parent: tailscaleParent, provider: globals.tailscaleProvider };
 
@@ -87,7 +64,6 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     }
 
     // ── Aggregate services, internalIps, and test device lists ───────────
-    const services = allExports.flatMap((exp) => exp.services);
     const internalIps = allExports.flatMap((exp) =>
       Object.values(exp.hosts)
         .filter((n) => n.internalIp)
@@ -141,10 +117,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       },
     ];
 
-    // ── Register Dockge services from all stacks ──────────────────────────
-    for (const service of services) {
-      manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
-    }
+    // // ── Register Dockge services from all stacks ──────────────────────────
+    // for (const service of services) {
+    //   manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
+    // }
 
     // ── Per-role access rules ─────────────────────────────────────────────
     configureProxmoxAccess(manager);

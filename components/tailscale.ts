@@ -9,7 +9,7 @@ import { GlobalResources } from "./globals.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { ClientCredentials } from "simple-oauth2";
-import { copyFileToRemote } from "./helpers.ts";
+import { awaitOutput, copyFileToRemote } from "./helpers.ts";
 import { DeviceTags, getDevice, getDeviceOutput, GetDeviceResult, TailnetKey } from "@pulumi/tailscale";
 import { TailscaleCidr } from "@openapi/tailscale-grants.js";
 import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
@@ -36,15 +36,15 @@ export interface TailscaleNodeExport {
   nodes: TailscaleNodeState[];
 }
 
-export async function getTailscaleClient(): Promise<Client<paths>> {
+export async function getTailscaleClient(globals: GlobalResources): Promise<Client<paths>> {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
 
-  const tailscaleCredential = await new OPClient().getItemByTitle("Tailscale Terraform OAuth Client");
+  const tailscaleCredential = await awaitOutput(globals.store.getSecretByTitle<{ username: string; credential: string }>("Tailscale Terraform OAuth Client"));
   const oauth = new ClientCredentials({
     client: {
-      id: tailscaleCredential.fields["username"].value!,
-      secret: tailscaleCredential.fields["credential"].value!,
+      id: tailscaleCredential.username,
+      secret: tailscaleCredential.credential,
     },
     auth: {
       tokenHost: "https://api.tailscale.com/api/v2/",
@@ -157,7 +157,7 @@ export function installTailscaleLxc(options: {
     relayServerPort?: pulumi.Input<number>;
   };
 }) {
-  const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
+  const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient(options.globals))]).apply(async ([name, ipAddress, args, client]) => {
     const dependsOn = options.dependsOn ?? [];
 
     if (pulumi.runtime.isDryRun()) {
@@ -267,9 +267,7 @@ export function installTailscaleLxc(options: {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return tailscaleSet.stdout
-      .apply(() =>updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn))
-      .apply((z) => z);
+    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply((z) => z);
   });
 
   return deviceInfo;
@@ -347,7 +345,7 @@ export function updateTailscaleProxmox(options: {
     exitNodeAllowLanAccess?: pulumi.Input<boolean>;
   };
 }) {
-  const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient())]).apply(async ([name, ipAddress, args, client]) => {
+  const deviceInfo = pulumi.all([options.name, options.ipAddress, options.args, pulumi.output(getTailscaleClient(options.globals))]).apply(async ([name, ipAddress, args, client]) => {
     const dependsOn = options.dependsOn ?? [];
 
     const tailscaleArgs = pulumi.interpolate`--hostname=${name} --report-posture ${args.acceptDns ? "--accept-dns" : "--accept-dns=false"} ${args.acceptRoutes ? "--accept-routes" : "--accept-routes=false"} ${
@@ -368,9 +366,7 @@ export function updateTailscaleProxmox(options: {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return tailscaleSet.stdout
-      .apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn))
-      .apply((z) => z);
+    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply((z) => z);
   });
 
   return deviceInfo;

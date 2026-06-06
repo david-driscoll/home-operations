@@ -1,18 +1,16 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import { GlobalResources, createClusterDefinition } from "../../components/globals.ts";
+import { GlobalResources } from "../../components/globals.ts";
 import { kubernetesApplications } from "./kubernetes.ts";
-import { OPClient } from "../../components/op.ts";
 import { AuthentikOutputs } from "@components/authentik.ts";
-
-const op = new OPClient();
+import { awaitOutput } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 const config = new pulumi.Config(`applications`);
 const clusterCredential = config.require("clusterCredential");
-const clusterDefinition = createClusterDefinition(await op.getItemByTitle(clusterCredential));
+const clusterDefinition = await awaitOutput(globals.store.getKubernetesCluster(clusterCredential));
 
-const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
+const outputs = await awaitOutput(globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs"));
 
 // only these two are branded.
 if (clusterDefinition.key === "sgc" || clusterDefinition.key === "equestria") {

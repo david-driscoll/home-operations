@@ -12,7 +12,7 @@ import CIDRMatcher from "cidr-matcher";
 
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   const matcher = new CIDRMatcher([Tailscale.subnets.home]);
-  const devices = pulumi.output(getTailscaleClient()).apply(async (client) => {
+  const devices = pulumi.output(getTailscaleClient(globals)).apply(async (client) => {
     const devices = await client.GET("/tailnet/{tailnet}/devices", {
       params: {
         path: { tailnet: "-" },

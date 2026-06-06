@@ -55,14 +55,13 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly hostname: pulumi.Output<string>;
   constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
     super("home:truenas:TruenasVM", name, opts);
-    const opClient = new OPClient();
     const cro = { parent: this };
     this.name = name;
     this.ipAddress = pulumi.output(args.ipAddress);
     this.tailscaleIpAddress = args.tailscaleIpAddress;
     this.tailscaleName = pulumi.interpolate`${name}`;
     this.credential = pulumi.output(args.credential);
-    const credentialItem = this.credential.apply(async (title) => opClient.getItemByTitle(title));
+    const credentialItem = this.credential.apply((title) => args.globals.store.getSecretByTitle<{ username: string; credential: string }>(title));
     this.globals = args.globals;
 
     this.hostname = pulumi.interpolate`${name}.${this.globals.searchDomain}`;
@@ -70,8 +69,8 @@ export class TruenasVm extends pulumi.ComponentResource {
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.ipAddress,
-      user: credentialItem.apply((z) => z.fields?.username?.value!),
-      password: credentialItem.apply((z) => z.fields?.credential?.value!),
+      user: credentialItem.apply((z) => z.username),
+      password: credentialItem.apply((z) => z.credential),
     });
 
     const truenasInfo = new OnePasswordItem(
@@ -84,8 +83,8 @@ export class TruenasVm extends pulumi.ComponentResource {
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
             },
           },
         },
@@ -113,7 +112,7 @@ export class TruenasVm extends pulumi.ComponentResource {
   public async addClusterBackup(name: string, parent: pulumi.Resource): Promise<TruenasVmResult> {
     const manager = await promisifyOutput(
       pulumi.output(this.credential).apply(async (credential) => {
-        return new TrueNASResourceManager(await getTruenasClient(credential));
+        return new TrueNASResourceManager(await getTruenasClient(this.globals, credential));
       }),
     );
 

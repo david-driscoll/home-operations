@@ -1,6 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
-import { createClusterDefinition, GlobalResources } from "../../components/globals.ts";
+import { GlobalResources } from "../../components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
@@ -12,18 +12,18 @@ import { exportNodeStateToOnePassword } from "@components/tailscale.ts";
 import { createGatusDnsUptime } from "@components/StandardDns.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 import { awaitOutput } from "@components/helpers.ts";
+import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
 
 const globals = new GlobalResources({}, {});
 const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
 
-const op = new OPClient();
 const vmRange = { start: 500, end: 599 };
 
-const outputs = new AuthentikOutputs(await op.getItemByTitle("Authentik Outputs"));
-const sftpClientKey = pulumi.output(op.getItemByTitle("Rclone SFTP Key"));
-const mainProxmoxCredentials = pulumi.output(op.getItemByTitle("Proxmox ApiKey"));
-const dockgeCredential = pulumi.output(op.getItemByTitle("Dockge Credential"));
-const cluster = pulumi.output(op.getItemByTitle("Cluster: Skystar")).apply(createClusterDefinition);
+const outputs = globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs");
+const sftpClientKey = globals.store.getSecretByTitle<SshKeyDefinition>("Rclone SFTP Key");
+const mainProxmoxCredentials = globals.store.getSecretByTitle<CredentialDefinition & { arch: string }>("Proxmox ApiKey");
+const dockgeCredential = globals.store.getSecretByTitle<PasswordDefinition>("Dockge Credential");
+const cluster = globals.store.getCluster("Cluster: Skystar");
 const dockgeId = new random.RandomInteger("skystar-dockge-id", { min: vmRange.start, max: vmRange.start + 50, keepers: { clusterId: cluster.key } });
 const pbsId = new random.RandomInteger("skystar-pbs-id", { min: vmRange.start + 51, max: vmRange.end, seed: dockgeId.result.apply((z) => z.toString()), keepers: { clusterId: cluster.key } });
 
@@ -72,7 +72,7 @@ await awaitOutput(dockgeRuntime.deployStacks({ dependsOn: [pbs], variables: {
 await awaitOutput(host.addUptimeGatus());
 
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
-await awaitOutput(backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, cluster: cluster }, [pbs]));
+await awaitOutput(backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, pbs, cluster }, [pbs]));
 
 exportNodeStateToOnePassword(
   [
