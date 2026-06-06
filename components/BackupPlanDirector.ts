@@ -164,7 +164,7 @@ report() { curl -sf -X POST -H "Authorization: Bearer $TOKEN" "$UPTIME_URL/api/v
 trap 'report false' ERR
 export RESTIC_PASSWORD_FILE="/etc/backup/restic-password"
 export RCLONE_CONFIG=/etc/backup/rclone.conf
-restic -r rclone:${planSource}:/data/backup/${plan.name}/ copy --to /data/backup/${plan.name}/
+restic -r rclone:${planSource}:/data/backup/${plan.name}/ copy --path /data/backup/${plan.name}/
 report true
 `;
 
