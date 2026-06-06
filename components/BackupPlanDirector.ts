@@ -176,6 +176,7 @@ report true
         connection: source.pbs.remoteConnection,
         parent: this,
         dependsOn: baseDeps,
+        withRemoveCommand: true,
       });
       const copyServiceFile = copyFileToRemote(`${clusterKey}-pbs-copy-svc-${plan.name}`, {
         content: `[Unit]
@@ -192,6 +193,7 @@ StandardError=journal
         connection: source.pbs.remoteConnection,
         parent: this,
         dependsOn: baseDeps,
+        withRemoveCommand: true,
       });
       const copyTimerFile = copyFileToRemote(`${clusterKey}-pbs-copy-timer-${plan.name}`, {
         content: `[Unit]
@@ -209,6 +211,7 @@ WantedBy=timers.target
         connection: source.pbs.remoteConnection,
         parent: this,
         dependsOn: baseDeps,
+        withRemoveCommand: true,
       });
 
       const enable = all([copyScriptFile, copyServiceFile, copyTimerFile]).apply(

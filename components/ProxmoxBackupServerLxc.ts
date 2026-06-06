@@ -421,7 +421,7 @@ __PBS_GROUPS__`;
       `${name}-install-jq`,
       {
         connection: args.host.remoteConnection,
-        create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
+        create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq restic rclone",
       },
       mergeOptions(cro, { dependsOn: [] }),
     );
