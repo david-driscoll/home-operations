@@ -122,7 +122,7 @@ export class BackupPlanDirector extends ComponentResource {
     depends: Input<Resource[]>,
   ) {
     const groupTitle = `Replicate: ${destination.cluster.title}`;
-    const remotes = this._createRemotes(destination.cluster, destination.pbs);
+    // const remotes = this._createRemotes(destination.cluster, destination.pbs);
     const backrestItems = plans
       .map((plan) => this._createDestinationBackrestPlan(groupTitle, destination, plan, uptimeUrl, password))
       .reduce(
