@@ -70,37 +70,3 @@ export async function kubernetesBackups(globals: GlobalResources, planManager: B
     ),
   );
 }
-
-function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {
-  return pulumi.interpolate`{
-  "kind": "Config",
-  "apiVersion": "v1",
-  "clusters": [
-    {
-      "cluster": {
-        "certificate-authority-data": "${credential.fields.certificate.apply((z) => Buffer.from(z.value!, "utf8").toString("base64"))}",
-        "server": "https://${credential.fields.cluster_api.value}:6443"
-      },
-      "name": "${credential.fields.cluster.value}"
-    }
-  ],
-  "contexts": [
-    {
-      "context": {
-        "cluster": "${credential.fields.cluster.value}",
-        "user": "${credential.fields.sa.value}"
-      },
-      "name": "${credential.fields.cluster.value}"
-    }
-  ],
-  "current-context": "${credential.fields.cluster.value}",
-  "users": [
-    {
-      "name": "${credential.fields.sa.value}",
-      "user": {
-        "token": "${credential.fields.token.value}"
-      }
-    }
-  ]
-}`;
-}
