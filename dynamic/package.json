@@ -18,6 +18,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "jsondiffpatch": "^0.7.3"
+    "jsondiffpatch": "^0.7.3",
+    "node-ssh": "^13.2.1",
+    "systemd-ts": "^260.2.0"
   }
 }

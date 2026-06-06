@@ -30,6 +30,7 @@
   "include": [
     "components/**/*.ts",
     "components/**/*.mts",
+    "dynamic/**/*.ts",
     "types/**/*.ts"
   ],
 }

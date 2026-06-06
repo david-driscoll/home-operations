@@ -9,6 +9,7 @@ import { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
 import { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
 import { ClusterDefinition, ProxmoxBackupServerLxcDefinition, SshKeyDefinition } from "./store/interfaces.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
+import { SystemdBackupJob } from "@dynamic/systemd/SystemdBackupJob.ts";
 
 interface Connection {
   connection: Unwrap<types.input.remote.ConnectionArgs>;
@@ -133,104 +134,35 @@ shell_type = none
       dependsOn: output(depends).apply((d) => [keySetup, ...d]),
     });
 
-    const resticPassword = copyFileToRemote(`${clusterKey}-pbs-restic-password`, {
-      content: volsyncPassword,
-      remotePath: "/etc/backup/restic-password",
-      connection: source.pbs.remoteConnection,
-      parent: this,
-      dependsOn: output(depends).apply((d) => [keySetup, ...d]),
-    });
-
     const perPlanResources: Input<Resource>[] = [];
+
+    const baseDeps = output(depends).apply((d) => [keySetup, rcloneConfig, chmodKey, authorizedKey, ...d]);
 
     for (const plan of destinationPlans) {
       const planSource = plan.source; // rclone remote name = source cluster key
       const copyToken = toGatusKey(destinationGroupTitle, plan.name);
 
-      const initRepo = new remote.Command(
-        `${clusterKey}-pbs-restic-init-${plan.name}`,
+      // A single dynamic resource owns the systemd `.service` + `.timer` lifecycle
+      // (create/update/delete) with the rclone-sync script embedded in the unit —
+      // no helper scripts, chmod, or daemon-reload commands to wire up by hand.
+      const job = new SystemdBackupJob(
+        `${clusterKey}-pbs-backup-${plan.name}`,
         {
-          connection: source.pbs.remoteConnection,
-          create: `RESTIC_PASSWORD_FILE="/etc/backup/restic-password" restic -r /data/backup/${plan.name}/ init 2>/dev/null || true`,
+          connection: { host: source.pbs.remoteConnection.host, user: source.pbs.remoteConnection.user },
+          name: `backup-copy-${plan.name}`,
+          description: `Backup sync: ${plan.name}`,
+          source: `${planSource}:/data/backup/${plan.name}/`,
+          destination: `/data/backup/${plan.name}/`,
+          rcloneConfigPath: "/etc/backup/rclone.conf",
+          onCalendar: "*-*-* 04:00:00",
+          randomizedDelaySec: "30m",
+          uptimeUrl,
+          uptimeToken: copyToken,
         },
-        { parent: this, dependsOn: output(depends).apply((d) => [resticPassword, keySetup, ...d]) },
+        { parent: this, dependsOn: baseDeps },
       );
 
-      const copyScript = `#!/bin/bash
-set -euo pipefail
-TOKEN="${copyToken}"
-UPTIME_URL="${uptimeUrl}"
-report() { curl -sf -X POST -H "Authorization: Bearer $TOKEN" "$UPTIME_URL/api/v1/endpoints/$TOKEN/external?success=$1" || true; }
-trap 'report false' ERR
-export RESTIC_PASSWORD_FILE="/etc/backup/restic-password"
-export RCLONE_CONFIG=/etc/backup/rclone.conf
-restic -r rclone:${planSource}:/data/backup/${plan.name}/ copy --path /data/backup/${plan.name}/
-report true
-`;
-
-      const baseDeps = output(depends).apply((d) => [keySetup, rcloneConfig, initRepo, chmodKey, authorizedKey, ...d]);
-
-      const copyScriptFile = copyFileToRemote(`${clusterKey}-pbs-copy-script-${plan.name}`, {
-        content: copyScript,
-        remotePath: `/usr/local/bin/backup-copy-${plan.name}.sh`,
-        connection: source.pbs.remoteConnection,
-        triggers: [plan.name, copyToken, uptimeUrl, copyScript],
-        parent: this,
-        dependsOn: baseDeps,
-        withRemoveCommand: true,
-      });
-      const copyServiceFile = copyFileToRemote(`${clusterKey}-pbs-copy-svc-${plan.name}`, {
-        content: `[Unit]
-Description=Restic copy: ${plan.name}
-After=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/backup-copy-${plan.name}.sh
-StandardOutput=journal
-StandardError=journal
-`,
-        remotePath: `/etc/systemd/system/backup-copy-${plan.name}.service`,
-        connection: source.pbs.remoteConnection,
-        triggers: [plan.name, copyToken, uptimeUrl, copyScript, copyScriptFile.id],
-        parent: this,
-        dependsOn: baseDeps,
-        withRemoveCommand: true,
-      });
-      const copyTimerFile = copyFileToRemote(`${clusterKey}-pbs-copy-timer-${plan.name}`, {
-        content: `[Unit]
-Description=Restic copy timer: ${plan.name}
-
-[Timer]
-OnCalendar=*-*-* 04:00:00
-RandomizedDelaySec=30m
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-`,
-        remotePath: `/etc/systemd/system/backup-copy-${plan.name}.timer`,
-        connection: source.pbs.remoteConnection,
-        triggers: [plan.name, copyToken, uptimeUrl, copyScript, copyScriptFile.id],
-        parent: this,
-        dependsOn: baseDeps,
-        withRemoveCommand: true,
-      });
-
-      const enable = all([copyScriptFile, copyServiceFile, copyTimerFile]).apply(
-        (files) =>
-          new remote.Command(
-            `${clusterKey}-pbs-systemd-enable-${plan.name}`,
-            {
-              connection: source.pbs.remoteConnection,
-              create: [`chmod 755 /usr/local/bin/backup-copy-${plan.name}.sh`, `systemctl daemon-reload`, `systemctl enable --now backup-copy-${plan.name}.timer`].join(" && "),
-              triggers: [plan.name, copyToken, uptimeUrl, copyScript, copyScriptFile.id],
-            },
-            { parent: this, dependsOn: files },
-          ),
-      );
-
-      perPlanResources.push(enable);
+      perPlanResources.push(job);
     }
 
     const backrestItems = [
