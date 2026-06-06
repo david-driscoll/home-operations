@@ -513,6 +513,17 @@ __PBS_GROUPS__`;
   }
 
   public addDatastore(args: { name: string; path: string; comment: string }) {
+    const folder = new remote.Command(
+      `${args.name}-backrest-config`,
+      {
+        connection: this.args.host.remoteConnection,
+        create: interpolate`mkdir -p "${args.path}" && chown 165534:165534 "${args.path}"`,
+      },
+      {
+        parent: this,
+        dependsOn: [...this.mountPoints, ...this.resources],
+      },
+    );
     return new pbs.Datastore(
       `${this.lxcName}-${args.name}`,
       {
@@ -527,7 +538,7 @@ __PBS_GROUPS__`;
         keepLast: 5,
         keepYearly: 1,
       },
-      { parent: this, provider: this.provider, dependsOn: [...this.mountPoints, ...this.resources] },
+      { parent: this, provider: this.provider, dependsOn: [folder, ...this.mountPoints, ...this.resources] },
     );
   }
 }
