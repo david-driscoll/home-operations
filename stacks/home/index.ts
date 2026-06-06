@@ -56,7 +56,7 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   vmIdRange: { start: 102, end: 199 },
 });
 const spikeVm = new TruenasVm("spike", {
-  credential: globals.truenasCredential.title,
+  credential: globals.truenasCredential.meta.title,
   globals: globals,
   host: twilightSparkleHost,
   ipAddress: pulumi.output("10.10.10.10"),

@@ -162,10 +162,10 @@ export class BackupPlanDirector extends ComponentResource {
       .apply(([cluster, destinations]) =>
         destinations.map((destination) => {
           const remote = new pbs.Remote(
-            `backrest-remote-${cluster.key}`,
+            destination.cluster.key,
             {
               host: destination.hostname,
-              name: `backrest-remote-${cluster.key}`,
+              name: destination.cluster.key,
               authId: destination.username,
               password: destination.password,
               comment: `Remote for Backrest backups to ${destination.hostname}`,

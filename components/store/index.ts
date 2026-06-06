@@ -1,5 +1,5 @@
-import { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
-import { OPClient, TypeEnum } from "./op.ts";
+import { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
+import { CategoryEnum, OPClient, TypeEnum } from "./op.ts";
 import { all, interpolate, output, Output, secret, Unwrap } from "@pulumi/pulumi";
 const op = new OPClient();
 
@@ -107,13 +107,11 @@ export class VaultStore {
   }
 }
 
-function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: OnePasswordItem): Output<Unwrap<T & { tags: string[]; urls: { href: string; label?: string }[] }>> {
-  const result = [];
+function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: OnePasswordItem): Output<Unwrap<T & Meta>> {
+  const result: [string, any][] = [["meta", output({ title: item.title, category: item.category, tags: item.tags ?? [], urls: item.urls?.map((z) => ({ href: z.href, label: z.label })) ?? [] })]];
   for (const [key, { value, type }] of Object.entries(item.fields)) {
     result.push([key, type === TypeEnum.Concealed ? secret(value) : output(value)] as const);
   }
-  result.push(["urls", item.urls?.map((z) => ({ href: z.href, label: z.label })) ?? []] as const);
-
   for (const [sectionKey, section] of Object.entries(item.sections)) {
     const sectionResult = [];
 
@@ -122,8 +120,7 @@ function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: O
     }
     result.push([sectionKey, Object.fromEntries(sectionResult)] as const);
   }
-  result.push(["tags", item.tags ?? []] as const);
-  return output(Object.fromEntries(result) as T & { tags: string[]; urls: { href: string; label?: string }[] });
+  return output(Object.fromEntries(result) as T & Meta);
 }
 
 export interface VaultStoreItem {}

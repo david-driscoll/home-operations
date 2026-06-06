@@ -5,7 +5,7 @@ import { remote, types } from "@pulumi/command";
 import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
 import * as purrl from "@pulumiverse/purrl";
-import random from "@pulumi/random";
+import * as random from "@pulumi/random";
 import * as pbs from "@pulumi/pbs";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { GlobalResources } from "./globals.ts";

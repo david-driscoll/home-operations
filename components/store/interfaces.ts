@@ -1,3 +1,5 @@
+import { CategoryEnum } from "./op.ts";
+
 export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
 
 export interface DockgeClusterDefinition {
@@ -78,4 +80,8 @@ export interface CredentialDefinition {
 export interface PasswordDefinition {
   username: string;
   password: string;
+}
+
+export interface Meta {
+  meta: { title: string; category: CategoryEnum; tags: string[]; urls: { href: string; label?: string }[] };
 }
