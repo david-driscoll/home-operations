@@ -45,7 +45,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
         {
             var content = System.IO.File.ReadAllText(path);
             var key = Path.GetFileNameWithoutExtension(path);
-            var value = System.Text.Json.JsonSerializer.Deserialize<BackupTask>(content, LocalContext.Default.BackupTask)!;
+            var value = System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!;
 
             // job.Dump(job.Value.Name);
             var sourceBackend = await CreateBackend("source", value.SourceType, value.Source, value.SourceSecret);
