@@ -44,6 +44,7 @@ export interface DockgeLxcDefinition {
 }
 
 export interface ProxmoxBackupServerLxcDefinition {
+  name: string;
   hostname: string;
   username: string;
   password: string;

@@ -188,9 +188,9 @@ await awaitOutput(celestiaHost.addUptimeGatus());
 await awaitOutput(twilightSparkleHost.addUptimeGatus());
 await awaitOutput(createGatusDnsUptime(globals, { parent: alphaSiteHost }));
 await awaitOutput(
-  backupDirector.createSource(
+  backupDirector.createPlans(
     {
-      connection: celestiaDockgeRuntime.remoteConnection,
+      dockge: celestiaDockgeRuntime,
       pbs: celestiaPbs,
       cluster: celestiaCluster,
     },

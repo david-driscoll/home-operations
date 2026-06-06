@@ -75,7 +75,7 @@ await awaitOutput(dockgeRuntime.deployStacks({ dependsOn: [pbs], variables: {
 await awaitOutput(host.addUptimeGatus());
 
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));
-await awaitOutput(backupDirector.createDestination({ connection: dockgeRuntime.remoteConnection, pbs, cluster }, [pbs]));
+await awaitOutput(backupDirector.createPlans({ dockge: dockgeRuntime, pbs, cluster }, [pbs]));
 
 monitor.exportNodeStateToOnePassword(
   [

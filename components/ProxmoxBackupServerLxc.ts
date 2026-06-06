@@ -475,6 +475,7 @@ __PBS_GROUPS__`;
           },
         },
         fields: {
+          name: { type: TypeEnum.String, value: name },
           username: { type: TypeEnum.String, value: "root" },
           password: { type: TypeEnum.Concealed, value: rootPassword.result },
           cluster: { type: TypeEnum.String, value: cluster.meta.title },

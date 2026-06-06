@@ -15,6 +15,7 @@ const dockgeInstances = dockgeDetails.apply((details) => {
     // call is replaced by the preSync param on createBackrestPlan.
     return backupPlanOrchestrator.addBackupPlan(
       pulumi.output({
+        source: "celestia",
         name: detail.name,
         title: detail.title,
         path: pulumi.interpolate`/data/staging/${detail.name}/`,
@@ -31,6 +32,7 @@ const dockgeInstances = dockgeDetails.apply((details) => {
 
 backupPlanOrchestrator.addBackupPlan(
   pulumi.output({
+    source: "celestia",
     name: "immich",
     title: "Immich",
     path: "/spike/data/immich/",
@@ -43,28 +45,13 @@ backupPlanOrchestrator.addBackupPlan(
 
 backupPlanOrchestrator.addBackupPlan(
   pulumi.output({
+    source: "celestia",
     name: "pgdump",
     title: "Postgres Dumps",
     path: "/spike/data/pgdump/",
     repository: "pgdump",
   }),
 );
-
-async function getDockgeServerDetails(item: ReturnType<OPClient["mapItem"]>) {
-  try {
-    return {
-      name: item.fields.name.value!,
-      hostname: item.sections.ssh.fields.hostname.value!,
-      tags: item.tags,
-      title: item.title,
-    };
-  } catch (error) {
-    pulumi.log.error(`Error getting backup server details: ${error}`);
-    pulumi.log.error(`Item details: ${JSON.stringify(item)}`);
-
-    throw error;
-  }
-}
 
 pulumi.all([dockgeInstances]).apply(() => {
   pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);

@@ -54,6 +54,7 @@ export async function kubernetesBackups(globals: GlobalResources, planManager: B
         jobs.map((job) => {
           return planManager.addBackupPlan(
             pulumi.output({
+              source: "celestia",
               // name: "pgdump",
               // title: "Postgres Dumps",
               // path: "/spike/data/pgdump/",
