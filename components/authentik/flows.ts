@@ -13,6 +13,7 @@ import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods
 import { OPClient } from "../op.ts";
 import { clientIdPair } from "@components/helpers.ts";
 import { GlobalResources } from "@components/globals.ts";
+import { VaultStore } from "@components/store/index.ts";
 
 interface PlexServerField {
   value?: string;
@@ -60,7 +61,7 @@ export class FlowsManager extends pulumi.ComponentResource {
   public readonly invalidationStages: InvalidationStages;
   public readonly authenticatorStages: AuthenticatorStages;
   public readonly authenticationStages: AuthenticationStages;
-  private readonly opClient: OPClient;
+  private readonly vault: VaultStore;
 
   constructor(
     private readonly globals: GlobalResources,
@@ -68,7 +69,7 @@ export class FlowsManager extends pulumi.ComponentResource {
   ) {
     super("custom:resource:FlowsManager", "flows-manager", {}, opts);
 
-    this.opClient = new OPClient();
+    this.vault = globals.store;
 
     this.propertyMappings = new PropertyMappings({ parent: this });
     this.policies = new Policies({ parent: this });
@@ -171,7 +172,7 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createPlexSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourcePlex {
-    const plexDetails = pulumi.output(this.opClient.getItemByTitle("Authentik Plex Source"));
+    const plexDetails = this.vault.getSecretByTitle<{ username: string; credential: string; servers: { [key: string]: string } }>("Authentik Plex Source");
 
     return new authentik.SourcePlex(
       "plex",
@@ -183,9 +184,9 @@ export class FlowsManager extends pulumi.ComponentResource {
         userPathTemplate: "driscoll.dev/plex/%(slug)s",
         userMatchingMode: "email_link",
         groupMatchingMode: "name_link",
-        clientId: plexDetails.apply((z) => z.fields["username"].value!),
-        plexToken: plexDetails.apply((z) => z.fields["credential"].value!),
-        allowedServers: plexDetails.apply((z) => Object.entries(z.sections?.servers?.fields || {}).map((z) => z[1].value!)),
+        clientId: plexDetails.apply((z) => z.username),
+        plexToken: plexDetails.apply((z) => z.credential),
+        allowedServers: plexDetails.apply((z) => Object.entries(z.servers || {}).map((z) => z[1])),
         allowFriends: true,
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
@@ -195,14 +196,10 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
-    const items = pulumi.output(this.opClient.listItemsByTitleContains("Cluster:")).apply((items) => {
-      return Array.from(
-        new Set(items.filter((z) => z.tags?.includes("cluster-definition") === true)
-          .map((z) => pulumi.interpolate`https://${z.fields.authentikDomain.value!}/source/oauth/callback/tailscale/`))
-          .values(),
-      ).concat([
+    const items = pulumi.output(this.vault.getAllClusters()).apply((items) => {
+      return Array.from(new Set(items.map((z) => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`)).values()).concat([
         pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
-        pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`
+        pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
       ]);
     });
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });

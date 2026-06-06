@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import * as pk8s from "@pulumi/kubernetes";
 import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
-import { GlobalResources, KubernetesClusterDefinition } from "@components/globals.ts";
+import { GlobalResources } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
@@ -13,18 +13,13 @@ import { kebabCase } from "moderndash";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
 
-const op = new OPClient();
-
-export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: KubernetesClusterDefinition) {
-  const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
-  const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
-  const volsyncPassword = await op.getItemByTitle(`Volsync Password`).then((z) => z.fields.credential.value!);
+export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
-    kubeconfig: kubeConfigJson,
+    kubeconfig: clusterDefinition.kubeConfig,
   });
 
   const kubeConfig = new kubernetes.KubeConfig();
-  kubeConfig.loadFromString(kubeConfigJson);
+  kubeConfig.loadFromString(clusterDefinition.kubeConfig);
 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 
@@ -123,11 +118,11 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       ).apply(() => apps);
     });
 
-  const outpostCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-authentik-outpost`));
+  const outpostCredential = globals.store.getKubeConfig(`${clusterDefinition.key}-authentik-outpost`);
 
   const serviceConnection = new authentik.ServiceConnectionKubernetes(clusterDefinition.key, {
     name: clusterDefinition.key,
-    kubeconfig: generateKubeConfig(outpostCredential),
+    kubeconfig: outpostCredential,
     verifySsl: true,
   });
   const proxyProviders = createdApplications.apply((apps) => apps.filter((z) => z.isProxy).map((z) => z.provider));
@@ -173,7 +168,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
   await awaitOutput(
-    pulumi.all([kubernetesBackups(backupPlanOrchestrator, clusterDefinition)]).apply(() => {
+    pulumi.all([kubernetesBackups(globals, backupPlanOrchestrator, clusterDefinition)]).apply(() => {
       pulumi.log.info("Finalizing backup plan manager with all backup jobs created", backupPlanOrchestrator);
       return backupPlanOrchestrator.savePlan(`${clusterDefinition.title} Backup Plan`);
     }),

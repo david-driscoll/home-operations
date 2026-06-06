@@ -1,7 +1,8 @@
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { OPClient } from "./op.ts";
 import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
+import {} from "@pulumi/pbs";
 import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
@@ -30,6 +31,7 @@ export interface BackupPlanItem {
 
 export class BackupPlanOrchestrator extends ComponentResource {
   plans: Output<BackupPlanItem[]> = output([]);
+  // sync?:; // what was this for?
 
   constructor(name: string, opts?: ComponentResourceOptions) {
     super("home:backups:BackupPlanOrchestrator", name, {}, opts);

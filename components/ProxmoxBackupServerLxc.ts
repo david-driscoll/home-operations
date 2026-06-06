@@ -1,14 +1,14 @@
 import { FullItem } from "@1password/connect";
 import { getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { remote } from "@pulumi/command";
+import { remote, types } from "@pulumi/command";
 import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
 import * as pulumi from "@pulumi/pulumi";
 import * as purrl from "@pulumiverse/purrl";
-import * as random from "@pulumi/random";
+import random from "@pulumi/random";
 import * as pbs from "@pulumi/pbs";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { ProxmoxHost } from "./ProxmoxHost.ts";
 import { StandardDns } from "./StandardDns.ts";
 import { getContainerHostnames } from "./helpers.ts";
@@ -19,10 +19,11 @@ import { ApplicationCertificate } from "@components/authentik/application-certif
 import { DockgeLxc } from "./DockgeLxc.ts";
 import { Tailscale } from "@components/constants.ts";
 import { PrivateKey } from "@pulumi/tls";
+import { ClusterDefinition } from "./store/index.ts";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
-  outputs: AuthentikOutputs;
+  outputs: Input<AuthentikOutputs>;
   /** Cluster definition used to derive the OIDC issuer URL and Traefik CNAME hostname. */
   cluster: Input<ClusterDefinition>;
   /** When provided, a Traefik dynamic config for PBS is written to this Dockge instance. */
@@ -40,6 +41,8 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly tailscaleHostname: Output<string>;
   public readonly dns: Output<StandardDns>;
+
+  public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly tailscaleName: Output<string>;
   public readonly tailscaleIpAddress: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
@@ -223,6 +226,11 @@ echo "PBS post-install complete"`;
 
     this.dns = dns;
 
+    this.remoteConnection = {
+      host: tailscaleHostname,
+      user: "root",
+    };
+
     const oidc = all([cluster])
       .apply(([c]) =>
         args.host.applicationManager.createApplication(
@@ -262,14 +270,14 @@ echo "PBS post-install complete"`;
         }
         return a;
       })!;
-    const rootPassword = args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!);
+    const rootPassword = new random.RandomPassword(`${name}-root-password`, { length: 64, special: true }, cro);
     new remote.Command(
       `${name}-set-root-password`,
       {
         connection: args.host.remoteConnection,
-        create: interpolate`echo 'root:${rootPassword}' | pct exec ${args.vmId} -- chpasswd`,
-        update: interpolate`echo 'root:${rootPassword}' | pct exec ${args.vmId} -- chpasswd`,
-        triggers: [rootPassword],
+        create: interpolate`echo 'root:${rootPassword.result}' | pct exec ${args.vmId} -- chpasswd`,
+        update: interpolate`echo 'root:${rootPassword.result}' | pct exec ${args.vmId} -- chpasswd`,
+        triggers: [rootPassword.result],
       },
       mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
     );
@@ -428,14 +436,25 @@ __PBS_GROUPS__`;
       },
       mergeOptions(cro, { dependsOn: [...this.resources, installJq] }),
     );
+    // Set executable permissions and run cron script
+    const tailscaleSetCert = new remote.Command(
+      `${name}-install-set`,
+      {
+        connection: { host: tailscaleHostname, user: "root" },
+        create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
+      },
+      mergeOptions(cro, { dependsOn: [tailscaleCron] }),
+    );
     this.resources.push(tailscaleCron);
+    this.resources.push(tailscaleSetCert);
 
     const backrestPrivateKey = new PrivateKey(`${name}-backrest-private-key`, { algorithm: "ED25519" }, cro);
 
     new OnePasswordItem(
       `${args.host.name}-pbs`,
       {
-        category: FullItem.CategoryEnum.SecureNote,
+        category: FullItem.CategoryEnum.Login,
+        urls: output([{ href: externalUrl }, { href: interpolate`https://${name}.${args.globals.tailscaleDomain}` }, { href: interpolate`https://${this.tailscaleHostname}:8007` }]),
         title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
         tags: output(args.tags).apply((tags) => [...tags, "pbs", "lxc", "backup"]),
         sections: {
@@ -444,6 +463,7 @@ __PBS_GROUPS__`;
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
               username: { type: TypeEnum.String, value: "root" },
+              password: { type: TypeEnum.Concealed, value: rootPassword.result },
             },
           },
           backrest: {
@@ -455,10 +475,12 @@ __PBS_GROUPS__`;
           },
         },
         fields: {
+          username: { type: TypeEnum.String, value: "root" },
+          password: { type: TypeEnum.Concealed, value: rootPassword.result },
           cluster: { type: TypeEnum.String, value: cluster.itemTitle },
           dockge: { type: TypeEnum.String, value: interpolate`DockgeLxc: ${args.dockge.cluster.title}` },
-          hostname: { type: TypeEnum.String, value: this.hostname },
-          webUrl: { type: TypeEnum.String, value: interpolate`https://${this.hostname}:8007` },
+          hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+          webUrl: { type: TypeEnum.String, value: interpolate`https://${name}.${args.globals.tailscaleDomain}` },
         },
       },
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
@@ -469,7 +491,7 @@ __PBS_GROUPS__`;
       `${name}-provider`,
       {
         username: `root`,
-        password: rootPassword,
+        password: rootPassword.result,
         endpoint: externalUrl.apply((u) => `https://${tailscaleHostname}:8007`),
         insecure: true,
       },

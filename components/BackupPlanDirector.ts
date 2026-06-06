@@ -1,7 +1,8 @@
-import { ClusterDefinition, createClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { OPClient } from "./op.ts";
 import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonParse, jsonStringify, log, Output, output, Resource, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
+import * as pbs from "@pulumi/pbs";
 import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
@@ -10,21 +11,21 @@ import { CopyToRemote } from "@pulumi/command/remote/index.js";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
+import { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
+import { ClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./store/interfaces.ts";
 
 interface Connection {
   connection: types.input.remote.ConnectionArgs;
   cluster: ClusterDefinition;
 }
 
-const op = new OPClient();
-
 export class BackupPlanDirector extends ComponentResource {
-  plans: Output<BackupPlanItem[]>;
-  globals: GlobalResources;
-  ssh?: NodeSSH;
-  volsyncPassword?: string;
-  jobs: Output<{ task: Omit<BackupTask, "token">; detail: Connection }[]> = output([]);
-  private uptimeUrl: Output<string>;
+  private readonly plans: Output<BackupPlanItem[]>;
+  private readonly globals: GlobalResources;
+  private readonly ssh?: NodeSSH;
+  private readonly jobs: Output<{ task: Omit<BackupTask, "token">; detail: Connection }[]> = output([]);
+  private readonly uptimeUrl: Output<string>;
+  private readonly volsyncPassword: Output<string>;
 
   constructor(
     name: string,
@@ -36,73 +37,146 @@ export class BackupPlanDirector extends ComponentResource {
     super("home:backups:BackupPlanDirector", name, {}, opts);
     this.globals = args.globals;
     this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
-    this.plans = output(op.findItemsByTag("backup-plan"))
-      .apply((items) => output(items.map((item) => jsonParse(item?.fields.plan.value!) as Output<{ plans: BackupPlanItem[] }>)))
-      .apply((plans) => plans.flatMap((p) => p.plans));
+    this.plans = output(args.globals.store.getBackupPlans<BackupPlanItem>());
+    this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply((z) => z.credential);
   }
 
-  public createSource(source: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>, depends: Input<Resource[]>) {
-    return all([source, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([source, plans, uptimeUrl, password]) => {
-      const groupTitle = `Backups: ${source.cluster.title}`;
-      const backrestItems = plans
-        .map((plan) => this.createSourceBackrestPlan(groupTitle, source, plan, uptimeUrl, password))
-        .reduce(
-          (acc, { plan, repo }) => {
-            acc.plans.push(plan);
-            acc.repos.push(repo);
-            return acc;
-          },
-          { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
-        );
-      const uptime = this.createUptime(groupTitle, source, plans);
-      return output(
-        this.updateBackrestConfiguration(
-          source,
-          all([depends, uptime]).apply(([d, u]) => [...d, u]),
-          backrestItems,
-        ),
-      ).apply(() => output({ plans, items: backrestItems, uptime }));
+  public createSource(
+    source: Input<{
+      connection: types.input.remote.ConnectionArgs;
+      pbs: ProxmoxBackupServerLxc;
+      cluster: Input<ClusterDefinition>;
+    }>,
+    depends: Input<Resource[]>,
+  ) {
+    return all([source, this.globals.store.proxmoxBackupServers("backup-destination"), this.plans, this.uptimeUrl, this.volsyncPassword]).apply((values) => this._createSource(...values, depends));
+  }
+
+  public createDestination(
+    destination: Input<{
+      connection: types.input.remote.ConnectionArgs;
+      pbs: ProxmoxBackupServerLxc;
+      cluster: Input<ClusterDefinition>;
+    }>,
+    depends: Input<Resource[]>,
+  ) {
+    return all([destination, this.plans, this.uptimeUrl, this.volsyncPassword]).apply((values) => this._createDestination(...values, depends));
+  }
+
+  private _createSource(
+    source: UnwrappedObject<{ connection: types.input.remote.ConnectionArgs; pbs: ProxmoxBackupServerLxc; cluster: Input<ClusterDefinition> }>,
+    destinations: UnwrappedArray<UnwrappedObject<ProxmoxBackupServerLxcDefinition>>,
+    plans: UnwrappedArray<BackupPlanItem>,
+    uptimeUrl: string,
+    password: string,
+    depends: Input<Resource[]>,
+  ) {
+    const groupTitle = `Backups: ${source.cluster.title}`;
+    // tomorow:
+    // we want to update the pbs root password to be a random passsword
+    // update the 1password item to have the proper urls, so it shows up automagically.
+    // add the password the item
+    // pull that password in here
+    const remotes = this._createRemotes(source.cluster, source.pbs);
+
+    for (const destination of destinations) {
+      // const syncJob = new pbs.SyncJob("", {
+      //   remote: ,
+      //   remoteStore: ,
+      //   syncJobId: ,
+      //   comment: ,
+      //   store: ,
+      //   syncDirection: ,
+      //   rateIn: ,
+      //   rateOut: ,
+      //   schedule: ,
+      //   burstIn: ,
+      //   burstOut: ,
+      // });
+    }
+    const backrestItems = plans
+      .map((plan) => this._createSourceBackrestPlan(groupTitle, source, plan, uptimeUrl, password))
+      .reduce(
+        (acc, { plan, repo }) => {
+          acc.plans.push(plan);
+          acc.repos.push(repo);
+          return acc;
+        },
+        { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
+      );
+    const uptime = this.createUptime(groupTitle, source, plans);
+    return output(
+      this.updateBackrestConfiguration(
+        source,
+        all([depends, uptime]).apply(([d, u]) => [...d, u]),
+        backrestItems,
+      ),
+    ).apply(() => output({ plans, items: backrestItems, uptime }));
+  }
+
+  private _createDestination(
+    destination: UnwrappedObject<{ connection: types.input.remote.ConnectionArgs; pbs: ProxmoxBackupServerLxc; cluster: Input<ClusterDefinition> }>,
+    plans: UnwrappedArray<BackupPlanItem>,
+    uptimeUrl: string,
+    password: string,
+    depends: Input<Resource[]>,
+  ) {
+    const groupTitle = `Replicate: ${destination.cluster.title}`;
+    const remotes = this._createRemotes(destination.cluster, destination.pbs);
+    const backrestItems = plans
+      .map((plan) => this._createDestinationBackrestPlan(groupTitle, destination, plan, uptimeUrl, password))
+      .reduce(
+        (acc, { plan, repo }) => {
+          acc.plans.push(plan);
+          acc.repos.push(repo);
+          return acc;
+        },
+        { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
+      );
+    const destinationPlans = backrestItems.plans.map((plan) => {
+      return new remote.Command(
+        `${plan.id}-backrest-config`,
+        {
+          connection: destination.connection,
+          create: interpolate`mkdir -p "/data/backup/.pull-health/${plan.id}" && chown 65534:65534 "/data/backup/.pull-health/${plan.id}"`,
+        },
+        {
+          parent: this,
+          dependsOn: depends,
+        },
+      );
     });
+    const uptime = this.createUptime(groupTitle, destination, plans);
+    return output(
+      this.updateBackrestConfiguration(
+        destination,
+        all([depends, uptime]).apply(([d, u]) => [...d, ...destinationPlans, u]),
+        backrestItems,
+      ),
+    ).apply(() => output({ plans, items: backrestItems, uptime }));
   }
 
-  public createDestination(destination: Input<{ connection: types.input.remote.ConnectionArgs; cluster: Input<ClusterDefinition> }>, depends: Input<Resource[]>) {
-    return all([destination, this.plans, this.uptimeUrl, this.getVolsyncPassword()]).apply(([destination, plans, uptimeUrl, password]) => {
-      const groupTitle = `Replicate: ${destination.cluster.title}`;
-      const backrestItems = plans
-        .map((plan) => this.createDestinationBackrestPlan(groupTitle, destination, plan, uptimeUrl, password))
-        .reduce(
-          (acc, { plan, repo }) => {
-            acc.plans.push(plan);
-            acc.repos.push(repo);
-            return acc;
-          },
-          { plans: [] as BackrestPlan[], repos: [] as BackrestRepository[] },
-        );
-      const destinationPlans = backrestItems.plans.map((plan) => {
-        return new remote.Command(
-          `${plan.id}-backrest-config`,
-          {
-            connection: destination.connection,
-            create: interpolate`mkdir -p "/data/backup/.pull-health/${plan.id}" && chown 65534:65534 "/data/backup/.pull-health/${plan.id}"`,
-          },
-          {
-            parent: this,
-            dependsOn: depends,
-          },
-        );
-      });
-      const uptime = this.createUptime(groupTitle, destination, plans);
-      return output(
-        this.updateBackrestConfiguration(
-          destination,
-          all([depends, uptime]).apply(([d, u]) => [...d, ...destinationPlans, u]),
-          backrestItems,
-        ),
-      ).apply(() => output({ plans, items: backrestItems, uptime }));
-    });
+  private _createRemotes(cluster: Input<ClusterDefinition>, lxc: ProxmoxBackupServerLxc) {
+    all([cluster, lxc.hostname, this.globals.store.proxmoxBackupServers()])
+      .apply(([cluster, hostname, destinations]) => [cluster, destinations.filter((d) => d.hostname !== hostname)] as const)
+      .apply(([cluster, destinations]) =>
+        destinations.map((destination) => {
+          const remote = new pbs.Remote(
+            `backrest-remote-${cluster.key}`,
+            {
+              host: destination.hostname,
+              name: `backrest-remote-${cluster.key}`,
+              authId: destination.username,
+              password: destination.password,
+              comment: `Remote for Backrest backups to ${destination.hostname}`,
+            },
+            { parent: this, dependsOn: [lxc], provider: lxc.provider },
+          );
+        }),
+      );
   }
 
-  private createSourceBackrestPlan(groupTitle: string, detail: Connection, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+  private _createSourceBackrestPlan(groupTitle: string, detail: Connection, plan: BackupPlanItem, uptimeUrl: string, password: string) {
     const sourceGroup = `Backups: ${detail.cluster.title}`;
     const sourceToken = toGatusKey(sourceGroup, plan.name);
 
@@ -197,7 +271,7 @@ export class BackupPlanDirector extends ComponentResource {
     return { plan: backrestPlan, repo: backrestRepo };
   }
 
-  private createDestinationBackrestPlan(groupTitle: string, detail: UnwrappedObject<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+  private _createDestinationBackrestPlan(groupTitle: string, detail: UnwrappedObject<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
     const pullPlans = new Map<string, BackrestPlan>();
 
     // Derive sync path from the repo URI so that if `repository` overrides `name`,
@@ -277,19 +351,6 @@ export class BackupPlanDirector extends ComponentResource {
     };
 
     return { plan: backrestPlan, repo: backrestRepo };
-  }
-
-  private async getVolsyncPassword(): Promise<string> {
-    if (this.volsyncPassword) {
-      return this.volsyncPassword;
-    }
-
-    const opClient = new OPClient();
-    const volsyncItem = await opClient.getItemByTitle("Volsync Password");
-    if (!volsyncItem) {
-      throw new Error("Volsync password item not found in 1Password");
-    }
-    return (this.volsyncPassword = volsyncItem.fields.credential.value!);
   }
 
   private createUptime(groupTitle: string, detail: UnwrappedObject<Connection>, plans: BackupPlanItem[]) {

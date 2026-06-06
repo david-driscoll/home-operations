@@ -10,140 +10,97 @@ import { Provider as PbsProvider } from "@pulumi/pbs";
 import { OPClient, OPClientItem } from "./op.ts";
 import { Tailscale } from "./constants.ts";
 import { remote, types } from "@pulumi/command";
-
-const op = new OPClient();
-
-export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
-
-export function createClusterDefinition(item: OPClientItem): ClusterDefinition {
-  return {
-    itemTitle: item.title,
-    type: item.fields.type.value as any,
-    authentikDomain: item.fields.authentikDomain.value!,
-    key: item.fields.key.value!,
-    rootDomain: item.fields.rootDomain.value!,
-    secret: item.fields.secret?.value!,
-    title: item.fields.title.value!,
-    background: item.fields.background?.value,
-    favicon: item.fields.favicon?.value,
-    icon: item.fields.icon?.value,
-  };
-}
-
-export interface DockgeClusterDefinition {
-  itemTitle: string;
-  type: "dockge";
-  key: string;
-  title: string;
-  rootDomain: string;
-  authentikDomain: string;
-  icon?: string;
-  background?: string;
-  favicon?: string;
-}
-
-export interface KubernetesClusterDefinition {
-  itemTitle: string;
-  type: "kubernetes";
-  key: string;
-  title: string;
-  rootDomain: string;
-  authentikDomain: string;
-  secret: string;
-  icon?: string;
-  background?: string;
-  favicon?: string;
-}
+import { VaultStore } from "./store/index.ts";
 
 export interface GlobalResourcesArgs {}
 
-export type OnePasswordItem = Unwrap<ReturnType<(typeof op)["mapItem"]>>;
-
 export class GlobalResources extends ComponentResource {
-  public readonly cloudflareCredential: Output<OnePasswordItem>;
+  public readonly cloudflareCredential;
   public readonly cloudflareProvider: CloudflareProvider;
-  public readonly unifiCredential: Output<OnePasswordItem>;
+  public readonly unifiCredential;
   public readonly unifiProvider: UnifiProvider;
   public readonly unifiFirewallProvider: UnifiFirewallProvider;
-  public readonly proxmoxCredential: Output<OnePasswordItem>;
-  public readonly tailscaleCredential: Output<OnePasswordItem>;
-  // public readonly backblazeCredential: Output<OnePasswordItem>;
+  public readonly proxmoxCredential;
+  public readonly tailscaleCredential;
+  // public readonly backblazeCredential
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
-  public readonly truenasCredential: Output<OnePasswordItem>;
-  public readonly truenasMinioCredential: Output<OnePasswordItem>;
+  public readonly truenasCredential;
+  public readonly truenasMinioCredential;
   public readonly truenasMinioProvider: MinioProvider;
   public readonly gateway: Output<string>;
-  public readonly adguardCredential: Output<OnePasswordItem>;
+  public readonly adguardCredential;
   public readonly adguardProvider: AdguardProvider;
   public readonly cloudflareZoneId: Output<string>;
   public readonly cloudFlareAccountId: Output<string>;
+  public readonly store: VaultStore;
   // public readonly backblazeProvider: BackblazeProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
 
     const cro: CustomResourceOptions = { parent: this };
-    this.cloudflareCredential = output(op.getItemByTitle("Cloudflare (driscoll.tech)"));
-    this.unifiCredential = output(op.getItemByTitle("Unifi Api Key Eris Cluster"));
-    this.proxmoxCredential = output(op.getItemByTitle("Proxmox"));
-    this.tailscaleCredential = output(op.getItemByTitle("Tailscale Terraform OAuth Client"));
-    this.truenasCredential = output(op.getItemByTitle("Eris Truenas Credentials"));
-    this.truenasMinioCredential = output(op.getItemByTitle("minio root user"));
+    const store = (this.store = new VaultStore());
+    this.cloudflareCredential = store.getSecretByTitle<{ username: string; credential: string; zoneId: string; accountId: string }>("Cloudflare (driscoll.tech)");
+    this.unifiCredential = store.getSecretByTitle<{ credential: string; hostname: string }>("Unifi Api Key Eris Cluster");
+    this.proxmoxCredential = store.getSecretByTitle<{ username: string; password: string }>("Proxmox");
+    this.tailscaleCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string }>("Tailscale Terraform OAuth Client");
+    this.truenasCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string; domain: string; title: string }>("Eris Truenas Credentials");
+    this.truenasMinioCredential = store.getSecretByTitle<{ username: string; credential: string }>("minio root user");
 
-    this.adguardCredential = output(op.getItemByTitle("AdGuard Home"));
+    this.adguardCredential = store.getSecretByTitle<{ username: string; password: string; urls: { label: string; href: string }[] }>("AdGuard Home");
     this.adguardProvider = new AdguardProvider(
       "adguard",
       {
         host: this.adguardCredential.apply((z) => z.urls.find((z) => z.label === "ip-host")?.href!.substring(7)!),
-        username: this.adguardCredential.apply((z) => z.fields["username"].value!),
-        password: this.adguardCredential.apply((z) => z.fields["password"].value!),
+        username: this.adguardCredential.apply((z) => z.username),
+        password: this.adguardCredential.apply((z) => z.password),
         insecure: true,
         scheme: "http",
       },
       cro,
     );
 
-    this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.fields["credential"].value!) }, cro);
-    this.cloudflareZoneId = this.cloudflareCredential.apply((z) => z.fields?.zoneId?.value!);
-    this.cloudFlareAccountId = this.cloudflareCredential.apply((z) => z.fields?.accountId?.value!);
+    this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.apply((z) => z.credential) }, cro);
+    this.cloudflareZoneId = this.cloudflareCredential.apply((z) => z.zoneId);
+    this.cloudFlareAccountId = this.cloudflareCredential.apply((z) => z.accountId);
     this.unifiProvider = new UnifiProvider(
       "unifi",
       {
-        apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
-        apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
+        apiUrl: this.unifiCredential.apply((z) => z.hostname),
+        apiKey: this.unifiCredential.apply((z) => z.credential),
       },
       cro,
     );
     this.unifiFirewallProvider = new UnifiFirewallProvider(
       "unifi-firewall",
       {
-        apiUrl: this.unifiCredential.apply((z) => z.fields["hostname"].value!),
-        apiKey: this.unifiCredential.apply((z) => z.fields["credential"].value!),
+        apiUrl: this.unifiCredential.apply((z) => z.hostname),
+        apiKey: this.unifiCredential.apply((z) => z.credential),
       },
       cro,
     );
     this.tailscaleProvider = new TailscaleProvider(
       "tailscale",
       {
-        oauthClientId: this.tailscaleCredential.apply((z) => z.fields["username"].value!),
-        oauthClientSecret: this.tailscaleCredential.apply((z) => z.fields["credential"].value!),
+        oauthClientId: this.tailscaleCredential.apply((z) => z.username),
+        oauthClientSecret: this.tailscaleCredential.apply((z) => z.credential),
       },
       cro,
     );
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
-    this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.fields["hostname"].value!);
+    this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.hostname);
 
     this.truenasMinioProvider = new MinioProvider(
       "truenas-minio",
       {
         minioRegion: "homelab",
         minioInsecure: true,
-        minioUser: this.truenasMinioCredential.apply((z) => z.fields["username"].value!),
-        minioPassword: this.truenasMinioCredential.apply((z) => z.fields["password"].value!),
-        minioServer: interpolate`${this.truenasCredential.apply((z) => z.fields["hostname"].value)}:9000`,
+        minioUser: this.truenasMinioCredential.apply((z) => z.username),
+        minioPassword: this.truenasMinioCredential.apply((z) => z.credential),
+        minioServer: interpolate`${this.truenasCredential.apply((z) => z.hostname)}:9000`,
       },
       cro,
     );

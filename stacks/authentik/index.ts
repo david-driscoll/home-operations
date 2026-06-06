@@ -4,8 +4,9 @@ import { FlowsManager } from "../../components/authentik/flows.ts";
 import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 import { Brand } from "@pulumi/authentik";
-import { createClusterDefinition, GlobalResources } from "@components/globals.ts";
+import { GlobalResources } from "@components/globals.ts";
 import { OPClient } from "@components/op.ts";
+import { awaitOutput } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 const authentikGroups = new AuthentikGroups({});
@@ -72,7 +73,7 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
   }),
 });
 
-const clusterDefinition = await new OPClient().getItemByTitle("Cluster: Stargate Command").then(createClusterDefinition);
+const clusterDefinition = await awaitOutput(globals.store.getCluster("Cluster: Stargate Command"));
 const tailscaleBrand = new Brand(
   "tailscale",
   {

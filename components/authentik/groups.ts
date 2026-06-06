@@ -2,6 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
 import { Roles, Groups } from "../constants.ts";
 import { OPClient } from "@components/op.ts";
+import { VaultStore } from "@components/store/index.ts";
 
 interface GroupDef {
   groupName: string;
@@ -12,7 +13,7 @@ interface GroupDef {
 export class AuthentikGroups extends pulumi.ComponentResource {
   private readonly groups = new Map<string, authentik.Group>();
   private readonly roles = new Map<string, authentik.RbacRole>();
-  private readonly client = new OPClient();
+  private readonly store = new VaultStore();
 
   private readonly initialGroups: GroupDef[] = [
     { groupName: Roles.Users },
@@ -40,7 +41,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
         {
           name: group.groupName,
         },
-        { parent: this }
+        { parent: this },
       );
       this.roles.set(group.groupName, roleResource);
 
@@ -55,7 +56,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
           attributes: this.resolveAttributes(group),
           ...(parentGroup && { parent: parentGroup.groupId }),
         },
-        { parent: this }
+        { parent: this },
       );
       this.groups.set(group.groupName, groupResource);
     }
@@ -63,17 +64,17 @@ export class AuthentikGroups extends pulumi.ComponentResource {
 
   private resolveAttributes(group: GroupDef): pulumi.Output<string> {
     const resolvedAttributes: Record<string, pulumi.Output<string>> = {};
-    const cache = new Map<string, ReturnType<typeof this.client.getItemByTitle>>();
+    const cache = new Map<string, ReturnType<typeof this.store.getSecretByTitle<{ [key: string]: string }>>>();
     for (const [attrName, titles] of Object.entries(group.attributes || {})) {
       for (const [title, fields] of Object.entries(titles)) {
         if (!cache.has(`${attrName}:${title}`)) {
-          const item = this.client.getItemByTitle(title);
+          const item = this.store.getSecretByTitle<{ [key: string]: string }>(title);
           cache.set(`${attrName}:${title}`, item);
         }
         const item = cache.get(`${attrName}:${title}`);
 
         for (const field of fields) {
-          resolvedAttributes[`${attrName}_${field}`] = pulumi.output(item).apply((itemData) => itemData?.fields[field as keyof typeof itemData.fields]?.value || "");
+          resolvedAttributes[`${attrName}_${field}`] = pulumi.output(item).apply((itemData) => itemData?.[field as keyof typeof itemData] || "");
         }
       }
     }

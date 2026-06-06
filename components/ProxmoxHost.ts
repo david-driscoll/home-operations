@@ -4,7 +4,7 @@ import { remote, types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import * as purrl from "@pulumiverse/purrl";
-import { ClusterDefinition, GlobalResources } from "./globals.ts";
+import { GlobalResources } from "./globals.ts";
 import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
 import { OPClient } from "./op.ts";
 import { clientIdPair, getHostnames } from "./helpers.ts";
@@ -19,13 +19,14 @@ import { Tailscale } from "@components/constants.ts";
 import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
 import { GatusDefinition } from "@openapi/application-definition.js";
 import { getProviderOauth2ConfigOutput, ProviderOauth2 } from "@pulumi/authentik";
+import { ClusterDefinition, CredentialDefinition } from "./store/index.ts";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
 export interface ProxmoxHostArgs {
   title?: Input<string>;
   globals: GlobalResources;
-  proxmox: Input<OPClientItem>;
+  proxmox: Input<CredentialDefinition & { arch: string }>;
   tailscaleIpAddress: TailscaleIp;
   tailscaleTags?: TailscaleTags[];
   tailscaleSubnetRoutes: TailscaleCidr[];
@@ -37,7 +38,7 @@ export interface ProxmoxHostArgs {
   shortName?: string;
   peerRelay?: boolean;
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
-  authentikOutputs: AuthentikOutputs;
+  authentikOutputs: Input<AuthentikOutputs>;
   vmIdRange: { start: number; end: number };
 }
 
@@ -91,7 +92,7 @@ export class ProxmoxHost extends ComponentResource {
     args.installTailscale ??= true;
 
     const apiCredential = output(args.proxmox);
-    this.arch = apiCredential.apply((z) => z.fields?.arch?.value!);
+    this.arch = apiCredential.apply((z) => z.arch);
 
     this.dns = this.hostname.apply((g) => {
       return StandardDns.create(`${name}-dns`, { hostname: g, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
@@ -108,10 +109,10 @@ export class ProxmoxHost extends ComponentResource {
       {
         ...this.vmIdRange,
         endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
-        apiToken: interpolate`${apiCredential.apply((z) => z.fields["username"].value)}=${apiCredential.apply((z) => z.fields["credential"].value)}`,
+        apiToken: interpolate`${apiCredential.apply((z) => z.username)}=${apiCredential.apply((z) => z.credential)}`,
         ssh: {
           username: "root",
-          password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
+          password: args.globals.proxmoxCredential.password,
         },
       },
       cro,
@@ -123,8 +124,8 @@ export class ProxmoxHost extends ComponentResource {
 
     const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.tailscaleHostname,
-      user: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!),
-      password: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!),
+      user: args.globals.proxmoxCredential.username,
+      password: args.globals.proxmoxCredential.password,
     });
 
     if (args.installTailscale) {
@@ -282,8 +283,8 @@ prometheus.remote_write "thanos" {
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.apply((z) => z.fields?.username?.value!) },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.apply((z) => z.fields?.password?.value!) },
+              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
+              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
             },
           },
         },

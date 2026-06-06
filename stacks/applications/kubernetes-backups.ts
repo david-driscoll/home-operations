@@ -1,21 +1,19 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pk8s from "@pulumi/kubernetes";
-import { KubernetesClusterDefinition } from "@components/globals.ts";
 import { OPClient } from "../../components/op.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import { awaitOutput } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap, tap } from "rxjs";
 import { BackrestRepository } from "@openapi/backrest.js";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { KubernetesClusterDefinition } from "@components/store/index.ts";
+import { GlobalResources } from "@components/globals.ts";
 
-const op = new OPClient();
-
-export async function kubernetesBackups(planManager: BackupPlanOrchestrator, clusterDefinition: KubernetesClusterDefinition) {
-  const crdCredential = pulumi.output(op.getItemByTitle(`${clusterDefinition.key}-definition-crds`));
-  const kubeConfigJson = await awaitOutput(generateKubeConfig(crdCredential));
+export async function kubernetesBackups(globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
+  const crdCredential = globals.store.getCluster(`${clusterDefinition.key}-definition-crds`);
 
   const kubeConfig = new kubernetes.KubeConfig();
-  kubeConfig.loadFromString(kubeConfigJson);
+  kubeConfig.loadFromString(clusterDefinition.kubeConfig);
 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
 

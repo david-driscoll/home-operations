@@ -1,10 +1,10 @@
 import { OPClient } from "../../components/op.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { GlobalResources } from "@components/globals.ts";
 
-const op = new OPClient();
-
-const dockgeDetails = pulumi.output(op.findItemsByTag("dockge")).apply((items) => pulumi.all(items.map(getDockgeServerDetails)));
+const globals = new GlobalResources({}, {});
+const dockgeDetails = globals.store.getDockgeInstances();
 
 const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
