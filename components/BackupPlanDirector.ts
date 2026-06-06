@@ -1,5 +1,5 @@
 import { GlobalResources } from "./globals.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Resource, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
+import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Resource, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
 import { addUptimeGatus, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
 import { ExternalEndpoint } from "@openapi/application-definition.js";
@@ -11,7 +11,7 @@ import { ClusterDefinition, ProxmoxBackupServerLxcDefinition, SshKeyDefinition }
 import { DockgeLxc } from "./DockgeLxc.ts";
 
 interface Connection {
-  connection: types.input.remote.ConnectionArgs;
+  connection: Unwrap<types.input.remote.ConnectionArgs>;
   cluster: ClusterDefinition;
 }
 
@@ -46,12 +46,16 @@ export class BackupPlanDirector extends ComponentResource {
     depends: Input<Resource[]>,
   ) {
     return all([source, this.globals.store.proxmoxBackupServers(), this.plans, this.uptimeUrl, this.volsyncPassword, this.sftpKey]).apply(
-      ([source, backupServers, plans, uptimeUrl, volsyncPassword, sftpKey]) => this._createPlans(source, backupServers, plans, uptimeUrl, volsyncPassword, sftpKey, depends),
+      ([source, backupServers, plans, uptimeUrl, volsyncPassword, sftpKey]) => {
+        return output({ connection: source.dockge.remoteConnection, cluster: source.cluster })
+          .apply(c => this._createPlans(source, c, backupServers, plans, uptimeUrl, volsyncPassword, sftpKey, depends));
+      },
     );
   }
 
   public _createPlans(
     source: UnwrappedObject<{ dockge: DockgeLxc; pbs: ProxmoxBackupServerLxc; cluster: ClusterDefinition }>,
+    dockgeConnection: Unwrap<Connection>,
     backupServers: UnwrappedArray<ProxmoxBackupServerLxcDefinition>,
     plans: UnwrappedArray<BackupPlanItem>,
     uptimeUrl: string,
@@ -64,10 +68,6 @@ export class BackupPlanDirector extends ComponentResource {
     const destinationGroupTitle = `Copy: ${source.cluster.title}`;
     const sourcePlans = plans.filter((p) => p.source === clusterKey);
     const destinationPlans = plans.filter((p) => p.source !== clusterKey);
-    const dockgeConnection = {
-      connection: source.dockge.remoteConnection,
-      cluster: source.cluster,
-    };
 
     // Set up sftpKey on source PBS for outbound rclone connections to remote dockge rclone-sftp servers
     const keySetup = new remote.Command(
@@ -254,7 +254,7 @@ WantedBy=timers.target
     return output(this.updateBackrestConfiguration(dockgeConnection, allDeps, backrestItems));
   }
 
-  private _createSourceBackrestPlan(detail: Connection, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+  private _createSourceBackrestPlan(detail: Unwrap<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
     const sourceGroup = `Backups: ${detail.cluster.title}`;
     const sourceToken = toGatusKey(sourceGroup, plan.name);
 
@@ -336,15 +336,15 @@ WantedBy=timers.target
 
     return { plan: null, repo: backrestRepo };
   }
-  async updateBackrestConfiguration(details: Connection, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
+  async updateBackrestConfiguration(details: Unwrap<Connection>, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
     const connection = details.connection;
     let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 6, modno: 1, instance: details.cluster.key, auth: { disabled: true }, multihost: {} };
 
     {
       const ssh = new NodeSSH();
       await ssh.connect({
-        host: connection.host as string,
-        username: connection.user as string,
+        host: connection.host,
+        username: connection.user,
       });
 
       const currentConfig = (await ssh.execCommand("cat /opt/stacks-data/backrest/config/config.json")).stdout;
