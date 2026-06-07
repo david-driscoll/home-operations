@@ -367,17 +367,13 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     new tailscale.DnsConfiguration(
       "dns-nameservers",
       {
-        overrideLocalDns: false,
-        // splitDns: [
-        //   {
-        //     domain: pulumi.interpolate`driscoll.tech`,
-        //     nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
-        //   },
-        //   {
-        //     domain: pulumi.interpolate`${globals.tailscaleDomain}`,
-        //     nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
-        //   },
-        // ],
+        overrideLocalDns: true,
+        splitDns: [
+          {
+            domain: pulumi.interpolate`driscoll.tech`,
+            nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
+          },
+        ],
         nameservers: [
           {
             address: primaryDnsIp,
