@@ -69,7 +69,7 @@ export class BackupPlanDirector extends ComponentResource {
         name: plan.name,
         schedule: "0 4 * * *",
         sourceType: "sftp" as const,
-        source: `${planServer!.dockge.ssh.hostname}:2022/data/backup/${plan.name}/`,
+        source: `${planServer!.dockge.ssh.hostname}/data/backup/${plan.name}/`,
         destinationType: "local" as const,
         destination: `/data/backup/${plan.name}/`,
         token: copyToken,
