@@ -754,6 +754,36 @@ export class DockgeLxc extends ComponentResource {
         hasInit = true;
       } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
+
+        const stackUsers = replacedContent.apply((content) => {
+          try {
+            const parsed = yaml.parse(content);
+            return [
+              ...new Set(
+                Object.values((parsed?.services ?? {}) as Record<string, any>)
+                  .map((svc: any) => svc?.user)
+                  .filter(Boolean) as string[],
+              ),
+            ];
+          } catch {
+            return [] as string[];
+          }
+        });
+
+        const chownCmd = stackUsers.apply((users) => (users.length > 0 ? users.map((u) => `chown ${u} /opt/stacks/${stackName} && chown ${u} /opt/stacks-data/${stackName}`).join(" && ") : "true"));
+
+        copyFiles.push(
+          new remote.Command(
+            `${this.shortName}-${stackName}-chown-stack`,
+            {
+              connection: this.remoteConnection,
+              create: chownCmd,
+              update: chownCmd,
+            },
+            { parent: stackParent, dependsOn: [stackParent] },
+          ),
+        );
+
         const tailscaleServices: Resource[] = [];
         const hostRegex = /Host\(`(.*?)`\)/g;
 
