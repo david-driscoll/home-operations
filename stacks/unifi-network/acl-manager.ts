@@ -530,6 +530,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
 
   manager.setGrant({ src: [tag.management], dst: [tag.dockge], ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.management], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmoxManagement, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
+  manager.setGrant({ src: [tag.management], dst: [tag.backups], ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs] }, { accept: [tag.management], deny: testData.knownNormalUsers });
   manager.setGrant(
     { src: [tag.management], dst: [tag.dockge, tag.proxmox, tag.backups], ip: [...ports.ssh, ...ports.nut, ...ports.nfs] },
     { accept: [tag.management], deny: testData.knownNormalUsers },

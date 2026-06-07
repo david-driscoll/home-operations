@@ -3,6 +3,7 @@ import * as authentik from "@pulumi/authentik";
 import { Roles, Groups } from "../constants.ts";
 import { OPClient } from "@components/op.ts";
 import { VaultStore } from "@components/store/index.ts";
+import { GlobalResources } from "@components/globals.ts";
 
 interface GroupDef {
   groupName: string;
@@ -13,7 +14,6 @@ interface GroupDef {
 export class AuthentikGroups extends pulumi.ComponentResource {
   private readonly groups = new Map<string, authentik.Group>();
   private readonly roles = new Map<string, authentik.RbacRole>();
-  private readonly store = new VaultStore();
 
   private readonly initialGroups: GroupDef[] = [
     { groupName: Roles.Users },
@@ -32,7 +32,7 @@ export class AuthentikGroups extends pulumi.ComponentResource {
     { groupName: Roles.MediaManagers, parentName: Roles.Users },
   ];
 
-  constructor(opts?: pulumi.ComponentResourceOptions) {
+  constructor(private readonly globals: GlobalResources, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:AuthentikGroups", "authentik-groups", {}, opts);
 
     for (const group of this.initialGroups) {
@@ -64,11 +64,11 @@ export class AuthentikGroups extends pulumi.ComponentResource {
 
   private resolveAttributes(group: GroupDef): pulumi.Output<string> {
     const resolvedAttributes: Record<string, pulumi.Output<string>> = {};
-    const cache = new Map<string, ReturnType<typeof this.store.getSecretByTitle<{ [key: string]: string }>>>();
+    const cache = new Map<string, ReturnType<typeof this.globals.store.getSecretByTitle<{ [key: string]: string }>>>();
     for (const [attrName, titles] of Object.entries(group.attributes || {})) {
       for (const [title, fields] of Object.entries(titles)) {
         if (!cache.has(`${attrName}:${title}`)) {
-          const item = this.store.getSecretByTitle<{ [key: string]: string }>(title);
+          const item = this.globals.store.getSecretByTitle<{ [key: string]: string }>(title);
           cache.set(`${attrName}:${title}`, item);
         }
         const item = cache.get(`${attrName}:${title}`);

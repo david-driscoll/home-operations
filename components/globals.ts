@@ -41,11 +41,15 @@ export class GlobalResources extends ComponentResource {
     super("custom:home:resources", "globals", args, opts);
 
     const cro: CustomResourceOptions = { parent: this };
-    const store = (this.store = new VaultStore());
+    this.searchDomain = output("driscoll.tech");
+    this.gateway = output("10.10.0.1");
+    const store = (this.store = new VaultStore(this));
+    this.tailscaleCredential = store.getSecretByTitle<{ hostname: string; username: string; credential: string }>("Tailscale Terraform OAuth Client");
+    this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.hostname);
+
     this.cloudflareCredential = store.getSecretByTitle<{ username: string; credential: string; zoneId: string; accountId: string }>("Cloudflare (driscoll.tech)");
     this.unifiCredential = store.getSecretByTitle<{ credential: string; hostname: string }>("Unifi Api Key Eris Cluster");
     this.proxmoxCredential = store.getSecretByTitle<{ username: string; password: string }>("Proxmox");
-    this.tailscaleCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string }>("Tailscale Terraform OAuth Client");
     this.truenasCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string; domain: string }>("Eris Truenas Credentials");
     this.truenasMinioCredential = store.getSecretByTitle<{ username: string; credential: string }>("minio root user");
 
@@ -89,9 +93,6 @@ export class GlobalResources extends ComponentResource {
       },
       cro,
     );
-    this.searchDomain = output("driscoll.tech");
-    this.gateway = output("10.10.0.1");
-    this.tailscaleDomain = this.tailscaleCredential.hostname;
 
     this.truenasMinioProvider = new MinioProvider(
       "truenas-minio",

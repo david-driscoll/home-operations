@@ -1,12 +1,14 @@
+import { GlobalResources } from "@components/globals.ts";
 import { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 import { CategoryEnum, OPClient, TypeEnum } from "./op.ts";
-import { all, Input, interpolate, log, output, Output, secret, Unwrap } from "@pulumi/pulumi";
+import { all, Input, interpolate, jsonStringify, log, output, Output, secret, Unwrap } from "@pulumi/pulumi";
 const op = new OPClient();
 
 export * from "./interfaces.ts";
 
 type OnePasswordItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 export class VaultStore {
+  constructor(private readonly globals: GlobalResources) {}
   public getDockgeInstances() {
     return output(op.findItemsByTag("dockge")).apply((items) => all(items.map(getSecretItem<DockgeLxcDefinition>)));
   }
@@ -24,7 +26,7 @@ export class VaultStore {
 
   public getBackupPlans<T>() {
     return output(op.findItemsByTag("backup-plan"))
-      .apply((items) => all(items.map(getSecretItem<{ plan: string }>)).apply((items) => items.map((item) => JSON.parse(item.plan) as {  plans: T[] })))
+      .apply((items) => all(items.map(getSecretItem<{ plan: string }>)).apply((items) => items.map((item) => JSON.parse(item.plan) as { plans: T[] })))
       .apply((plans) => plans.flat());
   }
 
@@ -55,7 +57,7 @@ export class VaultStore {
         return all(
           clusters.map((clusterDefinition) => ({
             ...clusterDefinition,
-            kubeConfig: this.getKubeConfig(`${clusterDefinition.key}-definition-crds`),
+            kubeConfig: output(generateTailscaleKubeConfig(clusterDefinition.key, this.globals.tailscaleDomain)),
           })),
         );
       });
@@ -63,12 +65,10 @@ export class VaultStore {
 
   public getKubernetesCluster(title: string): Output<KubernetesClusterDefinition & { kubeConfig: string }> {
     return this.getCluster(title).apply((cluster) =>
-      output(op.getItemByTitle(`${cluster.key}-definition-crds`))
-        .apply(generateKubeConfig)
-        .apply((kubeConfig) => ({
-          ...(cluster as KubernetesClusterDefinition),
-          kubeConfig,
-        })),
+      output(generateTailscaleKubeConfig(cluster.key, this.globals.tailscaleDomain)).apply((kubeConfig) => ({
+        ...(cluster as KubernetesClusterDefinition),
+        kubeConfig,
+      })),
     );
   }
 
@@ -124,6 +124,37 @@ function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: O
 }
 
 export interface VaultStoreItem {}
+
+function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Output<string>) {
+  return jsonStringify({
+    kind: "Config",
+    apiVersion: "v1",
+    clusters: [
+      {
+        cluster: {
+          server: interpolate`https://${clusterKey}-kubeproxy.${tailscaleDomain}`,
+        },
+        name: clusterKey,
+      },
+    ],
+    contexts: [
+      {
+        context: {
+          cluster: clusterKey,
+          user: clusterKey,
+        },
+        name: clusterKey,
+      },
+    ],
+    "current-context": clusterKey,
+    users: [
+      {
+        name: clusterKey,
+        user: {},
+      },
+    ],
+  });
+}
 
 function generateKubeConfig(item: OnePasswordItem) {
   const credential = getSecretItem<{ sa: string; cluster: string; cluster_api: string; token: string; certificate: string }>(item);

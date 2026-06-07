@@ -1,6 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as pk8s from "@pulumi/kubernetes";
-import { OPClient } from "../../components/op.ts";
 import * as kubernetes from "@kubernetes/client-node";
 import { awaitOutput } from "@components/helpers.ts";
 import { from, map, mergeMap, lastValueFrom, toArray, concatMap, tap } from "rxjs";
@@ -10,8 +9,6 @@ import { KubernetesClusterDefinition } from "@components/store/index.ts";
 import { GlobalResources } from "@components/globals.ts";
 
 export async function kubernetesBackups(globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
-  const crdCredential = globals.store.getCluster(`${clusterDefinition.key}-definition-crds`);
-
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(clusterDefinition.kubeConfig);
 
