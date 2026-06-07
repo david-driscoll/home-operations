@@ -89,15 +89,60 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
 
 await DownloadRclone();
 
-var builder = Host.CreateApplicationBuilder(args);
-var jobs = GetRCloneJobs().GroupBy(z => z.Schedule);
-var hasJob = await jobs.AnyAsync();
-await foreach (var grouping in jobs)
+while (true)
 {
-    var dele = CreateJobDelegate(grouping);
-    // instant run for now.
-    await dele();
-    builder.Services.AddNCronJob(dele, grouping.Key);
+    using var cts = new CancellationTokenSource();
+
+    using var watcher = new FileSystemWatcher("/jobs", "*.json")
+    {
+        NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+        IncludeSubdirectories = false,
+        EnableRaisingEvents = true,
+    };
+
+    void TriggerRestart(object sender, FileSystemEventArgs e)
+    {
+        Console.WriteLine($"Jobs directory changed ({e.ChangeType}: {e.Name}), restarting in 2s...");
+        cts.CancelAfter(TimeSpan.FromSeconds(2));
+    }
+
+    watcher.Changed += TriggerRestart;
+    watcher.Created += TriggerRestart;
+    watcher.Deleted += TriggerRestart;
+    watcher.Renamed += TriggerRestart;
+
+    var builder = Host.CreateApplicationBuilder(args);
+    var jobs = GetRCloneJobs().GroupBy(z => z.Schedule);
+    var hasJob = await jobs.AnyAsync();
+    await foreach (var grouping in jobs)
+    {
+        var dele = CreateJobDelegate(grouping);
+        // instant run for now.
+        await dele();
+        builder.Services.AddNCronJob(dele, grouping.Key);
+    }
+
+    var app = builder.Build();
+    if (hasJob)
+    {
+        await app.UseNCronJobAsync();
+    }
+    else
+    {
+        Console.WriteLine("No backup jobs found.");
+    }
+
+    try
+    {
+        await app.RunAsync(cts.Token);
+    }
+    catch (OperationCanceledException) { }
+    finally
+    {
+        await app.StopAsync();
+    }
+
+    Console.WriteLine("Restarting due to jobs directory change...");
 }
 
 Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
@@ -111,17 +156,6 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
             .ToTask();
     };
 }
-
-var app = builder.Build();
-if (hasJob)
-{
-    await app.UseNCronJobAsync();
-}
-else
-{
-    Console.WriteLine("No backup jobs found.");
-}
-app.Run();
 
 static async Task DownloadRclone()
 {
