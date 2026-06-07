@@ -508,6 +508,16 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     { accept: [groups.friendsAndFamily] },
   );
   manager.setGrant(
+    "cluster-kubeproxy-access",
+    {
+      src: clusterTags,
+      dst: [tag.k8s],
+      ip: ["tcp:443"],
+      app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-cluster-ops"] } }] },
+    },
+    { accept: clusterTags, deny: testData.knownNormalUsers },
+  );
+  manager.setGrant(
     { src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: [...ports.ssh, ...ports.nfs] },
     { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers },
   );
