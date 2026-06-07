@@ -8,6 +8,7 @@
 #:package Humanizer.Core@*
 #:package System.Reactive@6.1.0
 
+using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Net;
 using System.Reactive.Linq;
@@ -38,21 +39,32 @@ var vault = ( await client.GetVaultsAsync($"name eq \"Eris\"") ).Single();
 
 async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
 {
-    foreach (var path in Directory.EnumerateFiles("/jobs", "*.json"))
+    var jobs = Directory.EnumerateFiles("/jobs", "*.json")
+    .ToAsyncEnumerable()
+    .SelectMany(path =>
     {
-        RCloneJob result;
         try
         {
             var content = System.IO.File.ReadAllText(path);
             var key = Path.GetFileNameWithoutExtension(path);
-            var value = System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.BackupTask)!;
-
-            // job.Dump(job.Value.Name);
+            var value = System.Text.Json.JsonSerializer.Deserialize(content, LocalContext.Default.ImmutableArrayBackupTask)!;
+            return value;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing job file {path}: {ex.Message}");
+            return [];
+        }
+    });
+    await foreach (var value in jobs)
+    {
+        RCloneJob result;
+        try
+        {
             var sourceBackend = await CreateBackend("source", value.SourceType, value.Source, value.SourceSecret);
             var destinationBackend = await CreateBackend("destination", value.DestinationType, value.Destination, value.DestinationSecret);
 
             result = new RCloneJob(
-                key,
                 value.Name,
                 value.Schedule,
                 value.Token,
@@ -62,7 +74,7 @@ async IAsyncEnumerable<RCloneJob> GetRCloneJobs()
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing job file {path}: {ex.Message}");
+            Console.WriteLine($"Error processing job file {value.Name}: {ex.Message}");
             continue;
         }
         yield return result;
@@ -335,10 +347,11 @@ record LocalBackend(string Remote, string Path) : RCloneBackend(Remote, Path)
 }
 
 [JsonSerializable(typeof(BackupTask))]
+[JsonSerializable(typeof(ImmutableArray<BackupTask>))]
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 partial class LocalContext : JsonSerializerContext { }
 record BackupTask(string Name, string Schedule, string SourceType, string Source, string? SourceSecret, string DestinationType, string Destination, string? DestinationSecret, string Token);
-record RCloneJob(string Key, string Name, string Schedule, string Token, RCloneBackend Source, RCloneBackend Destination);
+record RCloneJob(string Name, string Schedule, string Token, RCloneBackend Source, RCloneBackend Destination);
 
 static class RCloneBackendExtensions
 {
