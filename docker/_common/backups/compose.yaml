@@ -4,8 +4,8 @@ services:
     image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:c0790639332692a0d56cdd81ed581cfd24d040d9839764c138994866df89a3b6
     volumes:
       - ./:/workspace
-      - ./keys:/keys:ro
-      - ./jobs:/jobs:ro
+      - /opt/stacks-data/${APP}/keys:/keys:ro
+      - /opt/stacks-data/${APP}/jobs:/jobs:ro
       - /data/backup:/data/backup:rw
       # - /data/restic:/data/restic:rw
       - /spike/backup:/spike/backup:ro

@@ -285,7 +285,7 @@ export function toGatusKey(group: string, name: string) {
 export function addBackupJobs(name: string, connection: types.input.remote.ConnectionArgs, tasks: BackupTask[], parent?: Resource, dependsOn?: Input<Resource[]>) {
   return copyFileToRemote(`backup-jobs-${name}`, {
     connection,
-    remotePath: `/opt/stacks/backups/jobs/${name}.json`,
+    remotePath: `/opt/stacks-data/backups/jobs/${name}.json`,
     content: JSON.stringify(tasks, null, 2),
     parent,
     dependsOn,
