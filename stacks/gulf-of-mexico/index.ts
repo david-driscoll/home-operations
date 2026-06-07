@@ -66,7 +66,7 @@ const pbs = new ProxmoxBackupServerLxc("luna-pbs", {
   tags: ["backup-destination"],
 });
 pbs.addHostMount("/data");
-pbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
+// pbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
 
 await awaitOutput(dockgeRuntime.deployStacks({ dependsOn: [pbs], variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
