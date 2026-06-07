@@ -14,3 +14,4 @@ bin/
 
 # APM dependencies
 apm_modules/
+stacks/unifi-network/tailscale-acl.json

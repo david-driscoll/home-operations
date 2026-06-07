@@ -40,7 +40,7 @@ export class VaultStore {
             services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
             hosts: Object.entries(item)
               .filter(([key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && "ip" in value)
-              .map(([_, value]) => value as { ip: string; internalIp?: string; nodeType: "dockge" | "proxmox" | "pbs" }),
+              .map(([key, value]) => ({ name: key, ...value }) as { name: string; ip: string; internalIp?: string; nodeType: "dockge" | "proxmox" | "pbs" }),
           };
         });
       });

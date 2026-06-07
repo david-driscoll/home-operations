@@ -6,6 +6,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
 import { GlobalResources } from "../../components/globals.ts";
+import { writeFileSync } from "node:fs";
 import { OPClient } from "../../components/op.ts";
 import { getTailscaleIp } from "../../components/tailscale.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, tag, TailscaleAclManager, TailscaleSshTestInputItem } from "../../components/tailscale/manager.ts";
@@ -50,7 +51,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       // ["unifi-dns", unifiDns],
     ];
     for (const exp of allExports) {
-      for (const [name, { ip }] of Object.entries(exp.hosts)) {
+      for (const [, { name, ip }] of Object.entries(exp.hosts)) {
         hosts.push([name, ip]);
       }
     }
@@ -72,12 +73,18 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         .filter(([_, n]) => n.nodeType === "dockge")
         .map(([name, _]) => name),
     );
+    const pbsDevices = allExports.flatMap((exp) =>
+      Object.entries(exp.hosts)
+        .filter(([_, n]) => n.nodeType === "pbs")
+        .map(([name, _]) => name),
+    );
     const services = allExports.flatMap((exp) => exp.services);
     const tests = {
       proxmoxDevices,
       dockgeDevices,
+      pbsDevices,
       kubernetesDevices: ["sgc", "equestria"],
-      taggedDevices: [...proxmoxDevices, ...dockgeDevices],
+      taggedDevices: [...proxmoxDevices, ...dockgeDevices, ...pbsDevices],
     };
 
     // ── Initialise ACL manager ────────────────────────────────────────────
@@ -353,6 +360,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       },
       { accept: [tag.egress] },
     );
+
+    pulumi.output(manager.getJson()).apply((json) => {
+      writeFileSync("tailscale-acl.json", json);
+    });
 
     // ── Create ACL + DNS resources ────────────────────────────────────────
     const acl = new tailscale.Acl(
