@@ -39,15 +39,17 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
   const currentAcl = tailscale.getAclOutput({ provider: globals.tailscaleProvider });
   const primaryDns = getTailscaleIp("adguard-home", globals);
   const secondaryDns = getTailscaleIp("dockge-as", globals);
+  const unifiDns = getTailscaleIp("discord", globals);
   const idpIp = getTailscaleIp("idp", globals);
   // const unifiDns = "100.111.0.1";
 
-  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, idpIp]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, idpAddr]) => {
+  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, unifiDns, idpIp]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, unifiDnsIp, idpAddr]) => {
     // ── Build hosts map from all exported stacks ──────────────────────────
     const hosts: [string, string][] = [
       ["idp", idpAddr],
       ["primary-dns", primaryDnsIp],
       ["secondary-dns", secondaryDnsIp],
+      ["unifi-dns", unifiDnsIp],
       // ["unifi-dns", unifiDns],
     ];
     for (const exp of allExports) {
@@ -382,7 +384,11 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         splitDns: [
           {
             domain: pulumi.interpolate`driscoll.tech`,
-            nameservers: [...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })), ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false }))],
+            nameservers: [
+              { address: unifiDnsIp, useWithExitNode: false },
+              ...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })),
+              ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false })),
+            ],
           },
         ],
         nameservers: [
@@ -392,6 +398,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           },
           {
             address: secondaryDnsIp,
+            useWithExitNode: false,
+          },
+          {
+            address: unifiDnsIp,
             useWithExitNode: false,
           },
           ...dns.internalIps.map((ip) => ({ address: ip, useWithExitNode: false })),
