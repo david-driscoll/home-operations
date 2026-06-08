@@ -121,6 +121,8 @@ export class BackupPlanDirector extends ComponentResource {
             "--sftp-user=sftp",
             "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
             "--sftp-shell-type=none",
+            "--delete-excluded",
+            ...plan.preSync.exclude.map((e) => `--exclude '${e}'`),
           ].join(" "),
         },
         onError: "ON_ERROR_FATAL",

@@ -17,6 +17,7 @@ export interface PreSyncArgs {
   sourcePath: string;
   /** SFTP port — defaults to 2022 (rclone-sftp entrypoint) */
   sftpPort?: number;
+  exclude: string[];
 }
 
 export interface BackupPlanItem {
