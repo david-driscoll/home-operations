@@ -1,15 +1,14 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
-import * as kubernetes from "@pulumi/kubernetes";
 import * as random from "@pulumi/random";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
 import { Roles } from "./constants.ts";
 import { GlobalResources } from "./globals.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
-import { ApplicationDefinitionSchema, AuthentikDefinition, Endpoint, GatusDefinition } from "@openapi/application-definition.js";
+import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
-import { addUptimeGatus, awaitOutput, clientIdPair } from "./helpers.ts";
+import { awaitOutput, clientIdPair } from "./helpers.ts";
 import { Application } from "../sdks/authentik/bin/application.js";
 import { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";

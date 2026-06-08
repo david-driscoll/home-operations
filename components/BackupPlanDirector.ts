@@ -43,7 +43,17 @@ export class BackupPlanDirector extends ComponentResource {
     depends: Input<Resource[]>,
   ) {
     return all([source, this.globals.store.proxmoxBackupServers(), this.plans, this.uptimeUrl, this.volsyncPassword]).apply(([source, backupServers, plans, uptimeUrl, volsyncPassword]) => {
-      return output({ connection: source.dockge.remoteConnection, cluster: source.cluster }).apply((c) => this._createPlans(source, c, backupServers, plans, uptimeUrl, volsyncPassword, depends));
+      return output({ connection: source.dockge.remoteConnection, cluster: source.cluster }).apply((c) =>
+        this._createPlans(
+          source,
+          c,
+          backupServers,
+          plans.filter((z) => z.source !== "volsync"),
+          uptimeUrl,
+          volsyncPassword,
+          depends,
+        ),
+      );
     });
   }
 

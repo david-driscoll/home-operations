@@ -1,13 +1,6 @@
-import { GlobalResources } from "./globals.ts";
-import { OPClient } from "./op.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
+import { all, ComponentResource, ComponentResourceOptions, Input, jsonStringify, Output, output } from "@pulumi/pulumi";
 import {} from "@pulumi/pbs";
-import { addUptimeGatus, BackupTask, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
-import { ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { NodeSSH } from "node-ssh";
-import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
-import { CopyToRemote } from "@pulumi/command/remote/index.js";
+import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
 export interface PreSyncArgs {
@@ -21,7 +14,7 @@ export interface PreSyncArgs {
 }
 
 export interface BackupPlanItem {
-  source: "celestia" | "skystar" | "luna";
+  source: "celestia" | "skystar" | "luna" | "volsync";
   name: string;
   title: string;
   planConfig?: Omit<BackrestPlan, "id" | "repo" | "paths">;
