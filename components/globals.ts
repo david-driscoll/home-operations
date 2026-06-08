@@ -43,9 +43,10 @@ export class GlobalResources extends ComponentResource {
     const cro: CustomResourceOptions = { parent: this };
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
-    const store = (this.store = new VaultStore(this));
+
+    const store = (this.store = new VaultStore());
+    this.tailscaleDomain = store.tailscaleDomain;
     this.tailscaleCredential = store.getSecretByTitle<{ hostname: string; username: string; credential: string }>("Tailscale Terraform OAuth Client");
-    this.tailscaleDomain = this.tailscaleCredential.apply((z) => z.hostname);
 
     this.cloudflareCredential = store.getSecretByTitle<{ username: string; credential: string; zoneId: string; accountId: string }>("Cloudflare (driscoll.tech)");
     this.unifiCredential = store.getSecretByTitle<{ credential: string; hostname: string }>("Unifi Api Key Eris Cluster");

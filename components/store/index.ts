@@ -8,7 +8,10 @@ export * from "./interfaces.ts";
 
 type OnePasswordItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 export class VaultStore {
-  constructor(private readonly globals: GlobalResources) {}
+  public readonly tailscaleDomain;
+  constructor() {
+    this.tailscaleDomain = this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply((z) => z.hostname);
+  }
   public getDockgeInstances() {
     return output(op.findItemsByTag("dockge")).apply((items) => all(items.map(getSecretItem<DockgeLxcDefinition>)));
   }
@@ -57,7 +60,7 @@ export class VaultStore {
         return all(
           clusters.map((clusterDefinition) => ({
             ...clusterDefinition,
-            kubeConfig: output(generateTailscaleKubeConfig(clusterDefinition.key, this.globals.tailscaleDomain)),
+            kubeConfig: output(generateTailscaleKubeConfig(clusterDefinition.key, this.tailscaleDomain)),
           })),
         );
       });
@@ -65,7 +68,7 @@ export class VaultStore {
 
   public getKubernetesCluster(title: string): Output<KubernetesClusterDefinition & { kubeConfig: string }> {
     return this.getCluster(title).apply((cluster) =>
-      output(generateTailscaleKubeConfig(cluster.key, this.globals.tailscaleDomain)).apply((kubeConfig) => ({
+      output(generateTailscaleKubeConfig(cluster.key, this.tailscaleDomain)).apply((kubeConfig) => ({
         ...(cluster as KubernetesClusterDefinition),
         kubeConfig,
       })),
@@ -125,7 +128,7 @@ function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: O
 
 export interface VaultStoreItem {}
 
-function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Output<string>) {
+function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<string>) {
   return jsonStringify({
     kind: "Config",
     apiVersion: "v1",
