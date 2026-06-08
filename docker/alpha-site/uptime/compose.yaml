@@ -20,7 +20,7 @@ services:
       traefik.http.routers.uptime-tailscale.entrypoints: tailscale
       traefik.http.routers.uptime-tailscale.service: uptime
 
-      traefik.http.services.uptime.loadbalancer.server.port: 8080
+      traefik.http.services.uptime.loadbalancer.server.port: 9595
     volumes:
       - /opt/stacks-data/${APP}/data/:/data/
       - /opt/stacks-data/${APP}/config/:/config/host/
