@@ -433,10 +433,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           });
 
           if (cluster.location === "remote") {
-            endpoint.interval = "5m";
+            endpoint.interval = "2m";
             for (const alert of endpoint.alerts) {
-              alert["failure-threshold"] = 24;
-              alert["success-threshold"] = 4;
+              alert["failure-threshold"] = 60;
+              alert["success-threshold"] = 3;
             }
           }
 
