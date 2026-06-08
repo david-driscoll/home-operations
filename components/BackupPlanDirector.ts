@@ -147,6 +147,7 @@ export class BackupPlanDirector extends ComponentResource {
             "--sftp-shell-type=none",
             "--log-level INFO",
             "--delete-excluded",
+            "--ignore-errors",
             ...(plan.preSync.exclude?.map((e) => `--exclude '${e}'`) ?? []),
           ].join(" "),
         },
