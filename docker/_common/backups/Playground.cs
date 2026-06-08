@@ -92,7 +92,7 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     return type switch
     {
         "local" => new LocalBackend(name, path),
-        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[( path.IndexOf('/') + 1 )..]),
+        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[path.IndexOf('/')..]),
         "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, path, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
         "s3" => path.Split('/') is { } parts ? new S3Backend(name, secretItem!.GetField("endpoint").Value!, parts[0], "/" + string.Join('/', parts.Skip(1)), secretItem!.GetField("username").Value!, secretItem!.GetField("password").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
@@ -112,8 +112,8 @@ while (true)
 
     void TriggerRestart(object sender, FileSystemEventArgs e)
     {
-        Console.WriteLine($"Jobs directory changed ({e.ChangeType}: {e.Name}), restarting in 2s...");
-        cts.CancelAfter(TimeSpan.FromSeconds(2));
+        Console.WriteLine($"Jobs directory changed ({e.ChangeType}: {e.Name}), restarting in 1h...");
+        cts.CancelAfter(TimeSpan.FromHours(1));
     }
 
     watcher.Changed += TriggerRestart;
