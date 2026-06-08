@@ -385,7 +385,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           {
             domain: pulumi.interpolate`driscoll.tech`,
             nameservers: [
-              { address: unifiDnsIp, useWithExitNode: false },
+              // { address: unifiDnsIp, useWithExitNode: false },
               ...dns.config.Discord.ips.map((ip) => ({ address: ip, useWithExitNode: false })),
               ...dns.config.Quad9.ips.map((ip) => ({ address: ip, useWithExitNode: false })),
             ],
@@ -400,10 +400,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
             address: secondaryDnsIp,
             useWithExitNode: false,
           },
-          {
-            address: unifiDnsIp,
-            useWithExitNode: false,
-          },
+          // {
+          //   address: unifiDnsIp,
+          //   useWithExitNode: false,
+          // },
           ...dns.internalIps.map((ip) => ({ address: ip, useWithExitNode: false })),
         ],
       },
