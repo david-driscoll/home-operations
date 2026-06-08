@@ -244,12 +244,11 @@ export class BackupPlanDirector extends ComponentResource {
     updatedConfig.repos = updatedConfig.repos || [];
     updatedConfig.plans = updatedConfig.plans || [];
 
-    updatedConfig.repos = updatedConfig.repos.filter((z) => !z.id.includes("-volsync-"));
-    updatedConfig.plans = updatedConfig.plans.filter((z) => !z.id.includes("-volsync-"));
-
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
 
+    updatedConfig.repos = updatedConfig.repos.filter((z) => !z.id.includes("-volsync-"));
+    updatedConfig.plans = updatedConfig.plans.filter((z) => !z.id.includes("-volsync-"));
 
     const configOutput = jsonStringify(updatedConfig);
 
