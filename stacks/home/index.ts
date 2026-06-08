@@ -68,6 +68,7 @@ const thanosStorage = new minio.S3Bucket(
   `thanos-storage`,
   {
     acl: "private",
+    bucketPrefix: "thanos",
   },
   {
     provider: globals.truenasMinioProvider,
