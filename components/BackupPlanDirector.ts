@@ -29,7 +29,7 @@ export class BackupPlanDirector extends ComponentResource {
   ) {
     super("home:backups:BackupPlanDirector", name, {}, opts);
     this.globals = args.globals;
-    this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `http://uptime.${domain}:9595`);
+    this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `https://uptime.${domain}`);
     this.plans = args.globals.store.getBackupPlans<BackupPlanItem>().apply((z) => z.flatMap((x) => x.plans));
     this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply((z) => z.credential);
   }
@@ -147,7 +147,7 @@ export class BackupPlanDirector extends ComponentResource {
             "--sftp-shell-type=none",
             "--log-level INFO",
             "--delete-excluded",
-            "--ignore-errors",
+            // "--ignore-errors",
             ...(plan.preSync.exclude?.map((e) => `--exclude '${e}'`) ?? []),
           ].join(" "),
         },

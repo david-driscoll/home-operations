@@ -24,7 +24,9 @@ const dockgeInstances = dockgeDetails.apply((details) => {
           sftpHost: detail.hostname,
           sftpPort: 2022,
           sourcePath: "/stacks/",
-          exclude: ["/authentik-outpost", "/backrest", "/autoheal", "/backups", "/docker-socket-proxy", "/prometheus", "/rclone-sftp", "/zot"],
+          exclude: [
+            "/adguard/confdir/AdGuardHome.yaml*",
+            "/authentik-outpost", "/backrest", "/autoheal", "/backups", "/docker-socket-proxy", "/prometheus", "/rclone-sftp", "/zot"],
         },
       }),
     );
