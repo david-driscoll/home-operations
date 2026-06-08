@@ -145,16 +145,16 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const fullNewInputs = client.mapItem(client.mapToFullItem(newInputs), id);
 
     const compareOlds = Object.fromEntries(
-      Object.keys(fullNewInputs)
+      Object.keys(getSecretItem(oldOutputs))
         .filter((z) => !z.startsWith("_"))
         .map((key) => [key, (oldOutputs as any)[key]] as const),
     );
     const compareNews = Object.fromEntries(
-      Object.keys(fullNewInputs)
+      Object.keys(getSecretItem(fullNewInputs))
         .filter((z) => !z.startsWith("_"))
         .map((key) => [key, (fullNewInputs as any)[key]] as const),
     );
-    const delta = differ.diff(getSecretItem(oldOutputs), getSecretItem(fullNewInputs));
+    const delta = differ.diff(compareOlds, compareNews);
     const patch = jsonpatch
       .format(delta)
       .filter((z) => z.op !== "move")
