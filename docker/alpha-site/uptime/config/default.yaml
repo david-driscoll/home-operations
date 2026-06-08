@@ -1,7 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
 storage:
-  type: sqlite
-  path: /data/data.db
+  type: postgres
+  path: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+  caching: true
+  maximum-number-of-results: 500
+  maximum-number-of-events: 250
 
 concurrency: 2
 

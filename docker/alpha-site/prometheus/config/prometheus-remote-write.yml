@@ -6,3 +6,12 @@ scrape_configs:
         labels:
           host: 'alpha-site'
           service: 'dns'
+
+  - job_name: gatus
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - gatus:8080
+        labels:
+          host: 'alpha-site'
+          service: 'uptime'

@@ -7,6 +7,9 @@ services:
       - 100.100.100.100
     environment:
       GATUS_CONFIG_PATH: /config
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: gatus
     labels:
       # Enable Traefik
       traefik.enable: true
@@ -23,10 +26,25 @@ services:
       traefik.http.services.uptime.loadbalancer.server.port: 8080
     volumes:
       - /opt/stacks-data/${APP}/config/:/config/
-      - /opt/stacks-data/${APP}/data/:/data/
-      - /opt/stacks/config/default.yaml:/config/default.yaml
+      - ./config/default.yaml:/config/default.yaml
     networks:
       - dockge_default
+      - gatus
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres
+    volumes:
+      - /opt/stacks-data/${APP}/data/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=gatus
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=password
+    networks:
+      - gatus
 x-dockge:
   urls:
     - https://uptime.${searchDomain}
@@ -34,3 +52,4 @@ x-dockge:
 networks:
   dockge_default:
     external: true
+  gatus:
