@@ -188,6 +188,7 @@ static async Task Rclone(RCloneJob job)
             args
             .Add("sync")
             // .Add("--no-update-dir-modtime")
+            .Add("--log-level").Add("INFO")
             .Add(job.Source.GetRemotePath())
             .Add(job.Destination.GetRemotePath())
         ).ExecuteAsync();
