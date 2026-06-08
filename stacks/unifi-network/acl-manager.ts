@@ -521,7 +521,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant(
     "cluster-kubeproxy-access",
     {
-      src: clusterTags,
+      src: [tag.management],
       dst: [tag.k8s],
       ip: ["tcp:443"],
       app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["tailnet-cluster-ops"] } }] },
