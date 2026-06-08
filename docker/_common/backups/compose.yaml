@@ -23,8 +23,8 @@ services:
       - DOTNET_CLI_HOME=/tmp/.dotnet
       - NUGET_PACKAGES=/tmp/.nuget/packages
       - XDG_DATA_HOME=/tmp
-      - TMPDIR=/tmp
       - RCLONE_CONFIG=/tmp/rclone.conf
+      - TMPDIR=/tmp
     env_file:
       - .env
     cpus: 1
