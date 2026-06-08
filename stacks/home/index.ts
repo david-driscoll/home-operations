@@ -72,7 +72,7 @@ const thanosStorage = new minio.S3Bucket(
   },
   {
     provider: globals.truenasMinioProvider,
-    protect: true,
+    protect: false,
     retainOnDelete: true,
   },
 );
