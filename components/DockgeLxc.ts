@@ -381,7 +381,7 @@ export class DockgeLxc extends ComponentResource {
         `${name}-install-tools`,
         {
           connection: this.remoteConnection,
-          create: interpolate`apt-get update && apt-get install -y restic`,
+          create: interpolate`apt-get update && apt-get install -y jq restic rclone speedometer`,
         },
         mergeOptions(cro, { dependsOn: depends }),
       ),

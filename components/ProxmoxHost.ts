@@ -164,7 +164,7 @@ export class ProxmoxHost extends ComponentResource {
         `${name}-install-jq`,
         {
           connection: connection,
-          create: "command -v jq >/dev/null 2>&1 || apt-get install -y jq",
+          create: interpolate`apt-get update && apt-get install -y jq restic rclone speedometer`,
         },
         mergeOptions(cro, { dependsOn: [] }),
       );
