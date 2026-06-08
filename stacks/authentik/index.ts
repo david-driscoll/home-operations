@@ -9,7 +9,7 @@ import { OPClient } from "@components/op.ts";
 import { awaitOutput } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
-const authentikGroups = new AuthentikGroups({});
+const authentikGroups = new AuthentikGroups(globals);
 const flowsManager = new FlowsManager(globals, {});
 const authentikFlows = flowsManager.createFlows();
 
