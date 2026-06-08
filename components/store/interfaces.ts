@@ -11,6 +11,7 @@ export interface DockgeClusterDefinition {
   icon?: string;
   background?: string;
   favicon?: string;
+  location?: "home" | "remote";
 }
 
 export interface KubernetesClusterDefinition {
@@ -23,6 +24,7 @@ export interface KubernetesClusterDefinition {
   icon?: string;
   background?: string;
   favicon?: string;
+  location?: "home" | "remote";
 }
 
 export interface DockgeLxcDefinition {

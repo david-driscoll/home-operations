@@ -426,13 +426,23 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
           endpoint.group ??= definition.spec.category;
           endpoint.group = endpoint.group === "System" || endpoint.group === cluster.title ? `Cluster: ${cluster.title}` : endpoint.group;
-          endpoint.interval ??= "2m";
-          endpoint.timeout ??= "60s";
           endpoint.alerts ??= [];
           endpoint.alerts.push({
             enabled: true,
             type: "pushover",
           });
+
+          if (cluster.location === "remote") {
+            endpoint.interval = "5m";
+            for (const alert of endpoint.alerts) {
+              alert["failure-threshold"] = 24;
+              alert["success-threshold"] = 4;
+            }
+          }
+
+          endpoint.interval ??= "2m";
+          endpoint.timeout ??= "60s";
+
           pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
 
           const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
