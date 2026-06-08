@@ -86,7 +86,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               },
               destination: {
                 zoneId: internalZone.id,
-                ips: peerRelays.map((d) => d),
+                ips: peerRelays,
                 matchOppositeIps: true,
               },
               schedule: {

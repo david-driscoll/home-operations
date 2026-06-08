@@ -92,7 +92,7 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     return type switch
     {
         "local" => new LocalBackend(name, path),
-        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[path.IndexOf('/')..]),
+        "sftp" => new SftpBackend(name, path[0..path.IndexOf('/')], path[( path.IndexOf('/') + 1 )..]),
         "b2" => new B2Backend(name, secretItem!.GetField("bucket").Value!, path, secretItem!.GetField("username").Value!, secretItem!.GetField("credential").Value!),
         "s3" => path.Split('/') is { } parts ? new S3Backend(name, secretItem!.GetField("endpoint").Value!, parts[0], "/" + string.Join('/', parts.Skip(1)), secretItem!.GetField("username").Value!, secretItem!.GetField("password").Value!) : throw new InvalidOperationException("Invalid S3 path format"),
         _ => throw new InvalidOperationException($"Unknown backend type: {type}"),
