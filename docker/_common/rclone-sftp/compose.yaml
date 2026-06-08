@@ -13,7 +13,7 @@ services:
       --authorized-keys /config/ssh/authorized_keys
       --key /config/ssh/host_key
     volumes:
-      - /data/backup/:/data/backup/:rw
+      - /data/backup/:/data/backup/:ro
       - /opt/stacks-data/:/data/stacks/:ro
       - /opt/stacks-data/${APP}/keys:/config/ssh:ro
     tmpfs:
