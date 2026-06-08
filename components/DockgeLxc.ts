@@ -770,7 +770,9 @@ export class DockgeLxc extends ComponentResource {
           }
         });
 
-        const chownCmd = stackUsers.apply((users) => (users.length > 0 ? users.map((u) => `chown ${u} /opt/stacks/${stackName} && chown ${u} /opt/stacks-data/${stackName}`).join(" && ") : "true"));
+        const chownCmd = stackUsers.apply((users) =>
+          users.length > 0 ? users.map((u) => `chown -R ${u} /opt/stacks/${stackName} && chown -R ${u} /opt/stacks-data/${stackName}`).join(" && ") : "true",
+        );
 
         copyFiles.push(
           new remote.Command(
