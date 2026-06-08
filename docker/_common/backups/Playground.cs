@@ -99,8 +99,6 @@ async Task<RCloneBackend> CreateBackend(string name, string type, string path, s
     };
 }
 
-await DownloadRclone();
-
 while (true)
 {
     using var cts = new CancellationTokenSource();
@@ -167,45 +165,6 @@ Func<Task> CreateJobDelegate(IEnumerable<RCloneJob> jobs)
             .Merge(2)
             .ToTask();
     };
-}
-
-static async Task DownloadRclone()
-{
-    try
-    {
-        var rclonePath = Path.Combine("/workspace", "rclone");
-        if (System.IO.File.Exists(rclonePath))
-        {
-            Console.WriteLine($"Rclone already exists at {rclonePath}, skipping download");
-            return;
-        }
-        var rcloneItem = Path.Combine("/workspace", "rclone.zip");
-
-        {
-            var client = new HttpClient();
-            var rcloneUrl = "https://downloads.rclone.org/v1.72.0/rclone-v1.72.0-linux-amd64.zip";
-            Console.WriteLine($"Downloading rclone from {rcloneUrl} to {rcloneItem}");
-            using var rcloneStream = await client.GetStreamAsync(rcloneUrl);
-            using var writeStream = System.IO.File.OpenWrite(rcloneItem);
-            await rcloneStream.CopyToAsync(writeStream);
-            await rcloneStream.FlushAsync();
-            await writeStream.FlushAsync();
-        }
-
-        using var archive = ZipFile.OpenRead(rcloneItem);
-        var entry = archive.Entries.Where(z => z.Name == "rclone").Single();
-        entry.ExtractToFile(destinationFileName: Path.Combine("/workspace", "rclone"), true);
-        Console.WriteLine($"Extracted rclone to {Path.Combine("/workspace", "rclone")}");
-        await Cli.Wrap("chmod")
-            .WithArguments($"+x {Path.Combine("/workspace", "rclone")}")
-            .ExecuteAsync();
-
-        Console.WriteLine($"Rclone is ready at {Path.Combine("/workspace", "rclone")}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error checking for existing rclone binary: {ex.Message}");
-    }
 }
 
 static async Task Rclone(RCloneJob job)
