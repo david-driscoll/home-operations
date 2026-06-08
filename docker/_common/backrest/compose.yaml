@@ -26,6 +26,7 @@ services:
       - ./cache:/cache
       - ./rclone:/root/.config/rclone
       - /data/backup:/data/backup
+      - /data/staging:/data/staging
       # - /data/restic:/repos
       - ./ssh:/root/.ssh:ro
       - /spike/backup:/spike/backup:ro
