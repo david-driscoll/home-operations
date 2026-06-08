@@ -6,6 +6,7 @@ import { OPClient, OPClientItemInput } from "../../components/op.ts";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { DiffResult } from "@pulumi/pulumi/dynamic/index.js";
+import { getSecretItem } from "@components/store/index.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;
@@ -56,6 +57,7 @@ export interface OnePasswordItemFileOutput {
   name: pulumi.Output<string>;
   content_path: pulumi.Output<string>;
   content: pulumi.Output<string>;
+  size: pulumi.Output<number>;
 }
 
 export interface OnePasswordItemSectionOutput {
@@ -152,7 +154,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         .filter((z) => !z.startsWith("_"))
         .map((key) => [key, (fullNewInputs as any)[key]] as const),
     );
-    const delta = differ.diff(compareOlds, compareNews);
+    const delta = differ.diff(getSecretItem(oldOutputs), getSecretItem(fullNewInputs));
     const patch = jsonpatch
       .format(delta)
       .filter((z) => z.op !== "move")
@@ -163,19 +165,16 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
         return true;
       });
 
-    // if (patch.length > 0) {
-    //   pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
-    // }
+    if (patch.length > 0) {
+      pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
+    } else {
+      pulumi.log.info(`OnePasswordItem no changes detected for item ${id}`);
+    }
 
     for (const change of patch) {
       replaces.push(change.path.substring(1));
     }
-    if (patch.length === 0) {
-      pulumi.log.info(`OnePasswordItem no changes detected for item ${id}`);
-      return {};
-    }
 
-    pulumi.log.info(`OnePasswordItem changes detected for item ${id}: ${JSON.stringify(patch, null, 2)}`);
     return {
       replaces: replaces,
       changes: patch.length > 0,

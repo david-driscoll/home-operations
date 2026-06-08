@@ -110,10 +110,25 @@ export class VaultStore {
   }
 }
 
-function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: OnePasswordItem): Output<Unwrap<T & Meta>> {
-  const result: [string, any][] = [["meta", output({ title: item.title, category: item.category, tags: item.tags ?? [], urls: item.urls?.map((z) => ({ href: z.href, label: z.label })) ?? [] })]];
+export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(
+  item: Pick<OnePasswordItem, "title" | "category" | "tags" | "urls" | "fields" | "files" | "sections">,
+): Output<Unwrap<T & Meta>> {
+  const result: [string, any][] = [
+    [
+      "meta",
+      output({
+        title: item.title,
+        category: item.category,
+        tags: item.tags ?? [],
+        urls: item.urls?.map((z) => ({ href: z.href, label: z.label })) ?? [],
+      }),
+    ],
+  ];
   for (const [key, { value, type }] of Object.entries(item.fields)) {
     result.push([key, type === TypeEnum.Concealed ? secret(value) : output(value)] as const);
+  }
+  for (const [key, { name, content }] of Object.entries(item.files ?? {})) {
+    result.push([key, secret(content)]);
   }
   for (const [sectionKey, section] of Object.entries(item.sections)) {
     const sectionResult = [];
