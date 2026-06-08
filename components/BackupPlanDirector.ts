@@ -256,7 +256,7 @@ export class BackupPlanDirector extends ComponentResource {
       content: configOutput,
       connection: details.connection,
       remotePath: "/opt/stacks-data/backrest/config/config.json",
-      triggers: [...items.repos.map((z) => z.uri), ...items.plans.map((z) => z.repo)],
+      triggers: [configOutput],
       dependsOn: depends,
       parent: this,
     });
