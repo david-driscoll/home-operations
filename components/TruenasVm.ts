@@ -15,6 +15,7 @@ import { FullItem } from "@1password/connect";
 import { Dataset } from "@components/truenas/index.ts";
 import { types } from "@pulumi/command";
 import { TailscaleIp } from "@openapi/tailscale-grants.js";
+import { awaitOutput } from "./helpers.ts";
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
@@ -133,6 +134,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     }
 
     const suffix = new random.RandomPet(`${name}-suffix`, { length: 2 }, { parent }).id.apply((z) => z.toLowerCase());
+    const importSuffix = await awaitOutput(suffix);
 
     const minioBucket = new minio.S3Bucket(
       `${name}-minio-bucket`,
@@ -145,6 +147,7 @@ export class TruenasVm extends pulumi.ComponentResource {
         provider: this.globals.truenasMinioProvider,
         protect: false,
         retainOnDelete: true,
+        import: `${importSuffix}-backup`,
       },
     );
 

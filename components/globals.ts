@@ -52,7 +52,7 @@ export class GlobalResources extends ComponentResource {
     this.unifiCredential = store.getSecretByTitle<{ credential: string; hostname: string }>("Unifi Api Key Eris Cluster");
     this.proxmoxCredential = store.getSecretByTitle<{ username: string; password: string }>("Proxmox");
     this.truenasCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string; domain: string }>("Eris Truenas Credentials");
-    this.truenasMinioCredential = store.getSecretByTitle<{ username: string; credential: string }>("minio root user");
+    this.truenasMinioCredential = store.getSecretByTitle<{ username: string; password: string }>("minio root user");
 
     this.adguardCredential = store.getSecretByTitle<{ username: string; password: string; urls: { label: string; href: string }[] }>("AdGuard Home");
     this.adguardProvider = new AdguardProvider(
@@ -101,7 +101,7 @@ export class GlobalResources extends ComponentResource {
         minioRegion: "homelab",
         minioInsecure: true,
         minioUser: this.truenasMinioCredential.username,
-        minioPassword: this.truenasMinioCredential.credential,
+        minioPassword: this.truenasMinioCredential.password,
         minioServer: interpolate`${this.truenasCredential.hostname}:9000`,
       },
       cro,
