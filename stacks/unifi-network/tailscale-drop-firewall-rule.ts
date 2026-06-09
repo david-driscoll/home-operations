@@ -90,7 +90,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 matchOppositeIps: true,
               },
               schedule: {
-                mode: "ALWAYS",
+                mode: "always",
               },
             },
             { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
@@ -120,7 +120,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 // TOOD: peer-relays that have ipv6?
               },
               schedule: {
-                mode: "ALWAYS",
+                mode: "always",
               },
             },
             { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
