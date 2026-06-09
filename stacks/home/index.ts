@@ -51,8 +51,11 @@ const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   proxmox: mainProxmoxCredentials,
   remote: false,
   cluster: celestiaCluster,
-  peerRelay: true,
-  tailscaleArgs: { acceptRoutes: false },
+  peerRelay: "unifi",
+  tailscaleArgs: {
+    advertiseExitNode: true,
+    acceptRoutes: false,
+  },
   tailscaleSubnetRoutes: [],
   vmIdRange: { start: 102, end: 199 },
 });
@@ -97,8 +100,11 @@ const celestiaHost = new ProxmoxHost("celestia", {
   truenas: spikeVm,
   remote: false,
   cluster: celestiaCluster,
-  peerRelay: true,
-  tailscaleArgs: { acceptRoutes: false },
+  peerRelay: "unifi",
+  tailscaleArgs: {
+    advertiseExitNode: true,
+    acceptRoutes: false,
+  },
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 302, end: 399 },
 });

@@ -36,7 +36,7 @@ export interface ProxmoxHostArgs {
   truenas?: TruenasVm;
   cluster: Input<ClusterDefinition>;
   shortName?: string;
-  peerRelay?: boolean;
+  peerRelay?: "unifi" | boolean;
   tailscaleArgs?: Partial<Parameters<typeof updateTailscaleProxmox>[0]["args"]>;
   authentikOutputs: Input<AuthentikOutputs>;
   vmIdRange: { start: number; end: number };
@@ -146,15 +146,19 @@ export class ProxmoxHost extends ComponentResource {
         globals: args.globals,
         dependsOn: [],
         args: {
-          ...args.tailscaleArgs,
           advertiseTags: [Tailscale.tag.proxmox, Tailscale.tag.exitNode, ...(args.peerRelay ? [Tailscale.tag.peerRelay] : [])].concat(args.tailscaleTags ?? []),
           acceptDns: false,
           acceptRoutes: false,
           ssh: true,
-          advertiseExitNode: true,
-          relayServerPort: args.peerRelay ? createPeerRelayRule(this.internalIpAddress, args.globals).result : undefined,
+          relayServerPort:
+            args.peerRelay === "unifi"
+              ? createPeerRelayRule(this.internalIpAddress, args.globals).result
+              : args.peerRelay
+                ? new random.RandomInteger(`tailscale-relay-port-${this.internalIpAddress}`, { min: 40000, max: 60000 }).result
+                : undefined,
           advertiseRoutes: args.tailscaleSubnetRoutes,
           exitNodeAllowLanAccess: true,
+          ...args.tailscaleArgs,
         },
       });
       // Configure SSH environment

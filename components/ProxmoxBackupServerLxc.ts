@@ -203,11 +203,11 @@ echo "PBS post-install complete"`;
       globals: args.globals,
       installTailscale: true,
       args: {
-        ...args.tailscaleArgs,
         advertiseTags: (args.tailscaleArgs?.advertiseTags ?? []).concat([Tailscale.tag.apps, Tailscale.tag.backups]),
         acceptDns: true,
         acceptRoutes: false,
         ssh: true,
+        ...args.tailscaleArgs,
       },
       vmId: args.vmId,
       dependsOn: [setHostname, createPbsLxc, postInstallRun, postInstallReboot],

@@ -35,7 +35,13 @@ const host = new ProxmoxHost("skystar", {
   proxmox: mainProxmoxCredentials,
   remote: true,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: true },
+  tailscaleArgs: {
+    acceptDns: true,
+    acceptRoutes: true,
+    advertiseExitNode: true,
+    advertiseRoutes: ["192.168.1.0/24"],
+  },
+  peerRelay: true,
   tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
 });
@@ -46,7 +52,10 @@ const dockgeRuntime = new DockgeLxc("skystar-dockge", {
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote },
+  tailscaleArgs: {
+    acceptDns: true,
+    acceptRoutes: host.remote,
+  },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,
