@@ -197,7 +197,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "admins-home-subnet-access",
       {
         src: [autogroups.admin],
-        dst: [subnets.home],
+        dst: Object.values(subnets),
         ip: ["*"],
       },
       { accept: [], deny: testData.knownNormalUsers },
@@ -420,7 +420,9 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
   manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.backups, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox]);
   manager.setExitNode(tag.proxmox);
-  manager.setRoute(subnets.home, [tag.proxmox]);
+  for (const subnet of Object.values(subnets)) {
+    manager.setRoute(subnet, [tag.proxmox]);
+  }
 
   manager.setGrant(
     { src: [tag.proxmox], dst: [tag.proxmox], ip: [...ports.ssh, ...ports.proxmox, ...ports.proxmoxManagement, ...ports.nfs] },

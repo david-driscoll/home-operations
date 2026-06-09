@@ -58,6 +58,7 @@ export const dns = {
 export const Tailscale = {
   subnets: {
     home: "10.10.0.0/16" as TailscaleCidr,
+    ocracoke: "192.168.1.0/24" as TailscaleCidr,
   } as const,
 
   ports: {

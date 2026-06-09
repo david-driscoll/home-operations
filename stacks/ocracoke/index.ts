@@ -39,7 +39,7 @@ const host = new ProxmoxHost("skystar", {
     acceptDns: true,
     acceptRoutes: true,
     advertiseExitNode: true,
-    advertiseRoutes: ["192.168.1.0/24"],
+    advertiseRoutes: [Tailscale.subnets.ocracoke],
   },
   peerRelay: true,
   tailscaleSubnetRoutes: [],
