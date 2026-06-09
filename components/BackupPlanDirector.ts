@@ -122,8 +122,8 @@ export class BackupPlanDirector extends ComponentResource {
     );
 
     const allDeps = all([depends, uptime, copyJobs]).apply((d) => d.flat());
-    await this.updateBackrestConfiguration(dockgeConnection, backrestItems);
-    return allDeps;
+
+    return output(this.updateBackrestConfiguration(dockgeConnection, allDeps, backrestItems));
   }
 
   private _createSourceBackrestPlan(detail: Unwrap<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
@@ -230,10 +230,6 @@ export class BackupPlanDirector extends ComponentResource {
 
     updatedConfig.repos = updatedConfig.repos || [];
     updatedConfig.plans = updatedConfig.plans || [];
-
-    log.info(`Updating backrest config with ${items.repos.length} repos and ${items.plans.length} plans`);
-    log.debug(`Repos: ${JSON.stringify(items.repos, null, 2)}`);
-    log.debug(`Plans: ${JSON.stringify(items.plans, null, 2)}`);
 
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
