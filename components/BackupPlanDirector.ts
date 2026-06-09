@@ -85,21 +85,32 @@ export class BackupPlanDirector extends ComponentResource {
       };
     });
 
+    const celestiaServer = backupServers.find((s) => s.cluster.key === "celestia");
     const volsyncJobTasks = volsyncPlans.map((plan) => {
-      const planServer = backupServers.find((s) => s.cluster.key === plan.source);
       const copyToken = toGatusKey(volsyncGroupTitle, plan.name);
+      if (clusterKey === "celestia") {
+        return {
+          name: plan.name,
+          schedule: "0 10 * * *",
+          sourceType: "local" as const,
+          source: plan.path,
+          destinationType: "local" as const,
+          destination: `/data/backup/${plan.name}/`,
+          token: copyToken,
+        };
+      }
       return {
         name: plan.name,
         schedule: "0 4 * * *",
         sourceType: "sftp" as const,
-        source: `${planServer!.dockge.ssh.hostname}/backup/${plan.name}/`,
+        source: `${celestiaServer!.dockge.ssh.hostname}/backup/${plan.name}/`,
         destinationType: "local" as const,
         destination: `/data/backup/${plan.name}/`,
         token: copyToken,
       };
     });
 
-    const copyJobs = addBackupJobs(`copy-${clusterKey}`, dockgeConnection, destinationJobTasks.concat(volsyncJobTasks), this, depends);
+    const copyJobs = addBackupJobs(`copy-${clusterKey}`, dockgeConnection, [...destinationJobTasks, ...volsyncJobTasks], this, depends);
 
     const backrestItems = [
       ...sourcePlans.map((plan) => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
