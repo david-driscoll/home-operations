@@ -30,7 +30,7 @@ export class VaultStore {
   public getBackupPlans<T>() {
     return output(op.findItemsByTag("backup-plan"))
       .apply((items) => all(items.map(getSecretItem<{ plan: string }>)).apply((items) => items.map((item) => JSON.parse(item.plan) as { plans: T[] })))
-      .apply((plans) => plans.flat());
+      .apply((plans) => plans.flatMap((z) => z.plans));
   }
 
   public getTailscaleExports() {
