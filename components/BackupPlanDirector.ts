@@ -48,7 +48,7 @@ export class BackupPlanDirector extends ComponentResource {
       this.uptimeUrl,
       this.volsyncPassword,
     ]).apply(([cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword]) =>
-      output(this._createPlans({ ...source, cluster }, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword, depends)),
+      output(this._createPlans(source.dockge, source.pbs, cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword, depends)),
     );
   }
 
