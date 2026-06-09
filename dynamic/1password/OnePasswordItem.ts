@@ -146,7 +146,10 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const compareOlds = await awaitOutput(getSecretItem(oldOutputs));
     const compareNews = await awaitOutput(getSecretItem(fullNewInputs));
     const delta = differ.diff(compareOlds, compareNews);
-    const patch = jsonpatch.format(delta).filter((z) => z.op !== "move");
+    const patch = jsonpatch
+      .format(delta)
+      .filter((z) => z.op !== "move")
+      .filter((z) => z.op === "add" && z.value !== null);
     // .filter((change) => {
     //   if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
     //   if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
@@ -154,7 +157,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     //   return true;
     // })
     if (patch.length > 0) {
-      pulumi.log.info(`OnePasswordItem diff for item ${newInputs.title} (${id})`);
+      pulumi.log.info(`OnePasswordItem diff for item ${newInputs.title} (${id}) :: ${JSON.stringify(patch)}`);
     } else {
       pulumi.log.info(`OnePasswordItem no changes detected for item ${newInputs.title} (${id})`);
     }
