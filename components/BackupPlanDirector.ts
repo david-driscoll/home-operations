@@ -48,7 +48,7 @@ export class BackupPlanDirector extends ComponentResource {
     });
   }
 
-  public _createPlans(
+  public async _createPlans(
     source: UnwrappedObject<{ dockge: DockgeLxc; pbs: ProxmoxBackupServerLxc; cluster: ClusterDefinition }>,
     dockgeConnection: Unwrap<Connection>,
     backupServers: UnwrappedArray<ProxmoxBackupServerLxcDefinition>,
@@ -123,8 +123,8 @@ export class BackupPlanDirector extends ComponentResource {
     );
 
     const allDeps = all([depends, uptime, copyJobs]).apply((d) => d.flat());
-    return output(this.updateBackrestConfiguration(dockgeConnection, backrestItems))
-      .apply(() => allDeps);
+    await this.updateBackrestConfiguration(dockgeConnection, backrestItems);
+    return allDeps;
   }
 
   private _createSourceBackrestPlan(detail: Unwrap<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
