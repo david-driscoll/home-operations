@@ -90,7 +90,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 matchOppositeIps: true,
               },
               schedule: {
-                mode: "always",
+                mode: "ALWAYS",
               },
             },
             { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
