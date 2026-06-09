@@ -241,7 +241,7 @@ export class BackupPlanDirector extends ComponentResource {
       await ssh.execCommand(`docker compose -f compose.yaml stop || true`, { cwd: "/opt/stacks/backrest" });
 
       log.info(`Copying updated Backrest config to PBS LXC`, this);
-      await ssh.execCommand(`rm -f /opt/stacks-data/backrest/config/config.json || true`);
+      await ssh.execCommand(`rm -f /opt/stacks-data/backrest/config/config.json* || true`);
 
       log.info(`Temp file path: ${tempFilePath}`, this);
       await ssh.putFile(tempFilePath, "/opt/stacks-data/backrest/config/config.json");
