@@ -120,7 +120,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 // TOOD: peer-relays that have ipv6?
               },
               schedule: {
-                mode: "always",
+                mode: "ALWAYS",
               },
             },
             { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
