@@ -237,7 +237,7 @@ export class BackupPlanDirector extends ComponentResource {
       const tempFilePath = getTempFilePath("backrest-config.json");
       writeFileSync(tempFilePath, configOutput);
 
-      log.info(`Updated Backrest Config: ${configOutput}`, this);
+      // log.info(`Updated Backrest Config: ${configOutput}`, this);
       await ssh.execCommand(`docker compose -f compose.yaml stop || true`, { cwd: "/opt/stacks/backrest" });
 
       log.info(`Copying updated Backrest config to PBS LXC`, this);
@@ -247,7 +247,8 @@ export class BackupPlanDirector extends ComponentResource {
       await ssh.putFile(tempFilePath, "/opt/stacks-data/backrest/config/config.json");
 
       log.info(`Starting Backrest with new configuration`, this);
-      await ssh.execCommand(`docker compose -f compose.yaml start || true`, { cwd: "/opt/stacks/backrest" });
+      const result = await ssh.execCommand(`docker compose -f compose.yaml start || true`, { cwd: "/opt/stacks/backrest" });
+      log.info(result.stdout + result.stderr, this);
 
       log.info(`Backrest configuration updated successfully`, this);
 
