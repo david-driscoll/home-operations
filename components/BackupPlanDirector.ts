@@ -197,20 +197,6 @@ export class BackupPlanDirector extends ComponentResource {
     return { plan: backrestPlan, repo: backrestRepo };
   }
 
-  private _createRepository(plan: BackupPlanItem, password: string) {
-    const backrestRepo: BackrestRepository = {
-      prunePolicy: { schedule: { maxFrequencyDays: 30, clock: "CLOCK_LAST_RUN_TIME" }, maxUnusedPercent: 10 },
-      checkPolicy: { schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" }, readDataSubsetPercent: 10 },
-      commandPrefix: { ioNice: "IO_BEST_EFFORT_LOW", cpuNice: "CPU_LOW" },
-      password,
-      ...plan.repositoryConfig,
-      id: plan.name,
-      uri: `/data/backup/${plan.name}/`,
-      autoUnlock: true,
-    };
-
-    return { plan: null, repo: backrestRepo };
-  }
   async updateBackrestConfiguration(details: Unwrap<Connection>, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
     const connection = details.connection;
     let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 6, modno: 1, instance: details.cluster.key, auth: { disabled: true }, multihost: {} };
@@ -285,15 +271,7 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
     if (jobIndex >= 0) {
       updatedConfig.repos[jobIndex] = {
         ...updatedConfig.repos[jobIndex],
-        uri: repo.uri,
-        password: repo.password,
-        env: repo.env,
-        flags: repo.flags,
-        prunePolicy: repo.prunePolicy,
-        checkPolicy: repo.checkPolicy,
-        hooks: repo.hooks,
-        commandPrefix: repo.commandPrefix,
-        autoUnlock: repo.autoUnlock,
+        ...repo,
       };
     } else {
       updatedConfig.repos.push({ ...repo, autoInitialize: true });
@@ -307,15 +285,7 @@ function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: Backre
     if (jobIndex >= 0) {
       updatedConfig.plans[jobIndex] = {
         ...updatedConfig.plans[jobIndex],
-        paths: plan.paths,
-        excludes: plan.excludes,
-        iexcludes: plan.iexcludes,
-        schedule: plan.schedule,
-        retention: plan.retention,
-        hooks: plan.hooks,
-        backupFlags: plan.backupFlags,
-        skipIfUnchanged: plan.skipIfUnchanged,
-        repo: plan.repo,
+        ...plan,
       };
     } else {
       updatedConfig.plans.push(plan);
