@@ -7,6 +7,7 @@ import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
 import { DiffResult } from "@pulumi/pulumi/dynamic/index.js";
 import { getSecretItem } from "@components/store/index.ts";
+import { awaitOutput } from "@components/helpers.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;
@@ -136,39 +137,46 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
 
     const differ = jsondiffpatch.create({
       propertyFilter(name, context) {
-        if (name === "__provider") return false;
-        if (context.childName === undefined && !allowedProperties.some((p) => p === name)) return false;
-        return true;
+        return name !== "meta";
       },
     });
 
     const fullNewInputs = client.mapItem(client.mapToFullItem(newInputs), id);
 
-    const compareOlds = Object.fromEntries(
-      Object.keys(getSecretItem(oldOutputs))
-        .filter((z) => !z.startsWith("_"))
-        .map((key) => [key, (oldOutputs as any)[key]] as const),
-    );
-    const compareNews = Object.fromEntries(
-      Object.keys(getSecretItem(fullNewInputs))
-        .filter((z) => !z.startsWith("_"))
-        .map((key) => [key, (fullNewInputs as any)[key]] as const),
-    );
+    const compareOlds = await awaitOutput(getSecretItem(oldOutputs));
+    const compareNews = await awaitOutput(getSecretItem(fullNewInputs));
     const delta = differ.diff(compareOlds, compareNews);
-    const patch = jsonpatch
-      .format(delta)
-      .filter((z) => z.op !== "move")
-      .filter((change) => {
-        if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
-        if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
-        if (change.path.endsWith("/label")) return false;
-        return true;
-      });
-
+    const patch = jsonpatch.format(delta).filter((z) => z.op !== "move");
+    // .filter((change) => {
+    //   if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
+    //   if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
+    //   if (change.path.endsWith("/label")) return false;
+    //   return true;
+    // })
     if (patch.length > 0) {
-      pulumi.log.info(`OnePasswordItem diff for item ${id}: ${JSON.stringify({ old: compareOlds, new: compareNews, patch }, null, 2)}`);
+      pulumi.log.info(
+        `OnePasswordItem diff for item ${newInputs.title} (${id}): ${JSON.stringify(
+          {
+            patch,
+            compareOlds,
+            compareNews,
+          },
+          null,
+          2,
+        )}`,
+      );
     } else {
-      pulumi.log.info(`OnePasswordItem no changes detected for item ${id}`);
+      pulumi.log.info(
+        `OnePasswordItem no changes detected for item ${newInputs.title} (${id}): ${JSON.stringify(
+          {
+            patch,
+            compareOlds,
+            compareNews,
+          },
+          null,
+          2,
+        )}`,
+      );
     }
 
     for (const change of patch) {

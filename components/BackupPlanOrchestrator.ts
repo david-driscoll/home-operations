@@ -46,7 +46,7 @@ export class BackupPlanOrchestrator extends ComponentResource {
         fields: {
           plan: {
             type: TypeEnum.Concealed,
-            value: jsonStringify({ plans: this.plans }, undefined, 2),
+            value: jsonStringify({ plans: this.plans }),
           },
         },
       },
