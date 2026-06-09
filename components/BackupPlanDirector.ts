@@ -1,7 +1,7 @@
 import { GlobalResources } from "./globals.ts";
 import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Resource, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
 import { remote, types } from "@pulumi/command";
-import { addBackupJobs, addUptimeGatus, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
+import { addBackupJobs, addUptimeGatus, copyFileToRemote, getTempFilePath, toGatusKey, writeTempFile } from "@components/helpers.ts";
 import { ExternalEndpoint } from "@openapi/application-definition.js";
 import { NodeSSH } from "node-ssh";
 import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
@@ -9,6 +9,7 @@ import { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
 import { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
 import { ClusterDefinition, ProxmoxBackupServerLxcDefinition, SshKeyDefinition } from "./store/interfaces.ts";
 import { DockgeLxc } from "./DockgeLxc.ts";
+import { writeFileSync } from "node:fs";
 
 interface Connection {
   connection: Unwrap<types.input.remote.ConnectionArgs>;
@@ -122,8 +123,8 @@ export class BackupPlanDirector extends ComponentResource {
     );
 
     const allDeps = all([depends, uptime, copyJobs]).apply((d) => d.flat());
-
-    return output(this.updateBackrestConfiguration(dockgeConnection, allDeps, backrestItems));
+    return output(this.updateBackrestConfiguration(dockgeConnection, backrestItems))
+      .apply(() => allDeps);
   }
 
   private _createSourceBackrestPlan(detail: Unwrap<Connection>, plan: BackupPlanItem, uptimeUrl: string, password: string) {
@@ -197,7 +198,7 @@ export class BackupPlanDirector extends ComponentResource {
     return { plan: backrestPlan, repo: backrestRepo };
   }
 
-  async updateBackrestConfiguration(details: Unwrap<Connection>, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
+  async updateBackrestConfiguration(details: Unwrap<Connection>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
     const connection = details.connection;
     let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 6, modno: 1, instance: details.cluster.key, auth: { disabled: true }, multihost: {} };
 
@@ -217,51 +218,34 @@ export class BackupPlanDirector extends ComponentResource {
         log.warn(`Current config content: ${currentConfig}`);
       }
 
+      if (!updatedConfig.version) updatedConfig.version = 6;
+      if (!updatedConfig.modno) updatedConfig.modno = 1;
+      updatedConfig.instance = details.cluster.key;
+      if (!updatedConfig.auth) updatedConfig.auth = { disabled: true };
+
+      delete updatedConfig.multihost;
+      delete updatedConfig.sync;
+
+      updatedConfig.repos = updatedConfig.repos || [];
+      updatedConfig.plans = updatedConfig.plans || [];
+
+      updateRepos(updatedConfig, items.repos);
+      updatePlans(updatedConfig, items.plans);
+
+      const configOutput = JSON.stringify(updatedConfig);
+
+      const tempFilePath = getTempFilePath("backrest-config.json");
+      writeFileSync(tempFilePath, configOutput);
+      await ssh.execCommand(`rm -f /opt/stacks-data/backrest/config/config.json || true`);
+      await ssh.putFile(tempFilePath, "/opt/stacks-data/backrest/config/config.json");
+      await ssh.execCommand(`docker compose -f compose.yaml build || true`, { cwd: "/opt/stacks/backrest" });
+      await ssh.execCommand(`docker compose -f compose.yaml up || true`, { cwd: "/opt/stacks/backrest" });
+      await ssh.execCommand(`docker compose -f compose.yaml restart || true`, { cwd: "/opt/stacks/backrest" });
+
       ssh.dispose();
     }
 
-    if (!updatedConfig.version) updatedConfig.version = 6;
-    if (!updatedConfig.modno) updatedConfig.modno = 1;
-    updatedConfig.instance = details.cluster.key;
-    if (!updatedConfig.auth) updatedConfig.auth = { disabled: true };
-
-    delete updatedConfig.multihost;
-    delete updatedConfig.sync;
-
-    updatedConfig.repos = updatedConfig.repos || [];
-    updatedConfig.plans = updatedConfig.plans || [];
-
-    updateRepos(updatedConfig, items.repos);
-    updatePlans(updatedConfig, items.plans);
-
-    updatedConfig.repos = updatedConfig.repos.filter((z) => !z.id.includes("-volsync-"));
-    updatedConfig.plans = updatedConfig.plans.filter((z) => !z.id.includes("-volsync-"));
-
-    const configOutput = jsonStringify(updatedConfig);
-
-    const backrestConfig = copyFileToRemote("backrest-config.json", {
-      content: configOutput,
-      connection: details.connection,
-      remotePath: "/opt/stacks-data/backrest/config/config.json",
-      triggers: [configOutput, this.uptimeUrl],
-      dependsOn: depends,
-      parent: this,
-    });
-
-    const compose = new remote.Command(
-      `backrest-restart`,
-      {
-        connection: details.connection,
-        triggers: [...items.repos.map((z) => z.uri), ...items.plans.map((z) => z.repo)],
-        create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml restart`,
-      },
-      {
-        parent: this,
-        dependsOn: output(depends).apply((x) => [...x, backrestConfig]),
-      },
-    );
-
-    return compose;
+    return updatedConfig;
   }
 }
 
