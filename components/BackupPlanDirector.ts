@@ -165,6 +165,8 @@ export class BackupPlanDirector extends ComponentResource {
             "--sftp-shell-type=none",
             "--delete-excluded",
             "--log-level INFO",
+            "--no-update-dir-modtime",
+            "--no-update-modtime",
             // "--ignore-errors",
             ...(plan.preSync.exclude?.map((e) => `--exclude '${e}'`) ?? []),
           ].join(" "),
