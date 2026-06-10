@@ -771,7 +771,7 @@ export class DockgeLxc extends ComponentResource {
         });
 
         const chownCmd = stackUsers.apply((users) =>
-          users.length > 0 ? users.map((u) => `chown -R ${u} /opt/stacks/${stackName} && chown -R ${u} /opt/stacks-data/${stackName}`).join(" && ") : "true",
+          users.length > 0 ? users.flatMap((u) => [`chown -R ${u} /opt/stacks-data/${stackName}`, `chown -R ${u} /opt/stacks/${stackName}`]).join(" && ") : "true",
         );
 
         copyFiles.push(
