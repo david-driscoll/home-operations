@@ -2,7 +2,7 @@
 	"folders": [
 		{
 			"name": "home-operations",
-			"path": "."
+			"path": ".",
 		},
 		{
 			"name": "vault",
@@ -29,6 +29,17 @@
 			"**/Thumbs.db": true,
 			"sdks/**": true,
 			"node_modules/**": true,
+			"**/.agents/**": true,
+			"**/.claude/**": true,
+			"**/.venv/**": true,
+			"**/.github/agents/**": true,
+			"**/.github/hooks/**": true,
+			"**/.github/instructions/**": true,
+			"**/.github/mcp.json": true,
+			"**/.github/copilot-instructions.md": true,
+			"**/.github/prompts/**": true,
+			"**/bin/**": true,
+			"**/apm_modules/**": true,
 		},
 		"sops.defaults.ageKeyFile": "../stargate-command-cluster/age.key",
 		"sops.binPath": "/opt/homebrew/bin/sops",
