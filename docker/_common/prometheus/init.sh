@@ -11,5 +11,6 @@ for dir in data/prometheus data/alloy; do
 done
 
 curl -X POST http://prometheus:9090/-/reload
+curl -X POST http://alloy:12345/-/reload
 
 echo "Prometheus data directories ready."

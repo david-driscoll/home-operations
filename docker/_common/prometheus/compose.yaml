@@ -16,6 +16,7 @@ services:
     ports:
       - "4317:4317"
       - "4318:4318"
+      - "12345:12345"
     labels:
       autoheal: true
       traefik.enable: true
