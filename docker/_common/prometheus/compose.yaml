@@ -85,6 +85,42 @@ services:
   #   networks:
   #     - dockge_default
 
+  prometheus-config-reloader:
+    container_name: prometheus-config-reloader
+    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.79.2
+    restart: unless-stopped
+    command:
+      - --watched-dir=/etc/prometheus
+      - --reload-url=http://prometheus:9090/-/reload
+      - --log-level=info
+    volumes:
+      - ./config/:/etc/prometheus:ro
+    labels:
+      autoheal: true
+      traefik.enable: false
+    networks:
+      - dockge_default
+    depends_on:
+      - prometheus
+
+  alloy-config-reloader:
+    container_name: alloy-config-reloader
+    image: ghcr.io/prometheus-operator/prometheus-config-reloader:v0.79.2
+    restart: unless-stopped
+    command:
+      - --watched-dir=/etc/alloy
+      - --reload-url=http://alloy:12345/-/reload
+      - --log-level=info
+    volumes:
+      - ./config/alloy:/etc/alloy:ro
+    labels:
+      autoheal: true
+      traefik.enable: false
+    networks:
+      - dockge_default
+    depends_on:
+      - alloy
+
   blackbox-exporter:
     user: "65534:65534"
     container_name: blackbox-exporter
