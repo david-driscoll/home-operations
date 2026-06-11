@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./externalsecret.yaml
+  - ./replicationsource.yaml
+  - ./replicationdestination.yaml
+  - ./pvc.yaml
+commonLabels:
+  app.kubernetes.io/name: "${APP}"
+  driscoll.dev/name: "${APP}"
+  kustomize.toolkit.fluxcd.io/force: enabled

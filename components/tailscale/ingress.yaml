@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/ingress.json
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${APP}-tailscale-ingress
+  annotations:
+    tailscale.com/proxy-group: tailnet-outbound
+    tailscale.com/experimental-forward-cluster-traffic-via-ingress: "true"
+    tailscale.com/tags: "tag:apps"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: "${TAILSCALE_SERVICE:=${APP}}"
+      port:
+        name: "${TAILSCALE_PORT:=http}"
+  tls:
+    - hosts:
+        - ${TAILSCALE_HOST:=${APP}}
