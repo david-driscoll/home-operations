@@ -14,7 +14,7 @@ packages:
   authentik:
     source: terraform-provider
     version: 0.14.0
-    parameters: [registry.terraform.io/goauthentik/authentik, 2026.2.0]
+    parameters: [registry.terraform.io/goauthentik/authentik, 2026.5.0]
   unifi:
     source: terraform-provider
     version: 0.14.0
