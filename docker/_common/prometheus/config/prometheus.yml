@@ -3,6 +3,7 @@ global:
   evaluation_interval: 60s
   external_labels:
     cluster: "${CLUSTER_KEY}"
+    cluster_title: "${CLUSTER_TITLE}"
     environment: "homelab"
     region: "${LOCATION}"
     machine_type: "dockge"

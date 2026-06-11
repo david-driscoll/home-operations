@@ -29,6 +29,7 @@ loki.process "container_logs" {
   stage.static_labels {
     values = {
         cluster = "${CLUSTER_KEY}",
+        cluster_title = "${CLUSTER_TITLE}",
         environment = "homelab",
         region = "${LOCATION}",
         machine_type = "dockge",
@@ -70,6 +71,11 @@ otelcol.processor.attributes "default" {
   action {
     key    = "cluster"
     value  = "${CLUSTER_KEY}"
+    action = "insert"
+  }
+  action {
+    key    = "cluster_title"
+    value  = "${CLUSTER_TITLE}"
     action = "insert"
   }
   action {
@@ -117,6 +123,7 @@ prometheus.remote_write "thanos" {
   }
   external_labels = {
     cluster     = "${CLUSTER_KEY}",
+    cluster_title = "${CLUSTER_TITLE}",
     environment = "homelab",
     region      = "${LOCATION}",
     machine_type = "dockge",
