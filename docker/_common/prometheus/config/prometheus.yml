@@ -163,3 +163,24 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: pve-exporter:9221
+      # Map Tailscale IPs to Proxmox host names
+      - source_labels: [instance]
+        regex: '100\.111\.10\.100.*'
+        target_label: instance
+        replacement: twilight-sparkle
+      - source_labels: [instance]
+        regex: '100\.111\.10\.103.*'
+        target_label: instance
+        replacement: celestia
+      - source_labels: [instance]
+        regex: '100\.111\.10\.104.*'
+        target_label: instance
+        replacement: luna
+      - source_labels: [instance]
+        regex: '100\.111\.10\.105.*'
+        target_label: instance
+        replacement: skystar
+      - source_labels: [instance]
+        regex: '100\.111\.10\.200.*'
+        target_label: instance
+        replacement: alpha-site
