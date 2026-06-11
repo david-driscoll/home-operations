@@ -10,7 +10,7 @@ for dir in data/prometheus data/alloy; do
   chown -R 65534:65534 "$dir"
 done
 
-curl -X POST http://prometheus:9090/-/reload
-curl -X POST http://alloy:12345/-/reload
+curl -X POST http://localhost:9090/-/reload
+curl -X POST http://localhost:12345/-/reload
 
 echo "Prometheus data directories ready."
