@@ -219,9 +219,9 @@ export class ProxmoxHost extends ComponentResource {
 loki.source.journal "default" {
   forward_to = [loki.write.default.receiver]
   labels = {
-    cluster     = "${cluster.apply((c) => c.key)}",
+    cluster     = "${cluster.key}",
     environment = "homelab",
-    region      = "home",
+    region      = "${cluster.location ?? "unknown"}",
     hostname    = "${name}",
     job         = "proxmox/journal",
   }
@@ -249,10 +249,10 @@ prometheus.remote_write "thanos" {
     }
   }
   external_labels = {
-    cluster     = "${cluster.apply((c) => c.key)}",
+    cluster     = "${cluster.key}",
     environment = "homelab",
-    region      = "home",
-    hostname    = "${name}",
+    region      = "${cluster.location ?? "unknown"}",
+    machine_type = "proxmox",
   }
 }
 `;

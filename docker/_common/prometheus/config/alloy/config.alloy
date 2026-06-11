@@ -30,7 +30,8 @@ loki.process "container_logs" {
     values = {
         cluster = "${CLUSTER_KEY}",
         environment = "homelab",
-        region = "home",
+        region = "${LOCATION}",
+        machine_type = "dockge",
       }
     }
   forward_to = [loki.write.default.receiver]
@@ -78,7 +79,12 @@ otelcol.processor.attributes "default" {
   }
   action {
     key    = "region"
-    value  = "home"
+    value  = "${LOCATION}"
+    action = "insert"
+  }
+  action {
+    key    = "machine_type"
+    value  = "dockge"
     action = "insert"
   }
   output {
@@ -112,7 +118,8 @@ prometheus.remote_write "thanos" {
   external_labels = {
     cluster     = "${CLUSTER_KEY}",
     environment = "homelab",
-    region      = "home",
+    region      = "${LOCATION}",
+    machine_type = "dockge",
   }
 }
 

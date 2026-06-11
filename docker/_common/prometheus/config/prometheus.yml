@@ -4,7 +4,9 @@ global:
   external_labels:
     cluster: "${CLUSTER_KEY}"
     environment: "homelab"
-    region: "home"
+    region: "${LOCATION}"
+    machine_type: "dockge"
+    hostname: "dockge-${host}"
 
 rule_files:
   - /etc/prometheus/rules/*.yml
