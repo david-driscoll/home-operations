@@ -1,10 +1,6 @@
 {
 	"folders": [
 		{
-			"name": "dashboard",
-			"path": "../equestria-cluster/kubernetes/apps/equestria/home/dynacat/resources",
-		},
-		{
 			"name": "home-operations",
 			"path": "."
 		},
