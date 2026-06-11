@@ -5,7 +5,11 @@ services:
     restart: unless-stopped
     privileged: true
     environment:
+      - CONFIGS=1
       - CONTAINERS=1
+      - DISTRIBUTION=1
+      - SERVICES=1
+      - SYSTEM=1
       - INFO=1
       - IMAGES=1
       - NETWORKS=1
@@ -19,6 +23,7 @@ services:
       - ALLOW_UNPAUSE=1
       - GRPC=1
       - NODES=1
+      - LOG_LEVEL=warning
     ports:
       - 2375:2375
     volumes:
