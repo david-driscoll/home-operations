@@ -1,7 +1,7 @@
 services:
   neo4j:
     container_name: neo4j
-    image: neo4j:5.26-community@sha256:a08208139e1a4f9a5673bbd4cbf8d6e8bfaf94884a92ef11c4b6cb84ff8c3374
+    image: neo4j:5.26-community@sha256:5a240d74b0bf507048cceb24a718dc98a5403afaeb5e6395ad1e367fb5aabf06
     restart: unless-stopped
     dns:
       - 100.100.100.100
