@@ -65,7 +65,7 @@ export class BackupPlanDirector extends ComponentResource {
   ) {
     const clusterKey = cluster.key;
     const sourceGroupTitle = `Backups: ${cluster.title}`;
-    const destinationGroupTitle = `Backups Sync: ${cluster.title}`;
+    const destinationGroupTitle = `Backups: ${cluster.title}`;
     const volsyncGroupTitle = `VolSync: ${cluster.title}`;
     const sourcePlans = plans.filter((p) => p.source === clusterKey && p.source !== "volsync");
     const destinationPlans = plans.filter((p) => p.source !== clusterKey && p.source !== "volsync");
