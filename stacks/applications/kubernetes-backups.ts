@@ -7,12 +7,14 @@ import { BackrestRepository } from "@openapi/backrest.js";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { KubernetesClusterDefinition } from "@components/store/index.ts";
 import { GlobalResources } from "@components/globals.ts";
+import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
 
 export async function kubernetesBackups(globals: GlobalResources, planManager: BackupPlanOrchestrator, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   const kubeConfig = new kubernetes.KubeConfig();
   kubeConfig.loadFromString(clusterDefinition.kubeConfig);
 
   const coreApi = kubeConfig.makeApiClient(kubernetes.CoreV1Api);
+    const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
 
   // TODO: clear out old keys that are no longer used
   const namespaceList = await coreApi.listNamespace();
@@ -45,19 +47,33 @@ export async function kubernetesBackups(globals: GlobalResources, planManager: B
       return jobs;
     });
 
+      const applications = await lastValueFrom(
+        from(namespaceNames).pipe(
+          concatMap((ns) =>
+            from(
+              customObjectApi.listNamespacedCustomObject({
+                group: "driscoll.dev",
+                version: "v1",
+                namespace: ns,
+                plural: "applicationdefinitions",
+              }),
+            ),
+          ),
+          map((res) => res as { items: ApplicationDefinitionSchema[] }),
+          concatMap((res) => from(res.items)),
+          toArray(),
+        ),
+      );
+
   return await awaitOutput(
     volsyncBackupJobs.apply((jobs) =>
       pulumi.all(
         jobs.map((job) => {
+          const relatedApp = applications.find((app) => app.metadata?.namespace === clusterDefinition.key && app.spec.name === job);
           return planManager.addBackupPlan(
             pulumi.output({
               source: "volsync",
-              // name: "pgdump",
-              // title: "Postgres Dumps",
-              // path: "/spike/data/pgdump/",
-              // repository: "pgdump",
-              name: pulumi.interpolate`${clusterDefinition.key}-volsync-${job}`,
-              title: `${clusterDefinition.title} VolSync :: ${job}`,
+              name: pulumi.interpolate`${clusterDefinition.title} ${relatedApp?.spec.name ?? job}`,
               repository: `${clusterDefinition.key}-volsync-${job}`,
               path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
             }),

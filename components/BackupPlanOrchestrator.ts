@@ -16,7 +16,6 @@ export interface PreSyncArgs {
 export interface BackupPlanItem {
   source: "celestia" | "skystar" | "luna" | "volsync";
   name: string;
-  title: string;
   planConfig?: Omit<BackrestPlan, "id" | "repo" | "paths">;
   repositoryConfig?: Omit<BackrestRepository, "guid" | "uri" | "id" | "autoUnlock" | "autoInitialize">;
   path: string;
