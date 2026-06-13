@@ -116,6 +116,16 @@ export class BackupPlanDirector extends ComponentResource {
       ...sourcePlans.map((plan) => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
       // setup for celestia?
       // ...volsyncPlans.map((plan) => this._createRepository(plan, volsyncPassword)),
+      ...volsyncPlans.map((plan) => ({
+        repo: {
+          id: plan.name,
+          uri: `/data/backup/${plan.name}/`,
+          password: volsyncPassword,
+          checkPolicy: { schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" }, readDataSubsetPercent: 10 },
+          commandPrefix: { ioNice: "IO_BEST_EFFORT_LOW", cpuNice: "CPU_LOW" },
+        } as BackrestRepository,
+        plan: null as unknown as BackrestPlan,
+      })),
     ].reduce(
       (acc, { plan, repo }) => {
         if (plan) acc.plans.push(plan);
