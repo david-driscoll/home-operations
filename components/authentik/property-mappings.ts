@@ -65,7 +65,29 @@ else:
 
     // Load default scope mappings
     for (const scopeName of defaultScopeNames) {
-      this.defaultScopeMappings.set(scopeName, pulumi.output(authentik.getPropertyMappingProviderScope({ scopeName }, { parent: this })));
+      if (scopeName === "email") {
+        const emailScope = authentik.getPropertyMappingProviderScopeOutput({ scopeName }, { parent: this });
+        const emailScopeMapping = new authentik.PropertyMappingProviderScope(
+          "email-verified",
+          {
+            scopeName: "email-verified",
+            description: emailScope.description,
+            name: emailScope.apply((m) => m.name!),
+            expression: `return {
+    "email": request.user.email,
+    "email_verified": True
+}`,
+          },
+          {
+            parent: this,
+          },
+        );
+        this.scopeMappings.set("email-verified", emailScopeMapping);
+        this.defaultScopeMappings.set(scopeName, authentik.getPropertyMappingProviderScopeOutput({ scopeName: emailScopeMapping.scopeName }, { parent: this }));
+        continue;
+      }
+
+      this.defaultScopeMappings.set(scopeName, authentik.getPropertyMappingProviderScopeOutput({ scopeName }, { parent: this }));
     }
 
     // Create custom scope mappings
