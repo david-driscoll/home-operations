@@ -56,6 +56,13 @@ else:
       description: "Proxmox group membership claim — returns all group names for use with PVE/PBS OIDC group mapping",
       expression: `return {"groups": [g.name for g in request.user.ak_groups.all()]}`,
     },
+    email_verified: {
+      description: "Adds an 'email_verified' claim based on whether the user has an email address set",
+      expression: `return {
+    "email": request.user.email,
+    "email_verified": True,
+}`,
+    },
   };
 
   constructor(opts?: pulumi.ComponentResourceOptions) {
@@ -65,28 +72,6 @@ else:
 
     // Load default scope mappings
     for (const scopeName of defaultScopeNames) {
-      if (scopeName === "email") {
-        const emailScope = authentik.getPropertyMappingProviderScopeOutput({ scopeName }, { parent: this });
-        const emailScopeMapping = new authentik.PropertyMappingProviderScope(
-          "email-verified",
-          {
-            scopeName: "email-verified",
-            description: emailScope.description,
-            name: "OAuth Mapping: OpenID 'email' (verified)",
-            expression: `return {
-    "email": request.user.email,
-    "email_verified": True,
-}`,
-          },
-          {
-            parent: this,
-          },
-        );
-        this.scopeMappings.set("email-verified", emailScopeMapping);
-        this.defaultScopeMappings.set(scopeName, authentik.getPropertyMappingProviderScopeOutput({ scopeName: emailScopeMapping.scopeName }, { parent: this }));
-        continue;
-      }
-
       this.defaultScopeMappings.set(scopeName, authentik.getPropertyMappingProviderScopeOutput({ scopeName }, { parent: this }));
     }
 
