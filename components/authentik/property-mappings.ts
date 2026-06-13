@@ -72,7 +72,7 @@ else:
           {
             scopeName: "email-verified",
             description: emailScope.description,
-            name: emailScope.apply((m) => m.name!),
+            name: "OAuth Mapping: OpenID 'email'",
             expression: `return {
     "email": request.user.email,
     "email_verified": True
