@@ -29,7 +29,7 @@ return groupsDict`,
     romm: {
       description: "Romm role mapping based on user groups",
       expression: `
-      return { email_verified: True, }`
+      return { email_verified: True, "groups": [group.name for group in user.ak_groups.all()] }`,
     },
     remote_user: {
       description: "Set remote-user based on the username",
@@ -41,7 +41,7 @@ return groupsDict`,
             }
         }
     }
-}`
+}`,
     },
     ggrequestz_role: {
       description: "GGRequestz role mapping based on user groups",
@@ -72,10 +72,10 @@ else:
           {
             scopeName: "email-verified",
             description: emailScope.description,
-            name: "OAuth Mapping: OpenID 'email'",
+            name: "OAuth Mapping: OpenID 'email' (verified)",
             expression: `return {
     "email": request.user.email,
-    "email_verified": True
+    "email_verified": True,
 }`,
           },
           {
@@ -99,7 +99,7 @@ else:
           description: scopeDef.description,
           expression: scopeDef.expression,
         },
-        { parent: this }
+        { parent: this },
       );
       this.scopeMappings.set(scopeName, mapping);
     }
