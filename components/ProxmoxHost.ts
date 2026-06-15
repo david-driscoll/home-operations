@@ -222,6 +222,7 @@ loki.source.journal "default" {
     cluster     = "${cluster.key}",
     environment = "homelab",
     region      = "${cluster.location ?? "unknown"}",
+    machine_type = "proxmox",
     hostname    = "${name}",
     job         = "proxmox/journal",
   }

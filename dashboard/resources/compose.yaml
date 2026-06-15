@@ -73,6 +73,7 @@ services:
     environment:
       - AUTHENTIK_URL
       - AUTHENTIK_API_TOKEN
+      - THANOS_URL
       - ASPNETCORE_HTTP_PORTS=8090
       - NUGET_PACKAGES=/tmp/nuget
       - DOTNET_ENVIRONMENT=Development
