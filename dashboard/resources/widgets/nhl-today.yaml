@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/not-first/glance-schema/master/schema.json#/properties/widget
 - type: custom-api
   title: NHL Today
-  cache: 5m
+  update-interval: 5m
   url: https://api-web.nhle.com/v1/score/now
   template: |
     {{ $myTeam := "ALL" }}

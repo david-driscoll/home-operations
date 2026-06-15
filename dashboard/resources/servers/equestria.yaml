@@ -6,7 +6,7 @@
     - type: extension
       url: ${GLANCE_K8S_EQUESTRIA_URL}/extension/nodes
       allow-potentially-dangerous-html: true
-      cache: 30s
+      update-interval: 30s
       title: Equestria Nodes
       title-url: ${HEADLAMP_EQUESTRIA_URL}
       parameters:
@@ -14,7 +14,7 @@
     - type: custom-api
       title: Cluster Resources
       url: ${THANOS_URL}/api/v1/query
-      cache: 2m
+      update-interval: 2m
       parameters:
         query: 'round(100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle",cluster="equestria"}[5m]))), 0.1)'
       subrequests:
@@ -38,7 +38,7 @@
         - type: custom-api
           title: Cluster Applications
           url: ${AUTHENTIK_URL}/api/v3/core/applications/?group=System:+Equestria&page_size=100&superuser_full_list=true
-          cache: 1h
+          update-interval: 1h
           headers:
             Authorization: Bearer ${AUTHENTIK_API_TOKEN}
             Accept: application/json
@@ -70,7 +70,7 @@
         - type: custom-api
           title: Active Alerts
           url: ${THANOS_URL}/api/v1/query
-          cache: 1m
+          update-interval: 1m
           parameters:
             query: 'ALERTS{alertstate="firing",severity!="info",alertname!="Watchdog",severity!="info",alertname!="Watchdog",cluster="equestria"}'
           template: |
@@ -96,7 +96,7 @@
         - type: extension
           url: ${GLANCE_K8S_EQUESTRIA_URL}/extension/apps
           allow-potentially-dangerous-html: true
-          cache: 1m
+          update-interval: 1m
           title: Equestria Apps
           parameters:
             show-if: glance.hide != "true"

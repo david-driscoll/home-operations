@@ -7,25 +7,25 @@
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
-  cache: 10m
+  update-interval: 10m
 - type: repository
   repository: david-driscoll/vault
   token: ${GITHUB_TOKEN}
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
-  cache: 10m
+  update-interval: 10m
 - type: repository
   repository: david-driscoll/stargate-command-cluster
   token: ${GITHUB_TOKEN}
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
-  cache: 10m
+  update-interval: 10m
 - type: repository
   repository: david-driscoll/equestria-cluster
   token: ${GITHUB_TOKEN}
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
-  cache: 10m
+  update-interval: 10m

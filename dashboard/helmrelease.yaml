@@ -61,6 +61,29 @@ spec:
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
 
+          extensions:
+            image:
+              repository: mcr.microsoft.com/dotnet/sdk
+              tag: "10.0"
+            command: ["dotnet", "run", "Extensions.cs"]
+            workingDir: /app
+            env:
+              ASPNETCORE_HTTP_PORTS: "8090"
+              NUGET_PACKAGES: "/tmp/nuget"
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 512Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
@@ -97,6 +120,16 @@ spec:
         globalMounts:
           - path: /app/config/servers/
             readOnly: true
+      extensions-file:
+        type: configMap
+        name: ${APP}-extensions
+        defaultMode: 444
+        advancedMounts:
+          dynacat:
+            extensions:
+              - path: /app/Extensions.cs
+                subPath: Extensions.cs
+                readOnly: true
 
     service:
       app:
@@ -105,6 +138,8 @@ spec:
         ports:
           http:
             port: &port 8080
+          extensions:
+            port: 8090
 
     route:
       internal:

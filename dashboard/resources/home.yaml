@@ -11,7 +11,7 @@
         # - type: rss
         #   limit: 10
         #   collapse-after: 3
-        #   cache: 3h
+        #   update-interval: 3h
         #   feeds:
         #     - url: https://ciechanow.ski/atom.xml
         #     - url: https://www.joshwcomeau.com/rss.xml
@@ -27,7 +27,7 @@
         - $include: ./widgets/media-playing.yaml
         - type: custom-api
           title: Immich stats
-          cache: 10s
+          update-interval: 10s
           url: ${IMMICH_URL}/api/server/statistics
           headers:
             x-api-key: ${IMMICH_API_KEY}
@@ -53,7 +53,7 @@
         # Epic Games Free Games
         - type: custom-api
           title: Epic Games Free
-          cache: 1h
+          update-interval: 1h
           url: https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en&country=US&allowCountries=US
           template: |
             <div>
@@ -116,7 +116,7 @@
         # XKCD
         - type: custom-api
           title: XKCD
-          cache: 2m
+          update-interval: 2m
           url: https://xkcd.com/info.0.json
           template: |
             <div style="text-align: center;">

@@ -5,7 +5,7 @@
   head-widgets:
     - type: custom-api
       title: Prowlarr Indexers
-      cache: 1m
+      update-interval: 1m
       options:
         url: https://prowlarr.${ROOT_DOMAIN}
         base-url: https://prowlarr.${ROOT_DOMAIN}
@@ -96,7 +96,7 @@
         {{ end }}
     - type: custom-api
       title: SABnzbd
-      cache: 1m
+      update-interval: 1m
       url: ${SABNZBD_URL}/api?output=json&apikey=${SABNZBD_API_KEY}&mode=queue
       headers:
         Accept: application/json
@@ -125,7 +125,7 @@
         </div>
     - type: custom-api
       title: qBittorrent
-      cache: 10s
+      update-interval: 10s
       options:
         view: "detailed"   # "basic" or "detailed"
         mode: "default"    # "default" or "upload"
@@ -322,7 +322,7 @@
       - type: custom-api
         title: Upcoming Movie
         title-url: https://radarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: radarr          # sonarr, radarr, or lidarr
           type: upcoming           # upcoming, recent, or missing
@@ -772,7 +772,7 @@
       - type: custom-api
         title: Upcoming TV
         title-url: https://sonarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: sonarr          # sonarr, radarr, or lidarr
           type: upcoming           # upcoming, recent, or missing
@@ -789,7 +789,7 @@
       - type: custom-api
         title: Upcoming Music
         title-url: https://lidarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: lidarr          # sonarr, radarr, or lidarr
           type: upcoming           # upcoming, recent, or missing
@@ -803,14 +803,14 @@
           api-base-url: https://lidarr.${ROOT_DOMAIN}
           url: https://lidarr.${ROOT_DOMAIN}
         template: *template
-      
+
 
     - size: full
       widgets:
       - type: custom-api
         title: Movie Releases
         title-url: https://radarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: radarr          # sonarr, radarr, or lidarr
           type: recent           # upcoming, recent, or missing
@@ -827,7 +827,7 @@
       - type: custom-api
         title: TV Releases
         title-url: https://sonarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: sonarr          # sonarr, radarr, or lidarr
           type: recent           # upcoming, recent, or missing
@@ -844,7 +844,7 @@
       - type: custom-api
         title: Music Releases
         title-url: https://lidarr.${ROOT_DOMAIN}
-        cache: 5m
+        update-interval: 5m
         options:
           service: lidarr          # sonarr, radarr, or lidarr
           type: recent           # upcoming, recent, or missing

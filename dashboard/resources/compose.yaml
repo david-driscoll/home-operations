@@ -1,0 +1,92 @@
+services:
+  dynacat:
+    image: ghcr.io/panonim/dynacat:2.3.1
+    develop:
+      watch:
+        - action: restart
+          path: Extensions.cs
+    environment:
+      - ROOT_DOMAIN
+      - AUTHENTIK_API_TOKEN
+      - CF_ACCOUNTID
+      - CF_USERNAME
+      - CF_CREDENTIAL
+      - EQUESTRIA_TUNNEL_USERNAME
+      - EQUESTRIA_TUNNEL_CREDENTIAL
+      - SGC_TUNNEL_USERNAME
+      - SGC_TUNNEL_CREDENTIAL
+      - PROWLARR_APIKEY
+      - UNIFI_API_KEY
+      - RADARR_API_KEY
+      - RADARR_URL
+      - LIDARR_API_KEY
+      - LIDARR_URL
+      - GITHUB_TOKEN
+      - GRAFANA_TOKEN
+      - SONARR_API_KEY
+      - TAUTULLI_API_KEY
+      - SABNZBD_API_KEY
+      - JELLYFIN_API_KEY
+      - PLEX_API_KEY
+      - JELLYFIN_USER_ID
+      - IMMICH_API_KEY
+      - IMMICH_URL
+      - PROWLARR_URL
+      - UNIFI_URL
+      - SABNZBD_URL
+      - QBITTORRENT_URL
+      - SONARR_URL
+      - TAUTULLI_URL
+      - JELLYFIN_URL
+      - PLEX_URL
+      - ROMM_URL
+      - DISCORD_URL
+      - GRAFANA_URL
+      - AUTHENTIK_URL
+      - UPTIME_URL
+      - GLANCE_K8S_SGC_URL
+      - GLANCE_K8S_EQUESTRIA_URL
+      - HEADLAMP_SGC_URL
+      - HEADLAMP_EQUESTRIA_URL
+      - BACKREST_LUNA_URL
+      - BACKREST_CELESTIA_URL
+      - DISPATCHARR_URL
+      - DISPATCHARR_USERNAME
+      - DISPATCHARR_PASSWORD
+      - DYNACAT_SECRET_KEY
+      - DYNACAT_OIDC_CLIENT_ID
+      - DYNACAT_OIDC_CLIENT_SECRET
+      - DYNACAT_OIDC_ISSUER_URL
+      - DYNACAT_OIDC_REDIRECT_URL
+      - THANOS_URL
+      - ALERTMANAGER_URL
+      - EXTENSIONS_URL
+    ports:
+      - "8080:8080"
+    networks:
+      - dashboard
+    volumes:
+      - .:/app/config/
+
+  extensions:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    develop:
+      watch:
+        - action: restart
+          path: Extensions.cs
+    environment:
+      - AUTHENTIK_URL
+      - AUTHENTIK_API_TOKEN
+      - ASPNETCORE_HTTP_PORTS=8090
+      - NUGET_PACKAGES=/tmp/nuget
+    command: ["dotnet", "run", "Extensions.cs"]
+    working_dir: /app
+    volumes:
+      - ./Extensions.cs:/app/Extensions.cs:ro
+    ports:
+      - "8090:8090"
+    networks:
+      - dashboard
+
+networks:
+  dashboard:

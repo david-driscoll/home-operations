@@ -31,6 +31,14 @@ configMapGenerator:
     annotations:
       kustomize.toolkit.fluxcd.io/substitute: disabled
 
+- name: dynacat-extensions
+  files:
+    - ./resources/Extensions.cs
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      kustomize.toolkit.fluxcd.io/substitute: disabled
+
 - name: dynacat-servers
   files:
     - ./resources/servers/alpha-site.yaml
