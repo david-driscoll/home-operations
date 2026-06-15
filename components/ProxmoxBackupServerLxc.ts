@@ -242,7 +242,7 @@ echo "PBS post-install complete"`;
               name: interpolate`${c.title} PBS`,
               // slug: this.lxcName,
               icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
-              category: c.title,
+              category: 'Infrastructure',
               url: interpolate`https://pbs.${c.rootDomain}`,
               authentik: {
                 oauth2: {

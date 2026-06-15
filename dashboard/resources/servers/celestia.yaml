@@ -5,39 +5,9 @@
 
   columns:
 
+
     - size: small
       widgets:
-        - type: custom-api
-          title: Cluster Applications
-          url: ${AUTHENTIK_URL}/api/v3/core/applications/?group=System:+Celestia&page_size=100&superuser_full_list=true
-          update-interval: 1h
-          headers:
-            Authorization: Bearer ${AUTHENTIK_API_TOKEN}
-            Accept: application/json
-          subrequests:
-            apps:
-              url: ${AUTHENTIK_URL}/api/v3/core/applications/?group=Celestia&page_size=100&superuser_full_list=true
-              headers:
-                Authorization: Bearer ${AUTHENTIK_API_TOKEN}
-                Accept: application/json
-          template: |
-            <style>
-              .app-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,0.05);border-radius:8px;text-decoration:none;color:var(--color-primary);transition:background 120ms ease-in-out;}
-              .app-item:hover{background:rgba(0,0,0,0.08);}
-              .app-icon{width:24px;height:24px;object-fit:contain;}
-              .app-name{font-size:0.95rem;font-weight:600;}
-              .app-description{display:block;font-size:0.8rem;color:var(--color-subdue);}
-              .app-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:0;padding:0;list-style:none;}
-              .app-grid-item{margin:0;}
-            </style>
-            <ul class="app-grid">
-            {{ range $.JSON.Array "results" | sortByString "name" "asc" }}
-              {{ $url := .String "meta_launch_url" }}
-              {{ if ne $url "" }}
-                <li class="app-grid-item"><a href="{{ $url }}" target="_blank" class="app-item" title="{{ .String "meta_description"}}"><span><span class="app-name">{{ .String "name" }}</span>{{ if .String "meta_icon" }}<img src="{{ .String "meta_icon"}}" class="app-icon">{{ end }}</span></a></li>
-              {{ end }}
-            {{ end }}
-            </ul>
 
         - type: custom-api
           title: Active Alerts
@@ -82,4 +52,8 @@
             </div>
 
     - size: full
-      widgets: []
+      widgets:
+        - type: extension
+          url: ${EXTENSIONS_URL}/cluster/applications/celestia
+          allow-potentially-dangerous-html: true
+          hide-header: true

@@ -70,6 +70,7 @@ spec:
             env:
               ASPNETCORE_HTTP_PORTS: "8090"
               NUGET_PACKAGES: "/tmp/nuget"
+              DOTNET_ENVIRONMENT: "Production"
             envFrom:
               - secretRef:
                   name: ${APP}-env

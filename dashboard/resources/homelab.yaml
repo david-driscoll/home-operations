@@ -98,10 +98,7 @@
         - type: extension
           url: ${EXTENSIONS_URL}/applications
           allow-potentially-dangerous-html: true
-          update-interval: 1h
-          title: Applications
-          # hide-header: true
-          # frameless: true
+          hide-header: true
 
 
 

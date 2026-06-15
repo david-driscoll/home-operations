@@ -12,34 +12,87 @@ var authentikUrl = Environment.GetEnvironmentVariable("AUTHENTIK_URL");
 var bearerToken = Environment.GetEnvironmentVariable("AUTHENTIK_API_TOKEN");
 
 var builder = WebApplication.CreateSlimBuilder(args);
+builder.Services.AddOutputCache(o =>
+{
+    o.AddBasePolicy(p =>
+    {
+        if (builder.Environment.IsProduction())
+        {
+            p.Cache();
+            p.Expire(TimeSpan.FromHours(1));
+        }
+        else
+        {
+            p.NoCache();
+        }
+    });
+});
 var app = builder.Build();
+app.UseOutputCache();
+
+var applications = Observable.Create<IEnumerable<AuthentikApplication>>(observer =>
+{
+    return Observable.Timer(app.Environment.IsProduction() ? TimeSpan.Zero : TimeSpan.FromSeconds(10), app.Environment.IsProduction() ? TimeSpan.FromHours(1) : TimeSpan.FromSeconds(10))
+    .StartWith(0)
+        .Select(_ => Observable.FromAsync(async () =>
+         await $"{authentikUrl}/api/v3/core/applications/?only_with_launch_url=true&page_size=100&superuser_full_list=true"
+            .WithOAuthBearerToken(bearerToken)
+            .GetJsonAsync<AuthentikApplicationResponse>())
+            .Expand(resp => resp.Pagination.Current < resp.Pagination.TotalPages
+                ? Observable.FromAsync(async () =>
+                    await $"{authentikUrl}/api/v3/core/applications/?only_with_launch_url=true&page_size=100&superuser_full_list=true&page={resp.Pagination.Current + 1}"
+                        .WithOAuthBearerToken(bearerToken)
+                        .GetJsonAsync<AuthentikApplicationResponse>())
+                : Observable.Empty<AuthentikApplicationResponse>())
+                .SelectMany(z => z.Results)
+                .ToArray())
+                .Switch()
+                .Subscribe(observer);
+})
+;
 app.MapGet("/applications", async (HttpContext context) =>
 {
-    var applications = await Observable.FromAsync(async () =>
-     await $"{authentikUrl}/api/v3/core/applications/?only_with_launch_url=true&page_size=100&superuser_full_list=true"
-        .WithOAuthBearerToken(bearerToken)
-        .GetJsonAsync<AuthentikApplicationResponse>())
-        .Expand(resp => resp.Pagination.Current < resp.Pagination.TotalPages
-            ? Observable.FromAsync(async () =>
-                await $"{authentikUrl}/api/v3/core/applications/?only_with_launch_url=true&page_size=100&superuser_full_list=true&page={resp.Pagination.Current + 1}"
-                    .WithOAuthBearerToken(bearerToken)
-                    .GetJsonAsync<AuthentikApplicationResponse>())
-            : Observable.Empty<AuthentikApplicationResponse>())
-            .SelectMany(z => z.Results)
-            .ToArray();
+    var apps = await applications.FirstAsync();
+    return RenderWidget("Applications", apps
+    .Where(z => !z.Group.StartsWith("System:"))
+    .OrderBy(app => app.Group), context.Response, app.Environment.IsProduction());
+
+}).CacheOutput();
+app.MapGet("/cluster/applications/{cluster}", async (HttpContext context, string cluster, ILoggerFactory factory) =>
+{
+    var logger = factory.CreateLogger("Extensions");
+    var apps = await applications.FirstAsync();
+    var clusterName = cluster.Replace("-", " ");
+    logger.LogInformation("Rendering widget for cluster {ClusterName} with {AppCount} applications", clusterName, apps.Count(z => z.MetaPublisher.Equals(clusterName, StringComparison.OrdinalIgnoreCase)));
+    var clusterApps = apps
+    .Where(z => z.MetaPublisher.Equals(clusterName, StringComparison.OrdinalIgnoreCase))
+    .OrderBy(app => app.Group.StartsWith("System:") ? 1 : 0)
+    .Select(z => z with { Group = z.Group.StartsWith("System:") ? "System" : z.Group })
+    .OrderBy(app => app.Group)
+    .ToArray();
+    var clusterTitle = clusterApps.First().MetaPublisher;
+    return RenderWidget(clusterTitle, clusterApps, context.Response, app.Environment.IsProduction());
+
+}).CacheOutput();
+
+app.Run();
+
+static IResult RenderWidget(string title, IEnumerable<AuthentikApplication> apps, HttpResponse response, bool isProduction)
+{
     var sb = new StringBuilder();
-    sb.Append(RenderGroup(applications));
+    sb.Append(RenderGroup(apps));
 
-    context.Response.Headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
+    response.Headers.Append("widget-content-frameless", "true");
+    response.Headers.Append("widget-content-type", "html");
+    response.Headers.Append("widget-title", title);
+    if (isProduction)
     {
-        Public = true,
-        MaxAge = TimeSpan.FromHours(1)
-    }.ToString();
-
-
-    context.Response.Headers.Append("widget-content-frameless", "false");
-    context.Response.Headers.Append("widget-content-type", "html");
-    context.Response.Headers.Append("widget-title", "Kubernetes Nodes");
+        response.Headers.Append("widget-update-interval", "1h");
+    }
+    else
+    {
+        response.Headers.Append("widget-update-interval", "10s");
+    }
 
     return Results.Content(
     $$$"""
@@ -77,13 +130,11 @@ app.MapGet("/applications", async (HttpContext context) =>
     </style>
     {{{sb}}}
     """
-    , "text/html");
+    , "text/html"
+    );
+}
 
-});
-
-app.Run();
-
-static string RenderGroup(AuthentikApplication[] applications)
+static string RenderGroup(IEnumerable<AuthentikApplication> applications)
 {
     var sb = new StringBuilder();
     foreach (var group in applications
@@ -97,7 +148,7 @@ static string RenderGroup(AuthentikApplication[] applications)
         <div class="widget-content">
         <ul class="app-grid">
         """);
-        foreach (var app in group.Applications)
+        foreach (var app in group.Applications.OrderBy(app => app.Name))
         {
             sb.Append(RenderApplication(app));
         }
@@ -123,7 +174,7 @@ static string RenderApplication(AuthentikApplication app)
             """;
 }
 
-public partial class AuthentikApplicationResponse
+public partial record AuthentikApplicationResponse
 {
     [JsonPropertyName("pagination")]
     public Pagination Pagination { get; set; }
@@ -133,7 +184,7 @@ public partial class AuthentikApplicationResponse
 }
 
 
-public partial class Pagination
+public partial record Pagination
 {
     [JsonPropertyName("next")]
     public long? Next { get; set; }
@@ -157,7 +208,7 @@ public partial class Pagination
     public long? EndIndex { get; set; }
 }
 
-public partial class AuthentikApplication
+public partial record AuthentikApplication
 {
     [JsonPropertyName("pk")]
     public Guid Pk { get; set; }
@@ -214,7 +265,7 @@ public partial class AuthentikApplication
     public bool MetaHide { get; set; }
 }
 
-public partial class Obj
+public partial record Obj
 {
     [JsonPropertyName("pk")]
     public long? Pk { get; set; }
@@ -259,7 +310,7 @@ public partial class Obj
     public string MetaModelName { get; set; }
 }
 
-public partial class MetaIconThemedUrls
+public partial record MetaIconThemedUrls
 {
     [JsonPropertyName("light")]
     public string Light { get; set; }

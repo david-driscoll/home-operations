@@ -323,7 +323,7 @@ prometheus.remote_write "thanos" {
           metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
           spec: {
             name: interpolate`${this.title} Proxmox VE`,
-            category: clusterDefinition.title,
+            category: "Infrastructure",
             description: interpolate`Proxmox Virtual Environment for ${clusterDefinition.title}`,
             url: interpolate`https://${this.tailscaleHostname}:8006/`,
             icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",

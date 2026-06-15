@@ -1,10 +1,6 @@
 services:
   dynacat:
     image: ghcr.io/panonim/dynacat:2.3.1
-    develop:
-      watch:
-        - action: restart
-          path: Extensions.cs
     environment:
       - ROOT_DOMAIN
       - AUTHENTIK_API_TOKEN
@@ -79,6 +75,7 @@ services:
       - AUTHENTIK_API_TOKEN
       - ASPNETCORE_HTTP_PORTS=8090
       - NUGET_PACKAGES=/tmp/nuget
+      - DOTNET_ENVIRONMENT=Development
     command: ["dotnet", "run", "Extensions.cs"]
     working_dir: /app
     volumes:
