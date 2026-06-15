@@ -262,7 +262,7 @@ static string RenderServer(string? title, IDictionary<string, double?> results, 
     results.TryGetValue("memory-usage", out var memUsage);
     results.TryGetValue("memory-max", out var memMax);
 
-    var titleTemplate = title != null ? """
+    var titleTemplate = title != null ? $$$"""
             <div class="server-details">
                 <div class="server-name color-highlight size-h3">{{{title}}}</div>
             </div>
