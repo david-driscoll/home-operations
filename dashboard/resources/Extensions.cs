@@ -156,7 +156,7 @@ app.MapGet("/cluster/resources/{cluster}", async (HttpContext context, string cl
     foreach (var item in r)
     {
         if (!item.Key.Equals(clusterName, StringComparison.OrdinalIgnoreCase)) continue;
-        sb.AppendLine(RenderServer(item.Key, item.Value.Values, context.Response, app.Environment.IsProduction()));
+        sb.AppendLine(RenderServer(null, item.Value.Values, context.Response, app.Environment.IsProduction()));
     }
     RenderWidgetHeaders(context.Response, "Cluster Resources", app.Environment.IsProduction());
 
