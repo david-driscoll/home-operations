@@ -12,6 +12,7 @@ import * as yaml from "yaml";
 import { kebabCase } from "moderndash";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
+import { createWarpgateTargets } from "./warpgate.ts";
 
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
@@ -173,6 +174,10 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       return backupPlanOrchestrator.savePlan(`${clusterDefinition.title} Backup Plan`);
     }),
   );
+
+  if (clusterDefinition.key === "equestria") {
+    await createWarpgateTargets(globals, provider);
+  }
 
   return {};
 }
