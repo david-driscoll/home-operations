@@ -175,9 +175,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     }),
   );
 
-  if (clusterDefinition.key === "equestria") {
-    await createWarpgateTargets(globals, provider);
-  }
+  // if (clusterDefinition.key === "equestria") {
+  //   await createWarpgateTargets(globals, provider);
+  // }
 
   return {};
 }
