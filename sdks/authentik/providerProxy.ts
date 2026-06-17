@@ -170,43 +170,43 @@ export interface ProviderProxyState {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=10`.
      */
-    accessTokenValidity?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
-    authorizationFlow?: pulumi.Input<string>;
+    accessTokenValidity?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    authorizationFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    basicAuthEnabled?: pulumi.Input<boolean>;
-    basicAuthPasswordAttribute?: pulumi.Input<string>;
-    basicAuthUsernameAttribute?: pulumi.Input<string>;
+    basicAuthEnabled?: pulumi.Input<boolean | undefined>;
+    basicAuthPasswordAttribute?: pulumi.Input<string | undefined>;
+    basicAuthUsernameAttribute?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    clientId?: pulumi.Input<string>;
-    cookieDomain?: pulumi.Input<string>;
-    externalHost?: pulumi.Input<string>;
+    clientId?: pulumi.Input<string | undefined>;
+    cookieDomain?: pulumi.Input<string | undefined>;
+    externalHost?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    interceptHeaderAuth?: pulumi.Input<boolean>;
-    internalHost?: pulumi.Input<string>;
+    interceptHeaderAuth?: pulumi.Input<boolean | undefined>;
+    internalHost?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    internalHostSslValidation?: pulumi.Input<boolean>;
-    invalidationFlow?: pulumi.Input<string>;
+    internalHostSslValidation?: pulumi.Input<boolean | undefined>;
+    invalidationFlow?: pulumi.Input<string | undefined>;
     /**
      * Deprecated. Use `jwt_federation_sources` instead.
      */
-    jwksSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
-    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `proxy`
@@ -214,15 +214,15 @@ export interface ProviderProxyState {
      *   - `forward_domain`
      *  Defaults to `proxy`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerProxyId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerProxyId?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    refreshTokenValidity?: pulumi.Input<string>;
-    skipPathRegex?: pulumi.Input<string>;
+    refreshTokenValidity?: pulumi.Input<string | undefined>;
+    skipPathRegex?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -232,39 +232,39 @@ export interface ProviderProxyArgs {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=10`.
      */
-    accessTokenValidity?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
+    accessTokenValidity?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     authorizationFlow: pulumi.Input<string>;
     /**
      * Defaults to `false`.
      */
-    basicAuthEnabled?: pulumi.Input<boolean>;
-    basicAuthPasswordAttribute?: pulumi.Input<string>;
-    basicAuthUsernameAttribute?: pulumi.Input<string>;
-    cookieDomain?: pulumi.Input<string>;
+    basicAuthEnabled?: pulumi.Input<boolean | undefined>;
+    basicAuthPasswordAttribute?: pulumi.Input<string | undefined>;
+    basicAuthUsernameAttribute?: pulumi.Input<string | undefined>;
+    cookieDomain?: pulumi.Input<string | undefined>;
     externalHost: pulumi.Input<string>;
     /**
      * Defaults to `true`.
      */
-    interceptHeaderAuth?: pulumi.Input<boolean>;
-    internalHost?: pulumi.Input<string>;
+    interceptHeaderAuth?: pulumi.Input<boolean | undefined>;
+    internalHost?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    internalHostSslValidation?: pulumi.Input<boolean>;
+    internalHostSslValidation?: pulumi.Input<boolean | undefined>;
     invalidationFlow: pulumi.Input<string>;
     /**
      * Deprecated. Use `jwt_federation_sources` instead.
      */
-    jwksSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
-    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `proxy`
@@ -272,13 +272,13 @@ export interface ProviderProxyArgs {
      *   - `forward_domain`
      *  Defaults to `proxy`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerProxyId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerProxyId?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    refreshTokenValidity?: pulumi.Input<string>;
-    skipPathRegex?: pulumi.Input<string>;
+    refreshTokenValidity?: pulumi.Input<string | undefined>;
+    skipPathRegex?: pulumi.Input<string | undefined>;
 }

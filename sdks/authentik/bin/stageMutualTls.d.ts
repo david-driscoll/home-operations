@@ -60,24 +60,24 @@ export interface StageMutualTlsState {
      *   - `email`
      *  Defaults to `email`.
      */
-    certAttribute?: pulumi.Input<string>;
-    certificateAuthorities?: pulumi.Input<pulumi.Input<string>[]>;
+    certAttribute?: pulumi.Input<string | undefined>;
+    certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `optional`
      *   - `required`
      *  Defaults to `optional`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageMutualTlsId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageMutualTlsId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `username`
      *   - `email`
      *  Defaults to `email`.
      */
-    userAttribute?: pulumi.Input<string>;
+    userAttribute?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a StageMutualTls resource.
@@ -90,23 +90,23 @@ export interface StageMutualTlsArgs {
      *   - `email`
      *  Defaults to `email`.
      */
-    certAttribute?: pulumi.Input<string>;
-    certificateAuthorities?: pulumi.Input<pulumi.Input<string>[]>;
+    certAttribute?: pulumi.Input<string | undefined>;
+    certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `optional`
      *   - `required`
      *  Defaults to `optional`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageMutualTlsId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageMutualTlsId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `username`
      *   - `email`
      *  Defaults to `email`.
      */
-    userAttribute?: pulumi.Input<string>;
+    userAttribute?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=stageMutualTls.d.ts.map

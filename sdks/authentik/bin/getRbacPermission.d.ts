@@ -22,6 +22,6 @@ export declare function getRbacPermissionOutput(args: GetRbacPermissionOutputArg
  */
 export interface GetRbacPermissionOutputArgs {
     codename: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getRbacPermission.d.ts.map

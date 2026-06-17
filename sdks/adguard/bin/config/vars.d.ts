@@ -22,3 +22,4 @@ export declare const timeout: number | undefined;
  * The username of the AdGuard Home instance
  */
 export declare const username: string | undefined;
+//# sourceMappingURL=vars.d.ts.map

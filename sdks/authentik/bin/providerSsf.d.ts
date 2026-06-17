@@ -25,6 +25,10 @@ export declare class ProviderSsf extends pulumi.CustomResource {
     readonly jwtFederationProviders: pulumi.Output<number[] | undefined>;
     readonly name: pulumi.Output<string>;
     readonly providerSsfId: pulumi.Output<string>;
+    /**
+     * Defaults to `true`.
+     */
+    readonly pushVerifyCertificates: pulumi.Output<boolean | undefined>;
     readonly signingKey: pulumi.Output<string | undefined>;
     /**
      * Create a ProviderSsf resource with the given unique name, arguments, and options.
@@ -42,14 +46,18 @@ export interface ProviderSsfState {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    eventRetention?: pulumi.Input<string>;
+    eventRetention?: pulumi.Input<string | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
-    name?: pulumi.Input<string>;
-    providerSsfId?: pulumi.Input<string>;
-    signingKey?: pulumi.Input<string>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerSsfId?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `true`.
+     */
+    pushVerifyCertificates?: pulumi.Input<boolean | undefined>;
+    signingKey?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a ProviderSsf resource.
@@ -58,13 +66,17 @@ export interface ProviderSsfArgs {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    eventRetention?: pulumi.Input<string>;
+    eventRetention?: pulumi.Input<string | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
-    name?: pulumi.Input<string>;
-    providerSsfId?: pulumi.Input<string>;
-    signingKey?: pulumi.Input<string>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerSsfId?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `true`.
+     */
+    pushVerifyCertificates?: pulumi.Input<boolean | undefined>;
+    signingKey?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=providerSsf.d.ts.map

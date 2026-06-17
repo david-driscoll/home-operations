@@ -68,90 +68,90 @@ export declare class PolicyPassword extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PolicyPassword resources.
  */
 export interface PolicyPasswordState {
-    amountDigits?: pulumi.Input<number>;
-    amountLowercase?: pulumi.Input<number>;
-    amountSymbols?: pulumi.Input<number>;
-    amountUppercase?: pulumi.Input<number>;
+    amountDigits?: pulumi.Input<number | undefined>;
+    amountLowercase?: pulumi.Input<number | undefined>;
+    amountSymbols?: pulumi.Input<number | undefined>;
+    amountUppercase?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    checkHaveIBeenPwned?: pulumi.Input<boolean>;
+    checkHaveIBeenPwned?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    checkStaticRules?: pulumi.Input<boolean>;
+    checkStaticRules?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    checkZxcvbn?: pulumi.Input<boolean>;
-    errorMessage?: pulumi.Input<string>;
+    checkZxcvbn?: pulumi.Input<boolean | undefined>;
+    errorMessage?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `1`.
      */
-    hibpAllowedCount?: pulumi.Input<number>;
-    lengthMin?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
+    hibpAllowedCount?: pulumi.Input<number | undefined>;
+    lengthMin?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `password`.
      */
-    passwordField?: pulumi.Input<string>;
-    policyPasswordId?: pulumi.Input<string>;
+    passwordField?: pulumi.Input<string | undefined>;
+    policyPasswordId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~`.
      */
-    symbolCharset?: pulumi.Input<string>;
+    symbolCharset?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `2`.
      */
-    zxcvbnScoreThreshold?: pulumi.Input<number>;
+    zxcvbnScoreThreshold?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a PolicyPassword resource.
  */
 export interface PolicyPasswordArgs {
-    amountDigits?: pulumi.Input<number>;
-    amountLowercase?: pulumi.Input<number>;
-    amountSymbols?: pulumi.Input<number>;
-    amountUppercase?: pulumi.Input<number>;
+    amountDigits?: pulumi.Input<number | undefined>;
+    amountLowercase?: pulumi.Input<number | undefined>;
+    amountSymbols?: pulumi.Input<number | undefined>;
+    amountUppercase?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    checkHaveIBeenPwned?: pulumi.Input<boolean>;
+    checkHaveIBeenPwned?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    checkStaticRules?: pulumi.Input<boolean>;
+    checkStaticRules?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    checkZxcvbn?: pulumi.Input<boolean>;
+    checkZxcvbn?: pulumi.Input<boolean | undefined>;
     errorMessage: pulumi.Input<string>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `1`.
      */
-    hibpAllowedCount?: pulumi.Input<number>;
-    lengthMin?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
+    hibpAllowedCount?: pulumi.Input<number | undefined>;
+    lengthMin?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `password`.
      */
-    passwordField?: pulumi.Input<string>;
-    policyPasswordId?: pulumi.Input<string>;
+    passwordField?: pulumi.Input<string | undefined>;
+    policyPasswordId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `!\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~`.
      */
-    symbolCharset?: pulumi.Input<string>;
+    symbolCharset?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `2`.
      */
-    zxcvbnScoreThreshold?: pulumi.Input<number>;
+    zxcvbnScoreThreshold?: pulumi.Input<number | undefined>;
 }
 //# sourceMappingURL=policyPassword.d.ts.map

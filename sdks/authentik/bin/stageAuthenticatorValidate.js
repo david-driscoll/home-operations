@@ -60,11 +60,16 @@ class StageAuthenticatorValidate extends pulumi.CustomResource {
             const state = argsOrState;
             resourceInputs["configurationStages"] = state?.configurationStages;
             resourceInputs["deviceClasses"] = state?.deviceClasses;
+            resourceInputs["emailOtpThrottlingFactor"] = state?.emailOtpThrottlingFactor;
             resourceInputs["lastAuthThreshold"] = state?.lastAuthThreshold;
             resourceInputs["name"] = state?.name;
             resourceInputs["notConfiguredAction"] = state?.notConfiguredAction;
+            resourceInputs["smsOtpThrottlingFactor"] = state?.smsOtpThrottlingFactor;
             resourceInputs["stageAuthenticatorValidateId"] = state?.stageAuthenticatorValidateId;
+            resourceInputs["staticOtpThrottlingFactor"] = state?.staticOtpThrottlingFactor;
+            resourceInputs["totpOtpThrottlingFactor"] = state?.totpOtpThrottlingFactor;
             resourceInputs["webauthnAllowedDeviceTypes"] = state?.webauthnAllowedDeviceTypes;
+            resourceInputs["webauthnHints"] = state?.webauthnHints;
             resourceInputs["webauthnUserVerification"] = state?.webauthnUserVerification;
         }
         else {
@@ -74,11 +79,16 @@ class StageAuthenticatorValidate extends pulumi.CustomResource {
             }
             resourceInputs["configurationStages"] = args?.configurationStages;
             resourceInputs["deviceClasses"] = args?.deviceClasses;
+            resourceInputs["emailOtpThrottlingFactor"] = args?.emailOtpThrottlingFactor;
             resourceInputs["lastAuthThreshold"] = args?.lastAuthThreshold;
             resourceInputs["name"] = args?.name;
             resourceInputs["notConfiguredAction"] = args?.notConfiguredAction;
+            resourceInputs["smsOtpThrottlingFactor"] = args?.smsOtpThrottlingFactor;
             resourceInputs["stageAuthenticatorValidateId"] = args?.stageAuthenticatorValidateId;
+            resourceInputs["staticOtpThrottlingFactor"] = args?.staticOtpThrottlingFactor;
+            resourceInputs["totpOtpThrottlingFactor"] = args?.totpOtpThrottlingFactor;
             resourceInputs["webauthnAllowedDeviceTypes"] = args?.webauthnAllowedDeviceTypes;
+            resourceInputs["webauthnHints"] = args?.webauthnHints;
             resourceInputs["webauthnUserVerification"] = args?.webauthnUserVerification;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

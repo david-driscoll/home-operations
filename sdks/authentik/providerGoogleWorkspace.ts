@@ -131,34 +131,34 @@ export interface ProviderGoogleWorkspaceState {
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    credentials?: pulumi.Input<string>;
-    defaultGroupEmailDomain?: pulumi.Input<string>;
-    delegatedSubject?: pulumi.Input<string>;
+    credentials?: pulumi.Input<string | undefined>;
+    defaultGroupEmailDomain?: pulumi.Input<string | undefined>;
+    delegatedSubject?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    filterGroup?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    groupDeleteAction?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerGoogleWorkspaceId?: pulumi.Input<string>;
+    groupDeleteAction?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerGoogleWorkspaceId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `do_nothing`
@@ -166,7 +166,7 @@ export interface ProviderGoogleWorkspaceState {
      *   - `suspend`
      *  Defaults to `delete`.
      */
-    userDeleteAction?: pulumi.Input<string>;
+    userDeleteAction?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -176,34 +176,34 @@ export interface ProviderGoogleWorkspaceArgs {
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    credentials?: pulumi.Input<string>;
+    credentials?: pulumi.Input<string | undefined>;
     defaultGroupEmailDomain: pulumi.Input<string>;
-    delegatedSubject?: pulumi.Input<string>;
+    delegatedSubject?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    filterGroup?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    groupDeleteAction?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerGoogleWorkspaceId?: pulumi.Input<string>;
+    groupDeleteAction?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerGoogleWorkspaceId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `do_nothing`
@@ -211,5 +211,5 @@ export interface ProviderGoogleWorkspaceArgs {
      *   - `suspend`
      *  Defaults to `delete`.
      */
-    userDeleteAction?: pulumi.Input<string>;
+    userDeleteAction?: pulumi.Input<string | undefined>;
 }

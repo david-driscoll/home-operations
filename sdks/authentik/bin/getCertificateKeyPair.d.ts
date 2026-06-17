@@ -29,9 +29,9 @@ export declare function getCertificateKeyPairOutput(args: GetCertificateKeyPairO
  * A collection of arguments for invoking getCertificateKeyPair.
  */
 export interface GetCertificateKeyPairOutputArgs {
-    fetchCertificate?: pulumi.Input<boolean>;
-    fetchKey?: pulumi.Input<boolean>;
-    keyData?: pulumi.Input<string>;
+    fetchCertificate?: pulumi.Input<boolean | undefined>;
+    fetchKey?: pulumi.Input<boolean | undefined>;
+    keyData?: pulumi.Input<string | undefined>;
     name: pulumi.Input<string>;
 }
 //# sourceMappingURL=getCertificateKeyPair.d.ts.map

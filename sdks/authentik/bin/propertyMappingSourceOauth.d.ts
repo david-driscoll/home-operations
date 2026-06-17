@@ -31,16 +31,16 @@ export declare class PropertyMappingSourceOauth extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PropertyMappingSourceOauth resources.
  */
 export interface PropertyMappingSourceOauthState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceOauthId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceOauthId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingSourceOauth resource.
  */
 export interface PropertyMappingSourceOauthArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceOauthId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceOauthId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingSourceOauth.d.ts.map

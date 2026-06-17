@@ -84,6 +84,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.endpoints.connectors.google_chrome`
      *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
@@ -93,7 +94,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik.enterprise.providers.ssf`
      *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
-     *   - `authentik.enterprise.search`
+     *   - `authentik.enterprise.stages.account_lockdown`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
      *   - `authentik.enterprise.stages.source`
@@ -212,6 +213,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -223,6 +225,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -230,6 +233,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
     readonly model: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
     readonly policyEventMatcherId: pulumi.Output<string>;
+    readonly query: pulumi.Output<string | undefined>;
     /**
      * Create a PolicyEventMatcher resource with the given unique name, arguments, and options.
      *
@@ -243,7 +247,7 @@ export declare class PolicyEventMatcher extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PolicyEventMatcher resources.
  */
 export interface PolicyEventMatcherState {
-    action?: pulumi.Input<string>;
+    action?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentik.commands`
@@ -312,6 +316,7 @@ export interface PolicyEventMatcherState {
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.endpoints.connectors.google_chrome`
      *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
@@ -321,17 +326,17 @@ export interface PolicyEventMatcherState {
      *   - `authentik.enterprise.providers.ssf`
      *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
-     *   - `authentik.enterprise.search`
+     *   - `authentik.enterprise.stages.account_lockdown`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
      *   - `authentik.enterprise.stages.source`
      */
-    app?: pulumi.Input<string>;
-    clientIp?: pulumi.Input<string>;
+    app?: pulumi.Input<string | undefined>;
+    clientIp?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -440,6 +445,7 @@ export interface PolicyEventMatcherState {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -451,19 +457,21 @@ export interface PolicyEventMatcherState {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
      */
-    model?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    policyEventMatcherId?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyEventMatcherId?: pulumi.Input<string | undefined>;
+    query?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PolicyEventMatcher resource.
  */
 export interface PolicyEventMatcherArgs {
-    action?: pulumi.Input<string>;
+    action?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentik.commands`
@@ -532,6 +540,7 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik.enterprise.audit`
      *   - `authentik.enterprise.endpoints.connectors.agent`
      *   - `authentik.enterprise.endpoints.connectors.fleet`
+     *   - `authentik.enterprise.endpoints.connectors.google_chrome`
      *   - `authentik.enterprise.lifecycle`
      *   - `authentik.enterprise.policies.unique_password`
      *   - `authentik.enterprise.providers.google_workspace`
@@ -541,17 +550,17 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik.enterprise.providers.ssf`
      *   - `authentik.enterprise.providers.ws_federation`
      *   - `authentik.enterprise.reports`
-     *   - `authentik.enterprise.search`
+     *   - `authentik.enterprise.stages.account_lockdown`
      *   - `authentik.enterprise.stages.authenticator_endpoint_gdtc`
      *   - `authentik.enterprise.stages.mtls`
      *   - `authentik.enterprise.stages.source`
      */
-    app?: pulumi.Input<string>;
-    clientIp?: pulumi.Input<string>;
+    app?: pulumi.Input<string | undefined>;
+    clientIp?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -660,6 +669,7 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -671,12 +681,14 @@ export interface PolicyEventMatcherArgs {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
      */
-    model?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    policyEventMatcherId?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyEventMatcherId?: pulumi.Input<string | undefined>;
+    query?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=policyEventMatcher.d.ts.map

@@ -14,6 +14,7 @@ export function getClientList(args?: GetClientListArgs, opts?: pulumi.InvokeOpti
         "group": args.group,
         "oui": args.oui,
         "site": args.site,
+        "timeouts": args.timeouts,
         "wired": args.wired,
     }, opts, utilities.getPackage());
 }
@@ -26,6 +27,7 @@ export interface GetClientListArgs {
     group?: string;
     oui?: string;
     site?: string;
+    timeouts?: inputs.GetClientListTimeouts;
     wired?: boolean;
 }
 
@@ -42,6 +44,7 @@ export interface GetClientListResult {
     readonly id: string;
     readonly oui?: string;
     readonly site: string;
+    readonly timeouts?: outputs.GetClientListTimeouts;
     readonly wired?: boolean;
 }
 export function getClientListOutput(args?: GetClientListOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientListResult> {
@@ -52,6 +55,7 @@ export function getClientListOutput(args?: GetClientListOutputArgs, opts?: pulum
         "group": args.group,
         "oui": args.oui,
         "site": args.site,
+        "timeouts": args.timeouts,
         "wired": args.wired,
     }, opts, utilities.getPackage());
 }
@@ -60,9 +64,10 @@ export function getClientListOutput(args?: GetClientListOutputArgs, opts?: pulum
  * A collection of arguments for invoking getClientList.
  */
 export interface GetClientListOutputArgs {
-    blocked?: pulumi.Input<boolean>;
-    group?: pulumi.Input<string>;
-    oui?: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
-    wired?: pulumi.Input<boolean>;
+    blocked?: pulumi.Input<boolean | undefined>;
+    group?: pulumi.Input<string | undefined>;
+    oui?: pulumi.Input<string | undefined>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetClientListTimeoutsArgs | undefined>;
+    wired?: pulumi.Input<boolean | undefined>;
 }

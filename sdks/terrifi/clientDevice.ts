@@ -136,51 +136,51 @@ export interface ClientDeviceState {
     /**
      * Whether the client device is blocked from network access. Defaults to `false`.
      */
-    blocked?: pulumi.Input<boolean>;
+    blocked?: pulumi.Input<boolean | undefined>;
     /**
      * Set of client group IDs to assign this device to. Use `terrifi.ClientGroup` to manage groups.
      */
-    clientGroupIds?: pulumi.Input<pulumi.Input<string>[]>;
+    clientGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The device type ID (fingerprint override) to set a custom icon for this client device. Use `terrifi list-device-types` to list IDs as CSV, or `terrifi list-device-types --html` to generate a browsable page with icons and fuzzy search.
      */
-    deviceTypeId?: pulumi.Input<number>;
+    deviceTypeId?: pulumi.Input<number | undefined>;
     /**
      * The MAC address of the access point to lock this client to (e.g. `aa:bb:cc:dd:ee:ff`). When set, the client will only connect to this AP.
      */
-    fixedApMac?: pulumi.Input<string>;
+    fixedApMac?: pulumi.Input<string | undefined>;
     /**
      * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
      */
-    fixedIp?: pulumi.Input<string>;
+    fixedIp?: pulumi.Input<string | undefined>;
     /**
      * A local DNS hostname for this client device. Requires `fixed_ip` to also be set (controller requirement).
      */
-    localDnsRecord?: pulumi.Input<string>;
+    localDnsRecord?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the client device (e.g. `aa:bb:cc:dd:ee:ff`).
      */
-    mac?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
     /**
      * The alias/display name for the client device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network ID for fixed IP assignment. Required when `fixed_ip` is set unless `network_override_id` provides the network context.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The network ID for VLAN/network override. When set, the client will be placed on this network regardless of the SSID or port profile it connects to.
      */
-    networkOverrideId?: pulumi.Input<string>;
+    networkOverrideId?: pulumi.Input<string | undefined>;
     /**
      * A free-text note for the client device.
      */
-    note?: pulumi.Input<string>;
+    note?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the client device with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -190,27 +190,27 @@ export interface ClientDeviceArgs {
     /**
      * Whether the client device is blocked from network access. Defaults to `false`.
      */
-    blocked?: pulumi.Input<boolean>;
+    blocked?: pulumi.Input<boolean | undefined>;
     /**
      * Set of client group IDs to assign this device to. Use `terrifi.ClientGroup` to manage groups.
      */
-    clientGroupIds?: pulumi.Input<pulumi.Input<string>[]>;
+    clientGroupIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The device type ID (fingerprint override) to set a custom icon for this client device. Use `terrifi list-device-types` to list IDs as CSV, or `terrifi list-device-types --html` to generate a browsable page with icons and fuzzy search.
      */
-    deviceTypeId?: pulumi.Input<number>;
+    deviceTypeId?: pulumi.Input<number | undefined>;
     /**
      * The MAC address of the access point to lock this client to (e.g. `aa:bb:cc:dd:ee:ff`). When set, the client will only connect to this AP.
      */
-    fixedApMac?: pulumi.Input<string>;
+    fixedApMac?: pulumi.Input<string | undefined>;
     /**
      * A fixed IP address to assign to this client via DHCP reservation. Requires `network_id` or `network_override_id` to also be set.
      */
-    fixedIp?: pulumi.Input<string>;
+    fixedIp?: pulumi.Input<string | undefined>;
     /**
      * A local DNS hostname for this client device. Requires `fixed_ip` to also be set (controller requirement).
      */
-    localDnsRecord?: pulumi.Input<string>;
+    localDnsRecord?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the client device (e.g. `aa:bb:cc:dd:ee:ff`).
      */
@@ -218,21 +218,21 @@ export interface ClientDeviceArgs {
     /**
      * The alias/display name for the client device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network ID for fixed IP assignment. Required when `fixed_ip` is set unless `network_override_id` provides the network context.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The network ID for VLAN/network override. When set, the client will be placed on this network regardless of the SSID or port profile it connects to.
      */
-    networkOverrideId?: pulumi.Input<string>;
+    networkOverrideId?: pulumi.Input<string | undefined>;
     /**
      * A free-text note for the client device.
      */
-    note?: pulumi.Input<string>;
+    note?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the client device with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
 }

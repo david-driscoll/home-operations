@@ -85,19 +85,19 @@ export interface FirewallZoneState {
     /**
      * The name of the firewall zone.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Set of network IDs to associate with this firewall zone.
      */
-    networkIds?: pulumi.Input<pulumi.Input<string>[]>;
+    networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The site to associate the firewall zone with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The zone key assigned by the controller.
      */
-    zoneKey?: pulumi.Input<string>;
+    zoneKey?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -107,13 +107,13 @@ export interface FirewallZoneArgs {
     /**
      * The name of the firewall zone.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Set of network IDs to associate with this firewall zone.
      */
-    networkIds?: pulumi.Input<pulumi.Input<string>[]>;
+    networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The site to associate the firewall zone with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
 }

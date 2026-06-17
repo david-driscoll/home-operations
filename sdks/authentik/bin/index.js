@@ -28,9 +28,9 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUser = exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = exports.getRbacPermissionOutput = exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getOutpostOutput = exports.getOutpost = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.EndpointsDeviceAccessGroup = exports.EndpointsConnectorAgentEnrollmentToken = exports.EndpointsConnectorAgent = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = void 0;
-exports.SourceKerberos = exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderWsFederation = exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.OutpostProviderAttachment = exports.Outpost = exports.Group = exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = void 0;
-exports.types = exports.config = exports.User = exports.Token = exports.TaskSchedule = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEndpoints = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.SourceTelegram = exports.SourceScim = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = exports.SourceLdap = void 0;
+exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = exports.getRbacPermissionOutput = exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getOutpostOutput = exports.getOutpost = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.EndpointsGoogleChromeConnector = exports.EndpointsDeviceAccessGroup = exports.EndpointsConnectorAgentEnrollmentToken = exports.EndpointsConnectorAgent = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = void 0;
+exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderWsFederation = exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.OutpostProviderAttachment = exports.Outpost = exports.Group = exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = exports.getUser = void 0;
+exports.types = exports.config = exports.User = exports.Token = exports.TaskSchedule = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEndpoints = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.StageAccountLockdown = exports.SourceTelegram = exports.SourceScim = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = exports.SourceLdap = exports.SourceKerberos = void 0;
 const pulumi = __importStar(require("@pulumi/pulumi"));
 const utilities = __importStar(require("./utilities"));
 exports.Application = null;
@@ -49,6 +49,8 @@ exports.EndpointsConnectorAgentEnrollmentToken = null;
 utilities.lazyLoad(exports, ["EndpointsConnectorAgentEnrollmentToken"], () => require("./endpointsConnectorAgentEnrollmentToken"));
 exports.EndpointsDeviceAccessGroup = null;
 utilities.lazyLoad(exports, ["EndpointsDeviceAccessGroup"], () => require("./endpointsDeviceAccessGroup"));
+exports.EndpointsGoogleChromeConnector = null;
+utilities.lazyLoad(exports, ["EndpointsGoogleChromeConnector"], () => require("./endpointsGoogleChromeConnector"));
 exports.EnterpriseLicense = null;
 utilities.lazyLoad(exports, ["EnterpriseLicense"], () => require("./enterpriseLicense"));
 exports.EventRule = null;
@@ -226,6 +228,8 @@ exports.SourceScim = null;
 utilities.lazyLoad(exports, ["SourceScim"], () => require("./sourceScim"));
 exports.SourceTelegram = null;
 utilities.lazyLoad(exports, ["SourceTelegram"], () => require("./sourceTelegram"));
+exports.StageAccountLockdown = null;
+utilities.lazyLoad(exports, ["StageAccountLockdown"], () => require("./stageAccountLockdown"));
 exports.StageAuthenticatorDuo = null;
 utilities.lazyLoad(exports, ["StageAuthenticatorDuo"], () => require("./stageAuthenticatorDuo"));
 exports.StageAuthenticatorEmail = null;
@@ -311,6 +315,8 @@ const _module = {
                 return new exports.EndpointsConnectorAgentEnrollmentToken(name, undefined, { urn });
             case "authentik:index/endpointsDeviceAccessGroup:EndpointsDeviceAccessGroup":
                 return new exports.EndpointsDeviceAccessGroup(name, undefined, { urn });
+            case "authentik:index/endpointsGoogleChromeConnector:EndpointsGoogleChromeConnector":
+                return new exports.EndpointsGoogleChromeConnector(name, undefined, { urn });
             case "authentik:index/enterpriseLicense:EnterpriseLicense":
                 return new exports.EnterpriseLicense(name, undefined, { urn });
             case "authentik:index/eventRule:EventRule":
@@ -423,6 +429,8 @@ const _module = {
                 return new exports.SourceScim(name, undefined, { urn });
             case "authentik:index/sourceTelegram:SourceTelegram":
                 return new exports.SourceTelegram(name, undefined, { urn });
+            case "authentik:index/stageAccountLockdown:StageAccountLockdown":
+                return new exports.StageAccountLockdown(name, undefined, { urn });
             case "authentik:index/stageAuthenticatorDuo:StageAuthenticatorDuo":
                 return new exports.StageAuthenticatorDuo(name, undefined, { urn });
             case "authentik:index/stageAuthenticatorEmail:StageAuthenticatorEmail":
@@ -496,6 +504,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/certificateKeyPair", _
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgent", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgentEnrollmentToken", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsDeviceAccessGroup", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/endpointsGoogleChromeConnector", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/enterpriseLicense", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/eventRule", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/eventTransport", _module);
@@ -552,6 +561,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/sourcePlex", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceSaml", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceScim", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceTelegram", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/stageAccountLockdown", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorDuo", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEmail", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEndpointGdtc", _module);

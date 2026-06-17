@@ -32,18 +32,18 @@ export declare class StagePrompt extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StagePrompt resources.
  */
 export interface StagePromptState {
-    fields?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    stagePromptId?: pulumi.Input<string>;
-    validationPolicies?: pulumi.Input<pulumi.Input<string>[]>;
+    fields?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stagePromptId?: pulumi.Input<string | undefined>;
+    validationPolicies?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 /**
  * The set of arguments for constructing a StagePrompt resource.
  */
 export interface StagePromptArgs {
     fields: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    stagePromptId?: pulumi.Input<string>;
-    validationPolicies?: pulumi.Input<pulumi.Input<string>[]>;
+    name?: pulumi.Input<string | undefined>;
+    stagePromptId?: pulumi.Input<string | undefined>;
+    validationPolicies?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 //# sourceMappingURL=stagePrompt.d.ts.map

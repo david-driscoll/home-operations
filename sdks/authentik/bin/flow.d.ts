@@ -23,6 +23,7 @@ export declare class Flow extends pulumi.CustomResource {
      *   - `require_superuser`
      *   - `require_redirect`
      *   - `require_outpost`
+     *   - `require_token`
      *  Defaults to `none`.
      */
     readonly authentication: pulumi.Output<string | undefined>;
@@ -97,21 +98,22 @@ export interface FlowState {
      *   - `require_superuser`
      *   - `require_redirect`
      *   - `require_outpost`
+     *   - `require_token`
      *  Defaults to `none`.
      */
-    authentication?: pulumi.Input<string>;
+    authentication?: pulumi.Input<string | undefined>;
     /**
      * Optional URL to an image which will be used as the background during the flow. Defaults to `/static/dist/assets/images/flow_background.jpg`.
      */
-    background?: pulumi.Input<string>;
+    background?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    compatibilityMode?: pulumi.Input<boolean>;
+    compatibilityMode?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `message_continue`.
      */
-    deniedAction?: pulumi.Input<string>;
+    deniedAction?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentication`
@@ -122,8 +124,8 @@ export interface FlowState {
      *   - `recovery`
      *   - `stage_configuration`
      */
-    designation?: pulumi.Input<string>;
-    flowId?: pulumi.Input<string>;
+    designation?: pulumi.Input<string | undefined>;
+    flowId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `stacked`
@@ -135,21 +137,21 @@ export interface FlowState {
      *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
-    layout?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    layout?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
-    slug?: pulumi.Input<string>;
-    title?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    title?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a Flow resource.
@@ -163,21 +165,22 @@ export interface FlowArgs {
      *   - `require_superuser`
      *   - `require_redirect`
      *   - `require_outpost`
+     *   - `require_token`
      *  Defaults to `none`.
      */
-    authentication?: pulumi.Input<string>;
+    authentication?: pulumi.Input<string | undefined>;
     /**
      * Optional URL to an image which will be used as the background during the flow. Defaults to `/static/dist/assets/images/flow_background.jpg`.
      */
-    background?: pulumi.Input<string>;
+    background?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    compatibilityMode?: pulumi.Input<boolean>;
+    compatibilityMode?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `message_continue`.
      */
-    deniedAction?: pulumi.Input<string>;
+    deniedAction?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentication`
@@ -189,7 +192,7 @@ export interface FlowArgs {
      *   - `stage_configuration`
      */
     designation: pulumi.Input<string>;
-    flowId?: pulumi.Input<string>;
+    flowId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `stacked`
@@ -201,15 +204,15 @@ export interface FlowArgs {
      *   - `sidebar_right_frame_background`
      *  Defaults to `stacked`.
      */
-    layout?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    layout?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     slug: pulumi.Input<string>;
     title: pulumi.Input<string>;
 }

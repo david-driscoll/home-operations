@@ -52,7 +52,7 @@ export function getDeviceOutput(args?: GetDeviceOutputArgs, opts?: pulumi.Invoke
  * A collection of arguments for invoking getDevice.
  */
 export interface GetDeviceOutputArgs {
-    mac?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    site?: pulumi.Input<string | undefined>;
 }

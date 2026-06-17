@@ -95,65 +95,65 @@ export interface ClientState {
     /**
      * Set of blocked services for this client
      */
-    blockedServices?: pulumi.Input<pulumi.Input<string>[]>;
+    blockedServices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Sets periods of inactivity for filtering blocked services. The schedule contains 7 days (Sunday to Saturday) and a time zone.
      */
-    blockedServicesPauseSchedule?: pulumi.Input<inputs.ClientBlockedServicesPauseSchedule>;
+    blockedServicesPauseSchedule?: pulumi.Input<inputs.ClientBlockedServicesPauseSchedule | undefined>;
     /**
      * Whether to have filtering enabled on this client. Defaults to `false`
      */
-    filteringEnabled?: pulumi.Input<boolean>;
+    filteringEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Set of identifiers for this client (IP, CIDR, MAC, or ClientID)
      */
-    ids?: pulumi.Input<pulumi.Input<string>[]>;
+    ids?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether to write to the query log. Defaults to `false`
      */
-    ignoreQuerylog?: pulumi.Input<boolean>;
+    ignoreQuerylog?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to be included in the statistics. Defaults to `false`
      */
-    ignoreStatistics?: pulumi.Input<boolean>;
-    lastUpdated?: pulumi.Input<string>;
+    ignoreStatistics?: pulumi.Input<boolean | undefined>;
+    lastUpdated?: pulumi.Input<string | undefined>;
     /**
      * Name of the client
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Whether to have AdGuard parental controls enabled on this client. Defaults to `false`
      */
-    parentalEnabled?: pulumi.Input<boolean>;
+    parentalEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to have AdGuard browsing security enabled on this client. Defaults to `false`
      */
-    safebrowsingEnabled?: pulumi.Input<boolean>;
-    safesearch?: pulumi.Input<inputs.ClientSafesearch>;
+    safebrowsingEnabled?: pulumi.Input<boolean | undefined>;
+    safesearch?: pulumi.Input<inputs.ClientSafesearch | undefined>;
     /**
      * Set of tags for this client
      */
-    tags?: pulumi.Input<pulumi.Input<string>[]>;
+    tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of upstream DNS server for this client
      */
-    upstreams?: pulumi.Input<pulumi.Input<string>[]>;
+    upstreams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether to enable DNS caching for this client's custom upstream configuration. Defaults to `false`
      */
-    upstreamsCacheEnabled?: pulumi.Input<boolean>;
+    upstreamsCacheEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The upstreams DNS cache size, in bytes
      */
-    upstreamsCacheSize?: pulumi.Input<number>;
+    upstreamsCacheSize?: pulumi.Input<number | undefined>;
     /**
      * Whether to use global settings for blocked services. Defaults to `true`
      */
-    useGlobalBlockedServices?: pulumi.Input<boolean>;
+    useGlobalBlockedServices?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to use global settings on this client. Defaults to `true`
      */
-    useGlobalSettings?: pulumi.Input<boolean>;
+    useGlobalSettings?: pulumi.Input<boolean | undefined>;
 }
 /**
  * The set of arguments for constructing a Client resource.
@@ -162,15 +162,15 @@ export interface ClientArgs {
     /**
      * Set of blocked services for this client
      */
-    blockedServices?: pulumi.Input<pulumi.Input<string>[]>;
+    blockedServices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Sets periods of inactivity for filtering blocked services. The schedule contains 7 days (Sunday to Saturday) and a time zone.
      */
-    blockedServicesPauseSchedule?: pulumi.Input<inputs.ClientBlockedServicesPauseSchedule>;
+    blockedServicesPauseSchedule?: pulumi.Input<inputs.ClientBlockedServicesPauseSchedule | undefined>;
     /**
      * Whether to have filtering enabled on this client. Defaults to `false`
      */
-    filteringEnabled?: pulumi.Input<boolean>;
+    filteringEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Set of identifiers for this client (IP, CIDR, MAC, or ClientID)
      */
@@ -178,46 +178,47 @@ export interface ClientArgs {
     /**
      * Whether to write to the query log. Defaults to `false`
      */
-    ignoreQuerylog?: pulumi.Input<boolean>;
+    ignoreQuerylog?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to be included in the statistics. Defaults to `false`
      */
-    ignoreStatistics?: pulumi.Input<boolean>;
+    ignoreStatistics?: pulumi.Input<boolean | undefined>;
     /**
      * Name of the client
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Whether to have AdGuard parental controls enabled on this client. Defaults to `false`
      */
-    parentalEnabled?: pulumi.Input<boolean>;
+    parentalEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to have AdGuard browsing security enabled on this client. Defaults to `false`
      */
-    safebrowsingEnabled?: pulumi.Input<boolean>;
-    safesearch?: pulumi.Input<inputs.ClientSafesearch>;
+    safebrowsingEnabled?: pulumi.Input<boolean | undefined>;
+    safesearch?: pulumi.Input<inputs.ClientSafesearch | undefined>;
     /**
      * Set of tags for this client
      */
-    tags?: pulumi.Input<pulumi.Input<string>[]>;
+    tags?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * List of upstream DNS server for this client
      */
-    upstreams?: pulumi.Input<pulumi.Input<string>[]>;
+    upstreams?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether to enable DNS caching for this client's custom upstream configuration. Defaults to `false`
      */
-    upstreamsCacheEnabled?: pulumi.Input<boolean>;
+    upstreamsCacheEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The upstreams DNS cache size, in bytes
      */
-    upstreamsCacheSize?: pulumi.Input<number>;
+    upstreamsCacheSize?: pulumi.Input<number | undefined>;
     /**
      * Whether to use global settings for blocked services. Defaults to `true`
      */
-    useGlobalBlockedServices?: pulumi.Input<boolean>;
+    useGlobalBlockedServices?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to use global settings on this client. Defaults to `true`
      */
-    useGlobalSettings?: pulumi.Input<boolean>;
+    useGlobalSettings?: pulumi.Input<boolean | undefined>;
 }
+//# sourceMappingURL=client.d.ts.map

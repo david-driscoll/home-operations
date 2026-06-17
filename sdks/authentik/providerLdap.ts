@@ -118,33 +118,33 @@ export class ProviderLdap extends pulumi.CustomResource {
  * Input properties used for looking up and filtering ProviderLdap resources.
  */
 export interface ProviderLdapState {
-    baseDn?: pulumi.Input<string>;
-    bindFlow?: pulumi.Input<string>;
+    baseDn?: pulumi.Input<string | undefined>;
+    bindFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `direct`.
      */
-    bindMode?: pulumi.Input<string>;
-    certificate?: pulumi.Input<string>;
+    bindMode?: pulumi.Input<string | undefined>;
+    certificate?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `4000`.
      */
-    gidStartNumber?: pulumi.Input<number>;
+    gidStartNumber?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `true`.
      */
-    mfaSupport?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    providerLdapId?: pulumi.Input<string>;
+    mfaSupport?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerLdapId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `direct`.
      */
-    searchMode?: pulumi.Input<string>;
-    tlsServerName?: pulumi.Input<string>;
+    searchMode?: pulumi.Input<string | undefined>;
+    tlsServerName?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `2000`.
      */
-    uidStartNumber?: pulumi.Input<number>;
-    unbindFlow?: pulumi.Input<string>;
+    uidStartNumber?: pulumi.Input<number | undefined>;
+    unbindFlow?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -156,26 +156,26 @@ export interface ProviderLdapArgs {
     /**
      * Defaults to `direct`.
      */
-    bindMode?: pulumi.Input<string>;
-    certificate?: pulumi.Input<string>;
+    bindMode?: pulumi.Input<string | undefined>;
+    certificate?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `4000`.
      */
-    gidStartNumber?: pulumi.Input<number>;
+    gidStartNumber?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `true`.
      */
-    mfaSupport?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    providerLdapId?: pulumi.Input<string>;
+    mfaSupport?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerLdapId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `direct`.
      */
-    searchMode?: pulumi.Input<string>;
-    tlsServerName?: pulumi.Input<string>;
+    searchMode?: pulumi.Input<string | undefined>;
+    tlsServerName?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `2000`.
      */
-    uidStartNumber?: pulumi.Input<number>;
+    uidStartNumber?: pulumi.Input<number | undefined>;
     unbindFlow: pulumi.Input<string>;
 }

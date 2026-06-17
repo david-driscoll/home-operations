@@ -26,5 +26,6 @@ export declare function getAccountInfoOutput(args?: GetAccountInfoOutputArgs, op
  * A collection of arguments for invoking getAccountInfo.
  */
 export interface GetAccountInfoOutputArgs {
-    id?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=getAccountInfo.d.ts.map

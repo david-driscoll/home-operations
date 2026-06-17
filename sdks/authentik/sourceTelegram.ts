@@ -145,31 +145,31 @@ export class SourceTelegram extends pulumi.CustomResource {
  * Input properties used for looking up and filtering SourceTelegram resources.
  */
 export interface SourceTelegramState {
-    authenticationFlow?: pulumi.Input<string>;
-    botToken?: pulumi.Input<string>;
-    botUsername?: pulumi.Input<string>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    botToken?: pulumi.Input<string | undefined>;
+    botUsername?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
-    preAuthenticationFlow?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
+    preAuthenticationFlow?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `false`.
      */
-    requestMessageAccess?: pulumi.Input<boolean>;
-    slug?: pulumi.Input<string>;
-    sourceTelegramId?: pulumi.Input<string>;
+    requestMessageAccess?: pulumi.Input<boolean | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    sourceTelegramId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -179,46 +179,46 @@ export interface SourceTelegramState {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a SourceTelegram resource.
  */
 export interface SourceTelegramArgs {
-    authenticationFlow?: pulumi.Input<string>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     botToken: pulumi.Input<string>;
     botUsername: pulumi.Input<string>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `false`.
      */
-    requestMessageAccess?: pulumi.Input<boolean>;
+    requestMessageAccess?: pulumi.Input<boolean | undefined>;
     slug: pulumi.Input<string>;
-    sourceTelegramId?: pulumi.Input<string>;
+    sourceTelegramId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -228,13 +228,13 @@ export interface SourceTelegramArgs {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }

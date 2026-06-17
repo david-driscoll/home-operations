@@ -31,16 +31,16 @@ export declare class PropertyMappingProviderScim extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PropertyMappingProviderScim resources.
  */
 export interface PropertyMappingProviderScimState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderScimId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderScimId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingProviderScim resource.
  */
 export interface PropertyMappingProviderScimArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderScimId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderScimId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingProviderScim.d.ts.map

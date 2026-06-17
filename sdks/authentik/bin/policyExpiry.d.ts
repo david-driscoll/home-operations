@@ -39,17 +39,17 @@ export declare class PolicyExpiry extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PolicyExpiry resources.
  */
 export interface PolicyExpiryState {
-    days?: pulumi.Input<number>;
+    days?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    denyOnly?: pulumi.Input<boolean>;
+    denyOnly?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyExpiryId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyExpiryId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PolicyExpiry resource.
@@ -59,12 +59,12 @@ export interface PolicyExpiryArgs {
     /**
      * Defaults to `false`.
      */
-    denyOnly?: pulumi.Input<boolean>;
+    denyOnly?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyExpiryId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyExpiryId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=policyExpiry.d.ts.map

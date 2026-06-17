@@ -94,19 +94,19 @@ export interface FirewallPolicyOrderState {
     /**
      * The ID of the destination firewall zone.
      */
-    destinationZoneId?: pulumi.Input<string>;
+    destinationZoneId?: pulumi.Input<string | undefined>;
     /**
      * Ordered list of firewall policy IDs. Policies are evaluated in this order, before any predefined (system) policies.
      */
-    policyIds?: pulumi.Input<pulumi.Input<string>[]>;
+    policyIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The site to associate the ordering with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The ID of the source firewall zone.
      */
-    sourceZoneId?: pulumi.Input<string>;
+    sourceZoneId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -124,7 +124,7 @@ export interface FirewallPolicyOrderArgs {
     /**
      * The site to associate the ordering with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The ID of the source firewall zone.
      */

@@ -136,51 +136,51 @@ export interface NetworkState {
     /**
      * List of DNS servers for DHCP clients. Maximum 4 servers.
      */
-    dhcpDns?: pulumi.Input<pulumi.Input<string>[]>;
+    dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether DHCP is enabled on this network. Default: `false`.
      */
-    dhcpEnabled?: pulumi.Input<boolean>;
+    dhcpEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The DHCP lease time in seconds. Default: `86400` (24 hours).
      */
-    dhcpLease?: pulumi.Input<number>;
+    dhcpLease?: pulumi.Input<number | undefined>;
     /**
      * The starting IP address for the DHCP pool.
      */
-    dhcpStart?: pulumi.Input<string>;
+    dhcpStart?: pulumi.Input<string | undefined>;
     /**
      * The ending IP address for the DHCP pool.
      */
-    dhcpStop?: pulumi.Input<string>;
+    dhcpStop?: pulumi.Input<string | undefined>;
     /**
      * Whether internet access is enabled on this network. Default: `true`.
      */
-    internetAccessEnabled?: pulumi.Input<boolean>;
+    internetAccessEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the network.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network group. Default: `LAN`.
      */
-    networkGroup?: pulumi.Input<string>;
+    networkGroup?: pulumi.Input<string | undefined>;
     /**
      * The purpose of the network. One of: `corporate`, `vlan-only`.
      */
-    purpose?: pulumi.Input<string>;
+    purpose?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the network with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The subnet for the network in CIDR notation (e.g., `192.168.33.0/24`).
      */
-    subnet?: pulumi.Input<string>;
+    subnet?: pulumi.Input<string | undefined>;
     /**
      * The VLAN ID for the network. Must be between 2 and 4095.
      */
-    vlanId?: pulumi.Input<number>;
+    vlanId?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -190,35 +190,35 @@ export interface NetworkArgs {
     /**
      * List of DNS servers for DHCP clients. Maximum 4 servers.
      */
-    dhcpDns?: pulumi.Input<pulumi.Input<string>[]>;
+    dhcpDns?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether DHCP is enabled on this network. Default: `false`.
      */
-    dhcpEnabled?: pulumi.Input<boolean>;
+    dhcpEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The DHCP lease time in seconds. Default: `86400` (24 hours).
      */
-    dhcpLease?: pulumi.Input<number>;
+    dhcpLease?: pulumi.Input<number | undefined>;
     /**
      * The starting IP address for the DHCP pool.
      */
-    dhcpStart?: pulumi.Input<string>;
+    dhcpStart?: pulumi.Input<string | undefined>;
     /**
      * The ending IP address for the DHCP pool.
      */
-    dhcpStop?: pulumi.Input<string>;
+    dhcpStop?: pulumi.Input<string | undefined>;
     /**
      * Whether internet access is enabled on this network. Default: `true`.
      */
-    internetAccessEnabled?: pulumi.Input<boolean>;
+    internetAccessEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the network.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network group. Default: `LAN`.
      */
-    networkGroup?: pulumi.Input<string>;
+    networkGroup?: pulumi.Input<string | undefined>;
     /**
      * The purpose of the network. One of: `corporate`, `vlan-only`.
      */
@@ -226,13 +226,13 @@ export interface NetworkArgs {
     /**
      * The site to associate the network with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The subnet for the network in CIDR notation (e.g., `192.168.33.0/24`).
      */
-    subnet?: pulumi.Input<string>;
+    subnet?: pulumi.Input<string | undefined>;
     /**
      * The VLAN ID for the network. Must be between 2 and 4095.
      */
-    vlanId?: pulumi.Input<number>;
+    vlanId?: pulumi.Input<number | undefined>;
 }

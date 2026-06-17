@@ -69,7 +69,7 @@ class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["digestAlgorithm"] = state?.digestAlgorithm;
             resourceInputs["encryptionKp"] = state?.encryptionKp;
             resourceInputs["invalidationFlow"] = state?.invalidationFlow;
-            resourceInputs["issuer"] = state?.issuer;
+            resourceInputs["issuerOverride"] = state?.issuerOverride;
             resourceInputs["logoutMethod"] = state?.logoutMethod;
             resourceInputs["name"] = state?.name;
             resourceInputs["nameIdMapping"] = state?.nameIdMapping;
@@ -78,6 +78,7 @@ class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["sessionValidNotOnOrAfter"] = state?.sessionValidNotOnOrAfter;
             resourceInputs["signAssertion"] = state?.signAssertion;
             resourceInputs["signLogoutRequest"] = state?.signLogoutRequest;
+            resourceInputs["signLogoutResponse"] = state?.signLogoutResponse;
             resourceInputs["signResponse"] = state?.signResponse;
             resourceInputs["signatureAlgorithm"] = state?.signatureAlgorithm;
             resourceInputs["signingKp"] = state?.signingKp;
@@ -113,7 +114,7 @@ class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["digestAlgorithm"] = args?.digestAlgorithm;
             resourceInputs["encryptionKp"] = args?.encryptionKp;
             resourceInputs["invalidationFlow"] = args?.invalidationFlow;
-            resourceInputs["issuer"] = args?.issuer;
+            resourceInputs["issuerOverride"] = args?.issuerOverride;
             resourceInputs["logoutMethod"] = args?.logoutMethod;
             resourceInputs["name"] = args?.name;
             resourceInputs["nameIdMapping"] = args?.nameIdMapping;
@@ -122,6 +123,7 @@ class ProviderSaml extends pulumi.CustomResource {
             resourceInputs["sessionValidNotOnOrAfter"] = args?.sessionValidNotOnOrAfter;
             resourceInputs["signAssertion"] = args?.signAssertion;
             resourceInputs["signLogoutRequest"] = args?.signLogoutRequest;
+            resourceInputs["signLogoutResponse"] = args?.signLogoutResponse;
             resourceInputs["signResponse"] = args?.signResponse;
             resourceInputs["signatureAlgorithm"] = args?.signatureAlgorithm;
             resourceInputs["signingKp"] = args?.signingKp;

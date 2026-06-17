@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getAccount(args: GetAccountArgs, opts?: pulumi.InvokeOptions): Promise<GetAccountResult> {
@@ -9,6 +11,7 @@ export function getAccount(args: GetAccountArgs, opts?: pulumi.InvokeOptions): P
     return pulumi.runtime.invoke("unifi:index/getAccount:getAccount", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getAccount(args: GetAccountArgs, opts?: pulumi.InvokeOptions): P
 export interface GetAccountArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetAccountTimeouts;
 }
 
 /**
@@ -29,6 +33,7 @@ export interface GetAccountResult {
     readonly networkId: string;
     readonly password: string;
     readonly site: string;
+    readonly timeouts?: outputs.GetAccountTimeouts;
     readonly tunnelMediumType: number;
     readonly tunnelType: number;
 }
@@ -37,6 +42,7 @@ export function getAccountOutput(args: GetAccountOutputArgs, opts?: pulumi.Invok
     return pulumi.runtime.invokeOutput("unifi:index/getAccount:getAccount", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -45,5 +51,6 @@ export function getAccountOutput(args: GetAccountOutputArgs, opts?: pulumi.Invok
  */
 export interface GetAccountOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetAccountTimeoutsArgs | undefined>;
 }

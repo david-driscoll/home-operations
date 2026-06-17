@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class Site extends pulumi.CustomResource {
     /**
      * Get an existing Site resource's state with the given name, ID, and optional extra
@@ -23,6 +25,7 @@ export declare class Site extends pulumi.CustomResource {
      * The name of the site.
      */
     readonly name: pulumi.Output<string>;
+    readonly timeouts: pulumi.Output<outputs.SiteTimeouts | undefined>;
     /**
      * Create a Site resource with the given unique name, arguments, and options.
      *
@@ -39,11 +42,12 @@ export interface SiteState {
     /**
      * The description of the site.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * The name of the site.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.SiteTimeouts | undefined>;
 }
 /**
  * The set of arguments for constructing a Site resource.
@@ -53,4 +57,6 @@ export interface SiteArgs {
      * The description of the site.
      */
     description: pulumi.Input<string>;
+    timeouts?: pulumi.Input<inputs.SiteTimeouts | undefined>;
 }
+//# sourceMappingURL=site.d.ts.map

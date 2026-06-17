@@ -91,19 +91,19 @@ export interface FirewallGroupState {
     /**
      * The members of the firewall group. For `port-group`, these are port numbers or port ranges (e.g. `"80"`, `"8080-8090"`). For `address-group`, these are IPv4 addresses or CIDRs. For `ipv6-address-group`, these are IPv6 addresses or CIDRs.
      */
-    members?: pulumi.Input<pulumi.Input<string>[]>;
+    members?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the firewall group with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The type of firewall group. One of: `port-group`, `address-group`, `ipv6-address-group`.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -117,11 +117,11 @@ export interface FirewallGroupArgs {
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the firewall group with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The type of firewall group. One of: `port-group`, `address-group`, `ipv6-address-group`.
      */

@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getClientInfo(args: GetClientInfoArgs, opts?: pulumi.InvokeOptions): Promise<GetClientInfoResult> {
@@ -9,6 +11,7 @@ export function getClientInfo(args: GetClientInfoArgs, opts?: pulumi.InvokeOptio
     return pulumi.runtime.invoke("unifi:index/getClientInfo:getClientInfo", {
         "mac": args.mac,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getClientInfo(args: GetClientInfoArgs, opts?: pulumi.InvokeOptio
 export interface GetClientInfoArgs {
     mac: string;
     site?: string;
+    timeouts?: inputs.GetClientInfoTimeouts;
 }
 
 /**
@@ -61,9 +65,10 @@ export interface GetClientInfoResult {
     readonly site: string;
     readonly status: string;
     readonly swPort: number;
+    readonly timeouts?: outputs.GetClientInfoTimeouts;
     readonly txBytes: number;
     readonly txRate: number;
-    readonly uptime: number;
+    readonly uptime: string;
     readonly useFixedip: boolean;
     readonly usergroupId: string;
     readonly wiredRateMbps: number;
@@ -73,6 +78,7 @@ export function getClientInfoOutput(args: GetClientInfoOutputArgs, opts?: pulumi
     return pulumi.runtime.invokeOutput("unifi:index/getClientInfo:getClientInfo", {
         "mac": args.mac,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -81,5 +87,6 @@ export function getClientInfoOutput(args: GetClientInfoOutputArgs, opts?: pulumi
  */
 export interface GetClientInfoOutputArgs {
     mac: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetClientInfoTimeoutsArgs | undefined>;
 }

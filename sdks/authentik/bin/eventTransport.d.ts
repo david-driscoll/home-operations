@@ -37,6 +37,7 @@ export declare class EventTransport extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     readonly sendOnce: pulumi.Output<boolean | undefined>;
+    readonly webhookCa: pulumi.Output<string | undefined>;
     readonly webhookMappingBody: pulumi.Output<string | undefined>;
     readonly webhookMappingHeaders: pulumi.Output<string | undefined>;
     readonly webhookUrl: pulumi.Output<string | undefined>;
@@ -56,12 +57,12 @@ export interface EventTransportState {
     /**
      * Defaults to `authentik Notification:`.
      */
-    emailSubjectPrefix?: pulumi.Input<string>;
+    emailSubjectPrefix?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/event_notification.html`.
      */
-    emailTemplate?: pulumi.Input<string>;
-    eventTransportId?: pulumi.Input<string>;
+    emailTemplate?: pulumi.Input<string | undefined>;
+    eventTransportId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `local`
@@ -69,15 +70,16 @@ export interface EventTransportState {
      *   - `webhook_slack`
      *   - `email`
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    sendOnce?: pulumi.Input<boolean>;
-    webhookMappingBody?: pulumi.Input<string>;
-    webhookMappingHeaders?: pulumi.Input<string>;
-    webhookUrl?: pulumi.Input<string>;
+    sendOnce?: pulumi.Input<boolean | undefined>;
+    webhookCa?: pulumi.Input<string | undefined>;
+    webhookMappingBody?: pulumi.Input<string | undefined>;
+    webhookMappingHeaders?: pulumi.Input<string | undefined>;
+    webhookUrl?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a EventTransport resource.
@@ -86,12 +88,12 @@ export interface EventTransportArgs {
     /**
      * Defaults to `authentik Notification:`.
      */
-    emailSubjectPrefix?: pulumi.Input<string>;
+    emailSubjectPrefix?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/event_notification.html`.
      */
-    emailTemplate?: pulumi.Input<string>;
-    eventTransportId?: pulumi.Input<string>;
+    emailTemplate?: pulumi.Input<string | undefined>;
+    eventTransportId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `local`
@@ -100,13 +102,14 @@ export interface EventTransportArgs {
      *   - `email`
      */
     mode: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    sendOnce?: pulumi.Input<boolean>;
-    webhookMappingBody?: pulumi.Input<string>;
-    webhookMappingHeaders?: pulumi.Input<string>;
-    webhookUrl?: pulumi.Input<string>;
+    sendOnce?: pulumi.Input<boolean | undefined>;
+    webhookCa?: pulumi.Input<string | undefined>;
+    webhookMappingBody?: pulumi.Input<string | undefined>;
+    webhookMappingHeaders?: pulumi.Input<string | undefined>;
+    webhookUrl?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=eventTransport.d.ts.map

@@ -103,26 +103,26 @@ export class RacEndpoint extends pulumi.CustomResource {
  * Input properties used for looking up and filtering RacEndpoint resources.
  */
 export interface RacEndpointState {
-    host?: pulumi.Input<string>;
+    host?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `0`.
      */
-    maximumConnections?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
+    maximumConnections?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `rdp`
      *   - `vnc`
      *   - `ssh`
      */
-    protocol?: pulumi.Input<string>;
-    protocolProvider?: pulumi.Input<number>;
-    racEndpointId?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
+    protocolProvider?: pulumi.Input<number | undefined>;
+    racEndpointId?: pulumi.Input<string | undefined>;
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    settings?: pulumi.Input<string>;
+    settings?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -133,9 +133,9 @@ export interface RacEndpointArgs {
     /**
      * Defaults to `0`.
      */
-    maximumConnections?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
+    maximumConnections?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `rdp`
@@ -144,9 +144,9 @@ export interface RacEndpointArgs {
      */
     protocol: pulumi.Input<string>;
     protocolProvider: pulumi.Input<number>;
-    racEndpointId?: pulumi.Input<string>;
+    racEndpointId?: pulumi.Input<string | undefined>;
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    settings?: pulumi.Input<string>;
+    settings?: pulumi.Input<string | undefined>;
 }

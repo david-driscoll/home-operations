@@ -65,6 +65,7 @@ class PolicyEventMatcher extends pulumi.CustomResource {
             resourceInputs["model"] = state?.model;
             resourceInputs["name"] = state?.name;
             resourceInputs["policyEventMatcherId"] = state?.policyEventMatcherId;
+            resourceInputs["query"] = state?.query;
         }
         else {
             const args = argsOrState;
@@ -75,6 +76,7 @@ class PolicyEventMatcher extends pulumi.CustomResource {
             resourceInputs["model"] = args?.model;
             resourceInputs["name"] = args?.name;
             resourceInputs["policyEventMatcherId"] = args?.policyEventMatcherId;
+            resourceInputs["query"] = args?.query;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(PolicyEventMatcher.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());

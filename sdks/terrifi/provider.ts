@@ -89,28 +89,28 @@ export interface ProviderArgs {
     /**
      * Skip TLS certificate verification. Useful for local controllers with self-signed certs. Can be specified with the `UNIFI_INSECURE` environment variable.
      */
-    allowInsecure?: pulumi.Input<boolean>;
+    allowInsecure?: pulumi.Input<boolean | undefined>;
     /**
      * API key for the UniFi controller. Can be specified with the `UNIFI_API_KEY` environment variable. If set, `username` and `password` are ignored.
      */
-    apiKey?: pulumi.Input<string>;
+    apiKey?: pulumi.Input<string | undefined>;
     /**
      * URL of the UniFi controller API. Can be specified with the `UNIFI_API` environment variable. Do not include the `/api` path — the SDK discovers API paths automatically to support both UDM-style and classic controller layouts.
      */
-    apiUrl?: pulumi.Input<string>;
+    apiUrl?: pulumi.Input<string | undefined>;
     /**
      * Password for the UniFi controller API. Can be specified with the `UNIFI_PASSWORD` environment variable.
      */
-    password?: pulumi.Input<string>;
-    responseCaching?: pulumi.Input<boolean>;
+    password?: pulumi.Input<string | undefined>;
+    responseCaching?: pulumi.Input<boolean | undefined>;
     /**
      * The UniFi site to manage. Can be specified with the `UNIFI_SITE` environment variable. Default: `default`.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Local username for the UniFi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.
      */
-    username?: pulumi.Input<string>;
+    username?: pulumi.Input<string | undefined>;
 }
 
 export namespace Provider {

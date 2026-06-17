@@ -12,13 +12,26 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.types = exports.config = exports.Wlan = exports.Wan = exports.VpnServer = exports.VpnClient = exports.TrafficRoute = exports.StaticRoute = exports.Site = exports.Setting = exports.RadiusProfile = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientQosRateOutput = exports.getClientQosRate = exports.getClientListOutput = exports.getClientList = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallRule = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientQosRate = exports.Client = exports.Bgp = exports.Account = void 0;
-const pulumi = require("@pulumi/pulumi");
-const utilities = require("./utilities");
+exports.VpnServer = exports.VpnClient = exports.TrafficRoute = exports.StaticRoute = exports.SiteToSiteVpn = exports.Site = exports.Setting = exports.RadiusUser = exports.RadiusProfile = exports.PowerSupervisor = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusUserOutput = exports.getRadiusUser = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getFirewallZoneOutput = exports.getFirewallZone = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientQosRateOutput = exports.getClientQosRate = exports.getClientListOutput = exports.getClientList = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallZone = exports.FirewallRule = exports.FirewallPolicy = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientQosRate = exports.Client = exports.Bgp = exports.Account = void 0;
+exports.types = exports.config = exports.Wlan = exports.WireguardPeer = exports.Wan = void 0;
+const pulumi = __importStar(require("@pulumi/pulumi"));
+const utilities = __importStar(require("./utilities"));
 exports.Account = null;
 utilities.lazyLoad(exports, ["Account"], () => require("./account"));
 exports.Bgp = null;
@@ -35,8 +48,12 @@ exports.DynamicDns = null;
 utilities.lazyLoad(exports, ["DynamicDns"], () => require("./dynamicDns"));
 exports.FirewallGroup = null;
 utilities.lazyLoad(exports, ["FirewallGroup"], () => require("./firewallGroup"));
+exports.FirewallPolicy = null;
+utilities.lazyLoad(exports, ["FirewallPolicy"], () => require("./firewallPolicy"));
 exports.FirewallRule = null;
 utilities.lazyLoad(exports, ["FirewallRule"], () => require("./firewallRule"));
+exports.FirewallZone = null;
+utilities.lazyLoad(exports, ["FirewallZone"], () => require("./firewallZone"));
 exports.getAccount = null;
 exports.getAccountOutput = null;
 utilities.lazyLoad(exports, ["getAccount", "getAccountOutput"], () => require("./getAccount"));
@@ -61,6 +78,9 @@ utilities.lazyLoad(exports, ["getClientQosRate", "getClientQosRateOutput"], () =
 exports.getDnsRecord = null;
 exports.getDnsRecordOutput = null;
 utilities.lazyLoad(exports, ["getDnsRecord", "getDnsRecordOutput"], () => require("./getDnsRecord"));
+exports.getFirewallZone = null;
+exports.getFirewallZoneOutput = null;
+utilities.lazyLoad(exports, ["getFirewallZone", "getFirewallZoneOutput"], () => require("./getFirewallZone"));
 exports.getNetwork = null;
 exports.getNetworkOutput = null;
 utilities.lazyLoad(exports, ["getNetwork", "getNetworkOutput"], () => require("./getNetwork"));
@@ -70,20 +90,29 @@ utilities.lazyLoad(exports, ["getPortProfile", "getPortProfileOutput"], () => re
 exports.getRadiusProfile = null;
 exports.getRadiusProfileOutput = null;
 utilities.lazyLoad(exports, ["getRadiusProfile", "getRadiusProfileOutput"], () => require("./getRadiusProfile"));
+exports.getRadiusUser = null;
+exports.getRadiusUserOutput = null;
+utilities.lazyLoad(exports, ["getRadiusUser", "getRadiusUserOutput"], () => require("./getRadiusUser"));
 exports.Network = null;
 utilities.lazyLoad(exports, ["Network"], () => require("./network"));
 exports.PortForward = null;
 utilities.lazyLoad(exports, ["PortForward"], () => require("./portForward"));
 exports.PortProfile = null;
 utilities.lazyLoad(exports, ["PortProfile"], () => require("./portProfile"));
+exports.PowerSupervisor = null;
+utilities.lazyLoad(exports, ["PowerSupervisor"], () => require("./powerSupervisor"));
 __exportStar(require("./provider"), exports);
 const provider_1 = require("./provider");
 exports.RadiusProfile = null;
 utilities.lazyLoad(exports, ["RadiusProfile"], () => require("./radiusProfile"));
+exports.RadiusUser = null;
+utilities.lazyLoad(exports, ["RadiusUser"], () => require("./radiusUser"));
 exports.Setting = null;
 utilities.lazyLoad(exports, ["Setting"], () => require("./setting"));
 exports.Site = null;
 utilities.lazyLoad(exports, ["Site"], () => require("./site"));
+exports.SiteToSiteVpn = null;
+utilities.lazyLoad(exports, ["SiteToSiteVpn"], () => require("./siteToSiteVpn"));
 exports.StaticRoute = null;
 utilities.lazyLoad(exports, ["StaticRoute"], () => require("./staticRoute"));
 exports.TrafficRoute = null;
@@ -94,12 +123,14 @@ exports.VpnServer = null;
 utilities.lazyLoad(exports, ["VpnServer"], () => require("./vpnServer"));
 exports.Wan = null;
 utilities.lazyLoad(exports, ["Wan"], () => require("./wan"));
+exports.WireguardPeer = null;
+utilities.lazyLoad(exports, ["WireguardPeer"], () => require("./wireguardPeer"));
 exports.Wlan = null;
 utilities.lazyLoad(exports, ["Wlan"], () => require("./wlan"));
 // Export sub-modules:
-const config = require("./config");
+const config = __importStar(require("./config"));
 exports.config = config;
-const types = require("./types");
+const types = __importStar(require("./types"));
 exports.types = types;
 const _module = {
     version: utilities.getVersion(),
@@ -121,20 +152,30 @@ const _module = {
                 return new exports.DynamicDns(name, undefined, { urn });
             case "unifi:index/firewallGroup:FirewallGroup":
                 return new exports.FirewallGroup(name, undefined, { urn });
+            case "unifi:index/firewallPolicy:FirewallPolicy":
+                return new exports.FirewallPolicy(name, undefined, { urn });
             case "unifi:index/firewallRule:FirewallRule":
                 return new exports.FirewallRule(name, undefined, { urn });
+            case "unifi:index/firewallZone:FirewallZone":
+                return new exports.FirewallZone(name, undefined, { urn });
             case "unifi:index/network:Network":
                 return new exports.Network(name, undefined, { urn });
             case "unifi:index/portForward:PortForward":
                 return new exports.PortForward(name, undefined, { urn });
             case "unifi:index/portProfile:PortProfile":
                 return new exports.PortProfile(name, undefined, { urn });
+            case "unifi:index/powerSupervisor:PowerSupervisor":
+                return new exports.PowerSupervisor(name, undefined, { urn });
             case "unifi:index/radiusProfile:RadiusProfile":
                 return new exports.RadiusProfile(name, undefined, { urn });
+            case "unifi:index/radiusUser:RadiusUser":
+                return new exports.RadiusUser(name, undefined, { urn });
             case "unifi:index/setting:Setting":
                 return new exports.Setting(name, undefined, { urn });
             case "unifi:index/site:Site":
                 return new exports.Site(name, undefined, { urn });
+            case "unifi:index/siteToSiteVpn:SiteToSiteVpn":
+                return new exports.SiteToSiteVpn(name, undefined, { urn });
             case "unifi:index/staticRoute:StaticRoute":
                 return new exports.StaticRoute(name, undefined, { urn });
             case "unifi:index/trafficRoute:TrafficRoute":
@@ -145,6 +186,8 @@ const _module = {
                 return new exports.VpnServer(name, undefined, { urn });
             case "unifi:index/wan:Wan":
                 return new exports.Wan(name, undefined, { urn });
+            case "unifi:index/wireguardPeer:WireguardPeer":
+                return new exports.WireguardPeer(name, undefined, { urn });
             case "unifi:index/wlan:Wlan":
                 return new exports.Wlan(name, undefined, { urn });
             default:
@@ -160,18 +203,24 @@ pulumi.runtime.registerResourceModule("unifi", "index/device", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/firewallGroup", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/firewallPolicy", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/firewallRule", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/firewallZone", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/network", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/portForward", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/portProfile", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/powerSupervisor", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/radiusUser", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/setting", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/siteToSiteVpn", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/trafficRoute", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/vpnClient", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/vpnServer", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/wan", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/wireguardPeer", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/wlan", _module);
 pulumi.runtime.registerResourcePackage("unifi", {
     version: utilities.getVersion(),

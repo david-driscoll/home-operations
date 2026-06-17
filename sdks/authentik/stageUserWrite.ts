@@ -102,10 +102,10 @@ export interface StageUserWriteState {
     /**
      * Defaults to `true`.
      */
-    createUsersAsInactive?: pulumi.Input<boolean>;
-    createUsersGroup?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageUserWriteId?: pulumi.Input<string>;
+    createUsersAsInactive?: pulumi.Input<boolean | undefined>;
+    createUsersGroup?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageUserWriteId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `never_create`
@@ -113,11 +113,11 @@ export interface StageUserWriteState {
      *   - `always_create`
      *  Defaults to `create_when_required`.
      */
-    userCreationMode?: pulumi.Input<string>;
+    userCreationMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `internal`
@@ -125,7 +125,7 @@ export interface StageUserWriteState {
      *   - `service_account`
      *  Defaults to `external`.
      */
-    userType?: pulumi.Input<string>;
+    userType?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -135,10 +135,10 @@ export interface StageUserWriteArgs {
     /**
      * Defaults to `true`.
      */
-    createUsersAsInactive?: pulumi.Input<boolean>;
-    createUsersGroup?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageUserWriteId?: pulumi.Input<string>;
+    createUsersAsInactive?: pulumi.Input<boolean | undefined>;
+    createUsersGroup?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageUserWriteId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `never_create`
@@ -146,11 +146,11 @@ export interface StageUserWriteArgs {
      *   - `always_create`
      *  Defaults to `create_when_required`.
      */
-    userCreationMode?: pulumi.Input<string>;
+    userCreationMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `internal`
@@ -158,5 +158,5 @@ export interface StageUserWriteArgs {
      *   - `service_account`
      *  Defaults to `external`.
      */
-    userType?: pulumi.Input<string>;
+    userType?: pulumi.Input<string | undefined>;
 }

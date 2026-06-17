@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getPortProfile(args: GetPortProfileArgs, opts?: pulumi.InvokeOptions): Promise<GetPortProfileResult> {
@@ -9,6 +11,7 @@ export function getPortProfile(args: GetPortProfileArgs, opts?: pulumi.InvokeOpt
     return pulumi.runtime.invoke("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,21 +21,27 @@ export function getPortProfile(args: GetPortProfileArgs, opts?: pulumi.InvokeOpt
 export interface GetPortProfileArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetPortProfileTimeouts;
 }
 
 /**
  * A collection of values returned by getPortProfile.
  */
 export interface GetPortProfileResult {
+    readonly forward: string;
     readonly id: string;
     readonly name: string;
+    readonly nativeNetworkconfId: string;
     readonly site: string;
+    readonly taggedNetworkconfIds: string[];
+    readonly timeouts?: outputs.GetPortProfileTimeouts;
 }
 export function getPortProfileOutput(args: GetPortProfileOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetPortProfileResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getPortProfile:getPortProfile", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -41,5 +50,6 @@ export function getPortProfileOutput(args: GetPortProfileOutputArgs, opts?: pulu
  */
 export interface GetPortProfileOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetPortProfileTimeoutsArgs | undefined>;
 }

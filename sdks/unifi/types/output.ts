@@ -5,6 +5,25 @@ import * as pulumi from "@pulumi/pulumi";
 import * as inputs from "../types/input";
 import * as outputs from "../types/output";
 
+export interface AccountTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface BgpPeer {
     /**
      * Description of this peer group.
@@ -24,6 +43,25 @@ export interface BgpPeer {
     remoteAs: number;
 }
 
+export interface BgpTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface ClientQosRate {
     /**
      * The ID of the client group (usergroup). If set, this group is used directly.
@@ -41,6 +79,44 @@ export interface ClientQosRate {
      * The name of the client group. If set, the group is looked up or created by name.
      */
     name: string;
+}
+
+export interface ClientQosRateTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface ClientTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
 }
 
 export interface DeviceConfigNetwork {
@@ -99,7 +175,7 @@ export interface DeviceOutletOverride {
 
 export interface DevicePortOverride {
     /**
-     * Number of ports in the aggregate.
+     * Port indices that make up this link-aggregation (LAG) group. Only takes effect when `op_mode` is `aggregate` on this port.
      */
     aggregateMembers?: number[];
     /**
@@ -111,9 +187,9 @@ export interface DevicePortOverride {
      */
     dot1xCtrl?: string;
     /**
-     * 802.1X idle timeout in seconds.
+     * 802.1X idle timeout, as a Go duration string (e.g. `5m`, `300s`).
      */
-    dot1xIdleTimeout?: number;
+    dot1xIdleTimeout?: string;
     /**
      * Egress rate limit in kbps.
      */
@@ -175,7 +251,7 @@ export interface DevicePortOverride {
      */
     nativeNetworkconfId?: string;
     /**
-     * Operating mode of the port, valid values are `switch`, `mirror`, and `aggregate`.
+     * Operating mode of the port: `switch` (default), `mirror`, or `aggregate`. Set `aggregate` on the lead port of an SFP+/link-aggregation (LAG) group and list the member ports in `aggregate_members`. Only written when not `switch`, as gateway devices (UDM) reject op_mode on update.
      */
     opMode: string;
     /**
@@ -267,6 +343,10 @@ export interface DevicePortOverride {
      */
     stpPortMode: boolean;
     /**
+     * List of network IDs to tag on this port.
+     */
+    taggedNetworkconfIds?: string[];
+    /**
      * Tagged VLAN management.
      */
     taggedVlanMgmt?: string;
@@ -353,6 +433,239 @@ export interface DeviceRadioTable {
      * Enable virtual wire.
      */
     vwireEnabled: boolean;
+}
+
+export interface DeviceTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface DnsRecordTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface DynamicDnsTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface FirewallGroupTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface FirewallPolicyDestination {
+    /**
+     * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
+     */
+    clientMacs: string[];
+    /**
+     * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
+     */
+    ips: string[];
+    /**
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     */
+    matchingTarget: string;
+    /**
+     * How the matching target is specified (`ANY`, `SPECIFIC`, `LIST`, `OBJECT`). Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    matchingTargetType: string;
+    /**
+     * List of UniFi network IDs to match. Used when `matching_target` is `NETWORK`.
+     */
+    networkIds: string[];
+    /**
+     * Port(s) to match when `port_matching_type` is `SPECIFIC`. A single port (`161`) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
+     */
+    port: string;
+    /**
+     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`.
+     */
+    portGroupId: string;
+    /**
+     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
+     */
+    portMatchingType: string;
+    /**
+     * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
+     */
+    webDomains: string[];
+    /**
+     * The ID of the firewall zone this endpoint belongs to. Use the `unifi.FirewallZone` data source to look up zone IDs by name.
+     */
+    zoneId: string;
+}
+
+export interface FirewallPolicySource {
+    /**
+     * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
+     */
+    clientMacs: string[];
+    /**
+     * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
+     */
+    ips: string[];
+    /**
+     * What to match: `ANY`, `NETWORK`, `CLIENT`, `IP`, `DEVICE`, `MAC`, or `WEB` (domains/FQDN).
+     */
+    matchingTarget: string;
+    /**
+     * How the matching target is specified (`ANY`, `SPECIFIC`, `LIST`, `OBJECT`). Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     */
+    matchingTargetType: string;
+    /**
+     * List of UniFi network IDs to match. Used when `matching_target` is `NETWORK`.
+     */
+    networkIds: string[];
+    /**
+     * Port(s) to match when `port_matching_type` is `SPECIFIC`. A single port (`161`) or a comma-separated list of ports/ranges (`80,443`, `8000-8100`). Leave unset for no port match.
+     */
+    port: string;
+    /**
+     * ID of a `unifi.FirewallGroup` (port-group type) to match. Used when `port_matching_type` is `OBJECT`.
+     */
+    portGroupId: string;
+    /**
+     * How to match ports: `ANY`, `SPECIFIC`, or `OBJECT` (port group).
+     */
+    portMatchingType: string;
+    /**
+     * List of domains/FQDNs to match. Used when `matching_target` is `WEB`.
+     */
+    webDomains: string[];
+    /**
+     * The ID of the firewall zone this endpoint belongs to. Use the `unifi.FirewallZone` data source to look up zone IDs by name.
+     */
+    zoneId: string;
+}
+
+export interface FirewallPolicyTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface FirewallRuleTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface FirewallZoneTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface GetAccountTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetApGroupTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
 }
 
 export interface GetClientInfoListClient {
@@ -509,9 +822,9 @@ export interface GetClientInfoListClient {
      */
     txRate: number;
     /**
-     * The uptime of the client in seconds.
+     * The uptime of the client, as a Go duration string.
      */
-    uptime: number;
+    uptime: string;
     /**
      * Whether this client uses a fixed IP.
      */
@@ -524,6 +837,20 @@ export interface GetClientInfoListClient {
      * The wired connection rate in Mbps.
      */
     wiredRateMbps: number;
+}
+
+export interface GetClientInfoListTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetClientInfoTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
 }
 
 export interface GetClientListClient {
@@ -697,6 +1024,13 @@ export interface GetClientListClient {
     wiredRateMbps: number;
 }
 
+export interface GetClientListTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
 export interface GetClientQosRate {
     /**
      * The ID of the client group.
@@ -714,6 +1048,34 @@ export interface GetClientQosRate {
      * The name of the client group.
      */
     name: string;
+}
+
+export interface GetClientQosRateTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetClientTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetDnsRecordTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetFirewallZoneTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
 }
 
 export interface GetNetworkDhcpGuarding {
@@ -764,9 +1126,9 @@ export interface GetNetworkDhcpServer {
      */
     gatewayEnabled: boolean;
     /**
-     * Specifies the lease time for DHCP addresses in seconds.
+     * Specifies the DHCP lease time, as a Go duration string.
      */
-    leasetime: number;
+    leasetime: string;
     /**
      * Specifies whether DHCP NTP is enabled.
      */
@@ -873,13 +1235,41 @@ export interface GetNetworkNatOutboundIpAddress {
     wanNetworkGroup: string;
 }
 
+export interface GetNetworkTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetPortProfileTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetRadiusProfileTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
+export interface GetRadiusUserTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    read?: string;
+}
+
 export interface NetworkDhcpGuarding {
     /**
      * Specifies whether DHCP guarding is enabled.
      */
     enabled: boolean;
     /**
-     * List of allowed DHCP server IP addresses (maximum 3). Only applies when `third_party_gateway` is enabled.
+     * List of allowed DHCP server IP addresses (maximum 3).
      */
     servers?: string[];
 }
@@ -921,9 +1311,9 @@ export interface NetworkDhcpServer {
      */
     gatewayEnabled: boolean;
     /**
-     * Specifies the lease time for DHCP addresses in seconds.
+     * Specifies the DHCP lease time, as a Go duration string (e.g. `24h`, `86400s`). Defaults to `24h0m0s`.
      */
-    leasetime: number;
+    leasetime: string;
     /**
      * Specifies whether DHCP NTP is enabled.
      */
@@ -984,6 +1374,33 @@ export interface NetworkDhcpServerWins {
     enabled: boolean;
 }
 
+export interface NetworkDhcpV6Server {
+    /**
+     * Specifies whether DNS auto-discovery is enabled for DHCPv6.
+     */
+    dnsAuto: boolean;
+    /**
+     * List of DNS server addresses for DHCPv6 clients (maximum 4).
+     */
+    dnsServers?: string[];
+    /**
+     * Specifies whether the DHCPv6 server is enabled.
+     */
+    enabled: boolean;
+    /**
+     * The lease time for DHCPv6 addresses in seconds.
+     */
+    lease?: number;
+    /**
+     * The start of the DHCPv6 address range.
+     */
+    start?: string;
+    /**
+     * The end of the DHCPv6 address range.
+     */
+    stop?: string;
+}
+
 export interface NetworkNatOutboundIpAddress {
     /**
      * The IP address.
@@ -1001,6 +1418,36 @@ export interface NetworkNatOutboundIpAddress {
      * The WAN network group.
      */
     wanNetworkGroup?: string;
+}
+
+export interface NetworkTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface PortForwardDestinationIp {
+    /**
+     * The destination IPv4 address. Use `any` for all addresses.
+     */
+    destinationIp?: string;
+    /**
+     * The WAN interface for this destination (e.g. `wan`, `wan2`).
+     */
+    interface?: string;
 }
 
 export interface PortForwardForward {
@@ -1033,6 +1480,25 @@ export interface PortForwardSourceLimiting {
     type: string;
 }
 
+export interface PortForwardTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface PortForwardWan {
     /**
      * The WAN interface. Can be `wan`, `wan2`, or `both`.
@@ -1048,6 +1514,63 @@ export interface PortForwardWan {
     port?: string;
 }
 
+export interface PortProfileTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface PowerSupervisorPowerSource {
+    /**
+     * Index of the supervised device's PSU.
+     */
+    clientPsuIndex: number;
+    /**
+     * Port/outlet index on the upstream source.
+     */
+    powerSourceIndex: number;
+    /**
+     * MAC of the upstream source (e.g. the PoE switch).
+     */
+    powerSourceMac: string;
+    /**
+     * Type of the upstream source (e.g. `poe_port`).
+     */
+    powerSourceType: string;
+}
+
+export interface PowerSupervisorTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface RadiusProfileAcctServer {
     /**
      * IP address of accounting service server.
@@ -1060,7 +1583,7 @@ export interface RadiusProfileAcctServer {
     /**
      * Shared secret for accounting server.
      */
-    xSecret: string;
+    secret: string;
 }
 
 export interface RadiusProfileAuthServer {
@@ -1075,14 +1598,284 @@ export interface RadiusProfileAuthServer {
     /**
      * Shared secret for authentication server.
      */
-    xSecret: string;
+    secret: string;
+}
+
+export interface RadiusProfileTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface RadiusUserTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface SettingAutoSpeedtest {
+    /**
+     * Cron expression controlling when the speed test runs (e.g. `0 * * * *`).
+     */
+    cronExpr: string;
+    /**
+     * Whether periodic automated speed tests are enabled.
+     */
+    enabled: boolean;
+}
+
+export interface SettingCountry {
+    /**
+     * Regulatory country code (ISO 3166-1 numeric).
+     */
+    code: number;
+}
+
+export interface SettingDoh {
+    /**
+     * Custom DNS servers specified via DNS stamp.
+     */
+    customServers: outputs.SettingDohCustomServer[];
+    /**
+     * Predefined DNS provider names (e.g. "cloudflare", "google").
+     */
+    serverNames: string[];
+    /**
+     * Encrypted DNS state: off, auto, manual, or custom.
+     */
+    state: string;
+}
+
+export interface SettingDohCustomServer {
+    /**
+     * Enable this custom server. Defaults to true.
+     */
+    enabled: boolean;
+    /**
+     * DNS stamp (sdns://) for the custom resolver.
+     */
+    sdnsStamp: string;
+    /**
+     * Human-readable name for this custom server.
+     */
+    serverName: string;
+}
+
+export interface SettingDpi {
+    /**
+     * Whether DPI is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Whether device fingerprinting is enabled.
+     */
+    fingerprintingEnabled: boolean;
+}
+
+export interface SettingIgmpSnooping {
+    /**
+     * Whether IGMP snooping is enabled for the site.
+     */
+    enabled: boolean;
+    /**
+     * IDs of the networks IGMP snooping applies to.
+     */
+    networkIds: string[];
+}
+
+export interface SettingIps {
+    /**
+     * Advanced filtering mode: manual or disabled.
+     */
+    advancedFilteringPreference: string;
+    /**
+     * Show a blocking page when content filtering blocks a request.
+     */
+    contentFilteringBlockingPageEnabled: boolean;
+    /**
+     * Emerging Threats ruleset categories to enable (e.g. "emerging-malware", "tor", "phishing").
+     */
+    enabledCategories: string[];
+    /**
+     * Network IDs to apply IPS inspection to.
+     */
+    enabledNetworks: string[];
+    /**
+     * Enable honeypot to detect internal port scans.
+     */
+    honeypotEnabled: boolean;
+    /**
+     * Honeypot IP addresses per network.
+     */
+    honeypots: outputs.SettingIpsHoneypot[];
+    /**
+     * IPS operating mode: ids (detect only), ips (detect and block), ipsInline, or disabled.
+     */
+    ipsMode: string;
+    /**
+     * Use memory-optimized IPS ruleset (reduced rule set for low-memory devices).
+     */
+    memoryOptimized: boolean;
+    /**
+     * Block BitTorrent traffic.
+     */
+    restrictTorrents: boolean;
+    /**
+     * IPS signature alert suppression entries — silence specific signatures or categories.
+     */
+    suppressionAlerts: outputs.SettingIpsSuppressionAlert[];
+    /**
+     * IPS suppression whitelist entries — sources/destinations to exclude from inspection.
+     */
+    suppressionWhitelists: outputs.SettingIpsSuppressionWhitelist[];
+}
+
+export interface SettingIpsHoneypot {
+    /**
+     * IP address to use as a honeypot.
+     */
+    ipAddress: string;
+    /**
+     * Network ID this honeypot IP belongs to.
+     */
+    networkId: string;
+    /**
+     * IP version: v4 or v6.
+     */
+    version: string;
+}
+
+export interface SettingIpsSuppressionAlert {
+    /**
+     * Alert suppression signature category.
+     */
+    category: string;
+    /**
+     * Signature Generator ID (GID).
+     */
+    gid: number;
+    /**
+     * Signature ID.
+     */
+    id: number;
+    /**
+     * Suppression signature name.
+     */
+    signature: string;
+    /**
+     * Tracking specifications (used when `type` is `track`).
+     */
+    trackings: outputs.SettingIpsSuppressionAlertTracking[];
+    /**
+     * Suppression type: `all` (everywhere) or `track` (only the tracked sources/destinations).
+     */
+    type: string;
+}
+
+export interface SettingIpsSuppressionAlertTracking {
+    /**
+     * Match direction: both, src, or dest.
+     */
+    direction: string;
+    /**
+     * Match mode: ip, subnet, or network.
+     */
+    mode: string;
+    /**
+     * IP address, CIDR subnet, or network ID to match.
+     */
+    value: string;
+}
+
+export interface SettingIpsSuppressionWhitelist {
+    /**
+     * Match direction: both, src, or dest.
+     */
+    direction: string;
+    /**
+     * Match mode: ip, subnet, or network.
+     */
+    mode: string;
+    /**
+     * IP address, CIDR subnet, or network ID to whitelist.
+     */
+    value: string;
+}
+
+export interface SettingLcm {
+    /**
+     * Display brightness (1-100).
+     */
+    brightness: number;
+    /**
+     * Whether the device display is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Seconds of inactivity before the display turns off (10-3600).
+     */
+    idleTimeout: number;
+    /**
+     * Sync display settings across devices.
+     */
+    sync: boolean;
+    /**
+     * Whether touch events on the display are enabled.
+     */
+    touchEvent: boolean;
 }
 
 export interface SettingMgmt {
     /**
+     * Enable advanced features.
+     */
+    advancedFeatureEnabled: boolean;
+    /**
      * Automatically upgrade device firmware.
      */
     autoUpgrade: boolean;
+    /**
+     * Hour of day (0-23) for automatic firmware upgrades.
+     */
+    autoUpgradeHour: number;
+    /**
+     * Enable debug tools.
+     */
+    debugToolsEnabled: boolean;
+    /**
+     * Enable Direct Connect (remote access).
+     */
+    directConnectEnabled: boolean;
+    /**
+     * Allow SSH password authentication (in addition to keys).
+     */
+    sshAuthPasswordEnabled: boolean;
     /**
      * Enable SSH authentication.
      */
@@ -1091,6 +1884,22 @@ export interface SettingMgmt {
      * SSH keys.
      */
     sshKeys: outputs.SettingMgmtSshKey[];
+    /**
+     * SSH password for device access. Sensitive — the controller stores only a hash, so this value is kept from configuration and not read back.
+     */
+    sshPassword?: string;
+    /**
+     * SSH username for device access.
+     */
+    sshUsername: string;
+    /**
+     * Enable the UniFi Identity Provider.
+     */
+    unifiIdpEnabled: boolean;
+    /**
+     * Enable WiFiman.
+     */
+    wifimanEnabled: boolean;
 }
 
 export interface SettingMgmtSshKey {
@@ -1112,6 +1921,36 @@ export interface SettingMgmtSshKey {
     type: string;
 }
 
+export interface SettingNetworkOptimization {
+    /**
+     * Whether automated network optimization is enabled.
+     */
+    enabled: boolean;
+}
+
+export interface SettingNtp {
+    /**
+     * Primary NTP server.
+     */
+    ntpServer1: string;
+    /**
+     * Second NTP server.
+     */
+    ntpServer2: string;
+    /**
+     * Third NTP server.
+     */
+    ntpServer3: string;
+    /**
+     * Fourth NTP server.
+     */
+    ntpServer4: string;
+    /**
+     * Configuration mode: `auto` or `manual`.
+     */
+    settingPreference: string;
+}
+
 export interface SettingRadius {
     /**
      * Enable RADIUS accounting.
@@ -1126,13 +1965,79 @@ export interface SettingRadius {
      */
     authPort: number;
     /**
-     * Interim update interval in seconds.
+     * Interim update interval, as a Go duration string (e.g. `1h`, `3600s`).
      */
-    interimUpdateInterval: number;
+    interimUpdateInterval: string;
     /**
      * RADIUS shared secret.
      */
     secret: string;
+}
+
+export interface SettingSyslog {
+    /**
+     * Logged facilities (e.g. `device`, `client`, `firewall_default_policy`, `triggers`, `updates`, `admin_activity`, `critical`, `security_detections`, `vpn`).
+     */
+    contents: string[];
+    /**
+     * Enable debug logging.
+     */
+    debug: boolean;
+    /**
+     * Whether remote syslog is enabled.
+     */
+    enabled: boolean;
+    /**
+     * Remote syslog server IP address.
+     */
+    ip: string;
+    /**
+     * Log all available facilities.
+     */
+    logAllContents: boolean;
+    /**
+     * Whether netconsole logging is enabled.
+     */
+    netconsoleEnabled: boolean;
+    /**
+     * Netconsole host.
+     */
+    netconsoleHost: string;
+    /**
+     * Netconsole port (1-65535).
+     */
+    netconsolePort: number;
+    /**
+     * Remote syslog server port (1-65535).
+     */
+    port: number;
+    /**
+     * Also log this controller's events.
+     */
+    thisController: boolean;
+    /**
+     * Only send this controller's logs over an encrypted channel.
+     */
+    thisControllerEncryptedOnly: boolean;
+}
+
+export interface SettingTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
 }
 
 export interface SettingUsg {
@@ -1173,9 +2078,9 @@ export interface SettingUsg {
      */
     h323Module: boolean;
     /**
-     * ICMP connection timeout in seconds.
+     * ICMP connection timeout, as a Go duration string (e.g. `30s`, `1m`).
      */
-    icmpTimeout: number;
+    icmpTimeout: string;
     /**
      * MSS clamping mode: auto, custom, or disabled.
      */
@@ -1193,9 +2098,9 @@ export interface SettingUsg {
      */
     offloadSch: boolean;
     /**
-     * Other connections timeout in seconds.
+     * Other connections timeout, as a Go duration string (e.g. `600s`, `10m`).
      */
-    otherTimeout: number;
+    otherTimeout: string;
     /**
      * Enable PPTP module.
      */
@@ -1217,37 +2122,37 @@ export interface SettingUsg {
      */
     synCookies: boolean;
     /**
-     * TCP close timeout in seconds.
+     * TCP close timeout, as a Go duration string (e.g. `10s`).
      */
-    tcpCloseTimeout: number;
+    tcpCloseTimeout: string;
     /**
-     * TCP close wait timeout in seconds.
+     * TCP close wait timeout, as a Go duration string (e.g. `60s`, `1m`).
      */
-    tcpCloseWaitTimeout: number;
+    tcpCloseWaitTimeout: string;
     /**
-     * TCP established connection timeout in seconds.
+     * TCP established connection timeout, as a Go duration string (e.g. `7440s`, `2h4m`).
      */
-    tcpEstablishedTimeout: number;
+    tcpEstablishedTimeout: string;
     /**
-     * TCP fin wait timeout in seconds.
+     * TCP fin wait timeout, as a Go duration string (e.g. `120s`, `2m`).
      */
-    tcpFinWaitTimeout: number;
+    tcpFinWaitTimeout: string;
     /**
-     * TCP last ACK timeout in seconds.
+     * TCP last ACK timeout, as a Go duration string (e.g. `30s`).
      */
-    tcpLastAckTimeout: number;
+    tcpLastAckTimeout: string;
     /**
-     * TCP SYN received timeout in seconds.
+     * TCP SYN received timeout, as a Go duration string (e.g. `60s`, `1m`).
      */
-    tcpSynRecvTimeout: number;
+    tcpSynRecvTimeout: string;
     /**
-     * TCP SYN sent timeout in seconds.
+     * TCP SYN sent timeout, as a Go duration string (e.g. `120s`, `2m`).
      */
-    tcpSynSentTimeout: number;
+    tcpSynSentTimeout: string;
     /**
-     * TCP time wait timeout in seconds.
+     * TCP time wait timeout, as a Go duration string (e.g. `120s`, `2m`).
      */
-    tcpTimeWaitTimeout: number;
+    tcpTimeWaitTimeout: string;
     /**
      * Enable TFTP module.
      */
@@ -1257,13 +2162,13 @@ export interface SettingUsg {
      */
     timeoutSettingPreference: string;
     /**
-     * UDP other timeout in seconds.
+     * UDP other timeout, as a Go duration string (e.g. `30s`).
      */
-    udpOtherTimeout: number;
+    udpOtherTimeout: string;
     /**
-     * UDP stream timeout in seconds.
+     * UDP stream timeout, as a Go duration string (e.g. `180s`, `3m`).
      */
-    udpStreamTimeout: number;
+    udpStreamTimeout: string;
     /**
      * Unbind WAN monitors.
      */
@@ -1305,86 +2210,87 @@ export interface SettingUsgDnsVerification {
     settingPreference: string;
 }
 
+export interface SiteTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface SiteToSiteVpnTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface StaticRouteTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface TrafficRouteDestination {
     /**
-     * List of domain entries to match.
+     * List of domain names to match.
      */
-    domains?: outputs.TrafficRouteDestinationDomain[];
+    domains?: string[];
     /**
-     * List of IP address or subnet entries to match.
+     * List of IP address, subnet, or IP range entries to match. Use CIDR notation (e.g. `10.0.0.0/8`) for subnets, or a hyphenated range (e.g. `192.168.10.1-192.168.10.255`) for IP ranges.
      */
-    ipAddresses?: outputs.TrafficRouteDestinationIpAddress[];
-    /**
-     * List of IP range entries to match.
-     */
-    ipRanges?: outputs.TrafficRouteDestinationIpRange[];
+    ips?: outputs.TrafficRouteDestinationIp[];
     /**
      * List of regions to match.
      */
     regions?: string[];
 }
 
-export interface TrafficRouteDestinationDomain {
+export interface TrafficRouteDestinationIp {
     /**
-     * The domain name to match.
+     * An IP address, CIDR subnet, or hyphenated IP range to match.
      */
-    domain: string;
+    address: string;
     /**
-     * List of port ranges to match.
+     * List of ports or port ranges to match. Use a single number (e.g. `80`) for individual ports, or a hyphenated range (e.g. `8080-8090`) for port ranges. Only supported for IP addresses and subnets, not IP ranges.
      */
-    portRanges?: outputs.TrafficRouteDestinationDomainPortRange[];
-    /**
-     * List of individual ports to match.
-     */
-    ports?: number[];
-}
-
-export interface TrafficRouteDestinationDomainPortRange {
-    /**
-     * The start port of the range.
-     */
-    start: number;
-    /**
-     * The stop port of the range.
-     */
-    stop: number;
-}
-
-export interface TrafficRouteDestinationIpAddress {
-    /**
-     * An IP address or CIDR subnet to match.
-     */
-    ipOrSubnet: string;
-    /**
-     * List of port ranges to match.
-     */
-    portRanges?: outputs.TrafficRouteDestinationIpAddressPortRange[];
-    /**
-     * List of individual ports to match.
-     */
-    ports?: number[];
-}
-
-export interface TrafficRouteDestinationIpAddressPortRange {
-    /**
-     * The start port of the range.
-     */
-    start: number;
-    /**
-     * The stop port of the range.
-     */
-    stop: number;
-}
-
-export interface TrafficRouteDestinationIpRange {
-    /**
-     * The start IP address of the range.
-     */
-    start: string;
-    /**
-     * The stop IP address of the range.
-     */
-    stop: string;
+    ports?: string[];
 }
 
 export interface TrafficRouteSource {
@@ -1410,6 +2316,44 @@ export interface TrafficRouteSourceNetwork {
      * The ID of the network.
      */
     id: string;
+}
+
+export interface TrafficRouteTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
+export interface VpnClientTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
 }
 
 export interface VpnClientWireguard {
@@ -1538,6 +2482,25 @@ export interface VpnServerOpenvpn {
     sharedClientKey: string;
 }
 
+export interface VpnServerTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface VpnServerWan {
     /**
      * WAN interface to use for the VPN server (e.g., `wan`, `wan2`).
@@ -1555,7 +2518,7 @@ export interface VpnServerWireguard {
      */
     port: number;
     /**
-     * WireGuard private key for this server. If not specified, one will be generated by the controller.
+     * WireGuard private key for this server (base64). If not specified, the provider generates one at create time (the controller does not generate it and rejects a server without a key).
      */
     privateKey: string;
     /**
@@ -1710,6 +2673,25 @@ export interface WanSmartq {
     upRate?: number;
 }
 
+export interface WanTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface WanUpnp {
     /**
      * Whether UPnP is enabled
@@ -1740,6 +2722,25 @@ export interface WanVlan {
     id: number;
 }
 
+export interface WireguardPeerTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
+
 export interface WlanMacFilter {
     /**
      * Indicates whether or not the MAC filter is turned on for the network.
@@ -1755,15 +2756,26 @@ export interface WlanMacFilter {
     policy: string;
 }
 
+export interface WlanPrivatePresharedKey {
+    /**
+     * ID of the network/VLAN this key is bound to. Leave unset to use the WLAN's default network.
+     */
+    networkId: string;
+    /**
+     * The passphrase for this key (8-255 characters).
+     */
+    password: string;
+}
+
 export interface WlanSchedule {
     /**
      * Day of week for the block.
      */
     dayOfWeek: string;
     /**
-     * Length of the block in minutes.
+     * Length of the block, as a Go duration string. The controller stores this value with one-minute resolution, so the duration must be at least `1m` and a whole multiple of one minute (e.g. `30m`, `2h`).
      */
-    duration: number;
+    duration: string;
     /**
      * Name of the block.
      */
@@ -1776,5 +2788,24 @@ export interface WlanSchedule {
      * Start minute for the block (0-59).
      */
     startMinute: number;
+}
+
+export interface WlanTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
 }
 

@@ -141,6 +141,7 @@ export class TaskSchedule extends pulumi.CustomResource {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -152,6 +153,7 @@ export class TaskSchedule extends pulumi.CustomResource {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -214,7 +216,7 @@ export class TaskSchedule extends pulumi.CustomResource {
  * Input properties used for looking up and filtering TaskSchedule resources.
  */
 export interface TaskScheduleState {
-    actorName?: pulumi.Input<string>;
+    actorName?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -323,6 +325,7 @@ export interface TaskScheduleState {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -334,28 +337,29 @@ export interface TaskScheduleState {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
      */
-    appModel?: pulumi.Input<string>;
+    appModel?: pulumi.Input<string | undefined>;
     /**
      * Crontab expression at which this task will run.
      */
-    crontab?: pulumi.Input<string>;
-    modelId?: pulumi.Input<string>;
+    crontab?: pulumi.Input<string | undefined>;
+    modelId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    paused?: pulumi.Input<boolean>;
-    taskScheduleId?: pulumi.Input<string>;
+    paused?: pulumi.Input<boolean | undefined>;
+    taskScheduleId?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a TaskSchedule resource.
  */
 export interface TaskScheduleArgs {
-    actorName?: pulumi.Input<string>;
+    actorName?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `authentik_tenants.domain`
@@ -464,6 +468,7 @@ export interface TaskScheduleArgs {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -475,6 +480,7 @@ export interface TaskScheduleArgs {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -488,6 +494,6 @@ export interface TaskScheduleArgs {
     /**
      * Defaults to `false`.
      */
-    paused?: pulumi.Input<boolean>;
-    taskScheduleId?: pulumi.Input<string>;
+    paused?: pulumi.Input<boolean | undefined>;
+    taskScheduleId?: pulumi.Input<string | undefined>;
 }

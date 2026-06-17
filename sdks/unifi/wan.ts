@@ -63,21 +63,37 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly ipAliases: pulumi.Output<string[] | undefined>;
     /**
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    declare public readonly ipv6SettingPreference: pulumi.Output<string>;
+    /**
      * Load balance configuration
      */
     declare public readonly loadBalance: pulumi.Output<outputs.WanLoadBalance>;
+    /**
+     * Whether the WAN interface MAC address is overridden.
+     */
+    declare public readonly macOverrideEnabled: pulumi.Output<boolean>;
     /**
      * The name of the WAN network
      */
     declare public readonly name: pulumi.Output<string>;
     /**
-     * WAN provider capabilities
+     * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
-    declare public readonly providerCapabilities: pulumi.Output<outputs.WanProviderCapabilities | undefined>;
+    declare public readonly providerCapabilities: pulumi.Output<outputs.WanProviderCapabilities>;
     /**
      * Whether to report WAN events
      */
     declare public readonly reportWanEvent: pulumi.Output<boolean>;
+    /**
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    declare public readonly settingPreference: pulumi.Output<string>;
+    /**
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     */
+    declare public readonly singleNetworkLan: pulumi.Output<string>;
     /**
      * The name of the site to associate the WAN network with
      */
@@ -86,12 +102,13 @@ export class Wan extends pulumi.CustomResource {
      * Smart Queue configuration
      */
     declare public readonly smartq: pulumi.Output<outputs.WanSmartq>;
+    declare public readonly timeouts: pulumi.Output<outputs.WanTimeouts | undefined>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
     declare public readonly type: pulumi.Output<string>;
     /**
-     * The IPv6 WAN type (dhcpv6, static, disabled)
+     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
     declare public readonly typeV6: pulumi.Output<string>;
     /**
@@ -102,6 +119,14 @@ export class Wan extends pulumi.CustomResource {
      * VLAN configuration
      */
     declare public readonly vlan: pulumi.Output<outputs.WanVlan>;
+    /**
+     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
+     */
+    declare public readonly wanDsliteRemoteHost: pulumi.Output<string>;
+    /**
+     * Whether the DS-Lite AFTR remote host is detected automatically.
+     */
+    declare public readonly wanDsliteRemoteHostAuto: pulumi.Output<boolean>;
 
     /**
      * Create a Wan resource with the given unique name, arguments, and options.
@@ -123,16 +148,23 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["igmpProxy"] = state?.igmpProxy;
             resourceInputs["ipAliases"] = state?.ipAliases;
+            resourceInputs["ipv6SettingPreference"] = state?.ipv6SettingPreference;
             resourceInputs["loadBalance"] = state?.loadBalance;
+            resourceInputs["macOverrideEnabled"] = state?.macOverrideEnabled;
             resourceInputs["name"] = state?.name;
             resourceInputs["providerCapabilities"] = state?.providerCapabilities;
             resourceInputs["reportWanEvent"] = state?.reportWanEvent;
+            resourceInputs["settingPreference"] = state?.settingPreference;
+            resourceInputs["singleNetworkLan"] = state?.singleNetworkLan;
             resourceInputs["site"] = state?.site;
             resourceInputs["smartq"] = state?.smartq;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["type"] = state?.type;
             resourceInputs["typeV6"] = state?.typeV6;
             resourceInputs["upnp"] = state?.upnp;
             resourceInputs["vlan"] = state?.vlan;
+            resourceInputs["wanDsliteRemoteHost"] = state?.wanDsliteRemoteHost;
+            resourceInputs["wanDsliteRemoteHostAuto"] = state?.wanDsliteRemoteHostAuto;
         } else {
             const args = argsOrState as WanArgs | undefined;
             resourceInputs["dhcp"] = args?.dhcp;
@@ -142,16 +174,23 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["igmpProxy"] = args?.igmpProxy;
             resourceInputs["ipAliases"] = args?.ipAliases;
+            resourceInputs["ipv6SettingPreference"] = args?.ipv6SettingPreference;
             resourceInputs["loadBalance"] = args?.loadBalance;
+            resourceInputs["macOverrideEnabled"] = args?.macOverrideEnabled;
             resourceInputs["name"] = args?.name;
             resourceInputs["providerCapabilities"] = args?.providerCapabilities;
             resourceInputs["reportWanEvent"] = args?.reportWanEvent;
+            resourceInputs["settingPreference"] = args?.settingPreference;
+            resourceInputs["singleNetworkLan"] = args?.singleNetworkLan;
             resourceInputs["site"] = args?.site;
             resourceInputs["smartq"] = args?.smartq;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["type"] = args?.type;
             resourceInputs["typeV6"] = args?.typeV6;
             resourceInputs["upnp"] = args?.upnp;
             resourceInputs["vlan"] = args?.vlan;
+            resourceInputs["wanDsliteRemoteHost"] = args?.wanDsliteRemoteHost;
+            resourceInputs["wanDsliteRemoteHostAuto"] = args?.wanDsliteRemoteHostAuto;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(Wan.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -165,71 +204,96 @@ export interface WanState {
     /**
      * DHCP configuration
      */
-    dhcp?: pulumi.Input<inputs.WanDhcp>;
+    dhcp?: pulumi.Input<inputs.WanDhcp | undefined>;
     /**
      * DHCPv6 configuration
      */
-    dhcpv6?: pulumi.Input<inputs.WanDhcpv6>;
+    dhcpv6?: pulumi.Input<inputs.WanDhcpv6 | undefined>;
     /**
      * DNS configuration
      */
-    dns?: pulumi.Input<inputs.WanDns>;
+    dns?: pulumi.Input<inputs.WanDns | undefined>;
     /**
      * Egress QoS configuration
      */
-    egressQos?: pulumi.Input<inputs.WanEgressQos>;
+    egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
     /**
      * Whether the WAN network is enabled
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * IGMP proxy configuration
      */
-    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy>;
+    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
     /**
      * IP aliases
      */
-    ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
+    ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    ipv6SettingPreference?: pulumi.Input<string | undefined>;
     /**
      * Load balance configuration
      */
-    loadBalance?: pulumi.Input<inputs.WanLoadBalance>;
+    loadBalance?: pulumi.Input<inputs.WanLoadBalance | undefined>;
+    /**
+     * Whether the WAN interface MAC address is overridden.
+     */
+    macOverrideEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the WAN network
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * WAN provider capabilities
+     * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
-    providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities>;
+    providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities | undefined>;
     /**
      * Whether to report WAN events
      */
-    reportWanEvent?: pulumi.Input<boolean>;
+    reportWanEvent?: pulumi.Input<boolean | undefined>;
+    /**
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    settingPreference?: pulumi.Input<string | undefined>;
+    /**
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     */
+    singleNetworkLan?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the WAN network with
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Smart Queue configuration
      */
-    smartq?: pulumi.Input<inputs.WanSmartq>;
+    smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
+    timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
     /**
-     * The IPv6 WAN type (dhcpv6, static, disabled)
+     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
-    typeV6?: pulumi.Input<string>;
+    typeV6?: pulumi.Input<string | undefined>;
     /**
      * UPnP configuration
      */
-    upnp?: pulumi.Input<inputs.WanUpnp>;
+    upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
     /**
      * VLAN configuration
      */
-    vlan?: pulumi.Input<inputs.WanVlan>;
+    vlan?: pulumi.Input<inputs.WanVlan | undefined>;
+    /**
+     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
+     */
+    wanDsliteRemoteHost?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the DS-Lite AFTR remote host is detected automatically.
+     */
+    wanDsliteRemoteHostAuto?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -239,69 +303,94 @@ export interface WanArgs {
     /**
      * DHCP configuration
      */
-    dhcp?: pulumi.Input<inputs.WanDhcp>;
+    dhcp?: pulumi.Input<inputs.WanDhcp | undefined>;
     /**
      * DHCPv6 configuration
      */
-    dhcpv6?: pulumi.Input<inputs.WanDhcpv6>;
+    dhcpv6?: pulumi.Input<inputs.WanDhcpv6 | undefined>;
     /**
      * DNS configuration
      */
-    dns?: pulumi.Input<inputs.WanDns>;
+    dns?: pulumi.Input<inputs.WanDns | undefined>;
     /**
      * Egress QoS configuration
      */
-    egressQos?: pulumi.Input<inputs.WanEgressQos>;
+    egressQos?: pulumi.Input<inputs.WanEgressQos | undefined>;
     /**
      * Whether the WAN network is enabled
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * IGMP proxy configuration
      */
-    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy>;
+    igmpProxy?: pulumi.Input<inputs.WanIgmpProxy | undefined>;
     /**
      * IP aliases
      */
-    ipAliases?: pulumi.Input<pulumi.Input<string>[]>;
+    ipAliases?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Whether WAN IPv6 settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    ipv6SettingPreference?: pulumi.Input<string | undefined>;
     /**
      * Load balance configuration
      */
-    loadBalance?: pulumi.Input<inputs.WanLoadBalance>;
+    loadBalance?: pulumi.Input<inputs.WanLoadBalance | undefined>;
+    /**
+     * Whether the WAN interface MAC address is overridden.
+     */
+    macOverrideEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the WAN network
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * WAN provider capabilities
+     * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
-    providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities>;
+    providerCapabilities?: pulumi.Input<inputs.WanProviderCapabilities | undefined>;
     /**
      * Whether to report WAN events
      */
-    reportWanEvent?: pulumi.Input<boolean>;
+    reportWanEvent?: pulumi.Input<boolean | undefined>;
+    /**
+     * Whether WAN settings are managed automatically by the controller or manually. Can be one of `auto` or `manual`.
+     */
+    settingPreference?: pulumi.Input<string | undefined>;
+    /**
+     * The LAN network used for IPv6 single-network prefix delegation (used when the IPv6 delegation type is `single_network`).
+     */
+    singleNetworkLan?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the WAN network with
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Smart Queue configuration
      */
-    smartq?: pulumi.Input<inputs.WanSmartq>;
+    smartq?: pulumi.Input<inputs.WanSmartq | undefined>;
+    timeouts?: pulumi.Input<inputs.WanTimeouts | undefined>;
     /**
      * The WAN type (dhcp, static, pppoe)
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
     /**
-     * The IPv6 WAN type (dhcpv6, static, disabled)
+     * The IPv6 WAN type. One of `dhcpv6`, `slaac`, `static`, or `disabled`. Note: the controller requires `slaac` when the IPv6 delegation type is `single_network` (`api.err.SingleNetworkMustBeSLAAC` otherwise) — common with ISPs that deliver IPv6 by Router Advertisement, e.g. Free/Freebox in bridge mode.
      */
-    typeV6?: pulumi.Input<string>;
+    typeV6?: pulumi.Input<string | undefined>;
     /**
      * UPnP configuration
      */
-    upnp?: pulumi.Input<inputs.WanUpnp>;
+    upnp?: pulumi.Input<inputs.WanUpnp | undefined>;
     /**
      * VLAN configuration
      */
-    vlan?: pulumi.Input<inputs.WanVlan>;
+    vlan?: pulumi.Input<inputs.WanVlan | undefined>;
+    /**
+     * The DS-Lite AFTR remote host. Only used when `wan_dslite_remote_host_auto` is disabled.
+     */
+    wanDsliteRemoteHost?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the DS-Lite AFTR remote host is detected automatically.
+     */
+    wanDsliteRemoteHostAuto?: pulumi.Input<boolean | undefined>;
 }

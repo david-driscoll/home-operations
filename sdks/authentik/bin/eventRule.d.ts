@@ -50,13 +50,13 @@ export interface EventRuleState {
     /**
      * Send notification to event user Defaults to `false`.
      */
-    destinationEventUser?: pulumi.Input<boolean>;
+    destinationEventUser?: pulumi.Input<boolean | undefined>;
     /**
      * Group to send notification to
      */
-    destinationGroup?: pulumi.Input<string>;
-    eventRuleId?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    destinationGroup?: pulumi.Input<string | undefined>;
+    eventRuleId?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `notice`
@@ -64,8 +64,8 @@ export interface EventRuleState {
      *   - `alert`
      *  Defaults to `warning`.
      */
-    severity?: pulumi.Input<string>;
-    transports?: pulumi.Input<pulumi.Input<string>[]>;
+    severity?: pulumi.Input<string | undefined>;
+    transports?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 /**
  * The set of arguments for constructing a EventRule resource.
@@ -74,13 +74,13 @@ export interface EventRuleArgs {
     /**
      * Send notification to event user Defaults to `false`.
      */
-    destinationEventUser?: pulumi.Input<boolean>;
+    destinationEventUser?: pulumi.Input<boolean | undefined>;
     /**
      * Group to send notification to
      */
-    destinationGroup?: pulumi.Input<string>;
-    eventRuleId?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    destinationGroup?: pulumi.Input<string | undefined>;
+    eventRuleId?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `notice`
@@ -88,7 +88,7 @@ export interface EventRuleArgs {
      *   - `alert`
      *  Defaults to `warning`.
      */
-    severity?: pulumi.Input<string>;
+    severity?: pulumi.Input<string | undefined>;
     transports: pulumi.Input<pulumi.Input<string>[]>;
 }
 //# sourceMappingURL=eventRule.d.ts.map

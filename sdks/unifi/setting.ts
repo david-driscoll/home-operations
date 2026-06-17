@@ -35,9 +35,45 @@ export class Setting extends pulumi.CustomResource {
     }
 
     /**
+     * Periodic automated internet speed test settings.
+     */
+    declare public readonly autoSpeedtest: pulumi.Output<outputs.SettingAutoSpeedtest>;
+    /**
+     * Regulatory country settings.
+     */
+    declare public readonly country: pulumi.Output<outputs.SettingCountry>;
+    /**
+     * Encrypted DNS (DNS-over-HTTPS) settings.
+     */
+    declare public readonly doh: pulumi.Output<outputs.SettingDoh>;
+    /**
+     * Deep Packet Inspection (DPI) settings.
+     */
+    declare public readonly dpi: pulumi.Output<outputs.SettingDpi>;
+    /**
+     * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
+     */
+    declare public readonly igmpSnooping: pulumi.Output<outputs.SettingIgmpSnooping | undefined>;
+    /**
+     * Intrusion Prevention System (IPS/IDS) and threat management settings. Basic IDS/IPS uses the built-in Emerging Threats ruleset and is free. A UniFi CyberSecure subscription adds enhanced threat intelligence from Proofpoint and Cloudflare on top of the base ruleset.
+     */
+    declare public readonly ips: pulumi.Output<outputs.SettingIps>;
+    /**
+     * LCD/display (LCM) settings for devices with a screen.
+     */
+    declare public readonly lcm: pulumi.Output<outputs.SettingLcm>;
+    /**
      * Management settings.
      */
     declare public readonly mgmt: pulumi.Output<outputs.SettingMgmt>;
+    /**
+     * Automated network optimization settings.
+     */
+    declare public readonly networkOptimization: pulumi.Output<outputs.SettingNetworkOptimization>;
+    /**
+     * NTP (time server) settings.
+     */
+    declare public readonly ntp: pulumi.Output<outputs.SettingNtp>;
     /**
      * RADIUS settings.
      */
@@ -46,6 +82,11 @@ export class Setting extends pulumi.CustomResource {
      * The name of the site to associate the settings with.
      */
     declare public readonly site: pulumi.Output<string>;
+    /**
+     * Remote syslog (rsyslogd) settings.
+     */
+    declare public readonly syslog: pulumi.Output<outputs.SettingSyslog>;
+    declare public readonly timeouts: pulumi.Output<outputs.SettingTimeouts | undefined>;
     /**
      * USG settings.
      */
@@ -64,15 +105,37 @@ export class Setting extends pulumi.CustomResource {
         opts = opts || {};
         if (opts.id) {
             const state = argsOrState as SettingState | undefined;
+            resourceInputs["autoSpeedtest"] = state?.autoSpeedtest;
+            resourceInputs["country"] = state?.country;
+            resourceInputs["doh"] = state?.doh;
+            resourceInputs["dpi"] = state?.dpi;
+            resourceInputs["igmpSnooping"] = state?.igmpSnooping;
+            resourceInputs["ips"] = state?.ips;
+            resourceInputs["lcm"] = state?.lcm;
             resourceInputs["mgmt"] = state?.mgmt;
+            resourceInputs["networkOptimization"] = state?.networkOptimization;
+            resourceInputs["ntp"] = state?.ntp;
             resourceInputs["radius"] = state?.radius;
             resourceInputs["site"] = state?.site;
+            resourceInputs["syslog"] = state?.syslog;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["usg"] = state?.usg;
         } else {
             const args = argsOrState as SettingArgs | undefined;
+            resourceInputs["autoSpeedtest"] = args?.autoSpeedtest;
+            resourceInputs["country"] = args?.country;
+            resourceInputs["doh"] = args?.doh;
+            resourceInputs["dpi"] = args?.dpi;
+            resourceInputs["igmpSnooping"] = args?.igmpSnooping;
+            resourceInputs["ips"] = args?.ips;
+            resourceInputs["lcm"] = args?.lcm;
             resourceInputs["mgmt"] = args?.mgmt;
+            resourceInputs["networkOptimization"] = args?.networkOptimization;
+            resourceInputs["ntp"] = args?.ntp;
             resourceInputs["radius"] = args?.radius;
             resourceInputs["site"] = args?.site;
+            resourceInputs["syslog"] = args?.syslog;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["usg"] = args?.usg;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -85,21 +148,62 @@ export class Setting extends pulumi.CustomResource {
  */
 export interface SettingState {
     /**
+     * Periodic automated internet speed test settings.
+     */
+    autoSpeedtest?: pulumi.Input<inputs.SettingAutoSpeedtest | undefined>;
+    /**
+     * Regulatory country settings.
+     */
+    country?: pulumi.Input<inputs.SettingCountry | undefined>;
+    /**
+     * Encrypted DNS (DNS-over-HTTPS) settings.
+     */
+    doh?: pulumi.Input<inputs.SettingDoh | undefined>;
+    /**
+     * Deep Packet Inspection (DPI) settings.
+     */
+    dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
+    /**
+     * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
+     */
+    igmpSnooping?: pulumi.Input<inputs.SettingIgmpSnooping | undefined>;
+    /**
+     * Intrusion Prevention System (IPS/IDS) and threat management settings. Basic IDS/IPS uses the built-in Emerging Threats ruleset and is free. A UniFi CyberSecure subscription adds enhanced threat intelligence from Proofpoint and Cloudflare on top of the base ruleset.
+     */
+    ips?: pulumi.Input<inputs.SettingIps | undefined>;
+    /**
+     * LCD/display (LCM) settings for devices with a screen.
+     */
+    lcm?: pulumi.Input<inputs.SettingLcm | undefined>;
+    /**
      * Management settings.
      */
-    mgmt?: pulumi.Input<inputs.SettingMgmt>;
+    mgmt?: pulumi.Input<inputs.SettingMgmt | undefined>;
+    /**
+     * Automated network optimization settings.
+     */
+    networkOptimization?: pulumi.Input<inputs.SettingNetworkOptimization | undefined>;
+    /**
+     * NTP (time server) settings.
+     */
+    ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
      * RADIUS settings.
      */
-    radius?: pulumi.Input<inputs.SettingRadius>;
+    radius?: pulumi.Input<inputs.SettingRadius | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    /**
+     * Remote syslog (rsyslogd) settings.
+     */
+    syslog?: pulumi.Input<inputs.SettingSyslog | undefined>;
+    timeouts?: pulumi.Input<inputs.SettingTimeouts | undefined>;
     /**
      * USG settings.
      */
-    usg?: pulumi.Input<inputs.SettingUsg>;
+    usg?: pulumi.Input<inputs.SettingUsg | undefined>;
 }
 
 /**
@@ -107,19 +211,60 @@ export interface SettingState {
  */
 export interface SettingArgs {
     /**
+     * Periodic automated internet speed test settings.
+     */
+    autoSpeedtest?: pulumi.Input<inputs.SettingAutoSpeedtest | undefined>;
+    /**
+     * Regulatory country settings.
+     */
+    country?: pulumi.Input<inputs.SettingCountry | undefined>;
+    /**
+     * Encrypted DNS (DNS-over-HTTPS) settings.
+     */
+    doh?: pulumi.Input<inputs.SettingDoh | undefined>;
+    /**
+     * Deep Packet Inspection (DPI) settings.
+     */
+    dpi?: pulumi.Input<inputs.SettingDpi | undefined>;
+    /**
+     * Site-level IGMP snooping setting. On UniFi Network 10.3.x+ the effective IGMP snooping toggle lives here rather than on each network. Advanced querier/flood options configured in the UI are preserved across updates.
+     */
+    igmpSnooping?: pulumi.Input<inputs.SettingIgmpSnooping | undefined>;
+    /**
+     * Intrusion Prevention System (IPS/IDS) and threat management settings. Basic IDS/IPS uses the built-in Emerging Threats ruleset and is free. A UniFi CyberSecure subscription adds enhanced threat intelligence from Proofpoint and Cloudflare on top of the base ruleset.
+     */
+    ips?: pulumi.Input<inputs.SettingIps | undefined>;
+    /**
+     * LCD/display (LCM) settings for devices with a screen.
+     */
+    lcm?: pulumi.Input<inputs.SettingLcm | undefined>;
+    /**
      * Management settings.
      */
-    mgmt?: pulumi.Input<inputs.SettingMgmt>;
+    mgmt?: pulumi.Input<inputs.SettingMgmt | undefined>;
+    /**
+     * Automated network optimization settings.
+     */
+    networkOptimization?: pulumi.Input<inputs.SettingNetworkOptimization | undefined>;
+    /**
+     * NTP (time server) settings.
+     */
+    ntp?: pulumi.Input<inputs.SettingNtp | undefined>;
     /**
      * RADIUS settings.
      */
-    radius?: pulumi.Input<inputs.SettingRadius>;
+    radius?: pulumi.Input<inputs.SettingRadius | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    /**
+     * Remote syslog (rsyslogd) settings.
+     */
+    syslog?: pulumi.Input<inputs.SettingSyslog | undefined>;
+    timeouts?: pulumi.Input<inputs.SettingTimeouts | undefined>;
     /**
      * USG settings.
      */
-    usg?: pulumi.Input<inputs.SettingUsg>;
+    usg?: pulumi.Input<inputs.SettingUsg | undefined>;
 }

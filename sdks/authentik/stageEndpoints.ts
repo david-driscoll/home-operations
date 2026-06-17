@@ -79,16 +79,16 @@ export class StageEndpoints extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StageEndpoints resources.
  */
 export interface StageEndpointsState {
-    connector?: pulumi.Input<string>;
+    connector?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `optional`
      *   - `required`
      *  Defaults to `optional`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageEndpointsId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageEndpointsId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -102,7 +102,7 @@ export interface StageEndpointsArgs {
      *   - `required`
      *  Defaults to `optional`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageEndpointsId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageEndpointsId?: pulumi.Input<string | undefined>;
 }

@@ -61,7 +61,7 @@ export class SystemSettings extends pulumi.CustomResource {
      */
     declare public readonly eventRetention: pulumi.Output<string | undefined>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"core_default_app_access":false,"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false}`.
      */
     declare public readonly flags: pulumi.Output<string | undefined>;
     declare public readonly footerLinks: pulumi.Output<{[key: string]: string}[] | undefined>;
@@ -151,61 +151,61 @@ export interface SystemSettingsState {
     /**
      * Defaults to `gravatar,initials`.
      */
-    avatars?: pulumi.Input<string>;
+    avatars?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    defaultTokenDuration?: pulumi.Input<string>;
+    defaultTokenDuration?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `60`.
      */
-    defaultTokenLength?: pulumi.Input<number>;
+    defaultTokenLength?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    defaultUserChangeEmail?: pulumi.Input<boolean>;
+    defaultUserChangeEmail?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    defaultUserChangeName?: pulumi.Input<boolean>;
+    defaultUserChangeName?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    defaultUserChangeUsername?: pulumi.Input<boolean>;
+    defaultUserChangeUsername?: pulumi.Input<boolean | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=365`.
      */
-    eventRetention?: pulumi.Input<string>;
+    eventRetention?: pulumi.Input<string | undefined>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"core_default_app_access":false,"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false}`.
      */
-    flags?: pulumi.Input<string>;
-    footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
-    /**
-     * Defaults to `true`.
-     */
-    gdprCompliance?: pulumi.Input<boolean>;
+    flags?: pulumi.Input<string | undefined>;
+    footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[] | undefined>;
     /**
      * Defaults to `true`.
      */
-    impersonation?: pulumi.Input<boolean>;
+    gdprCompliance?: pulumi.Input<boolean | undefined>;
+    /**
+     * Defaults to `true`.
+     */
+    impersonation?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `20`.
      */
-    paginationDefaultPageSize?: pulumi.Input<number>;
+    paginationDefaultPageSize?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    paginationMaxPageSize?: pulumi.Input<number>;
+    paginationMaxPageSize?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `-5`.
      */
-    reputationLowerLimit?: pulumi.Input<number>;
+    reputationLowerLimit?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `5`.
      */
-    reputationUpperLimit?: pulumi.Input<number>;
-    systemSettingsId?: pulumi.Input<string>;
+    reputationUpperLimit?: pulumi.Input<number | undefined>;
+    systemSettingsId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -215,59 +215,59 @@ export interface SystemSettingsArgs {
     /**
      * Defaults to `gravatar,initials`.
      */
-    avatars?: pulumi.Input<string>;
+    avatars?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    defaultTokenDuration?: pulumi.Input<string>;
+    defaultTokenDuration?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `60`.
      */
-    defaultTokenLength?: pulumi.Input<number>;
+    defaultTokenLength?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    defaultUserChangeEmail?: pulumi.Input<boolean>;
+    defaultUserChangeEmail?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    defaultUserChangeName?: pulumi.Input<boolean>;
+    defaultUserChangeName?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    defaultUserChangeUsername?: pulumi.Input<boolean>;
+    defaultUserChangeUsername?: pulumi.Input<boolean | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=365`.
      */
-    eventRetention?: pulumi.Input<string>;
+    eventRetention?: pulumi.Input<string | undefined>;
     /**
-     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false,"policies_buffered_access_view":false}`.
+     * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{"core_default_app_access":false,"enterprise_audit_include_expanded_diff":false,"flows_continuous_login":false,"flows_refresh_others":false}`.
      */
-    flags?: pulumi.Input<string>;
-    footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
-    /**
-     * Defaults to `true`.
-     */
-    gdprCompliance?: pulumi.Input<boolean>;
+    flags?: pulumi.Input<string | undefined>;
+    footerLinks?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[] | undefined>;
     /**
      * Defaults to `true`.
      */
-    impersonation?: pulumi.Input<boolean>;
+    gdprCompliance?: pulumi.Input<boolean | undefined>;
+    /**
+     * Defaults to `true`.
+     */
+    impersonation?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `20`.
      */
-    paginationDefaultPageSize?: pulumi.Input<number>;
+    paginationDefaultPageSize?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    paginationMaxPageSize?: pulumi.Input<number>;
+    paginationMaxPageSize?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `-5`.
      */
-    reputationLowerLimit?: pulumi.Input<number>;
+    reputationLowerLimit?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `5`.
      */
-    reputationUpperLimit?: pulumi.Input<number>;
-    systemSettingsId?: pulumi.Input<string>;
+    reputationUpperLimit?: pulumi.Input<number | undefined>;
+    systemSettingsId?: pulumi.Input<string | undefined>;
 }

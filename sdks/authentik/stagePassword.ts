@@ -88,15 +88,15 @@ export interface StagePasswordState {
     /**
      * Defaults to `false`.
      */
-    allowShowPassword?: pulumi.Input<boolean>;
-    backends?: pulumi.Input<pulumi.Input<string>[]>;
-    configureFlow?: pulumi.Input<string>;
+    allowShowPassword?: pulumi.Input<boolean | undefined>;
+    backends?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `5`.
      */
-    failedAttemptsBeforeCancel?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    stagePasswordId?: pulumi.Input<string>;
+    failedAttemptsBeforeCancel?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stagePasswordId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -106,13 +106,13 @@ export interface StagePasswordArgs {
     /**
      * Defaults to `false`.
      */
-    allowShowPassword?: pulumi.Input<boolean>;
+    allowShowPassword?: pulumi.Input<boolean | undefined>;
     backends: pulumi.Input<pulumi.Input<string>[]>;
-    configureFlow?: pulumi.Input<string>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `5`.
      */
-    failedAttemptsBeforeCancel?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    stagePasswordId?: pulumi.Input<string>;
+    failedAttemptsBeforeCancel?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stagePasswordId?: pulumi.Input<string | undefined>;
 }

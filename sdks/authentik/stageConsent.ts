@@ -83,7 +83,7 @@ export interface StageConsentState {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `weeks=4`.
      */
-    consentExpireIn?: pulumi.Input<string>;
+    consentExpireIn?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `always_require`
@@ -91,9 +91,9 @@ export interface StageConsentState {
      *   - `expiring`
      *  Defaults to `always_require`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageConsentId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageConsentId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -103,7 +103,7 @@ export interface StageConsentArgs {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `weeks=4`.
      */
-    consentExpireIn?: pulumi.Input<string>;
+    consentExpireIn?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `always_require`
@@ -111,7 +111,7 @@ export interface StageConsentArgs {
      *   - `expiring`
      *  Defaults to `always_require`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageConsentId?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageConsentId?: pulumi.Input<string | undefined>;
 }

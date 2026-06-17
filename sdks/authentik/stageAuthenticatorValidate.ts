@@ -35,6 +35,10 @@ export class StageAuthenticatorValidate extends pulumi.CustomResource {
     declare public readonly configurationStages: pulumi.Output<string[] | undefined>;
     declare public readonly deviceClasses: pulumi.Output<string[] | undefined>;
     /**
+     * Defaults to `1`.
+     */
+    declare public readonly emailOtpThrottlingFactor: pulumi.Output<number | undefined>;
+    /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
     declare public readonly lastAuthThreshold: pulumi.Output<string | undefined>;
@@ -46,8 +50,21 @@ export class StageAuthenticatorValidate extends pulumi.CustomResource {
      *   - `configure`
      */
     declare public readonly notConfiguredAction: pulumi.Output<string>;
+    /**
+     * Defaults to `1`.
+     */
+    declare public readonly smsOtpThrottlingFactor: pulumi.Output<number | undefined>;
     declare public readonly stageAuthenticatorValidateId: pulumi.Output<string>;
+    /**
+     * Defaults to `1`.
+     */
+    declare public readonly staticOtpThrottlingFactor: pulumi.Output<number | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    declare public readonly totpOtpThrottlingFactor: pulumi.Output<number | undefined>;
     declare public readonly webauthnAllowedDeviceTypes: pulumi.Output<string[] | undefined>;
+    declare public readonly webauthnHints: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -72,11 +89,16 @@ export class StageAuthenticatorValidate extends pulumi.CustomResource {
             const state = argsOrState as StageAuthenticatorValidateState | undefined;
             resourceInputs["configurationStages"] = state?.configurationStages;
             resourceInputs["deviceClasses"] = state?.deviceClasses;
+            resourceInputs["emailOtpThrottlingFactor"] = state?.emailOtpThrottlingFactor;
             resourceInputs["lastAuthThreshold"] = state?.lastAuthThreshold;
             resourceInputs["name"] = state?.name;
             resourceInputs["notConfiguredAction"] = state?.notConfiguredAction;
+            resourceInputs["smsOtpThrottlingFactor"] = state?.smsOtpThrottlingFactor;
             resourceInputs["stageAuthenticatorValidateId"] = state?.stageAuthenticatorValidateId;
+            resourceInputs["staticOtpThrottlingFactor"] = state?.staticOtpThrottlingFactor;
+            resourceInputs["totpOtpThrottlingFactor"] = state?.totpOtpThrottlingFactor;
             resourceInputs["webauthnAllowedDeviceTypes"] = state?.webauthnAllowedDeviceTypes;
+            resourceInputs["webauthnHints"] = state?.webauthnHints;
             resourceInputs["webauthnUserVerification"] = state?.webauthnUserVerification;
         } else {
             const args = argsOrState as StageAuthenticatorValidateArgs | undefined;
@@ -85,11 +107,16 @@ export class StageAuthenticatorValidate extends pulumi.CustomResource {
             }
             resourceInputs["configurationStages"] = args?.configurationStages;
             resourceInputs["deviceClasses"] = args?.deviceClasses;
+            resourceInputs["emailOtpThrottlingFactor"] = args?.emailOtpThrottlingFactor;
             resourceInputs["lastAuthThreshold"] = args?.lastAuthThreshold;
             resourceInputs["name"] = args?.name;
             resourceInputs["notConfiguredAction"] = args?.notConfiguredAction;
+            resourceInputs["smsOtpThrottlingFactor"] = args?.smsOtpThrottlingFactor;
             resourceInputs["stageAuthenticatorValidateId"] = args?.stageAuthenticatorValidateId;
+            resourceInputs["staticOtpThrottlingFactor"] = args?.staticOtpThrottlingFactor;
+            resourceInputs["totpOtpThrottlingFactor"] = args?.totpOtpThrottlingFactor;
             resourceInputs["webauthnAllowedDeviceTypes"] = args?.webauthnAllowedDeviceTypes;
+            resourceInputs["webauthnHints"] = args?.webauthnHints;
             resourceInputs["webauthnUserVerification"] = args?.webauthnUserVerification;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -101,22 +128,39 @@ export class StageAuthenticatorValidate extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StageAuthenticatorValidate resources.
  */
 export interface StageAuthenticatorValidateState {
-    configurationStages?: pulumi.Input<pulumi.Input<string>[]>;
-    deviceClasses?: pulumi.Input<pulumi.Input<string>[]>;
+    configurationStages?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    deviceClasses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    emailOtpThrottlingFactor?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    lastAuthThreshold?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    lastAuthThreshold?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `skip`
      *   - `deny`
      *   - `configure`
      */
-    notConfiguredAction?: pulumi.Input<string>;
-    stageAuthenticatorValidateId?: pulumi.Input<string>;
-    webauthnAllowedDeviceTypes?: pulumi.Input<pulumi.Input<string>[]>;
+    notConfiguredAction?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    smsOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    stageAuthenticatorValidateId?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    staticOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    totpOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    webauthnAllowedDeviceTypes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    webauthnHints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -124,20 +168,24 @@ export interface StageAuthenticatorValidateState {
      *   - `discouraged`
      *  Defaults to `preferred`.
      */
-    webauthnUserVerification?: pulumi.Input<string>;
+    webauthnUserVerification?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a StageAuthenticatorValidate resource.
  */
 export interface StageAuthenticatorValidateArgs {
-    configurationStages?: pulumi.Input<pulumi.Input<string>[]>;
-    deviceClasses?: pulumi.Input<pulumi.Input<string>[]>;
+    configurationStages?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    deviceClasses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    emailOtpThrottlingFactor?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    lastAuthThreshold?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    lastAuthThreshold?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `skip`
@@ -145,8 +193,21 @@ export interface StageAuthenticatorValidateArgs {
      *   - `configure`
      */
     notConfiguredAction: pulumi.Input<string>;
-    stageAuthenticatorValidateId?: pulumi.Input<string>;
-    webauthnAllowedDeviceTypes?: pulumi.Input<pulumi.Input<string>[]>;
+    /**
+     * Defaults to `1`.
+     */
+    smsOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    stageAuthenticatorValidateId?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    staticOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    /**
+     * Defaults to `1`.
+     */
+    totpOtpThrottlingFactor?: pulumi.Input<number | undefined>;
+    webauthnAllowedDeviceTypes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    webauthnHints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -154,5 +215,5 @@ export interface StageAuthenticatorValidateArgs {
      *   - `discouraged`
      *  Defaults to `preferred`.
      */
-    webauthnUserVerification?: pulumi.Input<string>;
+    webauthnUserVerification?: pulumi.Input<string | undefined>;
 }

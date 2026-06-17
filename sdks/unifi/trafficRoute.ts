@@ -39,7 +39,7 @@ export class TrafficRoute extends pulumi.CustomResource {
      */
     declare public readonly description: pulumi.Output<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domains`, `regions`, or IP-based matching (`ip_addresses` and/or `ip_ranges`). When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
      */
     declare public readonly destination: pulumi.Output<outputs.TrafficRouteDestination | undefined>;
     /**
@@ -66,6 +66,7 @@ export class TrafficRoute extends pulumi.CustomResource {
      * Source filter for this traffic route. When omitted, the route applies to all clients.
      */
     declare public readonly source: pulumi.Output<outputs.TrafficRouteSource | undefined>;
+    declare public readonly timeouts: pulumi.Output<outputs.TrafficRouteTimeouts | undefined>;
 
     /**
      * Create a TrafficRoute resource with the given unique name, arguments, and options.
@@ -88,6 +89,7 @@ export class TrafficRoute extends pulumi.CustomResource {
             resourceInputs["nextHop"] = state?.nextHop;
             resourceInputs["site"] = state?.site;
             resourceInputs["source"] = state?.source;
+            resourceInputs["timeouts"] = state?.timeouts;
         } else {
             const args = argsOrState as TrafficRouteArgs | undefined;
             resourceInputs["description"] = args?.description;
@@ -98,6 +100,7 @@ export class TrafficRoute extends pulumi.CustomResource {
             resourceInputs["nextHop"] = args?.nextHop;
             resourceInputs["site"] = args?.site;
             resourceInputs["source"] = args?.source;
+            resourceInputs["timeouts"] = args?.timeouts;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(TrafficRoute.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -111,35 +114,36 @@ export interface TrafficRouteState {
     /**
      * A description of the traffic route (max 128 characters).
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domains`, `regions`, or IP-based matching (`ip_addresses` and/or `ip_ranges`). When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
      */
-    destination?: pulumi.Input<inputs.TrafficRouteDestination>;
+    destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
      * Whether the traffic route is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable.
      */
-    killSwitchEnabled?: pulumi.Input<boolean>;
+    killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The ID of the network or VPN to route matching traffic through. Defaults to the primary WAN network.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The next hop for the traffic route.
      */
-    nextHop?: pulumi.Input<string>;
+    nextHop?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the traffic route with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source filter for this traffic route. When omitted, the route applies to all clients.
      */
-    source?: pulumi.Input<inputs.TrafficRouteSource>;
+    source?: pulumi.Input<inputs.TrafficRouteSource | undefined>;
+    timeouts?: pulumi.Input<inputs.TrafficRouteTimeouts | undefined>;
 }
 
 /**
@@ -149,33 +153,34 @@ export interface TrafficRouteArgs {
     /**
      * A description of the traffic route (max 128 characters).
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
-     * Destination filter for this traffic route. Specify exactly one of `domains`, `regions`, or IP-based matching (`ip_addresses` and/or `ip_ranges`). When omitted, the route matches all internet traffic.
+     * Destination filter for this traffic route. Specify exactly one of `domain`, `region`, or `ip`. When omitted, the route matches all internet traffic.
      */
-    destination?: pulumi.Input<inputs.TrafficRouteDestination>;
+    destination?: pulumi.Input<inputs.TrafficRouteDestination | undefined>;
     /**
      * Whether the traffic route is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether the kill switch is enabled. When enabled, traffic is blocked if the target network/VPN is unavailable.
      */
-    killSwitchEnabled?: pulumi.Input<boolean>;
+    killSwitchEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * The ID of the network or VPN to route matching traffic through. Defaults to the primary WAN network.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The next hop for the traffic route.
      */
-    nextHop?: pulumi.Input<string>;
+    nextHop?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the traffic route with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source filter for this traffic route. When omitted, the route applies to all clients.
      */
-    source?: pulumi.Input<inputs.TrafficRouteSource>;
+    source?: pulumi.Input<inputs.TrafficRouteSource | undefined>;
+    timeouts?: pulumi.Input<inputs.TrafficRouteTimeouts | undefined>;
 }

@@ -52,11 +52,11 @@ export class StageCaptcha extends pulumi.CustomResource {
     declare public readonly privateKey: pulumi.Output<string>;
     declare public readonly publicKey: pulumi.Output<string>;
     /**
-     * Defaults to `0.5`.
+     * Defaults to `1`.
      */
     declare public readonly scoreMaxThreshold: pulumi.Output<number | undefined>;
     /**
-     * Defaults to `1`.
+     * Defaults to `0.5`.
      */
     declare public readonly scoreMinThreshold: pulumi.Output<number | undefined>;
     declare public readonly stageCaptchaId: pulumi.Output<string>;
@@ -117,31 +117,31 @@ export interface StageCaptchaState {
     /**
      * Defaults to `https://www.recaptcha.net/recaptcha/api/siteverify`.
      */
-    apiUrl?: pulumi.Input<string>;
+    apiUrl?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    errorOnInvalidScore?: pulumi.Input<boolean>;
+    errorOnInvalidScore?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    interactive?: pulumi.Input<boolean>;
+    interactive?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `https://www.recaptcha.net/recaptcha/api.js`.
      */
-    jsUrl?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    privateKey?: pulumi.Input<string>;
-    publicKey?: pulumi.Input<string>;
-    /**
-     * Defaults to `0.5`.
-     */
-    scoreMaxThreshold?: pulumi.Input<number>;
+    jsUrl?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    privateKey?: pulumi.Input<string | undefined>;
+    publicKey?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `1`.
      */
-    scoreMinThreshold?: pulumi.Input<number>;
-    stageCaptchaId?: pulumi.Input<string>;
+    scoreMaxThreshold?: pulumi.Input<number | undefined>;
+    /**
+     * Defaults to `0.5`.
+     */
+    scoreMinThreshold?: pulumi.Input<number | undefined>;
+    stageCaptchaId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -151,29 +151,29 @@ export interface StageCaptchaArgs {
     /**
      * Defaults to `https://www.recaptcha.net/recaptcha/api/siteverify`.
      */
-    apiUrl?: pulumi.Input<string>;
+    apiUrl?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    errorOnInvalidScore?: pulumi.Input<boolean>;
+    errorOnInvalidScore?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    interactive?: pulumi.Input<boolean>;
+    interactive?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `https://www.recaptcha.net/recaptcha/api.js`.
      */
-    jsUrl?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    jsUrl?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     privateKey: pulumi.Input<string>;
     publicKey: pulumi.Input<string>;
     /**
-     * Defaults to `0.5`.
-     */
-    scoreMaxThreshold?: pulumi.Input<number>;
-    /**
      * Defaults to `1`.
      */
-    scoreMinThreshold?: pulumi.Input<number>;
-    stageCaptchaId?: pulumi.Input<string>;
+    scoreMaxThreshold?: pulumi.Input<number | undefined>;
+    /**
+     * Defaults to `0.5`.
+     */
+    scoreMinThreshold?: pulumi.Input<number | undefined>;
+    stageCaptchaId?: pulumi.Input<string | undefined>;
 }

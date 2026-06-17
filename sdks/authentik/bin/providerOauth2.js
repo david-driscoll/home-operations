@@ -67,6 +67,7 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["clientSecret"] = state?.clientSecret;
             resourceInputs["clientType"] = state?.clientType;
             resourceInputs["encryptionKey"] = state?.encryptionKey;
+            resourceInputs["grantTypes"] = state?.grantTypes;
             resourceInputs["includeClaimsInIdToken"] = state?.includeClaimsInIdToken;
             resourceInputs["invalidationFlow"] = state?.invalidationFlow;
             resourceInputs["issuerMode"] = state?.issuerMode;
@@ -103,6 +104,7 @@ class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["clientSecret"] = args?.clientSecret ? pulumi.secret(args.clientSecret) : undefined;
             resourceInputs["clientType"] = args?.clientType;
             resourceInputs["encryptionKey"] = args?.encryptionKey;
+            resourceInputs["grantTypes"] = args?.grantTypes;
             resourceInputs["includeClaimsInIdToken"] = args?.includeClaimsInIdToken;
             resourceInputs["invalidationFlow"] = args?.invalidationFlow;
             resourceInputs["issuerMode"] = args?.issuerMode;

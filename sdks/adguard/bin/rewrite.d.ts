@@ -23,6 +23,10 @@ export declare class Rewrite extends pulumi.CustomResource {
      * Domain name
      */
     readonly domain: pulumi.Output<string>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    readonly enabled: pulumi.Output<boolean>;
     readonly lastUpdated: pulumi.Output<string>;
     /**
      * Create a Rewrite resource with the given unique name, arguments, and options.
@@ -40,12 +44,16 @@ export interface RewriteState {
     /**
      * Value of A, AAAA or CNAME DNS record
      */
-    answer?: pulumi.Input<string>;
+    answer?: pulumi.Input<string | undefined>;
     /**
      * Domain name
      */
-    domain?: pulumi.Input<string>;
-    lastUpdated?: pulumi.Input<string>;
+    domain?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    lastUpdated?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a Rewrite resource.
@@ -59,4 +67,9 @@ export interface RewriteArgs {
      * Domain name
      */
     domain: pulumi.Input<string>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
 }
+//# sourceMappingURL=rewrite.d.ts.map

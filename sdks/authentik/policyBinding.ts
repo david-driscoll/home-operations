@@ -121,37 +121,37 @@ export interface PolicyBindingState {
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    failureResult?: pulumi.Input<boolean>;
+    failureResult?: pulumi.Input<boolean | undefined>;
     /**
      * UUID of the group
      */
-    group?: pulumi.Input<string>;
+    group?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    negate?: pulumi.Input<boolean>;
-    order?: pulumi.Input<number>;
+    negate?: pulumi.Input<boolean | undefined>;
+    order?: pulumi.Input<number | undefined>;
     /**
      * UUID of the policy
      */
-    policy?: pulumi.Input<string>;
-    policyBindingId?: pulumi.Input<string>;
+    policy?: pulumi.Input<string | undefined>;
+    policyBindingId?: pulumi.Input<string | undefined>;
     /**
      * ID of the object this binding should apply to
      */
-    target?: pulumi.Input<string>;
+    target?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `30`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * PK of the user
      */
-    user?: pulumi.Input<number>;
+    user?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -161,25 +161,25 @@ export interface PolicyBindingArgs {
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    failureResult?: pulumi.Input<boolean>;
+    failureResult?: pulumi.Input<boolean | undefined>;
     /**
      * UUID of the group
      */
-    group?: pulumi.Input<string>;
+    group?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    negate?: pulumi.Input<boolean>;
+    negate?: pulumi.Input<boolean | undefined>;
     order: pulumi.Input<number>;
     /**
      * UUID of the policy
      */
-    policy?: pulumi.Input<string>;
-    policyBindingId?: pulumi.Input<string>;
+    policy?: pulumi.Input<string | undefined>;
+    policyBindingId?: pulumi.Input<string | undefined>;
     /**
      * ID of the object this binding should apply to
      */
@@ -187,9 +187,9 @@ export interface PolicyBindingArgs {
     /**
      * Defaults to `30`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * PK of the user
      */
-    user?: pulumi.Input<number>;
+    user?: pulumi.Input<number | undefined>;
 }

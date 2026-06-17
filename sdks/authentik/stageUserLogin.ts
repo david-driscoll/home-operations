@@ -118,8 +118,8 @@ export interface StageUserLoginState {
      *   - `bind_continent_country_city`
      *  Defaults to `no_binding`.
      */
-    geoipBinding?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    geoipBinding?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `no_binding`
@@ -128,24 +128,24 @@ export interface StageUserLoginState {
      *   - `bind_asn_network_ip`
      *  Defaults to `no_binding`.
      */
-    networkBinding?: pulumi.Input<string>;
+    networkBinding?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    rememberDevice?: pulumi.Input<string>;
+    rememberDevice?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    rememberMeOffset?: pulumi.Input<string>;
+    rememberMeOffset?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    sessionDuration?: pulumi.Input<string>;
-    stageUserLoginId?: pulumi.Input<string>;
+    sessionDuration?: pulumi.Input<string | undefined>;
+    stageUserLoginId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    terminateOtherSessions?: pulumi.Input<boolean>;
+    terminateOtherSessions?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -160,8 +160,8 @@ export interface StageUserLoginArgs {
      *   - `bind_continent_country_city`
      *  Defaults to `no_binding`.
      */
-    geoipBinding?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    geoipBinding?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `no_binding`
@@ -170,22 +170,22 @@ export interface StageUserLoginArgs {
      *   - `bind_asn_network_ip`
      *  Defaults to `no_binding`.
      */
-    networkBinding?: pulumi.Input<string>;
+    networkBinding?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    rememberDevice?: pulumi.Input<string>;
+    rememberDevice?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    rememberMeOffset?: pulumi.Input<string>;
+    rememberMeOffset?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    sessionDuration?: pulumi.Input<string>;
-    stageUserLoginId?: pulumi.Input<string>;
+    sessionDuration?: pulumi.Input<string | undefined>;
+    stageUserLoginId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    terminateOtherSessions?: pulumi.Input<boolean>;
+    terminateOtherSessions?: pulumi.Input<boolean | undefined>;
 }

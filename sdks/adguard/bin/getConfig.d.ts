@@ -14,9 +14,11 @@ export interface GetConfigResult {
     readonly lastUpdated: string;
     readonly parentalControl: boolean;
     readonly querylog: outputs.GetConfigQuerylog;
+    readonly rewrites: boolean;
     readonly safebrowsing: boolean;
     readonly safesearch: outputs.GetConfigSafesearch;
     readonly stats: outputs.GetConfigStats;
     readonly tls: outputs.GetConfigTls;
 }
 export declare function getConfigOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetConfigResult>;
+//# sourceMappingURL=getConfig.d.ts.map

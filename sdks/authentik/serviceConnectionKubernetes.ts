@@ -87,17 +87,17 @@ export interface ServiceConnectionKubernetesState {
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    kubeconfig?: pulumi.Input<string>;
+    kubeconfig?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    local?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    serviceConnectionKubernetesId?: pulumi.Input<string>;
+    local?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    serviceConnectionKubernetesId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    verifySsl?: pulumi.Input<boolean>;
+    verifySsl?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -107,15 +107,15 @@ export interface ServiceConnectionKubernetesArgs {
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    kubeconfig?: pulumi.Input<string>;
+    kubeconfig?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    local?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    serviceConnectionKubernetesId?: pulumi.Input<string>;
+    local?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    serviceConnectionKubernetesId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    verifySsl?: pulumi.Input<boolean>;
+    verifySsl?: pulumi.Input<boolean | undefined>;
 }

@@ -10,3 +10,4 @@ export declare const applicationKeyId: string | undefined;
  * B2 endpoint - the string 'production' or a custom B2 API URL (B2_ENDPOINT env). You should not need to set this unless you work at Backblaze. Defaults to `production`.
  */
 export declare const endpoint: string | undefined;
+//# sourceMappingURL=vars.d.ts.map

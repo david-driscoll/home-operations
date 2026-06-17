@@ -192,87 +192,87 @@ export interface DeviceState {
     /**
      * Whether the device has been adopted by the controller.
      */
-    adopted?: pulumi.Input<boolean>;
+    adopted?: pulumi.Input<boolean | undefined>;
     /**
      * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with `ip`, `netmask`, and `gateway` set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
      */
-    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork>;
+    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
      * Whether the device is administratively disabled. Defaults to `false`.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * The current IP address of the device.
      */
-    ip?: pulumi.Input<string>;
+    ip?: pulumi.Input<string | undefined>;
     /**
      * LED brightness (0–100).
      */
-    ledBrightness?: pulumi.Input<number>;
+    ledBrightness?: pulumi.Input<number | undefined>;
     /**
      * LED color as a hex string (e.g. `#0000ff`).
      */
-    ledColor?: pulumi.Input<string>;
+    ledColor?: pulumi.Input<string | undefined>;
     /**
      * Whether LEDs are enabled. `true` forces LEDs on, `false` forces LEDs off. Omit to follow the site default.
      */
-    ledEnabled?: pulumi.Input<boolean>;
+    ledEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether the device is locked to prevent accidental removal. Defaults to `false`.
      */
-    locked?: pulumi.Input<boolean>;
+    locked?: pulumi.Input<boolean | undefined>;
     /**
      * The MAC address of the device (e.g. `aa:bb:cc:dd:ee:ff`). The device must already be adopted by the controller.
      */
-    mac?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
     /**
      * The hardware model of the device (e.g. `U6-LR`, `US-16-XG`).
      */
-    model?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
     /**
      * The display name for the device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Outdoor mode override. `default` follows the device default, `on` enables outdoor mode, `off` disables it.
      */
-    outdoorModeOverride?: pulumi.Input<string>;
+    outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
      * Radio settings for the 2.4 GHz (`ng`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio24?: pulumi.Input<inputs.DeviceRadio24>;
+    radio24?: pulumi.Input<inputs.DeviceRadio24 | undefined>;
     /**
      * Radio settings for the 5 GHz (`na`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio5?: pulumi.Input<inputs.DeviceRadio5>;
+    radio5?: pulumi.Input<inputs.DeviceRadio5 | undefined>;
     /**
      * Radio settings for the 6 GHz (`6e`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio6?: pulumi.Input<inputs.DeviceRadio6>;
+    radio6?: pulumi.Input<inputs.DeviceRadio6 | undefined>;
     /**
      * The site the device belongs to. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) contact string (max 255 characters). Identifies who is responsible for the device; read by network monitoring tools.
      */
-    snmpContact?: pulumi.Input<string>;
+    snmpContact?: pulumi.Input<string | undefined>;
     /**
      * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) location string (max 255 characters). Describes where the device is physically located; read by network monitoring tools.
      */
-    snmpLocation?: pulumi.Input<string>;
+    snmpLocation?: pulumi.Input<string | undefined>;
     /**
      * The device state. 0 = unknown, 1 = connected, 2 = pending, 4 = upgrading, 5 = provisioning, 6 = heartbeat missed.
      */
-    state?: pulumi.Input<number>;
+    state?: pulumi.Input<number | undefined>;
     /**
      * The device type (e.g. `uap` for access point, `usw` for switch, `ugw` for gateway).
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
     /**
      * Speaker volume (0–100). Only applicable to devices with speakers.
      */
-    volume?: pulumi.Input<number>;
+    volume?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -282,27 +282,27 @@ export interface DeviceArgs {
     /**
      * Management network configuration for the device. Use `type = "dhcp"` to receive an address from DHCP, or `type = "static"` with `ip`, `netmask`, and `gateway` set to assign a fixed management address. Omit this block to leave the device's current configuration unchanged.
      */
-    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork>;
+    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
      * Whether the device is administratively disabled. Defaults to `false`.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * LED brightness (0–100).
      */
-    ledBrightness?: pulumi.Input<number>;
+    ledBrightness?: pulumi.Input<number | undefined>;
     /**
      * LED color as a hex string (e.g. `#0000ff`).
      */
-    ledColor?: pulumi.Input<string>;
+    ledColor?: pulumi.Input<string | undefined>;
     /**
      * Whether LEDs are enabled. `true` forces LEDs on, `false` forces LEDs off. Omit to follow the site default.
      */
-    ledEnabled?: pulumi.Input<boolean>;
+    ledEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether the device is locked to prevent accidental removal. Defaults to `false`.
      */
-    locked?: pulumi.Input<boolean>;
+    locked?: pulumi.Input<boolean | undefined>;
     /**
      * The MAC address of the device (e.g. `aa:bb:cc:dd:ee:ff`). The device must already be adopted by the controller.
      */
@@ -310,37 +310,37 @@ export interface DeviceArgs {
     /**
      * The display name for the device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Outdoor mode override. `default` follows the device default, `on` enables outdoor mode, `off` disables it.
      */
-    outdoorModeOverride?: pulumi.Input<string>;
+    outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
      * Radio settings for the 2.4 GHz (`ng`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio24?: pulumi.Input<inputs.DeviceRadio24>;
+    radio24?: pulumi.Input<inputs.DeviceRadio24 | undefined>;
     /**
      * Radio settings for the 5 GHz (`na`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio5?: pulumi.Input<inputs.DeviceRadio5>;
+    radio5?: pulumi.Input<inputs.DeviceRadio5 | undefined>;
     /**
      * Radio settings for the 6 GHz (`6e`) radio on an access point. Omit to leave this radio's settings unchanged.
      */
-    radio6?: pulumi.Input<inputs.DeviceRadio6>;
+    radio6?: pulumi.Input<inputs.DeviceRadio6 | undefined>;
     /**
      * The site the device belongs to. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) contact string (max 255 characters). Identifies who is responsible for the device; read by network monitoring tools.
      */
-    snmpContact?: pulumi.Input<string>;
+    snmpContact?: pulumi.Input<string | undefined>;
     /**
      * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) location string (max 255 characters). Describes where the device is physically located; read by network monitoring tools.
      */
-    snmpLocation?: pulumi.Input<string>;
+    snmpLocation?: pulumi.Input<string | undefined>;
     /**
      * Speaker volume (0–100). Only applicable to devices with speakers.
      */
-    volume?: pulumi.Input<number>;
+    volume?: pulumi.Input<number | undefined>;
 }

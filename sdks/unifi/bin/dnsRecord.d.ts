@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class DnsRecord extends pulumi.CustomResource {
     /**
      * Get an existing DnsRecord resource's state with the given name, ID, and optional extra
@@ -32,17 +34,18 @@ export declare class DnsRecord extends pulumi.CustomResource {
      */
     readonly priority: pulumi.Output<number | undefined>;
     /**
-     * The type of the DNS record.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
      */
-    readonly recordType: pulumi.Output<string | undefined>;
+    readonly recordType: pulumi.Output<string>;
     /**
      * The name of the site to associate the DNS record with.
      */
     readonly site: pulumi.Output<string>;
+    readonly timeouts: pulumi.Output<outputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record.
+     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
-    readonly ttl: pulumi.Output<number | undefined>;
+    readonly ttl: pulumi.Output<string | undefined>;
     /**
      * The value of the DNS record.
      */
@@ -67,39 +70,40 @@ export interface DnsRecordState {
     /**
      * Whether the DNS record is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * The key of the DNS record.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The port of the DNS record.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * The priority of the DNS record.
      */
-    priority?: pulumi.Input<number>;
+    priority?: pulumi.Input<number | undefined>;
     /**
-     * The type of the DNS record.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
      */
-    recordType?: pulumi.Input<string>;
+    recordType?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the DNS record with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record.
+     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
-    ttl?: pulumi.Input<number>;
+    ttl?: pulumi.Input<string | undefined>;
     /**
      * The value of the DNS record.
      */
-    value?: pulumi.Input<string>;
+    value?: pulumi.Input<string | undefined>;
     /**
      * The weight of the DNS record.
      */
-    weight?: pulumi.Input<number>;
+    weight?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a DnsRecord resource.
@@ -108,31 +112,32 @@ export interface DnsRecordArgs {
     /**
      * Whether the DNS record is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * The key of the DNS record.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The port of the DNS record.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * The priority of the DNS record.
      */
-    priority?: pulumi.Input<number>;
+    priority?: pulumi.Input<number | undefined>;
     /**
-     * The type of the DNS record.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
      */
-    recordType?: pulumi.Input<string>;
+    recordType: pulumi.Input<string>;
     /**
      * The name of the site to associate the DNS record with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.DnsRecordTimeouts | undefined>;
     /**
-     * The TTL of the DNS record.
+     * The TTL of the DNS record, as a Go duration string (e.g. `1h`, `300s`). The controller stores this value as whole seconds in the range 0–65535s (≈18h12m15s).
      */
-    ttl?: pulumi.Input<number>;
+    ttl?: pulumi.Input<string | undefined>;
     /**
      * The value of the DNS record.
      */
@@ -140,5 +145,6 @@ export interface DnsRecordArgs {
     /**
      * The weight of the DNS record.
      */
-    weight?: pulumi.Input<number>;
+    weight?: pulumi.Input<number | undefined>;
 }
+//# sourceMappingURL=dnsRecord.d.ts.map

@@ -88,7 +88,6 @@ export class PolicyGeoip extends pulumi.CustomResource {
      *   - `CO`
      *   - `KM`
      *   - `CG`
-     *   - `CD`
      *   - `CK`
      *   - `CR`
      *   - `CI`
@@ -97,6 +96,7 @@ export class PolicyGeoip extends pulumi.CustomResource {
      *   - `CW`
      *   - `CY`
      *   - `CZ`
+     *   - `CD`
      *   - `DK`
      *   - `DJ`
      *   - `DM`
@@ -135,7 +135,6 @@ export class PolicyGeoip extends pulumi.CustomResource {
      *   - `GY`
      *   - `HT`
      *   - `HM`
-     *   - `VA`
      *   - `HN`
      *   - `HK`
      *   - `HU`
@@ -277,6 +276,7 @@ export class PolicyGeoip extends pulumi.CustomResource {
      *   - `UY`
      *   - `UZ`
      *   - `VU`
+     *   - `VA`
      *   - `VE`
      *   - `VN`
      *   - `VG`
@@ -358,9 +358,9 @@ export class PolicyGeoip extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PolicyGeoip resources.
  */
 export interface PolicyGeoipState {
-    asns?: pulumi.Input<pulumi.Input<number>[]>;
-    checkHistoryDistance?: pulumi.Input<boolean>;
-    checkImpossibleTravel?: pulumi.Input<boolean>;
+    asns?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    checkHistoryDistance?: pulumi.Input<boolean | undefined>;
+    checkImpossibleTravel?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `AF`
@@ -414,7 +414,6 @@ export interface PolicyGeoipState {
      *   - `CO`
      *   - `KM`
      *   - `CG`
-     *   - `CD`
      *   - `CK`
      *   - `CR`
      *   - `CI`
@@ -423,6 +422,7 @@ export interface PolicyGeoipState {
      *   - `CW`
      *   - `CY`
      *   - `CZ`
+     *   - `CD`
      *   - `DK`
      *   - `DJ`
      *   - `DM`
@@ -461,7 +461,6 @@ export interface PolicyGeoipState {
      *   - `GY`
      *   - `HT`
      *   - `HM`
-     *   - `VA`
      *   - `HN`
      *   - `HK`
      *   - `HU`
@@ -603,6 +602,7 @@ export interface PolicyGeoipState {
      *   - `UY`
      *   - `UZ`
      *   - `VU`
+     *   - `VA`
      *   - `VE`
      *   - `VN`
      *   - `VG`
@@ -613,38 +613,38 @@ export interface PolicyGeoipState {
      *   - `ZM`
      *   - `ZW`
      */
-    countries?: pulumi.Input<pulumi.Input<string>[]>;
+    countries?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `50`.
      */
-    distanceToleranceKm?: pulumi.Input<number>;
+    distanceToleranceKm?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `5`.
      */
-    historyLoginCount?: pulumi.Input<number>;
+    historyLoginCount?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    historyMaxDistanceKm?: pulumi.Input<number>;
+    historyMaxDistanceKm?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    impossibleToleranceKm?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    policyGeoipId?: pulumi.Input<string>;
+    impossibleToleranceKm?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyGeoipId?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a PolicyGeoip resource.
  */
 export interface PolicyGeoipArgs {
-    asns?: pulumi.Input<pulumi.Input<number>[]>;
-    checkHistoryDistance?: pulumi.Input<boolean>;
-    checkImpossibleTravel?: pulumi.Input<boolean>;
+    asns?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    checkHistoryDistance?: pulumi.Input<boolean | undefined>;
+    checkImpossibleTravel?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `AF`
@@ -698,7 +698,6 @@ export interface PolicyGeoipArgs {
      *   - `CO`
      *   - `KM`
      *   - `CG`
-     *   - `CD`
      *   - `CK`
      *   - `CR`
      *   - `CI`
@@ -707,6 +706,7 @@ export interface PolicyGeoipArgs {
      *   - `CW`
      *   - `CY`
      *   - `CZ`
+     *   - `CD`
      *   - `DK`
      *   - `DJ`
      *   - `DM`
@@ -745,7 +745,6 @@ export interface PolicyGeoipArgs {
      *   - `GY`
      *   - `HT`
      *   - `HM`
-     *   - `VA`
      *   - `HN`
      *   - `HK`
      *   - `HU`
@@ -887,6 +886,7 @@ export interface PolicyGeoipArgs {
      *   - `UY`
      *   - `UZ`
      *   - `VU`
+     *   - `VA`
      *   - `VE`
      *   - `VN`
      *   - `VG`
@@ -897,27 +897,27 @@ export interface PolicyGeoipArgs {
      *   - `ZM`
      *   - `ZW`
      */
-    countries?: pulumi.Input<pulumi.Input<string>[]>;
+    countries?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `50`.
      */
-    distanceToleranceKm?: pulumi.Input<number>;
+    distanceToleranceKm?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `5`.
      */
-    historyLoginCount?: pulumi.Input<number>;
+    historyLoginCount?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    historyMaxDistanceKm?: pulumi.Input<number>;
+    historyMaxDistanceKm?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `100`.
      */
-    impossibleToleranceKm?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
-    policyGeoipId?: pulumi.Input<string>;
+    impossibleToleranceKm?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyGeoipId?: pulumi.Input<string | undefined>;
 }

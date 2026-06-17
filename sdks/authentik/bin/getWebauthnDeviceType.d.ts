@@ -20,7 +20,7 @@ export declare function getWebauthnDeviceTypeOutput(args?: GetWebauthnDeviceType
  * A collection of arguments for invoking getWebauthnDeviceType.
  */
 export interface GetWebauthnDeviceTypeOutputArgs {
-    description?: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
+    id?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getWebauthnDeviceType.d.ts.map

@@ -132,41 +132,41 @@ export class ProviderMicrosoftEntra extends pulumi.CustomResource {
  * Input properties used for looking up and filtering ProviderMicrosoftEntra resources.
  */
 export interface ProviderMicrosoftEntraState {
-    clientId?: pulumi.Input<string>;
-    clientSecret?: pulumi.Input<string>;
+    clientId?: pulumi.Input<string | undefined>;
+    clientSecret?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    filterGroup?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    groupDeleteAction?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerMicrosoftEntraId?: pulumi.Input<string>;
+    groupDeleteAction?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerMicrosoftEntraId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
-    tenantId?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
+    tenantId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    userDeleteAction?: pulumi.Input<string>;
+    userDeleteAction?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -178,28 +178,28 @@ export interface ProviderMicrosoftEntraArgs {
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    filterGroup?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    filterGroup?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    groupDeleteAction?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerMicrosoftEntraId?: pulumi.Input<string>;
+    groupDeleteAction?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerMicrosoftEntraId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
     tenantId: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -207,5 +207,5 @@ export interface ProviderMicrosoftEntraArgs {
      *   - `do_nothing`
      *  Defaults to `delete`.
      */
-    userDeleteAction?: pulumi.Input<string>;
+    userDeleteAction?: pulumi.Input<string | undefined>;
 }

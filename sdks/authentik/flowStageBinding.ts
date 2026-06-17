@@ -113,8 +113,8 @@ export interface FlowStageBindingState {
     /**
      * Evaluate policies during the Flow planning process. Defaults to `true`.
      */
-    evaluateOnPlan?: pulumi.Input<boolean>;
-    flowStageBindingId?: pulumi.Input<string>;
+    evaluateOnPlan?: pulumi.Input<boolean | undefined>;
+    flowStageBindingId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `retry`
@@ -122,21 +122,21 @@ export interface FlowStageBindingState {
      *   - `restart_with_context`
      *  Defaults to `retry`.
      */
-    invalidResponseAction?: pulumi.Input<string>;
-    order?: pulumi.Input<number>;
+    invalidResponseAction?: pulumi.Input<string | undefined>;
+    order?: pulumi.Input<number | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Evaluate policies when the Stage is present to the user. Defaults to `false`.
      */
-    reEvaluatePolicies?: pulumi.Input<boolean>;
-    stage?: pulumi.Input<string>;
-    target?: pulumi.Input<string>;
+    reEvaluatePolicies?: pulumi.Input<boolean | undefined>;
+    stage?: pulumi.Input<string | undefined>;
+    target?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -146,8 +146,8 @@ export interface FlowStageBindingArgs {
     /**
      * Evaluate policies during the Flow planning process. Defaults to `true`.
      */
-    evaluateOnPlan?: pulumi.Input<boolean>;
-    flowStageBindingId?: pulumi.Input<string>;
+    evaluateOnPlan?: pulumi.Input<boolean | undefined>;
+    flowStageBindingId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `retry`
@@ -155,7 +155,7 @@ export interface FlowStageBindingArgs {
      *   - `restart_with_context`
      *  Defaults to `retry`.
      */
-    invalidResponseAction?: pulumi.Input<string>;
+    invalidResponseAction?: pulumi.Input<string | undefined>;
     order: pulumi.Input<number>;
     /**
      * Allowed values:
@@ -163,11 +163,11 @@ export interface FlowStageBindingArgs {
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Evaluate policies when the Stage is present to the user. Defaults to `false`.
      */
-    reEvaluatePolicies?: pulumi.Input<boolean>;
+    reEvaluatePolicies?: pulumi.Input<boolean | undefined>;
     stage: pulumi.Input<string>;
     target: pulumi.Input<string>;
 }

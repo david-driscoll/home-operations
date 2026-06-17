@@ -18,6 +18,10 @@ export declare class PortForward extends pulumi.CustomResource {
      */
     static isInstance(obj: any): obj is PortForward;
     /**
+     * Additional destination IP/interface pairs for the port forwarding rule, used for multi-WAN setups.
+     */
+    readonly destinationIps: pulumi.Output<outputs.PortForwardDestinationIp[] | undefined>;
+    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
@@ -47,6 +51,7 @@ export declare class PortForward extends pulumi.CustomResource {
      * Source limiting configuration for the port forwarding rule.
      */
     readonly sourceLimiting: pulumi.Output<outputs.PortForwardSourceLimiting | undefined>;
+    readonly timeouts: pulumi.Output<outputs.PortForwardTimeouts | undefined>;
     /**
      * WAN configuration for the port forwarding rule.
      */
@@ -65,76 +70,87 @@ export declare class PortForward extends pulumi.CustomResource {
  */
 export interface PortForwardState {
     /**
+     * Additional destination IP/interface pairs for the port forwarding rule, used for multi-WAN setups.
+     */
+    destinationIps?: pulumi.Input<pulumi.Input<inputs.PortForwardDestinationIp>[] | undefined>;
+    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Forward destination configuration.
      */
-    forward?: pulumi.Input<inputs.PortForwardForward>;
+    forward?: pulumi.Input<inputs.PortForwardForward | undefined>;
     /**
      * Specifies whether to enable syslog logging for forwarded traffic.
      */
-    logging?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the port forwarding rule.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the port forwarding rule with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source limiting configuration for the port forwarding rule.
      */
-    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting>;
+    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting | undefined>;
+    timeouts?: pulumi.Input<inputs.PortForwardTimeouts | undefined>;
     /**
      * WAN configuration for the port forwarding rule.
      */
-    wan?: pulumi.Input<inputs.PortForwardWan>;
+    wan?: pulumi.Input<inputs.PortForwardWan | undefined>;
 }
 /**
  * The set of arguments for constructing a PortForward resource.
  */
 export interface PortForwardArgs {
     /**
+     * Additional destination IP/interface pairs for the port forwarding rule, used for multi-WAN setups.
+     */
+    destinationIps?: pulumi.Input<pulumi.Input<inputs.PortForwardDestinationIp>[] | undefined>;
+    /**
      * Specifies whether the port forwarding rule is enabled or not.
      *
      * @deprecated Deprecated
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Forward destination configuration.
      */
-    forward?: pulumi.Input<inputs.PortForwardForward>;
+    forward?: pulumi.Input<inputs.PortForwardForward | undefined>;
     /**
      * Specifies whether to enable syslog logging for forwarded traffic.
      */
-    logging?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the port forwarding rule.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The protocol for the port forwarding rule. Can be `tcp`, `udp`, or `tcp_udp`.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the port forwarding rule with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source limiting configuration for the port forwarding rule.
      */
-    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting>;
+    sourceLimiting?: pulumi.Input<inputs.PortForwardSourceLimiting | undefined>;
+    timeouts?: pulumi.Input<inputs.PortForwardTimeouts | undefined>;
     /**
      * WAN configuration for the port forwarding rule.
      */
-    wan?: pulumi.Input<inputs.PortForwardWan>;
+    wan?: pulumi.Input<inputs.PortForwardWan | undefined>;
 }
+//# sourceMappingURL=portForward.d.ts.map

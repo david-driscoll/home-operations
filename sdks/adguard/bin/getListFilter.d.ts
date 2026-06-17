@@ -25,5 +25,6 @@ export declare function getListFilterOutput(args: GetListFilterOutputArgs, opts?
  */
 export interface GetListFilterOutputArgs {
     name: pulumi.Input<string>;
-    whitelist?: pulumi.Input<boolean>;
+    whitelist?: pulumi.Input<boolean | undefined>;
 }
+//# sourceMappingURL=getListFilter.d.ts.map

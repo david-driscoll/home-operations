@@ -123,6 +123,7 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -134,6 +135,7 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
@@ -264,6 +266,7 @@ export interface RbacPermissionRoleState {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -275,15 +278,16 @@ export interface RbacPermissionRoleState {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
      */
-    model?: pulumi.Input<string>;
-    objectId?: pulumi.Input<string>;
-    permission?: pulumi.Input<string>;
-    rbacPermissionRoleId?: pulumi.Input<string>;
-    role?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
+    objectId?: pulumi.Input<string | undefined>;
+    permission?: pulumi.Input<string | undefined>;
+    rbacPermissionRoleId?: pulumi.Input<string | undefined>;
+    role?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a RbacPermissionRole resource.
@@ -397,6 +401,7 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
+     *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
@@ -408,14 +413,15 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
      *   - `authentik_stages_source.sourcestage`
      */
-    model?: pulumi.Input<string>;
-    objectId?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
+    objectId?: pulumi.Input<string | undefined>;
     permission: pulumi.Input<string>;
-    rbacPermissionRoleId?: pulumi.Input<string>;
+    rbacPermissionRoleId?: pulumi.Input<string | undefined>;
     role: pulumi.Input<string>;
 }
 //# sourceMappingURL=rbacPermissionRole.d.ts.map

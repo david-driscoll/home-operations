@@ -10,10 +10,10 @@ export type Client = import("./client").Client;
 export const Client: typeof import("./client").Client = null as any;
 utilities.lazyLoad(exports, ["Client"], () => require("./client"));
 
-export { ConfigArgs, ConfigState } from "./config";
-export type Config = import("./config").Config;
-export const Config: typeof import("./config").Config = null as any;
-utilities.lazyLoad(exports, ["Config"], () => require("./config"));
+export { ConfigArgs, ConfigState } from "./config_";
+export type Config = import("./config_").Config;
+export const Config: typeof import("./config_").Config = null as any;
+utilities.lazyLoad(exports, ["Config"], () => require("./config_"));
 
 export { GetClientArgs, GetClientResult, GetClientOutputArgs } from "./getClient";
 export const getClient: typeof import("./getClient").getClient = null as any;

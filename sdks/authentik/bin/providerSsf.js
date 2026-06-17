@@ -62,6 +62,7 @@ class ProviderSsf extends pulumi.CustomResource {
             resourceInputs["jwtFederationProviders"] = state?.jwtFederationProviders;
             resourceInputs["name"] = state?.name;
             resourceInputs["providerSsfId"] = state?.providerSsfId;
+            resourceInputs["pushVerifyCertificates"] = state?.pushVerifyCertificates;
             resourceInputs["signingKey"] = state?.signingKey;
         }
         else {
@@ -70,6 +71,7 @@ class ProviderSsf extends pulumi.CustomResource {
             resourceInputs["jwtFederationProviders"] = args?.jwtFederationProviders;
             resourceInputs["name"] = args?.name;
             resourceInputs["providerSsfId"] = args?.providerSsfId;
+            resourceInputs["pushVerifyCertificates"] = args?.pushVerifyCertificates;
             resourceInputs["signingKey"] = args?.signingKey;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

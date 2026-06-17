@@ -44,6 +44,10 @@ export declare class SourceSaml extends pulumi.CustomResource {
     readonly encryptionKp: pulumi.Output<string | undefined>;
     readonly enrollmentFlow: pulumi.Output<string | undefined>;
     /**
+     * Defaults to `false`.
+     */
+    readonly forceAuthn: pulumi.Output<boolean | undefined>;
+    /**
      * Allowed values:
      *   - `identifier`
      *   - `name_link`
@@ -148,8 +152,8 @@ export interface SourceSamlState {
     /**
      * Defaults to `false`.
      */
-    allowIdpInitiated?: pulumi.Input<boolean>;
-    authenticationFlow?: pulumi.Input<string>;
+    allowIdpInitiated?: pulumi.Input<boolean | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `REDIRECT`
@@ -157,7 +161,7 @@ export interface SourceSamlState {
      *   - `POST_AUTO`
      *  Defaults to `REDIRECT`.
      */
-    bindingType?: pulumi.Input<string>;
+    bindingType?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#sha1`
@@ -166,13 +170,17 @@ export interface SourceSamlState {
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
      *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
-    digestAlgorithm?: pulumi.Input<string>;
+    digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    encryptionKp?: pulumi.Input<string>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    encryptionKp?: pulumi.Input<string | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    forceAuthn?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -180,13 +188,13 @@ export interface SourceSamlState {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    issuer?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    issuer?: pulumi.Input<string | undefined>;
     /**
      * SAML Metadata Generated.
      */
-    metadata?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    metadata?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
@@ -197,21 +205,21 @@ export interface SourceSamlState {
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
      *  Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
      */
-    nameIdPolicy?: pulumi.Input<string>;
+    nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
-    preAuthenticationFlow?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
+    preAuthenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    promoted?: pulumi.Input<boolean | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#rsa-sha1`
@@ -225,24 +233,24 @@ export interface SourceSamlState {
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
-    signatureAlgorithm?: pulumi.Input<string>;
+    signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    signedAssertion?: pulumi.Input<boolean>;
+    signedAssertion?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    signedResponse?: pulumi.Input<boolean>;
-    signingKp?: pulumi.Input<string>;
-    sloUrl?: pulumi.Input<string>;
-    slug?: pulumi.Input<string>;
-    sourceSamlId?: pulumi.Input<string>;
-    ssoUrl?: pulumi.Input<string>;
+    signedResponse?: pulumi.Input<boolean | undefined>;
+    signingKp?: pulumi.Input<string | undefined>;
+    sloUrl?: pulumi.Input<string | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    sourceSamlId?: pulumi.Input<string | undefined>;
+    ssoUrl?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=1`.
      */
-    temporaryUserDeleteAfter?: pulumi.Input<string>;
+    temporaryUserDeleteAfter?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -252,16 +260,16 @@ export interface SourceSamlState {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
-    verificationKp?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
+    verificationKp?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a SourceSaml resource.
@@ -270,8 +278,8 @@ export interface SourceSamlArgs {
     /**
      * Defaults to `false`.
      */
-    allowIdpInitiated?: pulumi.Input<boolean>;
-    authenticationFlow?: pulumi.Input<string>;
+    allowIdpInitiated?: pulumi.Input<boolean | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `REDIRECT`
@@ -279,7 +287,7 @@ export interface SourceSamlArgs {
      *   - `POST_AUTO`
      *  Defaults to `REDIRECT`.
      */
-    bindingType?: pulumi.Input<string>;
+    bindingType?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#sha1`
@@ -288,13 +296,17 @@ export interface SourceSamlArgs {
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
      *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
-    digestAlgorithm?: pulumi.Input<string>;
+    digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    encryptionKp?: pulumi.Input<string>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    encryptionKp?: pulumi.Input<string | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    forceAuthn?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -302,9 +314,9 @@ export interface SourceSamlArgs {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    issuer?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    issuer?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`
@@ -315,21 +327,21 @@ export interface SourceSamlArgs {
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
      *  Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
      */
-    nameIdPolicy?: pulumi.Input<string>;
+    nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    promoted?: pulumi.Input<boolean | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#rsa-sha1`
@@ -343,24 +355,24 @@ export interface SourceSamlArgs {
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
-    signatureAlgorithm?: pulumi.Input<string>;
+    signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    signedAssertion?: pulumi.Input<boolean>;
+    signedAssertion?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    signedResponse?: pulumi.Input<boolean>;
-    signingKp?: pulumi.Input<string>;
-    sloUrl?: pulumi.Input<string>;
+    signedResponse?: pulumi.Input<boolean | undefined>;
+    signingKp?: pulumi.Input<string | undefined>;
+    sloUrl?: pulumi.Input<string | undefined>;
     slug: pulumi.Input<string>;
-    sourceSamlId?: pulumi.Input<string>;
+    sourceSamlId?: pulumi.Input<string | undefined>;
     ssoUrl: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=1`.
      */
-    temporaryUserDeleteAfter?: pulumi.Input<string>;
+    temporaryUserDeleteAfter?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -370,15 +382,15 @@ export interface SourceSamlArgs {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
-    verificationKp?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
+    verificationKp?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=sourceSaml.d.ts.map

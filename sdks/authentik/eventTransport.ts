@@ -54,6 +54,7 @@ export class EventTransport extends pulumi.CustomResource {
      * Defaults to `true`.
      */
     declare public readonly sendOnce: pulumi.Output<boolean | undefined>;
+    declare public readonly webhookCa: pulumi.Output<string | undefined>;
     declare public readonly webhookMappingBody: pulumi.Output<string | undefined>;
     declare public readonly webhookMappingHeaders: pulumi.Output<string | undefined>;
     declare public readonly webhookUrl: pulumi.Output<string | undefined>;
@@ -77,6 +78,7 @@ export class EventTransport extends pulumi.CustomResource {
             resourceInputs["mode"] = state?.mode;
             resourceInputs["name"] = state?.name;
             resourceInputs["sendOnce"] = state?.sendOnce;
+            resourceInputs["webhookCa"] = state?.webhookCa;
             resourceInputs["webhookMappingBody"] = state?.webhookMappingBody;
             resourceInputs["webhookMappingHeaders"] = state?.webhookMappingHeaders;
             resourceInputs["webhookUrl"] = state?.webhookUrl;
@@ -91,6 +93,7 @@ export class EventTransport extends pulumi.CustomResource {
             resourceInputs["mode"] = args?.mode;
             resourceInputs["name"] = args?.name;
             resourceInputs["sendOnce"] = args?.sendOnce;
+            resourceInputs["webhookCa"] = args?.webhookCa;
             resourceInputs["webhookMappingBody"] = args?.webhookMappingBody;
             resourceInputs["webhookMappingHeaders"] = args?.webhookMappingHeaders;
             resourceInputs["webhookUrl"] = args?.webhookUrl;
@@ -107,12 +110,12 @@ export interface EventTransportState {
     /**
      * Defaults to `authentik Notification:`.
      */
-    emailSubjectPrefix?: pulumi.Input<string>;
+    emailSubjectPrefix?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/event_notification.html`.
      */
-    emailTemplate?: pulumi.Input<string>;
-    eventTransportId?: pulumi.Input<string>;
+    emailTemplate?: pulumi.Input<string | undefined>;
+    eventTransportId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `local`
@@ -120,15 +123,16 @@ export interface EventTransportState {
      *   - `webhook_slack`
      *   - `email`
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    sendOnce?: pulumi.Input<boolean>;
-    webhookMappingBody?: pulumi.Input<string>;
-    webhookMappingHeaders?: pulumi.Input<string>;
-    webhookUrl?: pulumi.Input<string>;
+    sendOnce?: pulumi.Input<boolean | undefined>;
+    webhookCa?: pulumi.Input<string | undefined>;
+    webhookMappingBody?: pulumi.Input<string | undefined>;
+    webhookMappingHeaders?: pulumi.Input<string | undefined>;
+    webhookUrl?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -138,12 +142,12 @@ export interface EventTransportArgs {
     /**
      * Defaults to `authentik Notification:`.
      */
-    emailSubjectPrefix?: pulumi.Input<string>;
+    emailSubjectPrefix?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/event_notification.html`.
      */
-    emailTemplate?: pulumi.Input<string>;
-    eventTransportId?: pulumi.Input<string>;
+    emailTemplate?: pulumi.Input<string | undefined>;
+    eventTransportId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `local`
@@ -152,12 +156,13 @@ export interface EventTransportArgs {
      *   - `email`
      */
     mode: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    sendOnce?: pulumi.Input<boolean>;
-    webhookMappingBody?: pulumi.Input<string>;
-    webhookMappingHeaders?: pulumi.Input<string>;
-    webhookUrl?: pulumi.Input<string>;
+    sendOnce?: pulumi.Input<boolean | undefined>;
+    webhookCa?: pulumi.Input<string | undefined>;
+    webhookMappingBody?: pulumi.Input<string | undefined>;
+    webhookMappingHeaders?: pulumi.Input<string | undefined>;
+    webhookUrl?: pulumi.Input<string | undefined>;
 }

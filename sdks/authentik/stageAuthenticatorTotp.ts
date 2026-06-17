@@ -82,38 +82,38 @@ export class StageAuthenticatorTotp extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StageAuthenticatorTotp resources.
  */
 export interface StageAuthenticatorTotpState {
-    configureFlow?: pulumi.Input<string>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `6`
      *   - `8`
      *  Defaults to `6`.
      */
-    digits?: pulumi.Input<string>;
+    digits?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageAuthenticatorTotpId?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageAuthenticatorTotpId?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a StageAuthenticatorTotp resource.
  */
 export interface StageAuthenticatorTotpArgs {
-    configureFlow?: pulumi.Input<string>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `6`
      *   - `8`
      *  Defaults to `6`.
      */
-    digits?: pulumi.Input<string>;
+    digits?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageAuthenticatorTotpId?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageAuthenticatorTotpId?: pulumi.Input<string | undefined>;
 }

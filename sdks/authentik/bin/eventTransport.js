@@ -64,6 +64,7 @@ class EventTransport extends pulumi.CustomResource {
             resourceInputs["mode"] = state?.mode;
             resourceInputs["name"] = state?.name;
             resourceInputs["sendOnce"] = state?.sendOnce;
+            resourceInputs["webhookCa"] = state?.webhookCa;
             resourceInputs["webhookMappingBody"] = state?.webhookMappingBody;
             resourceInputs["webhookMappingHeaders"] = state?.webhookMappingHeaders;
             resourceInputs["webhookUrl"] = state?.webhookUrl;
@@ -79,6 +80,7 @@ class EventTransport extends pulumi.CustomResource {
             resourceInputs["mode"] = args?.mode;
             resourceInputs["name"] = args?.name;
             resourceInputs["sendOnce"] = args?.sendOnce;
+            resourceInputs["webhookCa"] = args?.webhookCa;
             resourceInputs["webhookMappingBody"] = args?.webhookMappingBody;
             resourceInputs["webhookMappingHeaders"] = args?.webhookMappingHeaders;
             resourceInputs["webhookUrl"] = args?.webhookUrl;

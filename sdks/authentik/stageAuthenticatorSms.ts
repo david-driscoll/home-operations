@@ -123,36 +123,36 @@ export class StageAuthenticatorSms extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StageAuthenticatorSms resources.
  */
 export interface StageAuthenticatorSmsState {
-    accountSid?: pulumi.Input<string>;
-    auth?: pulumi.Input<string>;
-    authPassword?: pulumi.Input<string>;
+    accountSid?: pulumi.Input<string | undefined>;
+    auth?: pulumi.Input<string | undefined>;
+    authPassword?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `basic`
      *   - `bearer`
      *  Defaults to `basic`.
      */
-    authType?: pulumi.Input<string>;
-    configureFlow?: pulumi.Input<string>;
+    authType?: pulumi.Input<string | undefined>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    fromNumber?: pulumi.Input<string>;
-    mapping?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    fromNumber?: pulumi.Input<string | undefined>;
+    mapping?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `twilio`
      *   - `generic`
      *  Defaults to `twilio`.
      */
-    smsProvider?: pulumi.Input<string>;
-    stageAuthenticatorSmsId?: pulumi.Input<string>;
+    smsProvider?: pulumi.Input<string | undefined>;
+    stageAuthenticatorSmsId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    verifyOnly?: pulumi.Input<boolean>;
+    verifyOnly?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -161,32 +161,32 @@ export interface StageAuthenticatorSmsState {
 export interface StageAuthenticatorSmsArgs {
     accountSid: pulumi.Input<string>;
     auth: pulumi.Input<string>;
-    authPassword?: pulumi.Input<string>;
+    authPassword?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `basic`
      *   - `bearer`
      *  Defaults to `basic`.
      */
-    authType?: pulumi.Input<string>;
-    configureFlow?: pulumi.Input<string>;
+    authType?: pulumi.Input<string | undefined>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
     fromNumber: pulumi.Input<string>;
-    mapping?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    mapping?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `twilio`
      *   - `generic`
      *  Defaults to `twilio`.
      */
-    smsProvider?: pulumi.Input<string>;
-    stageAuthenticatorSmsId?: pulumi.Input<string>;
+    smsProvider?: pulumi.Input<string | undefined>;
+    stageAuthenticatorSmsId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    verifyOnly?: pulumi.Input<boolean>;
+    verifyOnly?: pulumi.Input<boolean | undefined>;
 }

@@ -28,8 +28,8 @@ export declare function getProviderOauth2ConfigOutput(args?: GetProviderOauth2Co
  * A collection of arguments for invoking getProviderOauth2Config.
  */
 export interface GetProviderOauth2ConfigOutputArgs {
-    id?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    providerId?: pulumi.Input<number>;
+    id?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerId?: pulumi.Input<number | undefined>;
 }
 //# sourceMappingURL=getProviderOauth2Config.d.ts.map

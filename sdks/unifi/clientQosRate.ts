@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class ClientQosRate extends pulumi.CustomResource {
@@ -48,6 +50,7 @@ export class ClientQosRate extends pulumi.CustomResource {
      * The name of the site to associate the client QOS rate with.
      */
     declare public readonly site: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.ClientQosRateTimeouts | undefined>;
 
     /**
      * Create a ClientQosRate resource with the given unique name, arguments, and options.
@@ -66,12 +69,14 @@ export class ClientQosRate extends pulumi.CustomResource {
             resourceInputs["qosRateMaxDown"] = state?.qosRateMaxDown;
             resourceInputs["qosRateMaxUp"] = state?.qosRateMaxUp;
             resourceInputs["site"] = state?.site;
+            resourceInputs["timeouts"] = state?.timeouts;
         } else {
             const args = argsOrState as ClientQosRateArgs | undefined;
             resourceInputs["name"] = args?.name;
             resourceInputs["qosRateMaxDown"] = args?.qosRateMaxDown;
             resourceInputs["qosRateMaxUp"] = args?.qosRateMaxUp;
             resourceInputs["site"] = args?.site;
+            resourceInputs["timeouts"] = args?.timeouts;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(ClientQosRate.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -85,19 +90,20 @@ export interface ClientQosRateState {
     /**
      * The name of the client QOS rate.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The QOS maximum download rate.
      */
-    qosRateMaxDown?: pulumi.Input<number>;
+    qosRateMaxDown?: pulumi.Input<number | undefined>;
     /**
      * The QOS maximum upload rate.
      */
-    qosRateMaxUp?: pulumi.Input<number>;
+    qosRateMaxUp?: pulumi.Input<number | undefined>;
     /**
      * The name of the site to associate the client QOS rate with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.ClientQosRateTimeouts | undefined>;
 }
 
 /**
@@ -107,17 +113,18 @@ export interface ClientQosRateArgs {
     /**
      * The name of the client QOS rate.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The QOS maximum download rate.
      */
-    qosRateMaxDown?: pulumi.Input<number>;
+    qosRateMaxDown?: pulumi.Input<number | undefined>;
     /**
      * The QOS maximum upload rate.
      */
-    qosRateMaxUp?: pulumi.Input<number>;
+    qosRateMaxUp?: pulumi.Input<number | undefined>;
     /**
      * The name of the site to associate the client QOS rate with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.ClientQosRateTimeouts | undefined>;
 }

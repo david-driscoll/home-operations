@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getRadiusProfile(args: GetRadiusProfileArgs, opts?: pulumi.InvokeOptions): Promise<GetRadiusProfileResult> {
@@ -9,6 +11,7 @@ export function getRadiusProfile(args: GetRadiusProfileArgs, opts?: pulumi.Invok
     return pulumi.runtime.invoke("unifi:index/getRadiusProfile:getRadiusProfile", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getRadiusProfile(args: GetRadiusProfileArgs, opts?: pulumi.Invok
 export interface GetRadiusProfileArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetRadiusProfileTimeouts;
 }
 
 /**
@@ -27,9 +31,10 @@ export interface GetRadiusProfileResult {
     readonly accountingEnabled: boolean;
     readonly id: string;
     readonly interimUpdateEnabled: boolean;
-    readonly interimUpdateInterval: number;
+    readonly interimUpdateInterval: string;
     readonly name: string;
     readonly site: string;
+    readonly timeouts?: outputs.GetRadiusProfileTimeouts;
     readonly useUsgAcctServer: boolean;
     readonly useUsgAuthServer: boolean;
     readonly vlanEnabled: boolean;
@@ -40,6 +45,7 @@ export function getRadiusProfileOutput(args: GetRadiusProfileOutputArgs, opts?: 
     return pulumi.runtime.invokeOutput("unifi:index/getRadiusProfile:getRadiusProfile", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -48,5 +54,6 @@ export function getRadiusProfileOutput(args: GetRadiusProfileOutputArgs, opts?: 
  */
 export interface GetRadiusProfileOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetRadiusProfileTimeoutsArgs | undefined>;
 }

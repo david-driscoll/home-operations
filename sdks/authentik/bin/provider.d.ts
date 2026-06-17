@@ -43,19 +43,19 @@ export interface ProviderArgs {
      */
     headers?: pulumi.Input<{
         [key: string]: pulumi.Input<string>;
-    }>;
+    } | undefined>;
     /**
      * Whether to skip TLS verification, can optionally be passed as `AUTHENTIK_INSECURE` environmental variable
      */
-    insecure?: pulumi.Input<boolean>;
+    insecure?: pulumi.Input<boolean | undefined>;
     /**
      * The authentik API token, can optionally be passed as `AUTHENTIK_TOKEN` environmental variable
      */
-    token?: pulumi.Input<string>;
+    token?: pulumi.Input<string | undefined>;
     /**
      * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
      */
-    url?: pulumi.Input<string>;
+    url?: pulumi.Input<string | undefined>;
 }
 export declare namespace Provider {
     /**

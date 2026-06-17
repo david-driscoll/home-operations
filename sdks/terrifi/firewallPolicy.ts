@@ -162,67 +162,67 @@ export interface FirewallPolicyState {
     /**
      * The action to take when traffic matches this policy. Valid values: `ALLOW`, `BLOCK`, `REJECT`.
      */
-    action?: pulumi.Input<string>;
+    action?: pulumi.Input<string | undefined>;
     /**
      * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
      */
-    connectionStateType?: pulumi.Input<string>;
+    connectionStateType?: pulumi.Input<string | undefined>;
     /**
      * Set of connection states to match (e.g. `NEW`, `ESTABLISHED`, `RELATED`, `INVALID`).
      */
-    connectionStates?: pulumi.Input<pulumi.Input<string>[]>;
+    connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether to automatically create a corresponding allow-respond rule. Not supported when the destination zone is the external zone — UniFi handles WAN return traffic at the stateful firewall level automatically.
      */
-    createAllowRespond?: pulumi.Input<boolean>;
+    createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
      * A description of the firewall policy.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * Destination endpoint configuration for the firewall policy.
      */
-    destination?: pulumi.Input<inputs.FirewallPolicyDestination>;
+    destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
      * Whether the firewall policy is enabled. Default: `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * The ordering index of the policy, assigned by the controller.
      */
-    index?: pulumi.Input<number>;
+    index?: pulumi.Input<number | undefined>;
     /**
      * IP version to match. Valid values: `BOTH`, `IPV4`, `IPV6`. Default: `BOTH`.
      */
-    ipVersion?: pulumi.Input<string>;
+    ipVersion?: pulumi.Input<string | undefined>;
     /**
      * Whether to enable syslog logging for matched traffic.
      */
-    logging?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to match IPsec traffic.
      */
-    matchIpsec?: pulumi.Input<boolean>;
+    matchIpsec?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the firewall policy.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * Schedule configuration for when this policy is active.
      */
-    schedule?: pulumi.Input<inputs.FirewallPolicySchedule>;
+    schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**
      * The site to associate the firewall policy with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source endpoint configuration for the firewall policy.
      */
-    source?: pulumi.Input<inputs.FirewallPolicySource>;
+    source?: pulumi.Input<inputs.FirewallPolicySource | undefined>;
 }
 
 /**
@@ -236,57 +236,57 @@ export interface FirewallPolicyArgs {
     /**
      * Connection state type. Valid values: `ALL`, `RESPOND_ONLY`, `CUSTOM`. When set to `CUSTOM`, specify individual states via `connection_states`. Default: `ALL`.
      */
-    connectionStateType?: pulumi.Input<string>;
+    connectionStateType?: pulumi.Input<string | undefined>;
     /**
      * Set of connection states to match (e.g. `NEW`, `ESTABLISHED`, `RELATED`, `INVALID`).
      */
-    connectionStates?: pulumi.Input<pulumi.Input<string>[]>;
+    connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether to automatically create a corresponding allow-respond rule. Not supported when the destination zone is the external zone — UniFi handles WAN return traffic at the stateful firewall level automatically.
      */
-    createAllowRespond?: pulumi.Input<boolean>;
+    createAllowRespond?: pulumi.Input<boolean | undefined>;
     /**
      * A description of the firewall policy.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * Destination endpoint configuration for the firewall policy.
      */
-    destination?: pulumi.Input<inputs.FirewallPolicyDestination>;
+    destination?: pulumi.Input<inputs.FirewallPolicyDestination | undefined>;
     /**
      * Whether the firewall policy is enabled. Default: `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * IP version to match. Valid values: `BOTH`, `IPV4`, `IPV6`. Default: `BOTH`.
      */
-    ipVersion?: pulumi.Input<string>;
+    ipVersion?: pulumi.Input<string | undefined>;
     /**
      * Whether to enable syslog logging for matched traffic.
      */
-    logging?: pulumi.Input<boolean>;
+    logging?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to match IPsec traffic.
      */
-    matchIpsec?: pulumi.Input<boolean>;
+    matchIpsec?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the firewall policy.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Protocol to match. Valid values: `all`, `tcp`, `udp`, `tcp_udp`, `icmp`, `icmpv6`. Default: `all`.
      */
-    protocol?: pulumi.Input<string>;
+    protocol?: pulumi.Input<string | undefined>;
     /**
      * Schedule configuration for when this policy is active.
      */
-    schedule?: pulumi.Input<inputs.FirewallPolicySchedule>;
+    schedule?: pulumi.Input<inputs.FirewallPolicySchedule | undefined>;
     /**
      * The site to associate the firewall policy with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Source endpoint configuration for the firewall policy.
      */
-    source?: pulumi.Input<inputs.FirewallPolicySource>;
+    source?: pulumi.Input<inputs.FirewallPolicySource | undefined>;
 }

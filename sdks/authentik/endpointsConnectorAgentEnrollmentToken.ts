@@ -102,27 +102,27 @@ export class EndpointsConnectorAgentEnrollmentToken extends pulumi.CustomResourc
  * Input properties used for looking up and filtering EndpointsConnectorAgentEnrollmentToken resources.
  */
 export interface EndpointsConnectorAgentEnrollmentTokenState {
-    connector?: pulumi.Input<string>;
-    deviceAccessGroup?: pulumi.Input<string>;
-    endpointsConnectorAgentEnrollmentTokenId?: pulumi.Input<string>;
-    expires?: pulumi.Input<string>;
+    connector?: pulumi.Input<string | undefined>;
+    deviceAccessGroup?: pulumi.Input<string | undefined>;
+    endpointsConnectorAgentEnrollmentTokenId?: pulumi.Input<string | undefined>;
+    expires?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    expiresIn?: pulumi.Input<number>;
+    expiresIn?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `true`.
      */
-    expiring?: pulumi.Input<boolean>;
+    expiring?: pulumi.Input<boolean | undefined>;
     /**
      * Generated.
      */
-    key?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    key?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    retrieveKey?: pulumi.Input<boolean>;
+    retrieveKey?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -130,16 +130,16 @@ export interface EndpointsConnectorAgentEnrollmentTokenState {
  */
 export interface EndpointsConnectorAgentEnrollmentTokenArgs {
     connector: pulumi.Input<string>;
-    deviceAccessGroup?: pulumi.Input<string>;
-    endpointsConnectorAgentEnrollmentTokenId?: pulumi.Input<string>;
-    expires?: pulumi.Input<string>;
+    deviceAccessGroup?: pulumi.Input<string | undefined>;
+    endpointsConnectorAgentEnrollmentTokenId?: pulumi.Input<string | undefined>;
+    expires?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    expiring?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
+    expiring?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    retrieveKey?: pulumi.Input<boolean>;
+    retrieveKey?: pulumi.Input<boolean | undefined>;
 }

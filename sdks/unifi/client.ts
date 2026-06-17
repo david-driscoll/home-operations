@@ -63,6 +63,10 @@ export class Client extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly hostname: pulumi.Output<string>;
     /**
+     * The most recent IP address the controller has seen for this client (read-only).
+     */
+    declare public /*out*/ readonly lastIp: pulumi.Output<string>;
+    /**
      * Specifies the local DNS record for this client.
      */
     declare public readonly localDnsRecord: pulumi.Output<string>;
@@ -94,6 +98,7 @@ export class Client extends pulumi.CustomResource {
      * Specifies whether this resource should tell the controller to "forget" the client on destroy.
      */
     declare public readonly skipForgetOnDestroy: pulumi.Output<boolean>;
+    declare public readonly timeouts: pulumi.Output<outputs.ClientTimeouts | undefined>;
 
     /**
      * Create a Client resource with the given unique name, arguments, and options.
@@ -115,6 +120,7 @@ export class Client extends pulumi.CustomResource {
             resourceInputs["fixedIp"] = state?.fixedIp;
             resourceInputs["groups"] = state?.groups;
             resourceInputs["hostname"] = state?.hostname;
+            resourceInputs["lastIp"] = state?.lastIp;
             resourceInputs["localDnsRecord"] = state?.localDnsRecord;
             resourceInputs["mac"] = state?.mac;
             resourceInputs["name"] = state?.name;
@@ -123,6 +129,7 @@ export class Client extends pulumi.CustomResource {
             resourceInputs["qosRate"] = state?.qosRate;
             resourceInputs["site"] = state?.site;
             resourceInputs["skipForgetOnDestroy"] = state?.skipForgetOnDestroy;
+            resourceInputs["timeouts"] = state?.timeouts;
         } else {
             const args = argsOrState as ClientArgs | undefined;
             if (args?.mac === undefined && !opts.urn) {
@@ -142,7 +149,9 @@ export class Client extends pulumi.CustomResource {
             resourceInputs["qosRate"] = args?.qosRate;
             resourceInputs["site"] = args?.site;
             resourceInputs["skipForgetOnDestroy"] = args?.skipForgetOnDestroy;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["hostname"] = undefined /*out*/;
+            resourceInputs["lastIp"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(Client.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -156,63 +165,68 @@ export interface ClientState {
     /**
      * Specifies whether this resource should just take over control of an existing client.
      */
-    allowExisting?: pulumi.Input<boolean>;
+    allowExisting?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether this client should be blocked from the network.
      */
-    blocked?: pulumi.Input<boolean>;
+    blocked?: pulumi.Input<boolean | undefined>;
     /**
      * The display name of the client.
      */
-    displayName?: pulumi.Input<string>;
+    displayName?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the access point to which this client should be fixed.
      */
-    fixedApMac?: pulumi.Input<string>;
+    fixedApMac?: pulumi.Input<string | undefined>;
     /**
      * A fixed IPv4 address for this client.
      */
-    fixedIp?: pulumi.Input<string>;
+    fixedIp?: pulumi.Input<string | undefined>;
     /**
      * List of network members group names for this client.
      */
-    groups?: pulumi.Input<pulumi.Input<string>[]>;
+    groups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The hostname of the client.
      */
-    hostname?: pulumi.Input<string>;
+    hostname?: pulumi.Input<string | undefined>;
+    /**
+     * The most recent IP address the controller has seen for this client (read-only).
+     */
+    lastIp?: pulumi.Input<string | undefined>;
     /**
      * Specifies the local DNS record for this client.
      */
-    localDnsRecord?: pulumi.Input<string>;
+    localDnsRecord?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the client.
      */
-    mac?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
     /**
      * The name of the client.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network ID for this client.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * A note with additional information for the client.
      */
-    note?: pulumi.Input<string>;
+    note?: pulumi.Input<string | undefined>;
     /**
      * QoS rate limiting configuration. Controls the client group (usergroup) used for bandwidth limits.
      */
-    qosRate?: pulumi.Input<inputs.ClientQosRate>;
+    qosRate?: pulumi.Input<inputs.ClientQosRate | undefined>;
     /**
      * The name of the site to associate the client with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Specifies whether this resource should tell the controller to "forget" the client on destroy.
      */
-    skipForgetOnDestroy?: pulumi.Input<boolean>;
+    skipForgetOnDestroy?: pulumi.Input<boolean | undefined>;
+    timeouts?: pulumi.Input<inputs.ClientTimeouts | undefined>;
 }
 
 /**
@@ -222,31 +236,31 @@ export interface ClientArgs {
     /**
      * Specifies whether this resource should just take over control of an existing client.
      */
-    allowExisting?: pulumi.Input<boolean>;
+    allowExisting?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether this client should be blocked from the network.
      */
-    blocked?: pulumi.Input<boolean>;
+    blocked?: pulumi.Input<boolean | undefined>;
     /**
      * The display name of the client.
      */
-    displayName?: pulumi.Input<string>;
+    displayName?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the access point to which this client should be fixed.
      */
-    fixedApMac?: pulumi.Input<string>;
+    fixedApMac?: pulumi.Input<string | undefined>;
     /**
      * A fixed IPv4 address for this client.
      */
-    fixedIp?: pulumi.Input<string>;
+    fixedIp?: pulumi.Input<string | undefined>;
     /**
      * List of network members group names for this client.
      */
-    groups?: pulumi.Input<pulumi.Input<string>[]>;
+    groups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Specifies the local DNS record for this client.
      */
-    localDnsRecord?: pulumi.Input<string>;
+    localDnsRecord?: pulumi.Input<string | undefined>;
     /**
      * The MAC address of the client.
      */
@@ -254,25 +268,26 @@ export interface ClientArgs {
     /**
      * The name of the client.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network ID for this client.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * A note with additional information for the client.
      */
-    note?: pulumi.Input<string>;
+    note?: pulumi.Input<string | undefined>;
     /**
      * QoS rate limiting configuration. Controls the client group (usergroup) used for bandwidth limits.
      */
-    qosRate?: pulumi.Input<inputs.ClientQosRate>;
+    qosRate?: pulumi.Input<inputs.ClientQosRate | undefined>;
     /**
      * The name of the site to associate the client with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Specifies whether this resource should tell the controller to "forget" the client on destroy.
      */
-    skipForgetOnDestroy?: pulumi.Input<boolean>;
+    skipForgetOnDestroy?: pulumi.Input<boolean | undefined>;
+    timeouts?: pulumi.Input<inputs.ClientTimeouts | undefined>;
 }

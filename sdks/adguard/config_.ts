@@ -52,6 +52,10 @@ export class Config extends pulumi.CustomResource {
     declare public readonly parentalControl: pulumi.Output<boolean>;
     declare public readonly querylog: pulumi.Output<outputs.ConfigQuerylog>;
     /**
+     * Whether Rewrites are enabled. Defaults to `true`
+     */
+    declare public readonly rewrites: pulumi.Output<boolean>;
+    /**
      * Whether Safe Browsing is enabled. Defaults to `false`
      */
     declare public readonly safebrowsing: pulumi.Output<boolean>;
@@ -80,6 +84,7 @@ export class Config extends pulumi.CustomResource {
             resourceInputs["lastUpdated"] = state?.lastUpdated;
             resourceInputs["parentalControl"] = state?.parentalControl;
             resourceInputs["querylog"] = state?.querylog;
+            resourceInputs["rewrites"] = state?.rewrites;
             resourceInputs["safebrowsing"] = state?.safebrowsing;
             resourceInputs["safesearch"] = state?.safesearch;
             resourceInputs["stats"] = state?.stats;
@@ -93,6 +98,7 @@ export class Config extends pulumi.CustomResource {
             resourceInputs["filtering"] = args?.filtering;
             resourceInputs["parentalControl"] = args?.parentalControl;
             resourceInputs["querylog"] = args?.querylog;
+            resourceInputs["rewrites"] = args?.rewrites;
             resourceInputs["safebrowsing"] = args?.safebrowsing;
             resourceInputs["safesearch"] = args?.safesearch;
             resourceInputs["stats"] = args?.stats;
@@ -111,27 +117,31 @@ export interface ConfigState {
     /**
      * Set of services to be blocked globally
      */
-    blockedServices?: pulumi.Input<pulumi.Input<string>[]>;
+    blockedServices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Sets periods of inactivity for filtering blocked services. The schedule contains 7 days (Sunday to Saturday) and a time zone.
      */
-    blockedServicesPauseSchedule?: pulumi.Input<inputs.ConfigBlockedServicesPauseSchedule>;
-    dhcp?: pulumi.Input<inputs.ConfigDhcp>;
-    dns?: pulumi.Input<inputs.ConfigDns>;
-    filtering?: pulumi.Input<inputs.ConfigFiltering>;
-    lastUpdated?: pulumi.Input<string>;
+    blockedServicesPauseSchedule?: pulumi.Input<inputs.ConfigBlockedServicesPauseSchedule | undefined>;
+    dhcp?: pulumi.Input<inputs.ConfigDhcp | undefined>;
+    dns?: pulumi.Input<inputs.ConfigDns | undefined>;
+    filtering?: pulumi.Input<inputs.ConfigFiltering | undefined>;
+    lastUpdated?: pulumi.Input<string | undefined>;
     /**
      * Whether Parental Control is enabled. Defaults to `false`
      */
-    parentalControl?: pulumi.Input<boolean>;
-    querylog?: pulumi.Input<inputs.ConfigQuerylog>;
+    parentalControl?: pulumi.Input<boolean | undefined>;
+    querylog?: pulumi.Input<inputs.ConfigQuerylog | undefined>;
+    /**
+     * Whether Rewrites are enabled. Defaults to `true`
+     */
+    rewrites?: pulumi.Input<boolean | undefined>;
     /**
      * Whether Safe Browsing is enabled. Defaults to `false`
      */
-    safebrowsing?: pulumi.Input<boolean>;
-    safesearch?: pulumi.Input<inputs.ConfigSafesearch>;
-    stats?: pulumi.Input<inputs.ConfigStats>;
-    tls?: pulumi.Input<inputs.ConfigTls>;
+    safebrowsing?: pulumi.Input<boolean | undefined>;
+    safesearch?: pulumi.Input<inputs.ConfigSafesearch | undefined>;
+    stats?: pulumi.Input<inputs.ConfigStats | undefined>;
+    tls?: pulumi.Input<inputs.ConfigTls | undefined>;
 }
 
 /**
@@ -141,24 +151,28 @@ export interface ConfigArgs {
     /**
      * Set of services to be blocked globally
      */
-    blockedServices?: pulumi.Input<pulumi.Input<string>[]>;
+    blockedServices?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Sets periods of inactivity for filtering blocked services. The schedule contains 7 days (Sunday to Saturday) and a time zone.
      */
-    blockedServicesPauseSchedule?: pulumi.Input<inputs.ConfigBlockedServicesPauseSchedule>;
-    dhcp?: pulumi.Input<inputs.ConfigDhcp>;
-    dns?: pulumi.Input<inputs.ConfigDns>;
-    filtering?: pulumi.Input<inputs.ConfigFiltering>;
+    blockedServicesPauseSchedule?: pulumi.Input<inputs.ConfigBlockedServicesPauseSchedule | undefined>;
+    dhcp?: pulumi.Input<inputs.ConfigDhcp | undefined>;
+    dns?: pulumi.Input<inputs.ConfigDns | undefined>;
+    filtering?: pulumi.Input<inputs.ConfigFiltering | undefined>;
     /**
      * Whether Parental Control is enabled. Defaults to `false`
      */
-    parentalControl?: pulumi.Input<boolean>;
-    querylog?: pulumi.Input<inputs.ConfigQuerylog>;
+    parentalControl?: pulumi.Input<boolean | undefined>;
+    querylog?: pulumi.Input<inputs.ConfigQuerylog | undefined>;
+    /**
+     * Whether Rewrites are enabled. Defaults to `true`
+     */
+    rewrites?: pulumi.Input<boolean | undefined>;
     /**
      * Whether Safe Browsing is enabled. Defaults to `false`
      */
-    safebrowsing?: pulumi.Input<boolean>;
-    safesearch?: pulumi.Input<inputs.ConfigSafesearch>;
-    stats?: pulumi.Input<inputs.ConfigStats>;
-    tls?: pulumi.Input<inputs.ConfigTls>;
+    safebrowsing?: pulumi.Input<boolean | undefined>;
+    safesearch?: pulumi.Input<inputs.ConfigSafesearch | undefined>;
+    stats?: pulumi.Input<inputs.ConfigStats | undefined>;
+    tls?: pulumi.Input<inputs.ConfigTls | undefined>;
 }

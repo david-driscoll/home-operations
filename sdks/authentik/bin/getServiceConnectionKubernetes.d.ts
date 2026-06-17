@@ -25,10 +25,10 @@ export declare function getServiceConnectionKubernetesOutput(args: GetServiceCon
  * A collection of arguments for invoking getServiceConnectionKubernetes.
  */
 export interface GetServiceConnectionKubernetesOutputArgs {
-    id?: pulumi.Input<string>;
-    kubeconfig?: pulumi.Input<string>;
-    local?: pulumi.Input<boolean>;
+    id?: pulumi.Input<string | undefined>;
+    kubeconfig?: pulumi.Input<string | undefined>;
+    local?: pulumi.Input<boolean | undefined>;
     name: pulumi.Input<string>;
-    verifySsl?: pulumi.Input<boolean>;
+    verifySsl?: pulumi.Input<boolean | undefined>;
 }
 //# sourceMappingURL=getServiceConnectionKubernetes.d.ts.map

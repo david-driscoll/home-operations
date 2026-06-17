@@ -157,15 +157,15 @@ export interface SourcePlexState {
     /**
      * Defaults to `true`.
      */
-    allowFriends?: pulumi.Input<boolean>;
-    allowedServers?: pulumi.Input<pulumi.Input<string>[]>;
-    authenticationFlow?: pulumi.Input<string>;
-    clientId?: pulumi.Input<string>;
+    allowFriends?: pulumi.Input<boolean | undefined>;
+    allowedServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    clientId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -173,22 +173,22 @@ export interface SourcePlexState {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    plexToken?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    plexToken?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
-    slug?: pulumi.Input<string>;
-    sourcePlexId?: pulumi.Input<string>;
+    promoted?: pulumi.Input<boolean | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    sourcePlexId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -198,15 +198,15 @@ export interface SourcePlexState {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -216,15 +216,15 @@ export interface SourcePlexArgs {
     /**
      * Defaults to `true`.
      */
-    allowFriends?: pulumi.Input<boolean>;
-    allowedServers?: pulumi.Input<pulumi.Input<string>[]>;
-    authenticationFlow?: pulumi.Input<string>;
+    allowFriends?: pulumi.Input<boolean | undefined>;
+    allowedServers?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     clientId: pulumi.Input<string>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -232,8 +232,8 @@ export interface SourcePlexArgs {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     plexToken: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -241,13 +241,13 @@ export interface SourcePlexArgs {
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
+    promoted?: pulumi.Input<boolean | undefined>;
     slug: pulumi.Input<string>;
-    sourcePlexId?: pulumi.Input<string>;
+    sourcePlexId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -257,13 +257,13 @@ export interface SourcePlexArgs {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }

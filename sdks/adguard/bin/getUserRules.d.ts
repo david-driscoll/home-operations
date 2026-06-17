@@ -8,3 +8,4 @@ export interface GetUserRulesResult {
     readonly rules: string[];
 }
 export declare function getUserRulesOutput(opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetUserRulesResult>;
+//# sourceMappingURL=getUserRules.d.ts.map

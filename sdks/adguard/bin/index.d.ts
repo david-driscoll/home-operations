@@ -1,9 +1,9 @@
 export { ClientArgs, ClientState } from "./client";
 export type Client = import("./client").Client;
 export declare const Client: typeof import("./client").Client;
-export { ConfigArgs, ConfigState } from "./config";
-export type Config = import("./config").Config;
-export declare const Config: typeof import("./config").Config;
+export { ConfigArgs, ConfigState } from "./config_";
+export type Config = import("./config_").Config;
+export declare const Config: typeof import("./config_").Config;
 export { GetClientArgs, GetClientResult, GetClientOutputArgs } from "./getClient";
 export declare const getClient: typeof import("./getClient").getClient;
 export declare const getClientOutput: typeof import("./getClient").getClientOutput;
@@ -32,3 +32,4 @@ export declare const UserRules: typeof import("./userRules").UserRules;
 import * as config from "./config";
 import * as types from "./types";
 export { config, types, };
+//# sourceMappingURL=index.d.ts.map

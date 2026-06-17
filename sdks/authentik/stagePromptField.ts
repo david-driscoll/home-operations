@@ -74,6 +74,9 @@ export class StagePromptField extends pulumi.CustomResource {
      *   - `separator`
      *   - `hidden`
      *   - `static`
+     *   - `alert_info`
+     *   - `alert_warning`
+     *   - `alert_danger`
      *   - `ak-locale`
      */
     declare public readonly type: pulumi.Output<string>;
@@ -136,29 +139,29 @@ export class StagePromptField extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StagePromptField resources.
  */
 export interface StagePromptFieldState {
-    fieldKey?: pulumi.Input<string>;
-    initialValue?: pulumi.Input<string>;
+    fieldKey?: pulumi.Input<string | undefined>;
+    initialValue?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    initialValueExpression?: pulumi.Input<boolean>;
-    label?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    order?: pulumi.Input<number>;
-    placeholder?: pulumi.Input<string>;
+    initialValueExpression?: pulumi.Input<boolean | undefined>;
+    label?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    order?: pulumi.Input<number | undefined>;
+    placeholder?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    placeholderExpression?: pulumi.Input<boolean>;
+    placeholderExpression?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    required?: pulumi.Input<boolean>;
-    stagePromptFieldId?: pulumi.Input<string>;
+    required?: pulumi.Input<boolean | undefined>;
+    stagePromptFieldId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    subText?: pulumi.Input<string>;
+    subText?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `text`
@@ -178,9 +181,12 @@ export interface StagePromptFieldState {
      *   - `separator`
      *   - `hidden`
      *   - `static`
+     *   - `alert_info`
+     *   - `alert_warning`
+     *   - `alert_danger`
      *   - `ak-locale`
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -188,28 +194,28 @@ export interface StagePromptFieldState {
  */
 export interface StagePromptFieldArgs {
     fieldKey: pulumi.Input<string>;
-    initialValue?: pulumi.Input<string>;
+    initialValue?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    initialValueExpression?: pulumi.Input<boolean>;
+    initialValueExpression?: pulumi.Input<boolean | undefined>;
     label: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    order?: pulumi.Input<number>;
-    placeholder?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    order?: pulumi.Input<number | undefined>;
+    placeholder?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    placeholderExpression?: pulumi.Input<boolean>;
+    placeholderExpression?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    required?: pulumi.Input<boolean>;
-    stagePromptFieldId?: pulumi.Input<string>;
+    required?: pulumi.Input<boolean | undefined>;
+    stagePromptFieldId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    subText?: pulumi.Input<string>;
+    subText?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `text`
@@ -229,6 +235,9 @@ export interface StagePromptFieldArgs {
      *   - `separator`
      *   - `hidden`
      *   - `static`
+     *   - `alert_info`
+     *   - `alert_warning`
+     *   - `alert_danger`
      *   - `ak-locale`
      */
     type: pulumi.Input<string>;

@@ -58,17 +58,17 @@ export declare class Token extends pulumi.CustomResource {
  * Input properties used for looking up and filtering Token resources.
  */
 export interface TokenState {
-    description?: pulumi.Input<string>;
-    expires?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
+    expires?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    expiresIn?: pulumi.Input<number>;
+    expiresIn?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `true`.
      */
-    expiring?: pulumi.Input<boolean>;
-    identifier?: pulumi.Input<string>;
+    expiring?: pulumi.Input<boolean | undefined>;
+    identifier?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `verification`
@@ -77,28 +77,28 @@ export interface TokenState {
      *   - `app_password`
      *  Defaults to `api`.
      */
-    intent?: pulumi.Input<string>;
+    intent?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    key?: pulumi.Input<string>;
+    key?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    retrieveKey?: pulumi.Input<boolean>;
-    tokenId?: pulumi.Input<string>;
-    user?: pulumi.Input<number>;
+    retrieveKey?: pulumi.Input<boolean | undefined>;
+    tokenId?: pulumi.Input<string | undefined>;
+    user?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a Token resource.
  */
 export interface TokenArgs {
-    description?: pulumi.Input<string>;
-    expires?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
+    expires?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    expiring?: pulumi.Input<boolean>;
+    expiring?: pulumi.Input<boolean | undefined>;
     identifier: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -108,12 +108,12 @@ export interface TokenArgs {
      *   - `app_password`
      *  Defaults to `api`.
      */
-    intent?: pulumi.Input<string>;
+    intent?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    retrieveKey?: pulumi.Input<boolean>;
-    tokenId?: pulumi.Input<string>;
+    retrieveKey?: pulumi.Input<boolean | undefined>;
+    tokenId?: pulumi.Input<string | undefined>;
     user: pulumi.Input<number>;
 }
 //# sourceMappingURL=token.d.ts.map

@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getClientQosRate(args: GetClientQosRateArgs, opts?: pulumi.InvokeOptions): Promise<GetClientQosRateResult> {
@@ -9,6 +11,7 @@ export function getClientQosRate(args: GetClientQosRateArgs, opts?: pulumi.Invok
     return pulumi.runtime.invoke("unifi:index/getClientQosRate:getClientQosRate", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getClientQosRate(args: GetClientQosRateArgs, opts?: pulumi.Invok
 export interface GetClientQosRateArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetClientQosRateTimeouts;
 }
 
 /**
@@ -29,12 +33,14 @@ export interface GetClientQosRateResult {
     readonly qosRateMaxDown: number;
     readonly qosRateMaxUp: number;
     readonly site: string;
+    readonly timeouts?: outputs.GetClientQosRateTimeouts;
 }
 export function getClientQosRateOutput(args: GetClientQosRateOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientQosRateResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getClientQosRate:getClientQosRate", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -43,5 +49,6 @@ export function getClientQosRateOutput(args: GetClientQosRateOutputArgs, opts?: 
  */
 export interface GetClientQosRateOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetClientQosRateTimeoutsArgs | undefined>;
 }

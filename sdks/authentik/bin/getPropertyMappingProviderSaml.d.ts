@@ -31,13 +31,13 @@ export declare function getPropertyMappingProviderSamlOutput(args?: GetPropertyM
  * A collection of arguments for invoking getPropertyMappingProviderSaml.
  */
 export interface GetPropertyMappingProviderSamlOutputArgs {
-    expression?: pulumi.Input<string>;
-    friendlyName?: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
-    ids?: pulumi.Input<pulumi.Input<string>[]>;
-    managed?: pulumi.Input<string>;
-    managedLists?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    samlName?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    id?: pulumi.Input<string | undefined>;
+    ids?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    managed?: pulumi.Input<string | undefined>;
+    managedLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    samlName?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getPropertyMappingProviderSaml.d.ts.map

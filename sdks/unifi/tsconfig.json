@@ -1,16 +1,22 @@
 {
     "compilerOptions": {
+        // Output
         "outDir": "bin",
-        "target": "ES2020",
-        "module": "commonjs",
-        "moduleResolution": "node",
         "declaration": true,
+        "declarationMap": true,
         "sourceMap": true,
         "stripInternal": true,
-        "experimentalDecorators": true,
+        // Environment
+        "target": "ES2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "moduleDetection": "force",
+        "types": ["node"],
+        // Type Checking
+        "strict": true,
         "noFallthroughCasesInSwitch": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true
+        "noImplicitReturns": true,
+        "skipLibCheck": true
     },
     "files": [
         "account.ts",
@@ -23,7 +29,9 @@
         "dnsRecord.ts",
         "dynamicDns.ts",
         "firewallGroup.ts",
+        "firewallPolicy.ts",
         "firewallRule.ts",
+        "firewallZone.ts",
         "getAccount.ts",
         "getApGroup.ts",
         "getClient.ts",
@@ -32,17 +40,22 @@
         "getClientList.ts",
         "getClientQosRate.ts",
         "getDnsRecord.ts",
+        "getFirewallZone.ts",
         "getNetwork.ts",
         "getPortProfile.ts",
         "getRadiusProfile.ts",
+        "getRadiusUser.ts",
         "index.ts",
         "network.ts",
         "portForward.ts",
         "portProfile.ts",
+        "powerSupervisor.ts",
         "provider.ts",
         "radiusProfile.ts",
+        "radiusUser.ts",
         "setting.ts",
         "site.ts",
+        "siteToSiteVpn.ts",
         "staticRoute.ts",
         "trafficRoute.ts",
         "types/index.ts",
@@ -52,6 +65,7 @@
         "vpnClient.ts",
         "vpnServer.ts",
         "wan.ts",
+        "wireguardPeer.ts",
         "wlan.ts"
     ]
 }

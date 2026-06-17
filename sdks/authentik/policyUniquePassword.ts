@@ -85,17 +85,17 @@ export interface PolicyUniquePasswordState {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `1`.
      */
-    numHistoricalPasswords?: pulumi.Input<number>;
+    numHistoricalPasswords?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `password`.
      */
-    passwordField?: pulumi.Input<string>;
-    policyUniquePasswordId?: pulumi.Input<string>;
+    passwordField?: pulumi.Input<string | undefined>;
+    policyUniquePasswordId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -105,15 +105,15 @@ export interface PolicyUniquePasswordArgs {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `1`.
      */
-    numHistoricalPasswords?: pulumi.Input<number>;
+    numHistoricalPasswords?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `password`.
      */
-    passwordField?: pulumi.Input<string>;
-    policyUniquePasswordId?: pulumi.Input<string>;
+    passwordField?: pulumi.Input<string | undefined>;
+    policyUniquePasswordId?: pulumi.Input<string | undefined>;
 }

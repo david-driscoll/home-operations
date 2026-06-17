@@ -33,5 +33,6 @@ export declare function getBucketOutput(args: GetBucketOutputArgs, opts?: pulumi
  */
 export interface GetBucketOutputArgs {
     bucketName: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=getBucket.d.ts.map

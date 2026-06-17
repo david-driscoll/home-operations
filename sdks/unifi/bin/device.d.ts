@@ -58,9 +58,9 @@ export declare class Device extends pulumi.CustomResource {
      */
     readonly lcmBrightnessOverride: pulumi.Output<boolean>;
     /**
-     * LCM idle timeout in seconds (10-3600).
+     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
      */
-    readonly lcmIdleTimeout: pulumi.Output<number>;
+    readonly lcmIdleTimeout: pulumi.Output<string>;
     /**
      * Override LCM idle timeout.
      */
@@ -122,7 +122,7 @@ export declare class Device extends pulumi.CustomResource {
      */
     readonly poeMode: pulumi.Output<string>;
     /**
-     * Settings overrides for specific switch ports.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
      */
     readonly portOverrides: pulumi.Output<outputs.DevicePortOverride[] | undefined>;
     /**
@@ -149,6 +149,7 @@ export declare class Device extends pulumi.CustomResource {
      * Enable VLAN support on the switch.
      */
     readonly switchVlanEnabled: pulumi.Output<boolean>;
+    readonly timeouts: pulumi.Output<outputs.DeviceTimeouts | undefined>;
     /**
      * Device type.
      */
@@ -177,147 +178,148 @@ export interface DeviceState {
     /**
      * Whether the device is adopted.
      */
-    adopted?: pulumi.Input<boolean>;
+    adopted?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether this resource should tell the controller to adopt the device on create.
      */
-    allowAdoption?: pulumi.Input<boolean>;
+    allowAdoption?: pulumi.Input<boolean | undefined>;
     /**
      * Band steering mode; valid values are `off`, `equal`, and `prefer_5g`.
      */
-    bandsteeringMode?: pulumi.Input<string>;
+    bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
      * Network configuration for the device.
      */
-    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork>;
+    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
      * Specifies whether this device should be disabled.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * Enable flow control.
      */
-    flowctrlEnabled?: pulumi.Input<boolean>;
+    flowctrlEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether this resource should tell the controller to forget the device on destroy.
      */
-    forgetOnDestroy?: pulumi.Input<boolean>;
+    forgetOnDestroy?: pulumi.Input<boolean | undefined>;
     /**
      * Enable jumbo frames.
      */
-    jumboframeEnabled?: pulumi.Input<boolean>;
+    jumboframeEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * LCM brightness (1-100).
      */
-    lcmBrightness?: pulumi.Input<number>;
+    lcmBrightness?: pulumi.Input<number | undefined>;
     /**
      * Override LCM brightness.
      */
-    lcmBrightnessOverride?: pulumi.Input<boolean>;
+    lcmBrightnessOverride?: pulumi.Input<boolean | undefined>;
     /**
-     * LCM idle timeout in seconds (10-3600).
+     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
      */
-    lcmIdleTimeout?: pulumi.Input<number>;
+    lcmIdleTimeout?: pulumi.Input<string | undefined>;
     /**
      * Override LCM idle timeout.
      */
-    lcmIdleTimeoutOverride?: pulumi.Input<boolean>;
+    lcmIdleTimeoutOverride?: pulumi.Input<boolean | undefined>;
     /**
      * LCM night mode begin time (HH:MM format).
      */
-    lcmNightModeBegins?: pulumi.Input<string>;
+    lcmNightModeBegins?: pulumi.Input<string | undefined>;
     /**
      * LCM night mode end time (HH:MM format).
      */
-    lcmNightModeEnds?: pulumi.Input<string>;
+    lcmNightModeEnds?: pulumi.Input<string | undefined>;
     /**
      * LED override setting; valid values are `default`, `on`, and `off`.
      */
-    ledOverride?: pulumi.Input<string>;
+    ledOverride?: pulumi.Input<string | undefined>;
     /**
      * LED color override (hex color code).
      */
-    ledOverrideColor?: pulumi.Input<string>;
+    ledOverrideColor?: pulumi.Input<string | undefined>;
     /**
      * LED brightness (0-100).
      */
-    ledOverrideColorBrightness?: pulumi.Input<number>;
+    ledOverrideColorBrightness?: pulumi.Input<number | undefined>;
     /**
      * Specifies whether the device is locked.
      */
-    locked?: pulumi.Input<boolean>;
+    locked?: pulumi.Input<boolean | undefined>;
     /**
      * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
-    mac?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
     /**
      * Management network ID.
      */
-    mgmtNetworkId?: pulumi.Input<string>;
+    mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**
      * Device model.
      */
-    model?: pulumi.Input<string>;
+    model?: pulumi.Input<string | undefined>;
     /**
      * The name of the device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Outdoor mode override; valid values are `default`, `on`, and `off`.
      */
-    outdoorModeOverride?: pulumi.Input<string>;
+    outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
      * Enable outlet control.
      */
-    outletEnabled?: pulumi.Input<boolean>;
+    outletEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Outlet configuration overrides.
      */
-    outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[]>;
+    outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[] | undefined>;
     /**
      * PoE mode; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
      */
-    poeMode?: pulumi.Input<string>;
+    poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Settings overrides for specific switch ports.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
      */
-    portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[]>;
+    portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**
      * Radio configuration table.
      */
-    radioTables?: pulumi.Input<pulumi.Input<inputs.DeviceRadioTable>[]>;
+    radioTables?: pulumi.Input<pulumi.Input<inputs.DeviceRadioTable>[] | undefined>;
     /**
      * The name of the site to associate the device with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * Device state.
      */
-    state?: pulumi.Input<number>;
+    state?: pulumi.Input<number | undefined>;
     /**
      * STP priority.
      */
-    stpPriority?: pulumi.Input<number>;
+    stpPriority?: pulumi.Input<number | undefined>;
     /**
      * STP version; valid values are `stp`, `rstp`, and `disabled`.
      */
-    stpVersion?: pulumi.Input<string>;
+    stpVersion?: pulumi.Input<string | undefined>;
     /**
      * Enable VLAN support on the switch.
      */
-    switchVlanEnabled?: pulumi.Input<boolean>;
+    switchVlanEnabled?: pulumi.Input<boolean | undefined>;
+    timeouts?: pulumi.Input<inputs.DeviceTimeouts | undefined>;
     /**
      * Device type.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
     /**
      * Volume level (0-100).
      */
-    volume?: pulumi.Input<number>;
+    volume?: pulumi.Input<number | undefined>;
     /**
      * Baresip password.
      */
-    xBaresipPassword?: pulumi.Input<string>;
+    xBaresipPassword?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a Device resource.
@@ -326,129 +328,131 @@ export interface DeviceArgs {
     /**
      * Specifies whether this resource should tell the controller to adopt the device on create.
      */
-    allowAdoption?: pulumi.Input<boolean>;
+    allowAdoption?: pulumi.Input<boolean | undefined>;
     /**
      * Band steering mode; valid values are `off`, `equal`, and `prefer_5g`.
      */
-    bandsteeringMode?: pulumi.Input<string>;
+    bandsteeringMode?: pulumi.Input<string | undefined>;
     /**
      * Network configuration for the device.
      */
-    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork>;
+    configNetwork?: pulumi.Input<inputs.DeviceConfigNetwork | undefined>;
     /**
      * Specifies whether this device should be disabled.
      */
-    disabled?: pulumi.Input<boolean>;
+    disabled?: pulumi.Input<boolean | undefined>;
     /**
      * Enable flow control.
      */
-    flowctrlEnabled?: pulumi.Input<boolean>;
+    flowctrlEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether this resource should tell the controller to forget the device on destroy.
      */
-    forgetOnDestroy?: pulumi.Input<boolean>;
+    forgetOnDestroy?: pulumi.Input<boolean | undefined>;
     /**
      * Enable jumbo frames.
      */
-    jumboframeEnabled?: pulumi.Input<boolean>;
+    jumboframeEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * LCM brightness (1-100).
      */
-    lcmBrightness?: pulumi.Input<number>;
+    lcmBrightness?: pulumi.Input<number | undefined>;
     /**
      * Override LCM brightness.
      */
-    lcmBrightnessOverride?: pulumi.Input<boolean>;
+    lcmBrightnessOverride?: pulumi.Input<boolean | undefined>;
     /**
-     * LCM idle timeout in seconds (10-3600).
+     * LCM idle timeout, as a Go duration string (e.g. `10m`, `600s`).
      */
-    lcmIdleTimeout?: pulumi.Input<number>;
+    lcmIdleTimeout?: pulumi.Input<string | undefined>;
     /**
      * Override LCM idle timeout.
      */
-    lcmIdleTimeoutOverride?: pulumi.Input<boolean>;
+    lcmIdleTimeoutOverride?: pulumi.Input<boolean | undefined>;
     /**
      * LCM night mode begin time (HH:MM format).
      */
-    lcmNightModeBegins?: pulumi.Input<string>;
+    lcmNightModeBegins?: pulumi.Input<string | undefined>;
     /**
      * LCM night mode end time (HH:MM format).
      */
-    lcmNightModeEnds?: pulumi.Input<string>;
+    lcmNightModeEnds?: pulumi.Input<string | undefined>;
     /**
      * LED override setting; valid values are `default`, `on`, and `off`.
      */
-    ledOverride?: pulumi.Input<string>;
+    ledOverride?: pulumi.Input<string | undefined>;
     /**
      * LED color override (hex color code).
      */
-    ledOverrideColor?: pulumi.Input<string>;
+    ledOverrideColor?: pulumi.Input<string | undefined>;
     /**
      * LED brightness (0-100).
      */
-    ledOverrideColorBrightness?: pulumi.Input<number>;
+    ledOverrideColorBrightness?: pulumi.Input<number | undefined>;
     /**
      * Specifies whether the device is locked.
      */
-    locked?: pulumi.Input<boolean>;
+    locked?: pulumi.Input<boolean | undefined>;
     /**
      * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
-    mac?: pulumi.Input<string>;
+    mac?: pulumi.Input<string | undefined>;
     /**
      * Management network ID.
      */
-    mgmtNetworkId?: pulumi.Input<string>;
+    mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**
      * The name of the device.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Outdoor mode override; valid values are `default`, `on`, and `off`.
      */
-    outdoorModeOverride?: pulumi.Input<string>;
+    outdoorModeOverride?: pulumi.Input<string | undefined>;
     /**
      * Enable outlet control.
      */
-    outletEnabled?: pulumi.Input<boolean>;
+    outletEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Outlet configuration overrides.
      */
-    outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[]>;
+    outletOverrides?: pulumi.Input<pulumi.Input<inputs.DeviceOutletOverride>[] | undefined>;
     /**
      * PoE mode; valid values are `auto`, `pasv24`, `passthrough`, and `off`.
      */
-    poeMode?: pulumi.Input<string>;
+    poeMode?: pulumi.Input<string | undefined>;
     /**
-     * Settings overrides for specific switch ports.
+     * Per-port settings overrides, applied only to the ports you declare. Ports without a `port_override` block keep their existing controller-side configuration — the provider merges your declared ports (by `index`) into the device's current overrides rather than replacing the whole set. Removing a block stops managing that port but does not reset it; clear a port by overriding it back to the defaults instead.
      */
-    portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[]>;
+    portOverrides?: pulumi.Input<pulumi.Input<inputs.DevicePortOverride>[] | undefined>;
     /**
      * Radio configuration table.
      */
-    radioTables?: pulumi.Input<pulumi.Input<inputs.DeviceRadioTable>[]>;
+    radioTables?: pulumi.Input<pulumi.Input<inputs.DeviceRadioTable>[] | undefined>;
     /**
      * The name of the site to associate the device with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * STP priority.
      */
-    stpPriority?: pulumi.Input<number>;
+    stpPriority?: pulumi.Input<number | undefined>;
     /**
      * STP version; valid values are `stp`, `rstp`, and `disabled`.
      */
-    stpVersion?: pulumi.Input<string>;
+    stpVersion?: pulumi.Input<string | undefined>;
     /**
      * Enable VLAN support on the switch.
      */
-    switchVlanEnabled?: pulumi.Input<boolean>;
+    switchVlanEnabled?: pulumi.Input<boolean | undefined>;
+    timeouts?: pulumi.Input<inputs.DeviceTimeouts | undefined>;
     /**
      * Volume level (0-100).
      */
-    volume?: pulumi.Input<number>;
+    volume?: pulumi.Input<number | undefined>;
     /**
      * Baresip password.
      */
-    xBaresipPassword?: pulumi.Input<string>;
+    xBaresipPassword?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=device.d.ts.map

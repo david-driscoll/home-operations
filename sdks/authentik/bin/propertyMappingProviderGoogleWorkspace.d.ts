@@ -31,16 +31,16 @@ export declare class PropertyMappingProviderGoogleWorkspace extends pulumi.Custo
  * Input properties used for looking up and filtering PropertyMappingProviderGoogleWorkspace resources.
  */
 export interface PropertyMappingProviderGoogleWorkspaceState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderGoogleWorkspaceId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderGoogleWorkspaceId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingProviderGoogleWorkspace resource.
  */
 export interface PropertyMappingProviderGoogleWorkspaceArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderGoogleWorkspaceId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderGoogleWorkspaceId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingProviderGoogleWorkspace.d.ts.map

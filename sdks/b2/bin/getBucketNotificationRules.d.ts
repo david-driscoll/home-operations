@@ -22,5 +22,6 @@ export declare function getBucketNotificationRulesOutput(args: GetBucketNotifica
  */
 export interface GetBucketNotificationRulesOutputArgs {
     bucketId: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=getBucketNotificationRules.d.ts.map

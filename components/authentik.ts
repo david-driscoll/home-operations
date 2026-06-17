@@ -189,6 +189,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           jwksSources: oauth2.jwksSources,
           jwtFederationProviders: oauth2.jwtFederationProviders,
           jwtFederationSources: oauth2.jwtFederationSources,
+          grantTypes: oauth2.grantTypes ?? ["implicit", "authorization_code", "refresh_token", "client_credentials"],
           subMode: oauth2.subMode,
           propertyMappings: this.resolvePropertyMappings(oauth2.propertyMappings),
         },

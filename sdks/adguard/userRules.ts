@@ -70,11 +70,11 @@ export class UserRules extends pulumi.CustomResource {
  * Input properties used for looking up and filtering UserRules resources.
  */
 export interface UserRulesState {
-    lastUpdated?: pulumi.Input<string>;
+    lastUpdated?: pulumi.Input<string | undefined>;
     /**
      * List of user rules
      */
-    rules?: pulumi.Input<pulumi.Input<string>[]>;
+    rules?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 
 /**

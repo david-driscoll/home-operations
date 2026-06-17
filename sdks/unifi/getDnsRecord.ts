@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getDnsRecord(args: GetDnsRecordArgs, opts?: pulumi.InvokeOptions): Promise<GetDnsRecordResult> {
@@ -9,6 +11,7 @@ export function getDnsRecord(args: GetDnsRecordArgs, opts?: pulumi.InvokeOptions
     return pulumi.runtime.invoke("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getDnsRecord(args: GetDnsRecordArgs, opts?: pulumi.InvokeOptions
 export interface GetDnsRecordArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetDnsRecordTimeouts;
 }
 
 /**
@@ -28,7 +32,8 @@ export interface GetDnsRecordResult {
     readonly id: string;
     readonly name: string;
     readonly site: string;
-    readonly ttl: number;
+    readonly timeouts?: outputs.GetDnsRecordTimeouts;
+    readonly ttl: string;
     readonly type: string;
     readonly value: string;
 }
@@ -37,6 +42,7 @@ export function getDnsRecordOutput(args: GetDnsRecordOutputArgs, opts?: pulumi.I
     return pulumi.runtime.invokeOutput("unifi:index/getDnsRecord:getDnsRecord", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -45,5 +51,6 @@ export function getDnsRecordOutput(args: GetDnsRecordOutputArgs, opts?: pulumi.I
  */
 export interface GetDnsRecordOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetDnsRecordTimeoutsArgs | undefined>;
 }

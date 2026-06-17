@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class FirewallGroup extends pulumi.CustomResource {
     /**
      * Get an existing FirewallGroup resource's state with the given name, ID, and optional extra
@@ -27,6 +29,7 @@ export declare class FirewallGroup extends pulumi.CustomResource {
      * The name of the site to associate the firewall group with.
      */
     readonly site: pulumi.Output<string>;
+    readonly timeouts: pulumi.Output<outputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
@@ -47,19 +50,20 @@ export interface FirewallGroupState {
     /**
      * The members of the firewall group.
      */
-    members?: pulumi.Input<pulumi.Input<string>[]>;
+    members?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the firewall group with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a FirewallGroup resource.
@@ -72,13 +76,15 @@ export interface FirewallGroupArgs {
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the firewall group with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
     type: pulumi.Input<string>;
 }
+//# sourceMappingURL=firewallGroup.d.ts.map

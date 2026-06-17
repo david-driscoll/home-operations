@@ -62,6 +62,7 @@ export class Bgp extends pulumi.CustomResource {
      * The name of the site to associate the BGP configuration with.
      */
     declare public readonly site: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.BgpTimeouts | undefined>;
     /**
      * The name of the uploaded configuration file.
      */
@@ -87,6 +88,7 @@ export class Bgp extends pulumi.CustomResource {
             resourceInputs["peers"] = state?.peers;
             resourceInputs["routerId"] = state?.routerId;
             resourceInputs["site"] = state?.site;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["uploadFileName"] = state?.uploadFileName;
         } else {
             const args = argsOrState as BgpArgs | undefined;
@@ -97,6 +99,7 @@ export class Bgp extends pulumi.CustomResource {
             resourceInputs["peers"] = args?.peers;
             resourceInputs["routerId"] = args?.routerId;
             resourceInputs["site"] = args?.site;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["uploadFileName"] = args?.uploadFileName;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -111,35 +114,36 @@ export interface BgpState {
     /**
      * The BGP Autonomous System Number. Conflicts with `config`.
      */
-    asn?: pulumi.Input<number>;
+    asn?: pulumi.Input<number | undefined>;
     /**
      * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
      */
-    config?: pulumi.Input<string>;
+    config?: pulumi.Input<string | undefined>;
     /**
      * Description of the BGP configuration.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * Enable BGP routing.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * List of BGP peer groups. Conflicts with `config`.
      */
-    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[]>;
+    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[] | undefined>;
     /**
      * The BGP router ID (typically an IP address). Conflicts with `config`.
      */
-    routerId?: pulumi.Input<string>;
+    routerId?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the BGP configuration with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.BgpTimeouts | undefined>;
     /**
      * The name of the uploaded configuration file.
      */
-    uploadFileName?: pulumi.Input<string>;
+    uploadFileName?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -149,33 +153,34 @@ export interface BgpArgs {
     /**
      * The BGP Autonomous System Number. Conflicts with `config`.
      */
-    asn?: pulumi.Input<number>;
+    asn?: pulumi.Input<number | undefined>;
     /**
      * The raw FRRouting BGP daemon configuration. Conflicts with `asn`, `router_id`, and `peers`.
      */
-    config?: pulumi.Input<string>;
+    config?: pulumi.Input<string | undefined>;
     /**
      * Description of the BGP configuration.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * Enable BGP routing.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * List of BGP peer groups. Conflicts with `config`.
      */
-    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[]>;
+    peers?: pulumi.Input<pulumi.Input<inputs.BgpPeer>[] | undefined>;
     /**
      * The BGP router ID (typically an IP address). Conflicts with `config`.
      */
-    routerId?: pulumi.Input<string>;
+    routerId?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the BGP configuration with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.BgpTimeouts | undefined>;
     /**
      * The name of the uploaded configuration file.
      */
-    uploadFileName?: pulumi.Input<string>;
+    uploadFileName?: pulumi.Input<string | undefined>;
 }

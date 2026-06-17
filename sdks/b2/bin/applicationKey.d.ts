@@ -66,54 +66,54 @@ export interface ApplicationKeyState {
     /**
      * The key.
      */
-    applicationKey?: pulumi.Input<string>;
+    applicationKey?: pulumi.Input<string | undefined>;
     /**
      * The ID of the newly created key.
      */
-    applicationKeyId?: pulumi.Input<string>;
-    b2ApplicationKeyId?: pulumi.Input<string>;
+    applicationKeyId?: pulumi.Input<string | undefined>;
+    b2ApplicationKeyId?: pulumi.Input<string | undefined>;
     /**
      * When present, restricts access to one bucket. Conflicts with `bucket_ids`. **Modifying this attribute will force creation of a new resource.**
      *
      * @deprecated Deprecated
      */
-    bucketId?: pulumi.Input<string>;
+    bucketId?: pulumi.Input<string | undefined>;
     /**
      * When provided, the new key can only access the specified buckets. Conflicts with `bucket_id`. **Modifying this attribute will force creation of a new resource.**
      */
-    bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
+    bucketIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * A set of strings, each one naming a capability the key has. **Modifying this attribute will force creation of a new resource.**
      */
-    capabilities?: pulumi.Input<pulumi.Input<string>[]>;
+    capabilities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
-    keyName?: pulumi.Input<string>;
+    keyName?: pulumi.Input<string | undefined>;
     /**
      * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
-    namePrefix?: pulumi.Input<string>;
+    namePrefix?: pulumi.Input<string | undefined>;
     /**
      * List of application key options.
      */
-    options?: pulumi.Input<pulumi.Input<string>[]>;
+    options?: pulumi.Input<pulumi.Input<string>[] | undefined>;
 }
 /**
  * The set of arguments for constructing a ApplicationKey resource.
  */
 export interface ApplicationKeyArgs {
-    b2ApplicationKeyId?: pulumi.Input<string>;
+    b2ApplicationKeyId?: pulumi.Input<string | undefined>;
     /**
      * When present, restricts access to one bucket. Conflicts with `bucket_ids`. **Modifying this attribute will force creation of a new resource.**
      *
      * @deprecated Deprecated
      */
-    bucketId?: pulumi.Input<string>;
+    bucketId?: pulumi.Input<string | undefined>;
     /**
      * When provided, the new key can only access the specified buckets. Conflicts with `bucket_id`. **Modifying this attribute will force creation of a new resource.**
      */
-    bucketIds?: pulumi.Input<pulumi.Input<string>[]>;
+    bucketIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * A set of strings, each one naming a capability the key has. **Modifying this attribute will force creation of a new resource.**
      */
@@ -125,5 +125,6 @@ export interface ApplicationKeyArgs {
     /**
      * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
-    namePrefix?: pulumi.Input<string>;
+    namePrefix?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=applicationKey.d.ts.map

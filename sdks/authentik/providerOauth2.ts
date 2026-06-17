@@ -57,6 +57,10 @@ export class ProviderOauth2 extends pulumi.CustomResource {
     declare public readonly clientType: pulumi.Output<string | undefined>;
     declare public readonly encryptionKey: pulumi.Output<string | undefined>;
     /**
+     * Generated.
+     */
+    declare public readonly grantTypes: pulumi.Output<string[]>;
+    /**
      * Defaults to `true`.
      */
     declare public readonly includeClaimsInIdToken: pulumi.Output<boolean | undefined>;
@@ -134,6 +138,7 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["clientSecret"] = state?.clientSecret;
             resourceInputs["clientType"] = state?.clientType;
             resourceInputs["encryptionKey"] = state?.encryptionKey;
+            resourceInputs["grantTypes"] = state?.grantTypes;
             resourceInputs["includeClaimsInIdToken"] = state?.includeClaimsInIdToken;
             resourceInputs["invalidationFlow"] = state?.invalidationFlow;
             resourceInputs["issuerMode"] = state?.issuerMode;
@@ -169,6 +174,7 @@ export class ProviderOauth2 extends pulumi.CustomResource {
             resourceInputs["clientSecret"] = args?.clientSecret ? pulumi.secret(args.clientSecret) : undefined;
             resourceInputs["clientType"] = args?.clientType;
             resourceInputs["encryptionKey"] = args?.encryptionKey;
+            resourceInputs["grantTypes"] = args?.grantTypes;
             resourceInputs["includeClaimsInIdToken"] = args?.includeClaimsInIdToken;
             resourceInputs["invalidationFlow"] = args?.invalidationFlow;
             resourceInputs["issuerMode"] = args?.issuerMode;
@@ -199,71 +205,75 @@ export interface ProviderOauth2State {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=1`.
      */
-    accessCodeValidity?: pulumi.Input<string>;
+    accessCodeValidity?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=10`.
      */
-    accessTokenValidity?: pulumi.Input<string>;
-    allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
-    authenticationFlow?: pulumi.Input<string>;
-    authorizationFlow?: pulumi.Input<string>;
-    clientId?: pulumi.Input<string>;
+    accessTokenValidity?: pulumi.Input<string | undefined>;
+    allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[] | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    authorizationFlow?: pulumi.Input<string | undefined>;
+    clientId?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    clientSecret?: pulumi.Input<string>;
+    clientSecret?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `confidential`
      *   - `public`
      *  Defaults to `confidential`.
      */
-    clientType?: pulumi.Input<string>;
-    encryptionKey?: pulumi.Input<string>;
+    clientType?: pulumi.Input<string | undefined>;
+    encryptionKey?: pulumi.Input<string | undefined>;
+    /**
+     * Generated.
+     */
+    grantTypes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `true`.
      */
-    includeClaimsInIdToken?: pulumi.Input<boolean>;
-    invalidationFlow?: pulumi.Input<string>;
+    includeClaimsInIdToken?: pulumi.Input<boolean | undefined>;
+    invalidationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `global`
      *   - `per_provider`
      *  Defaults to `per_provider`.
      */
-    issuerMode?: pulumi.Input<string>;
+    issuerMode?: pulumi.Input<string | undefined>;
     /**
      * Deprecated. Use `jwt_federation_sources` instead.
      */
-    jwksSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
-    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `backchannel`
      *   - `frontchannel`
      *  Defaults to `backchannel`.
      */
-    logoutMethod?: pulumi.Input<string>;
-    logoutUri?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerOauth2Id?: pulumi.Input<string>;
+    logoutMethod?: pulumi.Input<string | undefined>;
+    logoutUri?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerOauth2Id?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    refreshTokenThreshold?: pulumi.Input<string>;
+    refreshTokenThreshold?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    refreshTokenValidity?: pulumi.Input<string>;
-    signingKey?: pulumi.Input<string>;
+    refreshTokenValidity?: pulumi.Input<string | undefined>;
+    signingKey?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `hashed_user_id`
@@ -274,7 +284,7 @@ export interface ProviderOauth2State {
      *   - `user_upn`
      *  Defaults to `hashed_user_id`.
      */
-    subMode?: pulumi.Input<string>;
+    subMode?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -284,31 +294,35 @@ export interface ProviderOauth2Args {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=1`.
      */
-    accessCodeValidity?: pulumi.Input<string>;
+    accessCodeValidity?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=10`.
      */
-    accessTokenValidity?: pulumi.Input<string>;
-    allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[]>;
-    authenticationFlow?: pulumi.Input<string>;
+    accessTokenValidity?: pulumi.Input<string | undefined>;
+    allowedRedirectUris?: pulumi.Input<pulumi.Input<{[key: string]: pulumi.Input<string>}>[] | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     authorizationFlow: pulumi.Input<string>;
     clientId: pulumi.Input<string>;
     /**
      * Generated.
      */
-    clientSecret?: pulumi.Input<string>;
+    clientSecret?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `confidential`
      *   - `public`
      *  Defaults to `confidential`.
      */
-    clientType?: pulumi.Input<string>;
-    encryptionKey?: pulumi.Input<string>;
+    clientType?: pulumi.Input<string | undefined>;
+    encryptionKey?: pulumi.Input<string | undefined>;
+    /**
+     * Generated.
+     */
+    grantTypes?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to `true`.
      */
-    includeClaimsInIdToken?: pulumi.Input<boolean>;
+    includeClaimsInIdToken?: pulumi.Input<boolean | undefined>;
     invalidationFlow: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -316,39 +330,39 @@ export interface ProviderOauth2Args {
      *   - `per_provider`
      *  Defaults to `per_provider`.
      */
-    issuerMode?: pulumi.Input<string>;
+    issuerMode?: pulumi.Input<string | undefined>;
     /**
      * Deprecated. Use `jwt_federation_sources` instead.
      */
-    jwksSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwksSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
      */
-    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[]>;
+    jwtFederationProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
     /**
      * JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
      */
-    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[]>;
+    jwtFederationSources?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `backchannel`
      *   - `frontchannel`
      *  Defaults to `backchannel`.
      */
-    logoutMethod?: pulumi.Input<string>;
-    logoutUri?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerOauth2Id?: pulumi.Input<string>;
+    logoutMethod?: pulumi.Input<string | undefined>;
+    logoutUri?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerOauth2Id?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `seconds=0`.
      */
-    refreshTokenThreshold?: pulumi.Input<string>;
+    refreshTokenThreshold?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `days=30`.
      */
-    refreshTokenValidity?: pulumi.Input<string>;
-    signingKey?: pulumi.Input<string>;
+    refreshTokenValidity?: pulumi.Input<string | undefined>;
+    signingKey?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `hashed_user_id`
@@ -359,5 +373,5 @@ export interface ProviderOauth2Args {
      *   - `user_upn`
      *  Defaults to `hashed_user_id`.
      */
-    subMode?: pulumi.Input<string>;
+    subMode?: pulumi.Input<string | undefined>;
 }

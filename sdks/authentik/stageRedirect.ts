@@ -88,18 +88,18 @@ export interface StageRedirectState {
     /**
      * Defaults to `true`.
      */
-    keepContext?: pulumi.Input<boolean>;
+    keepContext?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `static`
      *   - `flow`
      *  Defaults to `flow`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageRedirectId?: pulumi.Input<string>;
-    targetFlow?: pulumi.Input<string>;
-    targetStatic?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageRedirectId?: pulumi.Input<string | undefined>;
+    targetFlow?: pulumi.Input<string | undefined>;
+    targetStatic?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -109,16 +109,16 @@ export interface StageRedirectArgs {
     /**
      * Defaults to `true`.
      */
-    keepContext?: pulumi.Input<boolean>;
+    keepContext?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `static`
      *   - `flow`
      *  Defaults to `flow`.
      */
-    mode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageRedirectId?: pulumi.Input<string>;
-    targetFlow?: pulumi.Input<string>;
-    targetStatic?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageRedirectId?: pulumi.Input<string | undefined>;
+    targetFlow?: pulumi.Input<string | undefined>;
+    targetStatic?: pulumi.Input<string | undefined>;
 }

@@ -65,6 +65,7 @@ class SourceSaml extends pulumi.CustomResource {
             resourceInputs["enabled"] = state?.enabled;
             resourceInputs["encryptionKp"] = state?.encryptionKp;
             resourceInputs["enrollmentFlow"] = state?.enrollmentFlow;
+            resourceInputs["forceAuthn"] = state?.forceAuthn;
             resourceInputs["groupMatchingMode"] = state?.groupMatchingMode;
             resourceInputs["issuer"] = state?.issuer;
             resourceInputs["metadata"] = state?.metadata;
@@ -107,6 +108,7 @@ class SourceSaml extends pulumi.CustomResource {
             resourceInputs["enabled"] = args?.enabled;
             resourceInputs["encryptionKp"] = args?.encryptionKp;
             resourceInputs["enrollmentFlow"] = args?.enrollmentFlow;
+            resourceInputs["forceAuthn"] = args?.forceAuthn;
             resourceInputs["groupMatchingMode"] = args?.groupMatchingMode;
             resourceInputs["issuer"] = args?.issuer;
             resourceInputs["name"] = args?.name;

@@ -13,6 +13,7 @@ export interface GetRewriteArgs {
 export interface GetRewriteResult {
     readonly answer: string;
     readonly domain: string;
+    readonly enabled: boolean;
     readonly id: string;
 }
 export declare function getRewriteOutput(args: GetRewriteOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetRewriteResult>;
@@ -23,3 +24,4 @@ export interface GetRewriteOutputArgs {
     answer: pulumi.Input<string>;
     domain: pulumi.Input<string>;
 }
+//# sourceMappingURL=getRewrite.d.ts.map

@@ -144,55 +144,55 @@ export interface WlanState {
     /**
      * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
      */
-    application?: pulumi.Input<string>;
+    application?: pulumi.Input<string | undefined>;
     /**
      * Whether the WLAN is enabled. Default: `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to hide the SSID from broadcast. Default: `false`.
      */
-    hideSsid?: pulumi.Input<boolean>;
+    hideSsid?: pulumi.Input<boolean | undefined>;
     /**
      * The SSID (network name) of the WLAN. Must be 1-32 characters.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The ID of the network to associate with this WLAN.
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
      */
-    optimizeIotConnectivity?: pulumi.Input<boolean>;
+    optimizeIotConnectivity?: pulumi.Input<boolean | undefined>;
     /**
      * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
      */
-    passphrase?: pulumi.Input<string>;
+    passphrase?: pulumi.Input<string | undefined>;
     /**
      * The security protocol for this WLAN. Must be `open` or `wpapsk`. Default: `wpapsk`.
      */
-    security?: pulumi.Input<string>;
+    security?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the WLAN with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The WiFi band for this WLAN. Must be `2g`, `5g`, or `both`. Default: `both`.
      */
-    wifiBand?: pulumi.Input<string>;
+    wifiBand?: pulumi.Input<string | undefined>;
     /**
      * Whether to enable WPA3 support. Default: `false`.
      */
-    wpa3Support?: pulumi.Input<boolean>;
+    wpa3Support?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: `false`.
      */
-    wpa3Transition?: pulumi.Input<boolean>;
+    wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
      * The WPA mode for this WLAN. Must be `auto` or `wpa2`. Default: `wpa2`.
      */
-    wpaMode?: pulumi.Input<string>;
+    wpaMode?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -202,19 +202,19 @@ export interface WlanArgs {
     /**
      * The application type for this WLAN. Must be `standard`, `hotspot`, or `iot`. `hotspot` enables guest behavior (captive portal); `iot` enables IoT-optimized behavior. Default: `standard`.
      */
-    application?: pulumi.Input<string>;
+    application?: pulumi.Input<string | undefined>;
     /**
      * Whether the WLAN is enabled. Default: `true`.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to hide the SSID from broadcast. Default: `false`.
      */
-    hideSsid?: pulumi.Input<boolean>;
+    hideSsid?: pulumi.Input<boolean | undefined>;
     /**
      * The SSID (network name) of the WLAN. Must be 1-32 characters.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The ID of the network to associate with this WLAN.
      */
@@ -222,33 +222,33 @@ export interface WlanArgs {
     /**
      * Enable IoT-specific radio optimizations that improve connection reliability for IoT devices. Only meaningful when `application = "iot"`. Default: `false`.
      */
-    optimizeIotConnectivity?: pulumi.Input<boolean>;
+    optimizeIotConnectivity?: pulumi.Input<boolean | undefined>;
     /**
      * The WPA passphrase for the WLAN. Must be 8-255 characters. Required when security is `wpapsk`.
      */
-    passphrase?: pulumi.Input<string>;
+    passphrase?: pulumi.Input<string | undefined>;
     /**
      * The security protocol for this WLAN. Must be `open` or `wpapsk`. Default: `wpapsk`.
      */
-    security?: pulumi.Input<string>;
+    security?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the WLAN with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The WiFi band for this WLAN. Must be `2g`, `5g`, or `both`. Default: `both`.
      */
-    wifiBand?: pulumi.Input<string>;
+    wifiBand?: pulumi.Input<string | undefined>;
     /**
      * Whether to enable WPA3 support. Default: `false`.
      */
-    wpa3Support?: pulumi.Input<boolean>;
+    wpa3Support?: pulumi.Input<boolean | undefined>;
     /**
      * Whether to enable WPA3 transition mode (WPA2/WPA3 mixed). Default: `false`.
      */
-    wpa3Transition?: pulumi.Input<boolean>;
+    wpa3Transition?: pulumi.Input<boolean | undefined>;
     /**
      * The WPA mode for this WLAN. Must be `auto` or `wpa2`. Default: `wpa2`.
      */
-    wpaMode?: pulumi.Input<string>;
+    wpaMode?: pulumi.Input<string | undefined>;
 }

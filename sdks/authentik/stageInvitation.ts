@@ -73,9 +73,9 @@ export interface StageInvitationState {
     /**
      * Defaults to `false`.
      */
-    continueFlowWithoutInvitation?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    stageInvitationId?: pulumi.Input<string>;
+    continueFlowWithoutInvitation?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageInvitationId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -85,7 +85,7 @@ export interface StageInvitationArgs {
     /**
      * Defaults to `false`.
      */
-    continueFlowWithoutInvitation?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    stageInvitationId?: pulumi.Input<string>;
+    continueFlowWithoutInvitation?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageInvitationId?: pulumi.Input<string | undefined>;
 }

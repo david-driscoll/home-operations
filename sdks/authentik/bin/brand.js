@@ -72,6 +72,7 @@ class Brand extends pulumi.CustomResource {
             resourceInputs["flowAuthentication"] = state?.flowAuthentication;
             resourceInputs["flowDeviceCode"] = state?.flowDeviceCode;
             resourceInputs["flowInvalidation"] = state?.flowInvalidation;
+            resourceInputs["flowLockdown"] = state?.flowLockdown;
             resourceInputs["flowRecovery"] = state?.flowRecovery;
             resourceInputs["flowUnenrollment"] = state?.flowUnenrollment;
             resourceInputs["flowUserSettings"] = state?.flowUserSettings;
@@ -96,6 +97,7 @@ class Brand extends pulumi.CustomResource {
             resourceInputs["flowAuthentication"] = args?.flowAuthentication;
             resourceInputs["flowDeviceCode"] = args?.flowDeviceCode;
             resourceInputs["flowInvalidation"] = args?.flowInvalidation;
+            resourceInputs["flowLockdown"] = args?.flowLockdown;
             resourceInputs["flowRecovery"] = args?.flowRecovery;
             resourceInputs["flowUnenrollment"] = args?.flowUnenrollment;
             resourceInputs["flowUserSettings"] = args?.flowUserSettings;

@@ -26,8 +26,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPackage = exports.callAsync = exports.lazyLoad = exports.resourceOptsDefaults = exports.getVersion = exports.getEnvNumber = exports.getEnvBoolean = exports.getEnv = void 0;
-const resproto = __importStar(require("@pulumi/pulumi/proto/resource_pb"));
-const mutex = __importStar(require("async-mutex"));
 const runtime = __importStar(require("@pulumi/pulumi/runtime"));
 function getEnv(...vars) {
     for (const v of vars) {
@@ -113,40 +111,15 @@ async function callAsync(tok, props, res, opts) {
     return value;
 }
 exports.callAsync = callAsync;
-const _packageLock = new mutex.Mutex();
-var _packageRef = undefined;
 async function getPackage() {
-    if (_packageRef === undefined) {
-        if (!runtime.supportsParameterization()) {
-            throw new Error("The Pulumi CLI does not support parameterization. Please update the Pulumi CLI");
-        }
-        await _packageLock.acquire();
-        if (_packageRef === undefined) {
-            const monitor = runtime.getMonitor();
-            const params = new resproto.Parameterization();
-            params.setName("authentik");
-            params.setVersion("2026.2.0");
-            params.setValue(Uint8Array.from(atob("eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2dvYXV0aGVudGlrL2F1dGhlbnRpayIsInZlcnNpb24iOiIyMDI2LjIuMCJ9fQ=="), c => c.charCodeAt(0)));
-            const req = new resproto.RegisterPackageRequest();
-            req.setName("terraform-provider");
-            req.setVersion("0.14.0");
-            req.setDownloadUrl("");
-            req.setParameterization(params);
-            const resp = await new Promise((resolve, reject) => {
-                monitor.registerPackage(req, (err, resp) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    else {
-                        resolve(resp);
-                    }
-                });
-            });
-            _packageRef = resp.getRef();
-        }
-        _packageLock.release();
-    }
-    return _packageRef;
+    return runtime.registerPackage({
+        baseProviderName: "terraform-provider",
+        baseProviderVersion: "0.14.0",
+        baseProviderDownloadUrl: "",
+        packageName: "authentik",
+        packageVersion: "2026.5.0",
+        base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2dvYXV0aGVudGlrL2F1dGhlbnRpayIsInZlcnNpb24iOiIyMDI2LjUuMCJ9fQ==",
+    });
 }
 exports.getPackage = getPackage;
 //# sourceMappingURL=utilities.js.map

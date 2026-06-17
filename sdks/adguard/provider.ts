@@ -84,27 +84,27 @@ export interface ProviderArgs {
     /**
      * The hostname of the AdGuard Home instance. Include the port if not on a standard HTTP/HTTPS port
      */
-    host?: pulumi.Input<string>;
+    host?: pulumi.Input<string | undefined>;
     /**
      * When `true`, will disable any TLS certificate checks. Defaults to `false`
      */
-    insecure?: pulumi.Input<boolean>;
+    insecure?: pulumi.Input<boolean | undefined>;
     /**
      * The password of the AdGuard Home instance
      */
-    password?: pulumi.Input<string>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * The HTTP scheme of the AdGuard Home instance. Can be either `http` or `https` (default)
      */
-    scheme?: pulumi.Input<string>;
+    scheme?: pulumi.Input<string | undefined>;
     /**
      * The timeout (in seconds) for making requests to AdGuard Home. Defaults to **10**
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * The username of the AdGuard Home instance
      */
-    username?: pulumi.Input<string>;
+    username?: pulumi.Input<string | undefined>;
 }
 
 export namespace Provider {

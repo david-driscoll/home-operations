@@ -40,6 +40,10 @@ export class Rewrite extends pulumi.CustomResource {
      * Domain name
      */
     declare public readonly domain: pulumi.Output<string>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    declare public readonly enabled: pulumi.Output<boolean>;
     declare public /*out*/ readonly lastUpdated: pulumi.Output<string>;
 
     /**
@@ -57,6 +61,7 @@ export class Rewrite extends pulumi.CustomResource {
             const state = argsOrState as RewriteState | undefined;
             resourceInputs["answer"] = state?.answer;
             resourceInputs["domain"] = state?.domain;
+            resourceInputs["enabled"] = state?.enabled;
             resourceInputs["lastUpdated"] = state?.lastUpdated;
         } else {
             const args = argsOrState as RewriteArgs | undefined;
@@ -68,6 +73,7 @@ export class Rewrite extends pulumi.CustomResource {
             }
             resourceInputs["answer"] = args?.answer;
             resourceInputs["domain"] = args?.domain;
+            resourceInputs["enabled"] = args?.enabled;
             resourceInputs["lastUpdated"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -82,12 +88,16 @@ export interface RewriteState {
     /**
      * Value of A, AAAA or CNAME DNS record
      */
-    answer?: pulumi.Input<string>;
+    answer?: pulumi.Input<string | undefined>;
     /**
      * Domain name
      */
-    domain?: pulumi.Input<string>;
-    lastUpdated?: pulumi.Input<string>;
+    domain?: pulumi.Input<string | undefined>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    lastUpdated?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -102,4 +112,8 @@ export interface RewriteArgs {
      * Domain name
      */
     domain: pulumi.Input<string>;
+    /**
+     * Whether the rewrite rule is enabled. Defaults to `true`
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
 }

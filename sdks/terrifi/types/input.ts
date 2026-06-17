@@ -9,23 +9,23 @@ export interface DeviceConfigNetwork {
     /**
      * Primary DNS server.
      */
-    dns1?: pulumi.Input<string>;
+    dns1?: pulumi.Input<string | undefined>;
     /**
      * Secondary DNS server.
      */
-    dns2?: pulumi.Input<string>;
+    dns2?: pulumi.Input<string | undefined>;
     /**
      * Default gateway IPv4 address. Required when `type = static`.
      */
-    gateway?: pulumi.Input<string>;
+    gateway?: pulumi.Input<string | undefined>;
     /**
      * Static IPv4 address. Required when `type = static`.
      */
-    ip?: pulumi.Input<string>;
+    ip?: pulumi.Input<string | undefined>;
     /**
      * Subnet mask (e.g. `255.255.255.0`). Required when `type = static`.
      */
-    netmask?: pulumi.Input<string>;
+    netmask?: pulumi.Input<string | undefined>;
     /**
      * Addressing mode: `dhcp` or `static`.
      */
@@ -36,120 +36,120 @@ export interface DeviceRadio24 {
     /**
      * Channel number or `auto`. Valid channels depend on the radio band and country.
      */
-    channel?: pulumi.Input<string>;
+    channel?: pulumi.Input<string | undefined>;
     /**
      * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
      */
-    channelWidth?: pulumi.Input<number>;
+    channelWidth?: pulumi.Input<number | undefined>;
     /**
      * Minimum RSSI threshold for client association (dBm, -90 to -67).
      */
-    minRssi?: pulumi.Input<number>;
+    minRssi?: pulumi.Input<number | undefined>;
     /**
      * Whether the minimum RSSI client association threshold is enabled.
      */
-    minRssiEnabled?: pulumi.Input<boolean>;
+    minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
      */
-    transmitPower?: pulumi.Input<string>;
+    transmitPower?: pulumi.Input<string | undefined>;
     /**
      * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
      */
-    transmitPowerMode?: pulumi.Input<string>;
+    transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadio5 {
     /**
      * Channel number or `auto`. Valid channels depend on the radio band and country.
      */
-    channel?: pulumi.Input<string>;
+    channel?: pulumi.Input<string | undefined>;
     /**
      * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
      */
-    channelWidth?: pulumi.Input<number>;
+    channelWidth?: pulumi.Input<number | undefined>;
     /**
      * Minimum RSSI threshold for client association (dBm, -90 to -67).
      */
-    minRssi?: pulumi.Input<number>;
+    minRssi?: pulumi.Input<number | undefined>;
     /**
      * Whether the minimum RSSI client association threshold is enabled.
      */
-    minRssiEnabled?: pulumi.Input<boolean>;
+    minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
      */
-    transmitPower?: pulumi.Input<string>;
+    transmitPower?: pulumi.Input<string | undefined>;
     /**
      * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
      */
-    transmitPowerMode?: pulumi.Input<string>;
+    transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface DeviceRadio6 {
     /**
      * Channel number or `auto`. Valid channels depend on the radio band and country.
      */
-    channel?: pulumi.Input<string>;
+    channel?: pulumi.Input<string | undefined>;
     /**
      * Channel width in MHz. Typical values: `20`, `40`, `80`, `160`.
      */
-    channelWidth?: pulumi.Input<number>;
+    channelWidth?: pulumi.Input<number | undefined>;
     /**
      * Minimum RSSI threshold for client association (dBm, -90 to -67).
      */
-    minRssi?: pulumi.Input<number>;
+    minRssi?: pulumi.Input<number | undefined>;
     /**
      * Whether the minimum RSSI client association threshold is enabled.
      */
-    minRssiEnabled?: pulumi.Input<boolean>;
+    minRssiEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Transmit power in dBm. Only used when `transmit_power_mode` is `custom`.
      */
-    transmitPower?: pulumi.Input<string>;
+    transmitPower?: pulumi.Input<string | undefined>;
     /**
      * Transmit power mode: `auto`, `high`, `medium`, `low`, `custom`, or `disabled`.
      */
-    transmitPowerMode?: pulumi.Input<string>;
+    transmitPowerMode?: pulumi.Input<string | undefined>;
 }
 
 export interface FirewallPolicyDestination {
     /**
      * Client device MAC addresses to match. Use the `mac` attribute from `terrifi.ClientDevice` resources.
      */
-    deviceIds?: pulumi.Input<pulumi.Input<string>[]>;
+    deviceIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * IP addresses or CIDR ranges to match.
      */
-    ips?: pulumi.Input<pulumi.Input<string>[]>;
+    ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * MAC addresses to match.
      */
-    macAddresses?: pulumi.Input<pulumi.Input<string>[]>;
+    macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Inverts IP matching. When `true` and action is `ALLOW`, all IPs except the specified ones are allowed. When `true` and action is `BLOCK`, all IPs except the specified ones are blocked.
      */
-    matchOppositeIps?: pulumi.Input<boolean>;
+    matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
      * Inverts port matching. When `true` and action is `ALLOW`, all ports except the specified ones are allowed. When `true` and action is `BLOCK`, all ports except the specified ones are blocked.
      */
-    matchOppositePorts?: pulumi.Input<boolean>;
+    matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
      * Network IDs to match.
      */
-    networkIds?: pulumi.Input<pulumi.Input<string>[]>;
+    networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Specific port number to match (when `port_matching_type` is `SPECIFIC`).
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Port group ID to match (when `port_matching_type` is `OBJECT`).
      */
-    portGroupId?: pulumi.Input<string>;
+    portGroupId?: pulumi.Input<string | undefined>;
     /**
      * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when `port` or `port_group_id` is set.
      */
-    portMatchingType?: pulumi.Input<string>;
+    portMatchingType?: pulumi.Input<string | undefined>;
     /**
      * The ID of the firewall zone.
      */
@@ -160,74 +160,74 @@ export interface FirewallPolicySchedule {
     /**
      * Date for one-time schedules.
      */
-    date?: pulumi.Input<string>;
+    date?: pulumi.Input<string | undefined>;
     /**
      * End date of the schedule range (e.g. `2026-12-31`). Required for `CUSTOM` mode.
      */
-    dateEnd?: pulumi.Input<string>;
+    dateEnd?: pulumi.Input<string | undefined>;
     /**
      * Start date of the schedule range (e.g. `2026-01-01`). Required for `CUSTOM` mode.
      */
-    dateStart?: pulumi.Input<string>;
+    dateStart?: pulumi.Input<string | undefined>;
     /**
      * Schedule mode. Valid values: `ALWAYS`, `EVERY_DAY`, `EVERY_WEEK`, `ONE_TIME_ONLY`, `CUSTOM`.
      */
-    mode?: pulumi.Input<string>;
+    mode?: pulumi.Input<string | undefined>;
     /**
      * Days of the week to repeat on. Valid values: `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`.
      */
-    repeatOnDays?: pulumi.Input<pulumi.Input<string>[]>;
+    repeatOnDays?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Whether the schedule applies all day.
      */
-    timeAllDay?: pulumi.Input<boolean>;
+    timeAllDay?: pulumi.Input<boolean | undefined>;
     /**
      * End time for the schedule (e.g. `17:00`).
      */
-    timeRangeEnd?: pulumi.Input<string>;
+    timeRangeEnd?: pulumi.Input<string | undefined>;
     /**
      * Start time for the schedule (e.g. `08:00`).
      */
-    timeRangeStart?: pulumi.Input<string>;
+    timeRangeStart?: pulumi.Input<string | undefined>;
 }
 
 export interface FirewallPolicySource {
     /**
      * Client device MAC addresses to match. Use the `mac` attribute from `terrifi.ClientDevice` resources.
      */
-    deviceIds?: pulumi.Input<pulumi.Input<string>[]>;
+    deviceIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * IP addresses or CIDR ranges to match.
      */
-    ips?: pulumi.Input<pulumi.Input<string>[]>;
+    ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * MAC addresses to match.
      */
-    macAddresses?: pulumi.Input<pulumi.Input<string>[]>;
+    macAddresses?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Inverts IP matching. When `true` and action is `ALLOW`, all IPs except the specified ones are allowed. When `true` and action is `BLOCK`, all IPs except the specified ones are blocked.
      */
-    matchOppositeIps?: pulumi.Input<boolean>;
+    matchOppositeIps?: pulumi.Input<boolean | undefined>;
     /**
      * Inverts port matching. When `true` and action is `ALLOW`, all ports except the specified ones are allowed. When `true` and action is `BLOCK`, all ports except the specified ones are blocked.
      */
-    matchOppositePorts?: pulumi.Input<boolean>;
+    matchOppositePorts?: pulumi.Input<boolean | undefined>;
     /**
      * Network IDs to match.
      */
-    networkIds?: pulumi.Input<pulumi.Input<string>[]>;
+    networkIds?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Specific port number to match (when `port_matching_type` is `SPECIFIC`).
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Port group ID to match (when `port_matching_type` is `OBJECT`).
      */
-    portGroupId?: pulumi.Input<string>;
+    portGroupId?: pulumi.Input<string | undefined>;
     /**
      * Port matching type. Valid values: `ANY`, `SPECIFIC`, `OBJECT`. Default: `ANY`. Automatically derived when `port` or `port_group_id` is set.
      */
-    portMatchingType?: pulumi.Input<string>;
+    portMatchingType?: pulumi.Input<string | undefined>;
     /**
      * The ID of the firewall zone.
      */

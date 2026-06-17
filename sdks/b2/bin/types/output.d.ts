@@ -263,3 +263,4 @@ export interface GetBucketNotificationRulesNotificationRuleTargetConfigurationCu
     name: string;
     value: string;
 }
+//# sourceMappingURL=output.d.ts.map

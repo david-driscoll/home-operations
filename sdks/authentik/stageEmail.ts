@@ -147,53 +147,53 @@ export interface StageEmailState {
     /**
      * Defaults to `false`.
      */
-    activateUserOnSuccess?: pulumi.Input<boolean>;
+    activateUserOnSuccess?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `system@authentik.local`.
      */
-    fromAddress?: pulumi.Input<string>;
+    fromAddress?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `localhost`.
      */
-    host?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    password?: pulumi.Input<string>;
+    host?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `25`.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=5`.
      */
-    recoveryCacheTimeout?: pulumi.Input<string>;
+    recoveryCacheTimeout?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `5`.
      */
-    recoveryMaxAttempts?: pulumi.Input<number>;
-    stageEmailId?: pulumi.Input<string>;
+    recoveryMaxAttempts?: pulumi.Input<number | undefined>;
+    stageEmailId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `authentik`.
      */
-    subject?: pulumi.Input<string>;
+    subject?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/password_reset.html`.
      */
-    template?: pulumi.Input<string>;
+    template?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `30`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    tokenExpiry?: pulumi.Input<string>;
+    tokenExpiry?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    useGlobalSettings?: pulumi.Input<boolean>;
-    useSsl?: pulumi.Input<boolean>;
-    useTls?: pulumi.Input<boolean>;
-    username?: pulumi.Input<string>;
+    useGlobalSettings?: pulumi.Input<boolean | undefined>;
+    useSsl?: pulumi.Input<boolean | undefined>;
+    useTls?: pulumi.Input<boolean | undefined>;
+    username?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -203,51 +203,51 @@ export interface StageEmailArgs {
     /**
      * Defaults to `false`.
      */
-    activateUserOnSuccess?: pulumi.Input<boolean>;
+    activateUserOnSuccess?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `system@authentik.local`.
      */
-    fromAddress?: pulumi.Input<string>;
+    fromAddress?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `localhost`.
      */
-    host?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    password?: pulumi.Input<string>;
+    host?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `25`.
      */
-    port?: pulumi.Input<number>;
+    port?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=5`.
      */
-    recoveryCacheTimeout?: pulumi.Input<string>;
+    recoveryCacheTimeout?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `5`.
      */
-    recoveryMaxAttempts?: pulumi.Input<number>;
-    stageEmailId?: pulumi.Input<string>;
+    recoveryMaxAttempts?: pulumi.Input<number | undefined>;
+    stageEmailId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `authentik`.
      */
-    subject?: pulumi.Input<string>;
+    subject?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `email/password_reset.html`.
      */
-    template?: pulumi.Input<string>;
+    template?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `30`.
      */
-    timeout?: pulumi.Input<number>;
+    timeout?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    tokenExpiry?: pulumi.Input<string>;
+    tokenExpiry?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    useGlobalSettings?: pulumi.Input<boolean>;
-    useSsl?: pulumi.Input<boolean>;
-    useTls?: pulumi.Input<boolean>;
-    username?: pulumi.Input<string>;
+    useGlobalSettings?: pulumi.Input<boolean | undefined>;
+    useSsl?: pulumi.Input<boolean | undefined>;
+    useTls?: pulumi.Input<boolean | undefined>;
+    username?: pulumi.Input<string | undefined>;
 }

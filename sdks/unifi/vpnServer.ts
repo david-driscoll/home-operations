@@ -63,9 +63,10 @@ export class VpnServer extends pulumi.CustomResource {
      */
     declare public readonly site: pulumi.Output<string>;
     /**
-     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP.
+     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
     declare public readonly subnet: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.
      */
@@ -96,6 +97,7 @@ export class VpnServer extends pulumi.CustomResource {
             resourceInputs["radiusprofileId"] = state?.radiusprofileId;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["wan"] = state?.wan;
             resourceInputs["wireguard"] = state?.wireguard;
         } else {
@@ -111,6 +113,7 @@ export class VpnServer extends pulumi.CustomResource {
             resourceInputs["radiusprofileId"] = args?.radiusprofileId;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["wan"] = args?.wan;
             resourceInputs["wireguard"] = args?.wireguard;
         }
@@ -126,43 +129,44 @@ export interface VpnServerState {
     /**
      * DNS configuration pushed to VPN clients.
      */
-    dns?: pulumi.Input<inputs.VpnServerDns>;
+    dns?: pulumi.Input<inputs.VpnServerDns | undefined>;
     /**
      * Specifies whether the VPN server is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * L2TP VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    l2tp?: pulumi.Input<inputs.VpnServerL2tp>;
+    l2tp?: pulumi.Input<inputs.VpnServerL2tp | undefined>;
     /**
      * The name of the VPN server.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * OpenVPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    openvpn?: pulumi.Input<inputs.VpnServerOpenvpn>;
+    openvpn?: pulumi.Input<inputs.VpnServerOpenvpn | undefined>;
     /**
      * The ID of the RADIUS profile to use for authentication. Applicable to L2TP and OpenVPN server types.
      */
-    radiusprofileId?: pulumi.Input<string>;
+    radiusprofileId?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the VPN server with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
-     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP.
+     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
-    subnet?: pulumi.Input<string>;
+    subnet?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.
      */
-    wan?: pulumi.Input<inputs.VpnServerWan>;
+    wan?: pulumi.Input<inputs.VpnServerWan | undefined>;
     /**
      * WireGuard VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    wireguard?: pulumi.Input<inputs.VpnServerWireguard>;
+    wireguard?: pulumi.Input<inputs.VpnServerWireguard | undefined>;
 }
 
 /**
@@ -172,41 +176,42 @@ export interface VpnServerArgs {
     /**
      * DNS configuration pushed to VPN clients.
      */
-    dns?: pulumi.Input<inputs.VpnServerDns>;
+    dns?: pulumi.Input<inputs.VpnServerDns | undefined>;
     /**
      * Specifies whether the VPN server is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * L2TP VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    l2tp?: pulumi.Input<inputs.VpnServerL2tp>;
+    l2tp?: pulumi.Input<inputs.VpnServerL2tp | undefined>;
     /**
      * The name of the VPN server.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * OpenVPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    openvpn?: pulumi.Input<inputs.VpnServerOpenvpn>;
+    openvpn?: pulumi.Input<inputs.VpnServerOpenvpn | undefined>;
     /**
      * The ID of the RADIUS profile to use for authentication. Applicable to L2TP and OpenVPN server types.
      */
-    radiusprofileId?: pulumi.Input<string>;
+    radiusprofileId?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the VPN server with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
-     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP.
+     * The VPN server subnet in CIDR notation (e.g., `10.100.0.1/24`). The first address is the server's tunnel IP, so use the gateway form (`10.100.0.1/24`) — the network address (`10.100.0.0/24`) is rejected with `api.err.IncorrectIPSubnetSpec`.
      */
     subnet: pulumi.Input<string>;
+    timeouts?: pulumi.Input<inputs.VpnServerTimeouts | undefined>;
     /**
      * WAN binding configuration for the VPN server.
      */
-    wan?: pulumi.Input<inputs.VpnServerWan>;
+    wan?: pulumi.Input<inputs.VpnServerWan | undefined>;
     /**
      * WireGuard VPN server configuration. Exactly one of `wireguard`, `l2tp`, or `openvpn` must be specified.
      */
-    wireguard?: pulumi.Input<inputs.VpnServerWireguard>;
+    wireguard?: pulumi.Input<inputs.VpnServerWireguard | undefined>;
 }

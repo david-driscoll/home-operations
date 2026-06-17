@@ -58,6 +58,7 @@ export class VpnClient extends pulumi.CustomResource {
      * The local IP address for the WireGuard tunnel in CIDR notation (e.g., `10.0.0.2/24`).
      */
     declare public readonly subnet: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.VpnClientTimeouts | undefined>;
     /**
      * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
      */
@@ -82,6 +83,7 @@ export class VpnClient extends pulumi.CustomResource {
             resourceInputs["pullDns"] = state?.pullDns;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["wireguard"] = state?.wireguard;
         } else {
             const args = argsOrState as VpnClientArgs | undefined;
@@ -97,6 +99,7 @@ export class VpnClient extends pulumi.CustomResource {
             resourceInputs["pullDns"] = args?.pullDns;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["wireguard"] = args?.wireguard;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -111,31 +114,32 @@ export interface VpnClientState {
     /**
      * Specifies whether to use the VPN as the default route.
      */
-    defaultRoute?: pulumi.Input<boolean>;
+    defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether the VPN client is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the VPN client.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Specifies whether to pull DNS servers from the VPN.
      */
-    pullDns?: pulumi.Input<boolean>;
+    pullDns?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the site to associate the VPN client with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The local IP address for the WireGuard tunnel in CIDR notation (e.g., `10.0.0.2/24`).
      */
-    subnet?: pulumi.Input<string>;
+    subnet?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.VpnClientTimeouts | undefined>;
     /**
      * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
      */
-    wireguard?: pulumi.Input<inputs.VpnClientWireguard>;
+    wireguard?: pulumi.Input<inputs.VpnClientWireguard | undefined>;
 }
 
 /**
@@ -145,27 +149,28 @@ export interface VpnClientArgs {
     /**
      * Specifies whether to use the VPN as the default route.
      */
-    defaultRoute?: pulumi.Input<boolean>;
+    defaultRoute?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether the VPN client is enabled.
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the VPN client.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Specifies whether to pull DNS servers from the VPN.
      */
-    pullDns?: pulumi.Input<boolean>;
+    pullDns?: pulumi.Input<boolean | undefined>;
     /**
      * The name of the site to associate the VPN client with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
     /**
      * The local IP address for the WireGuard tunnel in CIDR notation (e.g., `10.0.0.2/24`).
      */
     subnet: pulumi.Input<string>;
+    timeouts?: pulumi.Input<inputs.VpnClientTimeouts | undefined>;
     /**
      * WireGuard VPN configuration. Specify either `configuration` for file upload mode or `peer` for manual configuration.
      */

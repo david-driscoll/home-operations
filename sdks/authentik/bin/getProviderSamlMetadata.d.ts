@@ -22,8 +22,8 @@ export declare function getProviderSamlMetadataOutput(args?: GetProviderSamlMeta
  * A collection of arguments for invoking getProviderSamlMetadata.
  */
 export interface GetProviderSamlMetadataOutputArgs {
-    id?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    providerId?: pulumi.Input<number>;
+    id?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    providerId?: pulumi.Input<number | undefined>;
 }
 //# sourceMappingURL=getProviderSamlMetadata.d.ts.map

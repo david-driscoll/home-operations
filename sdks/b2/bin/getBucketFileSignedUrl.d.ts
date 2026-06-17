@@ -25,7 +25,8 @@ export declare function getBucketFileSignedUrlOutput(args: GetBucketFileSignedUr
  */
 export interface GetBucketFileSignedUrlOutputArgs {
     bucketId: pulumi.Input<string>;
-    duration?: pulumi.Input<number>;
+    duration?: pulumi.Input<number | undefined>;
     fileName: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
 }
+//# sourceMappingURL=getBucketFileSignedUrl.d.ts.map

@@ -45,6 +45,11 @@ export type EndpointsDeviceAccessGroup = import("./endpointsDeviceAccessGroup").
 export const EndpointsDeviceAccessGroup: typeof import("./endpointsDeviceAccessGroup").EndpointsDeviceAccessGroup = null as any;
 utilities.lazyLoad(exports, ["EndpointsDeviceAccessGroup"], () => require("./endpointsDeviceAccessGroup"));
 
+export { EndpointsGoogleChromeConnectorArgs, EndpointsGoogleChromeConnectorState } from "./endpointsGoogleChromeConnector";
+export type EndpointsGoogleChromeConnector = import("./endpointsGoogleChromeConnector").EndpointsGoogleChromeConnector;
+export const EndpointsGoogleChromeConnector: typeof import("./endpointsGoogleChromeConnector").EndpointsGoogleChromeConnector = null as any;
+utilities.lazyLoad(exports, ["EndpointsGoogleChromeConnector"], () => require("./endpointsGoogleChromeConnector"));
+
 export { EnterpriseLicenseArgs, EnterpriseLicenseState } from "./enterpriseLicense";
 export type EnterpriseLicense = import("./enterpriseLicense").EnterpriseLicense;
 export const EnterpriseLicense: typeof import("./enterpriseLicense").EnterpriseLicense = null as any;
@@ -433,6 +438,11 @@ export type SourceTelegram = import("./sourceTelegram").SourceTelegram;
 export const SourceTelegram: typeof import("./sourceTelegram").SourceTelegram = null as any;
 utilities.lazyLoad(exports, ["SourceTelegram"], () => require("./sourceTelegram"));
 
+export { StageAccountLockdownArgs, StageAccountLockdownState } from "./stageAccountLockdown";
+export type StageAccountLockdown = import("./stageAccountLockdown").StageAccountLockdown;
+export const StageAccountLockdown: typeof import("./stageAccountLockdown").StageAccountLockdown = null as any;
+utilities.lazyLoad(exports, ["StageAccountLockdown"], () => require("./stageAccountLockdown"));
+
 export { StageAuthenticatorDuoArgs, StageAuthenticatorDuoState } from "./stageAuthenticatorDuo";
 export type StageAuthenticatorDuo = import("./stageAuthenticatorDuo").StageAuthenticatorDuo;
 export const StageAuthenticatorDuo: typeof import("./stageAuthenticatorDuo").StageAuthenticatorDuo = null as any;
@@ -613,6 +623,8 @@ const _module = {
                 return new EndpointsConnectorAgentEnrollmentToken(name, <any>undefined, { urn })
             case "authentik:index/endpointsDeviceAccessGroup:EndpointsDeviceAccessGroup":
                 return new EndpointsDeviceAccessGroup(name, <any>undefined, { urn })
+            case "authentik:index/endpointsGoogleChromeConnector:EndpointsGoogleChromeConnector":
+                return new EndpointsGoogleChromeConnector(name, <any>undefined, { urn })
             case "authentik:index/enterpriseLicense:EnterpriseLicense":
                 return new EnterpriseLicense(name, <any>undefined, { urn })
             case "authentik:index/eventRule:EventRule":
@@ -725,6 +737,8 @@ const _module = {
                 return new SourceScim(name, <any>undefined, { urn })
             case "authentik:index/sourceTelegram:SourceTelegram":
                 return new SourceTelegram(name, <any>undefined, { urn })
+            case "authentik:index/stageAccountLockdown:StageAccountLockdown":
+                return new StageAccountLockdown(name, <any>undefined, { urn })
             case "authentik:index/stageAuthenticatorDuo:StageAuthenticatorDuo":
                 return new StageAuthenticatorDuo(name, <any>undefined, { urn })
             case "authentik:index/stageAuthenticatorEmail:StageAuthenticatorEmail":
@@ -798,6 +812,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/certificateKeyPair", _
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgent", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsConnectorAgentEnrollmentToken", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/endpointsDeviceAccessGroup", _module)
+pulumi.runtime.registerResourceModule("authentik", "index/endpointsGoogleChromeConnector", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/enterpriseLicense", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/eventRule", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/eventTransport", _module)
@@ -854,6 +869,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/sourcePlex", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/sourceSaml", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/sourceScim", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/sourceTelegram", _module)
+pulumi.runtime.registerResourceModule("authentik", "index/stageAccountLockdown", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorDuo", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEmail", _module)
 pulumi.runtime.registerResourceModule("authentik", "index/stageAuthenticatorEndpointGdtc", _module)

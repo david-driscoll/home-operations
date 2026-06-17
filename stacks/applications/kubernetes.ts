@@ -265,6 +265,7 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       jwksSources: oauth2Resource.jwksSources ? oauth2Resource.jwksSources.split(",") : undefined,
       jwtFederationProviders: oauth2Resource.jwtFederationProviders ? oauth2Resource.jwtFederationProviders.split(",") : undefined,
       jwtFederationSources: oauth2Resource.jwtFederationSources ? oauth2Resource.jwtFederationSources.split(",") : undefined,
+      grantTypes: oauth2Resource.grantTypes ? oauth2Resource.grantTypes.split(",") : ["implicit", "authorization_code", "refresh_token", "client_credentials"],
       subMode: oauth2Resource.subMode,
       allowedRedirectUris: oauth2Resource.allowedRedirectUris
         ? oauth2Resource.allowedRedirectUris.split(",").map((uri) => {

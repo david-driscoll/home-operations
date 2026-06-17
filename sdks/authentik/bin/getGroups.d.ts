@@ -35,14 +35,14 @@ export declare function getGroupsOutput(args?: GetGroupsOutputArgs, opts?: pulum
  * A collection of arguments for invoking getGroups.
  */
 export interface GetGroupsOutputArgs {
-    attributes?: pulumi.Input<string>;
-    id?: pulumi.Input<string>;
-    includeUsers?: pulumi.Input<boolean>;
-    isSuperuser?: pulumi.Input<boolean>;
-    membersByPks?: pulumi.Input<pulumi.Input<number>[]>;
-    membersByUsernames?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    ordering?: pulumi.Input<string>;
-    search?: pulumi.Input<string>;
+    attributes?: pulumi.Input<string | undefined>;
+    id?: pulumi.Input<string | undefined>;
+    includeUsers?: pulumi.Input<boolean | undefined>;
+    isSuperuser?: pulumi.Input<boolean | undefined>;
+    membersByPks?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    membersByUsernames?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    ordering?: pulumi.Input<string | undefined>;
+    search?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getGroups.d.ts.map

@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class Site extends pulumi.CustomResource {
@@ -40,6 +42,7 @@ export class Site extends pulumi.CustomResource {
      * The name of the site.
      */
     declare public /*out*/ readonly name: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.SiteTimeouts | undefined>;
 
     /**
      * Create a Site resource with the given unique name, arguments, and options.
@@ -56,12 +59,14 @@ export class Site extends pulumi.CustomResource {
             const state = argsOrState as SiteState | undefined;
             resourceInputs["description"] = state?.description;
             resourceInputs["name"] = state?.name;
+            resourceInputs["timeouts"] = state?.timeouts;
         } else {
             const args = argsOrState as SiteArgs | undefined;
             if (args?.description === undefined && !opts.urn) {
                 throw new Error("Missing required property 'description'");
             }
             resourceInputs["description"] = args?.description;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["name"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -76,11 +81,12 @@ export interface SiteState {
     /**
      * The description of the site.
      */
-    description?: pulumi.Input<string>;
+    description?: pulumi.Input<string | undefined>;
     /**
      * The name of the site.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.SiteTimeouts | undefined>;
 }
 
 /**
@@ -91,4 +97,5 @@ export interface SiteArgs {
      * The description of the site.
      */
     description: pulumi.Input<string>;
+    timeouts?: pulumi.Input<inputs.SiteTimeouts | undefined>;
 }

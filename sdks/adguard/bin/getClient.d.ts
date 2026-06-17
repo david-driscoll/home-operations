@@ -37,3 +37,4 @@ export declare function getClientOutput(args: GetClientOutputArgs, opts?: pulumi
 export interface GetClientOutputArgs {
     name: pulumi.Input<string>;
 }
+//# sourceMappingURL=getClient.d.ts.map

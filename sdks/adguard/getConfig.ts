@@ -25,6 +25,7 @@ export interface GetConfigResult {
     readonly lastUpdated: string;
     readonly parentalControl: boolean;
     readonly querylog: outputs.GetConfigQuerylog;
+    readonly rewrites: boolean;
     readonly safebrowsing: boolean;
     readonly safesearch: outputs.GetConfigSafesearch;
     readonly stats: outputs.GetConfigStats;

@@ -31,16 +31,16 @@ export declare class PropertyMappingSourceLdap extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PropertyMappingSourceLdap resources.
  */
 export interface PropertyMappingSourceLdapState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceLdapId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceLdapId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingSourceLdap resource.
  */
 export interface PropertyMappingSourceLdapArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceLdapId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceLdapId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingSourceLdap.d.ts.map

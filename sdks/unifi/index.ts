@@ -45,10 +45,20 @@ export type FirewallGroup = import("./firewallGroup").FirewallGroup;
 export const FirewallGroup: typeof import("./firewallGroup").FirewallGroup = null as any;
 utilities.lazyLoad(exports, ["FirewallGroup"], () => require("./firewallGroup"));
 
+export { FirewallPolicyArgs, FirewallPolicyState } from "./firewallPolicy";
+export type FirewallPolicy = import("./firewallPolicy").FirewallPolicy;
+export const FirewallPolicy: typeof import("./firewallPolicy").FirewallPolicy = null as any;
+utilities.lazyLoad(exports, ["FirewallPolicy"], () => require("./firewallPolicy"));
+
 export { FirewallRuleArgs, FirewallRuleState } from "./firewallRule";
 export type FirewallRule = import("./firewallRule").FirewallRule;
 export const FirewallRule: typeof import("./firewallRule").FirewallRule = null as any;
 utilities.lazyLoad(exports, ["FirewallRule"], () => require("./firewallRule"));
+
+export { FirewallZoneArgs, FirewallZoneState } from "./firewallZone";
+export type FirewallZone = import("./firewallZone").FirewallZone;
+export const FirewallZone: typeof import("./firewallZone").FirewallZone = null as any;
+utilities.lazyLoad(exports, ["FirewallZone"], () => require("./firewallZone"));
 
 export { GetAccountArgs, GetAccountResult, GetAccountOutputArgs } from "./getAccount";
 export const getAccount: typeof import("./getAccount").getAccount = null as any;
@@ -90,6 +100,11 @@ export const getDnsRecord: typeof import("./getDnsRecord").getDnsRecord = null a
 export const getDnsRecordOutput: typeof import("./getDnsRecord").getDnsRecordOutput = null as any;
 utilities.lazyLoad(exports, ["getDnsRecord","getDnsRecordOutput"], () => require("./getDnsRecord"));
 
+export { GetFirewallZoneArgs, GetFirewallZoneResult, GetFirewallZoneOutputArgs } from "./getFirewallZone";
+export const getFirewallZone: typeof import("./getFirewallZone").getFirewallZone = null as any;
+export const getFirewallZoneOutput: typeof import("./getFirewallZone").getFirewallZoneOutput = null as any;
+utilities.lazyLoad(exports, ["getFirewallZone","getFirewallZoneOutput"], () => require("./getFirewallZone"));
+
 export { GetNetworkArgs, GetNetworkResult, GetNetworkOutputArgs } from "./getNetwork";
 export const getNetwork: typeof import("./getNetwork").getNetwork = null as any;
 export const getNetworkOutput: typeof import("./getNetwork").getNetworkOutput = null as any;
@@ -104,6 +119,11 @@ export { GetRadiusProfileArgs, GetRadiusProfileResult, GetRadiusProfileOutputArg
 export const getRadiusProfile: typeof import("./getRadiusProfile").getRadiusProfile = null as any;
 export const getRadiusProfileOutput: typeof import("./getRadiusProfile").getRadiusProfileOutput = null as any;
 utilities.lazyLoad(exports, ["getRadiusProfile","getRadiusProfileOutput"], () => require("./getRadiusProfile"));
+
+export { GetRadiusUserArgs, GetRadiusUserResult, GetRadiusUserOutputArgs } from "./getRadiusUser";
+export const getRadiusUser: typeof import("./getRadiusUser").getRadiusUser = null as any;
+export const getRadiusUserOutput: typeof import("./getRadiusUser").getRadiusUserOutput = null as any;
+utilities.lazyLoad(exports, ["getRadiusUser","getRadiusUserOutput"], () => require("./getRadiusUser"));
 
 export { NetworkArgs, NetworkState } from "./network";
 export type Network = import("./network").Network;
@@ -120,6 +140,11 @@ export type PortProfile = import("./portProfile").PortProfile;
 export const PortProfile: typeof import("./portProfile").PortProfile = null as any;
 utilities.lazyLoad(exports, ["PortProfile"], () => require("./portProfile"));
 
+export { PowerSupervisorArgs, PowerSupervisorState } from "./powerSupervisor";
+export type PowerSupervisor = import("./powerSupervisor").PowerSupervisor;
+export const PowerSupervisor: typeof import("./powerSupervisor").PowerSupervisor = null as any;
+utilities.lazyLoad(exports, ["PowerSupervisor"], () => require("./powerSupervisor"));
+
 export * from "./provider";
 import { Provider } from "./provider";
 
@@ -127,6 +152,11 @@ export { RadiusProfileArgs, RadiusProfileState } from "./radiusProfile";
 export type RadiusProfile = import("./radiusProfile").RadiusProfile;
 export const RadiusProfile: typeof import("./radiusProfile").RadiusProfile = null as any;
 utilities.lazyLoad(exports, ["RadiusProfile"], () => require("./radiusProfile"));
+
+export { RadiusUserArgs, RadiusUserState } from "./radiusUser";
+export type RadiusUser = import("./radiusUser").RadiusUser;
+export const RadiusUser: typeof import("./radiusUser").RadiusUser = null as any;
+utilities.lazyLoad(exports, ["RadiusUser"], () => require("./radiusUser"));
 
 export { SettingArgs, SettingState } from "./setting";
 export type Setting = import("./setting").Setting;
@@ -137,6 +167,11 @@ export { SiteArgs, SiteState } from "./site";
 export type Site = import("./site").Site;
 export const Site: typeof import("./site").Site = null as any;
 utilities.lazyLoad(exports, ["Site"], () => require("./site"));
+
+export { SiteToSiteVpnArgs, SiteToSiteVpnState } from "./siteToSiteVpn";
+export type SiteToSiteVpn = import("./siteToSiteVpn").SiteToSiteVpn;
+export const SiteToSiteVpn: typeof import("./siteToSiteVpn").SiteToSiteVpn = null as any;
+utilities.lazyLoad(exports, ["SiteToSiteVpn"], () => require("./siteToSiteVpn"));
 
 export { StaticRouteArgs, StaticRouteState } from "./staticRoute";
 export type StaticRoute = import("./staticRoute").StaticRoute;
@@ -162,6 +197,11 @@ export { WanArgs, WanState } from "./wan";
 export type Wan = import("./wan").Wan;
 export const Wan: typeof import("./wan").Wan = null as any;
 utilities.lazyLoad(exports, ["Wan"], () => require("./wan"));
+
+export { WireguardPeerArgs, WireguardPeerState } from "./wireguardPeer";
+export type WireguardPeer = import("./wireguardPeer").WireguardPeer;
+export const WireguardPeer: typeof import("./wireguardPeer").WireguardPeer = null as any;
+utilities.lazyLoad(exports, ["WireguardPeer"], () => require("./wireguardPeer"));
 
 export { WlanArgs, WlanState } from "./wlan";
 export type Wlan = import("./wlan").Wlan;
@@ -198,20 +238,30 @@ const _module = {
                 return new DynamicDns(name, <any>undefined, { urn })
             case "unifi:index/firewallGroup:FirewallGroup":
                 return new FirewallGroup(name, <any>undefined, { urn })
+            case "unifi:index/firewallPolicy:FirewallPolicy":
+                return new FirewallPolicy(name, <any>undefined, { urn })
             case "unifi:index/firewallRule:FirewallRule":
                 return new FirewallRule(name, <any>undefined, { urn })
+            case "unifi:index/firewallZone:FirewallZone":
+                return new FirewallZone(name, <any>undefined, { urn })
             case "unifi:index/network:Network":
                 return new Network(name, <any>undefined, { urn })
             case "unifi:index/portForward:PortForward":
                 return new PortForward(name, <any>undefined, { urn })
             case "unifi:index/portProfile:PortProfile":
                 return new PortProfile(name, <any>undefined, { urn })
+            case "unifi:index/powerSupervisor:PowerSupervisor":
+                return new PowerSupervisor(name, <any>undefined, { urn })
             case "unifi:index/radiusProfile:RadiusProfile":
                 return new RadiusProfile(name, <any>undefined, { urn })
+            case "unifi:index/radiusUser:RadiusUser":
+                return new RadiusUser(name, <any>undefined, { urn })
             case "unifi:index/setting:Setting":
                 return new Setting(name, <any>undefined, { urn })
             case "unifi:index/site:Site":
                 return new Site(name, <any>undefined, { urn })
+            case "unifi:index/siteToSiteVpn:SiteToSiteVpn":
+                return new SiteToSiteVpn(name, <any>undefined, { urn })
             case "unifi:index/staticRoute:StaticRoute":
                 return new StaticRoute(name, <any>undefined, { urn })
             case "unifi:index/trafficRoute:TrafficRoute":
@@ -222,6 +272,8 @@ const _module = {
                 return new VpnServer(name, <any>undefined, { urn })
             case "unifi:index/wan:Wan":
                 return new Wan(name, <any>undefined, { urn })
+            case "unifi:index/wireguardPeer:WireguardPeer":
+                return new WireguardPeer(name, <any>undefined, { urn })
             case "unifi:index/wlan:Wlan":
                 return new Wlan(name, <any>undefined, { urn })
             default:
@@ -237,18 +289,24 @@ pulumi.runtime.registerResourceModule("unifi", "index/device", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dnsRecord", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/dynamicDns", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallGroup", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/firewallPolicy", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/firewallRule", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/firewallZone", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/network", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portForward", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/portProfile", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/powerSupervisor", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/radiusProfile", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/radiusUser", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/setting", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/site", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/siteToSiteVpn", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/staticRoute", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/trafficRoute", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/vpnClient", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/vpnServer", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/wan", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/wireguardPeer", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/wlan", _module)
 pulumi.runtime.registerResourcePackage("unifi", {
     version: utilities.getVersion(),

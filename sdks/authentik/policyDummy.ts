@@ -91,21 +91,21 @@ export interface PolicyDummyState {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyDummyId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyDummyId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    result?: pulumi.Input<boolean>;
+    result?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `30`.
      */
-    waitMax?: pulumi.Input<number>;
+    waitMax?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `5`.
      */
-    waitMin?: pulumi.Input<number>;
+    waitMin?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -115,19 +115,19 @@ export interface PolicyDummyArgs {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyDummyId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyDummyId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    result?: pulumi.Input<boolean>;
+    result?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `30`.
      */
-    waitMax?: pulumi.Input<number>;
+    waitMax?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `5`.
      */
-    waitMin?: pulumi.Input<number>;
+    waitMin?: pulumi.Input<number | undefined>;
 }

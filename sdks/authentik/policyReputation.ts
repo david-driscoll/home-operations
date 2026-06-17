@@ -91,21 +91,21 @@ export interface PolicyReputationState {
     /**
      * Defaults to `true`.
      */
-    checkIp?: pulumi.Input<boolean>;
+    checkIp?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    checkUsername?: pulumi.Input<boolean>;
+    checkUsername?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyReputationId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyReputationId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `10`.
      */
-    threshold?: pulumi.Input<number>;
+    threshold?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -115,19 +115,19 @@ export interface PolicyReputationArgs {
     /**
      * Defaults to `true`.
      */
-    checkIp?: pulumi.Input<boolean>;
+    checkIp?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `true`.
      */
-    checkUsername?: pulumi.Input<boolean>;
+    checkUsername?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    policyReputationId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyReputationId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `10`.
      */
-    threshold?: pulumi.Input<number>;
+    threshold?: pulumi.Input<number | undefined>;
 }

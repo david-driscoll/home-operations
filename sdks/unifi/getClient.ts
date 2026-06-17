@@ -11,6 +11,7 @@ export function getClient(args: GetClientArgs, opts?: pulumi.InvokeOptions): Pro
     return pulumi.runtime.invoke("unifi:index/getClient:getClient", {
         "mac": args.mac,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -20,6 +21,7 @@ export function getClient(args: GetClientArgs, opts?: pulumi.InvokeOptions): Pro
 export interface GetClientArgs {
     mac: string;
     site?: string;
+    timeouts?: inputs.GetClientTimeouts;
 }
 
 /**
@@ -40,12 +42,14 @@ export interface GetClientResult {
     readonly note: string;
     readonly qosRate: outputs.GetClientQosRate;
     readonly site: string;
+    readonly timeouts?: outputs.GetClientTimeouts;
 }
 export function getClientOutput(args: GetClientOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getClient:getClient", {
         "mac": args.mac,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -54,5 +58,6 @@ export function getClientOutput(args: GetClientOutputArgs, opts?: pulumi.InvokeO
  */
 export interface GetClientOutputArgs {
     mac: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetClientTimeoutsArgs | undefined>;
 }

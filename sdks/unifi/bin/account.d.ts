@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class Account extends pulumi.CustomResource {
     /**
      * Get an existing Account resource's state with the given name, ID, and optional extra
@@ -20,7 +22,7 @@ export declare class Account extends pulumi.CustomResource {
      */
     readonly name: pulumi.Output<string>;
     /**
-     * ID of the network for this account
+     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
     readonly networkId: pulumi.Output<string | undefined>;
     /**
@@ -31,14 +33,23 @@ export declare class Account extends pulumi.CustomResource {
      * The name of the site to associate the account with.
      */
     readonly site: pulumi.Output<string>;
+    readonly timeouts: pulumi.Output<outputs.AccountTimeouts | undefined>;
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    readonly tunnelConfigType: pulumi.Output<string | undefined>;
     /**
      * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
     readonly tunnelMediumType: pulumi.Output<number>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
      */
     readonly tunnelType: pulumi.Output<number>;
+    /**
+     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     */
+    readonly vlan: pulumi.Output<number>;
     /**
      * Create a Account resource with the given unique name, arguments, and options.
      *
@@ -55,27 +66,36 @@ export interface AccountState {
     /**
      * The name of the account.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network for this account
+     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The password of the account.
      */
-    password?: pulumi.Input<string>;
+    password?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the account with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    tunnelConfigType?: pulumi.Input<string | undefined>;
     /**
      * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
-    tunnelMediumType?: pulumi.Input<number>;
+    tunnelMediumType?: pulumi.Input<number | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
      */
-    tunnelType?: pulumi.Input<number>;
+    tunnelType?: pulumi.Input<number | undefined>;
+    /**
+     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     */
+    vlan?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a Account resource.
@@ -84,11 +104,11 @@ export interface AccountArgs {
     /**
      * The name of the account.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * ID of the network for this account
+     * ID of the network for this account. When set and `vlan` is omitted, the account inherits that network's VLAN (so RADIUS/MAB VLAN assignment is applied).
      */
-    networkId?: pulumi.Input<string>;
+    networkId?: pulumi.Input<string | undefined>;
     /**
      * The password of the account.
      */
@@ -96,13 +116,23 @@ export interface AccountArgs {
     /**
      * The name of the site to associate the account with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.AccountTimeouts | undefined>;
+    /**
+     * The tunnel configuration type. Can be `vpn`, `802.1x`, or `custom`.
+     */
+    tunnelConfigType?: pulumi.Input<string | undefined>;
     /**
      * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.2
      */
-    tunnelMediumType?: pulumi.Input<number>;
+    tunnelMediumType?: pulumi.Input<number | undefined>;
     /**
-     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1
+     * See [RFC 2868](https://www.rfc-editor.org/rfc/rfc2868) section 3.1. Valid values are 1-13; `13` (VLAN) is the most common.
      */
-    tunnelType?: pulumi.Input<number>;
+    tunnelType?: pulumi.Input<number | undefined>;
+    /**
+     * VLAN assigned to the account. If omitted but `network_id` is set, it is derived from that network's VLAN. If neither is set, the client falls back to the untagged VLAN.
+     */
+    vlan?: pulumi.Input<number | undefined>;
 }
+//# sourceMappingURL=account.d.ts.map

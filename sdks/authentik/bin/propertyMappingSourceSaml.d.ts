@@ -31,16 +31,16 @@ export declare class PropertyMappingSourceSaml extends pulumi.CustomResource {
  * Input properties used for looking up and filtering PropertyMappingSourceSaml resources.
  */
 export interface PropertyMappingSourceSamlState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceSamlId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceSamlId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingSourceSaml resource.
  */
 export interface PropertyMappingSourceSamlArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingSourceSamlId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingSourceSamlId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingSourceSaml.d.ts.map

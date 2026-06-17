@@ -45,5 +45,5 @@ export function getListFilterOutput(args: GetListFilterOutputArgs, opts?: pulumi
  */
 export interface GetListFilterOutputArgs {
     name: pulumi.Input<string>;
-    whitelist?: pulumi.Input<boolean>;
+    whitelist?: pulumi.Input<boolean | undefined>;
 }

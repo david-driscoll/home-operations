@@ -30,3 +30,4 @@ export declare const site: string | undefined;
  * Local user name for the Unifi controller API. Can be specified with the `UNIFI_USERNAME` environment variable.
  */
 export declare const username: string | undefined;
+//# sourceMappingURL=vars.d.ts.map

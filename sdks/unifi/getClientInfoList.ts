@@ -11,6 +11,7 @@ export function getClientInfoList(args?: GetClientInfoListArgs, opts?: pulumi.In
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invoke("unifi:index/getClientInfoList:getClientInfoList", {
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -19,6 +20,7 @@ export function getClientInfoList(args?: GetClientInfoListArgs, opts?: pulumi.In
  */
 export interface GetClientInfoListArgs {
     site?: string;
+    timeouts?: inputs.GetClientInfoListTimeouts;
 }
 
 /**
@@ -31,12 +33,14 @@ export interface GetClientInfoListResult {
      */
     readonly id: string;
     readonly site: string;
+    readonly timeouts?: outputs.GetClientInfoListTimeouts;
 }
 export function getClientInfoListOutput(args?: GetClientInfoListOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetClientInfoListResult> {
     args = args || {};
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getClientInfoList:getClientInfoList", {
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -44,5 +48,6 @@ export function getClientInfoListOutput(args?: GetClientInfoListOutputArgs, opts
  * A collection of arguments for invoking getClientInfoList.
  */
 export interface GetClientInfoListOutputArgs {
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetClientInfoListTimeoutsArgs | undefined>;
 }

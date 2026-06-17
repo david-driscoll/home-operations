@@ -43,40 +43,40 @@ export declare class StageAuthenticatorStatic extends pulumi.CustomResource {
  * Input properties used for looking up and filtering StageAuthenticatorStatic resources.
  */
 export interface StageAuthenticatorStaticState {
-    configureFlow?: pulumi.Input<string>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageAuthenticatorStaticId?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageAuthenticatorStaticId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `6`.
      */
-    tokenCount?: pulumi.Input<number>;
+    tokenCount?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `12`.
      */
-    tokenLength?: pulumi.Input<number>;
+    tokenLength?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a StageAuthenticatorStatic resource.
  */
 export interface StageAuthenticatorStaticArgs {
-    configureFlow?: pulumi.Input<string>;
+    configureFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    stageAuthenticatorStaticId?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    stageAuthenticatorStaticId?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `6`.
      */
-    tokenCount?: pulumi.Input<number>;
+    tokenCount?: pulumi.Input<number | undefined>;
     /**
      * Defaults to `12`.
      */
-    tokenLength?: pulumi.Input<number>;
+    tokenLength?: pulumi.Input<number | undefined>;
 }
 //# sourceMappingURL=stageAuthenticatorStatic.d.ts.map

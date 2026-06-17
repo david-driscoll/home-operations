@@ -19,7 +19,7 @@ export declare function getStageOutput(args?: GetStageOutputArgs, opts?: pulumi.
  * A collection of arguments for invoking getStage.
  */
 export interface GetStageOutputArgs {
-    id?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getStage.d.ts.map

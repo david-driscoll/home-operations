@@ -13,6 +13,7 @@ export function getNetwork(args?: GetNetworkArgs, opts?: pulumi.InvokeOptions): 
         "id": args.id,
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -23,6 +24,7 @@ export interface GetNetworkArgs {
     id?: string;
     name?: string;
     site?: string;
+    timeouts?: inputs.GetNetworkTimeouts;
 }
 
 /**
@@ -48,9 +50,9 @@ export interface GetNetworkResult {
     readonly ipv6PdStart: string;
     readonly ipv6PdStop: string;
     readonly ipv6Ra: boolean;
-    readonly ipv6RaPreferredLifetime: number;
+    readonly ipv6RaPreferredLifetime: string;
     readonly ipv6RaPriority: string;
-    readonly ipv6RaValidLifetime: number;
+    readonly ipv6RaValidLifetime: string;
     readonly ipv6StaticSubnet: string;
     readonly lteLan: boolean;
     readonly multicastDns: boolean;
@@ -63,6 +65,7 @@ export interface GetNetworkResult {
     readonly site: string;
     readonly subnet: string;
     readonly thirdPartyGateway: boolean;
+    readonly timeouts?: outputs.GetNetworkTimeouts;
     readonly vlan: number;
     readonly wanDns: string[];
     readonly wanEgressQos: number;
@@ -82,6 +85,7 @@ export function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pulumi.Invo
         "id": args.id,
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -89,7 +93,8 @@ export function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pulumi.Invo
  * A collection of arguments for invoking getNetwork.
  */
 export interface GetNetworkOutputArgs {
-    id?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetNetworkTimeoutsArgs | undefined>;
 }

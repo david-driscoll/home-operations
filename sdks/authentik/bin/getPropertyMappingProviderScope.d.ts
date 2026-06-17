@@ -29,11 +29,11 @@ export declare function getPropertyMappingProviderScopeOutput(args?: GetProperty
  * A collection of arguments for invoking getPropertyMappingProviderScope.
  */
 export interface GetPropertyMappingProviderScopeOutputArgs {
-    id?: pulumi.Input<string>;
-    ids?: pulumi.Input<pulumi.Input<string>[]>;
-    managed?: pulumi.Input<string>;
-    managedLists?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    scopeName?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    ids?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    managed?: pulumi.Input<string | undefined>;
+    managedLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    scopeName?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getPropertyMappingProviderScope.d.ts.map

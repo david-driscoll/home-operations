@@ -26,6 +26,7 @@ export interface GetRewriteArgs {
 export interface GetRewriteResult {
     readonly answer: string;
     readonly domain: string;
+    readonly enabled: boolean;
     readonly id: string;
 }
 export function getRewriteOutput(args: GetRewriteOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetRewriteResult> {

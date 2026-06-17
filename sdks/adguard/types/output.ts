@@ -336,6 +336,10 @@ export interface ConfigDns {
      */
     bootstrapDns: string[];
     /**
+     * Whether the DNS response cache is enabled. Defaults to `true`
+     */
+    cacheEnabled: boolean;
+    /**
      * Whether optimistic DNS caching is enabled. Defaults to `false`
      */
     cacheOptimistic: boolean;
@@ -446,6 +450,10 @@ export interface ConfigQuerylog {
      */
     enabled: boolean;
     /**
+     * If `true`, the host names in the `ignored` array are excluded from the query log. Defaults to `true`
+     */
+    ignoredEnabled: boolean;
+    /**
      * Set of host names which should not be written to log
      */
     ignoreds: string[];
@@ -471,6 +479,10 @@ export interface ConfigStats {
      * Whether server statistics are enabled. Defaults to `true`
      */
     enabled: boolean;
+    /**
+     * If `true`, the host names in the `ignored` array are excluded from the statistics. Defaults to `true`
+     */
+    ignoredEnabled: boolean;
     /**
      * Set of host names which should not be counted in the server statistics
      */
@@ -922,6 +934,10 @@ export interface GetConfigDns {
      */
     bootstrapDns: string[];
     /**
+     * Whether the DNS response cache is enabled
+     */
+    cacheEnabled: boolean;
+    /**
      * Whether optimistic DNS caching is enabled
      */
     cacheOptimistic: boolean;
@@ -1032,6 +1048,10 @@ export interface GetConfigQuerylog {
      */
     enabled: boolean;
     /**
+     * If `true`, the host names in the `ignored` array are excluded from the query log.
+     */
+    ignoredEnabled: boolean;
+    /**
      * Set of host names which should not be written to log
      */
     ignoreds: string[];
@@ -1057,6 +1077,10 @@ export interface GetConfigStats {
      * Whether server statistics enabled
      */
     enabled: boolean;
+    /**
+     * If `true`, the host names in the `ignored` array are excluded from the statistics
+     */
+    ignoredEnabled: boolean;
     /**
      * Set of host names which should not be counted in the server statistics
      */

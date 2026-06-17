@@ -62,6 +62,7 @@ class Application extends pulumi.CustomResource {
             resourceInputs["backchannelProviders"] = state?.backchannelProviders;
             resourceInputs["group"] = state?.group;
             resourceInputs["metaDescription"] = state?.metaDescription;
+            resourceInputs["metaHide"] = state?.metaHide;
             resourceInputs["metaIcon"] = state?.metaIcon;
             resourceInputs["metaLaunchUrl"] = state?.metaLaunchUrl;
             resourceInputs["metaPublisher"] = state?.metaPublisher;
@@ -81,6 +82,7 @@ class Application extends pulumi.CustomResource {
             resourceInputs["backchannelProviders"] = args?.backchannelProviders;
             resourceInputs["group"] = args?.group;
             resourceInputs["metaDescription"] = args?.metaDescription;
+            resourceInputs["metaHide"] = args?.metaHide;
             resourceInputs["metaIcon"] = args?.metaIcon;
             resourceInputs["metaLaunchUrl"] = args?.metaLaunchUrl;
             resourceInputs["metaPublisher"] = args?.metaPublisher;

@@ -19,6 +19,10 @@ export declare class Application extends pulumi.CustomResource {
     readonly backchannelProviders: pulumi.Output<number[] | undefined>;
     readonly group: pulumi.Output<string | undefined>;
     readonly metaDescription: pulumi.Output<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    readonly metaHide: pulumi.Output<boolean | undefined>;
     readonly metaIcon: pulumi.Output<string | undefined>;
     readonly metaLaunchUrl: pulumi.Output<string | undefined>;
     readonly metaPublisher: pulumi.Output<string | undefined>;
@@ -53,60 +57,68 @@ export declare class Application extends pulumi.CustomResource {
  * Input properties used for looking up and filtering Application resources.
  */
 export interface ApplicationState {
-    applicationId?: pulumi.Input<string>;
-    backchannelProviders?: pulumi.Input<pulumi.Input<number>[]>;
-    group?: pulumi.Input<string>;
-    metaDescription?: pulumi.Input<string>;
-    metaIcon?: pulumi.Input<string>;
-    metaLaunchUrl?: pulumi.Input<string>;
-    metaPublisher?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    applicationId?: pulumi.Input<string | undefined>;
+    backchannelProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    group?: pulumi.Input<string | undefined>;
+    metaDescription?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    openInNewTab?: pulumi.Input<boolean>;
+    metaHide?: pulumi.Input<boolean | undefined>;
+    metaIcon?: pulumi.Input<string | undefined>;
+    metaLaunchUrl?: pulumi.Input<string | undefined>;
+    metaPublisher?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    openInNewTab?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
-    protocolProvider?: pulumi.Input<number>;
-    slug?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
+    protocolProvider?: pulumi.Input<number | undefined>;
+    slug?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a Application resource.
  */
 export interface ApplicationArgs {
-    applicationId?: pulumi.Input<string>;
-    backchannelProviders?: pulumi.Input<pulumi.Input<number>[]>;
-    group?: pulumi.Input<string>;
-    metaDescription?: pulumi.Input<string>;
-    metaIcon?: pulumi.Input<string>;
-    metaLaunchUrl?: pulumi.Input<string>;
-    metaPublisher?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    applicationId?: pulumi.Input<string | undefined>;
+    backchannelProviders?: pulumi.Input<pulumi.Input<number>[] | undefined>;
+    group?: pulumi.Input<string | undefined>;
+    metaDescription?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    openInNewTab?: pulumi.Input<boolean>;
+    metaHide?: pulumi.Input<boolean | undefined>;
+    metaIcon?: pulumi.Input<string | undefined>;
+    metaLaunchUrl?: pulumi.Input<string | undefined>;
+    metaPublisher?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    /**
+     * Defaults to `false`.
+     */
+    openInNewTab?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
-    protocolProvider?: pulumi.Input<number>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
+    protocolProvider?: pulumi.Input<number | undefined>;
     slug: pulumi.Input<string>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=application.d.ts.map

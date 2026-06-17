@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
 import * as outputs from "./types/output";
 export declare function getNetwork(args?: GetNetworkArgs, opts?: pulumi.InvokeOptions): Promise<GetNetworkResult>;
 /**
@@ -8,6 +9,7 @@ export interface GetNetworkArgs {
     id?: string;
     name?: string;
     site?: string;
+    timeouts?: inputs.GetNetworkTimeouts;
 }
 /**
  * A collection of values returned by getNetwork.
@@ -32,9 +34,9 @@ export interface GetNetworkResult {
     readonly ipv6PdStart: string;
     readonly ipv6PdStop: string;
     readonly ipv6Ra: boolean;
-    readonly ipv6RaPreferredLifetime: number;
+    readonly ipv6RaPreferredLifetime: string;
     readonly ipv6RaPriority: string;
-    readonly ipv6RaValidLifetime: number;
+    readonly ipv6RaValidLifetime: string;
     readonly ipv6StaticSubnet: string;
     readonly lteLan: boolean;
     readonly multicastDns: boolean;
@@ -47,6 +49,7 @@ export interface GetNetworkResult {
     readonly site: string;
     readonly subnet: string;
     readonly thirdPartyGateway: boolean;
+    readonly timeouts?: outputs.GetNetworkTimeouts;
     readonly vlan: number;
     readonly wanDns: string[];
     readonly wanEgressQos: number;
@@ -64,7 +67,9 @@ export declare function getNetworkOutput(args?: GetNetworkOutputArgs, opts?: pul
  * A collection of arguments for invoking getNetwork.
  */
 export interface GetNetworkOutputArgs {
-    id?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    id?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetNetworkTimeoutsArgs | undefined>;
 }
+//# sourceMappingURL=getNetwork.d.ts.map

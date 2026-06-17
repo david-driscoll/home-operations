@@ -73,11 +73,11 @@ export interface ClientGroupState {
     /**
      * The name of the client group. Must be 1-128 characters.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the client group with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -87,9 +87,9 @@ export interface ClientGroupArgs {
     /**
      * The name of the client group. Must be 1-128 characters.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The site to associate the client group with. Defaults to the provider site.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
 }

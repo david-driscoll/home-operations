@@ -32,18 +32,18 @@ export declare class CertificateKeyPair extends pulumi.CustomResource {
  * Input properties used for looking up and filtering CertificateKeyPair resources.
  */
 export interface CertificateKeyPairState {
-    certificateData?: pulumi.Input<string>;
-    certificateKeyPairId?: pulumi.Input<string>;
-    keyData?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    certificateData?: pulumi.Input<string | undefined>;
+    certificateKeyPairId?: pulumi.Input<string | undefined>;
+    keyData?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a CertificateKeyPair resource.
  */
 export interface CertificateKeyPairArgs {
     certificateData: pulumi.Input<string>;
-    certificateKeyPairId?: pulumi.Input<string>;
-    keyData?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    certificateKeyPairId?: pulumi.Input<string | undefined>;
+    keyData?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=certificateKeyPair.d.ts.map

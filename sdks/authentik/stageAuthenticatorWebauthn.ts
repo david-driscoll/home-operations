@@ -44,13 +44,18 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
      * Defaults to ``.
      */
     declare public readonly friendlyName: pulumi.Output<string | undefined>;
+    declare public readonly hints: pulumi.Output<string[] | undefined>;
     declare public readonly maxAttempts: pulumi.Output<number | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
+     * Defaults to `true`.
+     */
+    declare public readonly preventDuplicateDevices: pulumi.Output<boolean | undefined>;
+    /**
      * Allowed values:
-     *   - `discouraged`
-     *   - `preferred`
      *   - `required`
+     *   - `preferred`
+     *   - `discouraged`
      *  Defaults to `preferred`.
      */
     declare public readonly residentKeyRequirement: pulumi.Output<string | undefined>;
@@ -81,8 +86,10 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["configureFlow"] = state?.configureFlow;
             resourceInputs["deviceTypeRestrictions"] = state?.deviceTypeRestrictions;
             resourceInputs["friendlyName"] = state?.friendlyName;
+            resourceInputs["hints"] = state?.hints;
             resourceInputs["maxAttempts"] = state?.maxAttempts;
             resourceInputs["name"] = state?.name;
+            resourceInputs["preventDuplicateDevices"] = state?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = state?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = state?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = state?.userVerification;
@@ -92,8 +99,10 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["configureFlow"] = args?.configureFlow;
             resourceInputs["deviceTypeRestrictions"] = args?.deviceTypeRestrictions;
             resourceInputs["friendlyName"] = args?.friendlyName;
+            resourceInputs["hints"] = args?.hints;
             resourceInputs["maxAttempts"] = args?.maxAttempts;
             resourceInputs["name"] = args?.name;
+            resourceInputs["preventDuplicateDevices"] = args?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = args?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = args?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = args?.userVerification;
@@ -112,24 +121,20 @@ export interface StageAuthenticatorWebauthnState {
      *   - `platform`
      *   - `cross-platform`
      */
-    authenticatorAttachment?: pulumi.Input<string>;
-    configureFlow?: pulumi.Input<string>;
-    deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[]>;
+    authenticatorAttachment?: pulumi.Input<string | undefined>;
+    configureFlow?: pulumi.Input<string | undefined>;
+    deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    maxAttempts?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    hints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    maxAttempts?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * Allowed values:
-     *   - `discouraged`
-     *   - `preferred`
-     *   - `required`
-     *  Defaults to `preferred`.
+     * Defaults to `true`.
      */
-    residentKeyRequirement?: pulumi.Input<string>;
-    stageAuthenticatorWebauthnId?: pulumi.Input<string>;
+    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -137,7 +142,16 @@ export interface StageAuthenticatorWebauthnState {
      *   - `discouraged`
      *  Defaults to `preferred`.
      */
-    userVerification?: pulumi.Input<string>;
+    residentKeyRequirement?: pulumi.Input<string | undefined>;
+    stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
+    /**
+     * Allowed values:
+     *   - `required`
+     *   - `preferred`
+     *   - `discouraged`
+     *  Defaults to `preferred`.
+     */
+    userVerification?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -149,24 +163,20 @@ export interface StageAuthenticatorWebauthnArgs {
      *   - `platform`
      *   - `cross-platform`
      */
-    authenticatorAttachment?: pulumi.Input<string>;
-    configureFlow?: pulumi.Input<string>;
-    deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[]>;
+    authenticatorAttachment?: pulumi.Input<string | undefined>;
+    configureFlow?: pulumi.Input<string | undefined>;
+    deviceTypeRestrictions?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Defaults to ``.
      */
-    friendlyName?: pulumi.Input<string>;
-    maxAttempts?: pulumi.Input<number>;
-    name?: pulumi.Input<string>;
+    friendlyName?: pulumi.Input<string | undefined>;
+    hints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    maxAttempts?: pulumi.Input<number | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
-     * Allowed values:
-     *   - `discouraged`
-     *   - `preferred`
-     *   - `required`
-     *  Defaults to `preferred`.
+     * Defaults to `true`.
      */
-    residentKeyRequirement?: pulumi.Input<string>;
-    stageAuthenticatorWebauthnId?: pulumi.Input<string>;
+    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -174,5 +184,14 @@ export interface StageAuthenticatorWebauthnArgs {
      *   - `discouraged`
      *  Defaults to `preferred`.
      */
-    userVerification?: pulumi.Input<string>;
+    residentKeyRequirement?: pulumi.Input<string | undefined>;
+    stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
+    /**
+     * Allowed values:
+     *   - `required`
+     *   - `preferred`
+     *   - `discouraged`
+     *  Defaults to `preferred`.
+     */
+    userVerification?: pulumi.Input<string | undefined>;
 }

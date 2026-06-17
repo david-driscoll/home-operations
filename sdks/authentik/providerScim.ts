@@ -53,6 +53,8 @@ export class ProviderScim extends pulumi.CustomResource {
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `webex`
+     *   - `vcenter`
      *  Defaults to `default`.
      */
     declare public readonly compatibilityMode: pulumi.Output<string | undefined>;
@@ -149,48 +151,50 @@ export interface ProviderScimState {
      *   - `oauth`
      *  Defaults to `token`.
      */
-    authMode?: pulumi.Input<string>;
+    authMode?: pulumi.Input<string | undefined>;
     /**
      * Slug of an OAuth source used for authentication
      */
-    authOauth?: pulumi.Input<string>;
+    authOauth?: pulumi.Input<string | undefined>;
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    authOauthParams?: pulumi.Input<string>;
+    authOauthParams?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `default`
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `webex`
+     *   - `vcenter`
      *  Defaults to `default`.
      */
-    compatibilityMode?: pulumi.Input<string>;
+    compatibilityMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerScimId?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerScimId?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `hours=1`.
      */
-    serviceProviderConfigCacheTimeout?: pulumi.Input<string>;
+    serviceProviderConfigCacheTimeout?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
-    token?: pulumi.Input<string>;
-    url?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
+    token?: pulumi.Input<string | undefined>;
+    url?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -203,46 +207,48 @@ export interface ProviderScimArgs {
      *   - `oauth`
      *  Defaults to `token`.
      */
-    authMode?: pulumi.Input<string>;
+    authMode?: pulumi.Input<string | undefined>;
     /**
      * Slug of an OAuth source used for authentication
      */
-    authOauth?: pulumi.Input<string>;
+    authOauth?: pulumi.Input<string | undefined>;
     /**
      * JSON format expected. Use `jsonencode()` to pass objects. Defaults to `{}`.
      */
-    authOauthParams?: pulumi.Input<string>;
+    authOauthParams?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `default`
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `webex`
+     *   - `vcenter`
      *  Defaults to `default`.
      */
-    compatibilityMode?: pulumi.Input<string>;
+    compatibilityMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    dryRun?: pulumi.Input<boolean>;
-    excludeUsersServiceAccount?: pulumi.Input<boolean>;
-    groupFilters?: pulumi.Input<pulumi.Input<string>[]>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
-    providerScimId?: pulumi.Input<string>;
+    dryRun?: pulumi.Input<boolean | undefined>;
+    excludeUsersServiceAccount?: pulumi.Input<boolean | undefined>;
+    groupFilters?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerScimId?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `hours=1`.
      */
-    serviceProviderConfigCacheTimeout?: pulumi.Input<string>;
+    serviceProviderConfigCacheTimeout?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `100`.
      */
-    syncPageSize?: pulumi.Input<number>;
+    syncPageSize?: pulumi.Input<number | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=30`.
      */
-    syncPageTimeout?: pulumi.Input<string>;
-    token?: pulumi.Input<string>;
+    syncPageTimeout?: pulumi.Input<string | undefined>;
+    token?: pulumi.Input<string | undefined>;
     url: pulumi.Input<string>;
 }

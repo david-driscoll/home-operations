@@ -150,31 +150,31 @@ export interface SourceOauthState {
     /**
      * Only required for OAuth1.
      */
-    accessTokenUrl?: pulumi.Input<string>;
-    additionalScopes?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
+    accessTokenUrl?: pulumi.Input<string | undefined>;
+    additionalScopes?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `basic_auth`
      *   - `post_body`
      *  Defaults to `basic_auth`.
      */
-    authorizationCodeAuthMethod?: pulumi.Input<string>;
+    authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    authorizationUrl?: pulumi.Input<string>;
+    authorizationUrl?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    callbackUri?: pulumi.Input<string>;
-    consumerKey?: pulumi.Input<string>;
-    consumerSecret?: pulumi.Input<string>;
+    callbackUri?: pulumi.Input<string | undefined>;
+    consumerKey?: pulumi.Input<string | undefined>;
+    consumerSecret?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -182,20 +182,20 @@ export interface SourceOauthState {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
-    oidcJwks?: pulumi.Input<string>;
+    oidcJwks?: pulumi.Input<string | undefined>;
     /**
      * Automatically configure JWKS if not specified by `oidc_well_known_url`.
      */
-    oidcJwksUrl?: pulumi.Input<string>;
+    oidcJwksUrl?: pulumi.Input<string | undefined>;
     /**
      * Automatically configure source from OIDC well-known endpoint. URL is taken as is, and should end with `.well-known/openid-configuration`.
      */
-    oidcWellKnownUrl?: pulumi.Input<string>;
+    oidcWellKnownUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `none`
@@ -203,24 +203,24 @@ export interface SourceOauthState {
      *   - `S256`
      *  Defaults to `none`.
      */
-    pkce?: pulumi.Input<string>;
+    pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    profileUrl?: pulumi.Input<string>;
+    profileUrl?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    promoted?: pulumi.Input<boolean | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `apple`
@@ -241,13 +241,13 @@ export interface SourceOauthState {
      *   - `twitter`
      *   - `wechat`
      */
-    providerType?: pulumi.Input<string>;
+    providerType?: pulumi.Input<string | undefined>;
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    requestTokenUrl?: pulumi.Input<string>;
-    slug?: pulumi.Input<string>;
-    sourceOauthId?: pulumi.Input<string>;
+    requestTokenUrl?: pulumi.Input<string | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    sourceOauthId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -257,15 +257,15 @@ export interface SourceOauthState {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a SourceOauth resource.
@@ -274,27 +274,27 @@ export interface SourceOauthArgs {
     /**
      * Only required for OAuth1.
      */
-    accessTokenUrl?: pulumi.Input<string>;
-    additionalScopes?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
+    accessTokenUrl?: pulumi.Input<string | undefined>;
+    additionalScopes?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `basic_auth`
      *   - `post_body`
      *  Defaults to `basic_auth`.
      */
-    authorizationCodeAuthMethod?: pulumi.Input<string>;
+    authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    authorizationUrl?: pulumi.Input<string>;
+    authorizationUrl?: pulumi.Input<string | undefined>;
     consumerKey: pulumi.Input<string>;
     consumerSecret: pulumi.Input<string>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -302,20 +302,20 @@ export interface SourceOauthArgs {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use `jsonencode()` to pass objects. Generated.
      */
-    oidcJwks?: pulumi.Input<string>;
+    oidcJwks?: pulumi.Input<string | undefined>;
     /**
      * Automatically configure JWKS if not specified by `oidc_well_known_url`.
      */
-    oidcJwksUrl?: pulumi.Input<string>;
+    oidcJwksUrl?: pulumi.Input<string | undefined>;
     /**
      * Automatically configure source from OIDC well-known endpoint. URL is taken as is, and should end with `.well-known/openid-configuration`.
      */
-    oidcWellKnownUrl?: pulumi.Input<string>;
+    oidcWellKnownUrl?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `none`
@@ -323,24 +323,24 @@ export interface SourceOauthArgs {
      *   - `S256`
      *  Defaults to `none`.
      */
-    pkce?: pulumi.Input<string>;
+    pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    profileUrl?: pulumi.Input<string>;
+    profileUrl?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `false`.
      */
-    promoted?: pulumi.Input<boolean>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[]>;
+    promoted?: pulumi.Input<boolean | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
      *   - `apple`
@@ -365,9 +365,9 @@ export interface SourceOauthArgs {
     /**
      * Manually configure OAuth2 URLs when `oidc_well_known_url` is not set.
      */
-    requestTokenUrl?: pulumi.Input<string>;
+    requestTokenUrl?: pulumi.Input<string | undefined>;
     slug: pulumi.Input<string>;
-    sourceOauthId?: pulumi.Input<string>;
+    sourceOauthId?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -377,14 +377,14 @@ export interface SourceOauthArgs {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=sourceOauth.d.ts.map

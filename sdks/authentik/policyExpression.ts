@@ -79,10 +79,10 @@ export interface PolicyExpressionState {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    policyExpressionId?: pulumi.Input<string>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    policyExpressionId?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -92,8 +92,8 @@ export interface PolicyExpressionArgs {
     /**
      * Defaults to `false`.
      */
-    executionLogging?: pulumi.Input<boolean>;
+    executionLogging?: pulumi.Input<boolean | undefined>;
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    policyExpressionId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    policyExpressionId?: pulumi.Input<string | undefined>;
 }

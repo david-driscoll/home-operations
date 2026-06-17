@@ -1,6 +1,6 @@
 {
     "name": "@pulumi/authentik",
-    "version": "2026.2.0",
+    "version": "2026.5.0",
     "description": "A Pulumi provider dynamically bridged from authentik.",
     "repository": "https://github.com/goauthentik/terraform-provider-authentik",
     "main": "bin/index.js",
@@ -9,9 +9,8 @@
         "postinstall": "node ./scripts/postinstall.js"
     },
     "dependencies": {
-        "@pulumi/pulumi": "^3.142.0",
+        "@pulumi/pulumi": "^3.238.0",
         "@types/node": "^20",
-        "async-mutex": "^0.5.0",
         "typescript": "^4.7.0"
     },
     "pulumi": {
@@ -20,8 +19,8 @@
         "version": "0.14.0",
         "parameterization": {
             "name": "authentik",
-            "version": "2026.2.0",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2dvYXV0aGVudGlrL2F1dGhlbnRpayIsInZlcnNpb24iOiIyMDI2LjIuMCJ9fQ=="
+            "version": "2026.5.0",
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2dvYXV0aGVudGlrL2F1dGhlbnRpayIsInZlcnNpb24iOiIyMDI2LjUuMCJ9fQ=="
         }
     }
 }

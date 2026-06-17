@@ -30,14 +30,14 @@ export declare class RbacRole extends pulumi.CustomResource {
  * Input properties used for looking up and filtering RbacRole resources.
  */
 export interface RbacRoleState {
-    name?: pulumi.Input<string>;
-    rbacRoleId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    rbacRoleId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a RbacRole resource.
  */
 export interface RbacRoleArgs {
-    name?: pulumi.Input<string>;
-    rbacRoleId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    rbacRoleId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=rbacRole.d.ts.map

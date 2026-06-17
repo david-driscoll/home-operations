@@ -43,40 +43,40 @@ export declare class ProviderRadius extends pulumi.CustomResource {
  * Input properties used for looking up and filtering ProviderRadius resources.
  */
 export interface ProviderRadiusState {
-    authorizationFlow?: pulumi.Input<string>;
-    certificate?: pulumi.Input<string>;
+    authorizationFlow?: pulumi.Input<string | undefined>;
+    certificate?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `0.0.0.0/0, ::/0`.
      */
-    clientNetworks?: pulumi.Input<string>;
-    invalidationFlow?: pulumi.Input<string>;
+    clientNetworks?: pulumi.Input<string | undefined>;
+    invalidationFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    mfaSupport?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerRadiusId?: pulumi.Input<string>;
-    sharedSecret?: pulumi.Input<string>;
+    mfaSupport?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerRadiusId?: pulumi.Input<string | undefined>;
+    sharedSecret?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a ProviderRadius resource.
  */
 export interface ProviderRadiusArgs {
     authorizationFlow: pulumi.Input<string>;
-    certificate?: pulumi.Input<string>;
+    certificate?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `0.0.0.0/0, ::/0`.
      */
-    clientNetworks?: pulumi.Input<string>;
+    clientNetworks?: pulumi.Input<string | undefined>;
     invalidationFlow: pulumi.Input<string>;
     /**
      * Defaults to `true`.
      */
-    mfaSupport?: pulumi.Input<boolean>;
-    name?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerRadiusId?: pulumi.Input<string>;
+    mfaSupport?: pulumi.Input<boolean | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerRadiusId?: pulumi.Input<string | undefined>;
     sharedSecret: pulumi.Input<string>;
 }
 //# sourceMappingURL=providerRadius.d.ts.map

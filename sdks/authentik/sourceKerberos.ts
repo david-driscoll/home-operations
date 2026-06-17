@@ -212,12 +212,12 @@ export class SourceKerberos extends pulumi.CustomResource {
  * Input properties used for looking up and filtering SourceKerberos resources.
  */
 export interface SourceKerberosState {
-    authenticationFlow?: pulumi.Input<string>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -225,49 +225,49 @@ export interface SourceKerberosState {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Custom krb5.conf to use. Uses the system one by default
      */
-    krb5Conf?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    krb5Conf?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * If enabled, the authentik-stored password will be updated upon login with the Kerberos password backend Defaults to `false`.
      */
-    passwordLoginUpdateInternalPassword?: pulumi.Input<boolean>;
+    passwordLoginUpdateInternalPassword?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Kerberos realm
      */
-    realm?: pulumi.Input<string>;
-    slug?: pulumi.Input<string>;
-    sourceKerberosId?: pulumi.Input<string>;
+    realm?: pulumi.Input<string | undefined>;
+    slug?: pulumi.Input<string | undefined>;
+    sourceKerberosId?: pulumi.Input<string | undefined>;
     /**
      * Credential cache to use for SPNEGO in form type:residual
      */
-    spnegoCcache?: pulumi.Input<string>;
+    spnegoCcache?: pulumi.Input<string | undefined>;
     /**
      * SPNEGO keytab base64-encoded or path to keytab in the form FILE:path
      */
-    spnegoKeytab?: pulumi.Input<string>;
+    spnegoKeytab?: pulumi.Input<string | undefined>;
     /**
      * Force the use of a specific server name for SPNEGO
      */
-    spnegoServerName?: pulumi.Input<string>;
+    spnegoServerName?: pulumi.Input<string | undefined>;
     /**
      * Credentials cache to authenticate to kadmin for sync. Must be in the form TYPE:residual
      */
-    syncCcache?: pulumi.Input<string>;
+    syncCcache?: pulumi.Input<string | undefined>;
     /**
      * Keytab to authenticate to kadmin for sync. Must be base64-encoded or in the form TYPE:residual
      */
-    syncKeytab?: pulumi.Input<string>;
+    syncKeytab?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `none`
@@ -275,23 +275,23 @@ export interface SourceKerberosState {
      *   - `deferred_end`
      *  Defaults to `deferred_end`.
      */
-    syncOutgoingTriggerMode?: pulumi.Input<string>;
+    syncOutgoingTriggerMode?: pulumi.Input<string | undefined>;
     /**
      * Password to authenticate to kadmin for sync
      */
-    syncPassword?: pulumi.Input<string>;
+    syncPassword?: pulumi.Input<string | undefined>;
     /**
      * Principal to authenticate to kadmin for sync.
      */
-    syncPrincipal?: pulumi.Input<string>;
+    syncPrincipal?: pulumi.Input<string | undefined>;
     /**
      * Sync users from Kerberos into authentik Defaults to `true`.
      */
-    syncUsers?: pulumi.Input<boolean>;
+    syncUsers?: pulumi.Input<boolean | undefined>;
     /**
      * When a user changes their password, sync it back to Kerberos Defaults to `true`.
      */
-    syncUsersPassword?: pulumi.Input<boolean>;
+    syncUsersPassword?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -301,27 +301,27 @@ export interface SourceKerberosState {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }
 
 /**
  * The set of arguments for constructing a SourceKerberos resource.
  */
 export interface SourceKerberosArgs {
-    authenticationFlow?: pulumi.Input<string>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    enabled?: pulumi.Input<boolean>;
-    enrollmentFlow?: pulumi.Input<string>;
+    enabled?: pulumi.Input<boolean | undefined>;
+    enrollmentFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -329,49 +329,49 @@ export interface SourceKerberosArgs {
      *   - `name_deny`
      *  Defaults to `identifier`.
      */
-    groupMatchingMode?: pulumi.Input<string>;
+    groupMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Custom krb5.conf to use. Uses the system one by default
      */
-    krb5Conf?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
+    krb5Conf?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * If enabled, the authentik-stored password will be updated upon login with the Kerberos password backend Defaults to `false`.
      */
-    passwordLoginUpdateInternalPassword?: pulumi.Input<boolean>;
+    passwordLoginUpdateInternalPassword?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
      *  Defaults to `any`.
      */
-    policyEngineMode?: pulumi.Input<string>;
+    policyEngineMode?: pulumi.Input<string | undefined>;
     /**
      * Kerberos realm
      */
     realm: pulumi.Input<string>;
     slug: pulumi.Input<string>;
-    sourceKerberosId?: pulumi.Input<string>;
+    sourceKerberosId?: pulumi.Input<string | undefined>;
     /**
      * Credential cache to use for SPNEGO in form type:residual
      */
-    spnegoCcache?: pulumi.Input<string>;
+    spnegoCcache?: pulumi.Input<string | undefined>;
     /**
      * SPNEGO keytab base64-encoded or path to keytab in the form FILE:path
      */
-    spnegoKeytab?: pulumi.Input<string>;
+    spnegoKeytab?: pulumi.Input<string | undefined>;
     /**
      * Force the use of a specific server name for SPNEGO
      */
-    spnegoServerName?: pulumi.Input<string>;
+    spnegoServerName?: pulumi.Input<string | undefined>;
     /**
      * Credentials cache to authenticate to kadmin for sync. Must be in the form TYPE:residual
      */
-    syncCcache?: pulumi.Input<string>;
+    syncCcache?: pulumi.Input<string | undefined>;
     /**
      * Keytab to authenticate to kadmin for sync. Must be base64-encoded or in the form TYPE:residual
      */
-    syncKeytab?: pulumi.Input<string>;
+    syncKeytab?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `none`
@@ -379,23 +379,23 @@ export interface SourceKerberosArgs {
      *   - `deferred_end`
      *  Defaults to `deferred_end`.
      */
-    syncOutgoingTriggerMode?: pulumi.Input<string>;
+    syncOutgoingTriggerMode?: pulumi.Input<string | undefined>;
     /**
      * Password to authenticate to kadmin for sync
      */
-    syncPassword?: pulumi.Input<string>;
+    syncPassword?: pulumi.Input<string | undefined>;
     /**
      * Principal to authenticate to kadmin for sync.
      */
-    syncPrincipal?: pulumi.Input<string>;
+    syncPrincipal?: pulumi.Input<string | undefined>;
     /**
      * Sync users from Kerberos into authentik Defaults to `true`.
      */
-    syncUsers?: pulumi.Input<boolean>;
+    syncUsers?: pulumi.Input<boolean | undefined>;
     /**
      * When a user changes their password, sync it back to Kerberos Defaults to `true`.
      */
-    syncUsersPassword?: pulumi.Input<boolean>;
+    syncUsersPassword?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `identifier`
@@ -405,13 +405,13 @@ export interface SourceKerberosArgs {
      *   - `username_deny`
      *  Defaults to `identifier`.
      */
-    userMatchingMode?: pulumi.Input<string>;
+    userMatchingMode?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `goauthentik.io/sources/%(slug)s`.
      */
-    userPathTemplate?: pulumi.Input<string>;
+    userPathTemplate?: pulumi.Input<string | undefined>;
     /**
      * Generated.
      */
-    uuid?: pulumi.Input<string>;
+    uuid?: pulumi.Input<string | undefined>;
 }

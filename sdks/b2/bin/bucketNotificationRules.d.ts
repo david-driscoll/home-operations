@@ -42,12 +42,12 @@ export interface BucketNotificationRulesState {
     /**
      * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
-    bucketId?: pulumi.Input<string>;
-    bucketNotificationRulesId?: pulumi.Input<string>;
+    bucketId?: pulumi.Input<string | undefined>;
+    bucketNotificationRulesId?: pulumi.Input<string | undefined>;
     /**
      * An array of Event Notification Rules.
      */
-    notificationRules?: pulumi.Input<pulumi.Input<inputs.BucketNotificationRulesNotificationRule>[]>;
+    notificationRules?: pulumi.Input<pulumi.Input<inputs.BucketNotificationRulesNotificationRule>[] | undefined>;
 }
 /**
  * The set of arguments for constructing a BucketNotificationRules resource.
@@ -57,9 +57,10 @@ export interface BucketNotificationRulesArgs {
      * The ID of the bucket. **Modifying this attribute will force creation of a new resource.**
      */
     bucketId: pulumi.Input<string>;
-    bucketNotificationRulesId?: pulumi.Input<string>;
+    bucketNotificationRulesId?: pulumi.Input<string | undefined>;
     /**
      * An array of Event Notification Rules.
      */
     notificationRules: pulumi.Input<pulumi.Input<inputs.BucketNotificationRulesNotificationRule>[]>;
 }
+//# sourceMappingURL=bucketNotificationRules.d.ts.map

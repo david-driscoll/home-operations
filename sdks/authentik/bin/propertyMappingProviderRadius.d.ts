@@ -31,16 +31,16 @@ export declare class PropertyMappingProviderRadius extends pulumi.CustomResource
  * Input properties used for looking up and filtering PropertyMappingProviderRadius resources.
  */
 export interface PropertyMappingProviderRadiusState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderRadiusId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderRadiusId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingProviderRadius resource.
  */
 export interface PropertyMappingProviderRadiusArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderRadiusId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderRadiusId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingProviderRadius.d.ts.map

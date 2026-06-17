@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export class FirewallGroup extends pulumi.CustomResource {
@@ -44,6 +46,7 @@ export class FirewallGroup extends pulumi.CustomResource {
      * The name of the site to associate the firewall group with.
      */
     declare public readonly site: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
@@ -65,6 +68,7 @@ export class FirewallGroup extends pulumi.CustomResource {
             resourceInputs["members"] = state?.members;
             resourceInputs["name"] = state?.name;
             resourceInputs["site"] = state?.site;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["type"] = state?.type;
         } else {
             const args = argsOrState as FirewallGroupArgs | undefined;
@@ -77,6 +81,7 @@ export class FirewallGroup extends pulumi.CustomResource {
             resourceInputs["members"] = args?.members;
             resourceInputs["name"] = args?.name;
             resourceInputs["site"] = args?.site;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["type"] = args?.type;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -91,19 +96,20 @@ export interface FirewallGroupState {
     /**
      * The members of the firewall group.
      */
-    members?: pulumi.Input<pulumi.Input<string>[]>;
+    members?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the firewall group with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -117,11 +123,12 @@ export interface FirewallGroupArgs {
     /**
      * The name of the firewall group.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the firewall group with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.FirewallGroupTimeouts | undefined>;
     /**
      * The type of the firewall group. Must be one of: `address-group`, `port-group`, or `ipv6-address-group`.
      */

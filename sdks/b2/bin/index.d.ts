@@ -35,3 +35,4 @@ export * from "./provider";
 import * as config from "./config";
 import * as types from "./types";
 export { config, types, };
+//# sourceMappingURL=index.d.ts.map

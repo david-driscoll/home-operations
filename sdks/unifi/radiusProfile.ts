@@ -51,9 +51,9 @@ export class RadiusProfile extends pulumi.CustomResource {
      */
     declare public readonly interimUpdateEnabled: pulumi.Output<boolean>;
     /**
-     * Specifies interim_update interval.
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
      */
-    declare public readonly interimUpdateInterval: pulumi.Output<number>;
+    declare public readonly interimUpdateInterval: pulumi.Output<string>;
     /**
      * The name of the profile.
      */
@@ -62,6 +62,7 @@ export class RadiusProfile extends pulumi.CustomResource {
      * The name of the site to associate the settings with.
      */
     declare public readonly site: pulumi.Output<string>;
+    declare public readonly timeouts: pulumi.Output<outputs.RadiusProfileTimeouts | undefined>;
     /**
      * Specifies whether to use usg as a RADIUS accounting server.
      */
@@ -99,6 +100,7 @@ export class RadiusProfile extends pulumi.CustomResource {
             resourceInputs["interimUpdateInterval"] = state?.interimUpdateInterval;
             resourceInputs["name"] = state?.name;
             resourceInputs["site"] = state?.site;
+            resourceInputs["timeouts"] = state?.timeouts;
             resourceInputs["useUsgAcctServer"] = state?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = state?.useUsgAuthServer;
             resourceInputs["vlanEnabled"] = state?.vlanEnabled;
@@ -112,6 +114,7 @@ export class RadiusProfile extends pulumi.CustomResource {
             resourceInputs["interimUpdateInterval"] = args?.interimUpdateInterval;
             resourceInputs["name"] = args?.name;
             resourceInputs["site"] = args?.site;
+            resourceInputs["timeouts"] = args?.timeouts;
             resourceInputs["useUsgAcctServer"] = args?.useUsgAcctServer;
             resourceInputs["useUsgAuthServer"] = args?.useUsgAuthServer;
             resourceInputs["vlanEnabled"] = args?.vlanEnabled;
@@ -129,47 +132,48 @@ export interface RadiusProfileState {
     /**
      * Specifies whether to use RADIUS accounting.
      */
-    accountingEnabled?: pulumi.Input<boolean>;
+    accountingEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * RADIUS accounting servers.
      */
-    acctServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAcctServer>[]>;
+    acctServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAcctServer>[] | undefined>;
     /**
      * RADIUS authentication servers.
      */
-    authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[]>;
+    authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
      * Specifies whether to use interim_update.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean>;
+    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies interim_update interval.
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
      */
-    interimUpdateInterval?: pulumi.Input<number>;
+    interimUpdateInterval?: pulumi.Input<string | undefined>;
     /**
      * The name of the profile.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.RadiusProfileTimeouts | undefined>;
     /**
      * Specifies whether to use usg as a RADIUS accounting server.
      */
-    useUsgAcctServer?: pulumi.Input<boolean>;
+    useUsgAcctServer?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use usg as a RADIUS authentication server.
      */
-    useUsgAuthServer?: pulumi.Input<boolean>;
+    useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use vlan on wired connections.
      */
-    vlanEnabled?: pulumi.Input<boolean>;
+    vlanEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
      */
-    vlanWlanMode?: pulumi.Input<string>;
+    vlanWlanMode?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -179,45 +183,46 @@ export interface RadiusProfileArgs {
     /**
      * Specifies whether to use RADIUS accounting.
      */
-    accountingEnabled?: pulumi.Input<boolean>;
+    accountingEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * RADIUS accounting servers.
      */
-    acctServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAcctServer>[]>;
+    acctServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAcctServer>[] | undefined>;
     /**
      * RADIUS authentication servers.
      */
-    authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[]>;
+    authServers?: pulumi.Input<pulumi.Input<inputs.RadiusProfileAuthServer>[] | undefined>;
     /**
      * Specifies whether to use interim_update.
      */
-    interimUpdateEnabled?: pulumi.Input<boolean>;
+    interimUpdateEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * Specifies interim_update interval.
+     * Specifies the RADIUS interim update interval, as a Go duration string (e.g. `1h`, `3600s`). Defaults to `1h0m0s`.
      */
-    interimUpdateInterval?: pulumi.Input<number>;
+    interimUpdateInterval?: pulumi.Input<string | undefined>;
     /**
      * The name of the profile.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the settings with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.RadiusProfileTimeouts | undefined>;
     /**
      * Specifies whether to use usg as a RADIUS accounting server.
      */
-    useUsgAcctServer?: pulumi.Input<boolean>;
+    useUsgAcctServer?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use usg as a RADIUS authentication server.
      */
-    useUsgAuthServer?: pulumi.Input<boolean>;
+    useUsgAuthServer?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use vlan on wired connections.
      */
-    vlanEnabled?: pulumi.Input<boolean>;
+    vlanEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Specifies whether to use vlan on wireless connections. Must be one of `disabled`, `optional`, or `required`.
      */
-    vlanWlanMode?: pulumi.Input<string>;
+    vlanWlanMode?: pulumi.Input<string | undefined>;
 }

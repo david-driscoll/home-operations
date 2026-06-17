@@ -1,4 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 export declare class StaticRoute extends pulumi.CustomResource {
     /**
      * Get an existing StaticRoute resource's state with the given name, ID, and optional extra
@@ -20,6 +22,18 @@ export declare class StaticRoute extends pulumi.CustomResource {
      */
     readonly distance: pulumi.Output<number>;
     /**
+     * Whether the static route is enabled.
+     */
+    readonly enabled: pulumi.Output<boolean>;
+    /**
+     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     */
+    readonly gatewayDevice: pulumi.Output<string | undefined>;
+    /**
+     * The type of gateway for the static route. Can be `default` or `switch`.
+     */
+    readonly gatewayType: pulumi.Output<string>;
+    /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
     readonly interface: pulumi.Output<string | undefined>;
@@ -32,13 +46,14 @@ export declare class StaticRoute extends pulumi.CustomResource {
      */
     readonly network: pulumi.Output<string>;
     /**
-     * The next hop of the static route (only valid for `nexthop-route` type).
+     * The next hop of the static route (only valid for `nexthop-route` type). Accepts IPv4 or IPv6 addresses.
      */
     readonly nextHop: pulumi.Output<string | undefined>;
     /**
      * The name of the site to associate the static route with.
      */
     readonly site: pulumi.Output<string>;
+    readonly timeouts: pulumi.Output<outputs.StaticRouteTimeouts | undefined>;
     /**
      * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
      */
@@ -59,31 +74,44 @@ export interface StaticRouteState {
     /**
      * The distance of the static route.
      */
-    distance?: pulumi.Input<number>;
+    distance?: pulumi.Input<number | undefined>;
+    /**
+     * Whether the static route is enabled.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     */
+    gatewayDevice?: pulumi.Input<string | undefined>;
+    /**
+     * The type of gateway for the static route. Can be `default` or `switch`.
+     */
+    gatewayType?: pulumi.Input<string | undefined>;
     /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
-    interface?: pulumi.Input<string>;
+    interface?: pulumi.Input<string | undefined>;
     /**
      * The name of the static route.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network subnet address.
      */
-    network?: pulumi.Input<string>;
+    network?: pulumi.Input<string | undefined>;
     /**
-     * The next hop of the static route (only valid for `nexthop-route` type).
+     * The next hop of the static route (only valid for `nexthop-route` type). Accepts IPv4 or IPv6 addresses.
      */
-    nextHop?: pulumi.Input<string>;
+    nextHop?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the static route with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.StaticRouteTimeouts | undefined>;
     /**
      * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
      */
-    type?: pulumi.Input<string>;
+    type?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a StaticRoute resource.
@@ -94,27 +122,41 @@ export interface StaticRouteArgs {
      */
     distance: pulumi.Input<number>;
     /**
+     * Whether the static route is enabled.
+     */
+    enabled?: pulumi.Input<boolean | undefined>;
+    /**
+     * The MAC address of the gateway device, used when `gateway_type` is `switch`.
+     */
+    gatewayDevice?: pulumi.Input<string | undefined>;
+    /**
+     * The type of gateway for the static route. Can be `default` or `switch`.
+     */
+    gatewayType?: pulumi.Input<string | undefined>;
+    /**
      * The interface of the static route (only valid for `interface-route` type). This can be `WAN1`, `WAN2`, or a network ID.
      */
-    interface?: pulumi.Input<string>;
+    interface?: pulumi.Input<string | undefined>;
     /**
      * The name of the static route.
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * The network subnet address.
      */
     network: pulumi.Input<string>;
     /**
-     * The next hop of the static route (only valid for `nexthop-route` type).
+     * The next hop of the static route (only valid for `nexthop-route` type). Accepts IPv4 or IPv6 addresses.
      */
-    nextHop?: pulumi.Input<string>;
+    nextHop?: pulumi.Input<string | undefined>;
     /**
      * The name of the site to associate the static route with.
      */
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.StaticRouteTimeouts | undefined>;
     /**
      * The type of static route. Can be `interface-route`, `nexthop-route`, or `blackhole`.
      */
     type: pulumi.Input<string>;
 }
+//# sourceMappingURL=staticRoute.d.ts.map

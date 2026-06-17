@@ -166,14 +166,14 @@ export interface ProviderWsFederationState {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=-5`.
      */
-    assertionValidNotBefore?: pulumi.Input<string>;
+    assertionValidNotBefore?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=5`.
      */
-    assertionValidNotOnOrAfter?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
-    authnContextClassRefMapping?: pulumi.Input<string>;
-    authorizationFlow?: pulumi.Input<string>;
+    assertionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    authnContextClassRefMapping?: pulumi.Input<string | undefined>;
+    authorizationFlow?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#sha1`
@@ -182,26 +182,26 @@ export interface ProviderWsFederationState {
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
      *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
-    digestAlgorithm?: pulumi.Input<string>;
-    encryptionKp?: pulumi.Input<string>;
-    invalidationFlow?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    nameIdMapping?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerWsFederationId?: pulumi.Input<string>;
-    replyUrl?: pulumi.Input<string>;
+    digestAlgorithm?: pulumi.Input<string | undefined>;
+    encryptionKp?: pulumi.Input<string | undefined>;
+    invalidationFlow?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    nameIdMapping?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerWsFederationId?: pulumi.Input<string | undefined>;
+    replyUrl?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=86400`.
      */
-    sessionValidNotOnOrAfter?: pulumi.Input<string>;
+    sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    signAssertion?: pulumi.Input<boolean>;
+    signAssertion?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    signLogoutRequest?: pulumi.Input<boolean>;
+    signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#rsa-sha1`
@@ -215,9 +215,9 @@ export interface ProviderWsFederationState {
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
-    signatureAlgorithm?: pulumi.Input<string>;
-    signingKp?: pulumi.Input<string>;
-    wtrealm?: pulumi.Input<string>;
+    signatureAlgorithm?: pulumi.Input<string | undefined>;
+    signingKp?: pulumi.Input<string | undefined>;
+    wtrealm?: pulumi.Input<string | undefined>;
 }
 
 /**
@@ -227,13 +227,13 @@ export interface ProviderWsFederationArgs {
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=-5`.
      */
-    assertionValidNotBefore?: pulumi.Input<string>;
+    assertionValidNotBefore?: pulumi.Input<string | undefined>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=5`.
      */
-    assertionValidNotOnOrAfter?: pulumi.Input<string>;
-    authenticationFlow?: pulumi.Input<string>;
-    authnContextClassRefMapping?: pulumi.Input<string>;
+    assertionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
+    authenticationFlow?: pulumi.Input<string | undefined>;
+    authnContextClassRefMapping?: pulumi.Input<string | undefined>;
     authorizationFlow: pulumi.Input<string>;
     /**
      * Allowed values:
@@ -243,26 +243,26 @@ export interface ProviderWsFederationArgs {
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
      *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
-    digestAlgorithm?: pulumi.Input<string>;
-    encryptionKp?: pulumi.Input<string>;
+    digestAlgorithm?: pulumi.Input<string | undefined>;
+    encryptionKp?: pulumi.Input<string | undefined>;
     invalidationFlow: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    nameIdMapping?: pulumi.Input<string>;
-    propertyMappings?: pulumi.Input<pulumi.Input<string>[]>;
-    providerWsFederationId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    nameIdMapping?: pulumi.Input<string | undefined>;
+    propertyMappings?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    providerWsFederationId?: pulumi.Input<string | undefined>;
     replyUrl: pulumi.Input<string>;
     /**
      * Format: hours=1;minutes=2;seconds=3. Defaults to `minutes=86400`.
      */
-    sessionValidNotOnOrAfter?: pulumi.Input<string>;
+    sessionValidNotOnOrAfter?: pulumi.Input<string | undefined>;
     /**
      * Defaults to `true`.
      */
-    signAssertion?: pulumi.Input<boolean>;
+    signAssertion?: pulumi.Input<boolean | undefined>;
     /**
      * Defaults to `false`.
      */
-    signLogoutRequest?: pulumi.Input<boolean>;
+    signLogoutRequest?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `http://www.w3.org/2000/09/xmldsig#rsa-sha1`
@@ -276,7 +276,7 @@ export interface ProviderWsFederationArgs {
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
      *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
-    signatureAlgorithm?: pulumi.Input<string>;
-    signingKp?: pulumi.Input<string>;
+    signatureAlgorithm?: pulumi.Input<string | undefined>;
+    signingKp?: pulumi.Input<string | undefined>;
     wtrealm: pulumi.Input<string>;
 }

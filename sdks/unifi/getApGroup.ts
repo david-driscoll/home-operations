@@ -2,6 +2,8 @@
 // *** Do not edit by hand unless you're certain you know what you are doing! ***
 
 import * as pulumi from "@pulumi/pulumi";
+import * as inputs from "./types/input";
+import * as outputs from "./types/output";
 import * as utilities from "./utilities";
 
 export function getApGroup(args: GetApGroupArgs, opts?: pulumi.InvokeOptions): Promise<GetApGroupResult> {
@@ -9,6 +11,7 @@ export function getApGroup(args: GetApGroupArgs, opts?: pulumi.InvokeOptions): P
     return pulumi.runtime.invoke("unifi:index/getApGroup:getApGroup", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -18,6 +21,7 @@ export function getApGroup(args: GetApGroupArgs, opts?: pulumi.InvokeOptions): P
 export interface GetApGroupArgs {
     name: string;
     site?: string;
+    timeouts?: inputs.GetApGroupTimeouts;
 }
 
 /**
@@ -28,12 +32,14 @@ export interface GetApGroupResult {
     readonly id: string;
     readonly name: string;
     readonly site: string;
+    readonly timeouts?: outputs.GetApGroupTimeouts;
 }
 export function getApGroupOutput(args: GetApGroupOutputArgs, opts?: pulumi.InvokeOutputOptions): pulumi.Output<GetApGroupResult> {
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts || {});
     return pulumi.runtime.invokeOutput("unifi:index/getApGroup:getApGroup", {
         "name": args.name,
         "site": args.site,
+        "timeouts": args.timeouts,
     }, opts, utilities.getPackage());
 }
 
@@ -42,5 +48,6 @@ export function getApGroupOutput(args: GetApGroupOutputArgs, opts?: pulumi.Invok
  */
 export interface GetApGroupOutputArgs {
     name: pulumi.Input<string>;
-    site?: pulumi.Input<string>;
+    site?: pulumi.Input<string | undefined>;
+    timeouts?: pulumi.Input<inputs.GetApGroupTimeoutsArgs | undefined>;
 }

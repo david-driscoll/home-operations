@@ -533,6 +533,7 @@ export interface Oauth2 {
   jwksSources?: string[];
   jwtFederationProviders?: number[];
   jwtFederationSources?: string[];
+  grantTypes?: string[];
   propertyMappings?: string[];
   providerOauth2Id?: string;
   refreshTokenValidity?: string;

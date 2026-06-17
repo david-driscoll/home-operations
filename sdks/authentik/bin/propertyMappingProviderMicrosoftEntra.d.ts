@@ -31,16 +31,16 @@ export declare class PropertyMappingProviderMicrosoftEntra extends pulumi.Custom
  * Input properties used for looking up and filtering PropertyMappingProviderMicrosoftEntra resources.
  */
 export interface PropertyMappingProviderMicrosoftEntraState {
-    expression?: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderMicrosoftEntraId?: pulumi.Input<string>;
+    expression?: pulumi.Input<string | undefined>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderMicrosoftEntraId?: pulumi.Input<string | undefined>;
 }
 /**
  * The set of arguments for constructing a PropertyMappingProviderMicrosoftEntra resource.
  */
 export interface PropertyMappingProviderMicrosoftEntraArgs {
     expression: pulumi.Input<string>;
-    name?: pulumi.Input<string>;
-    propertyMappingProviderMicrosoftEntraId?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
+    propertyMappingProviderMicrosoftEntraId?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=propertyMappingProviderMicrosoftEntra.d.ts.map

@@ -100,27 +100,27 @@ export interface ListFilterState {
     /**
      * Whether this list filter is enabled. Defaults to `true`
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Timestamp of last synchronization
      */
-    lastUpdated?: pulumi.Input<string>;
+    lastUpdated?: pulumi.Input<string | undefined>;
     /**
      * Name of the list filter
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Number of rules in the list filter
      */
-    rulesCount?: pulumi.Input<number>;
+    rulesCount?: pulumi.Input<number | undefined>;
     /**
      * Url of the list filter
      */
-    url?: pulumi.Input<string>;
+    url?: pulumi.Input<string | undefined>;
     /**
      * When `true`, will consider this list filter of type whitelist. Defaults to `false`
      */
-    whitelist?: pulumi.Input<boolean>;
+    whitelist?: pulumi.Input<boolean | undefined>;
 }
 
 /**
@@ -130,11 +130,11 @@ export interface ListFilterArgs {
     /**
      * Whether this list filter is enabled. Defaults to `true`
      */
-    enabled?: pulumi.Input<boolean>;
+    enabled?: pulumi.Input<boolean | undefined>;
     /**
      * Name of the list filter
      */
-    name?: pulumi.Input<string>;
+    name?: pulumi.Input<string | undefined>;
     /**
      * Url of the list filter
      */
@@ -142,5 +142,5 @@ export interface ListFilterArgs {
     /**
      * When `true`, will consider this list filter of type whitelist. Defaults to `false`
      */
-    whitelist?: pulumi.Input<boolean>;
+    whitelist?: pulumi.Input<boolean | undefined>;
 }
