@@ -30,6 +30,6 @@ node = "24.16.0"
 pulumi = "3.246.0"
 "github:microsoft/apm" = { version = "v0.20.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.7.1", bin = "skillfile" }
-"github:yvgude/lean-ctx" = { version = "v3.8.4", bin = "lean-ctx" }
+"github:yvgude/lean-ctx" = { version = "v3.8.8", bin = "lean-ctx" }
 dotnet = { postinstall = "dotnet tool restore && dotnet restore", version = "10.0.203" }
     
