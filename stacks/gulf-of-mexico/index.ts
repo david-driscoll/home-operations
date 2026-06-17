@@ -41,7 +41,7 @@ const host = new ProxmoxHost("luna", {
     acceptDns: true,
     acceptRoutes: true,
   },
-  tailscaleSubnetRoutes: [Tailscale.subnets.home],
+  tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
 });
 

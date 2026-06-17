@@ -29,6 +29,7 @@ services:
     environment:
       # Tell Dockge where is your stacks directory
       - DOCKGE_STACKS_DIR=/opt/stacks
+      - DOCKGE_ENABLE_CONSOLE=true
     networks:
       - dockge_default
     restart: unless-stopped
