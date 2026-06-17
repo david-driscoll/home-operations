@@ -45,6 +45,15 @@ services:
       - ./dynamic/middlewares.yaml:/config/dynamic/middlewares.yaml
     networks:
       - dockge_default
+  cert-extractor:
+    image: ghcr.io/datacore/traefik-certextractor:1.0.0
+    restart: unless-stopped
+    environment:
+      AcmeFileServiceOptions__FilePath: "/var/cert/in/acme.json"
+      CertExtractorServiceOptions__DirectoryPath: "/var/cert/out/"
+    volumes:
+      - ./letsencrypt:/var/cert/in/:ro
+      - ./certs/:/var/cert/out/
   error-pages:
     container_name: error-pages
     image: ghcr.io/tarampampam/error-pages:4.2@sha256:978c1f83e8f26742743ec3b565214ed9f2296cb5171b592071a6569dceac8c26
