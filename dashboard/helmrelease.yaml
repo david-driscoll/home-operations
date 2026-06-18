@@ -129,6 +129,7 @@ spec:
 
     configMaps:
       ${APP}-glance-kubeconfig:
+        forceRename: '${APP}-glance-kubeconfig'
         data:
           sgc.kubeconfig: |
             {
