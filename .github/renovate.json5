@@ -1,6 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended", "docker:enableMajor", "helpers:pinGitHubActionDigests", ":dependencyDashboard", ":disableRateLimiting", ":semanticCommits"],
+  extends: ["local>david-driscoll/.github:renovate-config", "config:recommended", "docker:enableMajor", "helpers:pinGitHubActionDigests", ":dependencyDashboard", ":disableRateLimiting", ":semanticCommits"],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
