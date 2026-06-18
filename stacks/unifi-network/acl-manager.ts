@@ -541,6 +541,16 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
     { accept: clusterTags, deny: testData.knownNormalUsers },
   );
   manager.setGrant(
+    "dockge-kubeproxy-readonly-access",
+    {
+      src: [tag.dockge],
+      dst: [tag.k8s],
+      ip: ["tcp:443"],
+      app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["glance-readonly"] } }] },
+    },
+    { accept: clusterTags, deny: testData.knownNormalUsers },
+  );
+  manager.setGrant(
     { src: [...clusterTags, tag.egress], dst: [...clusterTags, tag.ingress], ip: [...ports.ssh, ...ports.nfs] },
     { accept: [...clusterTags, tag.egress], deny: testData.knownNormalUsers },
   );

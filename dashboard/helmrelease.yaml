@@ -84,6 +84,98 @@ spec:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
+      sgc-glance:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        pod:
+          securityContext:
+            runAsNonRoot: false
+        containers:
+          sgc-glance:
+            image:
+              repository: ghcr.io/lukasdietrich/glance-k8s/glance-k8s
+              tag: v0.5.2
+            env:
+              GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+
+      equestria-glance:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        pod:
+          securityContext:
+            runAsNonRoot: false
+        containers:
+          equestria-glance:
+            image:
+              repository: ghcr.io/lukasdietrich/glance-k8s/glance-k8s
+              tag: v0.5.2
+            env:
+              GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+
+    configMaps:
+      glance-kubeconfig:
+        data:
+          sgc.kubeconfig: |
+            {
+              "kind": "Config",
+              "apiVersion": "v1",
+              "clusters": [
+                {
+                  "cluster": {
+                    "server": "https://sgc-kubeproxy.${TAILSCALE_DOMAIN}"
+                  },
+                  "name": "sgc"
+                }
+              ],
+              "contexts": [
+                {
+                  "context": {
+                    "cluster": "sgc",
+                    "user": "sgc"
+                  },
+                  "name": "sgc"
+                }
+              ],
+              "current-context": "sgc",
+              "users": [
+                {
+                  "name": "sgc",
+                  "user": {}
+                }
+              ]
+            }
+          equestria.kubeconfig: |
+            {
+              "kind": "Config",
+              "apiVersion": "v1",
+              "clusters": [
+                {
+                  "cluster": {
+                    "server": "https://equestria-kubeproxy.${TAILSCALE_DOMAIN}"
+                  },
+                  "name": "equestria"
+                }
+              ],
+              "contexts": [
+                {
+                  "context": {
+                    "cluster": "equestria",
+                    "user": "equestria"
+                  },
+                  "name": "equestria"
+                }
+              ],
+              "current-context": "equestria",
+              "users": [
+                {
+                  "name": "equestria",
+                  "user": {}
+                }
+              ]
+            }
+
 
     defaultPodOptions:
       securityContext:
@@ -97,9 +189,11 @@ spec:
     persistence:
       assets:
         existingClaim: ${APP}
-        globalMounts:
-          - path: /home/user/glance-assets
-            subPath: assets
+        advancedMounts:
+          dynacat:
+            dynacat:
+              - path: /home/user/glance-assets
+                subPath: assets
       config-files:
         type: configMap
         name: ${APP}-config
@@ -131,6 +225,21 @@ spec:
               - path: /app/Extensions.cs
                 subPath: Extensions.cs
                 readOnly: true
+      glance-kubeconfig:
+        type: configMap
+        name: ${APP}-glance-kubeconfig
+        defaultMode: 444
+        advancedMounts:
+          sgc-glance:
+            sgc-glance:
+              - path: /app/config/glance.kubeconfig
+                subPath: sgc.kubeconfig
+                readOnly: true
+          equestria-glance:
+            equestria-glance:
+              - path: /app/config/glance.kubeconfig
+                subPath: equestria.kubeconfig
+                readOnly: true
 
     service:
       app:
@@ -141,6 +250,20 @@ spec:
             port: &port 8080
           extensions:
             port: 8090
+
+      sgc-glance:
+        controller: sgc-glance
+        type: ClusterIP
+        ports:
+          http:
+            port: 8080
+
+      equestria-glance:
+        controller: equestria-glance
+        type: ClusterIP
+        ports:
+          http:
+            port: 8080
 
     route:
       internal:

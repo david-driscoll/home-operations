@@ -63,7 +63,6 @@ services:
       - dashboard
     volumes:
       - .:/app/config/
-
   extensions:
     image: mcr.microsoft.com/dotnet/sdk:10.0@sha256:548d93f8a18a1acbe6cc127bc4f47281430d34a9e35c18afa80a8d6741c2adc3
     develop:
@@ -85,6 +84,24 @@ services:
       - "8090:8090"
     networks:
       - dashboard
+
+  sgc-glance:
+    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2
+    environment:
+      GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+    networks:
+      - dashboard
+    volumes:
+      - ./sgc.kubeconfig.json:/app/config/glance.kubeconfig:ro
+
+  equestria-glance:
+    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2
+    environment:
+      GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+    networks:
+      - dashboard
+    volumes:
+      - ./equestria.kubeconfig.json:/app/config/glance.kubeconfig:ro
 
 networks:
   dashboard:

@@ -65,6 +65,7 @@ builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikAppli
                         .GetJsonAsync<AuthentikApplicationResponse>())
                 : Observable.Empty<AuthentikApplicationResponse>())
                 .SelectMany(z => z.Results)
+                .Where(z => !string.IsNullOrWhiteSpace(z.MetaLaunchUrl?.ToString()))
                 .ToArray())
                 .Switch()
                 .Subscribe(observer);
@@ -120,11 +121,9 @@ var r = await GetMetrics(vectorQueries);
 var sb = new StringBuilder();
 foreach (var item in r)
 {
-if (item.Value.MachineType != "dockge") continue;
-Console.WriteLine($"Rendering widget for cluster {item.Key} with machine type {item.Value.MachineType} and {item.Value.Values.Count} metrics");
-Console.WriteLine($"Metrics: {string.Join(", ", item.Value.Values.Select(kv => $"{kv.Key}: {kv.Value}"))}");
-sb.AppendLine(RenderServer(item.Key, item.Value.Values, context.Response, app.Environment.IsProduction()));
-}
+        if (item.Value.MachineType != "dockge") continue;
+        sb.AppendLine(RenderServer(item.Key, item.Value.Values, context.Response, app.Environment.IsProduction()));
+    }
 RenderWidgetHeaders(context.Response, "Dockge Nodes", app.Environment.IsProduction(), false);
 
 return Results.Content(sb.ToString(), "text/html");
@@ -178,13 +177,7 @@ static Func<Task<VectorReturnType>> QueryVector(string name, string query)
     };
     return async () =>
     {
-        Console.WriteLine($"Querying vector {name} with query: {query}");
         var response = await uri.ToString().GetJsonAsync<PrometheusVector>();
-        Console.WriteLine($"Received response for vector {name}: {response.Status} with {response.Data.Result.Length} results");
-        Console.WriteLine($"Response data: {JsonSerializer.Serialize(response)}");
-
-        Console.WriteLine(response.Data.Result.First().Value[0].GetType());
-        Console.WriteLine(response.Data.Result.First().Value[1].GetType());
         return (name, response.Data.Result
     .Where(z => !string.IsNullOrWhiteSpace(z.Metric.MachineType))
     .ToDictionary(z => (z.Metric.ClusterTitle, z.Metric.MachineType), z => z.Value switch
