@@ -46,7 +46,7 @@ services:
     networks:
       - dockge_default
   cert-extractor:
-    image: ghcr.io/datacore/traefik-certextractor:1.0.0
+    image: ghcr.io/datacore/traefik-certextractor:1.0.0@sha256:415495c0633c08cec5ad74bd5fd1e7b1078a0748c930f33ce6c065770e703ec1
     restart: unless-stopped
     environment:
       AcmeFileServiceOptions__FilePath: "/var/cert/in/acme.json"

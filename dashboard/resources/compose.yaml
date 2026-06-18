@@ -86,7 +86,7 @@ services:
       - dashboard
 
   sgc-glance:
-    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2
+    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2@sha256:fb7b538e1c637d3a52faad2f247866dcf936df1313b7009f021226f33b40fcac
     environment:
       GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
     networks:
@@ -95,7 +95,7 @@ services:
       - ./sgc.kubeconfig.json:/app/config/glance.kubeconfig:ro
 
   equestria-glance:
-    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2
+    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.2@sha256:fb7b538e1c637d3a52faad2f247866dcf936df1313b7009f021226f33b40fcac
     environment:
       GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
     networks:
