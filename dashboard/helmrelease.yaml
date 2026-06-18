@@ -84,6 +84,7 @@ spec:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
+
       sgc-glance:
         annotations:
           reloader.stakater.com/auto: "true"
@@ -98,6 +99,12 @@ spec:
               tag: v0.5.2
             env:
               GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
 
       equestria-glance:
         annotations:
@@ -113,9 +120,15 @@ spec:
               tag: v0.5.2
             env:
               GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
 
     configMaps:
-      glance-kubeconfig:
+      ${APP}-glance-kubeconfig:
         data:
           sgc.kubeconfig: |
             {
