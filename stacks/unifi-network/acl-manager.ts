@@ -543,7 +543,7 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   manager.setGrant(
     "dockge-kubeproxy-readonly-access",
     {
-      src: [tag.dockge],
+      src: [tag.observability],
       dst: [tag.k8s],
       ip: ["tcp:443"],
       app: { "tailscale.com/cap/kubernetes": [{ impersonate: { groups: ["glance-readonly"] } }] },
