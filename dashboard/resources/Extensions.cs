@@ -2,7 +2,7 @@
 #:package Flurl.Http@4.0.2
 #:property PublishAot=false
 #:package PromQL.NET@0.4.1
-#:package System.Reactive@7.0.0-preview.20
+#:package System.Reactive@7.0.0-rc.1
 
 using System.Reactive.Linq;
 using System.Text;
