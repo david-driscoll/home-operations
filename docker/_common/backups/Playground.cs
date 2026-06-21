@@ -4,7 +4,7 @@
 #:package Dumpify@0.6.6
 #:package 1Password.Connect.Sdk@1.0.4
 #:package Microsoft.Extensions.Hosting@10.0.0-rc.2.25502.107
-#:package NCronJob@4.6.0
+#:package NCronJob@4.10.2
 #:package Humanizer.Core@*
 #:package System.Reactive@6.1.0
 
