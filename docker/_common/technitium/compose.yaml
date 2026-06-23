@@ -12,7 +12,7 @@ services:
       traefik.enable: true
 
       # Admin web UI via local domain
-      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`)
+      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`)
       traefik.http.routers.technitium.entrypoints: websecure
       traefik.http.routers.technitium.tls.certresolver: le
       traefik.http.routers.technitium.service: technitium-admin
@@ -20,7 +20,7 @@ services:
       traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
 
       # DNS over HTTPS (DoH)
-      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`) && Path(`/dns-query`)
+      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`) && Path(`/dns-query`)
       traefik.http.routers.technitium-doh.entrypoints: websecure
       traefik.http.routers.technitium-doh.tls.certresolver: le
       traefik.http.routers.technitium-doh.service: technitium-doh
@@ -46,5 +46,5 @@ networks:
     external: true
 x-dockge:
   urls:
-    - https://${CLUSTER_KEY}.dns.${ROOT_DOMAIN}
+    - https://${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}
     - http://${ipAddress}:5380
