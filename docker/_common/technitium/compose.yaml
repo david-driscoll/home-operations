@@ -5,7 +5,7 @@ services:
       - 100.100.100.100
     image: technitium/dns-server:15.2.0@sha256:23d3b63d959e997800b095fe93009b3fae271b5258234ff2ade8535cb33682c8
     container_name: technitium
-    hostname: ${host}
+    hostname: ${CLUSTER_KEY}
     env_file:
       - .env
     labels:
