@@ -398,13 +398,13 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           },
           {
             address: secondaryDnsIp,
-            useWithExitNode: true,
+            useWithExitNode: FileSystemWritableFileStream,
           },
           // {
           //   address: unifiDnsIp,
           //   useWithExitNode: false,
           // },
-          // ...dns.internalIps.map((ip) => ({ address: ip, useWithExitNode: false })),
+          ...dns.internalIps.map((ip) => ({ address: ip, useWithExitNode: false })),
         ],
       },
       cro,
