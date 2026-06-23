@@ -398,7 +398,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           },
           {
             address: secondaryDnsIp,
-            useWithExitNode: FileSystemWritableFileStream,
+            useWithExitNode: false,
           },
           // {
           //   address: unifiDnsIp,
