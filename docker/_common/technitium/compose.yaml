@@ -1,30 +1,28 @@
 services:
-  technitium:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: technitium-ts
     restart: unless-stopped
     dns:
       - 100.100.100.100
-    image: technitium/dns-server:15.2.0@sha256:23d3b63d959e997800b095fe93009b3fae271b5258234ff2ade8535cb33682c8
-    container_name: technitium
-    hostname: ${CLUSTER_KEY}
     env_file:
       - .env
-    labels:
-      traefik.enable: true
-
-      # Admin web UI via local domain
-      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`)
-      traefik.http.routers.technitium.entrypoints: websecure
-      traefik.http.routers.technitium.tls.certresolver: le
-      traefik.http.routers.technitium.service: technitium-admin
-
-      traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
-
-      # DNS over HTTPS (DoH)
-      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`) && Path(`/dns-query`)
-      traefik.http.routers.technitium-doh.entrypoints: websecure
-      traefik.http.routers.technitium-doh.tls.certresolver: le
-      traefik.http.routers.technitium-doh.service: technitium-doh
-      traefik.http.services.technitium-doh.loadbalancer.server.port: 5380
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_ACCEPT_DNS: "false"
+      # TS_AUTHKEY and TS_HOSTNAME must be set in .env
+      # TS_HOSTNAME should be unique per cluster, e.g. technitium-celestia
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /opt/stacks-data/${APP}/tailscale:/var/lib/tailscale
+    networks:
+      - dockge_default
+    # Ports live here because technitium shares this network namespace
     ports:
       - "53:53/udp"
       - "53:53/tcp"
@@ -34,17 +32,62 @@ services:
       - "8053:8053/udp"
       - "5380:5380/tcp"
       - "53443:53443/tcp"
+    sysctls:
+      - net.ipv4.ip_local_port_range=1024 65535
+    # Traefik labels live here for the same reason — technitium has no network identity of its own
+    labels:
+      traefik.enable: true
+      traefik.docker.network: dockge_default
+
+      # Admin web UI via local domain
+      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`)
+      traefik.http.routers.technitium.entrypoints: websecure
+      traefik.http.routers.technitium.tls.certresolver: le
+      traefik.http.routers.technitium.service: technitium-admin
+
+      # Admin UI via Tailscale
+      traefik.http.routers.technitium-tailscale.rule: Host(`technitium-${host}.${tailscaleDomain}`)
+      traefik.http.routers.technitium-tailscale.entrypoints: tailscale
+      traefik.http.routers.technitium-tailscale.service: technitium-admin
+
+      traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
+
+      # DNS over HTTPS (DoH)
+      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`) && Path(`/dns-query`)
+      traefik.http.routers.technitium-doh.entrypoints: websecure
+      traefik.http.routers.technitium-doh.tls.certresolver: le
+      traefik.http.routers.technitium-doh.service: technitium-doh
+      traefik.http.services.technitium-doh.loadbalancer.server.port: 5380
+    healthcheck:
+      test: ["CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\":\"Running\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  technitium:
+    restart: unless-stopped
+    image: technitium/dns-server:15.2.0@sha256:23d3b63d959e997800b095fe93009b3fae271b5258234ff2ade8535cb33682c8
+    container_name: technitium
+    hostname: ${CLUSTER_KEY}
+    network_mode: service:tailscale
+    depends_on:
+      tailscale:
+        condition: service_healthy
+    env_file:
+      - .env
+    # DNS_SERVER_DOMAIN must be set in .env to the MagicDNS hostname (e.g. technitium-celestia.tail-abc123.ts.net)
+    # so the self-signed cert CN matches what cluster nodes use to reach each other over Tailscale
     volumes:
       - /opt/stacks-data/${APP}/config:/etc/dns
       - /opt/stacks/traefik/certs:/etc/ssl/certs
-    networks:
-      - dockge_default
-    sysctls:
-      - net.ipv4.ip_local_port_range=1024 65535
+
 networks:
   dockge_default:
     external: true
+
 x-dockge:
   urls:
     - https://${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}
+    - https://technitium-${host}.${tailscaleDomain}
     - http://${ipAddress}:5380
