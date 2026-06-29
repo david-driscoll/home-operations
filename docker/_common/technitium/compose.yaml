@@ -2,6 +2,9 @@ services:
   tailscale:
     image: tailscale/tailscale:latest@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
     container_name: technitium-ts
+    # hostname lives on the netns owner; technitium shares this namespace and
+    # therefore cannot set its own hostname (network_mode: service:tailscale)
+    hostname: ${CLUSTER_KEY}
     restart: unless-stopped
     dns:
       - 100.100.100.100
@@ -69,7 +72,6 @@ services:
     restart: unless-stopped
     image: technitium/dns-server:15.2.0@sha256:23d3b63d959e997800b095fe93009b3fae271b5258234ff2ade8535cb33682c8
     container_name: technitium
-    hostname: ${CLUSTER_KEY}
     network_mode: service:tailscale
     depends_on:
       tailscale:
