@@ -72,6 +72,7 @@ export class DockgeLxc extends ComponentResource {
   private readonly resources: Input<Resource>[];
   private readonly dockerParent: ComponentResource<any>;
   private readonly monitor: TailscaleMonitor;
+  private readonly name: string;
 
   constructor(
     name: string,
@@ -84,7 +85,8 @@ export class DockgeLxc extends ComponentResource {
     const cluster = output(args.cluster);
     this.dockerParent = new ComponentResource("home:dockge:DockgeLxcDockerParent", `${name}-docker`, {}, cro);
     this.cluster = cluster;
-    this.shortName = args.host.shortName ?? name;
+    this.shortName = args.host.shortName;
+    this.name = name;
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
     this.hostname = hostname;
@@ -582,7 +584,7 @@ export class DockgeLxc extends ComponentResource {
     );
 
     const dnsAuthkey = new TailnetKey(
-      `${name}-dns-authkey`,
+      `${this.args.host.name}-dns-authkey`,
       {
         reusable: true,
         preauthorized: true,
