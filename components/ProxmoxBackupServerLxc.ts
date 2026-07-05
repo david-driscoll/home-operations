@@ -198,7 +198,6 @@ echo "PBS post-install complete"`;
 
     const cluster = output(args.cluster);
     const _signingKey = new ApplicationCertificate(name, { globals: args.globals }, cro);
-    const externalUrl = cluster.apply(c => `https://pbs.${c.rootDomain}`);
 
     const deviceInfo = installTailscaleLxc({
       connection: args.host.remoteConnection,
@@ -218,11 +217,10 @@ echo "PBS post-install complete"`;
     });
     this.resources.push(deviceInfo.apply(z => z.resource));
 
-    const externalHostname = externalUrl.apply(u => new URL(u).hostname);
     const { dns } = args.dockge.registerExternalService(
       {
         name,
-        hostname: externalHostname,
+        hostname,
         backend: interpolate`https://${tailscaleHostname}:8007`,
       },
       [],
@@ -471,13 +469,7 @@ __PBS_GROUPS__`;
       `${args.host.name}-pbs`,
       {
         category: FullItem.CategoryEnum.Login,
-        urls: output([
-          { href: externalUrl },
-          {
-            href: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
-          },
-          { href: interpolate`https://${this.tailscaleHostname}:8007` },
-        ]),
+        urls: output([{ href: interpolate`https://${this.tailscaleHostname}:8007` }]),
         title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
         tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"]),
         sections: {

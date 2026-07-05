@@ -334,7 +334,7 @@ prometheus.remote_write "thanos" {
       const pveRedirectUri = interpolate`https://${this.tailscaleHostname}:8006/`;
       // PVE sends whatever URL the user accessed it from as redirect_uri (no override possible).
       // Include both the Tailscale direct URL and the external Traefik-proxied URL.
-      const pveExternalUri = `https://pve.${clusterDefinition.rootDomain}`;
+      const pveExternalUri = `https://${this.hostname}:8006/`;
       const oidcApp = this.applicationManager.createApplication(
         output({
           metadata: {
@@ -360,8 +360,14 @@ prometheus.remote_write "thanos" {
             },
             gatus: [
               {
-                name: interpolate`${this.title} Proxmox VE`,
+                name: interpolate`${this.title} Proxmox VE (Tailscale)`,
                 url: interpolate`https://${this.tailscaleHostname}:8006/`,
+                method: "GET",
+                conditions: ["[STATUS] == 200"],
+              },
+              {
+                name: interpolate`${this.title} Proxmox VE (External)`,
+                url: interpolate`https://${this.hostname}:8006/`,
                 method: "GET",
                 conditions: ["[STATUS] == 200"],
               },
