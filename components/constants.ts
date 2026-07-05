@@ -73,6 +73,7 @@ export const Tailscale = {
     nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
     proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
     proxmoxManagement: ["tcp:8006"] as TailscaleNetworkCapability[],
+    technitiumManagement: ["tcp:53443"] as TailscaleNetworkCapability[],
     proxmoxBackupServer: ["tcp:8007"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {
@@ -93,6 +94,7 @@ export const Tailscale = {
     friendsAndFamily: "group:fnf" as TailscaleGroups,
   } as const,
   tag: {
+    idp: "tag:idp" as TailscaleTags,
     dns: "tag:dns" as TailscaleTags,
     exitNode: "tag:exit-node" as TailscaleTags,
     mediaDevice: "tag:media-device" as TailscaleTags,

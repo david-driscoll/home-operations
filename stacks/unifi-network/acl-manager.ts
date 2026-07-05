@@ -130,7 +130,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
 
     // // ── Register Dockge services from all stacks ──────────────────────────
     for (const service of services) {
-      manager.setService(service as TailscaleService, [tag.dockge, tag.apps, tag.proxmox, tag.operator]);
+      manager.setService(service as TailscaleService, [tag.dockge, tag.dns, tag.idp, tag.apps, tag.proxmox, tag.operator]);
     }
 
     // ── Per-role access rules ─────────────────────────────────────────────
@@ -145,7 +145,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "default-apps-access",
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
-        dst: [tag.apps, tag.dockge],
+        dst: [tag.apps, tag.dockge, tag.dns, tag.idp],
         ip: ports.web,
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
@@ -164,8 +164,8 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       {
         src: [autogroups.admin],
-        dst: [tag.proxmox, tag.backups, tag.dockge],
-        ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.proxmoxManagement, ...ports.proxmoxBackupServer, ...ports.nfs],
+        dst: [tag.proxmox, tag.backups, tag.dockge, tag.dns],
+        ip: [...ports.ssh, ...ports.proxmox, ...ports.dockgeManagement, ...ports.technitiumManagement, ...ports.proxmoxManagement, ...ports.proxmoxBackupServer, ...ports.nfs],
       },
       { accept: testData.knownAdminUsers },
     );
@@ -184,7 +184,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "default-dns",
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
-        dst: ["host:primary-dns", "host:secondary-dns"],
+        dst: ["host:primary-dns", "host:secondary-dns", tag.dns],
         ip: ports.dns,
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
@@ -501,6 +501,14 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
   manager.setGrant(
     {
       src: [tag.proxmox],
+      dst: [tag.dns],
+      ip: ports.technitiumManagement,
+    },
+    { accept: [tag.proxmox], deny: testData.knownNormalUsers },
+  );
+  manager.setGrant(
+    {
+      src: [tag.proxmox],
       dst: [tag.backups],
       ip: [...ports.ssh, ...ports.proxmoxBackupServer, ...ports.nfs],
     },
@@ -539,6 +547,14 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
       src: [tag.dockge],
       dst: [tag.dockge],
       ip: [...ports.ssh, ...ports.dockgeManagement, ...ports.nfs],
+    },
+    { accept: [tag.dockge], deny: testData.knownNormalUsers },
+  );
+  manager.setGrant(
+    {
+      src: [tag.dockge],
+      dst: [tag.dns],
+      ip: ports.technitiumManagement,
     },
     { accept: [tag.dockge], deny: testData.knownNormalUsers },
   );
@@ -752,6 +768,14 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
       src: [tag.management],
       dst: [tag.proxmox],
       ip: [...ports.ssh, ...ports.proxmoxManagement, ...ports.nfs],
+    },
+    { accept: [tag.management], deny: testData.knownNormalUsers },
+  );
+  manager.setGrant(
+    {
+      src: [tag.management],
+      dst: [tag.dns],
+      ip: ports.technitiumManagement,
     },
     { accept: [tag.management], deny: testData.knownNormalUsers },
   );
