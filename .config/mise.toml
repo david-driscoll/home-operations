@@ -32,7 +32,7 @@ typos = "1.48.0"
 "npm:typescript" = "5.9.3"
 node = "24.18.0"
 pulumi = "3.250.0"
-"github:microsoft/apm" = { version = "v0.22.0", bin = "apm" }
+"github:microsoft/apm" = { version = "v0.24.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.7.1", bin = "skillfile" }
 "github:home-operations/flate" = "v0.4.10"
 "github:yvgude/lean-ctx" = { version = "v3.8.18", bin = "lean-ctx" }
