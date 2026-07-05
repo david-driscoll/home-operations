@@ -29,7 +29,7 @@ export declare class Outpost extends pulumi.CustomResource {
      *   - `ldap`
      *   - `radius`
      *   - `rac`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     readonly type: pulumi.Output<string | undefined>;
     /**
@@ -59,7 +59,7 @@ export interface OutpostState {
      *   - `ldap`
      *   - `radius`
      *   - `rac`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     type?: pulumi.Input<string | undefined>;
 }
@@ -81,7 +81,7 @@ export interface OutpostArgs {
      *   - `ldap`
      *   - `radius`
      *   - `rac`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     type?: pulumi.Input<string | undefined>;
 }

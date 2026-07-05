@@ -39,7 +39,7 @@ export class StageAuthenticatorSms extends pulumi.CustomResource {
      * Allowed values:
      *   - `basic`
      *   - `bearer`
-     *  Defaults to `basic`.
+     *      Defaults to `basic`.
      */
     declare public readonly authType: pulumi.Output<string | undefined>;
     declare public readonly configureFlow: pulumi.Output<string | undefined>;
@@ -54,7 +54,7 @@ export class StageAuthenticatorSms extends pulumi.CustomResource {
      * Allowed values:
      *   - `twilio`
      *   - `generic`
-     *  Defaults to `twilio`.
+     *      Defaults to `twilio`.
      */
     declare public readonly smsProvider: pulumi.Output<string | undefined>;
     declare public readonly stageAuthenticatorSmsId: pulumi.Output<string>;
@@ -130,7 +130,7 @@ export interface StageAuthenticatorSmsState {
      * Allowed values:
      *   - `basic`
      *   - `bearer`
-     *  Defaults to `basic`.
+     *      Defaults to `basic`.
      */
     authType?: pulumi.Input<string | undefined>;
     configureFlow?: pulumi.Input<string | undefined>;
@@ -145,7 +145,7 @@ export interface StageAuthenticatorSmsState {
      * Allowed values:
      *   - `twilio`
      *   - `generic`
-     *  Defaults to `twilio`.
+     *      Defaults to `twilio`.
      */
     smsProvider?: pulumi.Input<string | undefined>;
     stageAuthenticatorSmsId?: pulumi.Input<string | undefined>;
@@ -166,7 +166,7 @@ export interface StageAuthenticatorSmsArgs {
      * Allowed values:
      *   - `basic`
      *   - `bearer`
-     *  Defaults to `basic`.
+     *      Defaults to `basic`.
      */
     authType?: pulumi.Input<string | undefined>;
     configureFlow?: pulumi.Input<string | undefined>;
@@ -181,7 +181,7 @@ export interface StageAuthenticatorSmsArgs {
      * Allowed values:
      *   - `twilio`
      *   - `generic`
-     *  Defaults to `twilio`.
+     *      Defaults to `twilio`.
      */
     smsProvider?: pulumi.Input<string | undefined>;
     stageAuthenticatorSmsId?: pulumi.Input<string | undefined>;

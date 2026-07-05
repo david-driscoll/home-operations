@@ -111,7 +111,7 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly mac: pulumi.Output<string>;
     /**
-     * Management network ID.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     declare public readonly mgmtNetworkId: pulumi.Output<string>;
     /**
@@ -358,7 +358,7 @@ export interface DeviceState {
      */
     mac?: pulumi.Input<string | undefined>;
     /**
-     * Management network ID.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**
@@ -505,7 +505,7 @@ export interface DeviceArgs {
      */
     mac?: pulumi.Input<string | undefined>;
     /**
-     * Management network ID.
+     * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     mgmtNetworkId?: pulumi.Input<string | undefined>;
     /**

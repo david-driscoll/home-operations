@@ -79,6 +79,10 @@ export class Wan extends pulumi.CustomResource {
      */
     declare public readonly name: pulumi.Output<string>;
     /**
+     * The WAN network group this interface belongs to (`WAN`, `WAN2`, …). The primary uplink is `WAN`; a secondary/SFP uplink is `WAN2`. Computed from the controller when unset (so an imported `WAN2` is preserved), defaulting to `WAN` on create. Required to manage multi-WAN (WAN2+) setups, where a hard-coded `WAN` collides with the primary (`api.err.WanConfigurationForNetworkGroupAlreadyExists`).
+     */
+    declare public readonly networkgroup: pulumi.Output<string>;
+    /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
     declare public readonly providerCapabilities: pulumi.Output<outputs.WanProviderCapabilities>;
@@ -152,6 +156,7 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["loadBalance"] = state?.loadBalance;
             resourceInputs["macOverrideEnabled"] = state?.macOverrideEnabled;
             resourceInputs["name"] = state?.name;
+            resourceInputs["networkgroup"] = state?.networkgroup;
             resourceInputs["providerCapabilities"] = state?.providerCapabilities;
             resourceInputs["reportWanEvent"] = state?.reportWanEvent;
             resourceInputs["settingPreference"] = state?.settingPreference;
@@ -178,6 +183,7 @@ export class Wan extends pulumi.CustomResource {
             resourceInputs["loadBalance"] = args?.loadBalance;
             resourceInputs["macOverrideEnabled"] = args?.macOverrideEnabled;
             resourceInputs["name"] = args?.name;
+            resourceInputs["networkgroup"] = args?.networkgroup;
             resourceInputs["providerCapabilities"] = args?.providerCapabilities;
             resourceInputs["reportWanEvent"] = args?.reportWanEvent;
             resourceInputs["settingPreference"] = args?.settingPreference;
@@ -245,6 +251,10 @@ export interface WanState {
      * The name of the WAN network
      */
     name?: pulumi.Input<string | undefined>;
+    /**
+     * The WAN network group this interface belongs to (`WAN`, `WAN2`, …). The primary uplink is `WAN`; a secondary/SFP uplink is `WAN2`. Computed from the controller when unset (so an imported `WAN2` is preserved), defaulting to `WAN` on create. Required to manage multi-WAN (WAN2+) setups, where a hard-coded `WAN` collides with the primary (`api.err.WanConfigurationForNetworkGroupAlreadyExists`).
+     */
+    networkgroup?: pulumi.Input<string | undefined>;
     /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */
@@ -344,6 +354,10 @@ export interface WanArgs {
      * The name of the WAN network
      */
     name?: pulumi.Input<string | undefined>;
+    /**
+     * The WAN network group this interface belongs to (`WAN`, `WAN2`, …). The primary uplink is `WAN`; a secondary/SFP uplink is `WAN2`. Computed from the controller when unset (so an imported `WAN2` is preserved), defaulting to `WAN` on create. Required to manage multi-WAN (WAN2+) setups, where a hard-coded `WAN` collides with the primary (`api.err.WanConfigurationForNetworkGroupAlreadyExists`).
+     */
+    networkgroup?: pulumi.Input<string | undefined>;
     /**
      * WAN provider capabilities (line rate). Detected/populated by the controller; preserved when not set in config.
      */

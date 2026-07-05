@@ -517,6 +517,10 @@ export interface FirewallPolicyDestination {
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     */
+    ipGroupId?: pulumi.Input<string | undefined>;
+    /**
      * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
      */
     ips?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -559,6 +563,10 @@ export interface FirewallPolicySource {
      * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
      */
     clientMacs?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     */
+    ipGroupId?: pulumi.Input<string | undefined>;
     /**
      * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
      */

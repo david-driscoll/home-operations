@@ -39,6 +39,10 @@ export declare class ApplicationKey extends pulumi.CustomResource {
      */
     readonly capabilities: pulumi.Output<string[]>;
     /**
+     * When present, says when this key will expire, in milliseconds since 1970.
+     */
+    readonly expirationTimestamp: pulumi.Output<number>;
+    /**
      * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     readonly keyName: pulumi.Output<string>;
@@ -50,6 +54,10 @@ export declare class ApplicationKey extends pulumi.CustomResource {
      * List of application key options.
      */
     readonly options: pulumi.Output<string[]>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    readonly validDurationInSeconds: pulumi.Output<number | undefined>;
     /**
      * Create a ApplicationKey resource with the given unique name, arguments, and options.
      *
@@ -87,6 +95,10 @@ export interface ApplicationKeyState {
      */
     capabilities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * When present, says when this key will expire, in milliseconds since 1970.
+     */
+    expirationTimestamp?: pulumi.Input<number | undefined>;
+    /**
      * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     keyName?: pulumi.Input<string | undefined>;
@@ -98,6 +110,10 @@ export interface ApplicationKeyState {
      * List of application key options.
      */
     options?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    validDurationInSeconds?: pulumi.Input<number | undefined>;
 }
 /**
  * The set of arguments for constructing a ApplicationKey resource.
@@ -126,5 +142,9 @@ export interface ApplicationKeyArgs {
      * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
     namePrefix?: pulumi.Input<string | undefined>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    validDurationInSeconds?: pulumi.Input<number | undefined>;
 }
 //# sourceMappingURL=applicationKey.d.ts.map

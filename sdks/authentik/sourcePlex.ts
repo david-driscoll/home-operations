@@ -49,7 +49,7 @@ export class SourcePlex extends pulumi.CustomResource {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     declare public readonly groupMatchingMode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -58,7 +58,7 @@ export class SourcePlex extends pulumi.CustomResource {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     /**
@@ -74,7 +74,7 @@ export class SourcePlex extends pulumi.CustomResource {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     declare public readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -171,7 +171,7 @@ export interface SourcePlexState {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -180,7 +180,7 @@ export interface SourcePlexState {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
@@ -196,7 +196,7 @@ export interface SourcePlexState {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -230,7 +230,7 @@ export interface SourcePlexArgs {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -239,7 +239,7 @@ export interface SourcePlexArgs {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
@@ -255,7 +255,7 @@ export interface SourcePlexArgs {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

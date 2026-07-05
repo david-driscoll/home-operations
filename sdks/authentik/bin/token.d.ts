@@ -32,7 +32,7 @@ export declare class Token extends pulumi.CustomResource {
      *   - `api`
      *   - `recovery`
      *   - `app_password`
-     *  Defaults to `api`.
+     *      Defaults to `api`.
      */
     readonly intent: pulumi.Output<string | undefined>;
     /**
@@ -75,7 +75,7 @@ export interface TokenState {
      *   - `api`
      *   - `recovery`
      *   - `app_password`
-     *  Defaults to `api`.
+     *      Defaults to `api`.
      */
     intent?: pulumi.Input<string | undefined>;
     /**
@@ -106,7 +106,7 @@ export interface TokenArgs {
      *   - `api`
      *   - `recovery`
      *   - `app_password`
-     *  Defaults to `api`.
+     *      Defaults to `api`.
      */
     intent?: pulumi.Input<string | undefined>;
     /**

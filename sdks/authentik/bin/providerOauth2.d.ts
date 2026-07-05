@@ -37,7 +37,7 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
      * Allowed values:
      *   - `confidential`
      *   - `public`
-     *  Defaults to `confidential`.
+     *      Defaults to `confidential`.
      */
     readonly clientType: pulumi.Output<string | undefined>;
     readonly encryptionKey: pulumi.Output<string | undefined>;
@@ -54,7 +54,7 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
      * Allowed values:
      *   - `global`
      *   - `per_provider`
-     *  Defaults to `per_provider`.
+     *      Defaults to `per_provider`.
      */
     readonly issuerMode: pulumi.Output<string | undefined>;
     /**
@@ -73,7 +73,7 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
      * Allowed values:
      *   - `backchannel`
      *   - `frontchannel`
-     *  Defaults to `backchannel`.
+     *      Defaults to `backchannel`.
      */
     readonly logoutMethod: pulumi.Output<string | undefined>;
     readonly logoutUri: pulumi.Output<string | undefined>;
@@ -97,7 +97,7 @@ export declare class ProviderOauth2 extends pulumi.CustomResource {
      *   - `user_username`
      *   - `user_email`
      *   - `user_upn`
-     *  Defaults to `hashed_user_id`.
+     *      Defaults to `hashed_user_id`.
      */
     readonly subMode: pulumi.Output<string | undefined>;
     /**
@@ -135,7 +135,7 @@ export interface ProviderOauth2State {
      * Allowed values:
      *   - `confidential`
      *   - `public`
-     *  Defaults to `confidential`.
+     *      Defaults to `confidential`.
      */
     clientType?: pulumi.Input<string | undefined>;
     encryptionKey?: pulumi.Input<string | undefined>;
@@ -152,7 +152,7 @@ export interface ProviderOauth2State {
      * Allowed values:
      *   - `global`
      *   - `per_provider`
-     *  Defaults to `per_provider`.
+     *      Defaults to `per_provider`.
      */
     issuerMode?: pulumi.Input<string | undefined>;
     /**
@@ -171,7 +171,7 @@ export interface ProviderOauth2State {
      * Allowed values:
      *   - `backchannel`
      *   - `frontchannel`
-     *  Defaults to `backchannel`.
+     *      Defaults to `backchannel`.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     logoutUri?: pulumi.Input<string | undefined>;
@@ -195,7 +195,7 @@ export interface ProviderOauth2State {
      *   - `user_username`
      *   - `user_email`
      *   - `user_upn`
-     *  Defaults to `hashed_user_id`.
+     *      Defaults to `hashed_user_id`.
      */
     subMode?: pulumi.Input<string | undefined>;
 }
@@ -225,7 +225,7 @@ export interface ProviderOauth2Args {
      * Allowed values:
      *   - `confidential`
      *   - `public`
-     *  Defaults to `confidential`.
+     *      Defaults to `confidential`.
      */
     clientType?: pulumi.Input<string | undefined>;
     encryptionKey?: pulumi.Input<string | undefined>;
@@ -242,7 +242,7 @@ export interface ProviderOauth2Args {
      * Allowed values:
      *   - `global`
      *   - `per_provider`
-     *  Defaults to `per_provider`.
+     *      Defaults to `per_provider`.
      */
     issuerMode?: pulumi.Input<string | undefined>;
     /**
@@ -261,7 +261,7 @@ export interface ProviderOauth2Args {
      * Allowed values:
      *   - `backchannel`
      *   - `frontchannel`
-     *  Defaults to `backchannel`.
+     *      Defaults to `backchannel`.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     logoutUri?: pulumi.Input<string | undefined>;
@@ -285,7 +285,7 @@ export interface ProviderOauth2Args {
      *   - `user_username`
      *   - `user_email`
      *   - `user_upn`
-     *  Defaults to `hashed_user_id`.
+     *      Defaults to `hashed_user_id`.
      */
     subMode?: pulumi.Input<string | undefined>;
 }

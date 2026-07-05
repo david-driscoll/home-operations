@@ -36,7 +36,7 @@ export class ProviderScim extends pulumi.CustomResource {
      * Allowed values:
      *   - `token`
      *   - `oauth`
-     *  Defaults to `token`.
+     *      Defaults to `token`.
      */
     declare public readonly authMode: pulumi.Output<string | undefined>;
     /**
@@ -55,7 +55,7 @@ export class ProviderScim extends pulumi.CustomResource {
      *   - `sfdc`
      *   - `webex`
      *   - `vcenter`
-     *  Defaults to `default`.
+     *      Defaults to `default`.
      */
     declare public readonly compatibilityMode: pulumi.Output<string | undefined>;
     /**
@@ -149,7 +149,7 @@ export interface ProviderScimState {
      * Allowed values:
      *   - `token`
      *   - `oauth`
-     *  Defaults to `token`.
+     *      Defaults to `token`.
      */
     authMode?: pulumi.Input<string | undefined>;
     /**
@@ -168,7 +168,7 @@ export interface ProviderScimState {
      *   - `sfdc`
      *   - `webex`
      *   - `vcenter`
-     *  Defaults to `default`.
+     *      Defaults to `default`.
      */
     compatibilityMode?: pulumi.Input<string | undefined>;
     /**
@@ -205,7 +205,7 @@ export interface ProviderScimArgs {
      * Allowed values:
      *   - `token`
      *   - `oauth`
-     *  Defaults to `token`.
+     *      Defaults to `token`.
      */
     authMode?: pulumi.Input<string | undefined>;
     /**
@@ -224,7 +224,7 @@ export interface ProviderScimArgs {
      *   - `sfdc`
      *   - `webex`
      *   - `vcenter`
-     *  Defaults to `default`.
+     *      Defaults to `default`.
      */
     compatibilityMode?: pulumi.Input<string | undefined>;
     /**

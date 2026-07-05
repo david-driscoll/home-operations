@@ -53,7 +53,7 @@ export declare class StageAuthenticatorValidate extends pulumi.CustomResource {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     readonly webauthnUserVerification: pulumi.Output<string | undefined>;
     /**
@@ -107,7 +107,7 @@ export interface StageAuthenticatorValidateState {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     webauthnUserVerification?: pulumi.Input<string | undefined>;
 }
@@ -153,7 +153,7 @@ export interface StageAuthenticatorValidateArgs {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     webauthnUserVerification?: pulumi.Input<string | undefined>;
 }

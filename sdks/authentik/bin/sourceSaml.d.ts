@@ -25,7 +25,7 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `REDIRECT`
      *   - `POST`
      *   - `POST_AUTO`
-     *  Defaults to `REDIRECT`.
+     *      Defaults to `REDIRECT`.
      */
     readonly bindingType: pulumi.Output<string | undefined>;
     /**
@@ -34,7 +34,7 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     readonly digestAlgorithm: pulumi.Output<string | undefined>;
     /**
@@ -52,7 +52,7 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     readonly groupMatchingMode: pulumi.Output<string | undefined>;
     readonly issuer: pulumi.Output<string | undefined>;
@@ -69,14 +69,14 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
-     *  Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
+     *      Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
      */
     readonly nameIdPolicy: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     readonly policyEngineMode: pulumi.Output<string | undefined>;
     readonly preAuthenticationFlow: pulumi.Output<string>;
@@ -97,7 +97,7 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     readonly signatureAlgorithm: pulumi.Output<string | undefined>;
     /**
@@ -124,7 +124,7 @@ export declare class SourceSaml extends pulumi.CustomResource {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -159,7 +159,7 @@ export interface SourceSamlState {
      *   - `REDIRECT`
      *   - `POST`
      *   - `POST_AUTO`
-     *  Defaults to `REDIRECT`.
+     *      Defaults to `REDIRECT`.
      */
     bindingType?: pulumi.Input<string | undefined>;
     /**
@@ -168,7 +168,7 @@ export interface SourceSamlState {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
@@ -186,7 +186,7 @@ export interface SourceSamlState {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     issuer?: pulumi.Input<string | undefined>;
@@ -203,14 +203,14 @@ export interface SourceSamlState {
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
-     *  Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
+     *      Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
      */
     nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow?: pulumi.Input<string | undefined>;
@@ -231,7 +231,7 @@ export interface SourceSamlState {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
@@ -258,7 +258,7 @@ export interface SourceSamlState {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -285,7 +285,7 @@ export interface SourceSamlArgs {
      *   - `REDIRECT`
      *   - `POST`
      *   - `POST_AUTO`
-     *  Defaults to `REDIRECT`.
+     *      Defaults to `REDIRECT`.
      */
     bindingType?: pulumi.Input<string | undefined>;
     /**
@@ -294,7 +294,7 @@ export interface SourceSamlArgs {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     /**
@@ -312,7 +312,7 @@ export interface SourceSamlArgs {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     issuer?: pulumi.Input<string | undefined>;
@@ -325,14 +325,14 @@ export interface SourceSamlArgs {
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName`
      *   - `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`
      *   - `urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified`
-     *  Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
+     *      Defaults to `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`.
      */
     nameIdPolicy?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
@@ -353,7 +353,7 @@ export interface SourceSamlArgs {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     /**
@@ -380,7 +380,7 @@ export interface SourceSamlArgs {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

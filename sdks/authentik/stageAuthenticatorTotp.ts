@@ -37,7 +37,7 @@ export class StageAuthenticatorTotp extends pulumi.CustomResource {
      * Allowed values:
      *   - `6`
      *   - `8`
-     *  Defaults to `6`.
+     *      Defaults to `6`.
      */
     declare public readonly digits: pulumi.Output<string | undefined>;
     /**
@@ -87,7 +87,7 @@ export interface StageAuthenticatorTotpState {
      * Allowed values:
      *   - `6`
      *   - `8`
-     *  Defaults to `6`.
+     *      Defaults to `6`.
      */
     digits?: pulumi.Input<string | undefined>;
     /**
@@ -107,7 +107,7 @@ export interface StageAuthenticatorTotpArgs {
      * Allowed values:
      *   - `6`
      *   - `8`
-     *  Defaults to `6`.
+     *      Defaults to `6`.
      */
     digits?: pulumi.Input<string | undefined>;
     /**

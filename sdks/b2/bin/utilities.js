@@ -117,8 +117,8 @@ async function getPackage() {
         baseProviderVersion: "0.14.0",
         baseProviderDownloadUrl: "",
         packageName: "b2",
-        packageVersion: "0.12.1",
-        base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2JhY2tibGF6ZS9iMiIsInZlcnNpb24iOiIwLjEyLjEifX0=",
+        packageVersion: "0.13.0",
+        base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2JhY2tibGF6ZS9iMiIsInZlcnNpb24iOiIwLjEzLjAifX0=",
     });
 }
 exports.getPackage = getPackage;

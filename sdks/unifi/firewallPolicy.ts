@@ -39,13 +39,13 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public readonly action: pulumi.Output<string>;
     /**
-     * Connection-state matching mode (`ALL`, `RESPOND_ONLY`, or `CUSTOM`). Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
      */
-    declare public /*out*/ readonly connectionStateType: pulumi.Output<string>;
+    declare public readonly connectionStateType: pulumi.Output<string>;
     /**
-     * Connection states matched when `connection_state_type` is `CUSTOM` (e.g. `NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Managed by the UniFi controller; the provider round-trips it so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
      */
-    declare public /*out*/ readonly connectionStates: pulumi.Output<string[]>;
+    declare public readonly connectionStates: pulumi.Output<string[]>;
     /**
      * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Defaults to `false`.
      */
@@ -71,9 +71,9 @@ export class FirewallPolicy extends pulumi.CustomResource {
      */
     declare public /*out*/ readonly icmpV6Typename: pulumi.Output<string>;
     /**
-     * The ordering index of the policy. UniFi auto-assigns this if not set.
+     * The ordering index of the policy within its zone-pair, assigned by the controller. **Read-only:** UniFi does not accept a client-supplied index on create or update (the policy is always appended to the end of its source/destination zone-pair), and the supported API exposes no reorder operation, so policy ordering cannot be managed through this provider. Reorder policies in the UniFi UI if needed.
      */
-    declare public readonly index: pulumi.Output<number>;
+    declare public /*out*/ readonly index: pulumi.Output<number>;
     /**
      * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4`.
      */
@@ -142,11 +142,12 @@ export class FirewallPolicy extends pulumi.CustomResource {
                 throw new Error("Missing required property 'source'");
             }
             resourceInputs["action"] = args?.action;
+            resourceInputs["connectionStateType"] = args?.connectionStateType;
+            resourceInputs["connectionStates"] = args?.connectionStates;
             resourceInputs["createAllowRespond"] = args?.createAllowRespond;
             resourceInputs["description"] = args?.description;
             resourceInputs["destination"] = args?.destination;
             resourceInputs["enabled"] = args?.enabled;
-            resourceInputs["index"] = args?.index;
             resourceInputs["ipVersion"] = args?.ipVersion;
             resourceInputs["logging"] = args?.logging;
             resourceInputs["name"] = args?.name;
@@ -154,10 +155,9 @@ export class FirewallPolicy extends pulumi.CustomResource {
             resourceInputs["site"] = args?.site;
             resourceInputs["source"] = args?.source;
             resourceInputs["timeouts"] = args?.timeouts;
-            resourceInputs["connectionStateType"] = undefined /*out*/;
-            resourceInputs["connectionStates"] = undefined /*out*/;
             resourceInputs["icmpTypename"] = undefined /*out*/;
             resourceInputs["icmpV6Typename"] = undefined /*out*/;
+            resourceInputs["index"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
         super(FirewallPolicy.__pulumiType, name, resourceInputs, opts, false /*dependency*/, utilities.getPackage());
@@ -173,11 +173,11 @@ export interface FirewallPolicyState {
      */
     action?: pulumi.Input<string | undefined>;
     /**
-     * Connection-state matching mode (`ALL`, `RESPOND_ONLY`, or `CUSTOM`). Managed by the UniFi controller; the provider round-trips it so updates are accepted.
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
      */
     connectionStateType?: pulumi.Input<string | undefined>;
     /**
-     * Connection states matched when `connection_state_type` is `CUSTOM` (e.g. `NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Managed by the UniFi controller; the provider round-trips it so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
      */
     connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -205,7 +205,7 @@ export interface FirewallPolicyState {
      */
     icmpV6Typename?: pulumi.Input<string | undefined>;
     /**
-     * The ordering index of the policy. UniFi auto-assigns this if not set.
+     * The ordering index of the policy within its zone-pair, assigned by the controller. **Read-only:** UniFi does not accept a client-supplied index on create or update (the policy is always appended to the end of its source/destination zone-pair), and the supported API exposes no reorder operation, so policy ordering cannot be managed through this provider. Reorder policies in the UniFi UI if needed.
      */
     index?: pulumi.Input<number | undefined>;
     /**
@@ -244,6 +244,14 @@ export interface FirewallPolicyArgs {
      */
     action: pulumi.Input<string>;
     /**
+     * Connection-state matching mode: `ALL` (any state), `RESPOND_ONLY` (established/related returns), or `CUSTOM` (match the states listed in `connection_states`). Optional: if omitted the controller assigns it (defaults to `ALL`) and the provider round-trips the value so updates are accepted.
+     */
+    connectionStateType?: pulumi.Input<string | undefined>;
+    /**
+     * Connection states matched when `connection_state_type` is `CUSTOM` (`NEW`, `ESTABLISHED`, `RELATED`, `INVALID`). Optional: leave unset for `ALL`/`RESPOND_ONLY` and the controller manages it; the provider round-trips the value so a `CUSTOM` policy's states are not dropped on update (which the firmware rejects with HTTP 400).
+     */
+    connectionStates?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
      * When `true`, UniFi automatically creates a matching rule to allow established/related return traffic. Recommended for `ALLOW` policies. Defaults to `false`.
      */
     createAllowRespond?: pulumi.Input<boolean | undefined>;
@@ -259,10 +267,6 @@ export interface FirewallPolicyArgs {
      * Whether the policy is enabled. Defaults to `true`.
      */
     enabled?: pulumi.Input<boolean | undefined>;
-    /**
-     * The ordering index of the policy. UniFi auto-assigns this if not set.
-     */
-    index?: pulumi.Input<number | undefined>;
     /**
      * The IP version to match: `BOTH`, `IPV4`, or `IPV6`. Defaults to `IPV4`.
      */

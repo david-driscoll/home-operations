@@ -77,7 +77,7 @@ export declare class SourceLdap extends pulumi.CustomResource {
      *   - `none`
      *   - `immediate`
      *   - `deferred_end`
-     *  Defaults to `deferred_end`.
+     *      Defaults to `deferred_end`.
      */
     readonly syncOutgoingTriggerMode: pulumi.Output<string | undefined>;
     readonly syncParentGroup: pulumi.Output<string | undefined>;
@@ -180,7 +180,7 @@ export interface SourceLdapState {
      *   - `none`
      *   - `immediate`
      *   - `deferred_end`
-     *  Defaults to `deferred_end`.
+     *      Defaults to `deferred_end`.
      */
     syncOutgoingTriggerMode?: pulumi.Input<string | undefined>;
     syncParentGroup?: pulumi.Input<string | undefined>;
@@ -275,7 +275,7 @@ export interface SourceLdapArgs {
      *   - `none`
      *   - `immediate`
      *   - `deferred_end`
-     *  Defaults to `deferred_end`.
+     *      Defaults to `deferred_end`.
      */
     syncOutgoingTriggerMode?: pulumi.Input<string | undefined>;
     syncParentGroup?: pulumi.Input<string | undefined>;

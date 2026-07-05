@@ -134,6 +134,10 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly networkIsolation: pulumi.Output<boolean>;
     /**
+     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     */
+    readonly purpose: pulumi.Output<string>;
+    /**
      * Setting preference. Must be one of `auto` or `manual`.
      */
     readonly settingPreference: pulumi.Output<string>;
@@ -142,7 +146,7 @@ export declare class Network extends pulumi.CustomResource {
      */
     readonly site: pulumi.Output<string>;
     /**
-     * The IPv4 subnet of the network in CIDR notation. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
      */
     readonly subnet: pulumi.Output<string | undefined>;
     /**
@@ -284,6 +288,10 @@ export interface NetworkState {
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
+     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     */
+    purpose?: pulumi.Input<string | undefined>;
+    /**
      * Setting preference. Must be one of `auto` or `manual`.
      */
     settingPreference?: pulumi.Input<string | undefined>;
@@ -292,7 +300,7 @@ export interface NetworkState {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The IPv4 subnet of the network in CIDR notation. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
      */
     subnet?: pulumi.Input<string | undefined>;
     /**
@@ -426,6 +434,10 @@ export interface NetworkArgs {
      */
     networkIsolation?: pulumi.Input<boolean | undefined>;
     /**
+     * The network purpose: `corporate` (default), `guest`, or `vlan-only`. Leave unset to let the controller manage it (a `third_party_gateway` network is always `vlan-only`). **Note:** on Zone-Based-Firewall controllers the purpose is coupled to the firewall zone — a `guest` network only keeps `purpose = "guest"` while it belongs to the guest/Hotspot zone (assign it there via `unifi.FirewallZone`), otherwise the controller rewrites it back to `corporate` and the apply fails with an inconsistent-result error.
+     */
+    purpose?: pulumi.Input<string | undefined>;
+    /**
      * Setting preference. Must be one of `auto` or `manual`.
      */
     settingPreference?: pulumi.Input<string | undefined>;
@@ -434,7 +446,7 @@ export interface NetworkArgs {
      */
     site?: pulumi.Input<string | undefined>;
     /**
-     * The IPv4 subnet of the network in CIDR notation. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
+     * The network's gateway IP and prefix in CIDR notation. The host portion is the gateway address the controller assigns — it need not be the first usable address: `10.0.10.1/24` uses gateway `10.0.10.1`, while `10.0.10.254/24` uses gateway `10.0.10.254` on the same subnet. Optional: it is not required for `vlan_only` networks (`third_party_gateway = true`), where the UniFi controller does not manage the subnet.
      */
     subnet?: pulumi.Input<string | undefined>;
     /**

@@ -56,7 +56,7 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     declare public readonly residentKeyRequirement: pulumi.Output<string | undefined>;
     declare public readonly stageAuthenticatorWebauthnId: pulumi.Output<string>;
@@ -65,7 +65,7 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     declare public readonly userVerification: pulumi.Output<string | undefined>;
 
@@ -140,7 +140,7 @@ export interface StageAuthenticatorWebauthnState {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     residentKeyRequirement?: pulumi.Input<string | undefined>;
     stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
@@ -149,7 +149,7 @@ export interface StageAuthenticatorWebauthnState {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     userVerification?: pulumi.Input<string | undefined>;
 }
@@ -182,7 +182,7 @@ export interface StageAuthenticatorWebauthnArgs {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     residentKeyRequirement?: pulumi.Input<string | undefined>;
     stageAuthenticatorWebauthnId?: pulumi.Input<string | undefined>;
@@ -191,7 +191,7 @@ export interface StageAuthenticatorWebauthnArgs {
      *   - `required`
      *   - `preferred`
      *   - `discouraged`
-     *  Defaults to `preferred`.
+     *      Defaults to `preferred`.
      */
     userVerification?: pulumi.Input<string | undefined>;
 }

@@ -42,7 +42,7 @@ export class FlowStageBinding extends pulumi.CustomResource {
      *   - `retry`
      *   - `restart`
      *   - `restart_with_context`
-     *  Defaults to `retry`.
+     *      Defaults to `retry`.
      */
     declare public readonly invalidResponseAction: pulumi.Output<string | undefined>;
     declare public readonly order: pulumi.Output<number>;
@@ -50,7 +50,7 @@ export class FlowStageBinding extends pulumi.CustomResource {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     /**
@@ -120,7 +120,7 @@ export interface FlowStageBindingState {
      *   - `retry`
      *   - `restart`
      *   - `restart_with_context`
-     *  Defaults to `retry`.
+     *      Defaults to `retry`.
      */
     invalidResponseAction?: pulumi.Input<string | undefined>;
     order?: pulumi.Input<number | undefined>;
@@ -128,7 +128,7 @@ export interface FlowStageBindingState {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
@@ -153,7 +153,7 @@ export interface FlowStageBindingArgs {
      *   - `retry`
      *   - `restart`
      *   - `restart_with_context`
-     *  Defaults to `retry`.
+     *      Defaults to `retry`.
      */
     invalidResponseAction?: pulumi.Input<string | undefined>;
     order: pulumi.Input<number>;
@@ -161,7 +161,7 @@ export interface FlowStageBindingArgs {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**

@@ -117,8 +117,8 @@ async function getPackage() {
         baseProviderVersion: "0.14.0",
         baseProviderDownloadUrl: "",
         packageName: "unifi",
-        packageVersion: "0.52.2",
-        base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjUyLjIifX0=",
+        packageVersion: "0.54.0",
+        base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3ViaXF1aXRpLWNvbW11bml0eS91bmlmaSIsInZlcnNpb24iOiIwLjU0LjAifX0=",
     });
 }
 exports.getPackage = getPackage;

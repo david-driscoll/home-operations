@@ -45,7 +45,7 @@ export class SourceTelegram extends pulumi.CustomResource {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     declare public readonly preAuthenticationFlow: pulumi.Output<string>;
@@ -64,7 +64,7 @@ export class SourceTelegram extends pulumi.CustomResource {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     declare public readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -158,7 +158,7 @@ export interface SourceTelegramState {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow?: pulumi.Input<string | undefined>;
@@ -177,7 +177,7 @@ export interface SourceTelegramState {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -207,7 +207,7 @@ export interface SourceTelegramArgs {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     preAuthenticationFlow: pulumi.Input<string>;
@@ -226,7 +226,7 @@ export interface SourceTelegramArgs {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

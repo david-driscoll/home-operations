@@ -21,7 +21,7 @@ export declare class StageUserLogin extends pulumi.CustomResource {
      *   - `bind_continent`
      *   - `bind_continent_country`
      *   - `bind_continent_country_city`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     readonly geoipBinding: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -31,7 +31,7 @@ export declare class StageUserLogin extends pulumi.CustomResource {
      *   - `bind_asn`
      *   - `bind_asn_network`
      *   - `bind_asn_network_ip`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     readonly networkBinding: pulumi.Output<string | undefined>;
     /**
@@ -70,7 +70,7 @@ export interface StageUserLoginState {
      *   - `bind_continent`
      *   - `bind_continent_country`
      *   - `bind_continent_country_city`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     geoipBinding?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -80,7 +80,7 @@ export interface StageUserLoginState {
      *   - `bind_asn`
      *   - `bind_asn_network`
      *   - `bind_asn_network_ip`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     networkBinding?: pulumi.Input<string | undefined>;
     /**
@@ -111,7 +111,7 @@ export interface StageUserLoginArgs {
      *   - `bind_continent`
      *   - `bind_continent_country`
      *   - `bind_continent_country_city`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     geoipBinding?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -121,7 +121,7 @@ export interface StageUserLoginArgs {
      *   - `bind_asn`
      *   - `bind_asn_network`
      *   - `bind_asn_network_ip`
-     *  Defaults to `no_binding`.
+     *      Defaults to `no_binding`.
      */
     networkBinding?: pulumi.Input<string | undefined>;
     /**

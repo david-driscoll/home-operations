@@ -42,7 +42,7 @@ export class SourceOauth extends pulumi.CustomResource {
      * Allowed values:
      *   - `basic_auth`
      *   - `post_body`
-     *  Defaults to `basic_auth`.
+     *      Defaults to `basic_auth`.
      */
     declare public readonly authorizationCodeAuthMethod: pulumi.Output<string | undefined>;
     /**
@@ -65,7 +65,7 @@ export class SourceOauth extends pulumi.CustomResource {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     declare public readonly groupMatchingMode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -86,14 +86,14 @@ export class SourceOauth extends pulumi.CustomResource {
      *   - `none`
      *   - `plain`
      *   - `S256`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     declare public readonly pkce: pulumi.Output<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     /**
@@ -140,7 +140,7 @@ export class SourceOauth extends pulumi.CustomResource {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     declare public readonly userMatchingMode: pulumi.Output<string | undefined>;
     /**
@@ -257,7 +257,7 @@ export interface SourceOauthState {
      * Allowed values:
      *   - `basic_auth`
      *   - `post_body`
-     *  Defaults to `basic_auth`.
+     *      Defaults to `basic_auth`.
      */
     authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
@@ -280,7 +280,7 @@ export interface SourceOauthState {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -301,14 +301,14 @@ export interface SourceOauthState {
      *   - `none`
      *   - `plain`
      *   - `S256`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
@@ -355,7 +355,7 @@ export interface SourceOauthState {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**
@@ -382,7 +382,7 @@ export interface SourceOauthArgs {
      * Allowed values:
      *   - `basic_auth`
      *   - `post_body`
-     *  Defaults to `basic_auth`.
+     *      Defaults to `basic_auth`.
      */
     authorizationCodeAuthMethod?: pulumi.Input<string | undefined>;
     /**
@@ -401,7 +401,7 @@ export interface SourceOauthArgs {
      *   - `identifier`
      *   - `name_link`
      *   - `name_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     groupMatchingMode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -422,14 +422,14 @@ export interface SourceOauthArgs {
      *   - `none`
      *   - `plain`
      *   - `S256`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     pkce?: pulumi.Input<string | undefined>;
     /**
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     /**
@@ -476,7 +476,7 @@ export interface SourceOauthArgs {
      *   - `email_deny`
      *   - `username_link`
      *   - `username_deny`
-     *  Defaults to `identifier`.
+     *      Defaults to `identifier`.
      */
     userMatchingMode?: pulumi.Input<string | undefined>;
     /**

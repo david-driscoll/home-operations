@@ -6,7 +6,6 @@ export declare function getApplicationKey(args: GetApplicationKeyArgs, opts?: pu
 export interface GetApplicationKeyArgs {
     id?: string;
     keyName: string;
-    namePrefix?: string;
 }
 /**
  * A collection of values returned by getApplicationKey.
@@ -19,6 +18,7 @@ export interface GetApplicationKeyResult {
     readonly bucketId: string;
     readonly bucketIds: string[];
     readonly capabilities: string[];
+    readonly expirationTimestamp: number;
     readonly id: string;
     readonly keyName: string;
     readonly namePrefix: string;
@@ -31,6 +31,5 @@ export declare function getApplicationKeyOutput(args: GetApplicationKeyOutputArg
 export interface GetApplicationKeyOutputArgs {
     id?: pulumi.Input<string | undefined>;
     keyName: pulumi.Input<string>;
-    namePrefix?: pulumi.Input<string | undefined>;
 }
 //# sourceMappingURL=getApplicationKey.d.ts.map

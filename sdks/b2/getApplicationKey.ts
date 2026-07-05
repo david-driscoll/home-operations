@@ -9,7 +9,6 @@ export function getApplicationKey(args: GetApplicationKeyArgs, opts?: pulumi.Inv
     return pulumi.runtime.invoke("b2:index/getApplicationKey:getApplicationKey", {
         "id": args.id,
         "keyName": args.keyName,
-        "namePrefix": args.namePrefix,
     }, opts, utilities.getPackage());
 }
 
@@ -19,7 +18,6 @@ export function getApplicationKey(args: GetApplicationKeyArgs, opts?: pulumi.Inv
 export interface GetApplicationKeyArgs {
     id?: string;
     keyName: string;
-    namePrefix?: string;
 }
 
 /**
@@ -33,6 +31,7 @@ export interface GetApplicationKeyResult {
     readonly bucketId: string;
     readonly bucketIds: string[];
     readonly capabilities: string[];
+    readonly expirationTimestamp: number;
     readonly id: string;
     readonly keyName: string;
     readonly namePrefix: string;
@@ -43,7 +42,6 @@ export function getApplicationKeyOutput(args: GetApplicationKeyOutputArgs, opts?
     return pulumi.runtime.invokeOutput("b2:index/getApplicationKey:getApplicationKey", {
         "id": args.id,
         "keyName": args.keyName,
-        "namePrefix": args.namePrefix,
     }, opts, utilities.getPackage());
 }
 
@@ -53,5 +51,4 @@ export function getApplicationKeyOutput(args: GetApplicationKeyOutputArgs, opts?
 export interface GetApplicationKeyOutputArgs {
     id?: pulumi.Input<string | undefined>;
     keyName: pulumi.Input<string>;
-    namePrefix?: pulumi.Input<string | undefined>;
 }

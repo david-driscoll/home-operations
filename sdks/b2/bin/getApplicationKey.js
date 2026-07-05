@@ -33,7 +33,6 @@ function getApplicationKey(args, opts) {
     return pulumi.runtime.invoke("b2:index/getApplicationKey:getApplicationKey", {
         "id": args.id,
         "keyName": args.keyName,
-        "namePrefix": args.namePrefix,
     }, opts, utilities.getPackage());
 }
 exports.getApplicationKey = getApplicationKey;
@@ -42,7 +41,6 @@ function getApplicationKeyOutput(args, opts) {
     return pulumi.runtime.invokeOutput("b2:index/getApplicationKey:getApplicationKey", {
         "id": args.id,
         "keyName": args.keyName,
-        "namePrefix": args.namePrefix,
     }, opts, utilities.getPackage());
 }
 exports.getApplicationKeyOutput = getApplicationKeyOutput;

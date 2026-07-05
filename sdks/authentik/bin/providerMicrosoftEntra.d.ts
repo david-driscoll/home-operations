@@ -27,7 +27,7 @@ export declare class ProviderMicrosoftEntra extends pulumi.CustomResource {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     readonly groupDeleteAction: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -47,7 +47,7 @@ export declare class ProviderMicrosoftEntra extends pulumi.CustomResource {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     readonly userDeleteAction: pulumi.Output<string | undefined>;
     /**
@@ -75,7 +75,7 @@ export interface ProviderMicrosoftEntraState {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     groupDeleteAction?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -95,7 +95,7 @@ export interface ProviderMicrosoftEntraState {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     userDeleteAction?: pulumi.Input<string | undefined>;
 }
@@ -115,7 +115,7 @@ export interface ProviderMicrosoftEntraArgs {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     groupDeleteAction?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -135,7 +135,7 @@ export interface ProviderMicrosoftEntraArgs {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     userDeleteAction?: pulumi.Input<string | undefined>;
 }

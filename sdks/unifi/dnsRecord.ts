@@ -51,7 +51,7 @@ export class DnsRecord extends pulumi.CustomResource {
      */
     declare public readonly priority: pulumi.Output<number | undefined>;
     /**
-     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `PTR` or `NS`.
      */
     declare public readonly recordType: pulumi.Output<string>;
     /**
@@ -140,7 +140,7 @@ export interface DnsRecordState {
      */
     priority?: pulumi.Input<number | undefined>;
     /**
-     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `PTR` or `NS`.
      */
     recordType?: pulumi.Input<string | undefined>;
     /**
@@ -183,7 +183,7 @@ export interface DnsRecordArgs {
      */
     priority?: pulumi.Input<number | undefined>;
     /**
-     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV` or `PTR`.
+     * The type of the DNS record. One of `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `SRV`, `PTR` or `NS`.
      */
     recordType: pulumi.Input<string>;
     /**

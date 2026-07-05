@@ -47,7 +47,7 @@ export class EventRule extends pulumi.CustomResource {
      *   - `notice`
      *   - `warning`
      *   - `alert`
-     *  Defaults to `warning`.
+     *      Defaults to `warning`.
      */
     declare public readonly severity: pulumi.Output<string | undefined>;
     declare public readonly transports: pulumi.Output<string[]>;
@@ -107,7 +107,7 @@ export interface EventRuleState {
      *   - `notice`
      *   - `warning`
      *   - `alert`
-     *  Defaults to `warning`.
+     *      Defaults to `warning`.
      */
     severity?: pulumi.Input<string | undefined>;
     transports?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -132,7 +132,7 @@ export interface EventRuleArgs {
      *   - `notice`
      *   - `warning`
      *   - `alert`
-     *  Defaults to `warning`.
+     *      Defaults to `warning`.
      */
     severity?: pulumi.Input<string | undefined>;
     transports: pulumi.Input<pulumi.Input<string>[]>;

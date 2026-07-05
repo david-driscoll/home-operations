@@ -64,9 +64,11 @@ class ApplicationKey extends pulumi.CustomResource {
             resourceInputs["bucketId"] = state?.bucketId;
             resourceInputs["bucketIds"] = state?.bucketIds;
             resourceInputs["capabilities"] = state?.capabilities;
+            resourceInputs["expirationTimestamp"] = state?.expirationTimestamp;
             resourceInputs["keyName"] = state?.keyName;
             resourceInputs["namePrefix"] = state?.namePrefix;
             resourceInputs["options"] = state?.options;
+            resourceInputs["validDurationInSeconds"] = state?.validDurationInSeconds;
         }
         else {
             const args = argsOrState;
@@ -82,8 +84,10 @@ class ApplicationKey extends pulumi.CustomResource {
             resourceInputs["capabilities"] = args?.capabilities;
             resourceInputs["keyName"] = args?.keyName;
             resourceInputs["namePrefix"] = args?.namePrefix;
+            resourceInputs["validDurationInSeconds"] = args?.validDurationInSeconds;
             resourceInputs["applicationKey"] = undefined /*out*/;
             resourceInputs["applicationKeyId"] = undefined /*out*/;
+            resourceInputs["expirationTimestamp"] = undefined /*out*/;
             resourceInputs["options"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);

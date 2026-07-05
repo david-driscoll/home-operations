@@ -27,7 +27,7 @@ export declare class StageUserWrite extends pulumi.CustomResource {
      *   - `never_create`
      *   - `create_when_required`
      *   - `always_create`
-     *  Defaults to `create_when_required`.
+     *      Defaults to `create_when_required`.
      */
     readonly userCreationMode: pulumi.Output<string | undefined>;
     /**
@@ -39,7 +39,7 @@ export declare class StageUserWrite extends pulumi.CustomResource {
      *   - `internal`
      *   - `external`
      *   - `service_account`
-     *  Defaults to `external`.
+     *      Defaults to `external`.
      */
     readonly userType: pulumi.Output<string | undefined>;
     /**
@@ -67,7 +67,7 @@ export interface StageUserWriteState {
      *   - `never_create`
      *   - `create_when_required`
      *   - `always_create`
-     *  Defaults to `create_when_required`.
+     *      Defaults to `create_when_required`.
      */
     userCreationMode?: pulumi.Input<string | undefined>;
     /**
@@ -79,7 +79,7 @@ export interface StageUserWriteState {
      *   - `internal`
      *   - `external`
      *   - `service_account`
-     *  Defaults to `external`.
+     *      Defaults to `external`.
      */
     userType?: pulumi.Input<string | undefined>;
 }
@@ -99,7 +99,7 @@ export interface StageUserWriteArgs {
      *   - `never_create`
      *   - `create_when_required`
      *   - `always_create`
-     *  Defaults to `create_when_required`.
+     *      Defaults to `create_when_required`.
      */
     userCreationMode?: pulumi.Input<string | undefined>;
     /**
@@ -111,7 +111,7 @@ export interface StageUserWriteArgs {
      *   - `internal`
      *   - `external`
      *   - `service_account`
-     *  Defaults to `external`.
+     *      Defaults to `external`.
      */
     userType?: pulumi.Input<string | undefined>;
 }

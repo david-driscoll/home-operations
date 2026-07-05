@@ -56,6 +56,10 @@ export class ApplicationKey extends pulumi.CustomResource {
      */
     declare public readonly capabilities: pulumi.Output<string[]>;
     /**
+     * When present, says when this key will expire, in milliseconds since 1970.
+     */
+    declare public /*out*/ readonly expirationTimestamp: pulumi.Output<number>;
+    /**
      * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     declare public readonly keyName: pulumi.Output<string>;
@@ -67,6 +71,10 @@ export class ApplicationKey extends pulumi.CustomResource {
      * List of application key options.
      */
     declare public /*out*/ readonly options: pulumi.Output<string[]>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    declare public readonly validDurationInSeconds: pulumi.Output<number | undefined>;
 
     /**
      * Create a ApplicationKey resource with the given unique name, arguments, and options.
@@ -87,9 +95,11 @@ export class ApplicationKey extends pulumi.CustomResource {
             resourceInputs["bucketId"] = state?.bucketId;
             resourceInputs["bucketIds"] = state?.bucketIds;
             resourceInputs["capabilities"] = state?.capabilities;
+            resourceInputs["expirationTimestamp"] = state?.expirationTimestamp;
             resourceInputs["keyName"] = state?.keyName;
             resourceInputs["namePrefix"] = state?.namePrefix;
             resourceInputs["options"] = state?.options;
+            resourceInputs["validDurationInSeconds"] = state?.validDurationInSeconds;
         } else {
             const args = argsOrState as ApplicationKeyArgs | undefined;
             if (args?.capabilities === undefined && !opts.urn) {
@@ -104,8 +114,10 @@ export class ApplicationKey extends pulumi.CustomResource {
             resourceInputs["capabilities"] = args?.capabilities;
             resourceInputs["keyName"] = args?.keyName;
             resourceInputs["namePrefix"] = args?.namePrefix;
+            resourceInputs["validDurationInSeconds"] = args?.validDurationInSeconds;
             resourceInputs["applicationKey"] = undefined /*out*/;
             resourceInputs["applicationKeyId"] = undefined /*out*/;
+            resourceInputs["expirationTimestamp"] = undefined /*out*/;
             resourceInputs["options"] = undefined /*out*/;
         }
         opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
@@ -143,6 +155,10 @@ export interface ApplicationKeyState {
      */
     capabilities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
+     * When present, says when this key will expire, in milliseconds since 1970.
+     */
+    expirationTimestamp?: pulumi.Input<number | undefined>;
+    /**
      * The name of the key. **Modifying this attribute will force creation of a new resource.**
      */
     keyName?: pulumi.Input<string | undefined>;
@@ -154,6 +170,10 @@ export interface ApplicationKeyState {
      * List of application key options.
      */
     options?: pulumi.Input<pulumi.Input<string>[] | undefined>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    validDurationInSeconds?: pulumi.Input<number | undefined>;
 }
 
 /**
@@ -183,4 +203,8 @@ export interface ApplicationKeyArgs {
      * When present, restricts access to files whose names start with the prefix. **Modifying this attribute will force creation of a new resource.**
      */
     namePrefix?: pulumi.Input<string | undefined>;
+    /**
+     * When provided, the key will expire after the given number of seconds, and will have expirationTimestamp set. Value must be a positive integer, and must be less than 1000 days (in seconds). **Modifying this attribute will force creation of a new resource.**
+     */
+    validDurationInSeconds?: pulumi.Input<number | undefined>;
 }

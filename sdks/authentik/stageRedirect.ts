@@ -40,7 +40,7 @@ export class StageRedirect extends pulumi.CustomResource {
      * Allowed values:
      *   - `static`
      *   - `flow`
-     *  Defaults to `flow`.
+     *      Defaults to `flow`.
      */
     declare public readonly mode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -93,7 +93,7 @@ export interface StageRedirectState {
      * Allowed values:
      *   - `static`
      *   - `flow`
-     *  Defaults to `flow`.
+     *      Defaults to `flow`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -114,7 +114,7 @@ export interface StageRedirectArgs {
      * Allowed values:
      *   - `static`
      *   - `flow`
-     *  Defaults to `flow`.
+     *      Defaults to `flow`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;

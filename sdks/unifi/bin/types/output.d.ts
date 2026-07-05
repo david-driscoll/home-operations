@@ -497,6 +497,10 @@ export interface FirewallPolicyDestination {
      */
     clientMacs: string[];
     /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     */
+    ipGroupId: string;
+    /**
      * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
      */
     ips: string[];
@@ -538,6 +542,10 @@ export interface FirewallPolicySource {
      * List of client MAC addresses to match. Used when `matching_target` is `CLIENT`.
      */
     clientMacs: string[];
+    /**
+     * ID of a `unifi.FirewallGroup` (address-group type) to match. Used when `matching_target` is `IP` with `matching_target_type = OBJECT`.
+     */
+    ipGroupId: string;
     /**
      * List of IP addresses or CIDR ranges to match. Used when `matching_target` is `IP`.
      */

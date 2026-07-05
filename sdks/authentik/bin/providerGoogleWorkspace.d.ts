@@ -31,7 +31,7 @@ export declare class ProviderGoogleWorkspace extends pulumi.CustomResource {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     readonly groupDeleteAction: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -51,7 +51,7 @@ export declare class ProviderGoogleWorkspace extends pulumi.CustomResource {
      *   - `do_nothing`
      *   - `delete`
      *   - `suspend`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     readonly userDeleteAction: pulumi.Output<string | undefined>;
     /**
@@ -83,7 +83,7 @@ export interface ProviderGoogleWorkspaceState {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     groupDeleteAction?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -103,7 +103,7 @@ export interface ProviderGoogleWorkspaceState {
      *   - `do_nothing`
      *   - `delete`
      *   - `suspend`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     userDeleteAction?: pulumi.Input<string | undefined>;
 }
@@ -127,7 +127,7 @@ export interface ProviderGoogleWorkspaceArgs {
      * Allowed values:
      *   - `delete`
      *   - `do_nothing`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     groupDeleteAction?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -147,7 +147,7 @@ export interface ProviderGoogleWorkspaceArgs {
      *   - `do_nothing`
      *   - `delete`
      *   - `suspend`
-     *  Defaults to `delete`.
+     *      Defaults to `delete`.
      */
     userDeleteAction?: pulumi.Input<string | undefined>;
 }

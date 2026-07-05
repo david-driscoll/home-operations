@@ -37,7 +37,7 @@ export class StageEndpoints extends pulumi.CustomResource {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     declare public readonly mode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -84,7 +84,7 @@ export interface StageEndpointsState {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -100,7 +100,7 @@ export interface StageEndpointsArgs {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;

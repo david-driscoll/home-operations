@@ -52,7 +52,7 @@ export class Application extends pulumi.CustomResource {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     declare public readonly protocolProvider: pulumi.Output<number | undefined>;
@@ -138,7 +138,7 @@ export interface ApplicationState {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     protocolProvider?: pulumi.Input<number | undefined>;
@@ -173,7 +173,7 @@ export interface ApplicationArgs {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     protocolProvider?: pulumi.Input<number | undefined>;

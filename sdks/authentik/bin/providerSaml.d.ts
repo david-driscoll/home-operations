@@ -41,7 +41,7 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     readonly digestAlgorithm: pulumi.Output<string | undefined>;
     readonly encryptionKp: pulumi.Output<string | undefined>;
@@ -55,7 +55,7 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      *   - `frontchannel_iframe`
      *   - `frontchannel_native`
      *   - `backchannel`
-     *  Defaults to `frontchannel_iframe`.
+     *      Defaults to `frontchannel_iframe`.
      */
     readonly logoutMethod: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -93,7 +93,7 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     readonly signatureAlgorithm: pulumi.Output<string | undefined>;
     readonly signingKp: pulumi.Output<string | undefined>;
@@ -101,7 +101,7 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     readonly slsBinding: pulumi.Output<string | undefined>;
     readonly slsUrl: pulumi.Output<string | undefined>;
@@ -109,7 +109,7 @@ export declare class ProviderSaml extends pulumi.CustomResource {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     readonly spBinding: pulumi.Output<string | undefined>;
     /**
@@ -172,7 +172,7 @@ export interface ProviderSamlState {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     encryptionKp?: pulumi.Input<string | undefined>;
@@ -186,7 +186,7 @@ export interface ProviderSamlState {
      *   - `frontchannel_iframe`
      *   - `frontchannel_native`
      *   - `backchannel`
-     *  Defaults to `frontchannel_iframe`.
+     *      Defaults to `frontchannel_iframe`.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -224,7 +224,7 @@ export interface ProviderSamlState {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     signingKp?: pulumi.Input<string | undefined>;
@@ -232,7 +232,7 @@ export interface ProviderSamlState {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     slsBinding?: pulumi.Input<string | undefined>;
     slsUrl?: pulumi.Input<string | undefined>;
@@ -240,7 +240,7 @@ export interface ProviderSamlState {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     spBinding?: pulumi.Input<string | undefined>;
     /**
@@ -295,7 +295,7 @@ export interface ProviderSamlArgs {
      *   - `http://www.w3.org/2001/04/xmlenc#sha256`
      *   - `http://www.w3.org/2001/04/xmldsig-more#sha384`
      *   - `http://www.w3.org/2001/04/xmlenc#sha512`
-     *  Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmlenc#sha256`.
      */
     digestAlgorithm?: pulumi.Input<string | undefined>;
     encryptionKp?: pulumi.Input<string | undefined>;
@@ -309,7 +309,7 @@ export interface ProviderSamlArgs {
      *   - `frontchannel_iframe`
      *   - `frontchannel_native`
      *   - `backchannel`
-     *  Defaults to `frontchannel_iframe`.
+     *      Defaults to `frontchannel_iframe`.
      */
     logoutMethod?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -347,7 +347,7 @@ export interface ProviderSamlArgs {
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384`
      *   - `http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512`
      *   - `http://www.w3.org/2000/09/xmldsig#dsa-sha1`
-     *  Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
+     *      Defaults to `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`.
      */
     signatureAlgorithm?: pulumi.Input<string | undefined>;
     signingKp?: pulumi.Input<string | undefined>;
@@ -355,7 +355,7 @@ export interface ProviderSamlArgs {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     slsBinding?: pulumi.Input<string | undefined>;
     slsUrl?: pulumi.Input<string | undefined>;
@@ -363,7 +363,7 @@ export interface ProviderSamlArgs {
      * Allowed values:
      *   - `redirect`
      *   - `post`
-     *  Defaults to `redirect`.
+     *      Defaults to `redirect`.
      */
     spBinding?: pulumi.Input<string | undefined>;
     /**

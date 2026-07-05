@@ -87,6 +87,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["name"] = state?.name;
             resourceInputs["natOutboundIpAddresses"] = state?.natOutboundIpAddresses;
             resourceInputs["networkIsolation"] = state?.networkIsolation;
+            resourceInputs["purpose"] = state?.purpose;
             resourceInputs["settingPreference"] = state?.settingPreference;
             resourceInputs["site"] = state?.site;
             resourceInputs["subnet"] = state?.subnet;
@@ -125,6 +126,7 @@ class Network extends pulumi.CustomResource {
             resourceInputs["name"] = args?.name;
             resourceInputs["natOutboundIpAddresses"] = args?.natOutboundIpAddresses;
             resourceInputs["networkIsolation"] = args?.networkIsolation;
+            resourceInputs["purpose"] = args?.purpose;
             resourceInputs["settingPreference"] = args?.settingPreference;
             resourceInputs["site"] = args?.site;
             resourceInputs["subnet"] = args?.subnet;

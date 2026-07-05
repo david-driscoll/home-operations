@@ -41,7 +41,7 @@ export class Flow extends pulumi.CustomResource {
      *   - `require_redirect`
      *   - `require_outpost`
      *   - `require_token`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     declare public readonly authentication: pulumi.Output<string | undefined>;
     /**
@@ -77,7 +77,7 @@ export class Flow extends pulumi.CustomResource {
      *   - `sidebar_right`
      *   - `sidebar_left_frame_background`
      *   - `sidebar_right_frame_background`
-     *  Defaults to `stacked`.
+     *      Defaults to `stacked`.
      */
     declare public readonly layout: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -85,7 +85,7 @@ export class Flow extends pulumi.CustomResource {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     declare public readonly policyEngineMode: pulumi.Output<string | undefined>;
     declare public readonly slug: pulumi.Output<string>;
@@ -162,7 +162,7 @@ export interface FlowState {
      *   - `require_redirect`
      *   - `require_outpost`
      *   - `require_token`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     authentication?: pulumi.Input<string | undefined>;
     /**
@@ -198,7 +198,7 @@ export interface FlowState {
      *   - `sidebar_right`
      *   - `sidebar_left_frame_background`
      *   - `sidebar_right_frame_background`
-     *  Defaults to `stacked`.
+     *      Defaults to `stacked`.
      */
     layout?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -206,7 +206,7 @@ export interface FlowState {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     slug?: pulumi.Input<string | undefined>;
@@ -230,7 +230,7 @@ export interface FlowArgs {
      *   - `require_redirect`
      *   - `require_outpost`
      *   - `require_token`
-     *  Defaults to `none`.
+     *      Defaults to `none`.
      */
     authentication?: pulumi.Input<string | undefined>;
     /**
@@ -266,7 +266,7 @@ export interface FlowArgs {
      *   - `sidebar_right`
      *   - `sidebar_left_frame_background`
      *   - `sidebar_right_frame_background`
-     *  Defaults to `stacked`.
+     *      Defaults to `stacked`.
      */
     layout?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -274,7 +274,7 @@ export interface FlowArgs {
      * Allowed values:
      *   - `all`
      *   - `any`
-     *  Defaults to `any`.
+     *      Defaults to `any`.
      */
     policyEngineMode?: pulumi.Input<string | undefined>;
     slug: pulumi.Input<string>;

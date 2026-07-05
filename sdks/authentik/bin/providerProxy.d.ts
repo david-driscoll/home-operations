@@ -60,7 +60,7 @@ export declare class ProviderProxy extends pulumi.CustomResource {
      *   - `proxy`
      *   - `forward_single`
      *   - `forward_domain`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     readonly mode: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -129,7 +129,7 @@ export interface ProviderProxyState {
      *   - `proxy`
      *   - `forward_single`
      *   - `forward_domain`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -186,7 +186,7 @@ export interface ProviderProxyArgs {
      *   - `proxy`
      *   - `forward_single`
      *   - `forward_domain`
-     *  Defaults to `proxy`.
+     *      Defaults to `proxy`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;

@@ -67,7 +67,7 @@ export class User extends pulumi.CustomResource {
      *   - `external`
      *   - `service_account`
      *   - `internal_service_account`
-     *  Defaults to `internal`.
+     *      Defaults to `internal`.
      */
     declare public readonly type: pulumi.Output<string | undefined>;
     declare public readonly userId: pulumi.Output<string>;
@@ -160,7 +160,7 @@ export interface UserState {
      *   - `external`
      *   - `service_account`
      *   - `internal_service_account`
-     *  Defaults to `internal`.
+     *      Defaults to `internal`.
      */
     type?: pulumi.Input<string | undefined>;
     userId?: pulumi.Input<string | undefined>;
@@ -206,7 +206,7 @@ export interface UserArgs {
      *   - `external`
      *   - `service_account`
      *   - `internal_service_account`
-     *  Defaults to `internal`.
+     *      Defaults to `internal`.
      */
     type?: pulumi.Input<string | undefined>;
     userId?: pulumi.Input<string | undefined>;

@@ -37,7 +37,7 @@ export class StageMutualTls extends pulumi.CustomResource {
      *   - `subject`
      *   - `common_name`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     declare public readonly certAttribute: pulumi.Output<string | undefined>;
     declare public readonly certificateAuthorities: pulumi.Output<string[] | undefined>;
@@ -45,7 +45,7 @@ export class StageMutualTls extends pulumi.CustomResource {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     declare public readonly mode: pulumi.Output<string | undefined>;
     declare public readonly name: pulumi.Output<string>;
@@ -54,7 +54,7 @@ export class StageMutualTls extends pulumi.CustomResource {
      * Allowed values:
      *   - `username`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     declare public readonly userAttribute: pulumi.Output<string | undefined>;
 
@@ -100,7 +100,7 @@ export interface StageMutualTlsState {
      *   - `subject`
      *   - `common_name`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     certAttribute?: pulumi.Input<string | undefined>;
     certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -108,7 +108,7 @@ export interface StageMutualTlsState {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -117,7 +117,7 @@ export interface StageMutualTlsState {
      * Allowed values:
      *   - `username`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     userAttribute?: pulumi.Input<string | undefined>;
 }
@@ -131,7 +131,7 @@ export interface StageMutualTlsArgs {
      *   - `subject`
      *   - `common_name`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     certAttribute?: pulumi.Input<string | undefined>;
     certificateAuthorities?: pulumi.Input<pulumi.Input<string>[] | undefined>;
@@ -139,7 +139,7 @@ export interface StageMutualTlsArgs {
      * Allowed values:
      *   - `optional`
      *   - `required`
-     *  Defaults to `optional`.
+     *      Defaults to `optional`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -148,7 +148,7 @@ export interface StageMutualTlsArgs {
      * Allowed values:
      *   - `username`
      *   - `email`
-     *  Defaults to `email`.
+     *      Defaults to `email`.
      */
     userAttribute?: pulumi.Input<string | undefined>;
 }

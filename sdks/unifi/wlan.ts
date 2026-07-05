@@ -43,9 +43,9 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly apGroupMode: pulumi.Output<string>;
     /**
-     * List of MAC addresses for the broadcast filter.
+     * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
-    declare public readonly bcFilterLists: pulumi.Output<string[] | undefined>;
+    declare public readonly bcFilterLists: pulumi.Output<string[]>;
     /**
      * Improves client roaming by providing connection details of nearby APs.
      */
@@ -107,11 +107,11 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly macFilter: pulumi.Output<outputs.WlanMacFilter>;
     /**
-     * Minimum data rate for 2G clients in Kbps.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     declare public readonly minimumDataRate2gKbps: pulumi.Output<number>;
     /**
-     * Minimum data rate for 5G clients in Kbps.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     declare public readonly minimumDataRate5gKbps: pulumi.Output<number>;
     /**
@@ -168,9 +168,9 @@ export class Wlan extends pulumi.CustomResource {
      */
     declare public readonly radiusMacAuthEnabled: pulumi.Output<boolean>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`.
+     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
      */
-    declare public readonly radiusProfileId: pulumi.Output<string | undefined>;
+    declare public readonly radiusProfileId: pulumi.Output<string>;
     /**
      * Start and stop schedules for the WLAN
      */
@@ -377,7 +377,7 @@ export interface WlanState {
      */
     apGroupMode?: pulumi.Input<string | undefined>;
     /**
-     * List of MAC addresses for the broadcast filter.
+     * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
     bcFilterLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -441,11 +441,11 @@ export interface WlanState {
      */
     macFilter?: pulumi.Input<inputs.WlanMacFilter | undefined>;
     /**
-     * Minimum data rate for 2G clients in Kbps.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     minimumDataRate2gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum data rate for 5G clients in Kbps.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
@@ -502,7 +502,7 @@ export interface WlanState {
      */
     radiusMacAuthEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`.
+     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
      */
     radiusProfileId?: pulumi.Input<string | undefined>;
     /**
@@ -581,7 +581,7 @@ export interface WlanArgs {
      */
     apGroupMode?: pulumi.Input<string | undefined>;
     /**
-     * List of MAC addresses for the broadcast filter.
+     * List of MAC addresses for the broadcast filter. The controller may populate this on its own, so it is computed when unset.
      */
     bcFilterLists?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
@@ -645,11 +645,11 @@ export interface WlanArgs {
      */
     macFilter?: pulumi.Input<inputs.WlanMacFilter | undefined>;
     /**
-     * Minimum data rate for 2G clients in Kbps.
+     * Minimum data rate for 2G clients in Kbps. When unset, the controller assigns a value (e.g. `1000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     minimumDataRate2gKbps?: pulumi.Input<number | undefined>;
     /**
-     * Minimum data rate for 5G clients in Kbps.
+     * Minimum data rate for 5G clients in Kbps. When unset, the controller assigns a value (e.g. `6000` in `auto` mode), so this is computed rather than defaulted to `0`.
      */
     minimumDataRate5gKbps?: pulumi.Input<number | undefined>;
     /**
@@ -706,7 +706,7 @@ export interface WlanArgs {
      */
     radiusMacAuthEnabled?: pulumi.Input<boolean | undefined>;
     /**
-     * ID of the RADIUS profile to use when security `wpaeap`.
+     * ID of the RADIUS profile to use when security `wpaeap`. The controller may assign a default profile, so this is computed when unset.
      */
     radiusProfileId?: pulumi.Input<string | undefined>;
     /**

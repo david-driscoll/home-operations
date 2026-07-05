@@ -24,7 +24,7 @@ export declare class StageConsent extends pulumi.CustomResource {
      *   - `always_require`
      *   - `permanent`
      *   - `expiring`
-     *  Defaults to `always_require`.
+     *      Defaults to `always_require`.
      */
     readonly mode: pulumi.Output<string | undefined>;
     readonly name: pulumi.Output<string>;
@@ -51,7 +51,7 @@ export interface StageConsentState {
      *   - `always_require`
      *   - `permanent`
      *   - `expiring`
-     *  Defaults to `always_require`.
+     *      Defaults to `always_require`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
@@ -70,7 +70,7 @@ export interface StageConsentArgs {
      *   - `always_require`
      *   - `permanent`
      *   - `expiring`
-     *  Defaults to `always_require`.
+     *      Defaults to `always_require`.
      */
     mode?: pulumi.Input<string | undefined>;
     name?: pulumi.Input<string | undefined>;
