@@ -476,7 +476,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
 
 function configureProxmoxAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
-  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.backups, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox]);
+  manager.setTagOwner(tag.proxmox, [tag.apps, tag.exitNode, tag.dockge, tag.backups, tag.sharedDrive, tag.peerRelay, tag.mediaDevice, tag.proxmox, tag.dns, tag.idp]);
   manager.setExitNode(tag.proxmox);
   for (const subnet of Object.values(subnets)) {
     manager.setRoute(subnet, [tag.proxmox]);
@@ -531,7 +531,7 @@ function configureProxmoxAccess(manager: TailscaleAclManager) {
 
 function configureDockgeAccess(manager: TailscaleAclManager) {
   const testData = manager.testData;
-  manager.setTagOwner(tag.dockge, [tag.apps]);
+  manager.setTagOwner(tag.dockge, [tag.apps, tag.dns, tag.idp]);
   manager.setService(tag.apps, [tag.dockge]);
 
   manager.setGrant(

@@ -85,7 +85,7 @@ export class DockgeLxc extends ComponentResource {
     const cluster = output(args.cluster);
     this.dockerParent = new ComponentResource("home:dockge:DockgeLxcDockerParent", `${name}-docker`, {}, cro);
     this.cluster = cluster;
-    this.shortName = args.host.shortName;
+    this.shortName = args.host.shortName ?? name;
     this.name = name;
 
     const { hostname, tailscaleHostname, tailscaleName } = getContainerHostnames("dockge", args.host, args.globals);
