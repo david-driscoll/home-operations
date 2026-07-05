@@ -1,18 +1,13 @@
-import { Output, ComponentResource, ComponentResourceOptions, CustomResourceOptions, output, Unwrap, mergeOptions, interpolate, log } from "@pulumi/pulumi";
-import { Provider as TailscaleProvider, TailnetKey } from "@pulumi/tailscale";
-import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
-import { Provider as UnifiProvider } from "@pulumiverse/unifi";
-import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as AdguardProvider } from "@pulumi/adguard";
+import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
-// import { Provider as BackblazeProvider } from "@pulumi/b2";
-import { Provider as PbsProvider } from "@pulumi/pbs";
-import { OPClient, OPClientItem } from "./op.ts";
-import { Tailscale } from "./constants.ts";
-import { remote, types } from "@pulumi/command";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output } from "@pulumi/pulumi";
+import { Provider as TailscaleProvider } from "@pulumi/tailscale";
+import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
+import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { VaultStore } from "./store/index.ts";
 
-export interface GlobalResourcesArgs {}
+export type GlobalResourcesArgs = object;
 
 export class GlobalResources extends ComponentResource {
   public readonly cloudflareCredential;
@@ -46,19 +41,46 @@ export class GlobalResources extends ComponentResource {
 
     const store = (this.store = new VaultStore());
     this.tailscaleDomain = store.tailscaleDomain;
-    this.tailscaleCredential = store.getSecretByTitle<{ hostname: string; username: string; credential: string }>("Tailscale Terraform OAuth Client");
+    this.tailscaleCredential = store.getSecretByTitle<{
+      hostname: string;
+      username: string;
+      credential: string;
+    }>("Tailscale Terraform OAuth Client");
 
-    this.cloudflareCredential = store.getSecretByTitle<{ username: string; credential: string; zoneId: string; accountId: string }>("Cloudflare (driscoll.tech)");
-    this.unifiCredential = store.getSecretByTitle<{ credential: string; hostname: string }>("Unifi Api Key Eris Cluster");
-    this.proxmoxCredential = store.getSecretByTitle<{ username: string; password: string }>("Proxmox");
-    this.truenasCredential = store.getSecretByTitle<{ username: string; credential: string; hostname: string; domain: string }>("Eris Truenas Credentials");
-    this.truenasMinioCredential = store.getSecretByTitle<{ username: string; password: string }>("minio root user");
+    this.cloudflareCredential = store.getSecretByTitle<{
+      username: string;
+      credential: string;
+      zoneId: string;
+      accountId: string;
+    }>("Cloudflare (driscoll.tech)");
+    this.unifiCredential = store.getSecretByTitle<{
+      credential: string;
+      hostname: string;
+    }>("Unifi Api Key Eris Cluster");
+    this.proxmoxCredential = store.getSecretByTitle<{
+      username: string;
+      password: string;
+    }>("Proxmox");
+    this.truenasCredential = store.getSecretByTitle<{
+      username: string;
+      credential: string;
+      hostname: string;
+      domain: string;
+    }>("Eris Truenas Credentials");
+    this.truenasMinioCredential = store.getSecretByTitle<{
+      username: string;
+      password: string;
+    }>("minio root user");
 
-    this.adguardCredential = store.getSecretByTitle<{ username: string; password: string; urls: { label: string; href: string }[] }>("AdGuard Home");
+    this.adguardCredential = store.getSecretByTitle<{
+      username: string;
+      password: string;
+      urls: { label: string; href: string }[];
+    }>("AdGuard Home");
     this.adguardProvider = new AdguardProvider(
       "adguard",
       {
-        host: this.adguardCredential.apply((z) => z.meta.urls.find((z) => z.label === "ip-host")?.href!.substring(7)!),
+        host: this.adguardCredential.apply(z => z.meta.urls.find(z => z.label === "ip-host")?.href.substring(7)),
         username: this.adguardCredential.username,
         password: this.adguardCredential.password,
         insecure: true,

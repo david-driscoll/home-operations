@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
 import { SharedComponentResource } from "./shared-component-resource.js";
 
 export class InvalidationStages extends SharedComponentResource {
@@ -12,22 +12,14 @@ export class InvalidationStages extends SharedComponentResource {
 
   public get logout(): authentik.StageUserLogout {
     if (!this._logout) {
-      this._logout = new authentik.StageUserLogout(
-        "custom-authentication-logout",
-        {},
-        this.parent
-      );
+      this._logout = new authentik.StageUserLogout("custom-authentication-logout", {}, this.parent);
     }
     return this._logout;
   }
 
   public get providerLogout(): authentik.StageUserLogout {
     if (!this._providerLogout) {
-      this._providerLogout = new authentik.StageUserLogout(
-        "custom-authentication-provider-logout",
-        {},
-        this.parent
-      );
+      this._providerLogout = new authentik.StageUserLogout("custom-authentication-provider-logout", {}, this.parent);
     }
     return this._providerLogout;
   }

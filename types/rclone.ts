@@ -16,9 +16,9 @@ export interface LocalBackend {
 export interface B2Backend {
   type: "b2";
   bucket: string;
-    prefix?: string;
-    applicationKeyId: string;
-    applicationKey: string;
+  prefix?: string;
+  applicationKeyId: string;
+  applicationKey: string;
 }
 
 export interface S3Backend {

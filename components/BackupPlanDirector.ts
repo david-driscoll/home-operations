@@ -1,19 +1,14 @@
-import { GlobalResources } from "./globals.ts";
-import { all, ComponentResource, ComponentResourceOptions, Input, interpolate, jsonStringify, log, Output, output, Resource, Unwrap, UnwrappedArray, UnwrappedObject } from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
 import { addBackupJobs, addUptimeGatus, copyFileToRemote, toGatusKey } from "@components/helpers.ts";
-import { ExternalEndpoint } from "@openapi/application-definition.js";
+import type { ExternalEndpoint } from "@openapi/application-definition.js";
+import type { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
+import { remote } from "@pulumi/command";
+import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, jsonStringify, log, type Output, output, type Resource, type Unwrap, type UnwrappedArray } from "@pulumi/pulumi";
 import { NodeSSH } from "node-ssh";
-import { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
-import { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
-import { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
-import { ClusterDefinition, ProxmoxBackupServerLxcDefinition, SshKeyDefinition } from "./store/interfaces.ts";
-import { DockgeLxc } from "./DockgeLxc.ts";
-
-interface Connection {
-  connection: Unwrap<types.input.remote.ConnectionArgs>;
-  cluster: ClusterDefinition;
-}
+import type { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
+import type { DockgeLxc } from "./DockgeLxc.ts";
+import type { GlobalResources } from "./globals.ts";
+import type { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
+import type { ClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./store/interfaces.ts";
 
 export class BackupPlanDirector extends ComponentResource {
   private readonly globals: GlobalResources;
@@ -28,8 +23,8 @@ export class BackupPlanDirector extends ComponentResource {
   ) {
     super("home:backups:BackupPlanDirector", name, {}, opts);
     this.globals = args.globals;
-    this.uptimeUrl = output(args.globals.searchDomain).apply((domain) => `https://uptime.${domain}`);
-    this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply((z) => z.credential);
+    this.uptimeUrl = output(args.globals.searchDomain).apply(domain => `https://uptime.${domain}`);
+    this.volsyncPassword = this.globals.store.getSecretByTitle<{ credential: string }>("Volsync Password").apply(z => z.credential);
   }
 
   public createPlans(
@@ -40,21 +35,15 @@ export class BackupPlanDirector extends ComponentResource {
     },
     depends: Input<Resource[]>,
   ) {
-    return all([
-      source.cluster,
-      source.dockge.remoteConnection,
-      this.globals.store.proxmoxBackupServers(),
-      this.globals.store.getBackupPlans<BackupPlanItem>(),
-      this.uptimeUrl,
-      this.volsyncPassword,
-    ]).apply(([cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword]) =>
-      output(this._createPlans(source.dockge, source.pbs, cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword, depends)),
+    return all([source.cluster, source.dockge.remoteConnection, this.globals.store.proxmoxBackupServers(), this.globals.store.getBackupPlans<BackupPlanItem>(), this.uptimeUrl, this.volsyncPassword]).apply(
+      ([cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword]) =>
+        output(this._createPlans(source.dockge, source.pbs, cluster, dockgeConnection, backupServers, plans, uptimeUrl, volsyncPassword, depends)),
     );
   }
 
   public _createPlans(
-    dockge: DockgeLxc,
-    pbs: ProxmoxBackupServerLxc,
+    _dockge: DockgeLxc,
+    _pbs: ProxmoxBackupServerLxc,
     cluster: ClusterDefinition,
     dockgeConnection: Unwrap<DockgeLxc["remoteConnection"]>,
     backupServers: UnwrappedArray<ProxmoxBackupServerLxcDefinition>,
@@ -67,26 +56,26 @@ export class BackupPlanDirector extends ComponentResource {
     const sourceGroupTitle = `Backups: ${cluster.title}`;
     const destinationGroupTitle = `Backups: ${cluster.title}`;
     const volsyncGroupTitle = `VolSync: ${cluster.title}`;
-    const sourcePlans = plans.filter((p) => p.source === clusterKey && p.source !== "volsync");
-    const destinationPlans = plans.filter((p) => p.source !== clusterKey && p.source !== "volsync");
-    const volsyncPlans = plans.filter((p) => p.source === "volsync");
+    const sourcePlans = plans.filter(p => p.source === clusterKey && p.source !== "volsync");
+    const destinationPlans = plans.filter(p => p.source !== clusterKey && p.source !== "volsync");
+    const volsyncPlans = plans.filter(p => p.source === "volsync");
 
-    const destinationJobTasks = destinationPlans.map((plan) => {
-      const planServer = backupServers.find((s) => s.cluster.key === plan.source);
+    const destinationJobTasks = destinationPlans.map(plan => {
+      const planServer = backupServers.find(s => s.cluster.key === plan.source);
       const copyToken = toGatusKey(destinationGroupTitle, plan.name);
       return {
         name: plan.name,
         schedule: "0 4 * * *",
         sourceType: "sftp" as const,
-        source: `${planServer!.dockge.ssh.hostname}/backup/${plan.name}/`,
+        source: `${planServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
         destinationType: "local" as const,
         destination: `/data/backup/${plan.name}/`,
         token: copyToken,
       };
     });
 
-    const celestiaServer = backupServers.find((s) => s.cluster.key === "celestia");
-    const volsyncJobTasks = volsyncPlans.map((plan) => {
+    const celestiaServer = backupServers.find(s => s.cluster.key === "celestia");
+    const volsyncJobTasks = volsyncPlans.map(plan => {
       const copyToken = toGatusKey(volsyncGroupTitle, plan.name);
       if (clusterKey === "celestia") {
         return {
@@ -103,7 +92,7 @@ export class BackupPlanDirector extends ComponentResource {
         name: plan.name,
         schedule: "0 4 * * *",
         sourceType: "sftp" as const,
-        source: `${celestiaServer!.dockge.ssh.hostname}/backup/${plan.name}/`,
+        source: `${celestiaServer?.dockge.ssh.hostname}/backup/${plan.name}/`,
         destinationType: "local" as const,
         destination: `/data/backup/${plan.name}/`,
         token: copyToken,
@@ -113,15 +102,18 @@ export class BackupPlanDirector extends ComponentResource {
     const copyJobs = addBackupJobs(`copy-${clusterKey}`, dockgeConnection, [...destinationJobTasks, ...volsyncJobTasks], this, depends);
 
     const backrestItems = [
-      ...sourcePlans.map((plan) => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
+      ...sourcePlans.map(plan => this._createSourceBackrestPlan(dockgeConnection, cluster, plan, uptimeUrl, volsyncPassword)),
       // setup for celestia?
       // ...volsyncPlans.map((plan) => this._createRepository(plan, volsyncPassword)),
-      ...volsyncPlans.map((plan) => ({
+      ...volsyncPlans.map(plan => ({
         repo: {
           id: plan.name,
           uri: `/data/backup/${plan.name}/`,
           password: volsyncPassword,
-          checkPolicy: { schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" }, readDataSubsetPercent: 10 },
+          checkPolicy: {
+            schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" },
+            readDataSubsetPercent: 10,
+          },
           commandPrefix: { ioNice: "IO_BEST_EFFORT_LOW", cpuNice: "CPU_LOW" },
         } as BackrestRepository,
         plan: null as unknown as BackrestPlan,
@@ -141,20 +133,20 @@ export class BackupPlanDirector extends ComponentResource {
       {
         endpoints: [],
         "external-endpoints": [
-          ...sourcePlans.map((plan) => makeEndpoint(sourceGroupTitle, plan.name)),
-          ...destinationPlans.map((plan) => makeEndpoint(destinationGroupTitle, plan.name)),
-          ...volsyncPlans.map((plan) => makeEndpoint(volsyncGroupTitle, plan.name)),
+          ...sourcePlans.map(plan => makeEndpoint(sourceGroupTitle, plan.name)),
+          ...destinationPlans.map(plan => makeEndpoint(destinationGroupTitle, plan.name)),
+          ...volsyncPlans.map(plan => makeEndpoint(volsyncGroupTitle, plan.name)),
         ],
       },
       this,
     );
 
-    const allDeps = all([depends, uptime, copyJobs]).apply((d) => d.flat());
+    const allDeps = all([depends, uptime, copyJobs]).apply(d => d.flat());
 
     return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems));
   }
 
-  private _createSourceBackrestPlan(detail: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, plan: BackupPlanItem, uptimeUrl: string, password: string) {
+  private _createSourceBackrestPlan(_detail: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, plan: BackupPlanItem, uptimeUrl: string, password: string) {
     const sourceGroup = `Backups: ${cluster.title}`;
     const sourceToken = toGatusKey(sourceGroup, plan.name);
 
@@ -178,7 +170,7 @@ export class BackupPlanDirector extends ComponentResource {
             "--no-update-dir-modtime",
             "--no-update-modtime",
             // "--ignore-errors",
-            ...(plan.preSync.exclude?.map((e) => `--exclude '${e}'`) ?? []),
+            ...(plan.preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
           ].join(" "),
         },
         onError: "ON_ERROR_FATAL",
@@ -201,8 +193,14 @@ export class BackupPlanDirector extends ComponentResource {
     });
 
     const backrestRepo: BackrestRepository = {
-      prunePolicy: { schedule: { maxFrequencyDays: 30, clock: "CLOCK_LAST_RUN_TIME" }, maxUnusedPercent: 10 },
-      checkPolicy: { schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" }, readDataSubsetPercent: 10 },
+      prunePolicy: {
+        schedule: { maxFrequencyDays: 30, clock: "CLOCK_LAST_RUN_TIME" },
+        maxUnusedPercent: 10,
+      },
+      checkPolicy: {
+        schedule: { maxFrequencyDays: 7, clock: "CLOCK_LAST_RUN_TIME" },
+        readDataSubsetPercent: 10,
+      },
       commandPrefix: { ioNice: "IO_BEST_EFFORT_LOW", cpuNice: "CPU_LOW" },
       password,
       ...plan.repositoryConfig,
@@ -227,13 +225,16 @@ export class BackupPlanDirector extends ComponentResource {
     return { plan: backrestPlan, repo: backrestRepo };
   }
 
-  async updateBackrestConfiguration(
-    connection: Unwrap<DockgeLxc["remoteConnection"]>,
-    cluster: ClusterDefinition,
-    depends: Input<Resource[]>,
-    items: { repos: BackrestRepository[]; plans: BackrestPlan[] },
-  ) {
-    let updatedConfig: BackrestConfig = { repos: [], plans: [], version: 6, modno: 1, instance: cluster.key, auth: { disabled: true }, multihost: {} };
+  async updateBackrestConfiguration(connection: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
+    let updatedConfig: BackrestConfig = {
+      repos: [],
+      plans: [],
+      version: 6,
+      modno: 1,
+      instance: cluster.key,
+      auth: { disabled: true },
+      multihost: {},
+    };
 
     {
       const ssh = new NodeSSH();
@@ -283,12 +284,12 @@ export class BackupPlanDirector extends ComponentResource {
       `backrest-restart`,
       {
         connection: connection,
-        triggers: [...items.repos.map((z) => z.uri), ...items.plans.map((z) => z.repo)],
+        triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo)],
         create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml restart`,
       },
       {
         parent: this,
-        dependsOn: output(depends).apply((x) => [...x, backrestConfig]),
+        dependsOn: output(depends).apply(x => [...x, backrestConfig]),
       },
     );
 
@@ -298,7 +299,7 @@ export class BackupPlanDirector extends ComponentResource {
 
 function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, repos: BackrestRepository[]) {
   for (const repo of repos) {
-    const jobIndex = updatedConfig.repos.findIndex((r) => r.id === repo.id);
+    const jobIndex = updatedConfig.repos.findIndex(r => r.id === repo.id);
     if (jobIndex >= 0) {
       updatedConfig.repos[jobIndex] = {
         ...updatedConfig.repos[jobIndex],
@@ -312,7 +313,7 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
 
 function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, plans: BackrestPlan[]) {
   for (const plan of plans) {
-    const jobIndex = updatedConfig.plans.findIndex((r) => r.id === plan.id);
+    const jobIndex = updatedConfig.plans.findIndex(r => r.id === plan.id);
     if (jobIndex >= 0) {
       updatedConfig.plans[jobIndex] = {
         ...updatedConfig.plans[jobIndex],

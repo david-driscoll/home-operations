@@ -1,7 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
+import { Roles } from "../constants.ts";
 import { SharedComponentResource } from "./shared-component-resource.js";
-import { Roles, Groups } from "../constants.ts";
 
 export class Policies extends SharedComponentResource {
   private _passwordComplexity?: authentik.PolicyPassword;
@@ -28,7 +28,7 @@ export class Policies extends SharedComponentResource {
           lengthMin: 8,
           errorMessage: "Password needs to be 8 characters or longer.",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._passwordComplexity;
@@ -41,7 +41,7 @@ export class Policies extends SharedComponentResource {
         {
           expression: "return ak_is_sso_flow",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._sourceAuthenticationIfSingleSignOn;
@@ -54,7 +54,7 @@ export class Policies extends SharedComponentResource {
         {
           expression: "return ak_is_sso_flow",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._sourceEnrollmentIfSingleSignOn;
@@ -95,7 +95,7 @@ if not request.user.group_attributes(request.http_request).get(
 
 return True`,
         },
-        this.parent
+        this.parent,
       );
     }
     return this._userSettingsAuthorization;
@@ -112,7 +112,7 @@ group, _ = Group.objects.get_or_create(name="${Roles.Users}")
 request.context["flow_plan"].context["groups"] = [group]
 return True`,
         },
-        this.parent
+        this.parent,
       );
     }
     return this._defaultGroups;
@@ -137,7 +137,7 @@ for group_name in sourceGroups:
 request.context["flow_plan"].context["groups"] = groups
 return True`,
         },
-        this.parent
+        this.parent,
       );
     }
     return this._defaultSourceGroups;

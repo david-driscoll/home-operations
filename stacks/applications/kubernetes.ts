@@ -1,18 +1,17 @@
-import * as pulumi from "@pulumi/pulumi";
+import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
+import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import type { GlobalResources } from "@components/globals.ts";
+import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
+import * as kubernetes from "@kubernetes/client-node";
+import type { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as authentik from "@pulumi/authentik";
 import * as pk8s from "@pulumi/kubernetes";
-import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
-import { GlobalResources } from "@components/globals.ts";
-import { OPClient } from "../../components/op.ts";
-import * as kubernetes from "@kubernetes/client-node";
-import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
-import { from, map, lastValueFrom, toArray, concatMap } from "rxjs";
-import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
-import * as yaml from "yaml";
+import * as pulumi from "@pulumi/pulumi";
 import { kebabCase } from "moderndash";
-import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
+import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
+import * as yaml from "yaml";
+import type { OPClient } from "../../components/op.ts";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
-import { createWarpgateTargets } from "./warpgate.ts";
 
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
@@ -27,13 +26,13 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   // TODO: clear out old keys that are no longer used
   const customObjectApi = kubeConfig.makeApiClient(kubernetes.CustomObjectsApi);
   const namespaceList = await coreApi.listNamespace();
-  const namespaceNames = namespaceList.items.map((ns) => ns.metadata!.name!);
+  const namespaceNames = namespaceList.items.map(ns => ns.metadata!.name!);
 
   pulumi.log.info(`Found namespaces: ${namespaceNames.join(", ")}`, globals);
 
   const applications = await lastValueFrom(
     from(namespaceNames).pipe(
-      concatMap((ns) =>
+      concatMap(ns =>
         from(
           customObjectApi.listNamespacedCustomObject({
             group: "driscoll.dev",
@@ -43,8 +42,8 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           }),
         ),
       ),
-      map((res) => res as { items: ApplicationDefinitionSchema[] }),
-      concatMap((res) => from(res.items)),
+      map(res => res as { items: ApplicationDefinitionSchema[] }),
+      concatMap(res => from(res.items)),
       toArray(),
     ),
   );
@@ -57,14 +56,22 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     async loadFromResource(application, kind, from) {
       let data: { [key: string]: string };
       switch (from.type) {
-        case "configMap":
-          const configMap = await coreApi.readNamespacedConfigMap({ name: from.name, namespace: application.metadata.namespace! });
+        case "configMap": {
+          const configMap = await coreApi.readNamespacedConfigMap({
+            name: from.name,
+            namespace: application.metadata.namespace!,
+          });
           data = configMap.data!;
           break;
-        case "secret":
-          const secret = await coreApi.readNamespacedSecret({ name: from.name, namespace: application.metadata.namespace! });
+        }
+        case "secret": {
+          const secret = await coreApi.readNamespacedSecret({
+            name: from.name,
+            namespace: application.metadata.namespace!,
+          });
           data = secret.data!;
           break;
+        }
         default:
           throw new Error(`Unknown from type ${from.type}`);
       }
@@ -81,17 +88,17 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   const createdApplications = pulumi
     .output(
-      applications.map((app) =>
-        applicationManager.createApplication(app).apply((res) => {
+      applications.map(app =>
+        applicationManager.createApplication(app).apply(res => {
           if (res.provider && res.isProxy === false) {
             new pk8s.core.v1.Secret(
-              `${kebabCase(app.metadata!.name!)}-oidc-credentials`,
+              `${kebabCase(app.metadata!.name)}-oidc-credentials`,
               {
                 metadata: {
-                  name: `${app.metadata!.name!}-oidc-credentials`,
+                  name: `${kebabCase(app.metadata!.name)}-oidc-credentials`,
                   namespace: app.metadata.namespace ?? clusterDefinition.key,
                 },
-                stringData: res.oidcCredentials.fields.apply((z) => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+                stringData: res.oidcCredentials.fields.apply(z => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
               },
               {
                 parent: applicationManager,
@@ -104,15 +111,15 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         }),
       ),
     )
-    .apply((apps) => {
+    .apply(apps => {
       return addUptimeGatus(
         `cluster-apps-${clusterDefinition.key}`,
         globals,
         {
           endpoints: applicationManager.applications
-            .apply((apps) => apps.flatMap((z) => z.gatus))
-            .apply((instances) => {
-              return instances.map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
+            .apply(apps => apps.flatMap(z => z.gatus))
+            .apply(instances => {
+              return instances.map(e => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition);
             }),
         },
         applicationManager,
@@ -126,9 +133,9 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     kubeconfig: outpostCredential,
     verifySsl: true,
   });
-  const proxyProviders = createdApplications.apply((apps) => apps.filter((z) => z.isProxy).map((z) => z.provider));
+  const proxyProviders = createdApplications.apply(apps => apps.filter(z => z.isProxy).map(z => z.provider));
 
-  const outpost = new authentik.Outpost(
+  const _outpost = new authentik.Outpost(
     clusterDefinition.key,
     {
       serviceConnection: serviceConnection.serviceConnectionKubernetesId,
@@ -162,7 +169,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
         undefined,
         2,
       ),
-      protocolProviders: proxyProviders.apply((apps) => apps.map((z) => z.id.apply(parseFloat))),
+      protocolProviders: proxyProviders.apply(apps => apps.map(z => z.id.apply(parseFloat))),
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
@@ -182,14 +189,14 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   return {};
 }
 
-function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {
+function _generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {
   return pulumi.interpolate`{
   "kind": "Config",
   "apiVersion": "v1",
   "clusters": [
     {
       "cluster": {
-        "certificate-authority-data": "${credential.fields.certificate.apply((z) => Buffer.from(z.value!, "utf8").toString("base64"))}",
+        "certificate-authority-data": "${credential.fields.certificate.apply(z => Buffer.from(z.value!, "utf8").toString("base64"))}",
         "server": "https://${credential.fields.cluster_api.value}:6443"
       },
       "name": "${credential.fields.cluster.value}"
@@ -218,7 +225,9 @@ function generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapIt
 
 function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends keyof NonNullable<AuthentikDefinition[T]>>(type: T, resource: { [V in K]: string }): NonNullable<AuthentikDefinition[T]> {
   if (type === "proxy") {
-    const proxyResource = resource as { [V in keyof NonNullable<AuthentikDefinition["proxy"]>]: string };
+    const proxyResource = resource as {
+      [V in keyof NonNullable<AuthentikDefinition["proxy"]>]: string;
+    };
 
     return (<NonNullable<AuthentikDefinition["proxy"]>>{
       externalHost: proxyResource.externalHost,
@@ -245,7 +254,9 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
   }
 
   if (type === "oauth2") {
-    const oauth2Resource = resource as { [V in keyof NonNullable<AuthentikDefinition["oauth2"]>]: string };
+    const oauth2Resource = resource as {
+      [V in keyof NonNullable<AuthentikDefinition["oauth2"]>]: string;
+    };
 
     return (<NonNullable<AuthentikDefinition["oauth2"]>>{
       authorizationFlow: oauth2Resource.authorizationFlow,
@@ -268,9 +279,12 @@ function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends key
       grantTypes: oauth2Resource.grantTypes ? oauth2Resource.grantTypes.split(",") : ["implicit", "authorization_code", "refresh_token", "client_credentials"],
       subMode: oauth2Resource.subMode,
       allowedRedirectUris: oauth2Resource.allowedRedirectUris
-        ? oauth2Resource.allowedRedirectUris.split(",").map((uri) => {
+        ? oauth2Resource.allowedRedirectUris.split(",").map(uri => {
             const [matching_mode, url] = uri.split("|");
-            return { matching_mode: matching_mode as "strict" | "wildcard" | "regex", url };
+            return {
+              matching_mode: matching_mode as "strict" | "wildcard" | "regex",
+              url,
+            };
           })
         : undefined,
       propertyMappings: oauth2Resource.propertyMappings ? oauth2Resource.propertyMappings.split(",") : undefined,

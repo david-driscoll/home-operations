@@ -1,15 +1,15 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as tls from "@pulumi/tls";
+import type { GlobalResources } from "@components/globals.ts";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
+import * as tls from "@pulumi/tls";
 import { SharedComponentResource } from "./shared-component-resource.ts";
-import { GlobalResources } from "@components/globals.ts";
 
 export class ApplicationCertificate extends SharedComponentResource {
   public readonly privateKey: tls.PrivateKey;
   public readonly certificate: tls.SelfSignedCert;
   public readonly signingKey: authentik.CertificateKeyPair;
 
-  constructor(name: string, args: { globals: GlobalResources }, opts?: pulumi.ComponentResourceOptions) {
+  constructor(name: string, _args: { globals: GlobalResources }, opts?: pulumi.ComponentResourceOptions) {
     super("custom:resource:ApplicationCertificate", name, opts);
 
     const resourceName = (this as any).__name;
@@ -19,7 +19,7 @@ export class ApplicationCertificate extends SharedComponentResource {
         algorithm: "RSA",
         rsaBits: 4096,
       },
-      this.parent
+      this.parent,
     );
     this.certificate = new tls.SelfSignedCert(
       `${name}-certificate`,
@@ -35,7 +35,7 @@ export class ApplicationCertificate extends SharedComponentResource {
           locality: "Everywhere",
         },
       },
-      this.parent
+      this.parent,
     );
     this.signingKey = new authentik.CertificateKeyPair(
       `${name}-key-pair`,
@@ -43,7 +43,7 @@ export class ApplicationCertificate extends SharedComponentResource {
         certificateData: this.certificate.certPem,
         keyData: this.privateKey.privateKeyPem,
       },
-      this.parent
+      this.parent,
     );
   }
 }

@@ -1,20 +1,18 @@
-import { OPClient } from "./op.ts";
-import type { components, paths } from "../types/tailscale.ts";
-import createClient, { Client } from "openapi-fetch";
-import { dirname } from "path";
-import * as unifi from "@pulumiverse/unifi";
-import * as random from "@pulumi/random";
-import { fileURLToPath } from "url";
-import { GlobalResources } from "./globals.ts";
-import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { ClientCredentials } from "simple-oauth2";
-import { awaitOutput, copyFileToRemote } from "./helpers.ts";
-import { DeviceTags, getDevice, getDeviceOutput, GetDeviceResult, TailnetKey } from "@pulumi/tailscale";
-import { TailscaleCidr } from "@openapi/tailscale-grants.js";
-import { OnePasswordItem, OnePasswordItemFieldInput, OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
-import { Tailscale } from "./constants.ts";
+import { OnePasswordItem, type OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
+import type { TailscaleCidr } from "@openapi/tailscale-grants.js";
+import { remote, type types } from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+import { DeviceTags, getDevice, getDeviceOutput, TailnetKey } from "@pulumi/tailscale";
+import * as unifi from "@pulumiverse/unifi";
+import createClient, { type Client } from "openapi-fetch";
+import { ClientCredentials } from "simple-oauth2";
+import type { paths } from "../types/tailscale.ts";
+import type { GlobalResources } from "./globals.ts";
+import { awaitOutput, copyFileToRemote } from "./helpers.ts";
 
 /**
  * Tailscale node state exported by individual stacks to 1Password
@@ -53,7 +51,10 @@ export async function getTailscaleClient(globals: GlobalResources): Promise<Clie
   });
 
   const token = await oauth.getToken({});
-  const client = createClient<paths>({ baseUrl: "https://api.tailscale.com/api/v2/", headers: { Authorization: `Bearer ${token.token.access_token}` } });
+  const client = createClient<paths>({
+    baseUrl: "https://api.tailscale.com/api/v2/",
+    headers: { Authorization: `Bearer ${token.token.access_token}` },
+  });
 
   return client;
 }
@@ -73,11 +74,11 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
   }
 
   return getDeviceOutput({ name: pulumi.interpolate`${name}.${globals.tailscaleDomain}` }, { provider: globals.tailscaleProvider })
-    .apply((ip) => {
+    .apply(ip => {
       pulumi.log.info(`Got Tailscale IP for ${ip.name}: ${ip.addresses.join(", ")}`, globals);
       return ip;
     })
-    .apply((z) => z.addresses[0]);
+    .apply(z => z.addresses[0]);
 }
 
 export class TailscaleMonitor {
@@ -87,8 +88,8 @@ export class TailscaleMonitor {
   }
 
   public exportNodeStateToOnePassword(nodeState: NodeInfo[], cro: pulumi.ResourceOptions) {
-    const hostsSection: OnePasswordItemSectionInput = {
-      fields: Object.fromEntries(nodeState.map((z) => [z.name, { value: z.ip }] as const)),
+    const _hostsSection: OnePasswordItemSectionInput = {
+      fields: Object.fromEntries(nodeState.map(z => [z.name, { value: z.ip }] as const)),
     };
 
     return new OnePasswordItem(
@@ -97,12 +98,12 @@ export class TailscaleMonitor {
         category: FullItem.CategoryEnum.SecureNote,
         title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
         tags: ["tailscale-export"],
-        sections: pulumi.output(nodeState).apply((nodes) =>
+        sections: pulumi.output(nodeState).apply(nodes =>
           Object.fromEntries(
             nodes
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(
-                (z) =>
+                z =>
                   [
                     z.name,
                     {
@@ -125,7 +126,6 @@ export class TailscaleMonitor {
     );
   }
 }
-
 
 /**
  * Installs Tailscale on an LXC container using community-scripts.
@@ -192,7 +192,11 @@ export function installTailscaleLxc(options: {
         tags: args.advertiseTags,
         description: "Proxmox Management Key",
       },
-      { parent: options.parent, dependsOn: dependsOn, provider: options.globals.tailscaleProvider },
+      {
+        parent: options.parent,
+        dependsOn: dependsOn,
+        provider: options.globals.tailscaleProvider,
+      },
     );
 
     if (options.installTailscale) {
@@ -267,7 +271,7 @@ export function installTailscaleLxc(options: {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply((z) => z);
+    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply(z => z);
   });
 
   return deviceInfo;
@@ -291,9 +295,15 @@ function updateTailscaleDeviceInfo(
     // const deviceInfo = deviceInfos.devices[0];
 
     if (ipAddress) {
-      await client.POST("/device/{deviceId}/ip", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { ipv4: ipAddress } });
+      await client.POST("/device/{deviceId}/ip", {
+        params: { path: { deviceId: deviceInfo.nodeId } },
+        body: { ipv4: ipAddress },
+      });
     }
-    await client.POST("/device/{deviceId}/key", { params: { path: { deviceId: deviceInfo.nodeId } }, body: { keyExpiryDisabled: true } });
+    await client.POST("/device/{deviceId}/key", {
+      params: { path: { deviceId: deviceInfo.nodeId } },
+      body: { keyExpiryDisabled: true },
+    });
 
     const resource = new DeviceTags(
       `${name}-device-tags`,
@@ -301,7 +311,12 @@ function updateTailscaleDeviceInfo(
         deviceId: deviceInfo.nodeId!,
         tags: tags,
       },
-      { parent: parent, provider: globals.tailscaleProvider, dependsOn: dependsOn, retainOnDelete: true },
+      {
+        parent: parent,
+        provider: globals.tailscaleProvider,
+        dependsOn: dependsOn,
+        retainOnDelete: true,
+      },
     );
 
     const tailscaleForwardingConfig = copyFileToRemote(`${name}-tailscale-forwarding-config`, {
@@ -313,7 +328,7 @@ net.ipv6.conf.all.forwarding = 1
       parent: parent,
     });
 
-    const tailscaleForwarding = new remote.Command(
+    const _tailscaleForwarding = new remote.Command(
       `${name}-tailscale-forwarding`,
       {
         connection: { host: `${name}.${tailscaleDomain}`, user: "root" },
@@ -366,25 +381,25 @@ export function updateTailscaleProxmox(options: {
       return pulumi.output(pulumi.unknown) as ReturnType<typeof updateTailscaleDeviceInfo>;
     }
 
-    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply((z) => z);
+    return tailscaleSet.stdout.apply(() => updateTailscaleDeviceInfo(tailscaleSet.id, name, ipAddress, args.advertiseTags, client, options.globals, options.parent, dependsOn)).apply(z => z);
   });
 
   return deviceInfo;
 }
 
 export function createPeerRelayRule(fwdIp: pulumi.Input<string>, globals: GlobalResources) {
-  return pulumi.output(fwdIp).apply((ip) => {
+  return pulumi.output(fwdIp).apply(ip => {
     const ipDash = ip.replace(/\./g, "-");
     const relayPort = new random.RandomInteger(`tailscale-relay-port-${ipDash}`, { min: 40000, max: 60000 });
-    const portForward = new unifi.port.Forward(
+    const _portForward = new unifi.port.Forward(
       `tailscale-port-forward-${ipDash}`,
       {
-        dstPort: relayPort.result.apply((p) => p.toString()),
+        dstPort: relayPort.result.apply(p => p.toString()),
         portForwardInterface: "wan",
         protocol: "tcp_udp",
         srcIp: "any",
         fwdIp: fwdIp,
-        fwdPort: relayPort.result.apply((p) => p.toString()),
+        fwdPort: relayPort.result.apply(p => p.toString()),
       },
       { provider: globals.unifiProvider, dependsOn: [relayPort] },
     );

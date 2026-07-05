@@ -2,7 +2,7 @@ services:
   tailscale:
     image: tailscale/tailscale:latest@sha256:25cde9ad76020b0e29229136d0c38b5962e9a0e1774ffac9b0df68e4a37d6cf0
     container_name: technitium-ts
-    # hostname lives on the netns owner; technitium shares this namespace and
+    # hostname lives on the net ns owner; technitium shares this namespace and
     # therefore cannot set its own hostname (network_mode: service:tailscale)
     hostname: ${CLUSTER_KEY}
     restart: unless-stopped
@@ -13,7 +13,7 @@ services:
     environment:
       TS_STATE_DIR: /var/lib/tailscale
       TS_USERSPACE: "false"
-      TS_ACCEPT_DNS: "false"
+      TS_ACCEPT_DNS: "true"
       # TS_AUTHKEY and TS_HOSTNAME must be set in .env
       # TS_HOSTNAME should be unique per cluster, e.g. technitium-celestia
     cap_add:

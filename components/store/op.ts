@@ -1,8 +1,6 @@
-import { OPConnect } from "@1password/connect";
-import { FullItem } from "@1password/connect";
+import { FullItem, OPConnect } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import type { ItemFile, ItemUrls } from "@1password/connect/dist/model/models.js";
-import { ClusterDefinition } from "./interfaces.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;
@@ -50,7 +48,7 @@ export class OPClient {
 
   private async getVaultUuid(vaultName: string) {
     const vaults = await this.client.listVaults();
-    const personalVault = vaults.find((v) => v.name === vaultName);
+    const personalVault = vaults.find(v => v.name === vaultName);
     if (!personalVault) {
       throw new Error(`No vault found in 1Password Connect (value: ${vaultName})`);
     }
@@ -112,7 +110,7 @@ export class OPClient {
     const vaultUuid = await this.getVaultUuid("Eris");
     try {
       return this.mapItem(await this.client.getItemByTitle(vaultUuid, itemTitle), undefined);
-    } catch (e) {
+    } catch (_e) {
       return this.getItemById(itemTitle);
     }
   }
@@ -121,7 +119,7 @@ export class OPClient {
     const vaultUuid = await this.getVaultUuid("Eris");
     try {
       const items = await this.client.listItemsByTitleContains(vaultUuid, contains);
-      return items.map((item) => this.mapItem(item, item.id));
+      return items.map(item => this.mapItem(item, item.id));
     } catch (e) {
       console.error(`Error listing items by title contains (value: ${contains})`, e);
       throw e;
@@ -132,8 +130,8 @@ export class OPClient {
     const vaultUuid = await this.getVaultUuid("Eris");
     try {
       const allItems = await this.client.listItems(vaultUuid);
-      const filtered = allItems.filter((item) => item.tags && item.tags.includes(tag));
-      return Promise.all(filtered.map((z) => this.getItemByTitle(z.title!)));
+      const filtered = allItems.filter(item => item.tags?.includes(tag));
+      return Promise.all(filtered.map(z => this.getItemByTitle(z.title!)));
     } catch (e) {
       console.error(`Error finding items by tag (value: ${tag})`, e);
       throw e;
@@ -141,7 +139,10 @@ export class OPClient {
   }
 
   public mapToFullItem(item: OPClientItemInput & { id?: string }): Omit<FullItem, "vault" | "extractOTP"> {
-    const sections = Object.entries(item.sections ?? {}).map(([key, s]) => ({ id: key, label: key }));
+    const sections = Object.entries(item.sections ?? {}).map(([key, _s]) => ({
+      id: key,
+      label: key,
+    }));
     const fields = Object.entries(item.fields ?? {}).map(([fieldKey, field]) => ({
       id: fieldKey,
       ...field,
@@ -197,7 +198,9 @@ export class OPClient {
     sections: {
       [key: string]: {
         id: string;
-        fields: { [key: string]: Omit<FullItemAllOfFields, "section" | "label"> };
+        fields: {
+          [key: string]: Omit<FullItemAllOfFields, "section" | "label">;
+        };
         files: { [key: string]: Omit<ItemFile, "section" | "label"> };
       };
     };
@@ -217,14 +220,30 @@ export class OPClient {
       if (file.content === undefined || (file.section && file.section.id !== "add more")) continue;
       rootFiles.push([file.name!, file] as const);
     }
-    const sectionParts: [string, { id: string; label: string; fields: { [key: string]: FullItemAllOfFields }; files: { [key: string]: ItemFile } }][] = [];
-    for (let section of sections) {
+    const sectionParts: [
+      string,
+      {
+        id: string;
+        label: string;
+        fields: { [key: string]: FullItemAllOfFields };
+        files: { [key: string]: ItemFile };
+      },
+    ][] = [];
+    for (const section of sections) {
       if (section.id === undefined || section.id === "add more") {
         continue;
       }
-      const sectionFields = fields.filter((f) => f.section?.id === section.id).map((f) => [f.label!, f] as const);
-      const sectionFiles = files.filter((f) => f.section?.id === section.id).map((f) => [f.name!, f] as const);
-      sectionParts.push([section.id!, { id: section.id!, label: section.label ?? section.id!, fields: Object.fromEntries(sectionFields), files: Object.fromEntries(sectionFiles) }] as const);
+      const sectionFields = fields.filter(f => f.section?.id === section.id).map(f => [f.label!, f] as const);
+      const sectionFiles = files.filter(f => f.section?.id === section.id).map(f => [f.name!, f] as const);
+      sectionParts.push([
+        section.id!,
+        {
+          id: section.id!,
+          label: section.label ?? section.id!,
+          fields: Object.fromEntries(sectionFields),
+          files: Object.fromEntries(sectionFiles),
+        },
+      ] as const);
     }
 
     const result = removeUndefinedProperties({
@@ -246,7 +265,7 @@ function removeUndefinedProperties<T>(obj: T): T {
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.filter((item) => item !== undefined).map((item) => removeUndefinedProperties(item)) as T;
+    return obj.filter(item => item !== undefined).map(item => removeUndefinedProperties(item)) as T;
   }
   if (typeof obj === "object" && !(obj instanceof Date)) {
     return Object.fromEntries(

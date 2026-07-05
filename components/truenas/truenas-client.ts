@@ -1,21 +1,21 @@
+import { WebSocket } from "node:http";
+import type { MessageConnection } from "vscode-jsonrpc";
 import { ConsoleLogger, listen } from "vscode-ws-jsonrpc";
 import {
   type AuthLoginExParams,
-  type AuthLoginExResponse,
-  type SystemInfo,
-  type Job,
   AuthLoginExRequest,
-  // System Request Types
-  SystemInfoRequest,
-  CoreSubscribeRequest,
-  CoreUnsubscribeRequest,
+  type AuthLoginExResponse,
   // Notification Types
   CollectionUpdateNotification,
-  NotifyUnsubscribedNotification,
+  CoreSubscribeRequest,
+  CoreUnsubscribeRequest,
+  type Job,
   JobUpdateNotification,
+  NotifyUnsubscribedNotification,
+  type SystemInfo,
+  // System Request Types
+  SystemInfoRequest,
 } from "./truenas-types.js";
-import { WebSocket } from "http";
-import { MessageConnection } from "vscode-jsonrpc";
 
 /**
  * TrueNAS JSON-RPC 2.0 WebSocket Client
@@ -57,7 +57,7 @@ export class TrueNASClient {
               resolve(response.result);
             }
           }
-        } catch (e) {
+        } catch (_e) {
           reject(new Error("Failed to parse JSON-RPC response"));
         }
       };
@@ -87,7 +87,7 @@ export class TrueNASClient {
       ssl?: boolean;
       reconnectOnClose?: boolean;
       maxReconnectAttempts?: number;
-    } = {}
+    } = {},
   ) {
     const protocol = this.options.ssl ? "wss" : "ws";
     const port = this.options.port || (this.options.ssl ? 443 : 80);
@@ -99,19 +99,19 @@ export class TrueNASClient {
       listen({
         webSocket: webSocket as any,
         logger: new ConsoleLogger(),
-        onConnection: (connection) => {
+        onConnection: connection => {
           clearTimeout(timeout);
 
           // Set up typed notification handlers
-          connection.onNotification(CollectionUpdateNotification, (params) => {
+          connection.onNotification(CollectionUpdateNotification, params => {
             this.onCollectionUpdate?.(params);
           });
 
-          connection.onNotification(NotifyUnsubscribedNotification, (params) => {
+          connection.onNotification(NotifyUnsubscribedNotification, params => {
             this.onNotifyUnsubscribed?.(params);
           });
 
-          connection.onNotification(JobUpdateNotification, (params) => {
+          connection.onNotification(JobUpdateNotification, params => {
             this.onJobUpdate?.(params);
           });
 
@@ -162,14 +162,14 @@ export class TrueNASClient {
    * Subscribe to notifications for a specific collection
    */
   async subscribe(name: string): Promise<void> {
-    await this.withConnection((c) => c.sendRequest(CoreSubscribeRequest, name));
+    await this.withConnection(c => c.sendRequest(CoreSubscribeRequest, name));
   }
 
   /**
    * Unsubscribe from notifications for a specific collection
    */
   async unsubscribe(name: string): Promise<void> {
-    await this.withConnection((c) => c.sendRequest(CoreUnsubscribeRequest, name));
+    await this.withConnection(c => c.sendRequest(CoreUnsubscribeRequest, name));
   }
 
   /**
@@ -177,7 +177,7 @@ export class TrueNASClient {
    * @deprecated Use client.system.info() instead
    */
   getSystemInfo(): Promise<SystemInfo> {
-    return this.withConnection((c) => c.sendRequest(SystemInfoRequest));
+    return this.withConnection(c => c.sendRequest(SystemInfoRequest));
   }
 
   /**

@@ -1,30 +1,31 @@
-import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { all, ComponentResource, Input, interpolate, jsonStringify, log, mergeOptions, Output, output, Resource, Unwrap, UnwrappedObject } from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { GlobalResources } from "./globals.ts";
-import { getContainerHostnames } from "./helpers.ts";
-import { StandardDns } from "./StandardDns.ts";
-import { installTailscaleLxc, TailscaleMonitor } from "@components/tailscale.ts";
-import * as tailscale from "@pulumi/tailscale";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { FullItem } from "@1password/connect";
-import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { fileURLToPath } from "node:url";
-import { OPClient } from "@components/op.ts";
-import { glob } from "glob";
-import * as yaml from "yaml";
-import { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
-import { unique } from "moderndash";
-import { Command } from "@pulumi/command/remote/index.js";
-import { TailscaleIp } from "@openapi/tailscale-grants.js";
-import { runCommunityScriptLxc } from "./lxc.ts";
+import { FullItem } from "@1password/connect";
 import { Tailscale } from "@components/constants.ts";
-import * as authentik from "@pulumi/authentik";
+import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
+import type { OPClient } from "@components/op.ts";
+import { installTailscaleLxc, type TailscaleMonitor } from "@components/tailscale.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import * as authentikApi from "@goauthentik/api/dist/esm/index.js";
-import { AuthentikApplicationManager } from "./authentik.ts";
-import { ClusterDefinition, CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "./store/index.ts";
+import type { ApplicationDefinitionSchema } from "@openapi/application-definition.js";
+import type { TailscaleIp } from "@openapi/tailscale-grants.js";
+import * as authentik from "@pulumi/authentik";
+import { remote, type types } from "@pulumi/command";
+import { all, ComponentResource, type Input, interpolate, jsonStringify, log, mergeOptions, type Output, output, type Resource, type Unwrap } from "@pulumi/pulumi";
+import * as tailscale from "@pulumi/tailscale";
+import { TailnetKey } from "@pulumi/tailscale";
+import { glob } from "glob";
+import { unique } from "moderndash";
+import * as yaml from "yaml";
+import type { AuthentikApplicationManager } from "./authentik.ts";
+import type { GlobalResources } from "./globals.ts";
+import { getContainerHostnames } from "./helpers.ts";
+import { runCommunityScriptLxc } from "./lxc.ts";
+import type { ProxmoxHost } from "./ProxmoxHost.ts";
+import { StandardDns } from "./StandardDns.ts";
+import type { ClusterDefinition, PasswordDefinition, SshKeyDefinition } from "./store/index.ts";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
@@ -90,9 +91,7 @@ export class DockgeLxc extends ComponentResource {
     this.tailscaleHostname = tailscaleHostname;
 
     const tailscaleIpParts = (args.tailscaleIpAddress ?? args.host.tailscaleIpAddress).split(".");
-    this.tailscaleIpAddress = output(
-      args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp),
-    );
+    this.tailscaleIpAddress = output(args.tailscaleIpAddress ?? (`${tailscaleIpParts[0]}.${tailscaleIpParts[1]}.${args.host.tailscaleIpAddress[args.host.tailscaleIpAddress.length - 1]}0.100` as TailscaleIp));
 
     // Check if the Docker LXC container already exists on the Proxmox host
     const lxcExists = new remote.Command(
@@ -155,7 +154,7 @@ export class DockgeLxc extends ComponentResource {
       vmId: args.vmId,
       dependsOn: [...depends],
     });
-    depends.push(deviceInfo.apply((z) => z.resource));
+    depends.push(deviceInfo.apply(z => z.resource));
 
     // update hostname on machine
     const setHostname = new remote.Command(
@@ -181,17 +180,26 @@ export class DockgeLxc extends ComponentResource {
               create: interpolate`pct exec ${args.vmId} -- hostname -I`,
             },
             mergeOptions(cro, { dependsOn: [setHostname] }),
-          ).stdout.apply((z) => z.split(" ")[0]) as Output<TailscaleIp>);
+          ).stdout.apply(z => z.split(" ")[0]) as Output<TailscaleIp>);
 
     this.credential = output(args.credential);
-    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
+    const _connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.tailscaleHostname,
-      user: this.credential.apply((z) => z.username!),
-      password: this.credential.apply((z) => z.password!),
+      user: this.credential.apply(z => z.username!),
+      password: this.credential.apply(z => z.password!),
     });
 
-    this.dns = this.hostname.apply((g) => {
-      return StandardDns.create(name, { hostname: g, ipAddress: args.ipAddress ?? this.tailscaleIpAddress, type: "A" }, args.globals, cro);
+    this.dns = this.hostname.apply(g => {
+      return StandardDns.create(
+        name,
+        {
+          hostname: g,
+          ipAddress: args.ipAddress ?? this.tailscaleIpAddress,
+          type: "A",
+        },
+        args.globals,
+        cro,
+      );
     });
 
     // Seed SFTP keys into the rclone-sftp stack path on the remote host
@@ -219,8 +227,8 @@ export class DockgeLxc extends ComponentResource {
 
     const keyWrites: any[] = [];
 
-    const privateKeyPem = output(args.sftpKey).apply((k) => k["private key"]?.trim() + "\n");
-    const publicKeyPem = output(args.sftpKey).apply((k) => k["public key"]?.trim() + "\n");
+    const privateKeyPem = output(args.sftpKey).apply(k => `${k["private key"]?.trim()}\n`);
+    const publicKeyPem = output(args.sftpKey).apply(k => `${k["public key"]?.trim()}\n`);
 
     // Daily trigger: changes each calendar day so Pulumi re-copies key files even if they
     // went missing on disk (Pulumi state wouldn't notice a missing file otherwise).
@@ -369,7 +377,7 @@ export class DockgeLxc extends ComponentResource {
         `${name}-sftp-keys-perms`,
         {
           connection: this.remoteConnection,
-          triggers: keyWrites.map((k) => k.id),
+          triggers: keyWrites.map(k => k.id),
           create: interpolate`chmod 700 ${sftpKeysDir} ${jobsKeysDir} ${backrestSshDir} && chmod 600 ${sftpKeysDir}/host_key ${sftpKeysDir}/authorized_keys ${sftpKeysDir}/known_hosts ${jobsKeysDir}/id_ed25519 ${jobsKeysDir}/id_ed25519.pub ${jobsKeysDir}/known_hosts ${jobsKeysDir}/server_host_key.pub ${backrestSshDir}/id_ed25519 ${backrestSshDir}/id_ed25519.pub ${backrestSshDir}/known_hosts && chown -R 65534:65534 ${sftpKeysDir} || true`,
         },
         mergeOptions(cro, { dependsOn: keyWrites }),
@@ -400,9 +408,18 @@ export class DockgeLxc extends ComponentResource {
           // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
-              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
+              hostname: {
+                type: TypeEnum.String,
+                value: this.tailscaleHostname,
+              },
+              username: {
+                type: TypeEnum.String,
+                value: args.globals.proxmoxCredential.username,
+              },
+              password: {
+                type: TypeEnum.Concealed,
+                value: args.globals.proxmoxCredential.password,
+              },
             },
           },
         },
@@ -410,7 +427,10 @@ export class DockgeLxc extends ComponentResource {
           name: { type: TypeEnum.String, value: name },
           hostname: { type: TypeEnum.String, value: this.hostname },
           ipAddress: { type: TypeEnum.String, value: this.ipAddress },
-          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+          tailscaleIpAddress: {
+            type: TypeEnum.String,
+            value: this.tailscaleIpAddress,
+          },
         },
       },
       cro,
@@ -438,7 +458,7 @@ export class DockgeLxc extends ComponentResource {
   }
 
   public registerExternalService(opts: ExternalServiceOpts, dependsOn?: Resource[]) {
-    return output(opts).apply((opts) => {
+    return output(opts).apply(opts => {
       const content = output({
         http: {
           routers: {
@@ -446,7 +466,11 @@ export class DockgeLxc extends ComponentResource {
               rule: `Host(\`${opts.hostname}\`)`,
               entryPoints: ["websecure"],
               service: `host-${opts.name}`,
-              ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
+              ...(opts.middleware?.length
+                ? {
+                    middlewares: opts.middleware.map(m => `- ${m}`).join("\n"),
+                  }
+                : {}),
               tls: {
                 certResolver: opts.certResolver ?? "le",
               },
@@ -455,7 +479,11 @@ export class DockgeLxc extends ComponentResource {
               rule: interpolate`Host(\`${opts.name}.${this.args.globals.tailscaleDomain}\`)`,
               entryPoints: ["tailscale"],
               service: `host-${opts.name}`,
-              ...(opts.middleware?.length ? { middlewares: opts.middleware.map((m) => `- ${m}`).join("\n") } : {}),
+              ...(opts.middleware?.length
+                ? {
+                    middlewares: opts.middleware.map(m => `- ${m}`).join("\n"),
+                  }
+                : {}),
             },
           },
           services: {
@@ -466,7 +494,7 @@ export class DockgeLxc extends ComponentResource {
             },
           },
         },
-      }).apply((z) => yaml.stringify(z));
+      }).apply(z => yaml.stringify(z));
 
       const dns = StandardDns.create(
         `${opts.name}-dns-service`,
@@ -549,8 +577,21 @@ export class DockgeLxc extends ComponentResource {
       },
       {
         parent: this,
-        dependsOn: output(args.dependsOn).apply((z) => [...this.resources, ...(z ?? [])]),
+        dependsOn: output(args.dependsOn).apply(z => [...this.resources, ...(z ?? [])]),
       },
+    );
+
+    const dnsAuthkey = new TailnetKey(
+      `${name}-dns-authkey`,
+      {
+        reusable: true,
+        preauthorized: true,
+        ephemeral: false,
+        recreateIfInvalid: "always",
+        tags: [Tailscale.tag.dns],
+        description: interpolate`${this.cluster.title} Authkey for DNS service on ${this.args.host.name}`,
+      },
+      { parent: this, provider: this.args.globals.tailscaleProvider },
     );
 
     args.dependsOn = all([args.dependsOn, this.resources]).apply(([z, r]) => [...r, ...z, createDockerNetwork]);
@@ -565,12 +606,13 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{tailscaleIpAddress\}/g, this.tailscaleIpAddress),
       replaceVariable(/\$\{ipAddress\}/g, this.ipAddress),
       replaceVariable(/\$\{tailscaleHostname\}/g, this.tailscaleHostname),
+      replaceVariable(/\$\{TS_DNS_AUTHKEY\}/g, dnsAuthkey.key),
       replaceVariable(/\$\{CLUSTER_TITLE\}/g, this.cluster.title),
       replaceVariable(/\$\{CLUSTER_KEY\}/g, this.cluster.key),
       replaceVariable(/\$\{CLUSTER_CNAME\}/g, this.cluster.key),
       replaceVariable(
         /\$\{LOCATION\}/g,
-        output(this.cluster.location).apply((loc) => loc ?? "unknown"),
+        output(this.cluster.location).apply(loc => loc ?? "unknown"),
       ),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? interpolate`authentik.${this.args.globals.tailscaleDomain}` : this.cluster.authentikDomain),
@@ -580,13 +622,13 @@ export class DockgeLxc extends ComponentResource {
     ];
 
     const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
-      unique([...hostFiles, ...commonFiles].filter((z) => z !== ".keep")),
+      unique([...hostFiles, ...commonFiles].filter(z => z !== ".keep")),
     );
 
     const outpost = stacks
-      .apply((stacks) =>
+      .apply(stacks =>
         output(
-          stacks.map(async (stackName) => {
+          stacks.map(async stackName => {
             const path = resolve(dockerPath, this.args.host.name, stackName);
             const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
             if (!files) {
@@ -597,15 +639,15 @@ export class DockgeLxc extends ComponentResource {
               files,
               path,
               replacements,
-              output(args.dependsOn).apply((z) => [...z, ...this.mountPoints]),
+              output(args.dependsOn).apply(z => [...z, ...this.mountPoints]),
             );
           }),
         ),
       )
-      .apply((z) => z.filter((z) => z !== null).map((z) => z!))
-      .apply((z) => {
-        z.forEach((s) => log.info(`Loaded docker stack ${s.name} from ${s.path}`), this);
-        return output(this.createOutpost(z.flatMap((z) => z.applications)));
+      .apply(z => z.filter(z => z !== null).map(z => z!))
+      .apply(z => {
+        z.forEach(s => log.info(`Loaded docker stack ${s.name} from ${s.path}`), this);
+        return output(this.createOutpost(z.flatMap(z => z.applications)));
       });
 
     return outpost;
@@ -613,7 +655,7 @@ export class DockgeLxc extends ComponentResource {
 
   private async createOutpost(depends: ApplicationReturn[]) {
     const applicationManager = this.args.host.applicationManager;
-    const proxyProviders = depends.filter((z) => z.isProxy).map((z) => z.provider);
+    const proxyProviders = depends.filter(z => z.isProxy).map(z => z.provider);
 
     if (proxyProviders.length === 0) {
       return;
@@ -636,12 +678,21 @@ export class DockgeLxc extends ComponentResource {
           undefined,
           2,
         ),
-        protocolProviders: proxyProviders.map((z) => z.id.apply(parseFloat)),
+        protocolProviders: proxyProviders.map(z => z.id.apply(parseFloat)),
       },
-      { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true, dependsOn: proxyProviders },
+      {
+        parent: applicationManager.outpostsComponent,
+        deleteBeforeReplace: true,
+        dependsOn: proxyProviders,
+      },
     );
 
-    const authentikToken = await awaitOutput(this.args.globals.store.getSecretByTitle<{ credential: string; url: string }>("Authentik Token"));
+    const authentikToken = await awaitOutput(
+      this.args.globals.store.getSecretByTitle<{
+        credential: string;
+        url: string;
+      }>("Authentik Token"),
+    );
     const clientConfig = new authentikApi.Configuration({
       accessToken: authentikToken.credential,
       basePath: `${authentikToken.url}/api/v3/`,
@@ -649,7 +700,9 @@ export class DockgeLxc extends ComponentResource {
 
     const authentikCoreApi = new authentikApi.CoreApi(clientConfig);
     const outpostId = await awaitOutput(outpost.id);
-    const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({ identifier: `ak-outpost-${outpostId}-api` });
+    const outpostToken = await authentikCoreApi.coreTokensViewKeyRetrieve({
+      identifier: `ak-outpost-${outpostId}-api`,
+    });
     const clusterKey = await awaitOutput(this.cluster.key);
 
     const envValues = `AUTHENTIK_TOKEN=${outpostToken.key}`;
@@ -667,11 +720,21 @@ export class DockgeLxc extends ComponentResource {
     return environmentConfig;
   }
 
-  private async getStackFiles(stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
-    const commonFiles = await glob("**/*", { cwd: commonPath, absolute: true, nodir: true, dot: true });
-    const files = await glob("**/*", { cwd: path, absolute: true, nodir: true, dot: true });
+  private async getStackFiles(_stackName: string, commonPath: string, path: string): Promise<Map<string, string> | null> {
+    const commonFiles = await glob("**/*", {
+      cwd: commonPath,
+      absolute: true,
+      nodir: true,
+      dot: true,
+    });
+    const files = await glob("**/*", {
+      cwd: path,
+      absolute: true,
+      nodir: true,
+      dot: true,
+    });
 
-    if (commonFiles.some((z) => z.endsWith(".ignore")) || files.some((z) => z.endsWith(".ignore"))) {
+    if (commonFiles.some(z => z.endsWith(".ignore")) || files.some(z => z.endsWith(".ignore"))) {
       return null;
     }
 
@@ -696,9 +759,14 @@ export class DockgeLxc extends ComponentResource {
     path: string,
     replacements: ((input: Output<string>) => Output<string>)[],
     dependsOn: Input<Resource[]>,
-  ): Output<{ name: string; path: string; compose?: remote.Command; applications: ApplicationReturn[] }> {
+  ): Output<{
+    name: string;
+    path: string;
+    compose?: remote.Command;
+    applications: ApplicationReturn[];
+  }> {
     const copyFiles = [];
-    const cluster = this.cluster;
+    const _cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
     // Prepend stack-specific substitutions so they run BEFORE the vaultRegex resolver.
     // vaultRegex is the last item in the inherited replacements array; if APP/STACK_NAME
@@ -728,38 +796,38 @@ export class DockgeLxc extends ComponentResource {
     const others = Array.from(files.entries()).filter(([relativeFilePath]) => relativeFilePath !== "definition.yaml");
 
     const waitForApplications = output(definitions)
-      .apply((defs) =>
+      .apply(defs =>
         defs.map(([, absoluteFilePath]) => {
           const content = output(readFile(absoluteFilePath, "utf-8"));
-          let replacedContent = replacements.reduce((p, r) => r(p), content);
+          const replacedContent = replacements.reduce((p, r) => r(p), content);
           // intercept definition file and create the client id / client secret and inject that into the yaml.
-          return replacedContent.apply((content) => {
+          return replacedContent.apply(content => {
             const docs = yaml.parseAllDocuments(content);
             if (!docs || "empty" in docs) {
               return [];
             }
-            return docs.map((doc) => this.args.host.applicationManager.createApplication(doc.toJS() as unknown as ApplicationDefinitionSchema));
+            return docs.map(doc => this.args.host.applicationManager.createApplication(doc.toJS() as unknown as ApplicationDefinitionSchema));
           });
         }),
       )
-      .apply((z) => output(z))
-      .apply((z) => z.flat().map((z) => z));
+      .apply(z => output(z))
+      .apply(z => z.flat().map(z => z));
 
-    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map((z) => z.app)]);
+    dependsOn = all([dependsOn, waitForApplications]).apply(([a, b]) => [...a, ...b.map(z => z.app)]);
 
-    const triggers = [];
+    const _triggers = [];
 
     for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
       const file = relativeFilePath;
-      let replacedContent = replacements.reduce((p, r) => r(p), content);
+      const replacedContent = replacements.reduce((p, r) => r(p), content);
 
       if (file.endsWith("init.sh")) {
         hasInit = true;
       } else if (file.endsWith("compose.yaml")) {
         hasCompose = true;
 
-        const stackUsers = replacedContent.apply((content) => {
+        const stackUsers = replacedContent.apply(content => {
           try {
             const parsed = yaml.parse(content);
             return [
@@ -774,9 +842,7 @@ export class DockgeLxc extends ComponentResource {
           }
         });
 
-        const chownCmd = stackUsers.apply((users) =>
-          users.length > 0 ? users.flatMap((u) => [`chown -R ${u} /opt/stacks-data/${stackName}`, `chown -R ${u} /opt/stacks/${stackName}`]).join(" && ") : "true",
-        );
+        const chownCmd = stackUsers.apply(users => (users.length > 0 ? users.flatMap(u => [`chown -R ${u} /opt/stacks-data/${stackName}`, `chown -R ${u} /opt/stacks/${stackName}`]).join(" && ") : "true"));
 
         copyFiles.push(
           new remote.Command(
@@ -794,7 +860,7 @@ export class DockgeLxc extends ComponentResource {
         const hostRegex = /Host\(`(.*?)`\)/g;
 
         all([replacedContent, tailscaleDomain]).apply(([content, tailscaleDomain]) => {
-          const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map((z) => z[1]));
+          const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map(z => z[1]));
           for (const host of hosts) {
             if (host.indexOf(tailscaleDomain) > -1) {
               // this is a service domain
@@ -835,7 +901,7 @@ export class DockgeLxc extends ComponentResource {
                 },
               );
 
-      this.monitor.addService(`svc:${service}`);
+              this.monitor.addService(`svc:${service}`);
 
               copyFiles.push(tailscaleServe);
 
@@ -885,7 +951,7 @@ export class DockgeLxc extends ComponentResource {
           `${this.shortName}-${stackName}-init`,
           {
             connection: this.remoteConnection,
-            triggers: [new Date().getTime()], // always run
+            triggers: [Date.now()], // always run
             create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
           },
           {
@@ -901,19 +967,28 @@ export class DockgeLxc extends ComponentResource {
         `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
-          triggers: [...copyFiles.map((f) => f.id)],
+          triggers: [...copyFiles.map(f => f.id)],
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         {
           parent: stackParent,
-          dependsOn: all([waitForApplications, dependsOn]).apply(([waitForApplicationsDeps, dependsOnDeps]) => [...waitForApplicationsDeps.map((z) => z.app), ...dependsOnDeps, ...composeDeps]),
+          dependsOn: all([waitForApplications, dependsOn]).apply(([waitForApplicationsDeps, dependsOnDeps]) => [...waitForApplicationsDeps.map(z => z.app), ...dependsOnDeps, ...composeDeps]),
           deleteBeforeReplace: true,
         },
       );
 
-      return waitForApplications.apply((applications) => ({ name: stackName, path, compose, applications }));
+      return waitForApplications.apply(applications => ({
+        name: stackName,
+        path,
+        compose,
+        applications,
+      }));
     }
-    return waitForApplications.apply((applications) => ({ name: stackName, path, applications }));
+    return waitForApplications.apply(applications => ({
+      name: stackName,
+      path,
+      applications,
+    }));
   }
 }
 
@@ -933,10 +1008,10 @@ export function getDockageProperties(instance: DockgeLxc) {
   });
 }
 
-function tryGetService(name: string, globals: GlobalResources) {
+function _tryGetService(name: string, globals: GlobalResources) {
   try {
-    return tailscale.getServiceOutput({ name: `svc:${name}` }, { provider: globals.tailscaleProvider }).apply((z) => (z ? z : undefined));
-  } catch (error) {
+    return tailscale.getServiceOutput({ name: `svc:${name}` }, { provider: globals.tailscaleProvider }).apply(z => (z ? z : undefined));
+  } catch (_error) {
     return output(undefined);
   }
 }

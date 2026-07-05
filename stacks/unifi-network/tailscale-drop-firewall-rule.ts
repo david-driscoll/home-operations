@@ -1,31 +1,37 @@
 import * as pulumi from "@pulumi/pulumi";
-import axios from "axios";
-import * as unifi from "@pulumiverse/unifi";
 import * as firewall from "@pulumi/terrifi";
-import is_ip_private from "private-ip";
-import type { components } from "../../types/tailscale.ts";
-
-import { GlobalResources } from "../../components/globals.ts";
-import { Tailscale } from "../../components/constants.ts";
-import { getTailscaleClient } from "../../components/tailscale.ts";
+import * as unifi from "@pulumiverse/unifi";
+import axios from "axios";
 import CIDRMatcher from "cidr-matcher";
+import is_ip_private from "private-ip";
+import { Tailscale } from "../../components/constants.ts";
+import type { GlobalResources } from "../../components/globals.ts";
+import { getTailscaleClient } from "../../components/tailscale.ts";
+import type { components } from "../../types/tailscale.ts";
 
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   const matcher = new CIDRMatcher([Tailscale.subnets.home]);
-  const devices = pulumi.output(getTailscaleClient(globals)).apply(async (client) => {
+  const devices = pulumi.output(getTailscaleClient(globals)).apply(async client => {
     const devices = await client.GET("/tailnet/{tailnet}/devices", {
       params: {
         path: { tailnet: "-" },
         query: { fields: "all" },
       },
     });
-    const devicesIncludingDrops: { device: components["schemas"]["Device"]; ipv4IpsToDrop: { ip: string; port: number }[]; ipv6IpsToDrop: { ip: string; port: number }[] }[] = [];
+    const devicesIncludingDrops: {
+      device: components["schemas"]["Device"];
+      ipv4IpsToDrop: { ip: string; port: number }[];
+      ipv6IpsToDrop: { ip: string; port: number }[];
+    }[] = [];
     const peerRelays: string[] = [];
     for (const device of devices.data?.devices ?? []) {
       const ipv6IpsToDrop: { ip: string; port: number }[] = [];
       const ipv4IpsToDrop: { ip: string; port: number }[] = [];
       const endpoints = device.clientConnectivity?.endpoints ?? [];
-      for (const { ip, port } of endpoints.map((e) => ({ ip: e.substring(0, e.lastIndexOf(":")).replace("[", "").replace("]", ""), port: +e.substring(e.lastIndexOf(":") + 1) }))) {
+      for (const { ip, port } of endpoints.map(e => ({
+        ip: e.substring(0, e.lastIndexOf(":")).replace("[", "").replace("]", ""),
+        port: +e.substring(e.lastIndexOf(":") + 1),
+      }))) {
         if (device.tags?.includes(Tailscale.tag.peerRelay) && matcher.contains(ip)) {
           peerRelays.push(ip);
           continue;
@@ -40,9 +46,9 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         if (ipDetails.domain !== "att.com") continue;
         if (ipDetails.country_code !== "US") continue;
 
-        if (ipDetails.ip_version === "4" && ipv4IpsToDrop.findIndex((i) => i.ip === ip && i.port === port) === -1) {
+        if (ipDetails.ip_version === "4" && ipv4IpsToDrop.findIndex(i => i.ip === ip && i.port === port) === -1) {
           ipv4IpsToDrop.push({ ip, port });
-        } else if (ipDetails.ip_version === "6" && ipv6IpsToDrop.findIndex((i) => i.ip === ip && i.port === port) === -1) {
+        } else if (ipDetails.ip_version === "6" && ipv6IpsToDrop.findIndex(i => i.ip === ip && i.port === port) === -1) {
           ipv6IpsToDrop.push({ ip, port });
         }
       }
@@ -55,7 +61,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
 
   devices.apply(({ devices, peerRelays }) => {
     pulumi.log.info(`Found ${devices.length} Tailscale devices with AT&T IPs to drop`, globals);
-    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map((d) => d).join(", ")}`, globals);
+    pulumi.log.info(`Found ${peerRelays.length} Tailscale devices tagged as peer relays: ${peerRelays.map(d => d).join(", ")}`, globals);
   });
 
   const internalZone = unifi.firewall.getZoneOutput({ name: "Internal" }, { provider: globals.unifiProvider });
@@ -69,7 +75,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
       if (ipv4IpsToDrop.length > 0) {
         for (const { ip, port } of ipv4IpsToDrop) {
-          const firewallRule = new firewall.FirewallPolicy(
+          const _firewallRule = new firewall.FirewallPolicy(
             `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}-${port}`,
             {
               enabled: true,
@@ -93,14 +99,17 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
                 mode: "ALWAYS",
               },
             },
-            { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
+            {
+              provider: globals.unifiFirewallProvider,
+              deleteBeforeReplace: true,
+            },
           );
         }
       }
 
       if (ipv6IpsToDrop.length > 0) {
         for (const { ip, port } of ipv6IpsToDrop) {
-          const firewallRule = new firewall.FirewallPolicy(
+          const _firewallRule = new firewall.FirewallPolicy(
             `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}-${port}`,
             {
               enabled: true,
@@ -117,13 +126,16 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               },
               destination: {
                 zoneId: internalZone.id,
-                // TOOD: peer-relays that have ipv6?
+                // TODO: peer-relays that have ipv6?
               },
               schedule: {
                 mode: "ALWAYS",
               },
             },
-            { provider: globals.unifiFirewallProvider, deleteBeforeReplace: true },
+            {
+              provider: globals.unifiFirewallProvider,
+              deleteBeforeReplace: true,
+            },
           );
         }
       }
@@ -161,7 +173,7 @@ async function getIpDetails(ip: string) {
     const url = `https://api.ipdetails.io/?ip=${ip}`;
     const resp = await axios.get<IPInfo>(url, { timeout: 10000 });
     return resp.data;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }

@@ -1,8 +1,8 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
+import type { AuthenticatorStages } from "./authenticator-stages.js";
+import { passwordChange } from "./default-flows.ts";
 import { SharedComponentResource } from "./shared-component-resource.ts";
-import { AuthenticatorStages } from "./authenticator-stages.js";
-import { DefaultFlows } from "./default-flows.ts";
 
 export class AuthenticationStages extends SharedComponentResource {
   private _mfa?: authentik.StageAuthenticatorValidate;
@@ -10,7 +10,10 @@ export class AuthenticationStages extends SharedComponentResource {
   private _sourceLogin?: authentik.StageUserLogin;
   private _password?: authentik.StagePassword;
 
-  constructor(private authenticatorStages: AuthenticatorStages, opts?: pulumi.ComponentResourceOptions) {
+  constructor(
+    private authenticatorStages: AuthenticatorStages,
+    opts?: pulumi.ComponentResourceOptions,
+  ) {
     super("custom:resource:AuthenticationStages", "stages-authentication", opts);
   }
 
@@ -21,15 +24,11 @@ export class AuthenticationStages extends SharedComponentResource {
         {
           deviceClasses: ["static", "totp", "webauthn"],
           notConfiguredAction: "configure",
-          configurationStages: [
-            this.authenticatorStages.passkey.stageAuthenticatorWebauthnId,
-            this.authenticatorStages.totp.stageAuthenticatorTotpId,
-            this.authenticatorStages.backupCodes.stageAuthenticatorStaticId,
-          ],
+          configurationStages: [this.authenticatorStages.passkey.stageAuthenticatorWebauthnId, this.authenticatorStages.totp.stageAuthenticatorTotpId, this.authenticatorStages.backupCodes.stageAuthenticatorStaticId],
           lastAuthThreshold: "days=7",
           webauthnUserVerification: "preferred",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._mfa;
@@ -43,7 +42,7 @@ export class AuthenticationStages extends SharedComponentResource {
           rememberMeOffset: "days=29",
           sessionDuration: "days=1",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._login;
@@ -57,7 +56,7 @@ export class AuthenticationStages extends SharedComponentResource {
           rememberMeOffset: "days=29",
           sessionDuration: "days=1",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._sourceLogin;
@@ -70,9 +69,9 @@ export class AuthenticationStages extends SharedComponentResource {
         {
           backends: ["authentik.core.auth.InbuiltBackend", "authentik.core.auth.TokenBackend"],
           allowShowPassword: true,
-          configureFlow: DefaultFlows.passwordChange.apply((z) => z.id),
+          configureFlow: passwordChange().apply(z => z.id),
         },
-        this.parent
+        this.parent,
       );
     }
     return this._password;

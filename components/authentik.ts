@@ -1,18 +1,18 @@
-import * as pulumi from "@pulumi/pulumi";
+import type { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as authentik from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
-import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
-import { Roles } from "./constants.ts";
-import { GlobalResources } from "./globals.ts";
-import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
-import { ApplicationCertificate } from "./authentik/application-certificate.ts";
-import { ApplicationDefinitionSchema, AuthentikDefinition, GatusDefinition } from "@openapi/application-definition.js";
 import * as yaml from "yaml";
+import { CategoryEnum, OnePasswordItem, TypeEnum } from "../dynamic/1password/OnePasswordItem.ts";
+import type { Application } from "../sdks/authentik/bin/application.js";
+import type { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
+import type { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
+import { ApplicationCertificate } from "./authentik/application-certificate.ts";
+import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
+import type { Roles } from "./constants.ts";
+import type { GlobalResources } from "./globals.ts";
 import { awaitOutput, clientIdPair } from "./helpers.ts";
-import { Application } from "../sdks/authentik/bin/application.js";
-import { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
-import { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
-import { ClusterDefinition, VaultStore } from "./store/index.ts";
+import type { ClusterDefinition, VaultStore } from "./store/index.ts";
 
 export interface AuthentikResourcesArgs {
   globals: GlobalResources;
@@ -28,7 +28,9 @@ export interface AuthentikOutputs {
   groups: { [K in RolesValues]: string };
   roles: { [K in RolesValues]: string };
   scopeMappings: Record<string, string>;
-  flows: { [K in keyof ReturnType<import("./authentik/flows.ts").FlowsManager["createFlows"]>]: string };
+  flows: {
+    [K in keyof ReturnType<import("./authentik/flows.ts").FlowsManager["createFlows"]>]: string;
+  };
 }
 export class AuthentikApplicationManager extends pulumi.ComponentResource {
   private readonly providersComponent: pulumi.ComponentResource;
@@ -59,7 +61,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           provider: undefined;
           isProxy: false;
         }
-    ) & { definition: ApplicationDefinitionSchema; app: Application; gatus: GatusDefinition[] })[]
+    ) & {
+      definition: ApplicationDefinitionSchema;
+      app: Application;
+      gatus: GatusDefinition[];
+    })[]
   > = pulumi.output([]);
   public get applications() {
     return this._applications;
@@ -67,7 +73,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
   constructor(
     private readonly args: AuthentikResourcesArgs,
-    private readonly opts?: pulumi.ComponentResourceOptions,
+    readonly opts?: pulumi.ComponentResourceOptions,
   ) {
     super("custom:resource:AuthentikResourceManager", `${args.clusterKey}-authentik-resource-manager`, {}, opts);
 
@@ -82,11 +88,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   public createApplication(application: pulumi.Input<ApplicationDefinitionSchema>) {
     return pulumi
       .output(application)
-      .apply((application) =>
+      .apply(application =>
         (application.spec.authentikFrom
           ? pulumi.output(this.args.loadFromResource<ApplicationDefinitionSchema["spec"]["authentik"]>(application, "authentik", application.spec.authentikFrom))
           : pulumi.output(application.spec.authentik)
-        ).apply((authentik) => ({ application, authentik })),
+        ).apply(authentik => ({ application, authentik })),
       )
       .apply(async ({ application, authentik }) => {
         if (authentik) {
@@ -103,14 +109,18 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply((defs) => {
-          const r = Object.assign(result, { definition: application, app, gatus: defs });
+        const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply(defs => {
+          const r = Object.assign(result, {
+            definition: application,
+            app,
+            gatus: defs,
+          });
           return r;
         });
         return r;
       })
-      .apply((result) => {
-        this._applications = this._applications.apply((apps) => [...apps, result]);
+      .apply(result => {
+        this._applications = this._applications.apply(apps => [...apps, result]);
         return result;
       });
   }
@@ -161,7 +171,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // OAuth2 Provider
     if (authentikDefinition.oauth2) {
       const oauth2 = authentikDefinition.oauth2;
-      const { clientId, clientSecret } = clientIdPair(resourceName, { clientId: oauth2.clientId, clientSecret: oauth2.clientSecret, options: opts });
+      const { clientId, clientSecret } = clientIdPair(resourceName, {
+        clientId: oauth2.clientId,
+        clientSecret: oauth2.clientSecret,
+        options: opts,
+      });
       const signingKey = new ApplicationCertificate(resourceName, { globals: this.args.globals }, { parent: this });
 
       const provider = new authentik.ProviderOauth2(
@@ -174,7 +188,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           clientId: clientId,
           clientSecret: clientSecret,
           signingKey: signingKey.signingKey.id,
-          allowedRedirectUris: oauth2.allowedRedirectUris?.map((uri) => ({
+          allowedRedirectUris: oauth2.allowedRedirectUris?.map(uri => ({
             matching_mode: uri.matching_mode ?? "strict",
             url: uri.url,
           })),
@@ -206,11 +220,23 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           fields: pulumi.output({
             client_id: { value: clientId, type: TypeEnum.String },
             client_secret: { value: clientSecret, type: TypeEnum.Concealed },
-            authorization_url: { value: providerConfig.authorizeUrl, type: TypeEnum.String },
-            token_url: { value: providerConfig.tokenUrl, type: TypeEnum.String },
-            userinfo_url: { value: providerConfig.userInfoUrl, type: TypeEnum.String },
+            authorization_url: {
+              value: providerConfig.authorizeUrl,
+              type: TypeEnum.String,
+            },
+            token_url: {
+              value: providerConfig.tokenUrl,
+              type: TypeEnum.String,
+            },
+            userinfo_url: {
+              value: providerConfig.userInfoUrl,
+              type: TypeEnum.String,
+            },
             issuer: { value: providerConfig.issuerUrl, type: TypeEnum.String },
-            end_session_url: { value: providerConfig.logoutUrl, type: TypeEnum.String },
+            end_session_url: {
+              value: providerConfig.logoutUrl,
+              type: TypeEnum.String,
+            },
             jwks_url: { value: providerConfig.jwksUrl, type: TypeEnum.String },
             openid_configuration_url: {
               value: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
@@ -221,7 +247,14 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
         { parent: provider },
       );
 
-      return { provider, config: providerConfig, oidcCredentials, isProxy: false as const, clientId: await awaitOutput(clientId), clientSecret: await awaitOutput(clientSecret) };
+      return {
+        provider,
+        config: providerConfig,
+        oidcCredentials,
+        isProxy: false as const,
+        clientId: await awaitOutput(clientId),
+        clientSecret: await awaitOutput(clientSecret),
+      };
     }
 
     // // LDAP Provider
@@ -384,8 +417,8 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
     return pulumi
       .output(mappings)
-      .apply((maps) => pulumi.all([this.authentik.scopeMappings, maps]))
-      .apply(([mappings, scopeNames]) => scopeNames.map((scopeName) => mappings[scopeName.replace(/\//g, "~1")]).filter((mapping): mapping is string => !!mapping));
+      .apply(maps => pulumi.all([this.authentik.scopeMappings, maps]))
+      .apply(([mappings, scopeNames]) => scopeNames.map(scopeName => mappings[scopeName.replace(/\//g, "~1")]).filter((mapping): mapping is string => !!mapping));
   }
 
   private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
@@ -393,7 +426,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     const args: authentik.ApplicationArgs = {
       name: definition.spec.name,
       slug: new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
-      group: this.cluster.apply((cluster) => (definition.spec.category === "System" || cluster.title === definition.spec.category ? "System: " + cluster.title : definition.spec.category)),
+      group: this.cluster.apply(cluster => (definition.spec.category === "System" || cluster.title === definition.spec.category ? `System: ${cluster.title}` : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
@@ -402,7 +435,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     };
 
     if (provider) {
-      args.protocolProvider = provider.id.apply((id) => parseFloat(id));
+      args.protocolProvider = provider.id.apply(id => parseFloat(id));
     }
 
     const app = new authentik.Application(resourceName, args, {
@@ -413,7 +446,9 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     // Add group bindings for access control
     if (definition.spec.access_policy?.groups) {
       for (const groupName of definition.spec.access_policy.groups) {
-        addPolicyBindingToApplication(app, { group: this.authentik.apply((z) => z.groups[groupName]) });
+        addPolicyBindingToApplication(app, {
+          group: this.authentik.apply(z => z.groups[groupName]),
+        });
       }
     }
 
@@ -421,10 +456,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
   }
 
   private addGatusInstances(definition: ApplicationDefinitionSchema, gatusDefinitions: GatusDefinition[]) {
-    return this.cluster.apply((cluster) => {
+    return this.cluster.apply(cluster => {
       return pulumi.all(
         gatusDefinitions.map((endpoint, i) => {
-          endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i == 0 ? "" : i + 1).toString()}`;
+          endpoint.name = `${definition.spec.name} ${endpoint.name ?? (i === 0 ? "" : i + 1).toString()}`;
           endpoint.group ??= definition.spec.category;
           endpoint.group = endpoint.group === "System" || endpoint.group === cluster.title ? `Cluster: ${cluster.title}` : endpoint.group;
           endpoint.alerts ??= [];
@@ -447,7 +482,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
 
           const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
-          return pulumi.output(this.store.replaceOnePasswordPlaceholders(yamlString)).apply((y) => yaml.parse(y) as GatusDefinition);
+          return pulumi.output(this.store.replaceOnePasswordPlaceholders(yamlString)).apply(y => yaml.parse(y) as GatusDefinition);
         }),
       );
     });

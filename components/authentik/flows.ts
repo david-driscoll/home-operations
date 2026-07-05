@@ -1,39 +1,18 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as authentik from "@pulumi/authentik";
-import * as purrl from "@pulumiverse/purrl";
-import { PropertyMappings } from "./property-mappings.js";
-import { Policies } from "./policies.js";
-import { ConsentStages } from "./consent-stages.js";
-import { Fields } from "./fields.js";
-import { StagePrompts } from "./stage-prompts.js";
-import { InvalidationStages } from "./invalidation-stages.js";
-import { AuthenticatorStages } from "./authenticator-stages.js";
-import { AuthenticationStages } from "./authentication-stages.js";
-import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
-import { OPClient } from "../op.ts";
+import type { GlobalResources } from "@components/globals.ts";
 import { clientIdPair } from "@components/helpers.ts";
-import { GlobalResources } from "@components/globals.ts";
-import { VaultStore } from "@components/store/index.ts";
-
-interface PlexServerField {
-  value?: string;
-}
-
-interface PlexItemFields {
-  username: { value?: string };
-  credential: { value?: string };
-}
-
-interface PlexItemSections {
-  servers?: {
-    fields?: Record<string, PlexServerField>;
-  };
-}
-
-interface PlexItem {
-  fields: PlexItemFields;
-  sections: PlexItemSections;
-}
+import type { VaultStore } from "@components/store/index.ts";
+import * as authentik from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
+import * as purrl from "@pulumiverse/purrl";
+import { AuthenticationStages } from "./authentication-stages.js";
+import { AuthenticatorStages } from "./authenticator-stages.js";
+import { ConsentStages } from "./consent-stages.js";
+import { addFlowStageBinding, addPolicyBindingToFlow } from "./extension-methods.js";
+import { Fields } from "./fields.js";
+import { InvalidationStages } from "./invalidation-stages.js";
+import { Policies } from "./policies.js";
+import { PropertyMappings } from "./property-mappings.js";
+import { StagePrompts } from "./stage-prompts.js";
 
 export interface CustomFlows {
   logoutFlow: authentik.Flow;
@@ -80,9 +59,15 @@ export class FlowsManager extends pulumi.ComponentResource {
 
     this.consentStages = new ConsentStages({ parent: this.stagesComponent });
     this.fields = new Fields({ parent: this.stagesComponent });
-    this.stagePrompts = new StagePrompts(this.fields, { parent: this.stagesComponent });
-    this.invalidationStages = new InvalidationStages({ parent: this.stagesComponent });
-    this.authenticatorStages = new AuthenticatorStages({ parent: this.stagesComponent });
+    this.stagePrompts = new StagePrompts(this.fields, {
+      parent: this.stagesComponent,
+    });
+    this.invalidationStages = new InvalidationStages({
+      parent: this.stagesComponent,
+    });
+    this.authenticatorStages = new AuthenticatorStages({
+      parent: this.stagesComponent,
+    });
     this.authenticationStages = new AuthenticationStages(this.authenticatorStages, { parent: this.stagesComponent });
   }
 
@@ -172,7 +157,11 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createPlexSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourcePlex {
-    const plexDetails = this.vault.getSecretByTitle<{ username: string; credential: string; servers: { [key: string]: string } }>("Authentik Plex Source");
+    const plexDetails = this.vault.getSecretByTitle<{
+      username: string;
+      credential: string;
+      servers: { [key: string]: string };
+    }>("Authentik Plex Source");
 
     return new authentik.SourcePlex(
       "plex",
@@ -184,9 +173,9 @@ export class FlowsManager extends pulumi.ComponentResource {
         userPathTemplate: "driscoll.dev/plex/%(slug)s",
         userMatchingMode: "email_link",
         groupMatchingMode: "name_link",
-        clientId: plexDetails.apply((z) => z.username),
-        plexToken: plexDetails.apply((z) => z.credential),
-        allowedServers: plexDetails.apply((z) => Object.entries(z.servers || {}).map((z) => z[1])),
+        clientId: plexDetails.apply(z => z.username),
+        plexToken: plexDetails.apply(z => z.credential),
+        allowedServers: plexDetails.apply(z => Object.entries(z.servers || {}).map(z => z[1])),
         allowFriends: true,
         authenticationFlow: authenticationFlow.uuid,
         enrollmentFlow: enrollmentFlow.uuid,
@@ -196,13 +185,15 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
-    const items = pulumi.output(this.vault.getAllClusters()).apply((items) => {
-      return Array.from(new Set(items.map((z) => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`)).values()).concat([
+    const items = pulumi.output(this.vault.getAllClusters()).apply(items => {
+      return Array.from(new Set(items.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`)).values()).concat([
         pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
         pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
       ]);
     });
-    const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", { options: { parent: this.sourcesComponent } });
+    const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", {
+      options: { parent: this.sourcesComponent },
+    });
     const dynamicRegistration = new purrl.Purrl(
       "tailscale-oauth-dynamic-registration",
       {

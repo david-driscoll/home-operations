@@ -1,7 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
+import type { Fields } from "./fields.ts";
 import { SharedComponentResource } from "./shared-component-resource.js";
-import { Fields } from "./fields.ts";
 
 export class StagePrompts extends SharedComponentResource {
   private _userSettings?: authentik.StagePrompt;
@@ -10,13 +10,16 @@ export class StagePrompts extends SharedComponentResource {
   private _externalEnrollmentWrite?: authentik.StageUserWrite;
   private _sourceAuthenticationUpdate?: authentik.StageUserWrite;
 
-  constructor(private fields: Fields, opts?: pulumi.ComponentResourceOptions) {
+  constructor(
+    private fields: Fields,
+    opts?: pulumi.ComponentResourceOptions,
+  ) {
     super("custom:resource:AuthentikStagePrompts", "authentik-stage-prompts", opts);
   }
 
   public get userSettings(): authentik.StagePrompt {
     if (!this._userSettings) {
-      this._userSettings = this.createStagePrompt("user-settings", (args) => {
+      this._userSettings = this.createStagePrompt("user-settings", args => {
         args.fields = [this.fields.name.stagePromptFieldId, this.fields.username.stagePromptFieldId, this.fields.email.stagePromptFieldId];
       });
     }
@@ -25,7 +28,7 @@ export class StagePrompts extends SharedComponentResource {
 
   public get enrollment(): authentik.StagePrompt {
     if (!this._enrollment) {
-      this._enrollment = this.createStagePrompt("enrollment", (args) => {
+      this._enrollment = this.createStagePrompt("enrollment", args => {
         args.fields = [this.fields.email.stagePromptFieldId, this.fields.username.stagePromptFieldId, this.fields.name.stagePromptFieldId];
       });
     }
@@ -41,7 +44,7 @@ export class StagePrompts extends SharedComponentResource {
           userType: "internal",
           userCreationMode: "create_when_required",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._internalEnrollmentWrite;
@@ -56,7 +59,7 @@ export class StagePrompts extends SharedComponentResource {
           userType: "external",
           userCreationMode: "create_when_required",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._externalEnrollmentWrite;
@@ -71,7 +74,7 @@ export class StagePrompts extends SharedComponentResource {
           userType: "internal",
           userCreationMode: "never_create",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._sourceAuthenticationUpdate;

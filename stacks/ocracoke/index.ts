@@ -1,22 +1,21 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as random from "@pulumi/random";
-import { GlobalResources } from "../../components/globals.ts";
-import { OPClient } from "../../components/op.ts";
-import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
-import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
-import * as tls from "@pulumi/tls";
-import { AuthentikOutputs } from "@components/authentik.ts";
-import { Tailscale } from "@components/constants.ts";
-import { TailscaleMonitor } from "@components/tailscale.ts";
-import { createGatusDnsUptime } from "@components/StandardDns.ts";
+import type { AuthentikOutputs } from "@components/authentik.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
+import { Tailscale } from "@components/constants.ts";
 import { awaitOutput } from "@components/helpers.ts";
-import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
+import { createGatusDnsUptime } from "@components/StandardDns.ts";
+import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
+import { TailscaleMonitor } from "@components/tailscale.ts";
+import * as random from "@pulumi/random";
+import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
+import { GlobalResources } from "../../components/globals.ts";
+import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
+import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 
 const globals = new GlobalResources({}, {});
 const monitor = new TailscaleMonitor();
-const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
+const backupDirector = new BackupPlanDirector("backup-plan-director", {
+  globals,
+});
 
 const vmRange = { start: 500, end: 599 };
 
@@ -25,8 +24,17 @@ const sftpClientKey = globals.store.getSecretByTitle<SshKeyDefinition>("Rclone S
 const mainProxmoxCredentials = globals.store.getSecretByTitle<CredentialDefinition & { arch: string }>("Proxmox ApiKey");
 const dockgeCredential = globals.store.getSecretByTitle<PasswordDefinition>("Dockge Credential");
 const cluster = globals.store.getCluster("Cluster: Skystar");
-const dockgeId = new random.RandomInteger("skystar-dockge-id", { min: vmRange.start, max: vmRange.start + 50, keepers: { clusterId: cluster.key } });
-const pbsId = new random.RandomInteger("skystar-pbs-id", { min: vmRange.start + 51, max: vmRange.end, seed: dockgeId.result.apply((z) => z.toString()), keepers: { clusterId: cluster.key } });
+const dockgeId = new random.RandomInteger("skystar-dockge-id", {
+  min: vmRange.start,
+  max: vmRange.start + 50,
+  keepers: { clusterId: cluster.key },
+});
+const pbsId = new random.RandomInteger("skystar-pbs-id", {
+  min: vmRange.start + 51,
+  max: vmRange.end,
+  seed: dockgeId.result.apply(z => z.toString()),
+  keepers: { clusterId: cluster.key },
+});
 
 const host = new ProxmoxHost("skystar", {
   globals: globals,
@@ -75,10 +83,16 @@ const pbs = new ProxmoxBackupServerLxc("skystar-pbs", {
 pbs.addHostMount("/data");
 // pbs.addDatastore({ name: "testing", path: "/data/testing", comment: "Testing Datastore behavior" });
 
-await awaitOutput(dockgeRuntime.deployStacks({ dependsOn: [pbs], variables: {
+await awaitOutput(
+  dockgeRuntime.deployStacks({
+    dependsOn: [pbs],
+    variables: {
       PROXMOX_BLACKBOX_TARGETS: `["https://${host.tailscaleIpAddress}:8006"]`,
       PROXMOX_PVE_TARGETS: `["${host.tailscaleIpAddress}:8006"]`,
-      DNS_CLUSTER_IS_PRIMARY: "false", } }));
+      DNS_CLUSTER_IS_PRIMARY: "false",
+    },
+  }),
+);
 await awaitOutput(host.addUptimeGatus());
 
 await awaitOutput(createGatusDnsUptime(globals, { parent: host }));

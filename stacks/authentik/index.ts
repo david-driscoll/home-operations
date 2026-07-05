@@ -1,31 +1,38 @@
-import * as pulumi from "@pulumi/pulumi";
-import { AuthentikGroups } from "../../components/authentik/groups.ts";
-import { FlowsManager } from "../../components/authentik/flows.ts";
-import { OnePasswordItem, OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { Brand } from "@pulumi/authentik";
 import { GlobalResources } from "@components/globals.ts";
-import { OPClient } from "@components/op.ts";
 import { awaitOutput } from "@components/helpers.ts";
+import { OnePasswordItem, type OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import { Brand } from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
+import { FlowsManager } from "../../components/authentik/flows.ts";
+import { AuthentikGroups } from "../../components/authentik/groups.ts";
 
 const globals = new GlobalResources({}, {});
 const authentikGroups = new AuthentikGroups(globals);
 const flowsManager = new FlowsManager(globals, {});
 const authentikFlows = flowsManager.createFlows();
 
-function exportFlows(flows: ReturnType<FlowsManager["createFlows"]>): { [K in keyof typeof flows]: pulumi.Output<string> } {
+function exportFlows(flows: ReturnType<FlowsManager["createFlows"]>): {
+  [K in keyof typeof flows]: pulumi.Output<string>;
+} {
   return Object.fromEntries(Object.entries(flows).map(([key, flow]) => [key, flow.uuid])) as any;
 }
 
-function exportGroups(groups: AuthentikGroups): { [K in keyof AuthentikGroups]: pulumi.Output<string> } {
+function exportGroups(groups: AuthentikGroups): {
+  [K in keyof AuthentikGroups]: pulumi.Output<string>;
+} {
   return Object.fromEntries(Array.from(groups.allGroups).map(([key, group]) => [key, group.groupId])) as any;
 }
 
-function exportRoles(groups: AuthentikGroups): { [K in keyof AuthentikGroups]: pulumi.Output<string> } {
+function exportRoles(groups: AuthentikGroups): {
+  [K in keyof AuthentikGroups]: pulumi.Output<string>;
+} {
   return Object.fromEntries(Array.from(groups.allRoles).map(([key, role]) => [key, role.rbacRoleId])) as any;
 }
 
-function exportScopeMappings(flows: FlowsManager): { [key: string]: pulumi.Output<string> } {
+function exportScopeMappings(flows: FlowsManager): {
+  [key: string]: pulumi.Output<string>;
+} {
   return Object.fromEntries(Array.from(flows.propertyMappings.allScopeMappings));
 }
 
@@ -38,7 +45,7 @@ function exportFields(value: { [key: string]: pulumi.Output<string> }): OnePassw
         type: TypeEnum.String,
         value: output,
       },
-    ])
+    ]),
   );
 }
 
@@ -47,11 +54,11 @@ export const roles = exportRoles(authentikGroups);
 export const flows = exportFlows(authentikFlows);
 export const scopeMappings = exportScopeMappings(flowsManager);
 
-const authentikSecret = new OnePasswordItem("authentik-outputs", {
+const _authentikSecret = new OnePasswordItem("authentik-outputs", {
   category: FullItem.CategoryEnum.SecureNote,
   title: "Authentik Outputs",
   fields: {
-    ["notePlain"]: {
+    notePlain: {
       purpose: PurposeEnum.Notes,
       type: TypeEnum.String,
       value: "This item contains outputs from the authentik stack.",
@@ -74,7 +81,7 @@ const authentikSecret = new OnePasswordItem("authentik-outputs", {
 });
 
 const clusterDefinition = await awaitOutput(globals.store.getCluster("Cluster: Stargate Command"));
-const tailscaleBrand = new Brand(
+const _tailscaleBrand = new Brand(
   "tailscale",
   {
     domain: pulumi.interpolate`authentik.${globals.tailscaleDomain}`,
@@ -86,5 +93,5 @@ const tailscaleBrand = new Brand(
     flowInvalidation: authentikFlows.providerLogoutFlow.uuid,
     flowUserSettings: authentikFlows.userSettingsFlow.uuid,
   },
-  { deleteBeforeReplace: true }
+  { deleteBeforeReplace: true },
 );

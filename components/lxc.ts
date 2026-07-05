@@ -1,7 +1,5 @@
+import { remote, type types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { NodeSSH } from "node-ssh";
-import { awaitOutput } from "@components/helpers.ts";
 
 /**
  * Variables passed to community-scripts ProxmoxVE LXC creation scripts.
@@ -19,7 +17,7 @@ export type CommunityScriptLxcVars = {
 } & Record<string, pulumi.Input<string | number | undefined>>;
 
 function buildVarString(vars: CommunityScriptLxcVars): pulumi.Output<string> {
-  return pulumi.output(vars).apply((obj) => {
+  return pulumi.output(vars).apply(obj => {
     // Build entries from vars, adding storage defaults if not provided
     const entries = Object.entries(obj);
 
@@ -81,7 +79,7 @@ export function runCommunityScriptLxc(
   const create = pulumi.all([args.script, varString, ctid]).apply(([script, vars, id]) => {
     // If prompt answers provided, pipe them to the script via printf
     const scriptCmd = `TERM=linux mode=generated ${vars} eval "$(curl -fsSL ${script})"`;
-    const runCmd = promptAnswers.length > 0 ? `printf '%s\\n' ${promptAnswers.map((a) => `'${a}'`).join(" ")} | ${scriptCmd}` : scriptCmd;
+    const runCmd = promptAnswers.length > 0 ? `printf '%s\\n' ${promptAnswers.map(a => `'${a}'`).join(" ")} | ${scriptCmd}` : scriptCmd;
 
     return [
       `set -e`,
@@ -98,7 +96,7 @@ export function runCommunityScriptLxc(
     name,
     {
       connection: args.connection,
-      create: create.apply((cmd) => `bash -c '${cmd.replace(/'/g, "'\"'\"'")}'`),
+      create: create.apply(cmd => `bash -c '${cmd.replace(/'/g, "'\"'\"'")}'`),
       update: "echo 0",
       delete: pulumi.interpolate`pct stop ${ctid} && pct destroy ${ctid} --purge`,
       triggers: [...Object.values(args.vars), ...Object.keys(args.vars)],

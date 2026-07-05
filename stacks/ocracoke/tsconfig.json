@@ -16,21 +16,10 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "paths": {
-      "@components/*": [
-        "../../components/*"
-      ],
-      "@openapi/*": [
-        "../../types/*"
-      ],
-      "@dynamic/*": [
-        "../../dynamic/*"
-      ]
+      "@components/*": ["../../components/*"],
+      "@openapi/*": ["../../types/*"],
+      "@dynamic/*": ["../../dynamic/*"]
     }
   },
-  "include": [
-    "./*.ts",
-    "../../components/**/*.ts",
-    "../../dynamic/**/*.ts",
-    "../../types/**/*.ts"
-  ]
+  "include": ["./*.ts", "../../components/**/*.ts", "../../dynamic/**/*.ts", "../../types/**/*.ts"]
 }

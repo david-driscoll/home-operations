@@ -2,10 +2,7 @@
   "inputs": [],
   "servers": {
     "kubernetes": {
-      "args": [
-        "-y",
-        "kubernetes-mcp-server"
-      ],
+      "args": ["-y", "kubernetes-mcp-server"],
       "command": "npx",
       "type": "stdio"
     },
@@ -15,9 +12,7 @@
       "type": "stdio"
     },
     "mise": {
-      "args": [
-        "mcp"
-      ],
+      "args": ["mcp"],
       "command": "mise",
       "env": {
         "MISE_EXPERIMENTAL": "1"
@@ -25,11 +20,7 @@
       "type": "stdio"
     },
     "pulumi": {
-      "args": [
-        "-y",
-        "@pulumi/mcp-server",
-        "stdio"
-      ],
+      "args": ["-y", "@pulumi/mcp-server", "stdio"],
       "command": "npx",
       "type": "stdio"
     }

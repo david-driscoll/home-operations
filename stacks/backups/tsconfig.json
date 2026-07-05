@@ -16,24 +16,10 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "paths": {
-      "@components/*": [
-        "../../components/*"
-      ],
-      "@openapi/*": [
-        "../../types/*"
-      ],
-      "@dynamic/*": [
-        "../../dynamic/*"
-      ]
+      "@components/*": ["../../components/*"],
+      "@openapi/*": ["../../types/*"],
+      "@dynamic/*": ["../../dynamic/*"]
     }
   },
-  "include": [
-    "./*.ts",
-    "../../components/**/*.ts",
-    "../../dynamic/**/*.ts",
-    "../../types/**/*.ts",
-    "../home/jobs.ts",
-    "../home/backup-jobs.ts",
-    "../applications/kubernetes-backups.ts"
-  ]
+  "include": ["./*.ts", "../../components/**/*.ts", "../../dynamic/**/*.ts", "../../types/**/*.ts", "../home/jobs.ts", "../home/backup-jobs.ts", "../applications/kubernetes-backups.ts"]
 }

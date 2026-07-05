@@ -2,11 +2,11 @@
 	"folders": [
 		{
 			"name": "home-operations",
-			"path": ".",
+			"path": "."
 		},
 		{
 			"name": "vault",
-			"path": "../vault",
+			"path": "../vault"
 		},
 		{
 			"name": "stargate-command-cluster",
@@ -18,7 +18,6 @@
 		}
 	],
 	"settings": {
-
 		"editor.bracketPairColorization.enabled": true,
 		"files.trimTrailingWhitespace": true,
 		"files.exclude": {
@@ -39,7 +38,7 @@
 			"**/.github/copilot-instructions.md": true,
 			"**/.github/prompts/**": true,
 			"**/bin/**": true,
-			"**/apm_modules/**": true,
+			"**/apm_modules/**": true
 		},
 		"sops.defaults.ageKeyFile": "../stargate-command-cluster/age.key",
 		"sops.binPath": "/opt/homebrew/bin/sops",
@@ -48,8 +47,17 @@
 		"path-autocomplete.disableUpOneFolder": false,
 		"path-autocomplete.triggerOutsideStrings": true,
 		"cSpell.words": [
+			"Authentik",
+			"AUTHKEY",
+			"celestia",
+			"certresolver",
+			"dockge",
 			"gatus",
-			"pulumi"
+			"pulumi",
+			"sysctls",
+			"technitium",
+			"USERSPACE",
+			"websecure"
 		],
 		"vs-kubernetes": {
 			"vs-kubernetes.crd-code-completion": "enabled",

@@ -1,15 +1,14 @@
-import { OPClient } from "../../components/op.ts";
-import * as pulumi from "@pulumi/pulumi";
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { GlobalResources } from "@components/globals.ts";
+import * as pulumi from "@pulumi/pulumi";
 
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
 
 const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
 
-const dockgeInstances = dockgeDetails.apply((details) => {
-  return details.map((detail) => {
+const dockgeInstances = dockgeDetails.apply(details => {
+  return details.map(detail => {
     // Pre-sync: rclone pulls /opt/stacks-data/ from the dockge host into the backrest
     // container's staging dir before restic snapshots it.  The old createBackupJob
     // call is replaced by the preSync param on createBackrestPlan.

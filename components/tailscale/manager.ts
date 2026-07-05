@@ -1,12 +1,9 @@
-import * as pulumi from "@pulumi/pulumi";
-import { Tailscale } from "../constants.ts";
-import {
+import { awaitOutput } from "@components/helpers.ts";
+import type {
   PolicyFile,
-  TailscaleAutogroups,
   TailscaleCidr,
   TailscaleGrant,
   TailscaleGroups,
-  TailscaleNetworkCapability,
   TailscaleNodeAttr,
   TailscalePolicyFile,
   TailscaleSelector,
@@ -17,19 +14,32 @@ import {
   TailscaleTags,
   TailscaleTest,
 } from "@openapi/tailscale-grants.js";
-import * as parser from "jsonc-parser";
-import { awaitOutput } from "@components/helpers.ts";
-import { getAclOutput } from "@pulumi/tailscale";
+import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
+import { getAclOutput } from "@pulumi/tailscale";
+import * as parser from "jsonc-parser";
+import { Tailscale } from "../constants.ts";
 
 export const { groups, autogroups, tag, subnets, ports } = Tailscale;
 
 type TailscaleTestFactory<T, R> = (grant: T) => R[];
 export type TailscaleTestInput = { accept: pulumi.Input<string[]>; deny?: pulumi.Input<string[]> } | { accept?: pulumi.Input<string[]>; deny: pulumi.Input<string[]> };
 export type TailscaleSshTestInputItem =
-  | { accept: pulumi.Input<TailscaleSshUser[]>; deny?: pulumi.Input<TailscaleSshUser[]>; check?: pulumi.Input<TailscaleSshUser[]> }
-  | { accept?: pulumi.Input<TailscaleSshUser[]>; deny: pulumi.Input<TailscaleSshUser[]>; check?: pulumi.Input<TailscaleSshUser[]> }
-  | { accept?: pulumi.Input<TailscaleSshUser[]>; deny?: pulumi.Input<TailscaleSshUser[]>; check: pulumi.Input<TailscaleSshUser[]> };
+  | {
+      accept: pulumi.Input<TailscaleSshUser[]>;
+      deny?: pulumi.Input<TailscaleSshUser[]>;
+      check?: pulumi.Input<TailscaleSshUser[]>;
+    }
+  | {
+      accept?: pulumi.Input<TailscaleSshUser[]>;
+      deny: pulumi.Input<TailscaleSshUser[]>;
+      check?: pulumi.Input<TailscaleSshUser[]>;
+    }
+  | {
+      accept?: pulumi.Input<TailscaleSshUser[]>;
+      deny?: pulumi.Input<TailscaleSshUser[]>;
+      check: pulumi.Input<TailscaleSshUser[]>;
+    };
 type TailscaleSshTestInput = Record<TailscaleSshUser, TailscaleSshTestInputItem>;
 
 class TailscaleAclContext {
@@ -65,15 +75,20 @@ type TestsDataPopulated = TestsData & {
 
 export class TailscaleAclManager {
   public static default(opts?: pulumi.InvokeOptions) {
-    return getAclOutput(opts).apply((acls) => {
-      return new TailscaleAclManager(acls.hujson, [], { dockgeDevices: [], kubernetesDevices: [], proxmoxDevices: [], taggedDevices: [] });
+    return getAclOutput(opts).apply(acls => {
+      return new TailscaleAclManager(acls.hujson, [], {
+        dockgeDevices: [],
+        kubernetesDevices: [],
+        proxmoxDevices: [],
+        taggedDevices: [],
+      });
     });
   }
   public static applyAcl(manager: pulumi.Output<TailscaleAclManager>, cro: pulumi.ComponentResourceOptions) {
     return new tailscale.Acl(
       "acl",
       {
-        acl: manager.apply((z) => z.getJson()),
+        acl: manager.apply(z => z.getJson()),
         overwriteExistingContent: true,
       },
       cro,
@@ -85,7 +100,7 @@ export class TailscaleAclManager {
   constructor(acls: string, hosts: [pulumi.Input<string>, pulumi.Input<string>][], testData: TestsData) {
     this.acls = acls;
     this.updates.push(({ acls }) => {
-      return pulumi.output(hosts).apply((hosts) => {
+      return pulumi.output(hosts).apply(hosts => {
         return hosts.reduce((acc, [key, value]) => applyAllEdits(acc, ["hosts", key], value), acls);
       });
     });
@@ -95,7 +110,11 @@ export class TailscaleAclManager {
     const knownNormalUsers = context.policy.groups?.[groups.friendsAndFamily] ?? [];
 
     // parser.findNodeAtLocation
-    this.testData = { ...testData, knownNormalUsers: knownNormalUsers.filter((z) => !knownAdminUsers.includes(z)), knownAdminUsers };
+    this.testData = {
+      ...testData,
+      knownNormalUsers: knownNormalUsers.filter(z => !knownAdminUsers.includes(z)),
+      knownAdminUsers,
+    };
   }
 
   public setGrant(name: string, grant: pulumi.Input<TailscaleGrant>, tests: TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput): TailscaleAclManager;
@@ -105,10 +124,8 @@ export class TailscaleAclManager {
     grant: pulumi.Input<TailscaleGrant> | TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput,
     tests?: TailscaleTestFactory<TailscaleGrant, TailscaleTest> | TailscaleTestInput,
   ) {
-    this.updates.push((context) =>
-      pulumi
-        .all([typeof name === "string" ? name : undefined, typeof name !== "string" ? name! : grant!, typeof name !== "string" ? grant! : tests!])
-        .apply((data) => buildGrant(data as any, context)),
+    this.updates.push(context =>
+      pulumi.all([typeof name === "string" ? name : undefined, typeof name !== "string" ? name! : grant!, typeof name !== "string" ? grant! : tests!]).apply(data => buildGrant(data as any, context)),
     );
     return this;
 
@@ -119,31 +136,35 @@ export class TailscaleAclManager {
         tests: TailscaleTestFactory<TailscaleGrant, TailscaleTest>;
       };
       if (typeof data[0] !== "string") {
-        items = { name: getGrantName(data[1]), grant: data[1], tests: data[2] as any };
+        items = {
+          name: getGrantName(data[1]),
+          grant: data[1],
+          tests: data[2] as any,
+        };
       } else {
         items = { name: data[0], grant: data[1], tests: data[2] as any };
       }
       if (typeof data[2] !== "function") {
         const testSources = data[2];
-        items.tests = (grant) => {
+        items.tests = grant => {
           if (!grant.dst || !grant.ip) return [];
 
           const { dst, ip } = grant;
 
-          const destinations = (p: string, user: string | undefined) => {
+          const destinations = (p: string, _user: string | undefined) => {
             return dst
-              .filter((u) => !!u)
-              .map((u) => u.replace(/^host\:/, ""))
-              .filter((dest) => dest !== autogroups.internet)
-              .map((d) => (d === autogroups.internet ? d : `${d}:${p ?? "443"}`));
+              .filter(u => !!u)
+              .map(u => u.replace(/^host:/, ""))
+              .filter(dest => dest !== autogroups.internet)
+              .map(d => (d === autogroups.internet ? d : `${d}:${p ?? "443"}`));
           };
 
           return [
             ...(testSources.accept ?? [])
-              .filter((u) => !!u)
-              .map((u) => u.replace(/^host\:/, ""))
-              .flatMap((user) =>
-                ip.map((port) => {
+              .filter(u => !!u)
+              .map(u => u.replace(/^host:/, ""))
+              .flatMap(user =>
+                ip.map(port => {
                   const [proto, p] = port.toString().split(":");
                   return {
                     src: user,
@@ -153,10 +174,10 @@ export class TailscaleAclManager {
                 }),
               ),
             ...(testSources.deny ?? [])
-              .filter((u) => !!u)
-              .map((u) => u.replace(/^host\:/, ""))
-              .flatMap((user) =>
-                ip.map((port) => {
+              .filter(u => !!u)
+              .map(u => u.replace(/^host:/, ""))
+              .flatMap(user =>
+                ip.map(port => {
                   const [proto, p] = port.toString().split(":");
                   return {
                     src: user,
@@ -165,7 +186,7 @@ export class TailscaleAclManager {
                   } as TailscaleTest;
                 }),
               ),
-          ].filter((z) => (z.accept?.length ?? 0) + (z.deny?.length ?? 0) > 0);
+          ].filter(z => (z.accept?.length ?? 0) + (z.deny?.length ?? 0) > 0);
         };
       }
       return setGrant(context, items.name, items.grant, items.tests);
@@ -175,19 +196,19 @@ export class TailscaleAclManager {
   public setTagOwner(owner: TailscaleTags, tags: TailscaleTags[]): TailscaleAclManager;
   public setTagOwner(owner: TailscaleTags): TailscaleAclManager;
   public setTagOwner(owner: TailscaleTags, tags?: TailscaleTags[]) {
-    this.updates.push((context) => pulumi.output(setTagOwner(context, owner, [...(tags ?? [])])));
+    this.updates.push(context => pulumi.output(setTagOwner(context, owner, [...(tags ?? [])])));
     return this;
   }
 
   public setNodeAttr(value: TailscaleNodeAttr) {
-    this.updates.push((context) => pulumi.output(setNodeAttr(context, value)));
+    this.updates.push(context => pulumi.output(setNodeAttr(context, value)));
     return this;
   }
 
   public setGroup(owner: TailscaleGroups, tags: TailscaleSelector[]): TailscaleAclManager;
   public setGroup(owner: TailscaleGroups): TailscaleAclManager;
   public setGroup(owner: TailscaleGroups, tags?: TailscaleSelector[]) {
-    this.updates.push((context) => pulumi.output(setGroup(context, owner, [...(tags ?? [])])));
+    this.updates.push(context => pulumi.output(setGroup(context, owner, [...(tags ?? [])])));
     return this;
   }
 
@@ -195,7 +216,7 @@ export class TailscaleAclManager {
   public setSshRule(rule: pulumi.Input<TailscaleSshRule>, tests: TailscaleTestFactory<TailscaleGrant, TailscaleSshTest> | TailscaleSshTestInput) {
     if (typeof tests !== "function") {
       const testSources = tests;
-      tests = (grant) => {
+      tests = grant => {
         if (!grant.dst) return [];
 
         return Object.entries(testSources).map(([key, value]) => {
@@ -209,22 +230,22 @@ export class TailscaleAclManager {
         });
       };
     }
-    this.updates.push((context) => pulumi.all([rule]).apply(([r]) => setSshRule(context, r, tests)));
+    this.updates.push(context => pulumi.all([rule]).apply(([r]) => setSshRule(context, r, tests)));
     return this;
   }
 
   public setExitNode(tag: TailscaleTags) {
-    this.updates.push((context) => pulumi.output(setExitNode(context, tag)));
+    this.updates.push(context => pulumi.output(setExitNode(context, tag)));
     return this;
   }
 
   public setRoute(cidr: TailscaleCidr, approvers: TailscaleTags[]) {
-    this.updates.push((context) => pulumi.output(setRoute(context, cidr, approvers)));
+    this.updates.push(context => pulumi.output(setRoute(context, cidr, approvers)));
     return this;
   }
 
   public setService(service: TailscaleTags | TailscaleService, approvers: TailscaleTags[]) {
-    this.updates.push((context) => pulumi.output(setService(context, service, approvers)));
+    this.updates.push(context => pulumi.output(setService(context, service, approvers)));
     return this;
   }
 
@@ -242,14 +263,14 @@ export class TailscaleAclManager {
   }
 
   public getJsonParsed() {
-    return pulumi.output(this.getJson()).apply((acls) => parser.parse(acls) as TailscalePolicyFile);
+    return pulumi.output(this.getJson()).apply(acls => parser.parse(acls) as TailscalePolicyFile);
   }
 }
 
 function setSshRule({ acls, policy }: TailscaleAclContext, rule: TailscaleSshRule, tests: TailscaleTestFactory<TailscaleGrant, TailscaleSshTest>) {
-  let current = policy.ssh ?? [];
+  const current = policy.ssh ?? [];
   const name = getSshGrantName(rule);
-  const index = current.findIndex((r) => getSshGrantName(r) === name);
+  const index = current.findIndex(r => getSshGrantName(r) === name);
   acls = applyAllEdits(acls, ["ssh", index === -1 ? current.length : index], rule);
 
   for (const test of tests(rule)) {
@@ -274,7 +295,7 @@ function setExitNode({ acls, policy }: TailscaleAclContext, tag: TailscaleTags) 
 }
 
 function setTagOwner({ acls, policy }: TailscaleAclContext, owner: TailscaleSelector, tags: TailscaleSelector[]) {
-  let current = policy.tagOwners ?? {};
+  const current = policy.tagOwners ?? {};
   if (current[owner] === undefined) {
     current[owner] = [];
     acls = applyAllEdits(acls, ["tagOwners", owner], Array.from(new Set(current[owner].sort())));
@@ -289,7 +310,7 @@ function setTagOwner({ acls, policy }: TailscaleAclContext, owner: TailscaleSele
 function setNodeAttr({ acls, policy }: TailscaleAclContext, value: TailscaleNodeAttr) {
   const current = policy.nodeAttrs ?? [];
   const name = getNodeAttrName(value);
-  const index = current.findIndex((tt) => getNodeAttrName(tt) === name);
+  const index = current.findIndex(tt => getNodeAttrName(tt) === name);
   const existing = index > -1 ? current[index] : undefined;
   return applyAllEdits(acls, ["nodeAttrs", index === -1 ? current.length : index], {
     target: value.target,
@@ -299,7 +320,7 @@ function setNodeAttr({ acls, policy }: TailscaleAclContext, value: TailscaleNode
 }
 
 function setGroup({ acls, policy }: TailscaleAclContext, group: TailscaleGroups, members: TailscaleSelector[]) {
-  let current = policy.groups ?? {};
+  const current = policy.groups ?? {};
   const currentMembers = current[group] || [];
   currentMembers.push(...members);
   return applyAllEdits(acls, ["groups", group], Array.from(new Set(currentMembers)));
@@ -311,7 +332,7 @@ function setGrant({ acls, policy }: TailscaleAclContext, name: string | undefine
   const current = policy.grants ?? [];
   const autoGroupInternetDoesNotAllowAppScopes = grant.dst?.includes(autogroups.internet);
 
-  const index = current.findIndex((g) => getGrantName(g) === name);
+  const index = current.findIndex(g => getGrantName(g) === name);
   if (!autoGroupInternetDoesNotAllowAppScopes) {
     grant.app ??= {};
     grant.app["driscoll.dev/name"] = [name];
@@ -335,14 +356,14 @@ function setService({ acls, policy }: TailscaleAclContext, service: TailscaleTag
 function setGrantTest({ acls, policy }: TailscaleAclContext, test: TailscaleTest) {
   const current = policy.tests ?? [];
   const name = getTestName(test);
-  const index = current.findIndex((tt) => getTestName(tt) === name);
+  const index = current.findIndex(tt => getTestName(tt) === name);
   return applyAllEdits(acls, ["tests", index === -1 ? current.length : index], test);
 }
 
 function setSshTest({ acls, policy }: TailscaleAclContext, test: TailscaleSshTest) {
   const current = policy.sshTests ?? [];
   const name = getSshTestName(test);
-  const index = current.findIndex((tt) => getSshTestName(tt) === name);
+  const index = current.findIndex(tt => getSshTestName(tt) === name);
   return applyAllEdits(acls, ["sshTests", index === -1 ? current.length : index], test);
 }
 function getGrantName(grant: TailscaleGrant) {
@@ -361,8 +382,8 @@ function getGrantName(grant: TailscaleGrant) {
     nameParts.push("app");
     nameParts.push(
       ...Object.keys(grant.app)
-        .filter((k) => k !== "driscoll.dev/name")
-        .map((k) => k.replace("tailscale.com/cap/", "")),
+        .filter(k => k !== "driscoll.dev/name")
+        .map(k => k.replace("tailscale.com/cap/", "")),
     );
   }
   return nameParts.join("-");
@@ -403,5 +424,10 @@ function getSshTestName(rule: TailscaleSshTest) {
 export function applyAllEdits<Key extends keyof PolicyFile>(json: string, path: Extract<Key, string>[], value: PolicyFile[Key]): string;
 export function applyAllEdits(json: string, path: (string | number)[], value: any): string;
 export function applyAllEdits(json: string, path: (string | number)[], value: any): string {
-  return parser.applyEdits(json, parser.modify(json, path, value, { formattingOptions: { insertSpaces: true } }));
+  return parser.applyEdits(
+    json,
+    parser.modify(json, path, value, {
+      formattingOptions: { insertSpaces: true },
+    }),
+  );
 }
