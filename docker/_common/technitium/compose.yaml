@@ -62,7 +62,7 @@ services:
       traefik.http.routers.technitium-doh.service: technitium-doh
       traefik.http.services.technitium-doh.loadbalancer.server.port: 5380
     healthcheck:
-      test: ["CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\":\"Running\"'"]
+      test: ["CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\": *\"Running\"'"]
       interval: 10s
       timeout: 5s
       retries: 6
