@@ -220,7 +220,7 @@ echo "PBS post-install complete"`;
     const { dns } = args.dockge.registerExternalService(
       {
         name,
-        hostname,
+        hostname: interpolate`pbs.${cluster.rootDomain}`,
         backend: interpolate`https://${tailscaleHostname}:8007`,
       },
       [],
