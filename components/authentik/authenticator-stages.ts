@@ -1,7 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
+import { authenticatorStaticSetup, authenticatorTotpSetup, authenticatorWebauthnSetup } from "./default-flows.ts";
 import { SharedComponentResource } from "./shared-component-resource.js";
-import { DefaultFlows } from "./default-flows.ts";
 
 export class AuthenticatorStages extends SharedComponentResource {
   private _backupCodes?: authentik.StageAuthenticatorStatic;
@@ -20,9 +20,9 @@ export class AuthenticatorStages extends SharedComponentResource {
           tokenCount: 8,
           tokenLength: 12,
           friendlyName: "Backup Codes",
-          configureFlow: DefaultFlows.authenticatorStaticSetup.apply((z) => z.id),
+          configureFlow: authenticatorStaticSetup().apply(z => z.id),
         },
-        this.parent
+        this.parent,
       );
     }
     return this._backupCodes;
@@ -34,10 +34,10 @@ export class AuthenticatorStages extends SharedComponentResource {
         "authenticator-totp",
         {
           friendlyName: "TOTP Codes",
-          configureFlow: DefaultFlows.authenticatorTotpSetup.apply((z) => z.id),
+          configureFlow: authenticatorTotpSetup().apply(z => z.id),
           digits: "8",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._totp;
@@ -49,11 +49,11 @@ export class AuthenticatorStages extends SharedComponentResource {
         "authenticator-passkey",
         {
           friendlyName: "Passkey",
-          configureFlow: DefaultFlows.authenticatorWebauthnSetup.apply((z) => z.id),
+          configureFlow: authenticatorWebauthnSetup().apply(z => z.id),
           residentKeyRequirement: "preferred",
           userVerification: "required",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._passkey;

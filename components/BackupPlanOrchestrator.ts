@@ -1,8 +1,7 @@
-import { all, ComponentResource, ComponentResourceOptions, Input, jsonStringify, Output, output } from "@pulumi/pulumi";
-import {} from "@pulumi/pbs";
-import { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
+import { all, ComponentResource, type ComponentResourceOptions, type Input, jsonStringify, type Output, output } from "@pulumi/pulumi";
 export interface PreSyncArgs {
   /** SFTP hostname of the host whose data should be staged before the backup */
   sftpHost: string;

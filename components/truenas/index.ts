@@ -24,9 +24,7 @@
 
 // Export the base client
 export * from "./truenas-client.js";
-
-// Export all type definitions
-export * from "./truenas-types.js";
-
 // Export the manager
 export * from "./truenas-manager.js";
+// Export all type definitions
+export * from "./truenas-types.js";

@@ -1,25 +1,25 @@
-import { ComponentResource, ComponentResourceOptions, Input, Output, mergeOptions, interpolate, output, asset } from "@pulumi/pulumi";
-import proxmox, { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
-import { remote, types } from "@pulumi/command";
-import * as pulumi from "@pulumi/pulumi";
-import * as random from "@pulumi/random";
-import * as purrl from "@pulumiverse/purrl";
-import { GlobalResources } from "./globals.ts";
-import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
-import { OPClient } from "./op.ts";
-import { clientIdPair, getHostnames } from "./helpers.ts";
-import { createDnsSection, StandardDns } from "./StandardDns.ts";
-import * as yaml from "yaml";
-import type { TruenasVm } from "./TruenasVm.ts";
+import { FullItem } from "@1password/connect";
+import { AuthentikApplicationManager, type AuthentikOutputs } from "@components/authentik.ts";
+import { Tailscale } from "@components/constants.ts";
 import { addUptimeGatus, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { FullItem } from "@1password/connect";
-import { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
-import { Tailscale } from "@components/constants.ts";
-import { AuthentikApplicationManager, AuthentikOutputs } from "@components/authentik.ts";
-import { GatusDefinition } from "@openapi/application-definition.js";
-import { getProviderOauth2ConfigOutput, ProviderOauth2 } from "@pulumi/authentik";
-import { ClusterDefinition, CredentialDefinition } from "./store/index.ts";
+import { Provider as ProxmoxVEProvider } from "@muhlba91/pulumi-proxmoxve";
+import type { GatusDefinition } from "@openapi/application-definition.js";
+import type { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailscale-grants.js";
+import { getProviderOauth2ConfigOutput, type ProviderOauth2 } from "@pulumi/authentik";
+import { remote, type types } from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { asset, ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+import * as purrl from "@pulumiverse/purrl";
+import * as yaml from "yaml";
+import type { GlobalResources } from "./globals.ts";
+import { clientIdPair, getHostnames } from "./helpers.ts";
+import type { OPClient } from "./op.ts";
+import { StandardDns } from "./StandardDns.ts";
+import type { ClusterDefinition, CredentialDefinition } from "./store/index.ts";
+import type { TruenasVm } from "./TruenasVm.ts";
+import { createPeerRelayRule, updateTailscaleProxmox } from "./tailscale.ts";
 
 export type OPClientItem = pulumi.Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -59,7 +59,11 @@ export class ProxmoxHost extends ComponentResource {
   public readonly title: Output<string>;
   public readonly shortName?: string;
   public readonly applicationManager: AuthentikApplicationManager;
-  public readonly vmIdRange: { randomVmIds: true; randomVmIdStart: number; randomVmIdEnd: number };
+  public readonly vmIdRange: {
+    randomVmIds: true;
+    randomVmIdStart: number;
+    randomVmIdEnd: number;
+  };
   constructor(
     name: string,
     private args: ProxmoxHostArgs,
@@ -92,9 +96,9 @@ export class ProxmoxHost extends ComponentResource {
     args.installTailscale ??= true;
 
     const apiCredential = output(args.proxmox);
-    this.arch = apiCredential.apply((z) => z.arch);
+    this.arch = apiCredential.apply(z => z.arch);
 
-    this.dns = this.hostname.apply((g) => {
+    this.dns = this.hostname.apply(g => {
       return StandardDns.create(`${name}-dns`, { hostname: g, ipAddress: output(this.internalIpAddress), type: "A" }, args.globals, cro);
     });
 
@@ -109,7 +113,7 @@ export class ProxmoxHost extends ComponentResource {
       {
         ...this.vmIdRange,
         endpoint: interpolate`https://${this.tailscaleHostname}:8006/`,
-        apiToken: interpolate`${apiCredential.apply((z) => z.username)}=${apiCredential.apply((z) => z.credential)}`,
+        apiToken: interpolate`${apiCredential.apply(z => z.username)}=${apiCredential.apply(z => z.credential)}`,
         ssh: {
           username: "root",
           password: args.globals.proxmoxCredential.password,
@@ -129,7 +133,7 @@ export class ProxmoxHost extends ComponentResource {
     });
 
     if (args.installTailscale) {
-      const snippetsCommand = new remote.Command(
+      const _snippetsCommand = new remote.Command(
         `${name}-snippets`,
         {
           connection,
@@ -276,7 +280,7 @@ prometheus.remote_write "thanos" {
         mergeOptions(cro, { dependsOn: [copyAlloyConfig] }),
       );
     }
-    const proxmoxInfo = new OnePasswordItem(
+    const _proxmoxInfo = new OnePasswordItem(
       `${this.name}-proxmox`,
       {
         category: FullItem.CategoryEnum.SecureNote,
@@ -287,16 +291,28 @@ prometheus.remote_write "thanos" {
           // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
-              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
+              hostname: {
+                type: TypeEnum.String,
+                value: this.tailscaleHostname,
+              },
+              username: {
+                type: TypeEnum.String,
+                value: args.globals.proxmoxCredential.username,
+              },
+              password: {
+                type: TypeEnum.Concealed,
+                value: args.globals.proxmoxCredential.password,
+              },
             },
           },
         },
         fields: {
           hostname: { type: TypeEnum.String, value: this.hostname },
           ipAddress: { type: TypeEnum.String, value: this.internalIpAddress },
-          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+          tailscaleIpAddress: {
+            type: TypeEnum.String,
+            value: this.tailscaleIpAddress,
+          },
         },
       },
       cro,
@@ -307,12 +323,12 @@ prometheus.remote_write "thanos" {
       clusterKey: name,
       outputs: args.authentikOutputs,
       cluster: cluster,
-      loadFromResource(application, kind, { name }) {
+      loadFromResource(_application, _kind, _applicationResource) {
         throw new Error("Not implemented");
       },
     });
 
-    cluster.apply((clusterDefinition) => {
+    cluster.apply(clusterDefinition => {
       // Register Proxmox VE as a native Authentik OAuth2 OIDC application.
       // This replaces the previous forward-proxy registration.
       const pveRedirectUri = interpolate`https://${this.tailscaleHostname}:8006/`;
@@ -321,7 +337,10 @@ prometheus.remote_write "thanos" {
       const pveExternalUri = `https://pve.${clusterDefinition.rootDomain}`;
       const oidcApp = this.applicationManager.createApplication(
         output({
-          metadata: { name: `pve-${clusterDefinition.key}`, namespace: clusterDefinition.key },
+          metadata: {
+            name: `pve-${clusterDefinition.key}`,
+            namespace: clusterDefinition.key,
+          },
           spec: {
             name: interpolate`${this.title} Proxmox VE`,
             category: "Infrastructure",
@@ -352,7 +371,9 @@ prometheus.remote_write "thanos" {
       );
 
       // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PVE
-      const tsidpClient = clientIdPair(`${name}-tsidp`, { options: { parent: this } });
+      const tsidpClient = clientIdPair(`${name}-tsidp`, {
+        options: { parent: this },
+      });
       const tsidpDcr = new purrl.Purrl(
         `${name}-pve-tsidp-dcr`,
         {
@@ -371,7 +392,7 @@ prometheus.remote_write "thanos" {
         { parent: this },
       );
 
-      const appProvider: Output<ProviderOauth2> = oidcApp.apply((a) => a.provider! as unknown as ProviderOauth2);
+      const appProvider: Output<ProviderOauth2> = oidcApp.apply(a => a.provider! as unknown as ProviderOauth2);
       const providerConfig = getProviderOauth2ConfigOutput({ name: appProvider.name }, { parent: this });
 
       const realmScript = interpolate`
@@ -441,7 +462,7 @@ echo "PVE OIDC realms, groups, and ACLs configured"
     });
   }
 
-  public addNfsMount(hostname: Input<string>, remotePath: string) {
+  public addNfsMount(_hostname: Input<string>, remotePath: string) {
     const resourceName = `${this.name}-${remotePath.substring(1).replace(/\//g, "-")}nfs`;
     return resourceName;
     // fails with provider for now, the items get created, but seems to be a serialization issue.
@@ -469,11 +490,11 @@ echo "PVE OIDC realms, groups, and ACLs configured"
       {
         endpoints: pulumi
           .output(this.applicationManager.applications)
-          .apply((apps) => {
-            apps.forEach((app) => pulumi.log.info(`Adding Gatus endpoints for application ${app.definition.spec.name} in cluster ${app.definition.spec.category}`, this));
+          .apply(apps => {
+            apps.forEach(app => pulumi.log.info(`Adding Gatus endpoints for application ${app.definition.spec.name} in cluster ${app.definition.spec.category}`, this));
             return apps;
           })
-          .apply((instances) => instances.flatMap((z) => z.gatus).map((e) => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
+          .apply(instances => instances.flatMap(z => z.gatus).map(e => yaml.parse(yaml.stringify(e, { lineWidth: 0 })) as GatusDefinition)),
       },
       this.applicationManager,
     );

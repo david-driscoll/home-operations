@@ -1,25 +1,25 @@
 import { FullItem } from "@1password/connect";
-import { getTailscaleIp, installTailscaleLxc } from "@components/tailscale.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { remote, types } from "@pulumi/command";
-import { all, asset, ComponentResource, ComponentResourceOptions, Input, interpolate, mergeOptions, Output, output, Resource } from "@pulumi/pulumi";
-import * as pulumi from "@pulumi/pulumi";
-import * as purrl from "@pulumiverse/purrl";
-import * as random from "@pulumi/random";
-import * as pbs from "@pulumi/pbs";
-import { TailscaleIp } from "@openapi/tailscale-grants.js";
-import { GlobalResources } from "./globals.ts";
-import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { StandardDns } from "./StandardDns.ts";
-import { getContainerHostnames } from "./helpers.ts";
-import { CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
-import { AuthentikOutputs } from "@components/authentik.ts";
-import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
-import { DockgeLxc } from "./DockgeLxc.ts";
+import type { AuthentikOutputs } from "@components/authentik.ts";
 import { Tailscale } from "@components/constants.ts";
+import { installTailscaleLxc } from "@components/tailscale.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { TailscaleIp } from "@openapi/tailscale-grants.js";
+import { remote, type types } from "@pulumi/command";
+import * as pbs from "@pulumi/pbs";
+import * as pulumi from "@pulumi/pulumi";
+import { all, asset, ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output, type Resource } from "@pulumi/pulumi";
+import * as random from "@pulumi/random";
+import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { PrivateKey } from "@pulumi/tls";
-import { ClusterDefinition, Meta } from "./store/index.ts";
+import * as purrl from "@pulumiverse/purrl";
+import type { DockgeLxc } from "./DockgeLxc.ts";
+import type { GlobalResources } from "./globals.ts";
+import { getContainerHostnames } from "./helpers.ts";
+import { type CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
+import type { ProxmoxHost } from "./ProxmoxHost.ts";
+import type { StandardDns } from "./StandardDns.ts";
+import type { ClusterDefinition, Meta } from "./store/index.ts";
 
 export interface ProxmoxBackupServerLxcArgs {
   globals: GlobalResources;
@@ -97,7 +97,9 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
         create: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
         update: interpolate`pct exec ${args.vmId} -- hostnamectl set-hostname ${name}`,
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])],
+      }),
     );
 
     // Inline the post-install actions without whiptail / curl dependency:
@@ -179,7 +181,9 @@ echo "PBS post-install complete"`;
         connection: args.host.remoteConnection,
         create: interpolate`pct exec ${args.vmId} -- bash << '__POST_INSTALL__'\n${postInstallScript}\n__POST_INSTALL__`,
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])],
+      }),
     );
 
     const postInstallReboot = new remote.Command(
@@ -193,8 +197,8 @@ echo "PBS post-install complete"`;
     );
 
     const cluster = output(args.cluster);
-    const signingKey = new ApplicationCertificate(name, { globals: args.globals }, cro);
-    const externalUrl = cluster.apply((c) => `https://pbs.${c.rootDomain}`);
+    const _signingKey = new ApplicationCertificate(name, { globals: args.globals }, cro);
+    const externalUrl = cluster.apply(c => `https://pbs.${c.rootDomain}`);
 
     const deviceInfo = installTailscaleLxc({
       connection: args.host.remoteConnection,
@@ -212,9 +216,9 @@ echo "PBS post-install complete"`;
       vmId: args.vmId,
       dependsOn: [setHostname, createPbsLxc, postInstallRun, postInstallReboot],
     });
-    this.resources.push(deviceInfo.apply((z) => z.resource));
+    this.resources.push(deviceInfo.apply(z => z.resource));
 
-    const externalHostname = externalUrl.apply((u) => new URL(u).hostname);
+    const externalHostname = externalUrl.apply(u => new URL(u).hostname);
     const { dns } = args.dockge.registerExternalService(
       {
         name,
@@ -242,12 +246,17 @@ echo "PBS post-install complete"`;
               name: interpolate`${c.title} PBS`,
               // slug: this.lxcName,
               icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox-light.svg",
-              category: 'Infrastructure',
+              category: "Infrastructure",
               url: interpolate`https://pbs.${c.rootDomain}`,
               authentik: {
                 oauth2: {
                   clientType: "confidential",
-                  allowedRedirectUris: [{ matching_mode: "strict", url: interpolate`https://pbs.${c.rootDomain}` }],
+                  allowedRedirectUris: [
+                    {
+                      matching_mode: "strict",
+                      url: interpolate`https://pbs.${c.rootDomain}`,
+                    },
+                  ],
                   includeClaimsInIdToken: true,
                   propertyMappings: ["proxmox_groups", "openid", "email", "profile"],
                 },
@@ -264,7 +273,7 @@ echo "PBS post-install complete"`;
           }),
         ),
       )
-      .apply((a) => {
+      .apply(a => {
         if (!(a.provider && !a.isProxy)) {
           throw new Error("Failed to create OIDC application in Authentik");
         }
@@ -279,7 +288,9 @@ echo "PBS post-install complete"`;
         update: interpolate`echo 'root:${rootPassword.result}' | pct exec ${args.vmId} -- chpasswd`,
         triggers: [rootPassword.result],
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])],
+      }),
     );
 
     const realmId = "authentik";
@@ -315,7 +326,9 @@ echo "PBS OIDC configured for realm: $REALM_ID"
         delete: interpolate`pct exec ${args.vmId} -- proxmox-backup-manager openid delete ${realmId}`,
         triggers: [oidc.clientId, oidc.clientSecret, oidc.config.issuerUrl],
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])],
+      }),
     );
 
     // TSIDP (Tailscale Identity Provider) as a backup OIDC realm for PBS
@@ -329,7 +342,7 @@ echo "PBS OIDC configured for realm: $REALM_ID"
         url: pulumi.interpolate`https://idp.${args.globals.tailscaleDomain}/register`,
         method: "POST",
         body: pulumi.jsonStringify({
-          client_name: pulumi.interpolate`Proxmox Backup Server (${cluster.apply((c) => c.title)})`,
+          client_name: pulumi.interpolate`Proxmox Backup Server (${cluster.apply(c => c.title)})`,
           client_id: tsidpClientId,
           client_secret: tsidpClientSecret.result,
           redirect_uris: [interpolate`https://pbs.${cluster.rootDomain}`, interpolate`https://pbs.${args.globals.tailscaleDomain}`],
@@ -372,7 +385,9 @@ echo "PBS TSIDP realm configured"
         delete: interpolate`pct exec ${args.vmId} -- proxmox-backup-manager openid delete ${tsidpRealm}`,
         triggers: [tsidpClientSecret.result],
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, tsidpDcr, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, tsidpDcr, ...(args.dependsOn ?? [])],
+      }),
     );
 
     // Pre-create PBS groups with ACLs.
@@ -384,8 +399,8 @@ echo "PBS TSIDP realm configured"
     // v2026.2.0 has a bug in dataSourceUsersRead (groupsByNames causes a Go panic).
     const tailscaleAdmins = getTailscaleUsersOutput({ role: "admin" }, { provider: args.globals.tailscaleProvider, parent: this });
     const groupsScript = all([output(args.vmId), tailscaleAdmins]).apply(([vmId, tsAdmins]) => {
-      const tsidpEntries = tsAdmins
-        .users!.map((u) => {
+      const tsidpEntries = tsAdmins.users
+        ?.map(u => {
           const userId = `${u.loginName}@tsidp`;
           return [`proxmox-backup-manager user create "${userId}" 2>/dev/null || true`, `proxmox-backup-manager user modify "${userId}" --groups admins 2>/dev/null || true`].join("\n");
         })
@@ -413,7 +428,9 @@ __PBS_GROUPS__`;
         update: groupsScript,
         triggers: [groupsScript],
       },
-      mergeOptions(cro, { dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, {
+        dependsOn: [createPbsLxc, ...(args.dependsOn ?? [])],
+      }),
     );
 
     // Install jq
@@ -454,23 +471,44 @@ __PBS_GROUPS__`;
       `${args.host.name}-pbs`,
       {
         category: FullItem.CategoryEnum.Login,
-        urls: output([{ href: externalUrl }, { href: interpolate`https://${name}.${args.globals.tailscaleDomain}` }, { href: interpolate`https://${this.tailscaleHostname}:8007` }]),
+        urls: output([
+          { href: externalUrl },
+          {
+            href: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
+          },
+          { href: interpolate`https://${this.tailscaleHostname}:8007` },
+        ]),
         title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
-        tags: output(args.tags).apply((tags) => [...tags, "pbs", "lxc", "backup"]),
+        tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"]),
         sections: {
           // dns: createDnsSection(this.dns),
           ssh: {
             fields: {
-              hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
+              hostname: {
+                type: TypeEnum.String,
+                value: this.tailscaleHostname,
+              },
               username: { type: TypeEnum.String, value: "root" },
-              password: { type: TypeEnum.Concealed, value: rootPassword.result },
+              password: {
+                type: TypeEnum.Concealed,
+                value: rootPassword.result,
+              },
             },
           },
           backrest: {
             fields: {
-              publicKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.publicKeyPem },
-              privateKey: { type: TypeEnum.Concealed, value: backrestPrivateKey.privateKeyPem },
-              privateKeyId: { type: TypeEnum.String, value: backrestPrivateKey.id },
+              publicKey: {
+                type: TypeEnum.Concealed,
+                value: backrestPrivateKey.publicKeyPem,
+              },
+              privateKey: {
+                type: TypeEnum.Concealed,
+                value: backrestPrivateKey.privateKeyPem,
+              },
+              privateKeyId: {
+                type: TypeEnum.String,
+                value: backrestPrivateKey.id,
+              },
             },
           },
         },
@@ -479,15 +517,21 @@ __PBS_GROUPS__`;
           username: { type: TypeEnum.String, value: "root" },
           password: { type: TypeEnum.Concealed, value: rootPassword.result },
           cluster: { type: TypeEnum.String, value: cluster.meta.title },
-          dockge: { type: TypeEnum.String, value: interpolate`DockgeLxc: ${args.dockge.cluster.title}` },
+          dockge: {
+            type: TypeEnum.String,
+            value: interpolate`DockgeLxc: ${args.dockge.cluster.title}`,
+          },
           hostname: { type: TypeEnum.String, value: this.tailscaleHostname },
-          webUrl: { type: TypeEnum.String, value: interpolate`https://${name}.${args.globals.tailscaleDomain}` },
+          webUrl: {
+            type: TypeEnum.String,
+            value: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
+          },
         },
       },
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
     );
 
-    this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply((z) => z[0]);
+    this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);
     this.provider = new pbs.Provider(
       `${name}-provider`,
       {
@@ -496,7 +540,10 @@ __PBS_GROUPS__`;
         endpoint: interpolate`https://${tailscaleHostname}:8007`,
         insecure: true,
       },
-      { parent: this, dependsOn: [createPbsLxc, postInstallRun, postInstallReboot] },
+      {
+        parent: this,
+        dependsOn: [createPbsLxc, postInstallRun, postInstallReboot],
+      },
     );
   }
 
@@ -533,7 +580,11 @@ __PBS_GROUPS__`;
         path: args.path,
         gcSchedule: "weekly",
       },
-      { parent: this, provider: this.provider, dependsOn: [folder, ...this.mountPoints, ...this.resources] },
+      {
+        parent: this,
+        provider: this.provider,
+        dependsOn: [folder, ...this.mountPoints, ...this.resources],
+      },
     );
   }
 }

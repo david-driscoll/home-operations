@@ -1,7 +1,6 @@
-import { GlobalResources } from "./globals.ts";
+import type { GlobalResources } from "./globals.ts";
 import { awaitOutput } from "./helpers.ts";
-import { AuthLoginWithApiKeyRequest, TrueNASClient, TrueNASResourceManager } from "./truenas/index.ts";
-import { OPClient } from "@components/op.ts";
+import { AuthLoginWithApiKeyRequest, TrueNASClient } from "./truenas/index.ts";
 
 // Create a simple function that doesn't capture complex objects
 export async function getTruenasClient(globals: GlobalResources, credentialTitle: string) {

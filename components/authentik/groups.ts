@@ -1,9 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
+import type { GlobalResources } from "@components/globals.ts";
 import * as authentik from "@pulumi/authentik";
-import { Roles, Groups } from "../constants.ts";
-import { OPClient } from "@components/op.ts";
-import { VaultStore } from "@components/store/index.ts";
-import { GlobalResources } from "@components/globals.ts";
+import * as pulumi from "@pulumi/pulumi";
+import { Roles } from "../constants.ts";
 
 interface GroupDef {
   groupName: string;
@@ -32,7 +30,10 @@ export class AuthentikGroups extends pulumi.ComponentResource {
     { groupName: Roles.MediaManagers, parentName: Roles.Users },
   ];
 
-  constructor(private readonly globals: GlobalResources, opts?: pulumi.ComponentResourceOptions) {
+  constructor(
+    private readonly globals: GlobalResources,
+    opts?: pulumi.ComponentResourceOptions,
+  ) {
     super("custom:resource:AuthentikGroups", "authentik-groups", {}, opts);
 
     for (const group of this.initialGroups) {
@@ -68,13 +69,15 @@ export class AuthentikGroups extends pulumi.ComponentResource {
     for (const [attrName, titles] of Object.entries(group.attributes || {})) {
       for (const [title, fields] of Object.entries(titles)) {
         if (!cache.has(`${attrName}:${title}`)) {
-          const item = this.globals.store.getSecretByTitle<{ [key: string]: string }>(title);
+          const item = this.globals.store.getSecretByTitle<{
+            [key: string]: string;
+          }>(title);
           cache.set(`${attrName}:${title}`, item);
         }
         const item = cache.get(`${attrName}:${title}`);
 
         for (const field of fields) {
-          resolvedAttributes[`${attrName}_${field}`] = pulumi.output(item).apply((itemData) => itemData?.[field as keyof typeof itemData] || "");
+          resolvedAttributes[`${attrName}_${field}`] = pulumi.output(item).apply(itemData => itemData?.[field as keyof typeof itemData] || "");
         }
       }
     }

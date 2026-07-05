@@ -1,21 +1,16 @@
 import * as pulumi from "@pulumi/pulumi";
-import * as minio from "@pulumi/minio";
-// import * as b2 from "@pulumi/b2";
-import * as random from "@pulumi/random";
 
 export type { CustomResourceOptions } from "@pulumi/pulumi";
 
-import { OPClient } from "./op.ts";
-import { ProxmoxHost } from "./ProxmoxHost.ts";
-import { GlobalResources } from "./globals.ts";
-import { getTruenasClient } from "./truenas.ts";
-import TrueNASResourceManager from "./truenas/truenas-manager.ts";
-import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { FullItem } from "@1password/connect";
-import { Dataset } from "@components/truenas/index.ts";
-import { types } from "@pulumi/command";
-import { TailscaleIp } from "@openapi/tailscale-grants.js";
-import { awaitOutput } from "./helpers.ts";
+import type { Dataset } from "@components/truenas/index.ts";
+import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { TailscaleIp } from "@openapi/tailscale-grants.js";
+import type { types } from "@pulumi/command";
+import type { GlobalResources } from "./globals.ts";
+import type { ProxmoxHost } from "./ProxmoxHost.ts";
+import TrueNASResourceManager from "./truenas/truenas-manager.ts";
+import { getTruenasClient } from "./truenas.ts";
 
 export interface TruenasVmArgs {
   credential: pulumi.Input<string>;
@@ -43,7 +38,7 @@ export interface TruenasVmResult {
 }
 
 function promisifyOutput<T>(output: pulumi.Output<T>): Promise<T> {
-  return new Promise((resolve) => output.apply(resolve));
+  return new Promise(resolve => output.apply(resolve));
 }
 
 export class TruenasVm extends pulumi.ComponentResource {
@@ -56,25 +51,30 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly hostname: pulumi.Output<string>;
   constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
     super("home:truenas:TruenasVM", name, opts);
-    const cro = { parent: this };
+    const _cro = { parent: this };
     this.name = name;
     this.ipAddress = pulumi.output(args.ipAddress);
     this.tailscaleIpAddress = args.tailscaleIpAddress;
     this.tailscaleName = pulumi.interpolate`${name}`;
     this.credential = pulumi.output(args.credential);
-    const credentialItem = this.credential.apply((title) => args.globals.store.getSecretByTitle<{ username: string; credential: string }>(title));
+    const credentialItem = this.credential.apply(title =>
+      args.globals.store.getSecretByTitle<{
+        username: string;
+        credential: string;
+      }>(title),
+    );
     this.globals = args.globals;
 
     this.hostname = pulumi.interpolate`${name}.${this.globals.searchDomain}`;
     const tailscaleHostname = pulumi.interpolate`${name}.${this.globals.tailscaleDomain}`;
 
-    const connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
+    const _connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
       host: this.ipAddress,
-      user: credentialItem.apply((z) => z.username),
-      password: credentialItem.apply((z) => z.credential),
+      user: credentialItem.apply(z => z.username),
+      password: credentialItem.apply(z => z.credential),
     });
 
-    const truenasInfo = new OnePasswordItem(
+    const _truenasInfo = new OnePasswordItem(
       `${args.host.name}-truenas`,
       {
         category: FullItem.CategoryEnum.SecureNote,
@@ -84,15 +84,24 @@ export class TruenasVm extends pulumi.ComponentResource {
           ssh: {
             fields: {
               hostname: { type: TypeEnum.String, value: tailscaleHostname },
-              username: { type: TypeEnum.String, value: args.globals.proxmoxCredential.username },
-              password: { type: TypeEnum.Concealed, value: args.globals.proxmoxCredential.password },
+              username: {
+                type: TypeEnum.String,
+                value: args.globals.proxmoxCredential.username,
+              },
+              password: {
+                type: TypeEnum.Concealed,
+                value: args.globals.proxmoxCredential.password,
+              },
             },
           },
         },
         fields: {
           hostname: { type: TypeEnum.String, value: this.hostname },
           ipAddress: { type: TypeEnum.String, value: this.ipAddress },
-          tailscaleIpAddress: { type: TypeEnum.String, value: this.tailscaleIpAddress },
+          tailscaleIpAddress: {
+            type: TypeEnum.String,
+            value: this.tailscaleIpAddress,
+          },
         },
       },
       { parent: this },
@@ -110,9 +119,9 @@ export class TruenasVm extends pulumi.ComponentResource {
   }
 
   public credential: pulumi.Output<string>;
-  public async addClusterBackup(name: string, parent: pulumi.Resource): Promise<TruenasVmResult> {
+  public async addClusterBackup(name: string, _parent: pulumi.Resource): Promise<TruenasVmResult> {
     const manager = await promisifyOutput(
-      pulumi.output(this.credential).apply(async (credential) => {
+      pulumi.output(this.credential).apply(async credential => {
         return new TrueNASResourceManager(await getTruenasClient(this.globals, credential));
       }),
     );
@@ -120,7 +129,7 @@ export class TruenasVm extends pulumi.ComponentResource {
     let longhorn: Dataset | null = null;
     let volsync: Dataset | null = null;
     if (!pulumi.runtime.isDryRun()) {
-      const root = await manager.ensureDataset(`${this.backupDatasetId}/${name}`, { type: "FILESYSTEM" });
+      const _root = await manager.ensureDataset(`${this.backupDatasetId}/${name}`, { type: "FILESYSTEM" });
       longhorn = await manager.ensureDataset(`${this.backupDatasetId}/${name}/longhorn`, { type: "FILESYSTEM" });
       volsync = await manager.ensureDataset(`${this.backupDatasetId}/${name}/volsync`, { type: "FILESYSTEM" });
       await manager.ensureNFSShare(longhorn.mountpoint!, {

@@ -3,7 +3,7 @@
  * Generated for TrueNAS v25.04.1
  */
 
-import { RequestType, RequestType0, RequestType2, NotificationType, NotificationType0, ParameterStructures } from "vscode-jsonrpc";
+import { NotificationType, ParameterStructures, RequestType, RequestType0, RequestType2 } from "vscode-jsonrpc";
 
 // Collection update notification types
 export const CollectionUpdateNotification = new NotificationType<{
@@ -978,7 +978,7 @@ export type QueryOperator =
 export type QueryFilterArray = [string, QueryOperator, any];
 
 // Query filter with logical connectives - supports both object and array formats
-export type QueryFilterExpression<T = {}> = QueryFilter<T>[]; //; | ["OR", QueryFilterExpression<T>[]] | ["AND", QueryFilterExpression<T>[]];
+export type QueryFilterExpression<T> = QueryFilter<T>[]; //; | ["OR", QueryFilterExpression<T>[]] | ["AND", QueryFilterExpression<T>[]];
 // | QueryFilterArray
 // | ["OR", QueryFilterExpression[]]
 // | ["AND", QueryFilterExpression[]] // explicit AND (default is implicit)
@@ -1165,7 +1165,7 @@ export interface NetworkInterface {
     mtu: number;
     cloned: boolean;
     flags: string[];
-    nd6_flags: string[];
+    and6_flags: string[];
     capabilities: string[];
     aliases: NetworkInterfaceAlias[];
     link_state: string;

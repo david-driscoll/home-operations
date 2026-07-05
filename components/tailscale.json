@@ -90,9 +90,7 @@
         "summary": "List tailnet devices",
         "description": "Lists the devices in a tailnet.\n\nOAuth Scope: `devices:core:read`.\n",
         "operationId": "listTailnetDevices",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -132,9 +130,7 @@
         "summary": "Get a device",
         "description": "Retrieve the details for the specified device.\n\nOAuth Scope: `devices:core:read`.\n",
         "operationId": "getDevice",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "parameters": [
           {
             "$ref": "#/components/parameters/fields"
@@ -168,9 +164,7 @@
         "summary": "Delete a device",
         "description": "Deletes the device from its tailnet.\nThe device must belong to the requesting user's tailnet.\nDeleting devices shared with the tailnet is not supported.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "deleteDevice",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -199,9 +193,7 @@
         "summary": "Expire a device's key",
         "description": "Mark a device's node key as expired.\nThis will require the device to re-authenticate in order to connect to the tailnet.\nThe device must belong to the requesting user's tailnet.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "expireDeviceKey",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -226,9 +218,7 @@
         "summary": "List device routes",
         "description": "Retrieve the list of subnet routes that a device is advertising,\nas well as those that are enabled for it.\n\nRoutes must be both advertised and enabled for a device to act as a subnet router or exit node.\nIf a device has advertised routes, they are not exposed to traffic until they are enabled.\nConversely, if routes are enabled before they are advertised, they are not available for routing until the device in question has advertised them.\n\nLearn more about [subnet routers](/kb/1019/subnets) and [exit nodes](/kb/1103/exit-nodes).\n\nOAuth Scope: `devices:routes:read`.\n",
         "operationId": "listDeviceRoutes",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -253,9 +243,7 @@
         "summary": "Set device routes",
         "description": "Set a device's enabled subnet routes by replacing the existing list of subnet routes with the supplied parameters.\n[Advertised routes](/kb/1019/subnets#advertise-subnet-routes) cannot be set through the API, since they must be set directly on the device.\n\nRoutes must be both advertised and enabled for a device to act as a subnet router or exit node.\nIf a device has advertised routes, they are not exposed to traffic until they are enabled.\nConversely, if routes are enabled before they are advertised, they are not available for routing until the device in question has advertised them.\n\nLearn more about [subnet routers](/kb/1019/subnets) and [exit nodes](/kb/1103/exit-nodes).\n\nOAuth Scope: `devices:routes`.\n",
         "operationId": "setDeviceRoutes",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "required": true,
           "content": {
@@ -269,10 +257,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "example": [
-                      "10.0.0.0/16",
-                      "192.168.1.0/24"
-                    ]
+                    "example": ["10.0.0.0/16", "192.168.1.0/24"]
                   }
                 }
               }
@@ -310,9 +295,7 @@
         "summary": "Authorize device",
         "description": "This call marks a device as authorized or revokes its authorization for tailnets where device authorization is required,\naccording to the authorized field in the payload.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "authorizeDevice",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -324,9 +307,7 @@
                     "description": "- If `true`, authorize a new device or re-authorize a previously deauthorized device.\n- If `false`, deauthorize an authorized device.\n"
                   }
                 },
-                "required": [
-                  "authorized"
-                ]
+                "required": ["authorized"]
               }
             }
           }
@@ -353,11 +334,9 @@
       ],
       "post": {
         "summary": "Set device name",
-        "description": "When a device is added to a tailnet, its Tailscale [device name](https://tailscale.com/kb/1098/machine-names) (also sometimes referred to as machine name) is generated from its OS hostname.\nThe device name is the canonical name for the device on your tailnet.\n\nDevice name changes immediately get propogated through your tailnet, so be aware that any existing [Magic DNS](https://tailscale.com/kb/1081/magicdns) URLs using the old name will no longer work.\n\nOAuth Scope: `devices:core`.\n",
+        "description": "When a device is added to a tailnet, its Tailscale [device name](https://tailscale.com/kb/1098/machine-names) (also sometimes referred to as machine name) is generated from its OS hostname.\nThe device name is the canonical name for the device on your tailnet.\n\nDevice name changes immediately get propagated through your tailnet, so be aware that any existing [Magic DNS](https://tailscale.com/kb/1081/magicdns) URLs using the old name will no longer work.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "setDeviceName",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -370,9 +349,7 @@
                     "example": "dev-server"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -401,9 +378,7 @@
         "summary": "Set device tags",
         "description": "Tags let you assign an identity to a device that is separate from human users, and use that identity as part of an ACL to restrict access.\nTags are similar to role accounts, but more flexible.\n\nTags are created in the tailnet policy file by defining the tag and an owner of the tag.\nOnce a device is tagged, the tag is the owner of that device.\nA single node can have multiple tags assigned.\n\nConsult the policy file for your tailnet in the [admin console](https://login.tailscale.com/admin/acls) for the list of tags that have been created for your tailnet.\nLearn more about [tags](https://tailscale.com/kb/1068/).\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "setDeviceTags",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -416,10 +391,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "example": [
-                      "tag:foo",
-                      "tag:bar"
-                    ]
+                    "example": ["tag:foo", "tag:bar"]
                   }
                 }
               }
@@ -449,9 +421,7 @@
         "summary": "Update device key",
         "description": "When a device is added to a tailnet, its key expiry is set according to the tailnet's key expiry setting.\nIf the key is not refreshed and expires, the device can no longer communicate with other devices in the tailnet.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "updateDeviceKey",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -464,9 +434,7 @@
                     "description": "- If `true`, disable the device's key expiry. The original key expiry time is still maintained. Upon re-enabling, the key will expire at that original time.\n- If `false`, enable the device's key expiry. Sets the key to expire at the original expiry time prior to disabling. The key may already have expired. In that case, the device must be re-authenticated.\n"
                   }
                 },
-                "required": [
-                  "keyExpiryDisabled"
-                ]
+                "required": ["keyExpiryDisabled"]
               }
             }
           }
@@ -495,9 +463,7 @@
         "summary": "Set device IPv4 address",
         "description": "When a device is added to a tailnet, its Tailscale IPv4 address is set at random either from the CGNAT range,\nor a subset of the CGNAT range specified by an [ip pool](https://tailscale.com/kb/1304/ip-pool).\nThis endpoint can be used to replace the existing IPv4 address with a specific value.\n\nThis action will break any existing connections to this machine.\nYou will need to reconnect to this machine using the new IP address.\nYou may also need to flush your DNS cache.\n\nOAuth Scope: `devices:core`.\n",
         "operationId": "setDeviceIp",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -510,9 +476,7 @@
                     "example": "100.80.0.1"
                   }
                 },
-                "required": [
-                  "ipv4"
-                ]
+                "required": ["ipv4"]
               }
             }
           }
@@ -541,9 +505,7 @@
         "summary": "Get device posture attributes",
         "description": "Retrieve all posture attributes for the specified device.\nThis returns a JSON object of all the key-value pairs of posture attributes for the device.\n\nOAuth Scope: `devices:posture_attributes:read`.\n",
         "operationId": "getDevicePostureAttributes",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -578,9 +540,7 @@
         "summary": "Set custom device posture attributes",
         "description": "Create or update a custom posture attribute on the specified device.\nUser-managed attributes must be in the custom namespace,\nwhich is indicated by prefixing the attribute key with `custom:`.\n\nCustom device posture attributes are available for the Personal and Enterprise plans.\n\nOAuth Scope: `devices:posture_attributes`.\n",
         "operationId": "setCustomDevicePostureAttributes",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "requestBody": {
           "required": true,
           "content": {
@@ -643,9 +603,7 @@
         "summary": "Delete custom device posture attributes",
         "description": "Delete a posture attribute from the specified device.\nThis is only applicable to user-managed posture attributes in the custom namespace,\nwhich is indicated by prefixing the attribute key with `custom:`.\n\nOAuth Scope: `devices:posture_attributes`.\n",
         "operationId": "deleteCustomDevicePostureAttributes",
-        "tags": [
-          "Devices"
-        ],
+        "tags": ["Devices"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -670,9 +628,7 @@
         "summary": "List device invites",
         "description": "List all share invites for a device.\n\nOAuth Scope: `device_invites:read`.\n",
         "operationId": "listDeviceInvites",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -728,9 +684,7 @@
         "summary": "Create device invites",
         "description": "Create new share invites for a device.\n\nNote that device invites cannot be created using an API access token generated from an OAuth client as the shared device is scoped to a user.\n",
         "operationId": "createDeviceInvites",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "requestBody": {
           "description": "Device invites to create.",
           "content": {
@@ -818,9 +772,7 @@
         "summary": "List user invites",
         "description": "List all open (not yet accepted) user invites to the tailnet.",
         "operationId": "listUserInvites",
-        "tags": [
-          "UserInvites"
-        ],
+        "tags": ["UserInvites"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -868,9 +820,7 @@
         "summary": "Create user invites",
         "description": "Create, and optionally email out, new user invites to join the tailnet.\n\n> ⓘ Only permitted for user-owned keys, because invites require an inviting user.\n",
         "operationId": "createUserInvites",
-        "tags": [
-          "UserInvites"
-        ],
+        "tags": ["UserInvites"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -881,14 +831,7 @@
                   "properties": {
                     "role": {
                       "type": "string",
-                      "enum": [
-                        "member",
-                        "admin",
-                        "it-admin",
-                        "network-admin",
-                        "billing-admin",
-                        "auditor"
-                      ],
+                      "enum": ["member", "admin", "it-admin", "network-admin", "billing-admin", "auditor"],
                       "default": "member",
                       "example": "admin",
                       "description": "Optionally specifies a user role to assign the invited user.\n"
@@ -949,9 +892,7 @@
         "summary": "Get a user invite",
         "description": "Retrieve a specific user invite.\n",
         "operationId": "getUserInvite",
-        "tags": [
-          "UserInvites"
-        ],
+        "tags": ["UserInvites"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -976,9 +917,7 @@
         "summary": "Delete a user invite",
         "description": "Deletes a specific user invite.\n\n> ⓘ Only permitted for user-owned keys, because invites require an inviting user.\n",
         "operationId": "deleteUserInvite",
-        "tags": [
-          "UserInvites"
-        ],
+        "tags": ["UserInvites"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -1003,9 +942,7 @@
         "summary": "Resend a user invite",
         "description": "Resend a user invite by email. You can only use this if the specified invite\nwas originally created with an email specified.\nRefer to [creating user invites for a tailnet](#tag/userinvites/post/tailnet/{tailnet}/user-invites).\n\nNote: Invite resends are rate limited to one per minute.\n\n> ⓘ Only permitted for user-owned keys, because invites require an inviting user.\n",
         "operationId": "resendUserInvite",
-        "tags": [
-          "UserInvites"
-        ],
+        "tags": ["UserInvites"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -1030,9 +967,7 @@
         "summary": "Get a device invite",
         "description": "Retrieve a specific device invite.\n\nOAuth Scope: `device_invites:read`.\n",
         "operationId": "getDeviceInvite",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1057,9 +992,7 @@
         "summary": "Delete a device invite",
         "description": "Delete a specific device invite.\n\nOAuth Scope: `device_invites`.\n",
         "operationId": "deleteDeviceInvite",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -1084,9 +1017,7 @@
         "summary": "Resend a device invite",
         "description": "Resend a device invite by email. You can only use this if the specified invite\nwas originally created with an email specified.\nRefer to [creating device invites for a device](#tag/deviceinvites/post/device/{deviceId}/device-invites).\n\nNote: Invite resends are rate limited to one per minute.\n\nNote that device invites cannot be resent using an API access token generated from an OAuth client as the shared device is scoped to a user.\n",
         "operationId": "resendDeviceInvite",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -1106,9 +1037,7 @@
         "summary": "Accept a device invite",
         "description": "Accepts the invitation to share a device into the requesting user's tailnet.\n\nNote that device invites cannot be accepted using an API access token generated from an OAuth client as the shared device is scoped to a user.\n",
         "operationId": "acceptDeviceInvite",
-        "tags": [
-          "DeviceInvites"
-        ],
+        "tags": ["DeviceInvites"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1121,9 +1050,7 @@
                     "description": "The URL of the invite (in the form `https://login.tailscale.com/admin/invite/{code}`) or the `{code}` component of the URL.\n"
                   }
                 },
-                "required": [
-                  "invite"
-                ]
+                "required": ["invite"]
               },
               "examples": {
                 "usingFullUrl": {
@@ -1282,9 +1209,7 @@
         "summary": "List configuration audit logs",
         "description": "List all configuration audit logs for a tailnet.\n\nOAuth Scope: `logs:configuration:read`.\n",
         "operationId": "listConfigurationAuditLogs",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1347,9 +1272,7 @@
         "summary": "List network flow logs",
         "description": "List all network flow logs for a tailnet.\n\nOAuth Scope: `logs:network:read`.\n",
         "operationId": "listNetworkFlowLogs",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "responses": {
           "200": {
             "description": "Successful operation. The `logs` field contains an array of [NetworkFlowLog](#model/networkflowlog) objects.",
@@ -1403,9 +1326,7 @@
         "summary": "Get log streaming status",
         "description": "Retrieve the log streaming status for the provided log type.\n\nOAuth Scope: `log_streaming:read`.\n",
         "operationId": "getLogStreamingStatus",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1441,9 +1362,7 @@
         "summary": "Get log streaming configuration",
         "description": "Retrieve the log streaming configuration for the provided log type.\n\nOAuth Scope: `log_streaming:read`.\n",
         "operationId": "getLogStreamingConfiguration",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1465,9 +1384,7 @@
         "summary": "Set log streaming configuration",
         "description": "Set the log streaming configuration for the provided log type.\n\nOAuth Scope: `log_streaming`. `device_invites` and `policy_file` are also required if streaming to a [private endpoint](https://tailscale.com/kb/1255/log-streaming#private-endpoints).\n",
         "operationId": "setLogStreamingConfiguration",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "requestBody": {
           "description": "The [LogstreamEndpointConfiguration](#model/logstreamendpointconfiguration) to set.\n`logType` is specified in the request URL rather than the body.\n",
           "content": {
@@ -1506,9 +1423,7 @@
         "summary": "Disable log streaming",
         "description": "Delete the log streaming configuration for the provided log type.\n\nOAuth Scope: `log_streaming`.\n",
         "operationId": "disableLogStreaming",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -1534,9 +1449,7 @@
         "summary": "Create or get AWS external id",
         "description": "Get an AWS external id to use for streaming tailnet logs to S3 using role-based authentication,\ncreating a new one for this tailnet when necessary.\n\nOAuth Scope: `log_streaming`.\n",
         "operationId": "getAwsExternalId",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1597,9 +1510,7 @@
         "summary": "Validate external ID integration with IAM role trust policy",
         "description": "Validate that Tailscale can assume your IAM role with (and only with)\nthis external ID.\n\nOAuth Scope: `log_streaming`.\n",
         "operationId": "validateAwsExternalId",
-        "tags": [
-          "Logging"
-        ],
+        "tags": ["Logging"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1659,9 +1570,7 @@
         "summary": "List DNS nameservers",
         "description": "Lists the global DNS nameservers for a tailnet.\n",
         "operationId": "listDnsNameservers",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1675,10 +1584,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "example": [
-                        "8.8.8.8",
-                        "1.2.3.4"
-                      ],
+                      "example": ["8.8.8.8", "1.2.3.4"],
                       "description": "DNS nameservers.\n"
                     }
                   }
@@ -1699,9 +1605,7 @@
         "summary": "Set DNS nameservers",
         "description": "Replaces the list of global DNS nameservers for the given tailnet with the list supplied in the request.\n\nNote that changing the list of DNS nameservers may also affect the status of MagicDNS (if MagicDNS is on; learn about [MagicDNS](https://tailscale.com/kb/1081)).\nIf all nameservers have been removed, MagicDNS will be automatically disabled (until explicitly turned back on by the user).\n",
         "operationId": "setDnsNameservers",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1713,10 +1617,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "example": [
-                      "8.8.8.8",
-                      "1.2.3.4"
-                    ],
+                    "example": ["8.8.8.8", "1.2.3.4"],
                     "description": "DNS nameservers.\n"
                   }
                 }
@@ -1726,7 +1627,7 @@
         },
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1737,10 +1638,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "example": [
-                        "8.8.8.8",
-                        "1.2.3.4"
-                      ],
+                      "example": ["8.8.8.8", "1.2.3.4"],
                       "description": "DNS nameservers.\n"
                     },
                     "magicDNS": {
@@ -1773,12 +1671,10 @@
         "summary": "Get DNS preferences",
         "description": "Retrieves the DNS preferences that are currently set for the given tailnet.\n",
         "operationId": "getDnsPreferences",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1800,9 +1696,7 @@
         "summary": "Set DNS preferences",
         "description": "Set the DNS preferences for a tailnet; specifically, the MagicDNS setting.\nNote that MagicDNS is dependent on DNS servers.\nLearn about [MagicDNS](https://tailscale.com/kb/1081).\n\nIf there is at least one DNS server, then MagicDNS can be enabled.\nOtherwise, it returns an error.\n\nNote that removing all nameservers will turn off MagicDNS.\nTo reenable it, nameservers must be added back, and MagicDNS must be explicitly turned on.\n",
         "operationId": "setDnsPreferences",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1814,7 +1708,7 @@
         },
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1843,9 +1737,7 @@
         "summary": "List DNS search paths",
         "description": "Retrieves the list of search paths, also referred to as *search domains*, that is currently set for the given tailnet.\n",
         "operationId": "listDnsSearchPaths",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -1870,9 +1762,7 @@
         "summary": "Set DNS search paths",
         "description": "Replaces the list of search paths for the given tailnet.\n",
         "operationId": "setDnsSearchPaths",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1913,12 +1803,10 @@
         "summary": "Get split DNS",
         "description": "Retrieves the split DNS settings, which is a map from domains to lists of nameservers, that is currently set for the given tailnet.\n",
         "operationId": "getSplitDns",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1940,9 +1828,7 @@
         "summary": "Update split DNS",
         "description": "Performs partial updates of the split DNS settings for a given tailnet.\nOnly domains specified in the request map will be modified.\nSetting the value of a mapping to `null` clears the nameservers for that domain.\n",
         "operationId": "updateSplitDns",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1954,7 +1840,7 @@
         },
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1976,9 +1862,7 @@
         "summary": "Set split DNS",
         "description": "Replaces the split DNS settings for a given tailnet.\nSetting the value of a mapping to `null` clears the nameservers for that domain.\nSending an empty object clears nameservers for all domains.\n",
         "operationId": "setSplitDns",
-        "tags": [
-          "DNS"
-        ],
+        "tags": ["DNS"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1990,7 +1874,7 @@
         },
         "responses": {
           "200": {
-            "description": "Succesful operation.",
+            "description": "Successful operation.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2019,9 +1903,7 @@
         "summary": "List tailnet keys",
         "description": "Returns a list of active auth keys, API access tokens and OAuth clients.\n\nIf the parameter {all} was not specified, the set of keys returned depends on the access token used to make the request:\n- If the API call is made with a user-owned API access token, this returns only the keys owned by that user.\n- If the API call is made with an access token derived from an OAuth client, this returns all OAuth clients for the tailnet.\n\nOAuth Scope: `api_access_tokens:read` grants access to personal API access tokens.\n\nOAuth Scope: `auth_keys:read` grants access to machine auth keys.\n\nOAuth Scope: `oauth_keys:read` grants access to OAuth clients and OAuth tokens.\n",
         "operationId": "listTailnetKeys",
-        "tags": [
-          "Keys"
-        ],
+        "tags": ["Keys"],
         "parameters": [
           {
             "$ref": "#/components/parameters/all"
@@ -2046,9 +1928,7 @@
                           "id": "XXXX14CNTRL",
                           "keyType": "client",
                           "created": "yyyy-mm-ddThh:mm:ssZ",
-                          "scopes": [
-                            "all"
-                          ],
+                          "scopes": ["all"],
                           "description\"": "test key",
                           "userId": "uscwcTtzzo11DEVEL"
                         },
@@ -2058,9 +1938,7 @@
                           "expirySeconds": 7776000,
                           "created": "yyyy-mm-ddThh:mm:ssZ",
                           "expires": "yyyy-mm-ddThh:mm:ssZ",
-                          "scopes": [
-                            "all"
-                          ],
+                          "scopes": ["all"],
                           "description": "production key",
                           "userId": "uscwcTtzzo11DEVEL"
                         },
@@ -2076,9 +1954,7 @@
                                 "reusable": true,
                                 "ephemeral": false,
                                 "preauthorized": true,
-                                "tags": [
-                                  "tag:example"
-                                ]
+                                "tags": ["tag:example"]
                               }
                             }
                           },
@@ -2105,9 +1981,7 @@
         "summary": "Create an auth key or OAuth client",
         "description": "Creates a new [auth key](https://tailscale.com/kb/1085/) or [OAuth client](https://tailscale.com/kb/1215/) in the specified tailnet.\nThe key will be associated with the user who owns the API access token used to make this call,\nor, if the call is made with an access token derived from an OAuth client, the key will be owned by the tailnet.\n\nReturns a JSON object with the generated key.\nThe key should be recorded and kept safe and secure because it wields the capabilities or scopes specified in the request.\nThe identity of the key is embedded in the key itself and can be used to perform operations on the key (e.g., revoking it or retrieving information about it).\nThe full key can no longer be retrieved after the initial response.\n\nOAuth Scope: `auth_keys` grants access to create machine auth keys.\n\nOAuth Scope: `oauth_keys` grants access to create OAuth clients.\n",
         "operationId": "createAuthKey",
-        "tags": [
-          "Keys"
-        ],
+        "tags": ["Keys"],
         "requestBody": {
           "description": "The supported fields vary depending on the value of the `keyType` field.\n\nFor auth keys, at a minimum, the request POST body must have a `capabilities` object with a `devices` object,\nthough it can be an empty JSON object.\nWith nothing else supplied, such a request generates a single-use key with no tags.\n\nFor OAuth clients, at a minimum the request POST body must have at least one scope.\n",
           "content": {
@@ -2149,10 +2023,7 @@
                     }
                   }
                 },
-                "required": [
-                  "capabilities",
-                  "scopes"
-                ]
+                "required": ["capabilities", "scopes"]
               }
             }
           }
@@ -2191,9 +2062,7 @@
         "summary": "Get key",
         "description": "Returns a JSON object with information about a specific api access token, OAuth client or auth key, such as its creation and expiration dates and its capabilities.\n\nOAuth Scope: `api_access_tokens:read` grants access to personal API access tokens.\n\nOAuth Scope: `auth_keys:read` grants access to machine auth keys.\n\nOAuth Scope: `oauth_keys:read` grants access to OAuth clients and OAuth tokens.\n",
         "operationId": "getKey",
-        "tags": [
-          "Keys"
-        ],
+        "tags": ["Keys"],
         "responses": {
           "200": {
             "description": "Successful operation.\n\nResponse for a revoked (deleted) or expired key will have an `invalid` field set to true.\n",
@@ -2218,9 +2087,7 @@
         "summary": "Delete key",
         "description": "Deletes a specific api access token or auth key.\n\nOAuth Scope: `api_access_tokens` grants access to personal API access tokens.\n\nOAuth Scope: `auth_keys` grants access to machine auth keys.\n\nOAuth Scope: `oauth_keys` grants access to OAuth clients and OAuth tokens.\n",
         "operationId": "deleteKey",
-        "tags": [
-          "Keys"
-        ],
+        "tags": ["Keys"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -2252,9 +2119,7 @@
         "summary": "Get policy file",
         "description": "Retrieves the current policy file for the given tailnet; \nthis includes the ACL along with the rules and tests that have been defined.\n\nThis method can return the policy file as JSON or HuJSON, depending on the Accept header.\nThe response also includes an `ETag` header, which can be optionally included when [setting the policy file](#tag/policyfile/post/tailnet/{tailnet}/acl) to avoid missed updates.\n\nLearn more about [policy file ACL syntax](https://tailscale.com/kb/1337/acl-syntax).\n\nOAuth Scope: `policy_file:read`.\n",
         "operationId": "getPolicyFile",
-        "tags": [
-          "PolicyFile"
-        ],
+        "tags": ["PolicyFile"],
         "parameters": [
           {
             "name": "details",
@@ -2283,10 +2148,7 @@
                     "summary": "JSON response with details=true",
                     "value": {
                       "acl": "Ly8gUG9raW5nIGFyb3VuZCBpbiB0aGUgQVBJIGRvY3MsIGhvcGluZyB5b3UnZCBmaW5kIHNvbWV0aGluZyBnb29kLCBlaD8KLy8gV2UgbGlrZSB5b3VyIHN0eWxlISAgR28gZ3JhYiB5b3Vyc2VsZiBhIFRhaWxzY2FsZSB0LXNoaXJ0IGlmIHRoZXJlIGFyZQovLyBzdGlsbCBzb21lIGF2YWlsYWJsZS4gQnV0IHNoaGguLi4gZG9uJ3QgdGVsbCBhbnlvbmUhCi8vCi8vICAgICAgICAgICAgIGh0dHBzOi8vc3dhZy5jb20vZ2lmdC82a29mNGs1Z3B1ZW95ZDB2NXd6MHJkYmMKewoJLy8gRGVjbGFyZSBzdGF0aWMgZ3JvdXBzIG9mIHVzZXJzIGJleW9uZCB0aG9zZSBpbiB0aGUgaWRlbnRpdHkgc2VydmljZS4KCSJncm91cHMiOiB7CgkJImdyb3VwOmV4YW1wbGUiOiBbInVzZXIxQGV4YW1wbGUuY29tIiwgInVzZXIyQGV4YW1wbGUuY29tIl0sCgl9LAoKCS8vIERlY2xhcmUgY29udmVuaWVudCBob3N0bmFtZSBhbGlhc2VzIHRvIHVzZSBpbiBwbGFjZSBvZiBJUCBhZGRyZXNzZXMuCgkiaG9zdHMiOiB7CgkJImV4YW1wbGUtaG9zdC0xIjogIjEwMC4xMDAuMTAwLjEwMCIsCgl9LAoKCS8vIEFjY2VzcyBjb250cm9sIGxpc3RzLgoJImFjbHMiOiBbCgkJLy8gTWF0Y2ggYWJzb2x1dGVseSBldmVyeXRoaW5nLgoJCS8vIENvbW1lbnQgdGhpcyBzZWN0aW9uIG91dCBpZiB5b3Ugd2FudCB0byBkZWZpbmUgc3BlY2lmaWMgcmVzdHJpY3Rpb25zLgoJCXsiYWN0aW9uIjogImFjY2VwdCIsICJ1c2VycyI6IFsiKiJdLCAicG9ydHMiOiBbIio6KiJdfSwKCV0sCn0K",
-                      "warnings": [
-                        "\"group:example\": user not found: \"user1@example.com\"",
-                        "\"group:example\": user not found: \"user2@example.com\""
-                      ],
+                      "warnings": ["\"group:example\": user not found: \"user1@example.com\"", "\"group:example\": user not found: \"user2@example.com\""],
                       "errors": null
                     }
                   }
@@ -2323,9 +2185,7 @@
         "summary": "Set policy file",
         "description": "Sets the ACL for the given tailnet. HuJSON and JSON are both accepted inputs.\nAn `If-Match` header can be set to avoid missed updates.\n\nOn success, returns the updated ACL in JSON or HuJSON according to the `Accept` header.\nOtherwise, errors are returned for incorrectly defined ACLs, ACLs with failing tests on attempted updates, and mismatched `If-Match` header and `ETag`.\n\nLearn more about [policy file ACL syntax](https://tailscale.com/kb/1337/acl-syntax).\n\nOAuth Scope: `policy_file`.\n",
         "operationId": "setPolicyFile",
-        "tags": [
-          "PolicyFile"
-        ],
+        "tags": ["PolicyFile"],
         "parameters": [
           {
             "name": "If-Match",
@@ -2436,10 +2296,7 @@
           "required": true,
           "schema": {
             "type": "string",
-            "enum": [
-              "user",
-              "ipport"
-            ],
+            "enum": ["user", "ipport"],
             "x-enumDescriptions": {
               "user": "Specify `user` if the `previewFor` value is a user's email.\nNote that `user` remains in the API for compatibility purposes,\nbut has been replaced by `src` in policy files.\n",
               "ipport": "Specify `ipport` if the `previewFor` value is an IP address and port.\nNote that `ipport` remains in the API for compatibility purposes,\nbut has been replaced by `dst` in policy files.\n"
@@ -2462,9 +2319,7 @@
         "summary": "Preview rule matches",
         "description": "When given a user or IP port to match against,\nreturns the tailnet policy rules that apply to that resource,\nwithout saving the policy file to the server.\n",
         "operationId": "previewRuleMatches",
-        "tags": [
-          "PolicyFile"
-        ],
+        "tags": ["PolicyFile"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2508,9 +2363,7 @@
                               "type": "string"
                             },
                             "description": "Source entities affected by the rule.\n",
-                            "example": [
-                              "*"
-                            ]
+                            "example": ["*"]
                           },
                           "ports": {
                             "type": "array",
@@ -2518,9 +2371,7 @@
                               "type": "string"
                             },
                             "description": "Destinations that can be accessed.\n",
-                            "example": [
-                              "*.*"
-                            ]
+                            "example": ["*.*"]
                           },
                           "lineNumber": {
                             "type": "number",
@@ -2528,11 +2379,7 @@
                             "example": 19
                           }
                         },
-                        "required": [
-                          "users",
-                          "ports",
-                          "lineNumber"
-                        ]
+                        "required": ["users", "ports", "lineNumber"]
                       }
                     },
                     "type": {
@@ -2546,11 +2393,7 @@
                       "description": "Echoes the `previewFor` provided in the request.\n"
                     }
                   },
-                  "required": [
-                    "matches",
-                    "type",
-                    "previewFor"
-                  ]
+                  "required": ["matches", "type", "previewFor"]
                 }
               }
             }
@@ -2581,9 +2424,7 @@
         "summary": "Validate and test policy file",
         "description": "This endpoint works in one of two modes, neither of which modifies your current tailnet policy file:\n\n- Run ACL tests: When the request body contains ACL tests as a JSON array,\n  Tailscale runs ACL tests against the tailnet's current policy file.\n  Learn more about [ACL tests](https://tailscale.com/kb/1337/acl-syntax#tests).\n- Validate a new policy file: When the request body is a JSON object,\n  Tailscale interprets the body as a hypothetical new tailnet policy file with new ACLs,\n  including any new rules and tests.\n  It validates that the policy file is parsable and runs tests to validate the existing rules.\n\nIn either case, this method does not modify the tailnet policy file in any way.\n\nOAuth Scope: `policy_file:read`.\n",
         "operationId": "validateAndTestPolicyFile",
-        "tags": [
-          "PolicyFile"
-        ],
+        "tags": ["PolicyFile"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2640,9 +2481,7 @@
                           "description": "Specifies destinations to deny. Each destination in the list is of the form `host:port`\nwhere `port` is a single numeric port and `host` is in the format described in the\n[acl syntax](https://tailscale.com/kb/1337/acl-syntax#accept-and-deny-destinations) documentation.\n\nSources in `src` and `destinations` must refer to specific entities and do not support `*` wildcards.\nFor example, a `deny` destination cannot be `tags:*`.\n"
                         }
                       },
-                      "required": [
-                        "src"
-                      ]
+                      "required": ["src"]
                     },
                     "description": "Array of ACL tests.\n"
                   },
@@ -2658,12 +2497,8 @@
                   "value": [
                     {
                       "src": "user1@example.com",
-                      "accept": [
-                        "example-host-1:22"
-                      ],
-                      "deny": [
-                        "example-host-2:100"
-                      ]
+                      "accept": ["example-host-1:22"],
+                      "deny": ["example-host-2:100"]
                     }
                   ]
                 },
@@ -2707,9 +2542,7 @@
                       "example": [
                         {
                           "user": "user1@example.com",
-                          "errors": [
-                            "address \"2.2.2.2:22\": want: Drop, got: Accept"
-                          ]
+                          "errors": ["address \"2.2.2.2:22\": want: Drop, got: Accept"]
                         }
                       ]
                     }
@@ -2723,9 +2556,7 @@
                       "data": [
                         {
                           "user": "user1@example.com",
-                          "errors": [
-                            "address \"2.2.2.2:22\": want: Drop, got: Accept"
-                          ]
+                          "errors": ["address \"2.2.2.2:22\": want: Drop, got: Accept"]
                         }
                       ]
                     }
@@ -2737,9 +2568,7 @@
                       "data": [
                         {
                           "user": "group:unknown@example.com",
-                          "warnings": [
-                            "group is not syncing from SCIM and will be ignored by rules in the policy file"
-                          ]
+                          "warnings": ["group is not syncing from SCIM and will be ignored by rules in the policy file"]
                         }
                       ]
                     }
@@ -2778,9 +2607,7 @@
         "summary": "List all posture integrations",
         "description": "List all of the posture integrations for a tailnet.\n\nOAuth Scope: `feature_settings:read`.\n",
         "operationId": "getPostureIntegrations",
-        "tags": [
-          "DevicePosture"
-        ],
+        "tags": ["DevicePosture"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -2879,9 +2706,7 @@
         "summary": "Create a posture integration",
         "description": "Create a posture integration, returning the resulting [PostureIntegration](#model/postureintegration).\n\nMust include `provider` and `clientSecret`.\n\nCurrently, only one integration for each provider is supported.\n\nOAuth Scope: `feature_settings`.\n",
         "operationId": "createPostureIntegration",
-        "tags": [
-          "DevicePosture"
-        ],
+        "tags": ["DevicePosture"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2930,9 +2755,7 @@
         "summary": "Get a posture integration",
         "description": "Gets the posture integration identified by `{id}`.\n\nOAuth Scope: `feature_settings:read`.\n",
         "operationId": "getPostureIntegration",
-        "tags": [
-          "DevicePosture"
-        ],
+        "tags": ["DevicePosture"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -2954,9 +2777,7 @@
         "summary": "Update a posture integration",
         "description": "Updates the posture integration identified by `{id}`. You may omit the `clientSecret` from your request to retain the previously configured `clientSecret`.\n\nOAuth Scope: `feature_settings`.\n",
         "operationId": "updatePostureIntegration",
-        "tags": [
-          "DevicePosture"
-        ],
+        "tags": ["DevicePosture"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2997,9 +2818,7 @@
         "summary": "Delete a posture integration",
         "description": "Delete a specific posture integration.\n\nOAuth Scope: `feature_settings`.\n",
         "operationId": "deletePostureIntegration",
-        "tags": [
-          "DevicePosture"
-        ],
+        "tags": ["DevicePosture"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3027,11 +2846,7 @@
           "required": false,
           "schema": {
             "type": "string",
-            "enum": [
-              "member",
-              "shared",
-              "all"
-            ],
+            "enum": ["member", "shared", "all"],
             "default": "member",
             "example": "member"
           }
@@ -3043,16 +2858,7 @@
           "required": false,
           "schema": {
             "type": "string",
-            "enum": [
-              "owner",
-              "member",
-              "admin",
-              "it-admin",
-              "network-admin",
-              "billing-admin",
-              "auditor",
-              "all"
-            ],
+            "enum": ["owner", "member", "admin", "it-admin", "network-admin", "billing-admin", "auditor", "all"],
             "default": "all",
             "example": "all"
           }
@@ -3062,9 +2868,7 @@
         "summary": "List users",
         "description": "List all users of a tailnet.\n\nOAuth Scope: `users:read`.\n",
         "operationId": "listUsers",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3110,9 +2914,7 @@
         "summary": "Get a user",
         "description": "Retrieve details about the specified user.\n\nOAuth Scope: `users:read`.\n",
         "operationId": "getUser",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3150,9 +2952,7 @@
         "summary": "Update user role",
         "description": "Update the role for the specified user.\n\nLearn more about [user roles](kb/1138/user-roles).\n\nOAuth Scope: `users`.\n\n> ⓘ User-based access tokens cannot update their own user's role.\n",
         "operationId": "updateUserRole",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3161,15 +2961,7 @@
                 "properties": {
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "owner",
-                      "member",
-                      "admin",
-                      "it-admin",
-                      "network-admin",
-                      "billing-admin",
-                      "auditor"
-                    ],
+                    "enum": ["owner", "member", "admin", "it-admin", "network-admin", "billing-admin", "auditor"],
                     "example": "member",
                     "description": "The role of the user. Learn more about [user roles](kb/1138/user-roles).\n"
                   }
@@ -3208,9 +3000,7 @@
         "summary": "Approve a user",
         "description": "Approve a pending user's access to the tailnet.\nThis is a no-op if user approval has not been enabled for the tailnet, or if the user is already approved.\n\nUser approval can be managed using the [tailnet settings endpoints](#tag/tailnetsettings).\n\nLearn more about [user approval](/kb/1239/user-approval) and [enabling user approval for your network](/kb/1239/user-approval#enable-user-approval-for-your-network).\n\nOAuth Scope: `users`.\n\n> ⓘ User-based access tokens cannot approve their own user.\n",
         "operationId": "approveUser",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3241,9 +3031,7 @@
         "summary": "Suspend a user",
         "description": "> ⓘ This endpoint is available for the [Personal and Enterprise plans](/pricing).\n\nSuspends a user from their tailnet. Learn more about [suspending users](/kb/1145/remove-team-members#suspending-users).\n\nOAuth Scope: `users`.\n\n> ⓘ User-based access tokens cannot suspend their own user.\n",
         "operationId": "suspendUser",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3274,9 +3062,7 @@
         "summary": "Restore a user",
         "description": "> ⓘ This endpoint is available for the [Personal and Enterprise plans](/pricing).\n\nRestores a suspended user's access to their tailnet. Learn more about [restoring users](/kb/1145/remove-team-members#restoring-users).\n\nOAuth Scope: `users`.\n\n> ⓘ User-based access tokens cannot restore their own user.\n",
         "operationId": "restoreUser",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3307,9 +3093,7 @@
         "summary": "Delete a user",
         "description": "> ⓘ This endpoint is available for the [Personal and Enterprise plans](/pricing).\n\nDelete a user from their tailnet. Learn more about [deleting users](/kb/1145/remove-team-members#deleting-users).\n\nOAuth Scope: `users`.\n\n> ⓘ User-based access tokens cannot delete their own user.\n",
         "operationId": "deleteUser",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3340,9 +3124,7 @@
         "summary": "Get contacts",
         "description": "Retrieve the tailnet's current contacts.\n\nOAuth Scope: `account_settings:read`.\n",
         "operationId": "getContacts",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3403,9 +3185,7 @@
         "summary": "Update contact",
         "description": "Update the preferences for this type of contact. If the email address has changed, the system will send a verification email to confirm the change.\n\nOAuth Scope: `account_settings`.\n",
         "operationId": "updateContact",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3418,9 +3198,7 @@
                     "example": "newuser@example.com"
                   }
                 },
-                "required": [
-                  "email"
-                ]
+                "required": ["email"]
               },
               "example": {
                 "email": "newuser@example.com"
@@ -3459,9 +3237,7 @@
         "summary": "Resend verification email",
         "description": "Resends the verification email for this contact, if and only if verification is still pending.\n\nOAuth Scope: `account_settings`.\n",
         "operationId": "resendContactVerificationEmail",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3494,9 +3270,7 @@
         "summary": "List webhooks",
         "description": "List all webhooks for a tailnet.\n\nOAuth Scope: `webhooks:read`.\n",
         "operationId": "listWebhooks",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3535,9 +3309,7 @@
         "summary": "Create a webhook",
         "description": "Create a webhook within a tailnet.\n\nOAuth Scope: `webhooks`.\n",
         "operationId": "createWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3556,10 +3328,7 @@
                     "$ref": "#/components/schemas/subscriptions"
                   }
                 },
-                "required": [
-                  "endpointUrl",
-                  "subscriptions"
-                ]
+                "required": ["endpointUrl", "subscriptions"]
               }
             }
           }
@@ -3601,9 +3370,7 @@
         "summary": "Get webhook",
         "description": "Retrieve a specific webhook.\n\nOAuth Scope: `webhooks:read`.\n",
         "operationId": "getWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3634,9 +3401,7 @@
         "summary": "Update webhook",
         "description": "Update a specific webhook.\n\nOAuth Scope: `webhooks`.\n",
         "operationId": "updateWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3681,9 +3446,7 @@
         "summary": "Delete webhook",
         "description": "Delete a specific webhook.\n\nOAuth Scope: `webhooks`.\n",
         "operationId": "deleteWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "responses": {
           "200": {
             "description": "Successful operation."
@@ -3714,9 +3477,7 @@
         "summary": "Test a webhook",
         "description": "Test a specific webhook by sending out a test event to the endpoint URL.\nThis endpoint queues the event which is sent out asynchronously.\n\nIf your webhook is configured correctly, within a few seconds your webhook endpoint should receive an event with type of \"test\".\n\nOAuth Scope: `webhooks`.\n",
         "operationId": "testWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "responses": {
           "202": {
             "description": "Successfully queued test event."
@@ -3747,9 +3508,7 @@
         "summary": "Rotate webhook secret",
         "description": "Rotate and generate a new secret for a specific webhook.\n\nThis secret is used for generating the `Tailscale-Webhook-Signature` header in requests sent to the endpoint URL.\nLearn more about [verifying webhook event signatures](/kb/1213/webhooks#verifying-an-event-signature).\n\nOAuth Scope: `webhooks`.\n",
         "operationId": "rotateWebhookSecret",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3787,9 +3546,7 @@
         "summary": "Get tailnet settings",
         "description": "Retrieve the settings for a specific tailnet.\n\nOAuth Scope: `feature_settings:read` - required to view all settings except those governed by the below scopes.\n\nOAuth Scope: `logs:network:read` - required to view the `networkFlowLoggingOn` setting.\n\nOAuth Scope: `policy_file:read` - required to view the `aclsExternallyManagedOn` & `aclsExternalLink` settings.\n",
         "operationId": "getTailnetSettings",
-        "tags": [
-          "TailnetSettings"
-        ],
+        "tags": ["TailnetSettings"],
         "responses": {
           "200": {
             "description": "Successful operation.",
@@ -3817,9 +3574,7 @@
         "summary": "Update tailnet settings",
         "description": "Update the settings for a specific tailnet.\n\nOAuth Scope: `feature_settings` - required to update all settings except those governed by the below scopes.\n\nOAuth Scope: `logs:network` - required to update the `networkFlowLoggingOn` setting.\n\nOAuth Scope: `policy_file` - required to update the `aclsExternallyManagedOn` & `aclsExternalLink` settings.\n",
         "operationId": "updateTailnetSettings",
-        "tags": [
-          "TailnetSettings"
-        ],
+        "tags": ["TailnetSettings"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3879,10 +3634,7 @@
         "required": false,
         "schema": {
           "type": "string",
-          "enum": [
-            "all",
-            "default"
-          ],
+          "enum": ["all", "default"],
           "example": "all"
         }
       },
@@ -3953,10 +3705,7 @@
           "items": {
             "type": "string"
           },
-          "example": [
-            "uc4p8fRHvJ11DEVEL",
-            "~bob"
-          ]
+          "example": ["uc4p8fRHvJ11DEVEL", "~bob"]
         }
       },
       "target": {
@@ -3969,10 +3718,7 @@
           "items": {
             "type": "string"
           },
-          "example": [
-            "mytarget1",
-            "sometarget2"
-          ]
+          "example": ["mytarget1", "sometarget2"]
         }
       },
       "event": {
@@ -4101,10 +3847,7 @@
               "WEB_INTERFACE.LOGOUT"
             ]
           },
-          "example": [
-            "USER.CREATE",
-            "NODE.CREATE"
-          ]
+          "example": ["USER.CREATE", "NODE.CREATE"]
         }
       },
       "logType": {
@@ -4171,11 +3914,7 @@
         "required": true,
         "schema": {
           "type": "string",
-          "enum": [
-            "account",
-            "support",
-            "security"
-          ],
+          "enum": ["account", "support", "security"],
           "example": "account"
         }
       },
@@ -4198,10 +3937,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "example": [
-                "100.87.74.78",
-                "fd7a:115c:a1e0:ac82:4843:ca90:697d:c36e"
-              ]
+              "example": ["100.87.74.78", "fd7a:115c:a1e0:ac82:4843:ca90:697d:c36e"]
             },
             "description": "A list of Tailscale IP addresses for the device,\nincluding both IPv4 (formatted as 100.x.y.z)\nand IPv6 (formatted as fd7a:115c:a1e0:a:b:c:d:e) addresses.\n"
           },
@@ -4303,10 +4039,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "10.0.0.0/16",
-              "192.168.1.0/24"
-            ],
+            "example": ["10.0.0.0/16", "192.168.1.0/24"],
             "description": "The subnet routes for this device that have been approved by a tailnet admin.\nLearn more about subnet routes at https://tailscale.com/kb/1019/.\n"
           },
           "advertisedRoutes": {
@@ -4314,10 +4047,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "10.0.0.0/16",
-              "192.168.1.0/24"
-            ],
+            "example": ["10.0.0.0/16", "192.168.1.0/24"],
             "description": "The subnets this device requests to expose.\nLearn more about subnet routes at https://tailscale.com/kb/1019/.\n"
           },
           "clientConnectivity": {
@@ -4329,10 +4059,7 @@
                 "items": {
                   "type": "string"
                 },
-                "example": [
-                  "199.9.14.201:59128",
-                  "192.68.0.21:59128"
-                ],
+                "example": ["199.9.14.201:59128", "192.68.0.21:59128"],
                 "description": "Client's magicsock UDP IP:port endpoints (IPv4 or IPv6).\n"
               },
               "mappingVariesByDestIP": {
@@ -4400,16 +4127,13 @@
                   "upnp": {
                     "type": "boolean",
                     "example": false,
-                    "description": "'true' if UPnP port-mapping service exists on your router.\n"
+                    "description": "'true' if UOnP port-mapping service exists on your router.\n"
                   }
                 }
               }
             },
             "example": {
-              "endpoints": [
-                "199.9.14.201:59128",
-                "192.68.0.21:59128"
-              ],
+              "endpoints": ["199.9.14.201:59128", "192.68.0.21:59128"],
               "latency": {
                 "Dallas": {
                   "latencyMs": 60.463043
@@ -4435,9 +4159,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "tag:golink"
-            ],
+            "example": ["tag:golink"],
             "description": "Lets you assign an identity to a device that is separate from human users, and use it as part of an ACL to restrict access.\nOnce a device is tagged, the tag is the owner of that device.\nA single node can have multiple tags assigned.\nThis value is empty for external devices.\nLearn more about tags at https://tailscale.com/kb/1068/.\n"
           },
           "tailnetLockError": {
@@ -4459,18 +4181,14 @@
                 "items": {
                   "type": "string"
                 },
-                "example": [
-                  "CP74LFQJXM"
-                ]
+                "example": ["CP74LFQJXM"]
               },
               "disabled": {
                 "type": "boolean"
               }
             },
             "example": {
-              "serialNumbers": [
-                "CP74LFQJXM"
-              ]
+              "serialNumbers": ["CP74LFQJXM"]
             }
           },
           "isEphemeral": {
@@ -4487,9 +4205,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "message"
-        ]
+        "required": ["message"]
       },
       "DeviceRoutes": {
         "type": "object",
@@ -4500,10 +4216,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "10.0.0.0/16",
-              "192.168.1.0/24"
-            ]
+            "example": ["10.0.0.0/16", "192.168.1.0/24"]
           },
           "enabledRoutes": {
             "type": "array",
@@ -4511,10 +4224,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "10.0.0.0/16",
-              "192.168.1.0/24"
-            ]
+            "example": ["10.0.0.0/16", "192.168.1.0/24"]
           }
         }
       },
@@ -4662,14 +4372,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "member",
-              "admin",
-              "it-admin",
-              "network-admin",
-              "billing-admin",
-              "auditor"
-            ],
+            "enum": ["member", "admin", "it-admin", "network-admin", "billing-admin", "auditor"],
             "example": "admin",
             "description": "The tailnet user role to assign to the invited user upon accepting the invite.\n"
           },
@@ -4700,12 +4403,7 @@
             "description": "Included when `email` is not part of the tailnet's domain,\nor when `email` is empty. It is the link to accept the invite.\n\nWhen included, anyone with this link can accept the invite.\nIt is not restricted to the person to which the invite was emailed.\n\nWhen `email` is part of the tailnet's domain (has the same @domain.com\nsuffix as the tailnet), the user can join the tailnet automatically by\nlogging in with their domain email at https://login.tailscale.com/start.\nThey'll be assigned the specified `role` upon signing in for the first\ntime.\n"
           }
         },
-        "required": [
-          "id",
-          "role",
-          "tailnetId",
-          "inviterId"
-        ]
+        "required": ["id", "role", "tailnetId", "inviterId"]
       },
       "ConfigurationAuditLog": {
         "type": "object",
@@ -4717,9 +4415,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "CONFIG"
-            ],
+            "enum": ["CONFIG"],
             "description": "The type of log (always \"CONFIG\")."
           },
           "deferredAt": {
@@ -4734,17 +4430,7 @@
           },
           "origin": {
             "type": "string",
-            "enum": [
-              "ADMIN_CONSOLE",
-              "CONFIG_API",
-              "CONTROL",
-              "IDENTITY_PROVIDER",
-              "NODE",
-              "SUPPORT_REQUEST",
-              "STRIPE",
-              "SECURITY_NOTIFICATION",
-              "LEGAL_NOTIFICATION"
-            ],
+            "enum": ["ADMIN_CONSOLE", "CONFIG_API", "CONTROL", "IDENTITY_PROVIDER", "NODE", "SUPPORT_REQUEST", "STRIPE", "SECURITY_NOTIFICATION", "LEGAL_NOTIFICATION"],
             "description": "The initiator of the action that generated the event, typically an API or user interface, like the Tailscale admin panel.",
             "example": "ADMIN_CONSOLE"
           },
@@ -4759,16 +4445,7 @@
               },
               "type": {
                 "type": "string",
-                "enum": [
-                  "USER",
-                  "NODE",
-                  "AUTOMATED_WORKER",
-                  "OAUTH_CLIENT",
-                  "SCIM",
-                  "MULLVAD",
-                  "LOGSTREAM",
-                  "SECRET_SCANNER"
-                ],
+                "enum": ["USER", "NODE", "AUTOMATED_WORKER", "OAUTH_CLIENT", "SCIM", "MULLVAD", "LOGSTREAM", "SECRET_SCANNER"],
                 "description": "The entity type of the actor.",
                 "example": "USER"
               },
@@ -4787,10 +4464,7 @@
                   "type": "string"
                 },
                 "description": "Indicates the tags owning a node. Its value is only set if `type` is `NODE`.",
-                "example": [
-                  "server",
-                  "datacenter1"
-                ]
+                "example": ["server", "datacenter1"]
               }
             }
           },
@@ -4810,20 +4484,7 @@
               },
               "type": {
                 "type": "string",
-                "enum": [
-                  "TAILNET",
-                  "USER",
-                  "GROUP",
-                  "NODE",
-                  "API_KEY",
-                  "INVITE",
-                  "SHARE",
-                  "BILLING",
-                  "ADMIN_CONSOLE",
-                  "WEB_INTERFACE",
-                  "WEBHOOK_ENDPOINT",
-                  "FAILED_REQUEST"
-                ],
+                "enum": ["TAILNET", "USER", "GROUP", "NODE", "API_KEY", "INVITE", "SHARE", "BILLING", "ADMIN_CONSOLE", "WEB_INTERFACE", "WEBHOOK_ENDPOINT", "FAILED_REQUEST"],
                 "description": "The entity type of Target.",
                 "example": "NODE"
               },
@@ -4973,15 +4634,7 @@
             "description": "Provided when the configuration change failed to be completed. It is a user-presentable reason for the failure."
           }
         },
-        "required": [
-          "eventTime",
-          "type",
-          "eventGroupID",
-          "origin",
-          "actor",
-          "target",
-          "action"
-        ],
+        "required": ["eventTime", "type", "eventGroupID", "origin", "actor", "target", "action"],
         "example": {
           "action": "CREATE",
           "actor": {
@@ -5008,21 +4661,7 @@
         "properties": {
           "proto": {
             "type": "string",
-            "enum": [
-              "ah",
-              "dccp",
-              "egp",
-              "esp",
-              "gre",
-              "icmp",
-              "igmp",
-              "igp",
-              "ipv4",
-              "ipv6-icmp",
-              "sctp",
-              "tcp",
-              "udp"
-            ],
+            "enum": ["ah", "dccp", "egp", "esp", "gre", "icmp", "igmp", "igp", "ipv4", "ipv6-icmp", "sctp", "tcp", "udp"],
             "description": "IP protocol name (or number if no name used).",
             "example": "ipv4"
           },
@@ -5159,10 +4798,7 @@
       },
       "LogType": {
         "type": "string",
-        "enum": [
-          "configuration",
-          "network"
-        ],
+        "enum": ["configuration", "network"],
         "example": "configuration",
         "description": "The type of log for logging endpoints.\n"
       },
@@ -5277,15 +4913,7 @@
           },
           "destinationType": {
             "type": "string",
-            "enum": [
-              "splunk",
-              "elastic",
-              "panther",
-              "cribl",
-              "datadog",
-              "axiom",
-              "s3"
-            ],
+            "enum": ["splunk", "elastic", "panther", "cribl", "datadog", "axiom", "s3"],
             "description": "The type of system to which logs are being streamed.",
             "example": "elastic"
           },
@@ -5307,11 +4935,7 @@
           },
           "compressionFormat": {
             "type": "string",
-            "enum": [
-              "zstd",
-              "gzip",
-              "none"
-            ],
+            "enum": ["zstd", "gzip", "none"],
             "description": "The compression algorithm with which to compress logs. `none` disables compression. Defaults to `none`.",
             "example": "zstd"
           },
@@ -5337,10 +4961,7 @@
           },
           "s3AuthenticationType": {
             "type": "string",
-            "enum": [
-              "accesskey",
-              "rolearn"
-            ],
+            "enum": ["accesskey", "rolearn"],
             "description": "What type of authentication to use for S3. Required if the destinationType is `s3`. Tailscale recommends using `rolearn`. See [Amazon documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html)."
           },
           "s3AccessKeyId": {
@@ -5392,9 +5013,7 @@
             "description": "Whether MagicDNS is active for this tailnet.\n"
           }
         },
-        "required": [
-          "magicDNS"
-        ]
+        "required": ["magicDNS"]
       },
       "DnsSearchPaths": {
         "type": "object",
@@ -5404,37 +5023,24 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "user1.example.com",
-              "user2.example.com"
-            ],
+            "example": ["user1.example.com", "user2.example.com"],
             "description": "The search domains for the given tailnet.\n"
           }
         },
-        "required": [
-          "searchPaths"
-        ]
+        "required": ["searchPaths"]
       },
       "SplitDns": {
         "type": "object",
         "additionalProperties": {
           "x-additionalPropertiesName": "Domain names to DNS",
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "example": {
-          "example.com": [
-            "1.1.1.1",
-            "1.2.3.4"
-          ],
-          "other.com": [
-            "2.2.2.2"
-          ]
+          "example.com": ["1.1.1.1", "1.2.3.4"],
+          "other.com": ["2.2.2.2"]
         },
         "description": "Map of domain names to lists of nameservers or to `null`.\n"
       },
@@ -5558,14 +5164,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "enum": [
-              "falcon",
-              "intune",
-              "jamfpro",
-              "kandji",
-              "kolide",
-              "sentinelone"
-            ],
+            "enum": ["falcon", "intune", "jamfpro", "kandji", "kolide", "sentinelone"],
             "description": "The device posture provider.\n\nRequired on POST requests, ignored on PATCH requests.\n",
             "example": "falcon"
           },
@@ -5688,36 +5287,19 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "member",
-              "shared"
-            ],
+            "enum": ["member", "shared"],
             "example": "member",
             "description": "The type of relation this user has to the tailnet associated with the request.\n"
           },
           "role": {
             "type": "string",
-            "enum": [
-              "owner",
-              "member",
-              "admin",
-              "it-admin",
-              "network-admin",
-              "billing-admin",
-              "auditor"
-            ],
+            "enum": ["owner", "member", "admin", "it-admin", "network-admin", "billing-admin", "auditor"],
             "example": "member",
             "description": "The role of the user. Learn more about [user roles](kb/1138/user-roles).\n"
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "idle",
-              "suspended",
-              "needs-approval",
-              "over-billing-limit"
-            ],
+            "enum": ["active", "idle", "suspended", "needs-approval", "over-billing-limit"],
             "x-enumDescriptions": {
               "active": "Last seen within 28 days.",
               "idle": "Last seen longer than 28 days.",
@@ -5787,12 +5369,7 @@
           },
           "providerType": {
             "type": "string",
-            "enum": [
-              "slack",
-              "mattermost",
-              "googlechat",
-              "discord"
-            ],
+            "enum": ["slack", "mattermost", "googlechat", "discord"],
             "example": "slack",
             "description": "The provider type for the webhook destination, or an empty string if none are applicable.\nOutgoing webhook events are sent in the format expected by the provider type if non-empty.\n"
           },
@@ -5838,10 +5415,7 @@
                 "exitNodeIPForwardingNotEnabled"
               ]
             },
-            "example": [
-              "nodeCreated",
-              "userDeleted"
-            ],
+            "example": ["nodeCreated", "userDeleted"],
             "description": "The list of subscribed events that trigger POST requests to the configured endpoint URL.\nLearn more about [webhook events](/kb/1213/webhooks#events).\n"
           },
           "secret": {
@@ -5854,12 +5428,7 @@
       },
       "providerType": {
         "type": "string",
-        "enum": [
-          "slack",
-          "mattermost",
-          "googlechat",
-          "discord"
-        ],
+        "enum": ["slack", "mattermost", "googlechat", "discord"],
         "example": "slack",
         "description": "The provider type for the webhook destination, or an empty string if none are applicable.\nOutgoing webhook events are sent in the format expected by the provider type if non-empty.\n"
       },
@@ -5888,10 +5457,7 @@
             "exitNodeIPForwardingNotEnabled"
           ]
         },
-        "example": [
-          "nodeCreated",
-          "userDeleted"
-        ],
+        "example": ["nodeCreated", "userDeleted"],
         "description": "The list of subscribed events that trigger POST requests to the configured endpoint URL.\nLearn more about [webhook events](/kb/1213/webhooks#events).\n"
       },
       "TailnetSettings": {
@@ -5933,11 +5499,7 @@
           },
           "usersRoleAllowedToJoinExternalTailnets": {
             "type": "string",
-            "enum": [
-              "none",
-              "admin",
-              "member"
-            ],
+            "enum": ["none", "admin", "member"],
             "example": "admin",
             "description": "Which user roles are allowed to [join external tailnets](/kb/1271/invite-any-user).\n"
           },
@@ -6059,19 +5621,12 @@
           "acls": [
             {
               "action": "accept",
-              "ports": [
-                "*:*"
-              ],
-              "users": [
-                "*"
-              ]
+              "ports": ["*:*"],
+              "users": ["*"]
             }
           ],
           "groups": {
-            "group:example": [
-              "user1@example.com",
-              "user2@example.com"
-            ]
+            "group:example": ["user1@example.com", "user2@example.com"]
           },
           "hosts": {
             "example-host-1": "100.100.100.100"

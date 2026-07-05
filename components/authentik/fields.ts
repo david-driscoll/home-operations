@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
 import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class Fields extends SharedComponentResource {
@@ -72,7 +72,7 @@ export class Fields extends SharedComponentResource {
         ...args,
         order: currentOrder,
       },
-      this.parent
+      this.parent,
     );
   }
 }

@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
 
 interface ScopeMappingDefinition {
   description: string;
@@ -93,7 +93,7 @@ else:
   public get allScopeMappings() {
     return Array.from(this.scopeMappings.entries())
       .map(([key, output]) => [key, output.propertyMappingProviderScopeId] as const)
-      .concat(Array.from(this.defaultScopeMappings.entries()).map(([key, output]) => [key.replace(/\//g, "~1"), output.apply((m) => m.id)] as const));
+      .concat(Array.from(this.defaultScopeMappings.entries()).map(([key, output]) => [key.replace(/\//g, "~1"), output.apply(m => m.id)] as const));
   }
 
   public getScopeMappingId(scopeName: string): pulumi.Output<string> {
@@ -104,7 +104,7 @@ else:
 
     const defaultMapping = this.defaultScopeMappings.get(scopeName);
     if (defaultMapping) {
-      return defaultMapping.apply((m) => m.id);
+      return defaultMapping.apply(m => m.id);
     }
 
     throw new Error(`Scope mapping for '${scopeName}' not found.`);

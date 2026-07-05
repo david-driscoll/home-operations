@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
 
 // Track binding order for flows, applications, and stages
 const bindingOrder = new Map<string, number>();
@@ -14,11 +14,7 @@ function getNextOrder(resourceName: string): number {
 /**
  * Add a stage binding to a flow
  */
-export function addFlowStageBinding(
-  flow: authentik.Flow,
-  stageUuid: pulumi.Input<string>,
-  args?: Partial<authentik.FlowStageBindingArgs>
-): authentik.FlowStageBinding {
+export function addFlowStageBinding(flow: authentik.Flow, stageUuid: pulumi.Input<string>, args?: Partial<authentik.FlowStageBindingArgs>): authentik.FlowStageBinding {
   const resourceName = (flow as any).__name || flow.constructor.name;
   const order = getNextOrder(resourceName);
 
@@ -32,21 +28,13 @@ export function addFlowStageBinding(
     policyEngineMode: args?.policyEngineMode,
   };
 
-  return new authentik.FlowStageBinding(
-    `${resourceName}-binding-${order.toString().padStart(2, "0")}`,
-    bindingArgs,
-    { parent: flow }
-  );
+  return new authentik.FlowStageBinding(`${resourceName}-binding-${order.toString().padStart(2, "0")}`, bindingArgs, { parent: flow });
 }
 
 /**
  * Add a policy binding to a flow
  */
-export function addPolicyBindingToFlow(
-  flow: authentik.Flow | authentik.FlowStageBinding,
-  policyUuid: pulumi.Input<string>,
-  args?: Partial<authentik.PolicyBindingArgs>
-): authentik.PolicyBinding {
+export function addPolicyBindingToFlow(flow: authentik.Flow | authentik.FlowStageBinding, policyUuid: pulumi.Input<string>, args?: Partial<authentik.PolicyBindingArgs>): authentik.PolicyBinding {
   const resourceName = (flow as any).__name || flow.constructor.name;
   const order = getNextOrder(resourceName);
 
@@ -61,11 +49,7 @@ export function addPolicyBindingToFlow(
     timeout: args?.timeout ?? 30,
   };
 
-  return new authentik.PolicyBinding(
-    `${resourceName}-policy-${order}`,
-    bindingArgs,
-    { parent: flow }
-  );
+  return new authentik.PolicyBinding(`${resourceName}-policy-${order}`, bindingArgs, { parent: flow });
 }
 
 /**
@@ -76,10 +60,9 @@ export function addPolicyBindingToApplication(
   args: Partial<authentik.PolicyBindingArgs> & {
     policy?: pulumi.Input<string>;
     group?: pulumi.Input<string>;
-  }
+  },
 ): authentik.PolicyBinding {
-  const resourceName =
-    (application as any).__name || application.constructor.name;
+  const resourceName = (application as any).__name || application.constructor.name;
   const order = getNextOrder(resourceName);
 
   const bindingArgs: authentik.PolicyBindingArgs = {
@@ -92,19 +75,12 @@ export function addPolicyBindingToApplication(
     group: args.group,
   };
 
-  return new authentik.PolicyBinding(
-    `${resourceName}-policy-${order}`,
-    bindingArgs,
-    { parent: application }
-  );
+  return new authentik.PolicyBinding(`${resourceName}-policy-${order}`, bindingArgs, { parent: application });
 }
 
 /**
  * Add a group binding to an application (convenience wrapper)
  */
-export function addGroupBindingToApplication(
-  application: authentik.Application,
-  groupId: pulumi.Input<string>
-): authentik.PolicyBinding {
+export function addGroupBindingToApplication(application: authentik.Application, groupId: pulumi.Input<string>): authentik.PolicyBinding {
   return addPolicyBindingToApplication(application, { group: groupId });
 }

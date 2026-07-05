@@ -16,20 +16,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@components/*": [
-        "./components/*"
-      ],
-      "@openapi/*": [
-        "./types/*"
-      ],
-      "@dynamic/*": [
-        "./dynamic/*"
-      ]
+      "@components/*": ["./components/*"],
+      "@openapi/*": ["./types/*"],
+      "@dynamic/*": ["./dynamic/*"]
     }
   },
-  "include": [
-    "components/**/*.ts",
-    "components/**/*.mts",
-    "types/**/*.ts"
-  ],
+  "include": ["components/**/*.ts", "components/**/*.mts", "types/**/*.ts"]
 }

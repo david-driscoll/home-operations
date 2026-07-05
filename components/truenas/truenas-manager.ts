@@ -5,26 +5,25 @@
  * with your existing Pulumi infrastructure code.
  */
 
-import { TrueNASClient } from "./truenas-client.js";
+import type { TrueNASClient } from "./truenas-client.js";
 import {
+  type Dataset,
   DatasetCreateRequest,
   DatasetQueryRequest,
   DatasetUpdateRequest,
-  NFSQueryRequest,
-  NFSUpdateRequest,
-  NFSCreateRequest,
-  SMBQueryRequest,
-  SMBUpdateRequest,
-  SMBCreateRequest,
-  SystemInfoRequest,
-  PoolQueryRequest,
-  JobQueryRequest,
-  type Dataset,
-  type NFSShare,
-  type SMBShare,
-  type SystemInfo,
-  type Pool,
   type Job,
+  JobQueryRequest,
+  NFSCreateRequest,
+  NFSQueryRequest,
+  type NFSShare,
+  NFSUpdateRequest,
+  type Pool,
+  PoolQueryRequest,
+  SMBCreateRequest,
+  SMBQueryRequest,
+  type SMBShare,
+  SMBUpdateRequest,
+  SystemInfoRequest,
 } from "./truenas-types.js";
 
 /**
@@ -124,7 +123,7 @@ export class TrueNASResourceManager {
       comments?: string;
       managedby?: string;
       sync?: "STANDARD" | "ALWAYS" | "DISABLED";
-    }
+    },
   ): Promise<Dataset> {
     const connection = await this.client.connection;
     try {
@@ -135,7 +134,7 @@ export class TrueNASResourceManager {
         name: undefined,
         type: undefined,
       });
-    } catch (error) {
+    } catch (_error) {
       return await connection.sendRequest(DatasetCreateRequest, {
         name,
         ...config,
@@ -149,27 +148,34 @@ export class TrueNASResourceManager {
   async ensureNFSShare(
     path: string,
     config: {
-    comment?: string;
-    networks?: string[];
-    hosts?: string[];
-    alldirs?: boolean;
-    quiet?: boolean;
-    ro?: boolean;
-    maproot_user?: string;
-    maproot_group?: string;
-    mapall_user?: string;
-    mapall_group?: string;
-    security?: string[];
-    enabled?: boolean;
-  }): Promise<NFSShare> {
+      comment?: string;
+      networks?: string[];
+      hosts?: string[];
+      alldirs?: boolean;
+      quiet?: boolean;
+      ro?: boolean;
+      maproot_user?: string;
+      maproot_group?: string;
+      mapall_user?: string;
+      mapall_group?: string;
+      security?: string[];
+      enabled?: boolean;
+    },
+  ): Promise<NFSShare> {
     const connection = await this.client.connection;
     const shares = (await connection.sendRequest(NFSQueryRequest, [["path", "=", path]], {})) as NFSShare[];
 
     if (shares.length > 0) {
       const share = shares[0];
-      return await connection.sendRequest(NFSUpdateRequest, share.id, { ...config, path });
+      return await connection.sendRequest(NFSUpdateRequest, share.id, {
+        ...config,
+        path,
+      });
     } else {
-      return await connection.sendRequest(NFSCreateRequest, { ...config, path });
+      return await connection.sendRequest(NFSCreateRequest, {
+        ...config,
+        path,
+      });
     }
   }
 
@@ -178,7 +184,7 @@ export class TrueNASResourceManager {
    */
   async ensureSMBShare(
     name: string,
-    path: string,
+    _path: string,
     config: {
       comment?: string;
       readonly?: boolean;
@@ -187,7 +193,7 @@ export class TrueNASResourceManager {
       enabled?: boolean;
       timemachine?: boolean;
       timemachine_quota?: number;
-    }
+    },
   ): Promise<SMBShare> {
     const connection = await this.client.connection;
     const shares = (await connection.sendRequest(SMBQueryRequest, [["name", "=", name]], {})) as SMBShare[];
@@ -270,7 +276,7 @@ export class TrueNASResourceManager {
       }
 
       // Wait 1 second before checking again
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     throw new Error(`Job ${jobId} timed out after ${timeoutMs}ms`);

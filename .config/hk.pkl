@@ -1,0 +1,50 @@
+amends "package://github.com/jdx/hk/releases/download/v1.48.0/hk@1.48.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.48.0/hk@1.48.0#/Builtins.pkl"
+
+local excludes = new Listing<String> {
+  "**/obj/**/*"
+  "sdks/**/*"
+  ".vs/**/*"
+  ".vscode/**/*"
+  ".idea/**/*"
+  ".claude/**/*"
+  ".agents/**/*"
+  ".apm/**/*"
+  ".copilot/**/*"
+  ".squad/**/*"
+  "**/*.verified.*"
+  "**/*.received.*"
+}
+
+local linters = new Mapping<String, Step> {
+    ["biome"] = (Builtins.biome) {
+        fix = "biome check --write --unsafe --no-errors-on-unmatched {{ files }}"
+    }
+    // ["pkl"] = Builtins.pkl
+
+    // ["typos"] = Builtins.typos
+    ["trailing-whitespace"] = Builtins.trailing_whitespace
+    ["newlines"] = Builtins.newlines
+    ["check-merge-conflict"] = Builtins.check_merge_conflict
+    ["detect-private-key"] = Builtins.detect_private_key
+    ["check-added-large-files"] = Builtins.check_added_large_files
+}
+
+exclude = excludes
+hooks {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps = linters
+    }
+    ["pre-push"] {
+        steps = linters
+    }
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+    ["check"] {
+        steps = linters
+    }
+}

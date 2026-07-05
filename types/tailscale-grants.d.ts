@@ -68,7 +68,17 @@ export type TailscaleAllGroups = TailscaleGroups | TailscaleAutogroups;
 /**
  * Known host aliases defined in the hosts section
  */
-export type TailscaleHostAliases = "host:idp" | "host:primary-dns" | "host:secondary-dns" | "host:unifi-dns" | "host:alpha-site" | "host:celestia" | "host:luna" | "host:spike" | "host:twilight-sparkle" | `host:${string}`; // Any other custom host alias
+export type TailscaleHostAliases =
+  | "host:idp"
+  | "host:primary-dns"
+  | "host:secondary-dns"
+  | "host:unifi-dns"
+  | "host:alpha-site"
+  | "host:celestia"
+  | "host:luna"
+  | "host:spike"
+  | "host:twilight-sparkle"
+  | `host:${string}`; // Any other custom host alias
 
 // ============================================================================
 // Postures (based on your configuration)
@@ -93,11 +103,9 @@ export type TailscaleIpSet = `ipset:${string}`;
 // Source Selectors
 // ============================================================================
 
-export type TailscaleIp =
-  | `${number}.${number}.${number}.${number}` // Single IP
+export type TailscaleIp = `${number}.${number}.${number}.${number}`; // Single IP
 
-export type TailscaleCidr =
-  | `${number}.${number}.${number}.${number}/${number}`; // CIDR range
+export type TailscaleCidr = `${number}.${number}.${number}.${number}/${number}`; // CIDR range
 
 /**
  * Valid source selectors for grants
@@ -235,9 +243,7 @@ export interface TailscaleKubernetesCapability {
 /**
  * App Connectors capability
  */
-export interface TailscaleAppConnectorsCapability {
-  // Empty object for enabling app connectors
-}
+export type TailscaleAppConnectorsCapability = object;
 
 /**
  * Known Tailscale application capabilities
@@ -612,11 +618,11 @@ export interface TailscalePolicyFile {
 // ============================================================================
 
 export type {
-  TailscaleGrant as Grant,
-  TailscaleSshRule as SshRule,
-  TailscaleNodeAttr as NodeAttr,
   TailscaleAutoApprovers as AutoApprovers,
-  TailscaleTest as Test,
-  TailscaleSshTest as SshTest,
+  TailscaleGrant as Grant,
+  TailscaleNodeAttr as NodeAttr,
   TailscalePolicyFile as PolicyFile,
+  TailscaleSshRule as SshRule,
+  TailscaleSshTest as SshTest,
+  TailscaleTest as Test,
 };

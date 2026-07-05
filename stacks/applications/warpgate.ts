@@ -1,7 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as pk8s from "@pulumi/kubernetes";
-import { GlobalResources } from "@components/globals.ts";
+import type { GlobalResources } from "@components/globals.ts";
 import { awaitOutput } from "@components/helpers.ts";
+import * as pk8s from "@pulumi/kubernetes";
+import * as pulumi from "@pulumi/pulumi";
 
 const WARPGATE_NAMESPACE = "network";
 const WARPGATE_CONNECTION = "warpgate";
@@ -20,23 +20,37 @@ export async function createWarpgateTargets(globals: GlobalResources, provider: 
   const kubernetesClusters = await awaitOutput(globals.store.getKubernetesClusters());
 
   const targets: HttpTargetDef[] = [
-    ...tailscaleExports.flatMap((exp) =>
+    ...tailscaleExports.flatMap(exp =>
       exp.hosts.map((host): HttpTargetDef => {
         switch (host.nodeType) {
           case "proxmox":
-            return { name: `proxmox-${host.name}`, url: pulumi.interpolate`https://${host.name}.${d}:8006`, tlsVerify: false };
+            return {
+              name: `proxmox-${host.name}`,
+              url: pulumi.interpolate`https://${host.name}.${d}:8006`,
+              tlsVerify: false,
+            };
           case "dockge":
-            return { name: host.name, url: pulumi.interpolate`https://${host.name}.${d}`, tlsVerify: true };
+            return {
+              name: host.name,
+              url: pulumi.interpolate`https://${host.name}.${d}`,
+              tlsVerify: true,
+            };
           case "pbs":
-            return { name: host.name, url: pulumi.interpolate`https://${host.name}.${d}:8007`, tlsVerify: false };
+            return {
+              name: host.name,
+              url: pulumi.interpolate`https://${host.name}.${d}:8007`,
+              tlsVerify: false,
+            };
         }
       }),
     ),
-    ...kubernetesClusters.map((cluster): HttpTargetDef => ({
-      name: `k8s-${cluster.key}`,
-      url: pulumi.interpolate`https://${cluster.key}-kubeproxy.${d}`,
-      tlsVerify: true,
-    })),
+    ...kubernetesClusters.map(
+      (cluster): HttpTargetDef => ({
+        name: `k8s-${cluster.key}`,
+        url: pulumi.interpolate`https://${cluster.key}-kubeproxy.${d}`,
+        tlsVerify: true,
+      }),
+    ),
   ];
 
   for (const t of targets) {

@@ -1,25 +1,25 @@
-import * as pulumi from "@pulumi/pulumi";
-import { GlobalResources } from "../../components/globals.ts";
-import { OPClient } from "../../components/op.ts";
-import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
-import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
-import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
-import { TruenasVm } from "../../components/TruenasVm.ts";
-import * as minio from "@pulumi/minio";
-// import * as b2 from "@pulumi/b2";
-import { createGatusDnsUptime } from "../../components/StandardDns.ts";
-import { addUptimeGatus, awaitOutput } from "@components/helpers.ts";
-import * as tls from "@pulumi/tls";
-import { AuthentikOutputs } from "@components/authentik.ts";
-import { dns, Tailscale } from "@components/constants.ts";
+import type { AuthentikOutputs } from "@components/authentik.ts";
+import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
+import { Tailscale } from "@components/constants.ts";
+import { awaitOutput } from "@components/helpers.ts";
+import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
 import { TailscaleMonitor } from "@components/tailscale.ts";
 import { CategoryEnum, OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
-import { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
+import * as minio from "@pulumi/minio";
+import * as pulumi from "@pulumi/pulumi";
+import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
+import { GlobalResources } from "../../components/globals.ts";
+import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
+import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
+// import * as b2 from "@pulumi/b2";
+import { createGatusDnsUptime } from "../../components/StandardDns.ts";
+import { TruenasVm } from "../../components/TruenasVm.ts";
 
 const globals = new GlobalResources({}, {});
 const monitor = new TailscaleMonitor();
-const backupDirector = new BackupPlanDirector("backup-plan-director", { globals });
+const backupDirector = new BackupPlanDirector("backup-plan-director", {
+  globals,
+});
 
 const outputs = globals.store.getSecretByTitle<AuthentikOutputs>("Authentik Outputs");
 const sftpClientKey = globals.store.getSecretByTitle<SshKeyDefinition>("Rclone SFTP Key");
@@ -28,7 +28,7 @@ const alphaSiteProxmoxCredentials = globals.store.getSecretByTitle<CredentialDef
 const dockgeCredential = globals.store.getSecretByTitle<PasswordDefinition>("Dockge Credential");
 const celestiaCluster = globals.store.getCluster("Cluster: Celestia");
 const alphaSiteCluster = globals.store.getCluster("Cluster: Alpha Site");
-const minioBucket = new minio.S3Bucket(
+const _minioBucket = new minio.S3Bucket(
   `home-operations-minio-bucket`,
   {
     acl: "private",
@@ -80,14 +80,23 @@ const thanosStorage = new minio.S3Bucket(
   },
 );
 
-const thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
+const _thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
   title: "Thanos S3 Storage",
   category: CategoryEnum.APICredential,
   fields: {
-    username: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioUser },
-    password: { type: TypeEnum.Concealed, value: globals.truenasMinioProvider.minioPassword },
+    username: {
+      type: TypeEnum.String,
+      value: globals.truenasMinioProvider.minioUser,
+    },
+    password: {
+      type: TypeEnum.Concealed,
+      value: globals.truenasMinioProvider.minioPassword,
+    },
     bucket: { type: TypeEnum.String, value: thanosStorage.bucket },
-    endpoint: { type: TypeEnum.String, value: globals.truenasMinioProvider.minioServer },
+    endpoint: {
+      type: TypeEnum.String,
+      value: globals.truenasMinioProvider.minioServer,
+    },
   },
 });
 
@@ -126,7 +135,6 @@ const alphaSiteHost = new ProxmoxHost("alpha-site", {
   tailscaleSubnetRoutes: [Tailscale.subnets.home],
   vmIdRange: { start: 101, end: 199 },
 });
-
 
 const celestiaDockgeRuntime = new DockgeLxc("celestia-dockge", {
   globals,
@@ -176,20 +184,30 @@ celestiaPbs.addHostMount(`/mnt/pve/${celestiaDataMount}`, "/spike/data");
 // Celestia monitors twilight-sparkle + itself; alpha-site monitors only itself
 const celestiaPveHosts = [twilightSparkleHost, celestiaHost];
 const celestiaPveVariables = {
-  PROXMOX_BLACKBOX_TARGETS: `[${celestiaPveHosts.map((h) => `"https://${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
-  PROXMOX_PVE_TARGETS: `[${celestiaPveHosts.map((h) => `"${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
+  PROXMOX_BLACKBOX_TARGETS: `[${celestiaPveHosts.map(h => `"https://${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
+  PROXMOX_PVE_TARGETS: `[${celestiaPveHosts.map(h => `"${h.tailscaleIpAddress}:8006"`).join(", ")}]`,
   DNS_CLUSTER_IS_PRIMARY: "true",
 };
 
-const alphaSitePveVariables = {
+const _alphaSitePveVariables = {
   PROXMOX_BLACKBOX_TARGETS: `["https://${alphaSiteHost.tailscaleIpAddress}:8006"]`,
   PROXMOX_PVE_TARGETS: `["${alphaSiteHost.tailscaleIpAddress}:8006"]`,
 };
 
-await awaitOutput(alphaSiteDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }));
+await awaitOutput(
+  alphaSiteDockgeRuntime.deployStacks({
+    dependsOn: [celestiaPbs],
+    variables: celestiaPveVariables,
+  }),
+);
 await awaitOutput(alphaSiteHost.addUptimeGatus());
 
-await awaitOutput(celestiaDockgeRuntime.deployStacks({ dependsOn: [celestiaPbs], variables: celestiaPveVariables }));
+await awaitOutput(
+  celestiaDockgeRuntime.deployStacks({
+    dependsOn: [celestiaPbs],
+    variables: celestiaPveVariables,
+  }),
+);
 await awaitOutput(celestiaHost.addUptimeGatus());
 
 await awaitOutput(twilightSparkleHost.addUptimeGatus());

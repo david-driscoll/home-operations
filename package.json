@@ -24,6 +24,7 @@
     "sdks/*"
   ],
   "devDependencies": {
+    "@biomejs/biome": "2.5.2",
     "@types/crypto-js": "^4.2.2",
     "@types/ssh2": "^1.15.5",
     "tsx": "^4.19.3",
@@ -49,5 +50,14 @@
     "jsondiffpatch": "^0.7.3",
     "moderndash": "^4.0.0",
     "private-ip": "^3.0.2"
+  },
+  "allowScripts": {
+    "file:sdks/adguard": true,
+    "file:sdks/authentik": true,
+    "file:sdks/b2": true,
+    "file:sdks/pbs": true,
+    "file:sdks/tailscale": true,
+    "file:sdks/terrifi": true,
+    "file:sdks/unifi": true
   }
 }

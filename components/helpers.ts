@@ -1,17 +1,17 @@
-import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import { all, asset, ComponentResource, CustomResourceOptions, Input, interpolate, log, mergeOptions, Output, output, Resource, ResourceOptions } from "@pulumi/pulumi";
-import { GetDeviceResult } from "@pulumi/tailscale";
-import { writeFile, rm } from "fs/promises";
-import * as yaml from "yaml";
-import { remote, types } from "@pulumi/command";
-import { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
-import { GlobalResources } from "./globals.ts";
-import { mkdirSync } from "fs";
 import { hash } from "node:crypto";
-import { dirname, join } from "path";
-import { unique } from "moderndash";
-import { tmpdir } from "os";
+import { mkdirSync } from "node:fs";
+import { rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { ApplicationDefinitionSchema, ExternalEndpoint, GatusDefinition } from "@openapi/application-definition.js";
+import { remote, type types } from "@pulumi/command";
+import { all, asset, ComponentResource, type Input, interpolate, mergeOptions, type Output, output, type Resource, type ResourceOptions } from "@pulumi/pulumi";
 import { RandomPassword, RandomString } from "@pulumi/random";
+import type { GetDeviceResult } from "@pulumi/tailscale";
+import { unique } from "moderndash";
+import * as yaml from "yaml";
+import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
 
 export const tempDir = join(tmpdir(), "_home-operations-pulumi");
@@ -20,7 +20,7 @@ mkdirSync(tempDir, { recursive: true });
 const mkdirs = new Map<string, Map<string, remote.Command>>();
 const mkdirParent = new ComponentResource("home-operations:helpers:mkdirs", "mkdirs", {});
 function mkdirOutput({ remotePath, connection }: { remotePath: string; connection: types.input.remote.ConnectionArgs }) {
-  return output(connection.host).apply((host) => {
+  return output(connection.host).apply(host => {
     const dir = dirname(remotePath);
     if (mkdirs.has(host)) {
       const hostMap = mkdirs.get(host)!;
@@ -43,7 +43,7 @@ function mkdirOutput({ remotePath, connection }: { remotePath: string; connectio
     if (!mkdirs.has(host)) {
       mkdirs.set(host, new Map());
     }
-    mkdirs.get(host)!.set(dir, mkdir);
+    mkdirs.get(host)?.set(dir, mkdir);
     return mkdir;
   });
 }
@@ -66,7 +66,7 @@ export function getContainerHostnames(name: string, host: ProxmoxHost, globals: 
 }
 
 export function writeTempFile(fileName: Input<string>, content: Input<string>) {
-  const filePath = output(fileName).apply((name) => getTempFilePath(name));
+  const filePath = output(fileName).apply(name => getTempFilePath(name));
   return all([filePath, content])
     .apply(async ([filePath, content]) => {
       try {
@@ -91,12 +91,17 @@ export function copyFileToRemote(
   },
 ) {
   return output(name)
-    .apply((name) => output({ name, id: output(args.content).apply((c) => hash("md5", c, "hex")) }))
+    .apply(name =>
+      output({
+        name,
+        id: output(args.content).apply(c => hash("md5", c, "hex")),
+      }),
+    )
     .apply(({ name, id }) => {
       const tempFilePath = writeTempFile(name, args.content);
       const remotePath = output(args.remotePath);
-      const fileAsset = tempFilePath.apply((path) => new asset.FileAsset(path));
-      const mkdir = remotePath.apply((path) => mkdirOutput({ remotePath: path, connection: args.connection }));
+      const fileAsset = tempFilePath.apply(path => new asset.FileAsset(path));
+      const mkdir = remotePath.apply(path => mkdirOutput({ remotePath: path, connection: args.connection }));
 
       const internalDeps: remote.Command[] = [];
       if (args.withRemoveCommand) {
@@ -125,8 +130,8 @@ export function copyFileToRemote(
         {
           parent: args.parent,
           dependsOn: output(args.dependsOn)
-            .apply((d) => d ?? [])
-            .apply((d) => [...d, mkdir, ...internalDeps]),
+            .apply(d => d ?? [])
+            .apply(d => [...d, mkdir, ...internalDeps]),
           deleteBeforeReplace: args.deleteBeforeReplace,
         },
       );
@@ -143,14 +148,14 @@ export function pushLxcDefinition(
     dependsOn?: Input<Resource>[];
   },
 ) {
-  const content = output(args.definition).apply((def) => yaml.stringify(def, { lineWidth: 0 }));
+  const content = output(args.definition).apply(def => yaml.stringify(def, { lineWidth: 0 }));
   const vmId = output(args.vmId);
 
   const hostCopy = copyFileToRemote(
-    output(name).apply((n) => `${n}-lxc-def`),
+    output(name).apply(n => `${n}-lxc-def`),
     {
       content,
-      remotePath: output(name).apply((n) => `/tmp/app-defs/${n}.yaml`),
+      remotePath: output(name).apply(n => `/tmp/app-defs/${n}.yaml`),
       connection: args.connection,
       parent: args.parent,
       dependsOn: args.dependsOn,
@@ -178,7 +183,7 @@ export function removeUndefinedProperties<T>(obj: T): T {
     return obj;
   }
   if (Array.isArray(obj)) {
-    return obj.filter((item) => item !== undefined).map((item) => removeUndefinedProperties(item)) as T;
+    return obj.filter(item => item !== undefined).map(item => removeUndefinedProperties(item)) as T;
   }
   if (typeof obj === "object" && !(obj instanceof Date)) {
     return Object.fromEntries(
@@ -190,15 +195,23 @@ export function removeUndefinedProperties<T>(obj: T): T {
   return obj;
 }
 
-export function addUptimeGatus(name: string, globals: GlobalResources, args: { endpoints?: Input<GatusDefinition[]>; "external-endpoints"?: Input<ExternalEndpoint[]> }, parent?: Resource) {
-  const content = output(args).apply(async (a) => {
+export function addUptimeGatus(
+  name: string,
+  globals: GlobalResources,
+  args: {
+    endpoints?: Input<GatusDefinition[]>;
+    "external-endpoints"?: Input<ExternalEndpoint[]>;
+  },
+  parent?: Resource,
+) {
+  const content = output(args).apply(async a => {
     // log.info(`Generating Gatus config for ${name} with ${a.endpoints?.length ?? 0} endpoints and ${a["external-endpoints"]?.length ?? 0} external endpoints`);
     const y = yaml.stringify(
       {
         endpoints: unique(
           (a.endpoints ?? [])
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((e) => {
+            .map(e => {
               return {
                 interval: "2m",
                 ...e,
@@ -229,7 +242,7 @@ export function addUptimeGatus(name: string, globals: GlobalResources, args: { e
 }
 
 export function awaitOutput<T>(output: Output<T>) {
-  return new Promise<T>((resolve) => output.apply(resolve));
+  return new Promise<T>(resolve => output.apply(resolve));
 }
 
 export function getTailscaleDevice(device: Output<GetDeviceResult>) {
@@ -279,7 +292,7 @@ export type RepositoryBackupTask = {
 };
 
 export function toGatusKey(group: string, name: string) {
-  return `${group.replace(/[\s\/_,.#+&]+/g, "-")}_${name.replace(/[\s\/_,.#+&]+/g, "-")}`.toLowerCase();
+  return `${group.replace(/[\s/_,.#+&]+/g, "-")}_${name.replace(/[\s/_,.#+&]+/g, "-")}`.toLowerCase();
 }
 
 export function addBackupJobs(name: string, connection: types.input.remote.ConnectionArgs, tasks: BackupTask[], parent?: Resource, dependsOn?: Input<Resource[]>) {

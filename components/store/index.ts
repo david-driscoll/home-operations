@@ -1,7 +1,7 @@
-import { GlobalResources } from "@components/globals.ts";
-import { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
-import { CategoryEnum, OPClient, TypeEnum } from "./op.ts";
-import { all, Input, interpolate, jsonStringify, log, output, Output, secret, Unwrap } from "@pulumi/pulumi";
+import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
+import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
+import { OPClient, TypeEnum } from "./op.ts";
+
 const op = new OPClient();
 
 export * from "./interfaces.ts";
@@ -10,40 +10,60 @@ type OnePasswordItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 export class VaultStore {
   public readonly tailscaleDomain;
   constructor() {
-    this.tailscaleDomain = this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply((z) => z.hostname);
+    this.tailscaleDomain = this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply(z => z.hostname);
   }
   public getDockgeInstances() {
-    return output(op.findItemsByTag("dockge")).apply((items) => all(items.map(getSecretItem<DockgeLxcDefinition>)));
+    return output(op.findItemsByTag("dockge")).apply(items => all(items.map(getSecretItem<DockgeLxcDefinition>)));
   }
   public getCluster(title: string) {
     return output(op.getItemByTitle(title)).apply(getSecretItem<ClusterDefinition>);
   }
 
   public getAllClusters() {
-    return output(op.findItemsByTag("cluster-definition")).apply((items) => all(items.map(getSecretItem<ClusterDefinition>)));
+    return output(op.findItemsByTag("cluster-definition")).apply(items => all(items.map(getSecretItem<ClusterDefinition>)));
   }
 
   public getDockerClusters() {
-    return this.getAllClusters().apply((items) => items.filter((item) => item.type === "dockge"));
+    return this.getAllClusters().apply(items => items.filter(item => item.type === "dockge"));
   }
 
   public getBackupPlans<T>() {
     return output(op.findItemsByTag("backup-plan"))
-      .apply((items) => all(items.map(getSecretItem<{ plan: string }>)).apply((items) => items.map((item) => JSON.parse(item.plan) as { plans: T[] })))
-      .apply((plans) => plans.flatMap((z) => z.plans));
+      .apply(items => all(items.map(getSecretItem<{ plan: string }>)).apply(items => items.map(item => JSON.parse(item.plan) as { plans: T[] })))
+      .apply(plans => plans.flatMap(z => z.plans));
   }
 
   public getTailscaleExports() {
     return output(op.findItemsByTag("tailscale-export"))
-      .apply((items) => all(items.map(getSecretItem<{ [key: string]: { ip: string; internalIp?: string; nodeType: "dockge" | "proxmox" | "pbs" } }>)))
-      .apply((items) => {
-        return items.map((item) => {
+      .apply(items =>
+        all(
+          items.map(
+            getSecretItem<{
+              [key: string]: {
+                ip: string;
+                internalIp?: string;
+                nodeType: "dockge" | "proxmox" | "pbs";
+              };
+            }>,
+          ),
+        ),
+      )
+      .apply(items => {
+        return items.map(item => {
           return {
             name: item.name as unknown as string,
             services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
             hosts: Object.entries(item)
-              .filter(([key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && "ip" in value)
-              .map(([key, value]) => ({ name: key, ...value }) as { name: string; ip: string; internalIp?: string; nodeType: "dockge" | "proxmox" | "pbs" }),
+              .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && "ip" in value)
+              .map(
+                ([key, value]) =>
+                  ({ name: key, ...value }) as {
+                    name: string;
+                    ip: string;
+                    internalIp?: string;
+                    nodeType: "dockge" | "proxmox" | "pbs";
+                  },
+              ),
           };
         });
       });
@@ -55,10 +75,10 @@ export class VaultStore {
 
   public getKubernetesClusters(): Output<(KubernetesClusterDefinition & { kubeConfig: string })[]> {
     return this.getAllClusters()
-      .apply((items) => items.filter((item) => item.type === "kubernetes"))
-      .apply((clusters) => {
+      .apply(items => items.filter(item => item.type === "kubernetes"))
+      .apply(clusters => {
         return all(
-          clusters.map((clusterDefinition) => ({
+          clusters.map(clusterDefinition => ({
             ...clusterDefinition,
             kubeConfig: output(generateTailscaleKubeConfig(clusterDefinition.key, this.tailscaleDomain)),
           })),
@@ -67,8 +87,8 @@ export class VaultStore {
   }
 
   public getKubernetesCluster(title: string): Output<KubernetesClusterDefinition & { kubeConfig: string }> {
-    return this.getCluster(title).apply((cluster) =>
-      output(generateTailscaleKubeConfig(cluster.key, this.tailscaleDomain)).apply((kubeConfig) => ({
+    return this.getCluster(title).apply(cluster =>
+      output(generateTailscaleKubeConfig(cluster.key, this.tailscaleDomain)).apply(kubeConfig => ({
         ...(cluster as KubernetesClusterDefinition),
         kubeConfig,
       })),
@@ -76,25 +96,34 @@ export class VaultStore {
   }
 
   public proxmoxBackupServers(withTag: string = "pbs") {
-    return output(op.findItemsByTag(withTag)).apply((items) => all(items.map((item) => createProxmoxBackupServerDefinition(op, item))));
+    return output(op.findItemsByTag(withTag)).apply(items => all(items.map(item => createProxmoxBackupServerDefinition(op, item))));
   }
 
   public getSecretByTitle<T>(title: string) {
     return output(op.getItemByTitle(title)).apply(getSecretItem<T>);
   }
 
-  private readonly vaultRegex = /op\:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
+  private readonly vaultRegex = /op:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
   public replaceOnePasswordPlaceholders(value: Input<string>): Output<string> {
     return output(value)
-      .apply((v) => Array.from(v.matchAll(this.vaultRegex)))
-      .apply((matches) =>
+      .apply(v => Array.from(v.matchAll(this.vaultRegex)))
+      .apply(matches =>
         all(
           matches
-            .map((match) => match.slice(1) as [string, string])
-            .map(([itemTitle, fieldName]) => this.getSecretByTitle<{ [key: string]: string | undefined }>(itemTitle).apply((item) => ({ itemTitle, fieldName, fieldValue: item[fieldName] }) as const)),
+            .map(match => match.slice(1) as [string, string])
+            .map(([itemTitle, fieldName]) =>
+              this.getSecretByTitle<{ [key: string]: string | undefined }>(itemTitle).apply(
+                item =>
+                  ({
+                    itemTitle,
+                    fieldName,
+                    fieldValue: item[fieldName],
+                  }) as const,
+              ),
+            ),
         ),
       )
-      .apply((matches) => {
+      .apply(matches => {
         const items = new Map();
         for (const { fieldName, fieldValue, itemTitle } of matches) {
           if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
@@ -105,14 +134,12 @@ export class VaultStore {
           }
           items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
         }
-        return output(value).apply((v) => v.replace(this.vaultRegex, (fullMatch) => items.get(fullMatch) || fullMatch));
+        return output(value).apply(v => v.replace(this.vaultRegex, fullMatch => items.get(fullMatch) || fullMatch));
       });
   }
 }
 
-export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(
-  item: Pick<OnePasswordItem, "title" | "category" | "tags" | "urls" | "fields" | "files" | "sections">,
-): Output<Unwrap<T & Meta>> {
+export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: Pick<OnePasswordItem, "title" | "category" | "tags" | "urls" | "fields" | "files" | "sections">): Output<Unwrap<T & Meta>> {
   const result: [string, any][] = [
     [
       "meta",
@@ -120,14 +147,14 @@ export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(
         title: item.title,
         category: item.category,
         tags: item.tags ?? [],
-        urls: item.urls?.map((z) => ({ href: z.href, label: z.label })) ?? [],
+        urls: item.urls?.map(z => ({ href: z.href, label: z.label })) ?? [],
       }),
     ],
   ];
   for (const [key, { value, type }] of Object.entries(item.fields)) {
     result.push([key, type === TypeEnum.Concealed ? secret(value) : output(value)] as const);
   }
-  for (const [key, { name, content }] of Object.entries(item.files ?? {})) {
+  for (const [key, { content }] of Object.entries(item.files ?? {})) {
     result.push([key, secret(content)]);
   }
   for (const [sectionKey, section] of Object.entries(item.sections)) {
@@ -141,7 +168,7 @@ export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(
   return output(Object.fromEntries(result) as T & Meta);
 }
 
-export interface VaultStoreItem {}
+export type VaultStoreItem = object;
 
 function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<string>) {
   return jsonStringify({
@@ -175,14 +202,20 @@ function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<
 }
 
 function generateKubeConfig(item: OnePasswordItem) {
-  const credential = getSecretItem<{ sa: string; cluster: string; cluster_api: string; token: string; certificate: string }>(item);
+  const credential = getSecretItem<{
+    sa: string;
+    cluster: string;
+    cluster_api: string;
+    token: string;
+    certificate: string;
+  }>(item);
   return interpolate`{
   "kind": "Config",
   "apiVersion": "v1",
   "clusters": [
     {
       "cluster": {
-        "certificate-authority-data": "${credential.certificate.apply((c) => Buffer.from(c, "utf8").toString("base64"))}",
+        "certificate-authority-data": "${credential.certificate.apply(c => Buffer.from(c, "utf8").toString("base64"))}",
         "server": "https://${credential.cluster_api}:6443"
       },
       "name": "${credential.cluster}"

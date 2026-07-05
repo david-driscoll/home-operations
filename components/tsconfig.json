@@ -6,10 +6,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": [
-    "**/*.ts",
-    "../dynamic/**/*.ts",
-    "**/*.mts",
-  ],
+  "include": ["**/*.ts", "../dynamic/**/*.ts", "**/*.mts"],
   "references": []
 }

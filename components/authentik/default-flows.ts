@@ -1,79 +1,74 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
 
-export const DefaultFlowsParent = new pulumi.ComponentResource(
-  "custom:resource:DefaultFlows",
-  "authentik-default-flows"
-);
+export const DefaultFlowsParent = new pulumi.ComponentResource("custom:resource:DefaultFlows", "authentik-default-flows");
 
-function getFlowLazy(slug: string): pulumi.Output<authentik.GetFlowResult> {
+function getFlowLazy(slug: string) {
   return pulumi.output(authentik.getFlow({ slug }, { parent: DefaultFlowsParent }));
 }
 
-export class DefaultFlows {
-  private static _authenticationFlow?: pulumi.Output<authentik.GetFlowResult>;
-  private static _sourceAuthentication?: pulumi.Output<authentik.GetFlowResult>;
-  private static _providerAuthorizationExplicitConsent?: pulumi.Output<authentik.GetFlowResult>;
-  private static _providerAuthorizationImplicitConsent?: pulumi.Output<authentik.GetFlowResult>;
-  private static _sourceEnrollment?: pulumi.Output<authentik.GetFlowResult>;
-  private static _invalidationFlow?: pulumi.Output<authentik.GetFlowResult>;
-  private static _providerInvalidationFlow?: pulumi.Output<authentik.GetFlowResult>;
-  private static _authenticatorStaticSetup?: pulumi.Output<authentik.GetFlowResult>;
-  private static _authenticatorTotpSetup?: pulumi.Output<authentik.GetFlowResult>;
-  private static _authenticatorWebauthnSetup?: pulumi.Output<authentik.GetFlowResult>;
-  private static _passwordChange?: pulumi.Output<authentik.GetFlowResult>;
-  private static _sourcePreAuthentication?: pulumi.Output<authentik.GetFlowResult>;
-  private static _userSettingsFlow?: pulumi.Output<authentik.GetFlowResult>;
+let _authenticationFlow: ReturnType<typeof getFlowLazy>;
+let _sourceAuthentication: ReturnType<typeof getFlowLazy>;
+let _providerAuthorizationExplicitConsent: ReturnType<typeof getFlowLazy>;
+let _providerAuthorizationImplicitConsent: ReturnType<typeof getFlowLazy>;
+let _sourceEnrollment: ReturnType<typeof getFlowLazy>;
+let _invalidationFlow: ReturnType<typeof getFlowLazy>;
+let _providerInvalidationFlow: ReturnType<typeof getFlowLazy>;
+let _authenticatorStaticSetup: ReturnType<typeof getFlowLazy>;
+let _authenticatorTotpSetup: ReturnType<typeof getFlowLazy>;
+let _authenticatorWebauthnSetup: ReturnType<typeof getFlowLazy>;
+let _passwordChange: ReturnType<typeof getFlowLazy>;
+let _sourcePreAuthentication: ReturnType<typeof getFlowLazy>;
+let _userSettingsFlow: ReturnType<typeof getFlowLazy>;
 
-  public static get authenticationFlow(): pulumi.Output<authentik.GetFlowResult> {
-    return this._authenticationFlow ??= getFlowLazy("default-authentication-flow");
-  }
+export function authenticationFlow() {
+  return (_authenticationFlow ??= getFlowLazy("default-authentication-flow"));
+}
 
-  public static get sourceAuthentication(): pulumi.Output<authentik.GetFlowResult> {
-    return this._sourceAuthentication ??= getFlowLazy("default-source-authentication");
-  }
+export function sourceAuthentication() {
+  return (_sourceAuthentication ??= getFlowLazy("default-source-authentication"));
+}
 
-  public static get providerAuthorizationExplicitConsent(): pulumi.Output<authentik.GetFlowResult> {
-    return this._providerAuthorizationExplicitConsent ??= getFlowLazy("default-provider-authorization-explicit-consent");
-  }
+export function providerAuthorizationExplicitConsent() {
+  return (_providerAuthorizationExplicitConsent ??= getFlowLazy("default-provider-authorization-explicit-consent"));
+}
 
-  public static get providerAuthorizationImplicitConsent(): pulumi.Output<authentik.GetFlowResult> {
-    return this._providerAuthorizationImplicitConsent ??= getFlowLazy("default-provider-authorization-implicit-consent");
-  }
+export function providerAuthorizationImplicitConsent() {
+  return (_providerAuthorizationImplicitConsent ??= getFlowLazy("default-provider-authorization-implicit-consent"));
+}
 
-  public static get sourceEnrollment(): pulumi.Output<authentik.GetFlowResult> {
-    return this._sourceEnrollment ??= getFlowLazy("default-source-enrollment");
-  }
+export function sourceEnrollment() {
+  return (_sourceEnrollment ??= getFlowLazy("default-source-enrollment"));
+}
 
-  public static get invalidationFlow(): pulumi.Output<authentik.GetFlowResult> {
-    return this._invalidationFlow ??= getFlowLazy("default-invalidation-flow");
-  }
+export function invalidationFlow() {
+  return (_invalidationFlow ??= getFlowLazy("default-invalidation-flow"));
+}
 
-  public static get providerInvalidationFlow(): pulumi.Output<authentik.GetFlowResult> {
-    return this._providerInvalidationFlow ??= getFlowLazy("default-provider-invalidation-flow");
-  }
+export function providerInvalidationFlow() {
+  return (_providerInvalidationFlow ??= getFlowLazy("default-provider-invalidation-flow"));
+}
 
-  public static get authenticatorStaticSetup(): pulumi.Output<authentik.GetFlowResult> {
-    return this._authenticatorStaticSetup ??= getFlowLazy("default-authenticator-static-setup");
-  }
+export function authenticatorStaticSetup() {
+  return (_authenticatorStaticSetup ??= getFlowLazy("default-authenticator-static-setup"));
+}
 
-  public static get authenticatorTotpSetup(): pulumi.Output<authentik.GetFlowResult> {
-    return this._authenticatorTotpSetup ??= getFlowLazy("default-authenticator-totp-setup");
-  }
+export function authenticatorTotpSetup() {
+  return (_authenticatorTotpSetup ??= getFlowLazy("default-authenticator-totp-setup"));
+}
 
-  public static get authenticatorWebauthnSetup(): pulumi.Output<authentik.GetFlowResult> {
-    return this._authenticatorWebauthnSetup ??= getFlowLazy("default-authenticator-webauthn-setup");
-  }
+export function authenticatorWebauthnSetup() {
+  return (_authenticatorWebauthnSetup ??= getFlowLazy("default-authenticator-webauthn-setup"));
+}
 
-  public static get passwordChange(): pulumi.Output<authentik.GetFlowResult> {
-    return this._passwordChange ??= getFlowLazy("default-password-change");
-  }
+export function passwordChange() {
+  return (_passwordChange ??= getFlowLazy("default-password-change"));
+}
 
-  public static get sourcePreAuthentication(): pulumi.Output<authentik.GetFlowResult> {
-    return this._sourcePreAuthentication ??= getFlowLazy("default-source-pre-authentication");
-  }
+export function sourcePreAuthentication() {
+  return (_sourcePreAuthentication ??= getFlowLazy("default-source-pre-authentication"));
+}
 
-  public static get userSettingsFlow(): pulumi.Output<authentik.GetFlowResult> {
-    return this._userSettingsFlow ??= getFlowLazy("default-user-settings-flow");
-  }
+export function userSettingsFlow() {
+  return (_userSettingsFlow ??= getFlowLazy("default-user-settings-flow"));
 }

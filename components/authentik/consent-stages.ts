@@ -1,5 +1,5 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as authentik from "@pulumi/authentik";
+import type * as pulumi from "@pulumi/pulumi";
 import { SharedComponentResource } from "./shared-component-resource.ts";
 
 export class ConsentStages extends SharedComponentResource {
@@ -20,7 +20,7 @@ export class ConsentStages extends SharedComponentResource {
           consentExpireIn: "days=30",
           mode: "expiring",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._oneMonth;
@@ -34,7 +34,7 @@ export class ConsentStages extends SharedComponentResource {
           consentExpireIn: "days=7",
           mode: "expiring",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._oneWeek;
@@ -47,7 +47,7 @@ export class ConsentStages extends SharedComponentResource {
         {
           mode: "always_require",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._require;
@@ -60,7 +60,7 @@ export class ConsentStages extends SharedComponentResource {
         {
           mode: "permanent",
         },
-        this.parent
+        this.parent,
       );
     }
     return this._permanent;

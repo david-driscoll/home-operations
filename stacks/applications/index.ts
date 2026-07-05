@@ -1,9 +1,9 @@
-import * as pulumi from "@pulumi/pulumi";
+import type { AuthentikOutputs } from "@components/authentik.ts";
+import { awaitOutput } from "@components/helpers.ts";
 import * as authentik from "@pulumi/authentik";
+import * as pulumi from "@pulumi/pulumi";
 import { GlobalResources } from "../../components/globals.ts";
 import { kubernetesApplications } from "./kubernetes.ts";
-import { AuthentikOutputs } from "@components/authentik.ts";
-import { awaitOutput } from "@components/helpers.ts";
 
 const globals = new GlobalResources({}, {});
 const config = new pulumi.Config(`applications`);
@@ -14,7 +14,7 @@ const outputs = await awaitOutput(globals.store.getSecretByTitle<AuthentikOutput
 
 // only these two are branded.
 if (clusterDefinition.key === "sgc" || clusterDefinition.key === "equestria") {
-  const brand = new authentik.Brand(
+  const _brand = new authentik.Brand(
     clusterDefinition.key,
     {
       domain: clusterDefinition.authentikDomain,

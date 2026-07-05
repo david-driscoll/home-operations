@@ -1,13 +1,12 @@
-import { FullItem, GeneratorRecipe } from "@1password/connect";
+import { FullItem, type GeneratorRecipe } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
-import { ItemUrls } from "@1password/connect/dist/model/itemUrls.js";
+import type { ItemUrls } from "@1password/connect/dist/model/itemUrls.js";
+import { awaitOutput } from "@components/helpers.ts";
+import { getSecretItem } from "@components/store/index.ts";
 import * as pulumi from "@pulumi/pulumi";
-import { OPClient, OPClientItemInput } from "../../components/op.ts";
 import * as jsondiffpatch from "jsondiffpatch";
 import * as jsonpatch from "jsondiffpatch/formatters/jsonpatch";
-import { DiffResult } from "@pulumi/pulumi/dynamic/index.js";
-import { getSecretItem } from "@components/store/index.ts";
-import { awaitOutput } from "@components/helpers.ts";
+import { OPClient, type OPClientItemInput } from "../../components/op.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;
@@ -93,7 +92,7 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const client = new OPClient();
 
     const item = await this.retry(() => client.createItem(inputs));
-    return { id: item?.id!, outs: { ...item, id: item?.id! } };
+    return { id: item!.id!, outs: { ...item, id: item!.id! } };
   }
 
   async update(id: string, inputs: OPClientItemInput) {
@@ -133,10 +132,10 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
   async diff(id: string, oldOutputs: pulumi.Unwrap<OnePasswordItemProviderOutputs>, newInputs: OPClientItemInput) {
     const client = new OPClient();
     const replaces: string[] = [];
-    const allowedProperties = ["title", "category", "urls", "tags", "sections", "fields", "files"];
+    const _allowedProperties = ["title", "category", "urls", "tags", "sections", "fields", "files"];
 
     const differ = jsondiffpatch.create({
-      propertyFilter(name, context) {
+      propertyFilter(name, _context) {
         return name !== "meta";
       },
     });
@@ -148,8 +147,8 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const delta = differ.diff(compareOlds, compareNews);
     const patch = jsonpatch
       .format(delta)
-      .filter((z) => z.op !== "move")
-      .filter((z) => z.op === "add" && z.value !== null);
+      .filter(z => z.op !== "move")
+      .filter(z => z.op === "add" && z.value !== null);
     // .filter((change) => {
     //   if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
     //   if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;
@@ -177,7 +176,11 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
 
 export class OnePasswordItem extends pulumi.dynamic.Resource implements OnePasswordItemOutputs {
   constructor(name: string, props: OnePasswordItemInputs, opts?: pulumi.CustomResourceOptions) {
-    super(new OnePasswordItemProvider(), name, props, { deleteBeforeReplace: true, replaceOnChanges: ["*"], ...opts });
+    super(new OnePasswordItemProvider(), name, props, {
+      deleteBeforeReplace: true,
+      replaceOnChanges: ["*"],
+      ...opts,
+    });
   }
 }
 export interface OnePasswordItem extends OnePasswordItemOutputs {}

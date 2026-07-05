@@ -14,7 +14,7 @@ export const Roles = {
   MediaManagers: "media-managers",
 } as const;
 
-import { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleNetworkCapability, TailscaleTags } from "@openapi/tailscale-grants.js";
+import type { TailscaleAutogroups, TailscaleCidr, TailscaleGroups, TailscaleNetworkCapability, TailscaleTags } from "@openapi/tailscale-grants.js";
 
 const dnsServers = {
   "Alpha Site": {
@@ -50,9 +50,9 @@ const dnsServers = {
 };
 export const dns = {
   config: dnsServers,
-  ips: Object.values(dnsServers).flatMap((server) => (server.use ? server.ips : [])),
-  externalIps: Object.values(dnsServers).flatMap((server) => (server.use && server.internal ? [] : server.ips)),
-  internalIps: Object.values(dnsServers).flatMap((server) => (server.use && server.internal ? server.ips : [])),
+  ips: Object.values(dnsServers).flatMap(server => (server.use ? server.ips : [])),
+  externalIps: Object.values(dnsServers).flatMap(server => (server.use && server.internal ? [] : server.ips)),
+  internalIps: Object.values(dnsServers).flatMap(server => (server.use && server.internal ? server.ips : [])),
 } as const;
 
 export const Tailscale = {
@@ -69,21 +69,7 @@ export const Tailscale = {
     dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
     nfs: ["tcp:2049", "udp:2049", "tcp:111", "udp:111"] as TailscaleNetworkCapability[],
     dockgeManagement: ["tcp:5001", "udp:5001", "tcp:2022", "udp:2022", "tcp:2375", "udp:2375", "tcp:8082", "tcp:4000", "tcp:53443"] as TailscaleNetworkCapability[],
-    observability: [
-      "tcp:9093",
-      "tcp:19291",
-      "tcp:10902",
-      "tcp:9090",
-      "tcp:3100",
-      "tcp:8266",
-      "udp:8266",
-      "tcp:1883",
-      "udp:1883",
-      "tcp:8080",
-      "udp:8080",
-      "tcp:443",
-      "udp:443",
-    ] as TailscaleNetworkCapability[],
+    observability: ["tcp:9093", "tcp:19291", "tcp:10902", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],
     nut: ["tcp:3493", "udp:3493"] as TailscaleNetworkCapability[],
     proxmox: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
     proxmoxManagement: ["tcp:8006"] as TailscaleNetworkCapability[],
@@ -107,6 +93,7 @@ export const Tailscale = {
     friendsAndFamily: "group:fnf" as TailscaleGroups,
   } as const,
   tag: {
+    dns: "tag:dns" as TailscaleTags,
     exitNode: "tag:exit-node" as TailscaleTags,
     mediaDevice: "tag:media-device" as TailscaleTags,
     peerRelay: "tag:peer-relay" as TailscaleTags,

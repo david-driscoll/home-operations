@@ -1,11 +1,10 @@
-import { GlobalResources } from "@components/globals.ts";
-import { OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
-import * as cloudflare from "@pulumi/cloudflare";
-import { ComponentResource, Output, ComponentResourceOptions, mergeOptions, Input, output, interpolate, all, getStack, log } from "@pulumi/pulumi";
-import * as adguard from "@pulumi/adguard";
-import * as unifi from "@pulumiverse/unifi";
-import { GatusDefinition } from "@openapi/application-definition.js";
 import { dns } from "@components/constants.ts";
+import type { GlobalResources } from "@components/globals.ts";
+import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
+import type { GatusDefinition } from "@openapi/application-definition.js";
+import * as cloudflare from "@pulumi/cloudflare";
+import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, log, mergeOptions, type Output, output } from "@pulumi/pulumi";
+import * as unifi from "@pulumiverse/unifi";
 import { addUptimeGatus, awaitOutput } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
@@ -33,21 +32,33 @@ export class StandardDns extends ComponentResource {
       })();
 
     const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
-    const unifiRecordId = unifiRecords.results.apply((results) => results.find((r) => r.name === args.hostname)?.id).apply((id) => (id ? `default:${id}` : undefined));
+    const unifiRecordId = unifiRecords.results.apply(results => results.find(r => r.name === args.hostname)?.id).apply(id => (id ? `default:${id}` : undefined));
     const cloudflareRecords = cloudflare.getDnsRecordsOutput(
       {
         zoneId: globals.cloudflareZoneId,
-        name: { exact: all([args.hostname, globals.searchDomain]).apply(([h, s]) => h.replace(`.${s}`, "")) },
+        name: {
+          exact: all([args.hostname, globals.searchDomain]).apply(([h, s]) => h.replace(`.${s}`, "")),
+        },
         maxItems: 100,
       },
       { provider: globals.cloudflareProvider },
     );
-    cloudflareRecords.apply((r) => log.info(`Cloudflare records for ${name}: ${r.results.map((rec) => rec.name).join(", ")}`, globals));
-    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply((z) => z.results.find((r) => r.name === args.hostname)?.id)]).apply(([zoneId, id]) =>
-      id ? `${zoneId}/${id}` : undefined,
-    );
+    cloudflareRecords.apply(r => log.info(`Cloudflare records for ${name}: ${r.results.map(rec => rec.name).join(", ")}`, globals));
+    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply(z => z.results.find(r => r.name === args.hostname)?.id)]).apply(([zoneId, id]) => (id ? `${zoneId}/${id}` : undefined));
     const [unifiId, cloudflareId] = await awaitOutput(all([unifiRecordId, cloudflareRecordId]));
-    return new StandardDns(name, { hostname: args.hostname, ipAddress: args.ipAddress, type: args.type, record, unifiId, cloudflareId }, globals, cro);
+    return new StandardDns(
+      name,
+      {
+        hostname: args.hostname,
+        ipAddress: args.ipAddress,
+        type: args.type,
+        record,
+        unifiId,
+        cloudflareId,
+      },
+      globals,
+      cro,
+    );
   }
 
   private constructor(
@@ -125,13 +136,15 @@ const gatusDnsRecords: Output<GatusDefinition>[] = [];
 export function createGatusDnsUptime(globals: GlobalResources, options: { parent?: ComponentResource }) {
   const dnsParent = new ComponentResource("custom:home:StandardDnsParent", "standard-dns", options ?? {});
 
-  return all([gatusDnsRecords]).apply(async ([endpoints]) => {
-    return addUptimeGatus(`dns-${getStack()}`, globals, { endpoints: [...endpoints] }, dnsParent);
-  }).apply(a => a);
+  return all([gatusDnsRecords])
+    .apply(async ([endpoints]) => {
+      return addUptimeGatus(`dns-${getStack()}`, globals, { endpoints: [...endpoints] }, dnsParent);
+    })
+    .apply(a => a);
 }
 
 function addGatusDnsRecord(
-  name: string,
+  _name: string,
   args: {
     hostname: Input<string>;
     ipAddress?: Input<string>;
@@ -142,13 +155,13 @@ function addGatusDnsRecord(
   for (const [server, { ips, uptime }] of Object.entries(dns.config)) {
     if (!uptime) continue;
     const ip = ips[0];
-    const bodyConfig = output(args.hostname).apply((hostname) => {
+    const bodyConfig = output(args.hostname).apply(_hostname => {
       if (args.type === "A") return args.ipAddress;
       return interpolate`${args.record}., ${args.record},`;
     });
     gatusDnsRecords.push(
       output({
-        name: output(args.hostname).apply((h) => `${h.replace(/\./g, "_")}-${args.type}`),
+        name: output(args.hostname).apply(h => `${h.replace(/\./g, "_")}-${args.type}`),
         url: ip,
         group: `DNS @ ${server}`,
         dns: {
