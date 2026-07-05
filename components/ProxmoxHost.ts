@@ -369,6 +369,9 @@ prometheus.remote_write "thanos" {
                 name: interpolate`${this.title} Proxmox VE (External)`,
                 url: interpolate`https://${this.hostname}:8006/`,
                 method: "GET",
+                client: {
+                  insecure: true,
+                },
                 conditions: ["[STATUS] == 200"],
               },
             ],
