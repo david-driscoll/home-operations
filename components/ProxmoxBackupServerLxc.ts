@@ -8,14 +8,14 @@ import type { TailscaleIp } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
 import * as pbs from "@pulumi/pbs";
 import * as pulumi from "@pulumi/pulumi";
-import { all, asset, ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output, type Resource } from "@pulumi/pulumi";
+import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output, type Resource } from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import { getUsersOutput as getTailscaleUsersOutput } from "@pulumi/tailscale";
 import { PrivateKey } from "@pulumi/tls";
 import * as purrl from "@pulumiverse/purrl";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
-import { getContainerHostnames } from "./helpers.ts";
+import { copyFileToRemote, getContainerHostnames } from "./helpers.ts";
 import { type CommunityScriptLxcVars, runCommunityScriptLxc } from "./lxc.ts";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
 import type { StandardDns } from "./StandardDns.ts";
@@ -442,21 +442,32 @@ __PBS_GROUPS__`;
     );
 
     // Copy Tailscale cron script
-    const tailscaleCron = new remote.CopyToRemote(
-      `${name}-tailscale-cron`,
-      {
-        connection: { host: tailscaleHostname, user: "root" },
-        remotePath: "/etc/cron.weekly/tailscale",
-        source: new asset.FileAsset("scripts/tailscale-pbs.sh"),
-      },
-      mergeOptions(cro, { dependsOn: [...this.resources, installJq] }),
-    );
+    const tailscaleCron = copyFileToRemote(`${name}-tailscale-cron`, {
+      connection: { host: tailscaleHostname, user: "root" },
+      remotePath: "/etc/cron.weekly/tailscale",
+      content: interpolate`#!/bin/bash
+tailscale cert --cert-file="/etc/ssl/private/${tailscaleName}.crt" --key-file="/etc/ssl/private/${tailscaleName}.key" "${tailscaleName}"
+
+# for PVE
+pvenode cert set "/etc/ssl/private/${tailscaleName}.crt" "/etc/ssl/private/${tailscaleName}.key" --force --restart
+
+# for PBS
+cp /etc/ssl/private/${tailscaleName}.crt /etc/proxmox-backup/proxy.pem
+cp /etc/ssl/private/${tailscaleName}.key /etc/proxmox-backup/proxy.key
+chmod 640 /etc/proxmox-backup/proxy.key /etc/proxmox-backup/proxy.pem
+chgrp backup /etc/proxmox-backup/proxy.key /etc/proxmox-backup/proxy.pem
+systemctl reload proxmox-backup-proxy.service
+`,
+      dependsOn: [installJq],
+    });
+
     // Set executable permissions and run cron script
     const tailscaleSetCert = new remote.Command(
       `${name}-install-set`,
       {
         connection: { host: tailscaleHostname, user: "root" },
         create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
+        triggers: [this.tailscaleName, tailscaleCron.source],
       },
       mergeOptions(cro, { dependsOn: [tailscaleCron] }),
     );

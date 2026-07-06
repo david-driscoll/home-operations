@@ -9,7 +9,7 @@ import type { TailscaleCidr, TailscaleIp, TailscaleTags } from "@openapi/tailsca
 import { getProviderOauth2ConfigOutput, type ProviderOauth2 } from "@pulumi/authentik";
 import { remote, type types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { asset, ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 import * as purrl from "@pulumiverse/purrl";
 import * as yaml from "yaml";
@@ -178,15 +178,17 @@ export class ProxmoxHost extends ComponentResource {
       );
 
       // Copy Tailscale cron script
-      const tailscaleCron = new remote.CopyToRemote(
-        `${name}-tailscale-cron`,
-        {
-          connection: connection,
-          remotePath: "/etc/cron.weekly/tailscale",
-          source: new asset.FileAsset("scripts/tailscale.sh"),
-        },
-        mergeOptions(cro, { dependsOn: [installJq] }),
-      );
+      const tailscaleCron = copyFileToRemote(`${name}-tailscale-cron`, {
+        connection: connection,
+        remotePath: "/etc/cron.weekly/tailscale",
+        content: interpolate`#!/bin/bash
+tailscale cert --cert-file="/etc/ssl/private/${this.tailscaleName}.crt" --key-file="/etc/ssl/private/${this.tailscaleName}.key" "${this.tailscaleName}"
+
+# for PVE
+pvenode cert set "/etc/ssl/private/${this.tailscaleName}.crt" "/etc/ssl/private/${this.tailscaleName}.key" --force --restart
+`,
+        dependsOn: [installJq],
+      });
 
       // Set executable permissions and run cron script
       const tailscaleSetCert = new remote.Command(
@@ -194,6 +196,7 @@ export class ProxmoxHost extends ComponentResource {
         {
           connection: connection,
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
+          triggers: [this.tailscaleName, tailscaleCron.source],
         },
         mergeOptions(cro, { dependsOn: [tailscaleCron] }),
       );
