@@ -32,3 +32,6 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+    substituteFrom:
+      - kind: Secret
+        name: shared-secrets
