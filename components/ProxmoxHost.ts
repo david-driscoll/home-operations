@@ -182,10 +182,10 @@ export class ProxmoxHost extends ComponentResource {
         connection: connection,
         remotePath: "/etc/cron.weekly/tailscale",
         content: interpolate`#!/bin/bash
-tailscale cert --cert-file="/etc/ssl/private/${this.tailscaleName}.crt" --key-file="/etc/ssl/private/${this.tailscaleName}.key" "${this.tailscaleName}"
+tailscale cert --cert-file="/etc/ssl/private/${this.tailscaleHostname}.crt" --key-file="/etc/ssl/private/${this.tailscaleHostname}.key" "${this.tailscaleHostname}"
 
 # for PVE
-pvenode cert set "/etc/ssl/private/${this.tailscaleName}.crt" "/etc/ssl/private/${this.tailscaleName}.key" --force --restart
+pvenode cert set "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/private/${this.tailscaleHostname}.key" --force --restart
 `,
         dependsOn: [installJq],
       });

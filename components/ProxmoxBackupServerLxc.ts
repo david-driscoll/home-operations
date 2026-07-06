@@ -446,14 +446,14 @@ __PBS_GROUPS__`;
       connection: { host: tailscaleHostname, user: "root" },
       remotePath: "/etc/cron.weekly/tailscale",
       content: interpolate`#!/bin/bash
-tailscale cert --cert-file="/etc/ssl/private/${tailscaleName}.crt" --key-file="/etc/ssl/private/${tailscaleName}.key" "${tailscaleName}"
+tailscale cert --cert-file="/etc/ssl/private/${this.tailscaleHostname}.crt" --key-file="/etc/ssl/private/${this.tailscaleHostname}.key" "${this.tailscaleHostname}"
 
 # for PVE
-pvenode cert set "/etc/ssl/private/${tailscaleName}.crt" "/etc/ssl/private/${tailscaleName}.key" --force --restart
+pvenode cert set "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/private/${this.tailscaleHostname}.key" --force --restart
 
 # for PBS
-cp /etc/ssl/private/${tailscaleName}.crt /etc/proxmox-backup/proxy.pem
-cp /etc/ssl/private/${tailscaleName}.key /etc/proxmox-backup/proxy.key
+cp /etc/ssl/private/${this.tailscaleHostname}.crt /etc/proxmox-backup/proxy.pem
+cp /etc/ssl/private/${this.tailscaleHostname}.key /etc/proxmox-backup/proxy.key
 chmod 640 /etc/proxmox-backup/proxy.key /etc/proxmox-backup/proxy.pem
 chgrp backup /etc/proxmox-backup/proxy.key /etc/proxmox-backup/proxy.pem
 systemctl reload proxmox-backup-proxy.service
