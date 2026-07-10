@@ -1,0 +1,22 @@
+services:
+  llama-vulkan:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama-vulkan
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "992"          # host "render" group GID -> /dev/dri/renderD128 access
+    volumes:
+      - ./models:/models
+    environment:
+      - LLAMA_CACHE=/models     # cache downloaded GGUFs here (persists across restarts)
+    command: >
+      -hf ggml-org/gemma-3-4b-it-GGUF
+      --host 0.0.0.0
+      --port 8080
+      -ngl 999
+      -c 16384
+      --jinja
