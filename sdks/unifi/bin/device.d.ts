@@ -94,6 +94,10 @@ export declare class Device extends pulumi.CustomResource {
      */
     readonly mac: pulumi.Output<string>;
     /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    readonly meshStaVapEnabled: pulumi.Output<boolean>;
+    /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     readonly mgmtNetworkId: pulumi.Output<string>;
@@ -252,6 +256,10 @@ export interface DeviceState {
      */
     mac?: pulumi.Input<string | undefined>;
     /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
+    /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     mgmtNetworkId?: pulumi.Input<string | undefined>;
@@ -397,6 +405,10 @@ export interface DeviceArgs {
      * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     mac?: pulumi.Input<string | undefined>;
+    /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */

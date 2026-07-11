@@ -1,6 +1,9 @@
 export { AccountArgs, AccountState } from "./account";
 export type Account = import("./account").Account;
 export declare const Account: typeof import("./account").Account;
+export { ApGroupArgs, ApGroupState } from "./apGroup";
+export type ApGroup = import("./apGroup").ApGroup;
+export declare const ApGroup: typeof import("./apGroup").ApGroup;
 export { BgpArgs, BgpState } from "./bgp";
 export type Bgp = import("./bgp").Bgp;
 export declare const Bgp: typeof import("./bgp").Bgp;

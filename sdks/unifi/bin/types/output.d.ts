@@ -17,6 +17,24 @@ export interface AccountTimeouts {
      */
     update?: string;
 }
+export interface ApGroupTimeouts {
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    create?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Setting a timeout for a Delete operation is only applicable if changes are saved into state before the destroy operation occurs.
+     */
+    delete?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours). Read operations occur during any refresh or planning operation when refresh is enabled.
+     */
+    read?: string;
+    /**
+     * A string that can be [parsed as a duration](https://pkg.go.dev/time#ParseDuration) consisting of numbers and unit suffixes, such as "30s" or "2h45m". Valid time units are "s" (seconds), "m" (minutes), "h" (hours).
+     */
+    update?: string;
+}
 export interface BgpPeer {
     /**
      * Description of this peer group.
@@ -1517,9 +1535,9 @@ export interface PowerSupervisorTimeouts {
 }
 export interface RadiusProfileAcctServer {
     /**
-     * IP address of accounting service server.
+     * IP address of the accounting server. Optional: the controller-managed default profile returns a server entry without an IP, so importing it must not force one.
      */
-    ip: string;
+    ip?: string;
     /**
      * Port of accounting service.
      */
@@ -1531,9 +1549,9 @@ export interface RadiusProfileAcctServer {
 }
 export interface RadiusProfileAuthServer {
     /**
-     * IP address of authentication service server.
+     * IP address of the authentication server. Optional: the controller-managed default profile (e.g. the one created when a gateway RADIUS/VPN service is enabled, with `use_usg_auth_server = true`) returns a server entry without an IP, so importing it must not force one.
      */
-    ip: string;
+    ip?: string;
     /**
      * Port of authentication service.
      */

@@ -111,6 +111,10 @@ export class Device extends pulumi.CustomResource {
      */
     declare public readonly mac: pulumi.Output<string>;
     /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    declare public readonly meshStaVapEnabled: pulumi.Output<boolean>;
+    /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
     declare public readonly mgmtNetworkId: pulumi.Output<string>;
@@ -212,6 +216,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["ledOverrideColorBrightness"] = state?.ledOverrideColorBrightness;
             resourceInputs["locked"] = state?.locked;
             resourceInputs["mac"] = state?.mac;
+            resourceInputs["meshStaVapEnabled"] = state?.meshStaVapEnabled;
             resourceInputs["mgmtNetworkId"] = state?.mgmtNetworkId;
             resourceInputs["model"] = state?.model;
             resourceInputs["name"] = state?.name;
@@ -250,6 +255,7 @@ export class Device extends pulumi.CustomResource {
             resourceInputs["ledOverrideColorBrightness"] = args?.ledOverrideColorBrightness;
             resourceInputs["locked"] = args?.locked;
             resourceInputs["mac"] = args?.mac;
+            resourceInputs["meshStaVapEnabled"] = args?.meshStaVapEnabled;
             resourceInputs["mgmtNetworkId"] = args?.mgmtNetworkId;
             resourceInputs["name"] = args?.name;
             resourceInputs["outdoorModeOverride"] = args?.outdoorModeOverride;
@@ -357,6 +363,10 @@ export interface DeviceState {
      * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     mac?: pulumi.Input<string | undefined>;
+    /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */
@@ -504,6 +514,10 @@ export interface DeviceArgs {
      * The MAC address of the device. This can be specified so that the provider can take control of a device (since devices are created through adoption).
      */
     mac?: pulumi.Input<string | undefined>;
+    /**
+     * Enable the mesh station VAP (the UI "Mesh Connect" toggle), letting this AP uplink wirelessly to a mesh parent.
+     */
+    meshStaVapEnabled?: pulumi.Input<boolean | undefined>;
     /**
      * Management network ID. The network this device uses for its own management traffic (the UI's Network Override). When set, the device tags its management onto this network's VLAN, so that VLAN must already be tagged on the device's upstream switch port(s) before this attribute is applied. Otherwise the device loses its management path, drops off, and the apply fails with an inconsistent-result error. Apply in two steps: tag the VLAN on the uplink (a port_override tagged_networkconf_ids entry) first, then set mgmt_network_id. Leave unset to manage on the uplink's native (untagged) network.
      */

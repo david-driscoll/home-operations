@@ -28,12 +28,14 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VpnServer = exports.VpnClient = exports.TrafficRoute = exports.StaticRoute = exports.SiteToSiteVpn = exports.Site = exports.Setting = exports.RadiusUser = exports.RadiusProfile = exports.PowerSupervisor = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusUserOutput = exports.getRadiusUser = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getFirewallZoneOutput = exports.getFirewallZone = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientQosRateOutput = exports.getClientQosRate = exports.getClientListOutput = exports.getClientList = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallZone = exports.FirewallRule = exports.FirewallPolicy = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientQosRate = exports.Client = exports.Bgp = exports.Account = void 0;
-exports.types = exports.config = exports.Wlan = exports.WireguardPeer = exports.Wan = void 0;
+exports.VpnClient = exports.TrafficRoute = exports.StaticRoute = exports.SiteToSiteVpn = exports.Site = exports.Setting = exports.RadiusUser = exports.RadiusProfile = exports.PowerSupervisor = exports.PortProfile = exports.PortForward = exports.Network = exports.getRadiusUserOutput = exports.getRadiusUser = exports.getRadiusProfileOutput = exports.getRadiusProfile = exports.getPortProfileOutput = exports.getPortProfile = exports.getNetworkOutput = exports.getNetwork = exports.getFirewallZoneOutput = exports.getFirewallZone = exports.getDnsRecordOutput = exports.getDnsRecord = exports.getClientQosRateOutput = exports.getClientQosRate = exports.getClientListOutput = exports.getClientList = exports.getClientInfoListOutput = exports.getClientInfoList = exports.getClientInfoOutput = exports.getClientInfo = exports.getClientOutput = exports.getClient = exports.getApGroupOutput = exports.getApGroup = exports.getAccountOutput = exports.getAccount = exports.FirewallZone = exports.FirewallRule = exports.FirewallPolicy = exports.FirewallGroup = exports.DynamicDns = exports.DnsRecord = exports.Device = exports.ClientQosRate = exports.Client = exports.Bgp = exports.ApGroup = exports.Account = void 0;
+exports.types = exports.config = exports.Wlan = exports.WireguardPeer = exports.Wan = exports.VpnServer = void 0;
 const pulumi = __importStar(require("@pulumi/pulumi"));
 const utilities = __importStar(require("./utilities"));
 exports.Account = null;
 utilities.lazyLoad(exports, ["Account"], () => require("./account"));
+exports.ApGroup = null;
+utilities.lazyLoad(exports, ["ApGroup"], () => require("./apGroup"));
 exports.Bgp = null;
 utilities.lazyLoad(exports, ["Bgp"], () => require("./bgp"));
 exports.Client = null;
@@ -138,6 +140,8 @@ const _module = {
         switch (type) {
             case "unifi:index/account:Account":
                 return new exports.Account(name, undefined, { urn });
+            case "unifi:index/apGroup:ApGroup":
+                return new exports.ApGroup(name, undefined, { urn });
             case "unifi:index/bgp:Bgp":
                 return new exports.Bgp(name, undefined, { urn });
             case "unifi:index/client:Client":
@@ -196,6 +200,7 @@ const _module = {
     },
 };
 pulumi.runtime.registerResourceModule("unifi", "index/account", _module);
+pulumi.runtime.registerResourceModule("unifi", "index/apGroup", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/bgp", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/client", _module);
 pulumi.runtime.registerResourceModule("unifi", "index/clientQosRate", _module);

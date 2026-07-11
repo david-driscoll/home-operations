@@ -77,6 +77,7 @@ class Device extends pulumi.CustomResource {
             resourceInputs["ledOverrideColorBrightness"] = state?.ledOverrideColorBrightness;
             resourceInputs["locked"] = state?.locked;
             resourceInputs["mac"] = state?.mac;
+            resourceInputs["meshStaVapEnabled"] = state?.meshStaVapEnabled;
             resourceInputs["mgmtNetworkId"] = state?.mgmtNetworkId;
             resourceInputs["model"] = state?.model;
             resourceInputs["name"] = state?.name;
@@ -116,6 +117,7 @@ class Device extends pulumi.CustomResource {
             resourceInputs["ledOverrideColorBrightness"] = args?.ledOverrideColorBrightness;
             resourceInputs["locked"] = args?.locked;
             resourceInputs["mac"] = args?.mac;
+            resourceInputs["meshStaVapEnabled"] = args?.meshStaVapEnabled;
             resourceInputs["mgmtNetworkId"] = args?.mgmtNetworkId;
             resourceInputs["name"] = args?.name;
             resourceInputs["outdoorModeOverride"] = args?.outdoorModeOverride;

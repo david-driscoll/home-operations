@@ -10,6 +10,11 @@ export type Account = import("./account").Account;
 export const Account: typeof import("./account").Account = null as any;
 utilities.lazyLoad(exports, ["Account"], () => require("./account"));
 
+export { ApGroupArgs, ApGroupState } from "./apGroup";
+export type ApGroup = import("./apGroup").ApGroup;
+export const ApGroup: typeof import("./apGroup").ApGroup = null as any;
+utilities.lazyLoad(exports, ["ApGroup"], () => require("./apGroup"));
+
 export { BgpArgs, BgpState } from "./bgp";
 export type Bgp = import("./bgp").Bgp;
 export const Bgp: typeof import("./bgp").Bgp = null as any;
@@ -224,6 +229,8 @@ const _module = {
         switch (type) {
             case "unifi:index/account:Account":
                 return new Account(name, <any>undefined, { urn })
+            case "unifi:index/apGroup:ApGroup":
+                return new ApGroup(name, <any>undefined, { urn })
             case "unifi:index/bgp:Bgp":
                 return new Bgp(name, <any>undefined, { urn })
             case "unifi:index/client:Client":
@@ -282,6 +289,7 @@ const _module = {
     },
 };
 pulumi.runtime.registerResourceModule("unifi", "index/account", _module)
+pulumi.runtime.registerResourceModule("unifi", "index/apGroup", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/bgp", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/client", _module)
 pulumi.runtime.registerResourceModule("unifi", "index/clientQosRate", _module)
