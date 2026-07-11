@@ -25,7 +25,7 @@
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/std": "^2.2.0",
     "@pulumi/tls": "^5.2.2",
-    "@pulumiverse/unifi": "^0.2.0",
+    "@pulumiverse/unifi": "^0.3.0",
     "glob": "^13.0.0"
   }
 }
