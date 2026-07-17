@@ -3,7 +3,7 @@
 #:package CliWrap@3.10.2
 #:package Dumpify@0.7.0
 #:package 1Password.Connect.Sdk@1.0.4
-#:package Microsoft.Extensions.Hosting@10.0.9
+#:package Microsoft.Extensions.Hosting@10.0.10
 #:package NCronJob@4.10.2
 #:package Humanizer.Core@*
 #:package System.Reactive@6.1.0
