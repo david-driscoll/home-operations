@@ -1,6 +1,6 @@
 services:
   llama-vulkan:
-    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:6f1a66f0576550c5145cd240d1c4dc5ee4cc08d9492551bbfaf4202efd3a0d95
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:25932f6dde7478203be75a04651d210ff1a5f0ac7877fb61f4fa622943bea6df
     container_name: llama-vulkan
     restart: unless-stopped
     ports:
