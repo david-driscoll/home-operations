@@ -33,7 +33,7 @@ typos = "1.48.0"
 node = "24.18.0"
 pulumi = "3.253.0"
 "github:microsoft/apm" = { version = "v0.25.0", bin = "apm" }
-"github:eljulians/skillfile" = { version = "v1.7.4", bin = "skillfile" }
+"github:eljulians/skillfile" = { version = "v1.8.0", bin = "skillfile" }
 "github:home-operations/flate" = "v0.4.10"
 "github:yvgude/lean-ctx" = { version = "v3.9.12", bin = "lean-ctx" }
 dotnet = { version = "10.0.203" }
