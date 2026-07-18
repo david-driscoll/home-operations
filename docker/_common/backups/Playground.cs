@@ -6,7 +6,7 @@
 #:package Microsoft.Extensions.Hosting@10.0.10
 #:package NCronJob@4.10.2
 #:package Humanizer.Core@*
-#:package System.Reactive@6.1.0
+#:package System.Reactive@7.0.0
 
 using System.Collections.Immutable;
 using System.IO.Compression;
