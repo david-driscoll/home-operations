@@ -1,0 +1,35 @@
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: arcane
+spec:
+  name: Arcane
+  category: ${CLUSTER_TITLE}
+  description: Arcane docker manager
+  url: &url https://arcane.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/arcane.png
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+      - url: "https://arcane.${ROOT_DOMAIN}/auth/oidc/callback"
+      - url: 'arcane-mobile://oidc-callback'
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        - arcane_groups
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: ${CLUSTER_TITLE}
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

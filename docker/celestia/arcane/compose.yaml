@@ -1,0 +1,24 @@
+services:
+  arcane:
+    image: ghcr.io/getarcaneapp/manager:latest
+    container_name: arcane
+    ports:
+      - '3552:3552'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - arcane-data:/app/data
+      - ./oidc-mapping.json:/app/oidc-mapping.json:ro
+    environment:
+      - PUID=1000
+      - PGID=1000
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', '/app/arcane', 'health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  arcane-data: {}

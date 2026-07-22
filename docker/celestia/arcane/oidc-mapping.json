@@ -1,0 +1,1 @@
+[{ "claimValue": "admins", "roleId": "role_admin" }, { "claimValue": "editors", "roleId": "role_editor" }, { "claimValue": "users", "roleId": "role_monitor" }]

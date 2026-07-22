@@ -56,6 +56,10 @@ else:
       description: "Proxmox group membership claim — returns all group names for use with PVE/PBS OIDC group mapping",
       expression: `return {"groups": [g.name for g in request.user.ak_groups.all()]}`,
     },
+    arcane_groups: {
+      description: "Arcane group membership claim — returns all group names for use with OIDC_ROLE_MAPPINGS",
+      expression: `return {"groups": [g.name for g in request.user.ak_groups.all()]}`,
+    },
     email_verified: {
       description: "Adds an 'email_verified' claim based on whether the user has an email address set",
       expression: `return {
