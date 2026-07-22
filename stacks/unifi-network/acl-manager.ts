@@ -136,6 +136,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     // ── Per-role access rules ─────────────────────────────────────────────
     configureProxmoxAccess(manager);
     configureDockgeAccess(manager);
+    configureDnsAccess(manager);
     configurePbsAccess(manager);
     configureKubernetesAccess(manager, clusters);
     createGroupGrants(manager);
@@ -586,6 +587,22 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
       action: "accept",
     },
     rules,
+  );
+}
+
+function configureDnsAccess(manager: TailscaleAclManager) {
+  const testData = manager.testData;
+
+  // Technitium cluster nodes sync config/zones/heartbeats directly node-to-node
+  // over the web-service HTTPS port. Without this, nodes are tagged tag.dns but
+  // have no grant to reach each other, so clustering can never establish.
+  manager.setGrant(
+    {
+      src: [tag.dns],
+      dst: [tag.dns],
+      ip: ports.technitiumManagement,
+    },
+    { accept: [tag.dns], deny: testData.knownNormalUsers },
   );
 }
 
