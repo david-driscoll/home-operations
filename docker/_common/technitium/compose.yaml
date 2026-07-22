@@ -34,7 +34,6 @@ services:
       - "8053:8053/tcp"
       - "8053:8053/udp"
       - "5380:5380/tcp"
-      - "53443:53443/tcp"
     sysctls:
       - net.ipv4.ip_local_port_range=1024 65535
     # Traefik labels live here for the same reason — technitium has no network identity of its own
