@@ -42,7 +42,7 @@ services:
       traefik.docker.network: dockge_default
 
       # Admin web UI via local domain
-      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`)
+      traefik.http.routers.technitium.rule: Host(`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`)
       traefik.http.routers.technitium.entrypoints: websecure
       traefik.http.routers.technitium.tls.certresolver: le
       traefik.http.routers.technitium.service: technitium-admin
@@ -55,11 +55,11 @@ services:
       traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
 
       # DNS over HTTPS (DoH)
-      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.technitium.${ROOT_DOMAIN}`) && Path(`/dns-query`)
+      traefik.http.routers.technitium-doh.rule: Host(`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`) && Path(`/dns-query`)
       traefik.http.routers.technitium-doh.entrypoints: websecure
       traefik.http.routers.technitium-doh.tls.certresolver: le
       traefik.http.routers.technitium-doh.service: technitium-doh
-      traefik.http.services.technitium-doh.loadbalancer.server.port: 5380
+      traefik.http.services.technitium-doh.loadbalancer.server.port: 443
     healthcheck:
       test: ["CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\": *\"Running\"'"]
       interval: 10s
