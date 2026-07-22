@@ -82,7 +82,10 @@ services:
     # so the self-signed cert CN matches what cluster nodes use to reach each other over Tailscale
     volumes:
       - /opt/stacks-data/${APP}/config:/etc/dns
-      - /opt/stacks/traefik/certs:/etc/ssl/certs
+      # Mounted outside /etc/ssl/certs on purpose — that path is the container's
+      # system CA trust store; shadowing it with Traefik's cert dir breaks outbound
+      # TLS validation (App Store, DoT forwarders) with UntrustedRoot errors.
+      - /opt/stacks/traefik/certs:/etc/technitium/certs
 
 networks:
   dockge_default:
