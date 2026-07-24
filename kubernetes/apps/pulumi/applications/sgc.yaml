@@ -88,6 +88,10 @@ spec:
             secretKeyRef:
               name: pulumi-operator-github
               key: credential
+        # Cap V8's heap well under the 6Gi container limit so Node proactively GCs
+        # instead of ballooning until the kernel OOM-kills the whole process tree.
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=4096"
       resources:
         requests:
           cpu: 200m
