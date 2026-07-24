@@ -23,10 +23,6 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters: [registry.terraform.io/Backblaze/b2, 0.13.1]
-  adguard:
-    source: terraform-provider
-    version: 0.14.0
-    parameters: [registry.terraform.io/gmichels/adguard, 1.7.0]
   pbs:
     source: terraform-provider
     version: 0.14.0

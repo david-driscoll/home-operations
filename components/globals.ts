@@ -1,4 +1,3 @@
-import { Provider as AdguardProvider } from "@pulumi/adguard";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output } from "@pulumi/pulumi";
@@ -25,8 +24,6 @@ export class GlobalResources extends ComponentResource {
   public readonly truenasMinioCredential;
   public readonly truenasMinioProvider: MinioProvider;
   public readonly gateway: Output<string>;
-  public readonly adguardCredential;
-  public readonly adguardProvider: AdguardProvider;
   public readonly cloudflareZoneId: Output<string>;
   public readonly cloudFlareAccountId: Output<string>;
   public readonly store: VaultStore;
@@ -71,23 +68,6 @@ export class GlobalResources extends ComponentResource {
       username: string;
       password: string;
     }>("minio root user");
-
-    this.adguardCredential = store.getSecretByTitle<{
-      username: string;
-      password: string;
-      urls: { label: string; href: string }[];
-    }>("AdGuard Home");
-    this.adguardProvider = new AdguardProvider(
-      "adguard",
-      {
-        host: this.adguardCredential.apply(z => z.meta.urls.find(z => z.label === "ip-host")?.href.substring(7)),
-        username: this.adguardCredential.username,
-        password: this.adguardCredential.password,
-        insecure: true,
-        scheme: "http",
-      },
-      cro,
-    );
 
     this.cloudflareProvider = new CloudflareProvider("cloudflare", { apiToken: this.cloudflareCredential.credential }, cro);
     this.cloudflareZoneId = this.cloudflareCredential.zoneId;
