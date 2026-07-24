@@ -623,8 +623,8 @@ export class DockgeLxc extends ComponentResource {
       (input: Input<string>) => this.args.globals.store.replaceOnePasswordPlaceholders(input),
     ];
 
-    const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
-      unique([...hostFiles, ...commonFiles].filter(z => z !== ".keep")),
+    const stacks = all([output(readdir(resolve(dockerPath, "_common"), { withFileTypes: true })), output(readdir(resolve(dockerPath, this.args.host.name), { withFileTypes: true }))]).apply(
+      ([commonEntries, hostEntries]) => unique([...hostEntries, ...commonEntries].filter(entry => entry.isDirectory()).map(entry => entry.name)),
     );
 
     const outpost = stacks

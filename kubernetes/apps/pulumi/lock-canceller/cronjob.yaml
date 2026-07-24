@@ -7,7 +7,7 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
-  # Check every 5 minutes; acts on locks held > 30 minutes
+  # Check every 5 minutes; acts on locks held > 10 minutes
   schedule: "*/5 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
@@ -27,7 +27,7 @@ spec:
                 - |
                   set -euo pipefail
                   NOW=$(date +%s)
-                  LOCK_THRESHOLD=1800  # 30 minutes
+                  LOCK_THRESHOLD=600  # 10 minutes
 
                   echo "$(date -u): Checking for stale Pulumi stack locks"
 
