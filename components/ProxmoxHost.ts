@@ -196,7 +196,7 @@ pvenode cert set "/etc/ssl/private/${this.tailscaleHostname}.crt" "/etc/ssl/priv
         {
           connection: connection,
           create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
-          triggers: [this.tailscaleName, tailscaleCron.source],
+          triggers: [this.tailscaleName, tailscaleCron.triggers],
         },
         mergeOptions(cro, { dependsOn: [tailscaleCron] }),
       );

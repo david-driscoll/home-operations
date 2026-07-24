@@ -467,7 +467,7 @@ systemctl reload proxmox-backup-proxy.service
       {
         connection: { host: tailscaleHostname, user: "root" },
         create: "chmod 755 /etc/cron.weekly/tailscale && /etc/cron.weekly/tailscale",
-        triggers: [this.tailscaleName, tailscaleCron.source],
+        triggers: [this.tailscaleName, tailscaleCron.triggers],
       },
       mergeOptions(cro, { dependsOn: [tailscaleCron] }),
     );
