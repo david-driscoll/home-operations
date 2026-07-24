@@ -31,7 +31,7 @@ biome = "2.5.2"
 typos = "1.48.0"
 "npm:typescript" = "5.9.3"
 node = "24.18.0"
-pulumi = "3.253.0"
+pulumi = "3.254.0"
 "github:microsoft/apm" = { version = "v0.26.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.0", bin = "skillfile" }
 "github:home-operations/flate" = "v0.4.12"
