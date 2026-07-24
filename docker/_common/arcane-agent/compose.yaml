@@ -5,15 +5,17 @@ services:
     environment:
       - EDGE_AGENT=true
       - EDGE_TRANSPORT=auto
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
     env_file:
       - .env
       - path: /opt/stacks-data/${APP}/agent-token.env
         required: false
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - agent-data:/app/data
     cgroup: host
     restart: unless-stopped
+    networks:
+      - dockge_default
     healthcheck:
       test: [ 'CMD', '/app/arcane', 'health' ]
       interval: 30s
@@ -22,3 +24,7 @@ services:
 
 volumes:
   agent-data: {}
+
+networks:
+  dockge_default:
+    external: true

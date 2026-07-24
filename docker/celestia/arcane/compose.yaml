@@ -3,17 +3,19 @@ services:
     image: ghcr.io/getarcaneapp/manager:latest@sha256:287d3c096b1362838b1fa04767fb1d981a6aab322c2f866281451c898a3f96f6
     container_name: arcane
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - arcane-data:/app/data
       - ./oidc-mapping.json:/app/oidc-mapping.json:ro
     environment:
       - PUID=1000
       - PGID=1000
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
     env_file:
       - .env
     restart: unless-stopped
     dns:
       - 100.100.100.100
+    networks:
+      - dockge_default
     labels:
       # Enable Traefik
       traefik.enable: true
@@ -37,3 +39,7 @@ services:
 
 volumes:
   arcane-data: {}
+
+networks:
+  dockge_default:
+    external: true
