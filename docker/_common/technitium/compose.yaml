@@ -48,9 +48,9 @@ services:
       traefik.http.routers.technitium.service: technitium-admin
 
       # Admin UI via Tailscale
-      traefik.http.routers.technitium-tailscale.rule: Host(`technitium-${host}.${tailscaleDomain}`)
-      traefik.http.routers.technitium-tailscale.entrypoints: tailscale
-      traefik.http.routers.technitium-tailscale.service: technitium-admin
+      # traefik.http.routers.technitium-tailscale.rule: Host(`technitium-${host}.${tailscaleDomain}`)
+      # traefik.http.routers.technitium-tailscale.entrypoints: tailscale
+      # traefik.http.routers.technitium-tailscale.service: technitium-admin
 
       traefik.http.services.technitium-admin.loadbalancer.server.port: 5380
 

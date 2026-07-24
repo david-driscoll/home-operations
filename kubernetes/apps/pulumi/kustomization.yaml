@@ -11,6 +11,7 @@ resources:
   - ./secrets/ks.yaml
   - ./pulumi-operator/ks.yaml
   - ./lock-canceller/ks.yaml
+  - ./history-pruner/ks.yaml
   - ./npm-cache-prune/ks.yaml
   - ./kubeproxies/ks.yaml
   - ./unifi-network/ks.yaml

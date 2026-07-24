@@ -1,0 +1,62 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pulumi-history-pruner
+  namespace: pulumi
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  # Nightly; each stack's Pulumi update history can otherwise grow unbounded
+  # in the S3 backend and make `pulumi stack history` (called by the operator
+  # after every up) slow or hang.
+  schedule: "17 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: history-pruner
+              # renovate: datasource=docker depName=minio/mc
+              image: minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+              command: ["/bin/sh", "-c"]
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: truenas-home-operations
+                      key: username
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: truenas-home-operations
+                      key: password
+              args:
+                - |
+                  set -euo pipefail
+                  KEEP_DAYS=3
+                  BUCKET=home-operations
+                  # One prefix per Pulumi backend root; equestria/sgc share the
+                  # "applications" project so they share one prefix here too.
+                  PREFIXES="applications authentik gulf-of-mexico home ocracoke unifi-network vault"
+
+                  mc alias set truenas http://truenas.driscoll.tech:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"
+
+                  echo "$(date -u): Pruning Pulumi update history older than ${KEEP_DAYS}d"
+                  for prefix in $PREFIXES; do
+                    echo "  Pruning truenas/${BUCKET}/${prefix}/.pulumi/history/"
+                    mc rm -r --force --older-than "${KEEP_DAYS}d" "truenas/${BUCKET}/${prefix}/.pulumi/history/" \
+                      || echo "  WARNING: prune failed for ${prefix} (will retry next run)"
+                  done
+                  echo "$(date -u): History prune complete"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 256Mi
