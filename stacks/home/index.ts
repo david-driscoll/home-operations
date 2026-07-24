@@ -189,7 +189,7 @@ const celestiaPveVariables = {
   DNS_CLUSTER_IS_PRIMARY: "true",
 };
 
-const _alphaSitePveVariables = {
+const alphaSitePveVariables = {
   PROXMOX_BLACKBOX_TARGETS: `["https://${alphaSiteHost.tailscaleIpAddress}:8006"]`,
   PROXMOX_PVE_TARGETS: `["${alphaSiteHost.tailscaleIpAddress}:8006"]`,
 };
@@ -197,7 +197,7 @@ const _alphaSitePveVariables = {
 await awaitOutput(
   alphaSiteDockgeRuntime.deployStacks({
     dependsOn: [celestiaPbs],
-    variables: celestiaPveVariables,
+    variables: alphaSitePveVariables,
   }),
 );
 await awaitOutput(alphaSiteHost.addUptimeGatus());
@@ -269,7 +269,7 @@ monitor.exportNodeStateToOnePassword(
 
 export const alphaSite = {
   proxmox: getProxmoxProperties(alphaSiteHost),
-  // dockge: getDockageProperties(alphaSiteDockgeRuntime),
+  dockge: getDockageProperties(alphaSiteDockgeRuntime),
   backup: alphaSiteHost.backupVolumes!,
 };
 export const twilightSparkle = {
