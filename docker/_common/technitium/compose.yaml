@@ -4,7 +4,7 @@ services:
     container_name: technitium-ts
     # hostname lives on the net ns owner; technitium shares this namespace and
     # therefore cannot set its own hostname (network_mode: service:tailscale)
-    hostname: ${CLUSTER_KEY}
+    hostname: dns-${CLUSTER_KEY}
     restart: unless-stopped
     dns:
       - 100.100.100.100
