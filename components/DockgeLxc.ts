@@ -779,6 +779,13 @@ export class DockgeLxc extends ComponentResource {
     let hasCompose = false;
     let hasInit = false;
 
+    // Pluggable per-stack post-deploy hook: a method named `${stackName}Init` on this class,
+    // if present, is invoked once the stack's compose command has been created. This lets
+    // individual stacks (e.g. technitium) override default behavior — such as generic DNS
+    // record creation below — without special-casing them inline.
+    const stackInitMethod = (this as unknown as Record<string, unknown>)[`${stackName}Init`];
+    const hasStackInit = typeof stackInitMethod === "function";
+
     const stackParent = new remote.Command(
       `${this.shortName}-delete-${stackName}-on-remove`,
       {
@@ -863,6 +870,19 @@ export class DockgeLxc extends ComponentResource {
 
         all([replacedContent, tailscaleDomain]).apply(([content, tailscaleDomain]) => {
           const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map(z => z[1]));
+
+          // A stack running its own tailscale sidecar (network_mode: service:tailscale) joins
+          // the tailnet under a dedicated identity, not the DockgeLxc host's own address — the
+          // generic CNAME-to-host record below would point clients at the wrong IP, so skip it.
+          const hasTailscaleSidecar = (() => {
+            try {
+              const parsed = yaml.parse(content);
+              return Object.values((parsed?.services ?? {}) as Record<string, any>).some((svc: any) => typeof svc?.image === "string" && svc.image.startsWith("tailscale/tailscale"));
+            } catch {
+              return false;
+            }
+          })();
+
           for (const host of hosts) {
             if (host.indexOf(tailscaleDomain) > -1) {
               // this is a service domain
@@ -907,6 +927,10 @@ export class DockgeLxc extends ComponentResource {
 
               copyFiles.push(tailscaleServe);
 
+              continue;
+            }
+
+            if (hasTailscaleSidecar) {
               continue;
             }
 
@@ -979,6 +1003,10 @@ export class DockgeLxc extends ComponentResource {
         },
       );
 
+      if (hasStackInit) {
+        (stackInitMethod as (this: DockgeLxc, dependsOn: Input<Resource>[]) => unknown).call(this, [compose]);
+      }
+
       return waitForApplications.apply(applications => ({
         name: stackName,
         path,
@@ -992,10 +1020,40 @@ export class DockgeLxc extends ComponentResource {
       applications,
     }));
   }
+
+  // Technitium's tailscale sidecar joins the tailnet under its own identity (a dedicated
+  // TS_HOSTNAME, separate from the DockgeLxc host's own tailscaleIpAddress), landing one
+  // above the host's address — host.100 -> technitium.101. Point the DNS record clients
+  // actually use (`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`) at that address directly instead of
+  // the generic CNAME-to-host record, since the host's own Docker port publishing does not
+  // reliably front the technitium-ts container's ports.
+  private technitiumInit(dependsOn: Input<Resource>[]) {
+    const ipAddress = this.tailscaleIpAddress.apply(incrementLastOctet);
+    const hostname = interpolate`${this.cluster.key}.dns.${this.args.globals.searchDomain}`;
+
+    return hostname.apply(h =>
+      StandardDns.create(
+        `${this.shortName}-technitium-dns`,
+        {
+          hostname: h,
+          ipAddress,
+          type: "A",
+        },
+        this.args.globals,
+        { parent: this.dockerParent, dependsOn },
+      ),
+    );
+  }
 }
 
 function replaceVariable(key: RegExp, value: Input<string>) {
   return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
+}
+
+function incrementLastOctet(ip: TailscaleIp): TailscaleIp {
+  const parts = ip.split(".");
+  const lastOctet = Number(parts[3]) + 1;
+  return `${parts[0]}.${parts[1]}.${parts[2]}.${lastOctet}` as TailscaleIp;
 }
 
 export function getDockageProperties(instance: DockgeLxc) {
