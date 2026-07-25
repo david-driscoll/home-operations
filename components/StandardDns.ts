@@ -3,7 +3,7 @@ import type { GlobalResources } from "@components/globals.ts";
 import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as cloudflare from "@pulumi/cloudflare";
-import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, log, mergeOptions, type Output, output } from "@pulumi/pulumi";
+import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as unifi from "@pulumiverse/unifi";
 import { addUptimeGatus, awaitOutput } from "./helpers.ts";
 
@@ -33,26 +33,20 @@ export class StandardDns extends ComponentResource {
 
     const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
     const unifiRecordId = unifiRecords.results.apply(results => results.find(r => r.name === args.hostname)?.id).apply(id => (id ? `default:${id}` : undefined));
-    const cloudflareRecords = cloudflare.getDnsRecordsOutput(
-      {
-        zoneId: globals.cloudflareZoneId,
-        // Cloudflare matches `name.exact` against the fully-qualified record name, so the
-        // search domain must stay on. Passing the short name silently matches nothing,
-        // which leaves `import` unset and makes an existing record impossible to adopt.
-        name: { exact: args.hostname },
-        maxItems: 100,
-      },
-      { provider: globals.cloudflareProvider },
-    );
-    cloudflareRecords.apply(r => log.info(`Cloudflare records for ${name}: ${r.results.map(rec => `${rec.name} (${rec.type})`).join(", ")}`, globals));
-    // Only adopt a record of the same type: Pulumi's `import` fails outright when the
-    // imported resource's inputs differ from the program's, so importing e.g. a CNAME into
-    // an A declaration would trade one hard error for another. Leaving `import` unset lets
-    // the normal create/replace path handle the type change instead.
-    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply(z => z.results.find(r => r.name === args.hostname && r.type === args.type)?.id)]).apply(([zoneId, id]) =>
-      id ? `${zoneId}/${id}` : undefined,
-    );
-    const [unifiId, cloudflareId] = await awaitOutput(all([unifiRecordId, cloudflareRecordId]));
+    // Deliberately NOT adopting pre-existing Cloudflare records via `import`.
+    //
+    // The provider's import id is `<zoneId>/<recordId>` but the id it stores in state is the
+    // bare `<recordId>`, so `import` can never equal the resource's own state id. Pulumi
+    // therefore re-runs the import step on every single update, and combined with the
+    // `deleteBeforeReplace` below that destroys and recreates live DNS each run — any
+    // interruption leaves the records deleted. This wiped all 56 managed records twice on
+    // 2026-07-25.
+    //
+    // A collision with an existing Cloudflare record (error 81054) is instead handled by
+    // reusing the old Pulumi resource name so it becomes a replacement rather than a create
+    // — see the technitium record in `components/DockgeLxc.ts`.
+    const cloudflareId = undefined;
+    const unifiId = await awaitOutput(unifiRecordId);
     return new StandardDns(
       name,
       {
@@ -119,11 +113,9 @@ export class StandardDns extends ComponentResource {
         provider: globals.cloudflareProvider,
         deleteBeforeReplace: true,
         import: args.cloudflareId,
-        // The zone is fixed, but `zoneId` is a replace-triggering property and the program
-        // supplies it as a secret while an imported record reads back plaintext. Without
-        // this, every already-managed record diffs `[secret] => "c2ed…"` the moment `import`
-        // is set and Pulumi plans a destroy/recreate of live DNS. Verified against ocracoke:
-        // 13 spurious replacements with `zoneId` as the only changed property.
+        // `zoneId` is replace-triggering, and the program supplies it as a secret while the
+        // provider reads it back as plaintext. Keep it out of the diff so a `[secret] =>
+        // "c2ed…"` comparison can never plan a destroy/recreate of live DNS.
         ignoreChanges: ["zoneId"],
       },
     );
