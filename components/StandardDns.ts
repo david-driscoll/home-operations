@@ -119,6 +119,12 @@ export class StandardDns extends ComponentResource {
         provider: globals.cloudflareProvider,
         deleteBeforeReplace: true,
         import: args.cloudflareId,
+        // The zone is fixed, but `zoneId` is a replace-triggering property and the program
+        // supplies it as a secret while an imported record reads back plaintext. Without
+        // this, every already-managed record diffs `[secret] => "c2ed…"` the moment `import`
+        // is set and Pulumi plans a destroy/recreate of live DNS. Verified against ocracoke:
+        // 13 spurious replacements with `zoneId` as the only changed property.
+        ignoreChanges: ["zoneId"],
       },
     );
 
