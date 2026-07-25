@@ -1033,7 +1033,13 @@ export class DockgeLxc extends ComponentResource {
 
     return hostname.apply(h =>
       StandardDns.create(
-        `${this.shortName}-technitium-dns`,
+        // Deliberately reuses the name the generic loop above would have produced for this
+        // host (`${stackName}-dns-${host_with_underscores}`). Both records carry the same DNS
+        // name, and Pulumi runs creates before deletes — so introducing this as a *new*
+        // resource would try to create the A record while the generic CNAME still exists and
+        // fail with Cloudflare 81054. Keeping the name makes it a replacement of the resource
+        // already in state, which `deleteBeforeReplace` turns into delete-then-create.
+        `technitium-dns-${h.replace(/\./g, "_")}`,
         {
           hostname: h,
           ipAddress,
