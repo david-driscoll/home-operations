@@ -31,8 +31,6 @@ services:
       - "53:53/tcp"
       - "853:853/tcp"
       - "853:853/udp"
-      - "8053:8053/tcp"
-      - "8053:8053/udp"
       - "5380:5380/tcp"
     sysctls:
       - net.ipv4.ip_local_port_range=1024 65535
@@ -59,7 +57,7 @@ services:
       traefik.http.routers.technitium-doh.entrypoints: websecure
       traefik.http.routers.technitium-doh.tls.certresolver: le
       traefik.http.routers.technitium-doh.service: technitium-doh
-      traefik.http.services.technitium-doh.loadbalancer.server.port: 443
+      traefik.http.services.technitium-doh.loadbalancer.server.port: 80
     healthcheck:
       test: ["CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\": *\"Running\"'"]
       interval: 10s
