@@ -36,15 +36,22 @@ export class StandardDns extends ComponentResource {
     const cloudflareRecords = cloudflare.getDnsRecordsOutput(
       {
         zoneId: globals.cloudflareZoneId,
-        name: {
-          exact: all([args.hostname, globals.searchDomain]).apply(([h, s]) => h.replace(`.${s}`, "")),
-        },
+        // Cloudflare matches `name.exact` against the fully-qualified record name, so the
+        // search domain must stay on. Passing the short name silently matches nothing,
+        // which leaves `import` unset and makes an existing record impossible to adopt.
+        name: { exact: args.hostname },
         maxItems: 100,
       },
       { provider: globals.cloudflareProvider },
     );
-    cloudflareRecords.apply(r => log.info(`Cloudflare records for ${name}: ${r.results.map(rec => rec.name).join(", ")}`, globals));
-    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply(z => z.results.find(r => r.name === args.hostname)?.id)]).apply(([zoneId, id]) => (id ? `${zoneId}/${id}` : undefined));
+    cloudflareRecords.apply(r => log.info(`Cloudflare records for ${name}: ${r.results.map(rec => `${rec.name} (${rec.type})`).join(", ")}`, globals));
+    // Only adopt a record of the same type: Pulumi's `import` fails outright when the
+    // imported resource's inputs differ from the program's, so importing e.g. a CNAME into
+    // an A declaration would trade one hard error for another. Leaving `import` unset lets
+    // the normal create/replace path handle the type change instead.
+    const cloudflareRecordId = all([globals.cloudflareZoneId, cloudflareRecords.apply(z => z.results.find(r => r.name === args.hostname && r.type === args.type)?.id)]).apply(([zoneId, id]) =>
+      id ? `${zoneId}/${id}` : undefined,
+    );
     const [unifiId, cloudflareId] = await awaitOutput(all([unifiRecordId, cloudflareRecordId]));
     return new StandardDns(
       name,
