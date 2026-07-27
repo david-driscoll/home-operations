@@ -454,10 +454,15 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         // Technitium cluster nodes only — AdGuard (primary-dns / dockge-as) is
         // retired from tailnet resolution; its host entries and grants remain
         // until decommission.
-        nameservers: dnsNodes.map(node => ({
-          address: node.ip,
-          useWithExitNode: false,
-        })),
+        // TEMPORARY: the k8s nodes (dns-sgc, dns-equestria) are excluded until
+        // plain DNS forwards correctly through their tailscale ingress proxies
+        // (TCP-terminated flows work; port-53 relay does not yet).
+        nameservers: dnsNodes
+          .filter(node => !["dns-sgc", "dns-equestria"].includes(node.name))
+          .map(node => ({
+            address: node.ip,
+            useWithExitNode: false,
+          })),
       },
       cro,
     );
