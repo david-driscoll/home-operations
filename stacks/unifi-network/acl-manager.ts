@@ -647,7 +647,9 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
   const clusterTags = clusters.map(z => z.tag);
   const rules = Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map(z => [z, { check: [`root`] }] as const)));
 
-  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive]);
+  // tag.dns: the tailscale operator creates the dns-<cluster> proxy devices
+  // (in-cluster Technitium nodes) with tag:dns
+  manager.setTagOwner(tag.operator, [...clusterTags, tag.ingress, tag.egress, tag.apps, tag.observability, tag.exitNode, tag.recorder, tag.management, tag.k8s, tag.sharedDrive, tag.dns]);
   manager.setNodeAttr({ target: [tag.operator], attr: ["funnel"] });
   manager.setTagOwner(tag.ingress, [tag.apps, tag.observability]);
 
