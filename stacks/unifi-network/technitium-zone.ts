@@ -25,10 +25,10 @@ export function configureTechnitiumZones(globals: GlobalResources) {
     { ...cro, protect: true, retainOnDelete: true },
   );
 
-  addForwarderRecord(cro, zone, "www.david-driscoll.com", "dns.quad9.net:853 ([2620:fe::fe])");
-  addForwarderRecord(cro, zone, "www.david-driscoll.com", "dns.quad9.net:853 ([2620:fe::9])");
-  addForwarderRecord(cro, zone, "www.david-driscoll.com", "dns.quad9.net:853 (9.9.9.9)");
-  addForwarderRecord(cro, zone, "www.david-driscoll.com", "dns.quad9.net:853 (149.112.112.112)");
+  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 ([2620:fe::fe])");
+  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 ([2620:fe::9])");
+  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 (9.9.9.9)");
+  addForwarderRecord(cro, zone, "driscoll.tech", "dns.quad9.net:853 (149.112.112.112)");
 
   return { zone };
 }
