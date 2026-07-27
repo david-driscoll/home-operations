@@ -99,7 +99,14 @@ export class GlobalResources extends ComponentResource {
     this.technitiumProvider = new TechnitiumProvider(
       "technitium",
       {
-        serverUrl: interpolate`https://${this.technitiumCredential.hostname}`,
+        // The cluster primary's tailnet name resolves everywhere: MagicDNS
+        // returns the tailscale IP for local runs, and the tailscale operator's
+        // nameserver (dnsrecords ConfigMap) returns the dns-celestia egress
+        // service IP for pulumi-operator workspace pods.
+        serverUrl: interpolate`https://dns-celestia.${this.tailscaleDomain}:53443`,
+        // The tailnet name doesn't match the LE certificate — validate TLS
+        // against the real hostname from the credential item (sans port).
+        tlsServerName: this.technitiumCredential.hostname.apply(h => h.split(":")[0]),
         apiToken: this.technitiumCredential.credential,
       },
       cro,
