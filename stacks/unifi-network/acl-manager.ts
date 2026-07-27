@@ -451,10 +451,20 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         //     ],
         //   },
         // ],
-        nameservers: dnsNodes.map(node => ({
-          address: node.ip,
-          useWithExitNode: false,
-        })),
+        nameservers: [
+          {
+            address: primaryDnsIp,
+            useWithExitNode: false,
+          },
+          {
+            address: secondaryDnsIp,
+            useWithExitNode: false,
+          },
+          ...dnsNodes.map(node => ({
+            address: node.ip,
+            useWithExitNode: false,
+          })),
+        ],
       },
       cro,
     );
