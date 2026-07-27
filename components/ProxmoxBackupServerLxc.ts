@@ -45,6 +45,10 @@ export class ProxmoxBackupServerLxc extends ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly tailscaleName: Output<string>;
   public readonly tailscaleIpAddress: Output<string>;
+  /** LAN IP of the LXC (first `hostname -I` address) */
+  public readonly localIpAddress: Output<string>;
+  /** LXC vNIC MAC (net0 hwaddr, lowercase) — for DHCP reservations */
+  public readonly macAddress: Output<string>;
   private readonly mountPoints: remote.Command[] = [];
   private resources!: Input<Resource>[];
   private readonly lxcName: string;
@@ -232,6 +236,26 @@ echo "PBS post-install complete"`;
       host: tailscaleHostname,
       user: "root",
     };
+
+    // LAN-side identity of the LXC, read from the Proxmox host — exported for
+    // subnet grants and UniFi DHCP reservations
+    this.localIpAddress = new remote.Command(
+      `${name}-local-ip-address`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct exec ${args.vmId} -- hostname -I`,
+      },
+      mergeOptions(cro, { dependsOn: [createPbsLxc] }),
+    ).stdout.apply(z => z.split(" ")[0].trim());
+
+    this.macAddress = new remote.Command(
+      `${name}-mac-address`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct config ${args.vmId} | sed -n 's/^net0:.*hwaddr=\\([^,]*\\).*/\\1/p'`,
+      },
+      mergeOptions(cro, { dependsOn: [createPbsLxc] }),
+    ).stdout.apply(z => z.trim().toLowerCase());
 
     const oidc = all([cluster])
       .apply(([c]) =>

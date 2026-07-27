@@ -2,6 +2,7 @@ import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
+import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { VaultStore } from "./store/index.ts";
@@ -14,6 +15,8 @@ export class GlobalResources extends ComponentResource {
   public readonly unifiCredential;
   public readonly unifiProvider: UnifiProvider;
   public readonly unifiFirewallProvider: UnifiFirewallProvider;
+  public readonly technitiumCredential;
+  public readonly technitiumProvider: TechnitiumProvider;
   public readonly proxmoxCredential;
   public readonly tailscaleCredential;
   // public readonly backblazeCredential
@@ -54,6 +57,10 @@ export class GlobalResources extends ComponentResource {
       credential: string;
       hostname: string;
     }>("Unifi Api Key Eris Cluster");
+    this.technitiumCredential = store.getSecretByTitle<{
+      credential: string;
+      hostname: string;
+    }>("Technitium ApiKey");
     this.proxmoxCredential = store.getSecretByTitle<{
       username: string;
       password: string;
@@ -85,6 +92,15 @@ export class GlobalResources extends ComponentResource {
       {
         apiUrl: this.unifiCredential.hostname,
         apiKey: this.unifiCredential.credential,
+      },
+      cro,
+    );
+    // hostname is host:port (cluster primary's admin TLS endpoint); writes replicate cluster-wide
+    this.technitiumProvider = new TechnitiumProvider(
+      "technitium",
+      {
+        serverUrl: interpolate`https://${this.technitiumCredential.hostname}`,
+        apiToken: this.technitiumCredential.credential,
       },
       cro,
     );

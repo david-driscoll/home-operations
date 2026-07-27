@@ -53,6 +53,10 @@ export class ProxmoxHost extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly arch: Output<string>;
   public readonly remote: boolean;
+  /** LAN IP of the host's vmbr0 bridge, discovered over SSH */
+  public readonly localIpAddress: Output<string>;
+  /** MAC of the host's vmbr0 bridge (lowercase), discovered over SSH */
+  public readonly macAddress: Output<string>;
   public readonly dns: Output<StandardDns>;
   public readonly cluster: Output<ClusterDefinition>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
@@ -131,6 +135,26 @@ export class ProxmoxHost extends ComponentResource {
       user: args.globals.proxmoxCredential.username,
       password: args.globals.proxmoxCredential.password,
     });
+
+    // LAN-side identity of the host bridge (vmbr0) — exported for subnet grants
+    // and UniFi DHCP reservations
+    this.macAddress = new remote.Command(
+      `${name}-mac-address`,
+      {
+        connection,
+        create: `cat /sys/class/net/vmbr0/address`,
+      },
+      cro,
+    ).stdout.apply(z => z.trim().toLowerCase());
+
+    this.localIpAddress = new remote.Command(
+      `${name}-local-ip-address`,
+      {
+        connection,
+        create: `ip -4 -o addr show vmbr0 scope global | awk '{print $4}' | cut -d/ -f1 | head -1`,
+      },
+      cro,
+    ).stdout.apply(z => z.trim());
 
     if (args.installTailscale) {
       const _snippetsCommand = new remote.Command(

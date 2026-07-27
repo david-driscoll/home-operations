@@ -4,6 +4,7 @@ import { type OnePasswordItemSectionInput, TypeEnum } from "@dynamic/1password/O
 import type { GatusDefinition } from "@openapi/application-definition.js";
 import * as cloudflare from "@pulumi/cloudflare";
 import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
+import * as technitium from "@pulumi/technitium";
 import * as unifi from "@pulumiverse/unifi";
 import { addUptimeGatus, awaitOutput } from "./helpers.ts";
 
@@ -11,6 +12,7 @@ export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
   public readonly unifi: unifi.dns.Record;
   public readonly cloudflare: cloudflare.DnsRecord;
+  public readonly technitium: technitium.Record;
   // public readonly adguard: adguard.Rewrite;
 
   public static async create(
@@ -96,6 +98,25 @@ export class StandardDns extends ComponentResource {
         provider: globals.unifiProvider,
         deleteBeforeReplace: true,
         import: args.unifiId,
+      },
+    );
+
+    // Override record inside the driscoll.tech conditional-forwarder zone on the
+    // Technitium cluster (zone managed by stacks/unifi-network/technitium-zone.ts).
+    // Names without an override fall through the zone's FWD record to public DNS.
+    this.technitium = new technitium.Record(
+      `${name}-technitium`,
+      {
+        zone: "driscoll.tech",
+        name: args.hostname,
+        type: args.type,
+        value: record,
+        ttl: 300,
+      },
+      {
+        parent: this,
+        provider: globals.technitiumProvider,
+        deleteBeforeReplace: true,
       },
     );
 

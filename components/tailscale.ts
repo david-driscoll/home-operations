@@ -61,9 +61,12 @@ export async function getTailscaleClient(globals: GlobalResources): Promise<Clie
 
 export interface NodeInfo {
   name: pulumi.Input<string>;
-  ip: pulumi.Input<string>;
-  /** Non-Tailscale internal IP (e.g., 10.10.x.x) — used for subnet access grants */
-  internalIp?: pulumi.Input<string>;
+  /** Tailscale IP of the node */
+  externalIp: pulumi.Input<string>;
+  /** LAN IP (e.g., 10.10.x.x) — used for subnet access grants and DHCP reservations */
+  internalIp: pulumi.Input<string>;
+  /** LAN NIC MAC address (lowercase) — used for UniFi DHCP reservations */
+  mac: pulumi.Input<string>;
   /** Device role — used to categorize nodes for ACL test cases */
   nodeType?: "proxmox" | "dockge" | "pbs" | "truenas";
 }
@@ -89,7 +92,7 @@ export class TailscaleMonitor {
 
   public exportNodeStateToOnePassword(nodeState: NodeInfo[], cro: pulumi.ResourceOptions) {
     const _hostsSection: OnePasswordItemSectionInput = {
-      fields: Object.fromEntries(nodeState.map(z => [z.name, { value: z.ip }] as const)),
+      fields: Object.fromEntries(nodeState.map(z => [z.name, { value: z.externalIp }] as const)),
     };
 
     return new OnePasswordItem(
@@ -108,8 +111,9 @@ export class TailscaleMonitor {
                     z.name,
                     {
                       fields: {
-                        ip: { value: z.ip },
+                        externalIp: { value: z.externalIp },
                         internalIp: { value: z.internalIp },
+                        mac: { value: z.mac },
                         nodeType: { value: z.nodeType ?? "unknown" },
                       },
                     },
