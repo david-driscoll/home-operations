@@ -48,17 +48,21 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
   const secondaryDns = getTailscaleIp("dockge-as", globals);
   const unifiDns = getTailscaleIp("discord", globals);
   const idpIp = getTailscaleIp("idp", globals);
-  // const unifiDns = "100.111.0.1";
 
-  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, unifiDns, idpIp]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, unifiDnsIp, idpAddr]) => {
+  // Technitium cluster nodes are all named dns-<cluster> (dns-celestia, dns-luna, ...);
+  // collecting by prefix picks up new nodes automatically as they join the tailnet.
+  const dnsMachines = tailscale.getDevicesOutput({ namePrefix: "dns-" }, { provider: globals.tailscaleProvider }).apply(result =>
+    (result.devices ?? [])
+      .map(device => ({
+        name: device.name.split(".")[0],
+        ip: (device.addresses.find(address => !address.includes(":")) ?? device.addresses[0]) as TailscaleIp,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
+
+  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, unifiDns, idpIp, dnsMachines]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, unifiDnsIp, idpAddr, dnsNodes]) => {
     // ── Build hosts map from all exported stacks ──────────────────────────
-    const hosts: [string, string][] = [
-      ["idp", idpAddr],
-      ["primary-dns", primaryDnsIp],
-      ["secondary-dns", secondaryDnsIp],
-      ["unifi-dns", unifiDnsIp],
-      // ["unifi-dns", unifiDns],
-    ];
+    const hosts: [string, string][] = [["idp", idpAddr], ["primary-dns", primaryDnsIp], ["secondary-dns", secondaryDnsIp], ["unifi-dns", unifiDnsIp], ...dnsNodes.map(node => [node.name, node.ip] as [string, string])];
     for (const exp of allExports) {
       for (const [, { name, ip }] of Object.entries(exp.hosts)) {
         hosts.push([name, ip]);
@@ -431,40 +435,26 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "dns-nameservers",
       {
         overrideLocalDns: true,
-        splitDns: [
-          {
-            domain: pulumi.interpolate`driscoll.tech`,
-            nameservers: [
-              // { address: unifiDnsIp, useWithExitNode: false },
-              ...dns.config.Discord.ips.map(ip => ({
-                address: ip,
-                useWithExitNode: false,
-              })),
-              ...dns.config.Quad9.ips.map(ip => ({
-                address: ip,
-                useWithExitNode: false,
-              })),
-            ],
-          },
-        ],
-        nameservers: [
-          {
-            address: primaryDnsIp,
-            useWithExitNode: false,
-          },
-          {
-            address: secondaryDnsIp,
-            useWithExitNode: false,
-          },
-          // {
-          //   address: unifiDnsIp,
-          //   useWithExitNode: false,
-          // },
-          ...dns.internalIps.map(ip => ({
-            address: ip,
-            useWithExitNode: false,
-          })),
-        ],
+        // splitDns: [
+        //   {
+        //     domain: pulumi.interpolate`driscoll.tech`,
+        //     nameservers: [
+        //       // { address: unifiDnsIp, useWithExitNode: false },
+        //       ...dns.config.Discord.ips.map(ip => ({
+        //         address: ip,
+        //         useWithExitNode: false,
+        //       })),
+        //       ...dns.config.Quad9.ips.map(ip => ({
+        //         address: ip,
+        //         useWithExitNode: false,
+        //       })),
+        //     ],
+        //   },
+        // ],
+        nameservers: dnsNodes.map(node => ({
+          address: node.ip,
+          useWithExitNode: false,
+        })),
       },
       cro,
     );
