@@ -34,7 +34,34 @@ export async function configureLocalDns(globals: GlobalResources) {
   const cro = { parent, provider: globals.unifiProvider };
 
   // dns-<cluster> tailscale machines → their dockge-<cluster> hosts from the exports
-  const dnsClusterKeys = tailscale.getDevicesOutput({ namePrefix: "dns-" }, { provider: globals.tailscaleProvider }).apply(result => (result.devices ?? []).map(device => device.name.split(".")[0].replace(/^dns-/, "")));
+  const dnsMachines = tailscale.getDevicesOutput({ namePrefix: "dns-" }, { provider: globals.tailscaleProvider }).apply(result =>
+    (result.devices ?? [])
+      .map(device => ({
+        key: device.name.split(".")[0].replace(/^dns-/, ""),
+        ip: device.addresses.find(address => !address.includes(":")) ?? device.addresses[0],
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key)),
+  );
+  const dnsClusterKeys = dnsMachines.apply(machines => machines.map(machine => machine.key));
+
+  // UniFi's dnsmasq is authoritative for driscoll.tech (the LAN domain), so any
+  // name it lacks returns empty instead of falling through — publish the cluster
+  // node names here so resolver chains that pass through the gateway (e.g.
+  // AdGuard's [/driscoll.tech/] upstream) can reach <node>.dns.driscoll.tech.
+  dnsMachines.apply(machines =>
+    machines.map(
+      machine =>
+        new unifi.dns.Record(
+          `dns-node-record-${machine.key}`,
+          {
+            name: `${machine.key}.dns.driscoll.tech`,
+            type: "A",
+            value: machine.ip,
+          },
+          cro,
+        ),
+    ),
+  );
 
   const dnsHosts = pulumi.all([globals.store.getTailscaleExports(), dnsClusterKeys]).apply(([allExports, clusterKeys]) => {
     const matcher = new CIDRMatcher([Tailscale.subnets.home]);

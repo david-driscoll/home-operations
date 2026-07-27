@@ -451,20 +451,13 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         //     ],
         //   },
         // ],
-        nameservers: [
-          {
-            address: primaryDnsIp,
-            useWithExitNode: false,
-          },
-          {
-            address: secondaryDnsIp,
-            useWithExitNode: false,
-          },
-          ...dnsNodes.map(node => ({
-            address: node.ip,
-            useWithExitNode: false,
-          })),
-        ],
+        // Technitium cluster nodes only — AdGuard (primary-dns / dockge-as) is
+        // retired from tailnet resolution; its host entries and grants remain
+        // until decommission.
+        nameservers: dnsNodes.map(node => ({
+          address: node.ip,
+          useWithExitNode: false,
+        })),
       },
       cro,
     );
