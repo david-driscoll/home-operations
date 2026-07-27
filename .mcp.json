@@ -10,18 +10,6 @@
       "command": "npx",
       "args": ["-y", "@pulumi/mcp-server", "stdio"]
     },
-    "mise": {
-      "type": "stdio",
-      "command": "mise",
-      "env": {
-        "MISE_EXPERIMENTAL": "1"
-      },
-      "args": ["mcp"]
-    },
-    "lean-ctx": {
-      "args": [],
-      "command": "lean-ctx"
-    },
     "unifi-network": {
       "type": "stdio",
       "command": "op",
@@ -58,6 +46,20 @@
         "UNIFI_ACCESS_USERNAME": "op://Eris/unifipoller/username",
         "UNIFI_ACCESS_PASSWORD": "op://Eris/unifipoller/password"
       }
+    },
+    "crew_state": {
+      "command": "crew",
+      "args": ["state-mcp"],
+      "env": {},
+      "tools": ["*"]
+    },
+    "mise": {
+      "args": ["mcp"],
+      "command": "mise",
+      "env": {
+        "MISE_EXPERIMENTAL": "1"
+      },
+      "type": "stdio"
     }
   }
 }

@@ -16,3 +16,17 @@ bin/
 apm_modules/
 stacks/unifi-network/tailscale-acl.json
 headlamp/
+# Crew: ignore runtime state (logs, inbox, sessions)
+# Note: .crew/casting/* is identity and MUST be committed to main, not ignored
+.crew/orchestration-log/
+.crew/log/
+.crew/decisions/inbox/
+.crew/sessions/
+.crew/.scratch/
+.crew/.cache/
+# Crew: state owned by crew-state branch (two-layer/orphan backend)
+.crew/decisions.md
+.crew/agents/*/history.md
+# /Crew: state owned by crew-state branch
+# Crew: SubCrew activation file (local to this machine)
+.crew-workstream

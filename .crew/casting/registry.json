@@ -1,0 +1,74 @@
+{
+  "agents": {
+    "lead-architect": {
+      "persistent_name": "Morpheus",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "pulumi-iac": {
+      "persistent_name": "Trinity",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "kubernetes-gitops": {
+      "persistent_name": "Tank",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "networking-dns": {
+      "persistent_name": "Niobe",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "secrets-identity": {
+      "persistent_name": "Dozer",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "verification-review": {
+      "persistent_name": "Mouse",
+      "universe": "The Matrix",
+      "created_at": "2026-07-26T00:00:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "storage-data-protection": {
+      "persistent_name": "Seraph",
+      "universe": "The Matrix",
+      "created_at": "2026-07-27T03:27:08Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "node-lifecycle-upgrades": {
+      "persistent_name": "Roland",
+      "universe": "The Matrix",
+      "created_at": "2026-07-27T03:27:08Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "observability-sre": {
+      "persistent_name": "Oracle",
+      "universe": "The Matrix",
+      "created_at": "2026-07-27T03:27:08Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "cicd-github-automation": {
+      "persistent_name": "Sparks",
+      "universe": "The Matrix",
+      "created_at": "2026-07-27T03:27:08Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
+}
