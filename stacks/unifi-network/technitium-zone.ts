@@ -34,14 +34,19 @@ export function configureTechnitiumZones(globals: GlobalResources) {
 }
 
 function addForwarderRecord(cro: pulumi.ComponentResourceOptions, zone: technitium.Zone, name: string, target: string) {
+  // Resource name carries the target's IP so multiple upstreams for the same
+  // record name stay distinct; overwrite=false makes each record additive to
+  // the FWD record set instead of replacing its siblings.
+  const suffix = (target.match(/\(([^)]+)\)/)?.[1] ?? target).replace(/[^a-zA-Z0-9]+/g, "-");
   return new technitium.Record(
-    `fwd-${name}`,
+    `fwd-${name}-${suffix}`,
     {
       zone: zone.name.apply(z => z!),
       name,
       type: "FWD",
       value: target,
       protocol: "Quic",
+      overwrite: false,
     },
     cro,
   );

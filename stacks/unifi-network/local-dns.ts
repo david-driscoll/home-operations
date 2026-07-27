@@ -39,14 +39,10 @@ export async function configureLocalDns(globals: GlobalResources) {
       .sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  const _dhcpDns = dnsHosts.apply(hosts => {
-    if (hosts.length === 0) {
-      throw new Error("local-dns: no dns hosts found on the Home subnet — refusing to clear DHCP DNS");
-    }
-    return hosts.map(host => host.internalIp!);
-  });
-
-  const homeNetwork = unifi.getNetworkOutput({ name: "Home" });
+  // The Home network itself is intentionally unmanaged (DHCP DNS was set once
+  // and the pulumiverse Network resource clobbers unmodeled controller fields);
+  // only the network id is needed for the reservations below.
+  const homeNetwork = unifi.getNetworkOutput({ name: "Home" }, { provider: globals.unifiProvider });
 
   // DHCP reservations pinning each dns host to its current LAN IP. LXC recreation
   // regenerates the MAC; the next up of the exporting stack refreshes the export
