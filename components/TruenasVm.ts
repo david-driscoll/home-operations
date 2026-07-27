@@ -6,7 +6,7 @@ import { FullItem } from "@1password/connect";
 import type { Dataset } from "@components/truenas/index.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleIp } from "@openapi/tailscale-grants.js";
-import type { types } from "@pulumi/command";
+import { remote, type types } from "@pulumi/command";
 import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxHost } from "./ProxmoxHost.ts";
 import TrueNASResourceManager from "./truenas/truenas-manager.ts";
@@ -49,6 +49,8 @@ export class TruenasVm extends pulumi.ComponentResource {
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly globals: GlobalResources;
   public readonly hostname: pulumi.Output<string>;
+  /** MAC of the default-route NIC (lowercase) — for DHCP reservations */
+  public readonly macAddress: pulumi.Output<string>;
   constructor(name: string, args: TruenasVmArgs, opts?: pulumi.ComponentResourceOptions) {
     super("home:truenas:TruenasVM", name, opts);
     const _cro = { parent: this };
@@ -73,6 +75,16 @@ export class TruenasVm extends pulumi.ComponentResource {
       user: credentialItem.apply(z => z.username),
       password: credentialItem.apply(z => z.credential),
     });
+
+    // MAC of the interface holding the default route — for UniFi DHCP reservations
+    this.macAddress = new remote.Command(
+      `${name}-mac-address`,
+      {
+        connection: this.remoteConnection,
+        create: `cat /sys/class/net/$(ip route show default | sed -n 's/.*dev \\([^ ]*\\).*/\\1/p' | head -1)/address`,
+      },
+      _cro,
+    ).stdout.apply(z => z.trim().toLowerCase());
 
     const _truenasInfo = new OnePasswordItem(
       `${args.host.name}-truenas`,

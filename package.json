@@ -39,6 +39,7 @@
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/tailscale": "file:sdks/tailscale",
+    "@pulumi/technitium": "file:sdks/technitium",
     "@pulumi/terrifi": "file:sdks/terrifi",
     "@pulumi/unifi": "file:sdks/unifi",
     "@pulumiverse/purrl": "^0.6.2",
@@ -57,6 +58,7 @@
     "file:sdks/b2": true,
     "file:sdks/pbs": true,
     "file:sdks/tailscale": true,
+    "file:sdks/technitium": true,
     "file:sdks/terrifi": true,
     "file:sdks/unifi": true
   }

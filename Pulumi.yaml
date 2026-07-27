@@ -35,3 +35,7 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters: [registry.terraform.io/tailscale/tailscale, 0.29.2]
+  technitium:
+    source: terraform-provider
+    version: 0.14.0
+    parameters: [registry.terraform.io/darkhonor/technitium, 1.2.1]

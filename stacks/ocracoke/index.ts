@@ -102,18 +102,23 @@ monitor.exportNodeStateToOnePassword(
   [
     {
       name: host.tailscaleName,
-      ip: host.tailscaleIpAddress,
+      externalIp: host.tailscaleIpAddress,
+      internalIp: host.localIpAddress,
+      mac: host.macAddress,
       nodeType: "proxmox",
     },
     {
       name: dockgeRuntime.tailscaleName,
-      ip: dockgeRuntime.tailscaleIpAddress,
-      internalIp: dockgeRuntime.ipAddress,
+      externalIp: dockgeRuntime.tailscaleIpAddress,
+      internalIp: dockgeRuntime.localIpAddress,
+      mac: dockgeRuntime.macAddress,
       nodeType: "dockge",
     },
     {
       name: pbs.tailscaleName,
-      ip: pbs.tailscaleIpAddress,
+      externalIp: pbs.tailscaleIpAddress,
+      internalIp: pbs.localIpAddress,
+      mac: pbs.macAddress,
       nodeType: "pbs",
     },
   ],

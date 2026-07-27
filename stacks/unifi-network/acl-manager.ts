@@ -8,7 +8,7 @@ import { writeFileSync } from "node:fs";
 import type { TailscaleCidr, TailscaleIp, TailscaleService, TailscaleTags } from "@openapi/tailscale-grants.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
-import { dns, Roles } from "../../components/constants.ts";
+import { Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
 import { getTailscaleIp } from "../../components/tailscale.ts";
@@ -64,8 +64,8 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     // ── Build hosts map from all exported stacks ──────────────────────────
     const hosts: [string, string][] = [["idp", idpAddr], ["primary-dns", primaryDnsIp], ["secondary-dns", secondaryDnsIp], ["unifi-dns", unifiDnsIp], ...dnsNodes.map(node => [node.name, node.ip] as [string, string])];
     for (const exp of allExports) {
-      for (const [, { name, ip }] of Object.entries(exp.hosts)) {
-        hosts.push([name, ip]);
+      for (const [, { name, externalIp }] of Object.entries(exp.hosts)) {
+        hosts.push([name, externalIp]);
       }
     }
 

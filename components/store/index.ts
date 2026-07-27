@@ -40,9 +40,10 @@ export class VaultStore {
           items.map(
             getSecretItem<{
               [key: string]: {
-                ip: string;
-                internalIp?: string;
-                nodeType: "dockge" | "proxmox" | "pbs";
+                externalIp: string;
+                internalIp: string;
+                mac: string;
+                nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
               };
             }>,
           ),
@@ -54,14 +55,17 @@ export class VaultStore {
             name: item.name as unknown as string,
             services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
             hosts: Object.entries(item)
-              .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && "ip" in value)
+              .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && ("externalIp" in value || "ip" in value))
               .map(
+                // `ip` fallback tolerates items written before the externalIp rename;
+                // safe to drop once every exporting stack has redeployed.
                 ([key, value]) =>
-                  ({ name: key, ...value }) as {
+                  ({ name: key, ...value, externalIp: (value as { externalIp?: string; ip?: string }).externalIp ?? (value as { ip?: string }).ip }) as {
                     name: string;
-                    ip: string;
-                    internalIp?: string;
-                    nodeType: "dockge" | "proxmox" | "pbs";
+                    externalIp: string;
+                    internalIp: string;
+                    mac: string;
+                    nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
                   },
               ),
           };

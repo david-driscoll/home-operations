@@ -62,6 +62,10 @@ export class DockgeLxc extends ComponentResource {
   public readonly device?: ReturnType<typeof installTailscaleLxc>;
   public readonly dns: Output<StandardDns>;
   public readonly ipAddress: Output<TailscaleIp>;
+  /** LAN IP of the LXC (first `hostname -I` address), regardless of remote flag */
+  public readonly localIpAddress: Output<TailscaleIp>;
+  /** LXC vNIC MAC (net0 hwaddr, lowercase) — for DHCP reservations */
+  public readonly macAddress: Output<string>;
   public readonly remoteConnection: types.input.remote.ConnectionArgs;
   public readonly credential;
   public readonly cluster: Output<ClusterDefinition>;
@@ -171,18 +175,29 @@ export class DockgeLxc extends ComponentResource {
       }),
     );
 
-    this.ipAddress = args.ipAddress
-      ? output(args.ipAddress)
-      : args.host.remote
-        ? this.tailscaleIpAddress
-        : (new remote.Command(
-            `${name}-ip-address`,
-            {
-              connection: args.host.remoteConnection,
-              create: interpolate`pct exec ${args.vmId} -- hostname -I`,
-            },
-            mergeOptions(cro, { dependsOn: [setHostname] }),
-          ).stdout.apply(z => z.split(" ")[0]) as Output<TailscaleIp>);
+    // LAN-side identity of the LXC, read from the Proxmox host: the vNIC MAC from
+    // `pct config` and the first address of `hostname -I`. Exported to 1Password so
+    // consumers (e.g. UniFi DHCP reservations in stacks/unifi-network/local-dns.ts)
+    // never need these hardcoded.
+    this.localIpAddress = new remote.Command(
+      `${name}-ip-address`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct exec ${args.vmId} -- hostname -I`,
+      },
+      mergeOptions(cro, { dependsOn: [setHostname] }),
+    ).stdout.apply(z => z.split(" ")[0].trim()) as Output<TailscaleIp>;
+
+    this.macAddress = new remote.Command(
+      `${name}-mac-address`,
+      {
+        connection: args.host.remoteConnection,
+        create: interpolate`pct config ${args.vmId} | sed -n 's/^net0:.*hwaddr=\\([^,]*\\).*/\\1/p'`,
+      },
+      mergeOptions(cro, { dependsOn: [lxcExists] }),
+    ).stdout.apply(z => z.trim().toLowerCase());
+
+    this.ipAddress = args.ipAddress ? output(args.ipAddress) : args.host.remote ? this.tailscaleIpAddress : this.localIpAddress;
 
     this.credential = output(args.credential);
     const _connection: types.input.remote.ConnectionArgs = (this.remoteConnection = {
@@ -1020,43 +1035,13 @@ export class DockgeLxc extends ComponentResource {
       applications,
     }));
   }
-
-  // Technitium's tailscale sidecar joins the tailnet under its own identity (a dedicated
-  // TS_HOSTNAME, separate from the DockgeLxc host's own tailscaleIpAddress), landing one
-  // above the host's address — host.100 -> technitium.101. Point the DNS record clients
-  // actually use (`${CLUSTER_KEY}.dns.${ROOT_DOMAIN}`) at that address directly instead of
-  // the generic CNAME-to-host record, since the host's own Docker port publishing does not
-  // reliably front the technitium-ts container's ports.
-  private technitiumInit(dependsOn: Input<Resource>[]) {
-    const ipAddress = this.tailscaleIpAddress.apply(incrementLastOctet);
-    const hostname = interpolate`${this.cluster.key}.dns.${this.args.globals.searchDomain}`;
-
-    return hostname.apply(h =>
-      StandardDns.create(
-        // Deliberately reuses the name the generic loop above would have produced for this
-        // host (`${stackName}-dns-${host_with_underscores}`). Both records carry the same DNS
-        // name, and Pulumi runs creates before deletes — so introducing this as a *new*
-        // resource would try to create the A record while the generic CNAME still exists and
-        // fail with Cloudflare 81054. Keeping the name makes it a replacement of the resource
-        // already in state, which `deleteBeforeReplace` turns into delete-then-create.
-        `technitium-dns-${h.replace(/\./g, "_")}`,
-        {
-          hostname: h,
-          ipAddress,
-          type: "A",
-        },
-        this.args.globals,
-        { parent: this.dockerParent, dependsOn },
-      ),
-    );
-  }
 }
 
 function replaceVariable(key: RegExp, value: Input<string>) {
   return (input: Input<string>) => all([value, input]).apply(([v, i]) => i.replace(key, v));
 }
 
-function incrementLastOctet(ip: TailscaleIp): TailscaleIp {
+function _incrementLastOctet(ip: TailscaleIp): TailscaleIp {
   const parts = ip.split(".");
   const lastOctet = Number(parts[3]) + 1;
   return `${parts[0]}.${parts[1]}.${parts[2]}.${lastOctet}` as TailscaleIp;
