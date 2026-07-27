@@ -7,19 +7,26 @@
  * DockgeLxc over Proxmox SSH), and then:
  *
  * - pins a DHCP reservation for each host on its current LAN IP, and
- * - points the Home network's DHCP DNS at those hosts, so every LAN client
- *   resolves through Technitium (ports 53/853 are published on the dockge host
- *   IPs by docker/_common/technitium/compose.yaml).
+ * - points DHCP DNS on the Home and IoT networks at those hosts (plus the
+ *   standing internal resolvers as fallback), so clients resolve through
+ *   Technitium (ports 53/853 are published on the dockge host IPs by
+ *   docker/_common/technitium/compose.yaml).
  *
- * Hosts whose internalIp is outside the Home subnet (e.g. skystar offsite) are
- * ignored — they participate in tailnet DNS only.
+ * Hosts whose internalIp is outside the Home subnet (e.g. skystar offsite, and
+ * luna once it moves) are ignored — they participate in tailnet DNS only.
+ *
+ * DHCP DNS is applied with Purrl as a partial REST PUT on purpose: the
+ * pulumiverse Network resource PUTs a schema-built body and resets controller
+ * fields it does not model (is_nat, dhcpd_conflict_checking, ...), while the
+ * controller merges partial PUTs safely.
  */
 
 import * as pulumi from "@pulumi/pulumi";
 import * as tailscale from "@pulumi/tailscale";
+import * as purrl from "@pulumiverse/purrl";
 import * as unifi from "@pulumiverse/unifi";
 import CIDRMatcher from "cidr-matcher";
-import { Tailscale } from "../../components/constants.ts";
+import { dns, Tailscale } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 
 export async function configureLocalDns(globals: GlobalResources) {
@@ -39,10 +46,52 @@ export async function configureLocalDns(globals: GlobalResources) {
       .sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  // The Home network itself is intentionally unmanaged (DHCP DNS was set once
-  // and the pulumiverse Network resource clobbers unmodeled controller fields);
-  // only the network id is needed for the reservations below.
+  // Technitium hosts first, standing internal resolvers as fallback, capped at
+  // the controller's four DHCP DNS slots. Refuses to act on an empty derivation
+  // so a broken export can never blank out client DNS.
+  const dhcpDns = dnsHosts.apply(hosts => {
+    const derived = hosts.map(host => host.internalIp!);
+    if (derived.length === 0) {
+      throw new Error("local-dns: no dns hosts found on the Home subnet — refusing to update DHCP DNS");
+    }
+    return [...derived, ...dns.internalIps.filter(ip => !derived.includes(ip))].slice(0, 4);
+  });
+
+  // The networks themselves are intentionally unmanaged (the pulumiverse
+  // Network resource clobbers unmodeled controller fields); only their ids are
+  // needed for the reservations and targeted DHCP DNS updates below.
   const homeNetwork = unifi.getNetworkOutput({ name: "Home" }, { provider: globals.unifiProvider });
+  const iotNetwork = unifi.getNetworkOutput({ name: "IoT" }, { provider: globals.unifiProvider });
+
+  for (const [key, network] of [
+    ["home", homeNetwork],
+    ["iot", iotNetwork],
+  ] as const) {
+    new purrl.Purrl(
+      `${key}-dhcp-dns`,
+      {
+        name: `${key} network DHCP DNS`,
+        url: pulumi.interpolate`${globals.unifiCredential.hostname}/proxy/network/api/s/default/rest/networkconf/${network.id}`,
+        method: "PUT",
+        headers: {
+          "X-API-KEY": globals.unifiCredential.credential,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: dhcpDns.apply(list =>
+          JSON.stringify({
+            dhcpd_dns_enabled: true,
+            dhcpd_dns_1: list[0] ?? "",
+            dhcpd_dns_2: list[1] ?? "",
+            dhcpd_dns_3: list[2] ?? "",
+            dhcpd_dns_4: list[3] ?? "",
+          }),
+        ),
+        responseCodes: ["200"],
+      },
+      { parent },
+    );
+  }
 
   // DHCP reservations pinning each dns host to its current LAN IP. LXC recreation
   // regenerates the MAC; the next up of the exporting stack refreshes the export
@@ -68,5 +117,5 @@ export async function configureLocalDns(globals: GlobalResources) {
       ),
   );
 
-  return { homeNetwork };
+  return { homeNetwork, iotNetwork };
 }
