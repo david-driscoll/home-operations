@@ -11,8 +11,7 @@ services:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     env_file:
       - .env
-      - path: /opt/stacks-data/${APP}/agent-token.env
-        required: false
+      - token.env
     volumes:
       - agent-data:/app/data
     cgroup: host
