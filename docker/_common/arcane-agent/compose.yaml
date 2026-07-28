@@ -37,7 +37,7 @@ services:
 
       traefik.http.services.${APP}.loadbalancer.server.port: 3553
     healthcheck:
-      test: [ 'CMD', '/app/arcane', 'health' ]
+      test: [ 'CMD', '/app/arcane-agent', 'health' ]
       interval: 30s
       timeout: 5s
       retries: 3
