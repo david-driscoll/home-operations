@@ -25,17 +25,17 @@ services:
       traefik.enable: true
 
       # Arcane Agent - HTTPS
-      traefik.http.routers.${APP}.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.${APP}.entrypoints: websecure
-      traefik.http.routers.${APP}.tls.certresolver: le
-      traefik.http.routers.${APP}.service: ${APP}
+      traefik.http.routers.arcane-agent.rule: Host(`${APP}.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.arcane-agent.entrypoints: websecure
+      traefik.http.routers.arcane-agent.tls.certresolver: le
+      traefik.http.routers.arcane-agent.service: ${APP}
 
       # Tailscale internal routing
-      traefik.http.routers.${APP}-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
-      traefik.http.routers.${APP}-tailscale.entrypoints: tailscale
-      traefik.http.routers.${APP}-tailscale.service: ${APP}
+      traefik.http.routers.arcane-agent-tailscale.rule: Host(`${APP}-${host}.${tailscaleDomain}`)
+      traefik.http.routers.arcane-agent-tailscale.entrypoints: tailscale
+      traefik.http.routers.arcane-agent-tailscale.service: arcane-agent
 
-      traefik.http.services.${APP}.loadbalancer.server.port: 3553
+      traefik.http.services.arcane-agent.loadbalancer.server.port: 3553
     healthcheck:
       test: [ 'CMD', '/app/arcane-agent', 'health' ]
       interval: 30s
