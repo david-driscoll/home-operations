@@ -6,7 +6,7 @@ import * as cloudflare from "@pulumi/cloudflare";
 import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as technitium from "@pulumi/technitium";
 import * as unifi from "@pulumiverse/unifi";
-import { addUptimeGatus, awaitOutput } from "./helpers.ts";
+import { addUptimeGatus } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -33,8 +33,30 @@ export class StandardDns extends ComponentResource {
         throw new Error("Either ipAddress or record must be provided");
       })();
 
-    const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
-    const unifiRecordId = unifiRecords.results.apply(results => results.find(r => r.name === args.hostname)?.id).apply(id => (id ? `default:${id}` : undefined));
+    // Deliberately NOT adopting pre-existing UniFi records via `import` either — same defect
+    // as Cloudflare below, confirmed against live state on 2026-07-28.
+    //
+    // The provider's import id is `<site>:<recordId>` (`default:6a12…`) but the id it stores
+    // in state is the bare `<recordId>`, so `import` can never equal the resource's own state
+    // id. This used to be fed from a live `unifi.dns.getRecordsOutput` lookup, which meant a
+    // record was created with `import: undefined` on the run that made it and then, on the
+    // very next run, the lookup found it and supplied `import: "default:<id>"`. That
+    // transition makes Pulumi plan a replace-by-import, and the `deleteBeforeReplace` below
+    // turns it into delete-then-adopt: the live record is destroyed first. If the update dies
+    // before the import checkpoint lands, the record stays deleted and state keeps the dead
+    // id — every subsequent delete then 404s and wedges the stack.
+    //
+    // Evidence at the time of removal: across gulf-of-mexico/home-operations/ocracoke, 45/45
+    // records carrying an `importID` had `importID == "default:" + id` and were healthy,
+    // while every entry that had *not* completed the cycle pointed at an id the controller no
+    // longer had — nine destroyed records in total (`pbs.luna`, `pbs.celestia`,
+    // `netbootxyz`, `arcane`, `pbs.skystar`, `backrest.skystar`, and the three
+    // `<node>.dns` records), plus three `delete: true` twins still queued to destroy the
+    // `arcane-agent.*` records they share an id with.
+    //
+    // A collision with an existing UniFi record is handled the same way as Cloudflare: reuse
+    // the old Pulumi resource name so it becomes a replacement rather than a create.
+    const unifiId = undefined;
     // Deliberately NOT adopting pre-existing Cloudflare records via `import`.
     //
     // The provider's import id is `<zoneId>/<recordId>` but the id it stores in state is the
@@ -48,7 +70,6 @@ export class StandardDns extends ComponentResource {
     // reusing the old Pulumi resource name so it becomes a replacement rather than a create
     // — see the technitium record in `components/DockgeLxc.ts`.
     const cloudflareId = undefined;
-    const unifiId = await awaitOutput(unifiRecordId);
     return new StandardDns(
       name,
       {
