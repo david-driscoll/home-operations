@@ -13,6 +13,7 @@
 | Name | Role | Charter | Status |
 |------|------|---------|--------|
 | Morpheus | Lead / Architect | `.crew/agents/morpheus/charter.md` | active |
+| Link | Discovery Research & Work Breakdown | `.crew/agents/link/charter.md` | active |
 | Trinity | Pulumi & TypeScript IaC | `.crew/agents/trinity/charter.md` | active |
 | Tank | Kubernetes Workloads & Flux Delivery | `.crew/agents/tank/charter.md` | active |
 | Seraph | Storage & Data Protection | `.crew/agents/seraph/charter.md` | active |
@@ -25,7 +26,7 @@
 | Scribe | Session Logger | `.crew/agents/scribe/charter.md` | active |
 | Ralph | Work Monitor | `.crew/agents/ralph/charter.md` | active |
 | Rai | RAI Reviewer | `.crew/agents/Rai/charter.md` | active |
-| Fact Checker | Verifier | `.crew/agents/fact-checker/charter.md` | active |
+| Ghost | Verifier (Devil's Advocate) | `.crew/agents/fact-checker/charter.md` | active |
 
 ## Project Context
 

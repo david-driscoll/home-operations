@@ -9,6 +9,16 @@
       "universe": "The Matrix",
       "assignment_id": "home-operations-2026-07-27-platform-domains",
       "used_at": "2026-07-27T03:27:08Z"
+    },
+    {
+      "universe": "The Matrix",
+      "assignment_id": "home-operations-2026-07-28-discovery-research",
+      "used_at": "2026-07-28T00:00:00Z"
+    },
+    {
+      "universe": "The Matrix",
+      "assignment_id": "home-operations-2026-07-28-verification-casting",
+      "used_at": "2026-07-28T00:00:00Z"
     }
   ],
   "assignment_cast_snapshots": {
@@ -34,6 +44,24 @@
       },
       "created_at": "2026-07-27T03:27:08Z",
       "notes": "Platform-domain expansion for the two Kubernetes clusters, cast into the hub repo because the clusters are planned to move into home-operations. Split by domain rather than per-cluster: the clusters are platform twins, so per-cluster seats would duplicate knowledge and become obsolete on merge. Tank's charter was narrowed to Flux delivery plus the equestria/sgc workload namespaces; Niobe and Dozer took in-cluster scope extensions rather than new seats. THE MATRIX IS NOW AT CAPACITY (10/10) — the next addition triggers Overflow Handling per crew.agent.md: diegetic expansion to peripheral characters from the same universe, then thematic promotion, then structural mirroring. Do NOT switch universes, and never rename an existing agent."
+    },
+    "home-operations-2026-07-28-discovery-research": {
+      "universe": "The Matrix",
+      "agents": {
+        "discovery-research-breakdown": "Link"
+      },
+      "created_at": "2026-07-28T00:00:00Z",
+      "overflow_applied": "diegetic_expansion",
+      "notes": "Seat 11 (see also the 2026-07-28-verification-casting snapshot, same day). The Matrix was already at its 10/10 policy capacity, so Overflow Handling step 1 (diegetic expansion) was applied — a recurring supporting character from the SAME universe, no universe switch, no existing agent renamed. Fills the idea-to-issue-tree gap: Morpheus triages issues that already exist and explicitly sequences rather than implements; Ralph only pumps already-filed issues; Ghost (Fact Checker) verifies claims but produces no work breakdown. Nothing owned discovery research or decomposition. Link is deliberately upstream of Morpheus's triage, not parallel to it: he files into the `crew` inbox with a Suggested owner in the body and never applies a `crew:{member}` label, so scope, priority, and ownership stay Morpheus's calls. Continue overflow from this universe on the next addition."
+    },
+    "home-operations-2026-07-28-verification-casting": {
+      "universe": "The Matrix",
+      "agents": {
+        "verification-devils-advocate": "Ghost"
+      },
+      "created_at": "2026-07-28T00:00:00Z",
+      "overflow_applied": "diegetic_expansion",
+      "notes": "Completing a SKIPPED allocation, not renaming a cast agent. The Fact Checker charter stated from init that this seat 'Gets a universe name like any other agent (not exempt like Scribe/Ralph)' — the name was simply never allocated, so the seat ran on its literal role label as a placeholder. The 'never rename an existing agent' rule in the platform-domains snapshot is scoped by crew.agent.md to Overflow Handling ('Existing agents are NEVER renamed during overflow') and exists to prevent name churn when a universe runs dry; it does not bar finishing an allocation that was never made. Scribe, Ralph, and Rai remain deliberately exempt built-ins. Ghost is a peripheral Matrix character (Enter the Matrix / Revolutions) — precise, introspective, questions everything — which fits Devil's Advocate, and the name resonates with the charter's hallucination-detection duty. Collision check run across the estate before choosing: 'apoc' was rejected (Neo4j APOC plugin, live in the database namespace), 'vector' rejected (log shipper, Oracle's observability domain), 'switch' rejected (network switches, Niobe's domain), 'binary' rejected. 'ghost' appears only as a commented-out TEMPLATE_NAME placeholder in docker/_common/traefik/compose.yaml — acceptable, and well within house tolerance given Oracle was cast while the estate runs a database namespace. ROLE IS UNCHANGED: still Devil's Advocate & Verification. CHARTER DIRECTORY DELIBERATELY NOT RENAMED — .crew/agents/fact-checker/ and .crew/fact-checker/ stay put because crew.agent.md names those paths literally in its runtime-managed list. Display name != storage path, on purpose. THE GITHUB LABEL crew:fact-checker IS NOW STALE and needs a migration decision from David."
     }
   }
 }

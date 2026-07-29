@@ -1,6 +1,10 @@
 # Fact Checker Policy
 
-> Authoritative verification & devil's-advocate methodology for this project. Fact Checker enforces these standards.
+> **Naming note (2026-07-28):** this seat is cast as **Ghost**. "Fact Checker" below refers to the
+> same single agent — the role and methodology are unchanged, only the persona name was allocated.
+> The `fact-checker` directory and filenames stay as-is because `crew.agent.md` names them literally.
+
+> Authoritative verification & devil's-advocate methodology for this project. Ghost enforces these standards.
 
 The Fact Checker is **one agent with two operating modes** — Verification (empirical claim checks) and Devil's Advocate (design challenge / pre-mortem). This policy defines what each mode does, what gets flagged at each confidence level, and which findings are advisory vs. blocking.
 
