@@ -6,7 +6,7 @@ import * as cloudflare from "@pulumi/cloudflare";
 import { all, ComponentResource, type ComponentResourceOptions, getStack, type Input, interpolate, mergeOptions, type Output, output } from "@pulumi/pulumi";
 import * as technitium from "@pulumi/technitium";
 import * as unifi from "@pulumiverse/unifi";
-import { addUptimeGatus, awaitOutput } from "./helpers.ts";
+import { addUptimeGatus } from "./helpers.ts";
 
 export class StandardDns extends ComponentResource {
   public readonly hostname: Output<string>;
@@ -33,8 +33,6 @@ export class StandardDns extends ComponentResource {
         throw new Error("Either ipAddress or record must be provided");
       })();
 
-    const unifiRecords = unifi.dns.getRecordsOutput({}, { provider: globals.unifiProvider });
-    const unifiRecordId = unifiRecords.results.apply(results => results.find(r => r.name === args.hostname)?.id).apply(id => (id ? `default:${id}` : undefined));
     // Deliberately NOT adopting pre-existing Cloudflare records via `import`.
     //
     // The provider's import id is `<zoneId>/<recordId>` but the id it stores in state is the
@@ -48,7 +46,28 @@ export class StandardDns extends ComponentResource {
     // reusing the old Pulumi resource name so it becomes a replacement rather than a create
     // — see the technitium record in `components/DockgeLxc.ts`.
     const cloudflareId = undefined;
-    const unifiId = await awaitOutput(unifiRecordId);
+    // Deliberately NOT adopting pre-existing UniFi records via `import` either — same
+    // structural defect as the Cloudflare half above, disarmed here on 2026-07-28.
+    //
+    // `@pulumiverse/unifi` v0.3.0 bridges `filipowm/terraform-provider-unifi` v1.1.0, whose
+    // plugin-framework importer (`internal/provider/base/importer.go`, `ImportIDWithSite`)
+    // *requires* a `<site>:<id>` import id — it errors with "ID does not contain site part.
+    // Format should be 'site:id'" otherwise — and then splits it, assigning the part after
+    // the colon to `id` and the part before it to the separate `site` attribute. So state
+    // always holds the bare `<id>` (verified: every `unifi:dns/record:Record` in state has
+    // `id: "6a67…"` alongside `site: "default"`), while the now-removed
+    // `unifi.dns.getRecordsOutput` lookup fed `default:<id>` into `import` on the record
+    // below. Those two can never be equal, so Pulumi re-ran the
+    // import step on every update — and `deleteBeforeReplace: true` on the record makes that
+    // a destroy-then-recreate of live DNS each run. This is exactly the Cloudflare failure
+    // mode, and unlike the Cloudflare lookup (which matched the short name and therefore
+    // always returned nothing) the UniFi lookup matched the full hostname, so this half was
+    // live-armed. Six UniFi records were found missing from the controller while state still
+    // claimed their ids — the signature of an interrupted destroy/re-import.
+    //
+    // Adoption of an existing UniFi record is handled the same way as Cloudflare: reuse the
+    // old Pulumi resource name so the change is a replacement rather than a create.
+    const unifiId = undefined;
     return new StandardDns(
       name,
       {
