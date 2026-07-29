@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "5d6fd77e-8229-4c8f-8f63-56b82be7c6c8",
+    "class": "DECISION",
+    "loadGuidance": "ALWAYS",
+    "title": "Roster: Link added as Discovery Research &amp; Work Breakdown (seat 11)",
+    "path": ".crew/decisions/inbox/crew-coordinator-roster-link-added-as-discovery-research-amp-work-breakdown-seat--5d6fd77e.md",
+    "status": "active",
+    "createdAt": "2026-07-29T01:07:07.698Z",
+    "updatedAt": "2026-07-29T01:07:07.698Z"
+  }
+]
