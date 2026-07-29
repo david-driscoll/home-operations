@@ -1,0 +1,88 @@
+{
+  "captured_at": "2026-07-29T02:08:36Z",
+  "git": "2.55.0",
+  "crew": "0.11.0-build.6",
+  "hk": "none",
+  "repos": [
+    {
+      "repo": "/Users/david/Development/david-driscoll/home-operations",
+      "head": "main",
+      "core_hooksPath": "",
+      "hooks_dir": "/Users/david/Development/david-driscoll/home-operations/.git/hooks",
+      "config_hooks": "hook.hk-pre-commit.command test \"${HK:-1}\" = \"0\" || hk run pre-commit --from-hook \"$@\";hook.hk-pre-commit.event pre-commit;hook.hk-pre-push.command test \"${HK:-1}\" = \"0\" || hk run pre-push --from-hook \"$@\";hook.hk-pre-push.event pre-push;",
+      "hooks": {
+        "pre-commit": { "channels": "file+config", "sha256": "f7c505ffc0b2a9ecae49ca0784a80b7c2e38b7c5d8865163526e7ba6900963dc" },
+        "post-commit": { "channels": "file", "sha256": "622c4444f826d1491fe1e42ede42e66b26826ef1654f3fd63e85337740c6696d" },
+        "pre-push": { "channels": "file+config", "sha256": "77b6b2e6fb91898c05b61dd8db110dd6b6174e16e497161dbeea2a3fcbee192e" },
+        "post-checkout": { "channels": "file", "sha256": "ef286897925c37bbc4c61aa8908312933a457f9538ddea09e204e9279201d32b" },
+        "post-merge": { "channels": "file", "sha256": "c1151c446ce5a89a01326fae0c92be6026395f87db8eee840c17259ee1d5f806" },
+        "post-rewrite": { "channels": "file", "sha256": "7a50403660b70fa6cb061b381630f6a60c1e4c0c772d816e8faabd980a18f7d4" }
+      },
+      "refs": {
+        "crew_state_local": "16ccf130f620d826d81773bef6ac5070e72cdba0",
+        "crew_state_remote": "9b758649ffa9acf6659e13ee21c919d670c32d8c",
+        "notes_crew": "c8173a44d64149138a971bf412405dee60be2319"
+      }
+    },
+    {
+      "repo": "/Users/david/Development/david-driscoll/vault",
+      "head": "main",
+      "core_hooksPath": "",
+      "hooks_dir": "/Users/david/Development/david-driscoll/vault/.git/hooks",
+      "config_hooks": "",
+      "hooks": {
+        "pre-commit": { "channels": "file", "sha256": "f7c505ffc0b2a9ecae49ca0784a80b7c2e38b7c5d8865163526e7ba6900963dc" },
+        "post-commit": { "channels": "file", "sha256": "622c4444f826d1491fe1e42ede42e66b26826ef1654f3fd63e85337740c6696d" },
+        "pre-push": { "channels": "file", "sha256": "77b6b2e6fb91898c05b61dd8db110dd6b6174e16e497161dbeea2a3fcbee192e" },
+        "post-checkout": { "channels": "file", "sha256": "94edf0d0b94a8704d4e11198207b8a1610acf6d22e0ebcb8c1c0ee04f5160d48" },
+        "post-merge": { "channels": "file", "sha256": "9f0c8d433c66b80f7b28ef3afbeff3e34314d85ab35bda777fb8716db15451b7" },
+        "post-rewrite": { "channels": "file", "sha256": "7a50403660b70fa6cb061b381630f6a60c1e4c0c772d816e8faabd980a18f7d4" }
+      },
+      "refs": {
+        "crew_state_local": "5d835de7ce0c24bf776986b280a8dbf3f5161010",
+        "crew_state_remote": "5d835de7ce0c24bf776986b280a8dbf3f5161010",
+        "notes_crew": ""
+      }
+    },
+    {
+      "repo": "/Users/david/Development/david-driscoll/equestria-cluster",
+      "head": "main",
+      "core_hooksPath": ".husky",
+      "hooks_dir": "/Users/david/Development/david-driscoll/equestria-cluster/.husky",
+      "config_hooks": "",
+      "hooks": {
+        "pre-commit": { "channels": "file", "sha256": "31ead1c9d2b657dc6ea32b75e1a572d0152201991f3c74b012aa952a179bacdf" },
+        "post-commit": { "channels": "file", "sha256": "622c4444f826d1491fe1e42ede42e66b26826ef1654f3fd63e85337740c6696d" },
+        "pre-push": { "channels": "file", "sha256": "77b6b2e6fb91898c05b61dd8db110dd6b6174e16e497161dbeea2a3fcbee192e" },
+        "post-checkout": { "channels": "file", "sha256": "94edf0d0b94a8704d4e11198207b8a1610acf6d22e0ebcb8c1c0ee04f5160d48" },
+        "post-merge": { "channels": "file", "sha256": "9f0c8d433c66b80f7b28ef3afbeff3e34314d85ab35bda777fb8716db15451b7" },
+        "post-rewrite": { "channels": "file", "sha256": "7a50403660b70fa6cb061b381630f6a60c1e4c0c772d816e8faabd980a18f7d4" }
+      },
+      "refs": {
+        "crew_state_local": "772b9969f0fdcafc735f7c6f05b16acf770da931",
+        "crew_state_remote": "772b9969f0fdcafc735f7c6f05b16acf770da931",
+        "notes_crew": ""
+      }
+    },
+    {
+      "repo": "/Users/david/Development/david-driscoll/stargate-command-cluster",
+      "head": "main",
+      "core_hooksPath": ".husky",
+      "hooks_dir": "/Users/david/Development/david-driscoll/stargate-command-cluster/.husky",
+      "config_hooks": "",
+      "hooks": {
+        "pre-commit": { "channels": "file", "sha256": "31ead1c9d2b657dc6ea32b75e1a572d0152201991f3c74b012aa952a179bacdf" },
+        "post-commit": { "channels": "file", "sha256": "622c4444f826d1491fe1e42ede42e66b26826ef1654f3fd63e85337740c6696d" },
+        "pre-push": { "channels": "file", "sha256": "77b6b2e6fb91898c05b61dd8db110dd6b6174e16e497161dbeea2a3fcbee192e" },
+        "post-checkout": { "channels": "file", "sha256": "94edf0d0b94a8704d4e11198207b8a1610acf6d22e0ebcb8c1c0ee04f5160d48" },
+        "post-merge": { "channels": "file", "sha256": "9f0c8d433c66b80f7b28ef3afbeff3e34314d85ab35bda777fb8716db15451b7" },
+        "post-rewrite": { "channels": "file", "sha256": "7a50403660b70fa6cb061b381630f6a60c1e4c0c772d816e8faabd980a18f7d4" }
+      },
+      "refs": {
+        "crew_state_local": "8a954da6d3dbf30ba404d694d75f53619a21f3f1",
+        "crew_state_remote": "8a954da6d3dbf30ba404d694d75f53619a21f3f1",
+        "notes_crew": ""
+      }
+    }
+  ]
+}

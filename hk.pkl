@@ -1,27 +1,83 @@
 amends "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtins.pkl"
 
-// hk hook configuration — see david-driscoll/vault#81
+// hk hook configuration — consolidated from the two competing configs that
+// both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603).
 //
-// Deliberate safety posture for this repo:
+// WHY THIS FILE LIVES AT THE REPO ROOT
 //
-//   * `fix = false` on pre-commit. hk NEVER mutates the working tree during a
-//     commit. This repo is frequently worked in by several concurrent agents
-//     sharing one checkout; an auto-fixer that rewrites files mid-commit can
-//     pick up a neighbour's unstaged edits. Auto-fixing is still available on
-//     demand via `hk fix`.
+// hk resolves exactly one project config, and a root `hk.pkl` takes precedence
+// over `.config/hk.pkl` with NO warning of any kind. While both files existed,
+// this root file won and #603's `exclude` block was silently inert. Verified
+// empirically against hk 1.53.0 with marker steps in each file.
+//
+// The config therefore lives at the WINNING path on purpose. Keeping it in
+// `.config/` would leave it permanently vulnerable to being shadowed again by
+// any stray root `hk.pkl` — which is exactly what `hk init` and the `hk-setup`
+// skill generate by default. At the root, nothing can silently outrank it.
+//
+// DELIBERATE SAFETY POSTURE (preserved from #601 — do not "fix" this)
+//
+//   * `fix = false` on pre-commit / pre-push. hk NEVER mutates the working
+//     tree during a commit or push. This repo is frequently worked in by
+//     several concurrent agents sharing one checkout; an auto-fixer that
+//     rewrites files mid-commit can pick up a neighbour's unstaged edits.
+//     Auto-fixing stays available on demand via `hk fix`.
 //   * `stash = "none"` follows from the above — with no mutation there is
-//     nothing to stash, so hk never runs `git stash` and can never strand work
-//     in the stash if it is interrupted.
+//     nothing to stash, so hk never runs `git stash` and can never strand a
+//     concurrent agent's work in the stash if it is interrupted.
 //
 // Crew's own hooks are NOT re-expressed here. hk registers via git config
 // (`hook.hk-pre-commit.*`) and git 2.55 runs that channel *alongside*
 // `.git/hooks/*`, so crew's state-sync hooks keep working untouched.
 // See the PR body for why the crew state guard deliberately stays with crew.
 
+local excludes = new Listing<String> {
+  // SOPS-ENCRYPTED FILES — HIGHEST-SEVERITY EXCLUSION. DO NOT REMOVE.
+  // Any byte-level rewrite (trailing whitespace, final newline, reformat)
+  // invalidates the SOPS MAC and renders the file PERMANENTLY UNDECRYPTABLE.
+  // The `trailing-whitespace` and `newlines` steps below were verified to
+  // rewrite a `.sops.yaml` file under `hk fix --all` when NOT excluded here.
+  // Note: a per-step `exclude` type-checks but does NOT actually filter in
+  // hk 1.53.0 — the exclusion has to live at this top level to take effect.
+  "**/*.sops.yaml"
+  "**/*.sops.yml"
+  "**/*.sops.json"
+  "**/*.sops.env"
+  "**/*.sops.toml"
+  "**/*.agekey"
+
+  "**/obj/**/*"
+  "sdks/**/*"
+  ".vs/**/*"
+  ".vscode/**/*"
+  ".idea/**/*"
+  ".claude/**/*"
+  ".agents/**/*"
+  ".apm/**/*"
+  ".copilot/**/*"
+  ".squad/**/*"
+  // crew owns and rewrites everything under .crew/ — keep hk out of it,
+  // otherwise the two tools fight over .crew/casting/*.json and .crew/templates/*.
+  ".crew/**/*"
+  // Documents secret *detection patterns*. Its reference table quotes the
+  // PEM private-key banner verbatim as an example (no key body), which trips
+  // the detect-private-key step and would fail every commit touching it.
+  ".github/skills/secret-handling/SKILL.md"
+  "**/*.verified.*"
+  "**/*.received.*"
+}
+
 local linters = new Mapping<String, Step> {
     // Formatter + linter. Config lives in biome.json (which already excludes sdks/).
-    ["biome"] = Builtins.biome
+    ["biome"] = (Builtins.biome) {
+        fix = "biome check --write --unsafe --no-errors-on-unmatched {{ files }}"
+    }
+
+    // Whitespace hygiene. These DO rewrite files under a fix-enabled hook,
+    // which is why the sops exclusions above are load-bearing.
+    ["trailing-whitespace"] = Builtins.trailing_whitespace
+    ["newlines"] = Builtins.newlines
 
     // Repo-hygiene guards. These are pure checks — they never rewrite a file.
     ["check-merge-conflict"] = Builtins.check_merge_conflict
@@ -29,8 +85,16 @@ local linters = new Mapping<String, Step> {
     ["check-added-large-files"] = Builtins.check_added_large_files
 }
 
+exclude = excludes
+
 hooks {
     ["pre-commit"] {
+        fix = false
+        stash = "none"
+        steps = linters
+    }
+
+    ["pre-push"] {
         fix = false
         stash = "none"
         steps = linters
