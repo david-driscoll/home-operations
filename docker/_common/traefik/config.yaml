@@ -98,6 +98,13 @@ certificatesResolvers:
       storage: "/letsencrypt/acme.json"
       dnsChallenge:
         provider: cloudflare
+        # Resolve challenges against public DNS, never the container resolver.
+        # MagicDNS routes *.driscoll.tech to the Technitium cluster, which is
+        # authoritative for dns.driscoll.tech — lego would then pick that as the
+        # ACME zone and ask Cloudflare for a zone that does not exist there.
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
 
   cloudflare:
     acme:
@@ -106,3 +113,6 @@ certificatesResolvers:
       storage: "/letsencrypt/acme.json"
       dnsChallenge:
         provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
