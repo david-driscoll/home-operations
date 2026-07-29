@@ -8,5 +8,15 @@
     "status": "active",
     "createdAt": "2026-07-29T01:07:07.698Z",
     "updatedAt": "2026-07-29T01:07:07.698Z"
+  },
+  {
+    "id": "4ff2fc46-9fdb-443e-b26c-f1d485360c16",
+    "class": "DECISION",
+    "loadGuidance": "ALWAYS",
+    "title": "Ghost casting + Link/Morpheus boundary re-cut on authority",
+    "path": ".crew/decisions/inbox/crew-coordinator-ghost-casting-link-morpheus-boundary-re-cut-on-authority-4ff2fc46.md",
+    "status": "active",
+    "createdAt": "2026-07-29T01:17:41.875Z",
+    "updatedAt": "2026-07-29T01:17:41.875Z"
   }
 ]
