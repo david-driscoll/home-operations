@@ -11,7 +11,6 @@ import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
-// import * as b2 from "@pulumi/b2";
 import { createGatusDnsUptime } from "../../components/StandardDns.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 

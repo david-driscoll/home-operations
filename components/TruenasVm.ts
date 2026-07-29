@@ -23,14 +23,6 @@ export interface TruenasVmArgs {
 export interface TruenasVmResult {
   longhorn: string;
   volsync: string;
-  // backblaze: {
-  //   backup: pulumi.Output<string>;
-  //   backupCredential: OnePasswordItem;
-  //   backupApplicationKey: pulumi.Output<string>;
-  //   database: pulumi.Output<string>;
-  //   databaseCredential: OnePasswordItem;
-  //   databaseApplicationKey: pulumi.Output<string>;
-  // };
   // truenas: {`
   //   backup: pulumi.Output<string>;
   //   database: pulumi.Output<string>;
@@ -157,14 +149,6 @@ export class TruenasVm extends pulumi.ComponentResource {
     return {
       longhorn: longhorn?.mountpoint ?? `/mnt/${this.backupDatasetId}/${name}/longhorn`,
       volsync: volsync?.mountpoint ?? `/mnt/${this.backupDatasetId}/${name}/volsync`,
-      // backblaze: {
-      //   backupCredential: backupCredential,
-      //   backup: b2Bucket.bucketName,
-      //   backupApplicationKey: b2BucketApplicationKey.applicationKeyId,
-      //   database: b2DatabaseBucket.bucketName,
-      //   databaseCredential: backupCredential,
-      //   databaseApplicationKey: b2DatabaseBucketApplicationKey.applicationKeyId,
-      // },
       // truenas: {
       //   backup: minioBucket.bucket,
       //   database: minioDbBucket.bucket,
