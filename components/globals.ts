@@ -19,7 +19,6 @@ export class GlobalResources extends ComponentResource {
   public readonly technitiumProvider: TechnitiumProvider;
   public readonly proxmoxCredential;
   public readonly tailscaleCredential;
-  // public readonly backblazeCredential
   public readonly tailscaleProvider: TailscaleProvider;
   public readonly tailscaleDomain: Output<string>;
   public readonly searchDomain: Output<string>;
@@ -30,7 +29,6 @@ export class GlobalResources extends ComponentResource {
   public readonly cloudflareZoneId: Output<string>;
   public readonly cloudFlareAccountId: Output<string>;
   public readonly store: VaultStore;
-  // public readonly backblazeProvider: BackblazeProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -131,15 +129,5 @@ export class GlobalResources extends ComponentResource {
       },
       cro,
     );
-
-    // this.backblazeCredential = output(op.getItemByTitle("Backblaze Master Application Key"));
-    // this.backblazeProvider = new BackblazeProvider(
-    //   "backblaze",
-    //   {
-    //     applicationKeyId: this.backblazeCredential.fields.apply((z) => z["username"].value!),
-    //     applicationKey: this.backblazeCredential.fields.apply((z) => z["credential"].value!),
-    //   },
-    //   cro,
-    // );
   }
 }

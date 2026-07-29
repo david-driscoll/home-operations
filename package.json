@@ -31,9 +31,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@pulumi/adguard": "file:sdks/adguard",
     "@pulumi/authentik": "file:sdks/authentik",
-    "@pulumi/b2": "file:sdks/b2",
     "@pulumi/github": "^6.8.0",
     "@pulumi/http": "^0.3.0",
     "@pulumi/kubernetes": "^4.23.0",
@@ -53,9 +51,7 @@
     "private-ip": "^3.0.2"
   },
   "allowScripts": {
-    "file:sdks/adguard": true,
     "file:sdks/authentik": true,
-    "file:sdks/b2": true,
     "file:sdks/pbs": true,
     "file:sdks/tailscale": true,
     "file:sdks/technitium": true,
