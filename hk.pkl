@@ -1,0 +1,49 @@
+amends "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtins.pkl"
+
+// hk hook configuration — see david-driscoll/vault#81
+//
+// Deliberate safety posture for this repo:
+//
+//   * `fix = false` on pre-commit. hk NEVER mutates the working tree during a
+//     commit. This repo is frequently worked in by several concurrent agents
+//     sharing one checkout; an auto-fixer that rewrites files mid-commit can
+//     pick up a neighbour's unstaged edits. Auto-fixing is still available on
+//     demand via `hk fix`.
+//   * `stash = "none"` follows from the above — with no mutation there is
+//     nothing to stash, so hk never runs `git stash` and can never strand work
+//     in the stash if it is interrupted.
+//
+// Crew's own hooks are NOT re-expressed here. hk registers via git config
+// (`hook.hk-pre-commit.*`) and git 2.55 runs that channel *alongside*
+// `.git/hooks/*`, so crew's state-sync hooks keep working untouched.
+// See the PR body for why the crew state guard deliberately stays with crew.
+
+local linters = new Mapping<String, Step> {
+    // Formatter + linter. Config lives in biome.json (which already excludes sdks/).
+    ["biome"] = Builtins.biome
+
+    // Repo-hygiene guards. These are pure checks — they never rewrite a file.
+    ["check-merge-conflict"] = Builtins.check_merge_conflict
+    ["detect-private-key"] = Builtins.detect_private_key
+    ["check-added-large-files"] = Builtins.check_added_large_files
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = false
+        stash = "none"
+        steps = linters
+    }
+
+    // `hk check` — read-only, used by CI and by hand.
+    ["check"] {
+        steps = linters
+    }
+
+    // `hk fix` — explicit, human-invoked auto-fix.
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+}
