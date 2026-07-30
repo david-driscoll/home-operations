@@ -62,33 +62,17 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     // ── Build hosts map from all exported stacks ──────────────────────────
     const hosts: [string, string][] = [["idp", idpAddr], ["unifi-dns", unifiDnsIp], ...dnsNodes.map(node => [node.name, node.ip] as [string, string])];
     for (const exp of allExports) {
-      for (const [, { name, externalIp }] of Object.entries(exp.hosts)) {
+      for (const { name, externalIp } of exp.hosts) {
         hosts.push([name, externalIp]);
       }
     }
 
     // ── Aggregate services, internalIps, and test device lists ───────────
-    const internalIps = allExports.flatMap(exp =>
-      Object.values(exp.hosts)
-        .filter(n => n.internalIp)
-        .map(n => n.internalIp!),
-    ) as TailscaleIp[];
+    const internalIps = allExports.flatMap(exp => exp.hosts.filter(n => n.internalIp).map(n => n.internalIp!)) as TailscaleIp[];
 
-    const proxmoxDevices = allExports.flatMap(exp =>
-      Object.entries(exp.hosts)
-        .filter(([_, n]) => n.nodeType === "proxmox")
-        .map(([name, _]) => name),
-    );
-    const dockgeDevices = allExports.flatMap(exp =>
-      Object.entries(exp.hosts)
-        .filter(([_, n]) => n.nodeType === "dockge")
-        .map(([name, _]) => name),
-    );
-    const pbsDevices = allExports.flatMap(exp =>
-      Object.entries(exp.hosts)
-        .filter(([_, n]) => n.nodeType === "pbs")
-        .map(([name, _]) => name),
-    );
+    const proxmoxDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "proxmox").map(n => n.name));
+    const dockgeDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "dockge").map(n => n.name));
+    const pbsDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "pbs").map(n => n.name));
     const services = allExports.flatMap(exp => exp.services);
     const tests = {
       proxmoxDevices,
