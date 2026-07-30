@@ -342,6 +342,38 @@ net.ipv6.conf.all.forwarding = 1
       { parent: parent, dependsOn: [resource, tailscaleForwardingConfig] },
     );
 
+    // Containers behind a docker bridge (MTU 1500) negotiate MSS 1460, but forwarded
+    // traffic leaves via tailscale0 (MTU 1280); without clamping, full-size return
+    // segments are black-holed and TLS handshakes to remote-site services stall.
+    const mssClampUnit = copyFileToRemote(`${name}-tailscale-mss-clamp-unit`, {
+      connection: { host: `${name}.${tailscaleDomain}`, user: "root" },
+      remotePath: "/etc/systemd/system/tailscale-mss-clamp.service",
+      content: `[Unit]
+Description=Clamp TCP MSS to PMTU for traffic forwarded into tailscale0
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'iptables -t mangle -C FORWARD -o tailscale0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || iptables -t mangle -A FORWARD -o tailscale0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu'
+ExecStart=/bin/sh -c 'ip6tables -t mangle -C FORWARD -o tailscale0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || ip6tables -t mangle -A FORWARD -o tailscale0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu'
+
+[Install]
+WantedBy=multi-user.target
+`,
+      parent: parent,
+    });
+
+    const _mssClamp = new remote.Command(
+      `${name}-tailscale-mss-clamp`,
+      {
+        connection: { host: `${name}.${tailscaleDomain}`, user: "root" },
+        create: "systemctl daemon-reload && systemctl enable --now tailscale-mss-clamp.service",
+        triggers: [mssClampUnit.id],
+      },
+      { parent: parent, dependsOn: [resource, mssClampUnit] },
+    );
+
     return { resource, deviceInfo };
   });
 }
