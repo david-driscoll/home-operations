@@ -44,8 +44,6 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
   const currentAcl = tailscale.getAclOutput({
     provider: globals.tailscaleProvider,
   });
-  const primaryDns = getTailscaleIp("adguard-home", globals);
-  const secondaryDns = getTailscaleIp("dockge-as", globals);
   const unifiDns = getTailscaleIp("discord", globals);
   const idpIp = getTailscaleIp("idp", globals);
 
@@ -60,9 +58,9 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
 
-  return pulumi.all([currentAcl.hujson, nodeExports, primaryDns, secondaryDns, unifiDns, idpIp, dnsMachines]).apply(([hujson, allExports, primaryDnsIp, secondaryDnsIp, unifiDnsIp, idpAddr, dnsNodes]) => {
+  return pulumi.all([currentAcl.hujson, nodeExports, unifiDns, idpIp, dnsMachines]).apply(([hujson, allExports, unifiDnsIp, idpAddr, dnsNodes]) => {
     // ── Build hosts map from all exported stacks ──────────────────────────
-    const hosts: [string, string][] = [["idp", idpAddr], ["primary-dns", primaryDnsIp], ["secondary-dns", secondaryDnsIp], ["unifi-dns", unifiDnsIp], ...dnsNodes.map(node => [node.name, node.ip] as [string, string])];
+    const hosts: [string, string][] = [["idp", idpAddr], ["unifi-dns", unifiDnsIp], ...dnsNodes.map(node => [node.name, node.ip] as [string, string])];
     for (const exp of allExports) {
       for (const [, { name, externalIp }] of Object.entries(exp.hosts)) {
         hosts.push([name, externalIp]);
@@ -106,6 +104,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     aclsJson = applyAllEdits(aclsJson, ["tests"], []);
     aclsJson = applyAllEdits(aclsJson, ["ssh"], []);
     aclsJson = applyAllEdits(aclsJson, ["sshTests"], []);
+    aclsJson = applyAllEdits(aclsJson, ["hosts"], {});
 
     const manager = new TailscaleAclManager(aclsJson, hosts, tests);
     const testData = manager.testData;
@@ -189,7 +188,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       "default-dns",
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
-        dst: ["host:primary-dns", "host:secondary-dns", tag.dns],
+        dst: [tag.dns],
         ip: ports.dns,
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
@@ -571,7 +570,9 @@ function configureDockgeAccess(manager: TailscaleAclManager) {
   manager.setGrant({ src: [tag.dockge], dst: [tag.observability], ip: ports.observability }, { accept: [tag.dockge], deny: testData.knownNormalUsers });
   manager.setGrant({ src: [tag.dockge], dst: [autogroups.internet], ip: ports.any }, { accept: [tag.dockge] });
 
-  const rules = Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map(z => [z, { accept: [`root`] }] as const)));
+  const rules = Object.fromEntries(
+    testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.dockgeDevices.map(z => [z, { accept: [`root`] } as TailscaleSshTestInputItem] as const)),
+  );
   manager.setSshRule(
     {
       src: [tag.dockge],
@@ -638,7 +639,9 @@ function configurePbsAccess(manager: TailscaleAclManager) {
 function configureKubernetesAccess(manager: TailscaleAclManager, clusters: KubernetesCluster[]) {
   const testData = manager.testData;
   const clusterTags = clusters.map(z => z.tag);
-  const rules = Object.fromEntries(testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map(z => [z, { check: [`root`] }] as const)));
+  const rules = Object.fromEntries(
+    testData.knownNormalUsers.map(user => [user, { deny: [`root`] } as TailscaleSshTestInputItem] as const).concat(testData.knownAdminUsers.map(z => [z, { check: [`root`] } as TailscaleSshTestInputItem] as const)),
+  );
 
   // tag.dns: the tailscale operator creates the dns-<cluster> proxy devices
   // (in-cluster Technitium nodes) with tag:dns
