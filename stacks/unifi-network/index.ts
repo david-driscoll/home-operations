@@ -1,6 +1,7 @@
 import { GlobalResources } from "../../components/globals.ts";
 import { assignTailscaleAcls } from "./acl-manager.ts";
 import { configureLocalDns } from "./local-dns.ts";
+import { createTailscaleAttDropFirewallRule } from "./tailscale-drop-firewall-rule.ts";
 import { configureTechnitiumZones } from "./technitium-zone.ts";
 
 const globals = new GlobalResources({}, {});
