@@ -320,13 +320,6 @@ dependencies:
   - .claude/skills/security-digest
   - .claude/skills/unifi-protect-setup
   content_hash: sha256:362f41cacd66a036594f31227e0258f358ef6f4563d1e5abcda228ba79d1e610
-- repo_url: yvgude/lean-ctx
-  host: github.com
-  resolved_commit: 83c670a33a5423c242079b796ffb385d8e60badb
-  package_type: marketplace_plugin
-  deployed_files:
-  - .agents/skills/lean-ctx
-  content_hash: sha256:b32a39479e7c3486acbdf8a1ceb1959d1864a07d7ddf3e2df9387e9f4ba93595
 mcp_servers:
 - cloudflare-api
 - cloudflare-bindings

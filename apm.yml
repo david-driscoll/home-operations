@@ -36,7 +36,6 @@ dependencies:
   - sirkirby/unifi-mcp/plugins/unifi-protect
   - sirkirby/unifi-mcp/plugins/unifi-access
   - cloudflare/skills
-  - yvgude/lean-ctx
   mcp:
   - name: kubernetes
     registry: false
