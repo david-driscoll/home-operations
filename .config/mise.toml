@@ -30,7 +30,7 @@ pkl = "0.32.1"
 biome = "2.5.2"
 typos = "1.48.0"
 "npm:typescript" = "5.9.3"
-node = "24.18.0"
+node = "24.18.1"
 pulumi = "3.255.0"
 "github:microsoft/apm" = { version = "v0.26.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.0", bin = "skillfile" }
