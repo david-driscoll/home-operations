@@ -1,4 +1,4 @@
-# Comment Watch — detecting human replies on `vault` issues
+# Comment Watch — detecting human replies on `vault` issues and review feedback on PRs
 
 Repo-local operative spec for vault#105. Read this alongside
 `.crew/templates/ralph-reference.md` (Ralph's work-check cycle) and
@@ -11,7 +11,8 @@ Repo-local operative spec for vault#105. Read this alongside
 > byte-identical to the shipped template. An edit there would be silently reverted
 > on the next upgrade — worse than not making it, because it would look done.
 >
-> The convention is therefore proposed upstream in **[Blacklite/crew#3](https://github.com/Blacklite/crew/pull/3)**,
+> The convention is therefore proposed upstream in **[Blacklite/crew#3](https://github.com/Blacklite/crew/pull/3)**
+> (merged) and **[Blacklite/crew#4](https://github.com/Blacklite/crew/pull/4)** (PR review feedback),
 > which is where every agent in every crew will actually pick it up. This file is
 > the repo-local operative copy: it keeps the behaviour live in the window before
 > that lands, and afterwards it shrinks to the estate-specific parts (the tracker,
@@ -168,31 +169,83 @@ genuine David replies:
 Nothing outstanding, so the cutoff loses nothing. Had any been unanswered, they would
 have been routed by hand before the floor was set.
 
-**If this PR sits before merging,** re-set `since` to the merge time. Agent comments
-posted in the gap would be unmarked and after the floor — the one window where a false
-human alert is possible.
+**If this PR sits before merging,** check the gap window before touching `since`. The
+concern is *unmarked agent* comments landing after the floor — the one window where a
+false human alert is possible. Re-set `since` to the merge time only if the gap actually
+contains such comments; raising it over an unanswered *human* comment would silence live
+work. It sat, it was checked, and it must not be raised — see
+[Why `since` stays at `02:31:00Z`](#why-since-stays-at-023100z--do-not-correct-it-to-the-merge-time).
 
-## Scope — recommendation for the four code repos
+## Scope — PR review feedback
 
-vault#105 asks whether PR review comments in `home-operations`, `equestria-cluster`,
-`stargate-command-cluster` and `vault` deserve the same treatment. **Recommendation:
-yes, but not with this mechanism, and as a separate issue.**
+vault#105 asked whether PR review comments in the four code repos deserve the same
+treatment. This section recorded the recommendation; it is now **built**, upstream in
+[Blacklite/crew#4](https://github.com/Blacklite/crew/pull/4) with the config below.
 
-The gap is real but narrower than it looks. Ralph already sees `CHANGES_REQUESTED` and
-`APPROVED` through `reviewDecision`. What it misses is a **`COMMENTED` review** and
-**unresolved inline threads** — verified on live open PRs, where a PR carrying review
-activity still reports `reviewDecision: null`.
+The recommendation held on its main point and was **corrected on one**.
 
-The marker machinery is the wrong tool there, because **GitHub already provides the
-high-water mark**: `reviewThreads(first:N) { isResolved isOutdated }`. An unresolved
-thread *is* outstanding work, tracked natively, with no cutoff, no `seen=` field and no
-retroactive problem. The right shape is a separate Ralph category keyed on
-`reviewThreads.isResolved == false` plus `reviews(states:[COMMENTED])`, across all four
-repos — cheap, and it needs none of this.
+### Held
 
-The signing convention still applies to PR comments (an agent must sign whatever it
-posts), but PR-side *detection* should be built on resolution state. Filed separately
-rather than folded in here.
+Ralph already sees `CHANGES_REQUESTED` and `APPROVED` via `reviewDecision`; a `COMMENTED`
+review and an inline thread both leave it `null`. And the marker/`seen=` machinery is
+indeed the wrong tool for threads, because **GitHub already provides the high-water mark**:
+`reviewThreads(first:N) { isResolved }`. An unresolved thread *is* outstanding work — no
+cutoff, no `seen=`, no retroactive problem, because a thread resolved before any of this
+existed is already resolved.
+
+### Corrected — `reviews(states:[COMMENTED])` is a firehose
+
+The recommendation's "plus `reviews(states:[COMMENTED])`" does not survive contact with
+this estate. Codacy posts a top-level `COMMENTED` review or PR conversation comment on
+**every PR**, in every repo. Keying on that flags every PR permanently.
+
+Measured on the live open PRs at the time of writing — six repos, eight open PRs:
+
+| | Items reported |
+|---|---|
+| Without a bot filter | **12** (all bot boilerplate) |
+| With `author.__typename != "Bot"` | **0** |
+
+Inline threads are the opposite: rare and specific — a bot had opened one on about **one PR
+in sixty**. So the filter is asymmetric, and the asymmetry is the whole trick:
+
+- **Inline threads — keep every author.** A bot pointing at a real line is real feedback,
+  and `isResolved` gives it a native ack. (The one live example, vault#40, is a genuine
+  Codacy suggestion about duplicated `mise.toml` tool definitions.)
+- **Top-level reviews and PR conversation comments — drop `__typename == "Bot"`.** These
+  fire unconditionally and carry no ack.
+
+`seen=` therefore has **no meaning on review threads** (confirmed), but it **does** retain
+meaning on top-level `COMMENTED` review bodies and PR conversation comments, which have no
+resolution state and are otherwise just issue comments living on a PR.
+
+### Resolution — agents reply, humans resolve
+
+An agent that addresses a review comment **replies, signed, and leaves the thread open.**
+
+Both directions had a real argument. The failure modes decide it:
+
+- Agent resolves a thread it only *partly* addressed → feedback vanishes from every view the
+  reviewer uses. Fails **silently**.
+- Agent leaves an addressed thread open → it stays visible until confirmed. Fails **noisily**,
+  and self-corrects.
+
+For a mechanism that exists so feedback stops sitting unread, a silent drop defeats the
+purpose; noise merely annoys. The queue-cleanliness argument for self-resolving is answered
+separately: a thread whose newest comment is a signed agent reply is demoted to **awaiting
+confirmation**, not re-reported as new work. If David replies again, it returns to the queue
+automatically. That is also the one job the marker does on the PR side — distinguishing
+"an agent has responded" from "nobody has".
+
+### Repo scope
+
+Configurable, not hardcoded — the estate has crew PRs outside the four code repos.
+`commentWatch.pullRequestRepos` lists all six: the four code repos, plus `Blacklite/crew`
+(crew's own protocol PRs) and `david-driscoll/.github` (shared Renovate config). Cost is
+one GraphQL request per cycle for all six, via aliases.
+
+Full spec, including the query and the fixture results: `.crew/templates/ralph-reference.md`
+→ "PR Review Feedback Detection", once Blacklite/crew#4 lands and `crew upgrade` runs.
 
 ## Config
 
@@ -200,9 +253,43 @@ rather than folded in here.
 "commentWatch": {
   "repo": "david-driscoll/vault",
   "since": "2026-08-01T02:31:00Z",
-  "scope": "issues"
+  "scope": "issues+pulls",
+  "pullRequestRepos": [
+    "david-driscoll/home-operations",
+    "david-driscoll/vault",
+    "david-driscoll/equestria-cluster",
+    "david-driscoll/stargate-command-cluster",
+    "Blacklite/crew",
+    "david-driscoll/.github"
+  ]
 }
 ```
+
+### Why `since` stays at `02:31:00Z` — do not "correct" it to the merge time
+
+HO#625 merged at `2026-08-01T03:02:36Z`, half an hour after `since` was written, and the
+rule above says to re-set the floor to merge time when the PR sits. **Checked before
+applying it, and it must not be applied here.** Four comments landed in that window:
+
+| Issue | Comment | Marked? | Acknowledged |
+|---|---|---|---|
+| #109 | 02:35:48Z | no — David | ✅ `seen=2026-08-01T02:35:48Z` |
+| #110 | 02:39:37Z | no — David | ✅ `seen=2026-08-01T02:39:37Z` |
+| #111 | 02:46:32Z | no — David | ✅ `seen=2026-08-01T02:46:32Z` |
+| **#81** | **02:37:27Z** — *"Lets do steps 2 and 3, I'm not releasing crew at the moment"* | no — David | ❌ **none — still outstanding** |
+
+Every comment in the gap is a genuine David reply; **zero** unmarked agent comments were
+posted in it, because the crew was already signing by then. So the false alert the rule
+guards against never became possible, while raising the floor would have **silenced a live,
+unanswered instruction on #81** — precisely the failure this whole mechanism exists to
+prevent. Three of the four are already suppressed by `seen=`, which is the mechanism doing
+its job; the fourth should keep nagging until it is answered.
+
+**Generalise the rule:** before raising the floor, list the comments in the gap. Raise it
+only over unmarked *agent* comments. Never raise it over an unanswered human one — a floor
+is for a back-catalogue that cannot be classified, not for live work that can.
+
+`pullRequestRepos` needs no equivalent floor: `isResolved` is not retroactive.
 
 `.crew/config.json` is operator config — `crew upgrade` reads it and never rewrites it
 — so the cutoff survives upgrades.
