@@ -85,3 +85,24 @@ both Claude Code and GitHub Copilot.
 - **MCP tools:** `.mcp.json` at the repo root exposes crew's state tools;
   Claude Code loads it automatically.
 <!-- crew:end -->
+
+### Agent comment signing (estate rule)
+
+Crew agents post through `gh` with David's credentials, so **every comment an agent
+leaves on a `vault` issue or a PR is authored by `david-driscoll`** — the same account
+as David's own replies. Sign yours so the two can be told apart:
+
+```
+<!-- crew:agent={member} -->
+```
+
+Last line of every comment you post to an issue or PR. Anything unsigned is a human
+comment by definition, and that inverse is the only reason Ralph can detect David's
+replies at all. When your comment answers something David wrote, extend the marker
+with `seen={ISO-8601 timestamp of the comment you are answering}`.
+
+Read `.crew/comment-watch.md` before posting comments programmatically, before
+changing Ralph's scan, or when a human reply needs routing. The convention is proposed
+upstream in [Blacklite/crew#3](https://github.com/Blacklite/crew/pull/3); the local
+file stays authoritative for the estate-specific parts (tracker, adoption cutoff,
+scope).
