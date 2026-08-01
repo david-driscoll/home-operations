@@ -4,18 +4,6 @@ import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtin
 // hk hook configuration — consolidated from the two competing configs that
 // both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603).
 //
-// WHY THIS FILE LIVES AT THE REPO ROOT
-//
-// hk resolves exactly one project config, and a root `hk.pkl` takes precedence
-// over `.config/hk.pkl` with NO warning of any kind. While both files existed,
-// this root file won and #603's `exclude` block was silently inert. Verified
-// empirically against hk 1.53.0 with marker steps in each file.
-//
-// The config therefore lives at the WINNING path on purpose. Keeping it in
-// `.config/` would leave it permanently vulnerable to being shadowed again by
-// any stray root `hk.pkl` — which is exactly what `hk init` and the `hk-setup`
-// skill generate by default. At the root, nothing can silently outrank it.
-//
 // DELIBERATE SAFETY POSTURE (preserved from #601 — do not "fix" this)
 //
 //   * `fix = false` on pre-commit / pre-push. hk NEVER mutates the working
