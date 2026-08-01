@@ -1,0 +1,156 @@
+services:
+  # The frontend image bakes in `proxy_pass http://backend:8000` (upstream
+  # docker/nginx.conf), so the backend must answer to the bare name `backend`.
+  # That alias is scoped to the stack-private `homelable` network on purpose —
+  # claiming a name that generic on the host-wide `dockge_default` would
+  # collide with any other stack that ever adds a `backend` service.
+  homelable-backend:
+    image: ghcr.io/pouzor/homelable-backend:3.1.2@sha256:1d7ffebcbbc2de6363ce6c46009e6dd59be8603fcba75b0c6d9bc473ab104d81
+    container_name: homelable-backend
+    hostname: homelable-backend
+    env_file:
+      - .env
+    environment:
+      SQLITE_PATH: /app/data/homelab.db
+    volumes:
+      # The SQLite DB *is* the hand-curated canvas and is not reproducible from
+      # git. Covered by the celestia dockge backrest plan, which syncs all of
+      # /opt/stacks-data minus an explicit exclude list (stacks/backups/index.ts).
+      - /opt/stacks-data/homelable:/app/data
+    # Strictly tighter than upstream, which only adds NET_RAW (a no-op — it is
+    # already in Docker's default set). This sheds the other ~13 defaults and
+    # keeps only the raw-socket cap the ICMP discovery sweep and `nmap -sS`
+    # actually use. No privileged, no NET_ADMIN, no host networking.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    # No traefik labels and no published ports: the backend is reachable only
+    # through the frontend's nginx proxy.
+    networks:
+      homelable:
+        aliases:
+          - backend
+
+  homelable:
+    image: ghcr.io/pouzor/homelable-frontend:3.1.2@sha256:3c2fa58a512042bd2a5e07340d6b7d7660fa00591e09e646e0302d47e7911230
+    container_name: homelable
+    hostname: homelable
+    depends_on:
+      - homelable-backend
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    networks:
+      - homelable
+      - dockge_default
+    labels:
+      # Enable Traefik
+      traefik.enable: true
+      # This container is on two networks; be explicit about which one traefik
+      # should dial so it never picks the stack-private one.
+      traefik.docker.network: dockge_default
+
+      # homelable has native OIDC (AUTH_MODE=oidc) — no forward-auth
+      # middleware, same pattern as docker/celestia/pdm.
+      traefik.http.routers.homelable.rule: Host(`homelable.${searchDomain}`)
+      traefik.http.routers.homelable.entrypoints: websecure
+      traefik.http.routers.homelable.tls.certresolver: le
+      traefik.http.routers.homelable.service: homelable
+
+      traefik.http.routers.homelable-tailscale.rule: Host(`homelable.${tailscaleDomain}`)
+      traefik.http.routers.homelable-tailscale.entrypoints: tailscale
+      traefik.http.routers.homelable-tailscale.service: homelable
+
+      # --- live view containment ------------------------------------------
+      # LIVEVIEW_KEY enables a read-only canvas that bypasses OIDC entirely.
+      # The key travels in a query string, and traefik's accessLog
+      # (format: common, filters.statusCodes includes "200") writes the full
+      # request line — so every *successful* live-view load logs the key in
+      # plaintext. It also lands in browser history and any outbound Referer.
+      #
+      # So /view is not served on the LAN-facing hostname at all. Live view is
+      # tailnet-only, via the homelable-tailscale router above: every viewer is
+      # already Tailscale-authenticated and governed by the ACLs in git, and a
+      # compromised device on the flat 10.10.0.0/16 cannot reach it.
+      #
+      # TWO paths must be blocked, not one:
+      #   /view             the SPA page — frontend/src/main.tsx switches on
+      #                     window.location.pathname === '/view'
+      #   /api/v1/liveview  the data endpoint that page fetches
+      #                     (backend/app/api/routes/liveview.py). It is
+      #                     key-authenticated only, NOT session-guarded, so
+      #                     blocking the page alone would still leave the whole
+      #                     topology readable as JSON.
+      # /api/v1/liveview/config is deliberately NOT blocked: it is guarded by
+      # the OIDC session and is what the UI reads to build a share link.
+      #
+      # This router is the entire control. Delete it, or let the main router's
+      # priority exceed it, and /view is live on the LAN hostname with nothing
+      # else in the way. The Gatus "Live View Blocked" check in definition.yaml
+      # is the regression alarm.
+      traefik.http.routers.homelable-view-block.rule: Host(`homelable.${searchDomain}`) && (PathPrefix(`/view`) || Path(`/api/v1/liveview`) || Path(`/api/v1/liveview/`))
+      traefik.http.routers.homelable-view-block.entrypoints: websecure
+      traefik.http.routers.homelable-view-block.tls.certresolver: le
+      # Default priority is rule length; the main router's rule is ~30 chars.
+      # Pinned high so it stays dominant even if that rule grows.
+      traefik.http.routers.homelable-view-block.priority: 1000
+      # Defined in docker/_common/traefik/dynamic/middlewares.yaml.
+      traefik.http.routers.homelable-view-block.service: error-pages@file
+
+      traefik.http.services.homelable.loadbalancer.server.port: 80
+
+  homelable-mcp:
+    image: ghcr.io/pouzor/homelable-mcp:3.1.2@sha256:60f9bdb43c0822730b9e3d88567b8b4bcf1a2bc220c33648fca4e5d0e88ddefc
+    container_name: homelable-mcp
+    hostname: homelable-mcp
+    depends_on:
+      - homelable-backend
+    env_file:
+      - .env
+    environment:
+      BACKEND_URL: http://backend:8000
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    networks:
+      - homelable
+      - dockge_default
+    labels:
+      traefik.enable: true
+      traefik.docker.network: dockge_default
+
+      # tailscale entrypoint ONLY — deliberately no websecure router.
+      # MCP clients authenticate with a static X-API-Key header and cannot
+      # complete an interactive OIDC redirect, so authentik forward-auth would
+      # *break* this service rather than protect it. The boundary therefore has
+      # to be network-level: an endpoint whose only credential is a static key
+      # must not be reachable from the flat /16 this stack is about to scan.
+      #
+      # MCP_SERVICE_KEY (mcp -> backend) also bypasses OIDC by design, but only
+      # over the stack-private network, and the backend has no router at all.
+      traefik.http.routers.homelable-mcp.rule: Host(`homelable-mcp.${tailscaleDomain}`)
+      traefik.http.routers.homelable-mcp.entrypoints: tailscale
+      traefik.http.routers.homelable-mcp.service: homelable-mcp
+      traefik.http.services.homelable-mcp.loadbalancer.server.port: 8001
+
+networks:
+  # Stack-private. Carries the `backend` alias the frontend's baked-in
+  # nginx.conf requires, without putting that name on dockge_default.
+  homelable: {}
+  dockge_default:
+    external: true
+
+x-dockge:
+  urls:
+    - https://homelable.${searchDomain}
+    - https://homelable.${tailscaleDomain}
+    - https://homelable-mcp.${tailscaleDomain}/mcp
