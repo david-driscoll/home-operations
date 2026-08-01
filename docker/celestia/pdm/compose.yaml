@@ -1,6 +1,6 @@
 services:
   pdm:
-    image: ghcr.io/longqt-sea/proxmox-datacenter-manager@sha256:1fb81c418bef562b9780a05e8a781373eb9cc57acda7935a3ee27f5930a6b30a
+    image: ghcr.io/longqt-sea/proxmox-datacenter-manager@sha256:00fd8e1ec0ed890182146b08bcacbab35053b93538e270d17a230109649851e6
     container_name: pdm
     hostname: pdm
     cgroup: host
