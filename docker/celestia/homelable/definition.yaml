@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: homelable
+spec:
+  name: Homelable
+  category: ${CLUSTER_TITLE}
+  description: Homelab network topology map and LAN device discovery
+  url: &url https://homelable.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homelable.svg
+  access_policy:
+    groups:
+      # This app renders a complete map of the network. Admins only.
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        - url: "https://homelable.${searchDomain}/api/v1/auth/oidc/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # The SPA shell. nginx serves it regardless of session, so a plain 200 is
+    # the right signal that the frontend is up.
+    - group: ${CLUSTER_TITLE}
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+    # Deeper: /api/v1/health has no auth dependency and is proxied by nginx to
+    # the backend, so this covers frontend -> nginx -> backend in one check.
+    - name: API
+      group: ${CLUSTER_TITLE}
+      url: https://homelable.${searchDomain}/api/v1/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == ok"
+    # Regression alarm for the live-view containment in compose.yaml. If the
+    # blocking router is removed, reordered, or out-prioritised, /view starts
+    # answering 200 on the LAN-facing hostname and this fires. Any other
+    # outcome (404 from error-pages, 502 if error-pages is down) still passes,
+    # so it only alerts on the thing that actually matters.
+    - name: Live View Blocked
+      group: ${CLUSTER_TITLE}
+      url: https://homelable.${searchDomain}/view
+      method: GET
+      conditions:
+        - "[STATUS] != 200"

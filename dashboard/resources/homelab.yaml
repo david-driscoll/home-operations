@@ -33,4 +33,35 @@
 
     - size: small
       widgets:
+        # homelable's gethomepage widget endpoint (read-only aggregate counts,
+        # X-API-Key header auth). PENDING is the one worth watching — it is the
+        # "something undeclared appeared on the network" counter, which is
+        # exactly the gap Gatus is structurally blind to.
+        - type: custom-api
+          title: Network
+          title-url: ${HOMELABLE_URL}
+          update-interval: 5m
+          url: ${HOMELABLE_URL}/api/v1/stats/summary
+          headers:
+            X-API-Key: ${HOMELABLE_API_KEY}
+            Accept: application/json
+          template: |
+            <div class="flex justify-between text-center">
+              <div>
+                  <div class="color-highlight size-h3">{{ .JSON.Int "nodes" | formatNumber }}</div>
+                  <div class="size-h6">NODES</div>
+              </div>
+              <div>
+                  <div class="color-positive size-h3">{{ .JSON.Int "online" | formatNumber }}</div>
+                  <div class="size-h6">ONLINE</div>
+              </div>
+              <div>
+                  <div class="color-negative size-h3">{{ .JSON.Int "offline" | formatNumber }}</div>
+                  <div class="size-h6">OFFLINE</div>
+              </div>
+              <div>
+                  <div class="color-highlight size-h3">{{ .JSON.Int "pending_devices" | formatNumber }}</div>
+                  <div class="size-h6">PENDING</div>
+              </div>
+            </div>
         - $include: widgets/nodes.yaml
