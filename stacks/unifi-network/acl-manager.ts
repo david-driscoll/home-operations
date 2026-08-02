@@ -68,11 +68,14 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     }
 
     // ── Aggregate services, internalIps, and test device lists ───────────
-    const internalIps = allExports.flatMap(exp => exp.hosts.filter(n => n.internalIp).map(n => n.internalIp!)) as TailscaleIp[];
+    // These land in ordered ACL arrays (tests, sshTests, grant dst), so they are sorted here
+    // as well as at the source — an unsorted list makes every resync push a pure permutation.
+    const internalIps = (allExports.flatMap(exp => exp.hosts.filter(n => n.internalIp).map(n => n.internalIp!)) as TailscaleIp[]).sort((a, b) => a.localeCompare(b));
 
-    const proxmoxDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "proxmox").map(n => n.name));
-    const dockgeDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "dockge").map(n => n.name));
-    const pbsDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "pbs").map(n => n.name));
+    const byName = (a: string, b: string) => a.localeCompare(b);
+    const proxmoxDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "proxmox").map(n => n.name)).sort(byName);
+    const dockgeDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "dockge").map(n => n.name)).sort(byName);
+    const pbsDevices = allExports.flatMap(exp => exp.hosts.filter(n => n.nodeType === "pbs").map(n => n.name)).sort(byName);
     const services = allExports.flatMap(exp => exp.services);
     const tests = {
       proxmoxDevices,

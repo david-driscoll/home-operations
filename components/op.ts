@@ -124,7 +124,9 @@ export class OPClient {
     const vaultUuid = await this.getVaultUuid("Eris");
     try {
       const allItems = await this.client.listItems(vaultUuid);
-      const filtered = allItems.filter(item => item.tags?.includes(tag));
+      // Connect returns items in an unspecified order that varies between calls; sorting by
+      // title keeps every derived list byte-stable so resyncs don't push pure permutations.
+      const filtered = allItems.filter(item => item.tags?.includes(tag)).sort((a, b) => a.title!.localeCompare(b.title!));
       return Promise.all(filtered.map(z => this.getItemByTitle(z.title!)));
     } catch (e) {
       console.error(`Error finding items by tag (value: ${tag})`, e);

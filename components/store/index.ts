@@ -50,26 +50,31 @@ export class VaultStore {
         ),
       )
       .apply(items => {
-        return items.map(item => {
-          return {
-            name: item.name as unknown as string,
-            services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
-            hosts: Object.entries(item)
-              .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && ("externalIp" in value || "ip" in value))
-              .map(
-                // `ip` fallback tolerates items written before the externalIp rename;
-                // safe to drop once every exporting stack has redeployed.
-                ([key, value]) =>
-                  ({ name: key, ...value, externalIp: (value as { externalIp?: string; ip?: string }).externalIp ?? (value as { ip?: string }).ip }) as {
-                    name: string;
-                    externalIp: string;
-                    internalIp: string;
-                    mac: string;
-                    nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
-                  },
-              ),
-          };
-        });
+        // Sorted at both levels — the exported node name drives ACL tests/grant dsts, and the
+        // 1Password item title it is sorted by upstream can diverge from it.
+        return items
+          .map(item => {
+            return {
+              name: item.name as unknown as string,
+              services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
+              hosts: Object.entries(item)
+                .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && ("externalIp" in value || "ip" in value))
+                .map(
+                  // `ip` fallback tolerates items written before the externalIp rename;
+                  // safe to drop once every exporting stack has redeployed.
+                  ([key, value]) =>
+                    ({ name: key, ...value, externalIp: (value as { externalIp?: string; ip?: string }).externalIp ?? (value as { ip?: string }).ip }) as {
+                      name: string;
+                      externalIp: string;
+                      internalIp: string;
+                      mac: string;
+                      nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
+                    },
+                )
+                .sort((a, b) => a.name.localeCompare(b.name)),
+            };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name));
       });
   }
 
