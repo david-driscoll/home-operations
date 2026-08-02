@@ -18,11 +18,13 @@ mkdir -p "${DATA_DIR}/workspace"
 # Seed config.yaml ONLY on a genuinely fresh volume.
 #
 # This is a one-way door on purpose. config.yaml is live, self-modifying state:
-# `hermes model`, the dashboard settings tab, and `hermes update`'s schema
-# migrations (v0 -> v33 as of 0.19.1) all rewrite it. Copying our seed over an
-# existing file on every deploy would silently revert David's model choice and
-# clobber migrated schema — so if the file exists, we leave it completely alone
-# and say so in the log.
+# `hermes model`, the dashboard settings tab, and the boot-time schema
+# migrator (scripts/docker_config_migrate.py; the ladder spans v12 -> v33 at
+# the pinned image tag, v12 being upstream's auto-migration support floor and
+# 33 the current schema — see config.seed.yaml) all rewrite it. Copying our
+# seed over an existing file on every deploy would silently revert David's
+# model choice and clobber migrated schema — so if the file exists, we leave it
+# completely alone and say so in the log.
 if [[ -f "${DATA_DIR}/config.yaml" ]]; then
   echo "[hermes] config.yaml already present — leaving it untouched."
   echo "[hermes] To re-apply the seed, move the existing file aside first."
