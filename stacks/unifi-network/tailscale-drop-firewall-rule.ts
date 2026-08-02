@@ -9,6 +9,22 @@ import type { GlobalResources } from "../../components/globals.ts";
 import { getTailscaleClient } from "../../components/tailscale.ts";
 import type { components } from "../../types/tailscale.ts";
 
+/**
+ * A single AT&T endpoint IP for one device, together with every source port Tailscale currently
+ * advertises for it. Tailscale reports several concurrent STUN endpoints per device, and the NAT
+ * mapping behind them rotates every few minutes — so the ports are grouped under the IP rather than
+ * spread across one resource each. Only the IP is identity; the ports are payload.
+ */
+interface DropTarget {
+  ip: string;
+  ports: number[];
+}
+
+/** Collapse `{ip, port}` observations into one {@link DropTarget} per IP, with ports sorted so the members list is stable. */
+function toDropTargets(ports: Map<string, Set<number>>): DropTarget[] {
+  return [...ports].map(([ip, p]) => ({ ip, ports: [...p].sort((a, b) => a - b) })).sort((a, b) => a.ip.localeCompare(b.ip));
+}
+
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   const matcher = new CIDRMatcher([Tailscale.subnets.home]);
   const devices = pulumi.output(getTailscaleClient(globals)).apply(async client => {
@@ -20,13 +36,13 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
     });
     const devicesIncludingDrops: {
       device: components["schemas"]["Device"];
-      ipv4IpsToDrop: { ip: string; port: number }[];
-      ipv6IpsToDrop: { ip: string; port: number }[];
+      ipv4IpsToDrop: DropTarget[];
+      ipv6IpsToDrop: DropTarget[];
     }[] = [];
     const peerRelays: string[] = [];
     for (const device of devices.data?.devices ?? []) {
-      const ipv6IpsToDrop: { ip: string; port: number }[] = [];
-      const ipv4IpsToDrop: { ip: string; port: number }[] = [];
+      const ipv6PortsByIp = new Map<string, Set<number>>();
+      const ipv4PortsByIp = new Map<string, Set<number>>();
       const endpoints = device.clientConnectivity?.endpoints ?? [];
       for (const { ip, port } of endpoints.map(e => ({
         ip: e.substring(0, e.lastIndexOf(":")).replace("[", "").replace("]", ""),
@@ -46,12 +62,14 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         if (ipDetails.domain !== "att.com") continue;
         if (ipDetails.country_code !== "US") continue;
 
-        if (ipDetails.ip_version === "4" && ipv4IpsToDrop.findIndex(i => i.ip === ip && i.port === port) === -1) {
-          ipv4IpsToDrop.push({ ip, port });
-        } else if (ipDetails.ip_version === "6" && ipv6IpsToDrop.findIndex(i => i.ip === ip && i.port === port) === -1) {
-          ipv6IpsToDrop.push({ ip, port });
-        }
+        const portsByIp = ipDetails.ip_version === "4" ? ipv4PortsByIp : ipDetails.ip_version === "6" ? ipv6PortsByIp : undefined;
+        if (!portsByIp) continue;
+        const ports = portsByIp.get(ip) ?? new Set<number>();
+        ports.add(port);
+        portsByIp.set(ip, ports);
       }
+      const ipv4IpsToDrop = toDropTargets(ipv4PortsByIp);
+      const ipv6IpsToDrop = toDropTargets(ipv6PortsByIp);
       if (ipv4IpsToDrop.length > 0 || ipv6IpsToDrop.length > 0) {
         devicesIncludingDrops.push({ device, ipv4IpsToDrop, ipv6IpsToDrop });
       }
@@ -74,9 +92,21 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
     }
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
       if (ipv4IpsToDrop.length > 0) {
-        for (const { ip, port } of ipv4IpsToDrop) {
+        for (const { ip, ports } of ipv4IpsToDrop) {
+          const name = `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}`;
+          const portGroup = new firewall.FirewallGroup(
+            `${name}-ports`,
+            {
+              type: "port-group",
+              members: ports.map(String),
+            },
+            {
+              provider: globals.unifiFirewallProvider,
+            },
+          );
+
           const _firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}-${port}`,
+            name,
             {
               enabled: true,
 
@@ -88,7 +118,8 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               source: {
                 zoneId: externalZone.id,
                 ips: [ip],
-                port: port,
+                portGroupId: portGroup.id,
+                portMatchingType: "OBJECT",
               },
               destination: {
                 zoneId: internalZone.id,
@@ -108,9 +139,21 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       }
 
       if (ipv6IpsToDrop.length > 0) {
-        for (const { ip, port } of ipv6IpsToDrop) {
+        for (const { ip, ports } of ipv6IpsToDrop) {
+          const name = `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}`;
+          const portGroup = new firewall.FirewallGroup(
+            `${name}-ports`,
+            {
+              type: "port-group",
+              members: ports.map(String),
+            },
+            {
+              provider: globals.unifiFirewallProvider,
+            },
+          );
+
           const _firewallRule = new firewall.FirewallPolicy(
-            `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}-${port}`,
+            name,
             {
               enabled: true,
 
@@ -122,7 +165,8 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
               source: {
                 zoneId: externalZone.id,
                 ips: [ip],
-                port: port,
+                portGroupId: portGroup.id,
+                portMatchingType: "OBJECT",
               },
               destination: {
                 zoneId: internalZone.id,
