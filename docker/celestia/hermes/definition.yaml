@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: hermes
+spec:
+  name: Hermes Agent
+  category: ${CLUSTER_TITLE}
+  description: NousResearch agent runtime — dashboard, gateway, and skills
+  url: &url https://hermes.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nous-research.svg
+  access_policy:
+    groups:
+      # This agent holds a shell inside the home network. Admins only, and
+      # deliberately narrower than "anyone who can reach the hostname".
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # The self-hosted OIDC provider validates that the redirect_uri path
+        # ends in exactly `/auth/callback` before it will even bounce to the
+        # IDP (plugins/dashboard_auth/self_hosted: _validate_redirect_uri).
+        # Any other path fails fast at login with a confusing error, so this
+        # value is not free-form.
+        - url: "https://hermes.${searchDomain}/auth/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # /api/health is the dashboard's unauthenticated liveness probe and the
+    # same endpoint the container healthcheck uses. It is the only health
+    # surface this stack has: the gateway's own /health lives on the
+    # OpenAI-compatible API server, which is deliberately off.
+    #
+    # `auth_required == true` is the load-bearing assertion here, not a
+    # nicety. It is the regression alarm for the dashboard's auth gate — if
+    # the OIDC env vars ever go missing or get misconfigured, the gate
+    # disengages and this check fires. A plain 200 would not catch that.
+    - name: Dashboard
+      group: ${CLUSTER_TITLE}
+      url: https://hermes.${searchDomain}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].ok == true"
+        - "[BODY].auth_required == true"
+    # DELIBERATELY NOT ADDED: a check asserting that `/` 302s to the authentik
+    # login. Unauthenticated `/` does return 302 (verified locally against
+    # v2026.7.30), but whether Gatus reports 302 or silently follows to
+    # authentik's 200 login page depends on redirect handling this repo has no
+    # prior art for and I could not verify — so the assertion would be a coin
+    # flip. The `auth_required == true` condition above is the real regression
+    # alarm for the gate and needs no such assumption.

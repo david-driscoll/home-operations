@@ -1,0 +1,166 @@
+services:
+  # Hermes Agent — NousResearch's agent runtime. This is an agent with a shell,
+  # a filesystem, and (optionally) a browser, running inside the home network.
+  # Upstream's own SECURITY.md §2.2 is explicit that the ONLY boundary against
+  # an adversarial model is the OS: "Nothing inside the agent process
+  # constitutes containment — not the approval gate, not output redaction, not
+  # any pattern scanner, not any tool allowlist." This container IS the
+  # boundary, which is why the hardening below is load-bearing rather than
+  # decorative. Read vault#117 before loosening any of it.
+  hermes:
+    # Upstream's docker-compose.yml uses `build: .` with a local `image:
+    # hermes-agent` tag, which is what the issue was written against — but the
+    # project DOES publish a multi-arch image. .github/workflows/docker.yml has
+    # a `publish` job (environment: container-publish) that pushes amd64+arm64
+    # by digest to Docker Hub on every main push and every release, and a
+    # `merge` job that stitches the manifest list and tags it `:<release_tag>`.
+    # So this is a normal digest-pinned upstream image and Renovate's
+    # docker-compose manager owns it like every other celestia service.
+    #
+    # Tags are CalVer and NOT consistently semver-shaped (v2026.7.30 is three
+    # components, v2026.7.7.2 is four), so a `versioning: loose` package rule
+    # is added in .github/renovate.json5 — without it Renovate silently skips
+    # the four-component releases.
+    #
+    # Image is ~1GB compressed / ~5GB extracted. That is upstream's size, not a
+    # packaging mistake on our side: the image bakes a full Python 3.13 venv,
+    # a Node toolchain, ffmpeg, and the dashboard's web bundle.
+    image: nousresearch/hermes-agent:v2026.7.30@sha256:b869e64d6496d4763d5e4fb675b5f504cb23b0e35ec9b790481a56118602b10f
+    container_name: hermes
+    hostname: hermes
+    env_file:
+      - .env
+    environment:
+      # The image starts as root, remaps its internal `hermes` user to these
+      # IDs via usermod/groupmod in the s6 stage2 hook, chowns /opt/data, and
+      # then drops every supervised service to that user with s6-setuidgid.
+      #
+      # DELIBERATE DEVIATION — no `user:` key. The upstream entrypoint
+      # hard-fails on `docker run --user <uid>` (docker/main-wrapper.sh and
+      # docker/stage2-hook.sh both reject it) because the bootstrap needs root
+      # and the baked /opt/hermes tree is root-owned and read-only to the
+      # runtime user. HERMES_UID/HERMES_GID is upstream's supported equivalent.
+      # Setting `user:` here would also make DockgeLxc chown the stack dir
+      # (components/DockgeLxc.ts) to a UID the container refuses to start as.
+      HERMES_UID: "1000"
+      HERMES_GID: "1000"
+      # Dashboard runs as an s6-supervised service INSIDE this container.
+      #
+      # This is the whole reason we don't need upstream's `network_mode: host`.
+      # Upstream ships the dashboard as a second container, and that second
+      # container needs a shared PID namespace with the gateway for its
+      # liveness detection — which is what forces host networking in their
+      # compose. In-container there is no namespace to share and the question
+      # disappears. Verified against v2026.7.30: single container, bridged,
+      # dashboard healthy.
+      HERMES_DASHBOARD: "1"
+      # Binds 0.0.0.0 *inside the container* so Traefik can reach it over the
+      # stack network. It is never published to the host — see `ports:` (absent)
+      # and the traefik labels below.
+      #
+      # A non-loopback bind arms upstream's auth gate, which FAILS CLOSED at
+      # startup unless a DashboardAuthProvider is registered. That is a feature
+      # and we are relying on it: HERMES_DASHBOARD_OIDC_* in .env registers the
+      # bundled self-hosted OIDC provider against authentik. Verified: with the
+      # OIDC vars unset the dashboard refuses to bind and logs "Refusing to
+      # bind dashboard to 0.0.0.0"; with them set, `/` returns 302 to
+      # /auth/login?provider=self-hosted and /api/config returns 401.
+      #
+      # HERMES_DASHBOARD_INSECURE is a deprecated no-op upstream as of the June
+      # 2026 hardening and must not be reintroduced — an unauthenticated public
+      # dashboard was the entry point for the MCP-config persistence campaign
+      # that drove agents into planting SSH backdoors.
+      HERMES_DASHBOARD_HOST: "0.0.0.0"
+      HERMES_DASHBOARD_PORT: "9119"
+      TZ: ${TIMEZONE}
+    volumes:
+      # /opt/data is the single source of truth for ALL Hermes state: config,
+      # .env, sessions, memories, skills, cron jobs, hooks, logs, and the
+      # agent's workspace. Upstream's compose mounts ~/.hermes; that would put
+      # it outside the celestia dockge backrest plan and it would silently not
+      # be backed up.
+      #
+      # /opt/stacks-data/hermes IS in scope: stacks/backups/index.ts syncs the
+      # whole of /stacks/ (the sftp view of /opt/stacks-data) minus an explicit
+      # exclude list, and `hermes` is not on that list.
+      - /opt/stacks-data/hermes:/opt/data
+    # DELIBERATE: no docker socket, no host bind mounts beyond the data volume.
+    # The image ships `docker-cli` and Hermes has a docker terminal backend, so
+    # mounting the socket would hand the agent full control of every container
+    # on celestia — including its own. There is no first-pass use case worth
+    # that. Same reasoning for /opt/stacks: the agent must not be able to
+    # rewrite the compose files that constrain it.
+    cap_drop:
+      - ALL
+    cap_add:
+      # Minimum set for the s6-overlay bootstrap, verified empirically against
+      # this exact digest — the container starts, the supervision tree comes
+      # up, and the dashboard binds with these six and ALL others dropped.
+      #   CHOWN + DAC_OVERRIDE + FOWNER — stage2 hook chowns /opt/data to the
+      #     remapped UID and usermod/groupmod rewrite /etc/passwd + /etc/group.
+      #   SETUID + SETGID              — s6-setuidgid drops each supervised
+      #     service (gateway, dashboard) from root to the hermes user.
+      #   KILL                         — s6-supervise signals its now-non-root
+      #     children on restart/shutdown.
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+      - KILL
+    security_opt:
+      # The agent can execute arbitrary shell as the unprivileged hermes user;
+      # this stops any setuid binary in the image from being a path back up.
+      - no-new-privileges:true
+    healthcheck:
+      # The dashboard's /api/health is an unauthenticated liveness probe by
+      # design (hermes_cli/web_server.py — no _require_token) and returns
+      # {"ok":true,"version":...,"auth_required":true}. Verified in-container.
+      #
+      # NOT the gateway's /health on 8642: that route only exists when the
+      # OpenAI-compatible API server is running, and the API server is
+      # deliberately off (see .env). This is the only HTTP health surface this
+      # stack actually has, which is a second reason the dashboard ships.
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9119/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # First boot seeds the data volume and starts the supervision tree; on a
+      # cold LXC that is comfortably slower than the 30s interval would allow.
+      start_period: 180s
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+    labels:
+      traefik.enable: true
+
+      # Hermes has native OIDC (the bundled dashboard_auth/self_hosted
+      # provider) — no authentik forward-auth middleware, same pattern as
+      # docker/celestia/pdm and docker/celestia/homelable.
+      #
+      # Routed on websecure like arcane (which controls Docker) and pdm (which
+      # controls Proxmox). Those are comparable or greater blast radius and sit
+      # behind the same authentik gate, so this is the estate's existing bar,
+      # not a loosening of it. The gate is genuinely enforced here: the
+      # dashboard refuses to serve a single protected route without a
+      # completed OIDC login.
+      traefik.http.routers.hermes.rule: Host(`hermes.${searchDomain}`)
+      traefik.http.routers.hermes.entrypoints: websecure
+      traefik.http.routers.hermes.tls.certresolver: le
+      traefik.http.routers.hermes.service: hermes
+
+      traefik.http.routers.hermes-tailscale.rule: Host(`hermes.${tailscaleDomain}`)
+      traefik.http.routers.hermes-tailscale.entrypoints: tailscale
+      traefik.http.routers.hermes-tailscale.service: hermes
+
+      traefik.http.services.hermes.loadbalancer.server.port: 9119
+
+networks:
+  dockge_default:
+    external: true
+
+x-dockge:
+  urls:
+    - https://hermes.${searchDomain}
