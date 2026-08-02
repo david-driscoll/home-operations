@@ -1,0 +1,97 @@
+# Hermes Agent — first-boot config seed for celestia.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# On first boot the image seeds /opt/data/config.yaml from its bundled 89KB
+# example, which enables a very broad default toolset (see below). Everything
+# that matters for containment lives in config.yaml, not in env vars, so the
+# hardening has to be in place BEFORE the container first starts.
+#
+# init.sh copies this file into /opt/stacks-data/hermes/config.yaml only when
+# no config.yaml is present. After that Hermes owns the file — it is a live,
+# self-modifying config (`hermes model`, the dashboard's settings tab, and
+# `hermes update`'s schema migrations all write to it), so this is a seed and
+# NOT a bind mount. Editing this file does not change a running deployment;
+# change it in the dashboard or with `hermes config set`, and update this file
+# so a rebuilt host comes back the same way.
+#
+# A partial config is fine — Hermes merges it over its defaults. Verified
+# against v2026.7.30: the container boots and `hermes tools list` reflects the
+# narrowed toolset below.
+
+# --- terminal ---------------------------------------------------------------
+terminal:
+  # "local" means tool commands run inside THIS container as the unprivileged
+  # hermes user. That is the correct choice here and it is a deliberate one:
+  # upstream calls this posture "whole-process wrapping" (SECURITY.md §2.2) and
+  # it is the supported way to contain everything — shell, code execution, MCP
+  # subprocesses, plugins, hooks, skill loading. The alternative,
+  # terminal-backend isolation, only confines what goes through the shell and
+  # would additionally require handing this container a docker socket.
+  backend: "local"
+  # Anchor tool commands in a dedicated workspace rather than letting them
+  # start in the data root next to sessions/, memories/, and .env.
+  cwd: "/opt/data/workspace"
+  timeout: 180
+
+# --- tool loop guardrails ---------------------------------------------------
+# Upstream ships hard stops OFF, which they document as reasonable for
+# interactive use "where a person can see repeated tool-call warnings" and
+# explicitly call out as wrong for unattended gateway deployments. This is an
+# unattended gateway deployment.
+tool_loop_guardrails:
+  warnings_enabled: true
+  hard_stop_enabled: true
+  hard_stop_after:
+    exact_failure: 5
+    same_tool_failure: 8
+    idempotent_no_progress: 5
+
+# --- toolsets ---------------------------------------------------------------
+# The dashboard's chat tab drives the `cli` platform, so this is the list that
+# governs the first pass.
+#
+# Enabled-by-default upstream, verified by running v2026.7.30 and reading
+# `hermes tools list`:
+#   web, browser, terminal, file, code_execution, vision, image_gen, bfl, tts,
+#   skills, todo, memory, session_search, clarify, delegation, cronjob,
+#   computer_use
+#
+# Turned off here, with reasons:
+#   code_execution — spawns a HOST subprocess from the agent's own interpreter.
+#       Upstream is explicit that this path bypasses terminal-backend isolation.
+#       `terminal` already covers running things and is the better-guarded of
+#       the two.
+#   cronjob        — lets the agent schedule its own recurring work. That is a
+#       persistence mechanism, and self-scheduled agent tasks are precisely the
+#       shape of the June 2026 MCP-config persistence campaign. If scheduled
+#       work is wanted later it should be a job David creates, not one the
+#       model can create for itself.
+#   delegation     — spawns sub-agents; multiplies iteration spend and makes the
+#       audit trail much harder to follow. Off until there is a reason.
+#   browser        — needs BROWSERBASE_API_KEY (an external cloud browser with
+#       residential proxies and CAPTCHA solving) and is inert without it.
+#       Listing it explicitly so "off" is a decision rather than an accident of
+#       a missing key.
+#   computer_use   — no display in this container; inert, and it should stay
+#       that way.
+#   vision / image_gen / tts / stt — all need provider keys we do not set.
+#
+# Kept: web (search/extract), terminal, file, skills, todo, memory,
+# session_search, clarify. That is enough to be a useful agent while the shell
+# stays the only high-power verb, contained by the container boundary.
+#
+# NOTE: `bfl` (BFL FLUX 3 Video) reports enabled even when omitted from this
+# list — it appears to register outside platform_toolsets. It requires an API
+# key we do not set, so it is inert, but the mechanism is UNVERIFIED and worth
+# a look if the toolset list ever seems not to apply.
+platform_toolsets:
+  cli:
+    - web
+    - terminal
+    - file
+    - skills
+    - todo
+    - memory
+    - session_search
+    - clarify

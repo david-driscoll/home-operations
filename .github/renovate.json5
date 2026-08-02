@@ -122,6 +122,17 @@
       matchDepNames: ["1password-cli"],
       overrideDatasource: "custom.1password-cli",
     },
+    {
+      // Hermes Agent tags are CalVer and inconsistently shaped: v2026.7.30 has
+      // three components, v2026.7.7.2 and v2026.5.29.2 have four. Renovate's
+      // default docker versioning is semver-like and silently skips the
+      // four-component releases, which would strand the pin on an older tag
+      // with no visible failure. `loose` orders them all.
+      description: "Hermes Agent uses 4-component CalVer tags that semver versioning skips",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["nousresearch/hermes-agent"],
+      versioning: "loose",
+    },
   ],
   customManagers: [
     {
