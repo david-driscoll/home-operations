@@ -66,6 +66,41 @@ const spikeVm = new TruenasVm("spike", {
   tailscaleIpAddress: "100.111.10.10",
 });
 
+// CloudNativePG barman-cloud WAL archives + base backups, one bucket per
+// Kubernetes cluster. These are the PITR archive: postgres cannot recycle a WAL
+// segment until barman has put it here, so if a bucket is missing the cluster's
+// pg_wal grows without bound (vault#119 — the ObjectStore manifests shipped
+// pointing at buckets that only ever existed on Backblaze B2, and archiving
+// failed with barman GeneralErrorExit/4 wrapping a NoSuchBucket).
+//
+// protect + retainOnDelete: destroying one of these discards the entire
+// recovery window. Never let a stack destroy take them.
+const _cnpgEquestriaBackups = new minio.S3Bucket(
+  `cnpg-equestria-backups`,
+  {
+    acl: "private",
+    bucket: pulumi.interpolate`cnpg-equestria`,
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
+    retainOnDelete: true,
+  },
+);
+
+const _cnpgSgcBackups = new minio.S3Bucket(
+  `cnpg-sgc-backups`,
+  {
+    acl: "private",
+    bucket: pulumi.interpolate`cnpg-sgc`,
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
+    retainOnDelete: true,
+  },
+);
+
 const thanosStorage = new minio.S3Bucket(
   `thanos-storage`,
   {
