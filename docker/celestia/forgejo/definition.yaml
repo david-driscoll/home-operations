@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: forgejo
+spec:
+  name: Forgejo
+  category: ${CLUSTER_TITLE}
+  description: Self-hosted git forge — repositories, issues, and Actions
+  url: &url https://git.${searchDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/forgejo.svg
+  access_policy:
+    groups:
+      # Admins only to start. Widening this is a one-line change, but do it
+      # deliberately: with ENABLE_AUTO_REGISTRATION every authentik identity
+      # that can complete this login gets a Forgejo account created for it.
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # The path segment after /user/oauth2/ must exactly match the auth
+        # source name provision.sh registers ("authentik"). Change one, change
+        # both.
+        - url: "https://git.${searchDomain}/user/oauth2/authentik/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # /api/healthz is the same unauthenticated liveness endpoint the container
+    # healthcheck uses; it answers even with REQUIRE_SIGNIN_VIEW=true. The
+    # body assertion catches the degraded case where the process serves HTTP
+    # but a component (database, cache) is failing its internal check — that
+    # reports "fail"/"warn" rather than "pass".
+    - name: Forgejo
+      group: ${CLUSTER_TITLE}
+      url: https://git.${searchDomain}/api/healthz
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == pass"
