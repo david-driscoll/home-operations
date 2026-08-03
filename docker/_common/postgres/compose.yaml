@@ -70,7 +70,7 @@ services:
   # role <name> and a database <name> owned by it. Nothing else is read, so a
   # host with no consumers provisions nothing and this container exits 0.
   postgres-provision:
-    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    image: postgres:18-alpine
     container_name: postgres-provision
     depends_on:
       postgres:
@@ -109,7 +109,7 @@ services:
   # pg_dump produces one that is: each dump is a consistent snapshot taken
   # inside a single transaction.
   postgres-backup:
-    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    image: postgres:18-alpine
     container_name: postgres-backup
     depends_on:
       postgres:
