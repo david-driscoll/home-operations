@@ -38,7 +38,9 @@ if [ -n "${auth_id}" ]; then
     --key "${FORGEJO_OIDC_CLIENT_ID}" \
     --secret "${FORGEJO_OIDC_CLIENT_SECRET}" \
     --auto-discover-url "${FORGEJO_OIDC_DISCOVERY_URL}" \
-    --scopes "openid profile email"
+    --scopes "openid profile email" \
+    --group-claim-name groups \
+    --admin-group admins
   echo "[forgejo-provision] OAuth2 source updated (id ${auth_id})"
 else
   forgejo admin auth add-oauth \
@@ -47,7 +49,9 @@ else
     --key "${FORGEJO_OIDC_CLIENT_ID}" \
     --secret "${FORGEJO_OIDC_CLIENT_SECRET}" \
     --auto-discover-url "${FORGEJO_OIDC_DISCOVERY_URL}" \
-    --scopes "openid profile email"
+    --scopes "openid profile email" \
+    --group-claim-name groups \
+    --admin-group admins
   echo "[forgejo-provision] OAuth2 source created"
 fi
 
