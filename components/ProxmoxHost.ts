@@ -82,10 +82,13 @@ export class ProxmoxHost extends ComponentResource {
     if (args.remote) {
       this.internalIpAddress = args.tailscaleIpAddress;
     } else {
-      if (args.internalIpAddress === undefined) {
-        throw new Error("internalIpAddress must be provided for non-remote Proxmox hosts");
-      }
-      this.internalIpAddress = args.internalIpAddress;
+      // Tailnet-primary local hosts (e.g. luna, modeled remote:false while it
+      // is physically home but staged for an off-site move) may omit
+      // internalIpAddress: the tailscale IP then doubles as the internal
+      // address. DNS stays on the tailnet IP, and the LAN-side machinery
+      // (local-dns.ts reservations/DHCP DNS) correctly skips the host because
+      // 100.x is outside the Home subnet.
+      this.internalIpAddress = args.internalIpAddress ?? args.tailscaleIpAddress;
     }
     this.tailscaleIpAddress = args.tailscaleIpAddress;
     this.remote = args.remote;
