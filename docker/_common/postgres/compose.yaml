@@ -1,40 +1,13 @@
 services:
-  # Shared Postgres for this Docker node. One instance per host (this is a
-  # `_common` stack, so components/DockgeLxc.ts:641 deploys it to celestia,
-  # alpha-site, luna and skystar alike), serving every consumer stack on that
-  # host rather than each app shipping its own database container.
-  #
-  # NAMING — deliberate, and the single most important line in this file.
-  # The service, container and DNS name is `postgres-shared`, NOT `postgres`.
-  # This stack sits on the host-wide `dockge_default` network, where every
-  # container name is a DNS name every other container on the host resolves.
-  # `postgres` is the single most likely name for some future stack to claim:
-  # vendor compose files use it constantly — itsaplan's own upstream
-  # docker-compose.yml has a service called exactly `postgres`. Two containers
-  # answering to one name on one network is a round-robin coin flip on every
-  # connection, which is the hazard docker/celestia/homelable/compose.yaml
-  # documents for the name `backend`. A stack literally called `postgres` on a
-  # shared network is the sharpest possible version of that problem, so the
-  # generic name is left unclaimed on purpose. Consumers dial
-  # `postgres-shared:5432`.
-  postgres-shared:
-    # Postgres 17, chosen rather than inherited:
-    #   * upstream itsaplan pins `postgres:17-alpine` and runs its test suite
-    #     against it (docker-compose.test.yml), so 17 is the tested target;
-    #   * the estate's CNPG clusters are on 17 today, and vault#114 (the 17->18
-    #     conversation) is still open. Following the CNPG decision rather than
-    #     getting ahead of it keeps one Postgres major across the estate.
-    # When vault#114 lands on 18, this moves with it — deliberately second.
-    #
-    # A major bump here is NOT an image bump: PGDATA is major-version-bound and
-    # a 17->18 image swap crash-loops on "database files are incompatible".
-    # `.github/renovate.json5` disables major updates for this image for that
-    # reason; minor/patch/digest still flow normally.
-    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
-    container_name: postgres-shared
-    hostname: postgres-shared
+  postgres:
+    image: postgres:18-alpine
+    container_name: postgres
+    hostname: postgres
     env_file:
-      - .env
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
     environment:
       TZ: ${TIMEZONE}
       POSTGRES_USER: postgres
@@ -57,10 +30,7 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      # Live data. NOT usable as a backup source — a file copy of a running
-      # cluster is torn, not crash-consistent. `stacks/backups/index.ts`
-      # excludes this path and backs up the dumps below instead.
-      - /opt/stacks-data/postgres/pgdata:/var/lib/postgresql/data
+      - /opt/stacks/postgres/pgdata:/var/lib/postgresql/data
     # Postgres uses POSIX shared memory for parallel query; Docker's 64m
     # default is small enough to cause "could not resize shared memory segment".
     shm_size: 256mb
@@ -101,15 +71,18 @@ services:
   # host with no consumers provisions nothing and this container exits 0.
   postgres-provision:
     image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
-    container_name: postgres-shared-provision
+    container_name: postgres-provision
     depends_on:
-      postgres-shared:
+      postgres:
         condition: service_healthy
     env_file:
-      - .env
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
     environment:
       TZ: ${TIMEZONE}
-      PGHOST: postgres-shared
+      PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
     user: "70:70"
@@ -137,15 +110,18 @@ services:
   # inside a single transaction.
   postgres-backup:
     image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
-    container_name: postgres-shared-backup
+    container_name: postgres-backup
     depends_on:
-      postgres-shared:
+      postgres:
         condition: service_healthy
     env_file:
-      - .env
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
     environment:
       TZ: ${TIMEZONE}
-      PGHOST: postgres-shared
+      PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
     user: "70:70"
