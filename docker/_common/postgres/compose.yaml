@@ -1,6 +1,17 @@
 services:
   postgres:
-    image: postgres:18-alpine
+    # Postgres 18. All three services in this file MUST stay on the same major:
+    # pg_dump refuses to dump a server newer than itself ("aborting because of
+    # server version mismatch"), and backup.sh treats a failed dump as a warning
+    # and keeps looping — so a skew here is a permanently silent backup failure,
+    # not a visible one. Verified against 18.4: pg_dump/pg_dumpall 17.10 exit 1,
+    # the matching 18 client exits 0. (psql 17 -> 18 does work, so provision.sh
+    # would have survived the skew; the backups would not have.)
+    #
+    # A major bump is NOT an image bump: PGDATA is bound to the major that
+    # created it, so 18 -> 19 is a pg_upgrade or dump/restore. renovate.json5
+    # disables major updates for this image; minor/patch/digest still flow.
+    image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
     container_name: postgres
     hostname: postgres
     env_file:
@@ -30,7 +41,26 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - /opt/stacks/postgres/pgdata:/var/lib/postgresql/data
+      # MUST be under /opt/stacks-data, never /opt/stacks. Two reasons, both
+      # load-bearing:
+      #
+      #   * /opt/stacks/<stack> is the Dockge *definition* directory — Pulumi
+      #     copies compose.yaml/.env/init.sh there, and DockgeLxc.ts:810 runs
+      #     `rm -rf /opt/stacks/<stack>` when the stack is deleted. PGDATA
+      #     there means removing the stack silently destroys the database.
+      #   * init.sh only prepares paths under /opt/stacks-data. Point this
+      #     elsewhere and Docker auto-creates the bind source as root:root
+      #     0755 at `up` time; the container runs as uid 70 with cap_drop ALL,
+      #     cannot mkdir $PGDATA inside it, and crash-loops on
+      #     "mkdir: can't create directory '.../pgdata': Permission denied".
+      #     Commit 2b99cb93 retargeted this line to /opt/stacks and that is
+      #     exactly what happened on celestia and skystar — 14 restarts, no
+      #     cluster ever initialised. Keep this path and init.sh in lockstep.
+      #
+      # It is also NOT usable as a backup source — a file copy of a running
+      # cluster is torn, not crash-consistent. stacks/backups/index.ts excludes
+      # this path and backs up the pg_dump output below instead.
+      - /opt/stacks-data/postgres/pgdata:/var/lib/postgresql/data
     # Postgres uses POSIX shared memory for parallel query; Docker's 64m
     # default is small enough to cause "could not resize shared memory segment".
     shm_size: 256mb
@@ -70,7 +100,8 @@ services:
   # role <name> and a database <name> owned by it. Nothing else is read, so a
   # host with no consumers provisions nothing and this container exits 0.
   postgres-provision:
-    image: postgres:18-alpine
+    # Same major + digest as the server above. See the note there.
+    image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
     container_name: postgres-provision
     depends_on:
       postgres:
@@ -109,7 +140,10 @@ services:
   # pg_dump produces one that is: each dump is a consistent snapshot taken
   # inside a single transaction.
   postgres-backup:
-    image: postgres:18-alpine
+    # Same major + digest as the server above — this is the one that MUST match.
+    # pg_dump aborts against a newer server and backup.sh only warns, so a skew
+    # here fails every dump forever without ever failing the container.
+    image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
     container_name: postgres-backup
     depends_on:
       postgres:

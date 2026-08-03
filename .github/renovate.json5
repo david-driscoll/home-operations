@@ -135,13 +135,23 @@
     },
     {
       // The repo extends "docker:enableMajor", so without this rule Renovate
-      // would happily open a postgres 17 -> 18 PR for docker/_common/postgres.
+      // would happily open a postgres 18 -> 19 PR for docker/_common/postgres.
       // Merging it would not be an upgrade, it would be an outage: PGDATA is
-      // bound to the major version that created it, and an 18 binary starting
-      // on a 17 data directory exits with "database files are incompatible
+      // bound to the major version that created it, and a 19 binary starting
+      // on an 18 data directory exits with "database files are incompatible
       // with server" and crash-loops. A major move is a pg_upgrade or a
-      // dump/restore, planned alongside the CNPG decision in vault#114 — never
-      // an image bump. Minor, patch and digest updates still flow normally.
+      // dump/restore — never an image bump. Minor, patch and digest updates
+      // still flow normally.
+      //
+      // The stack was authored on 17 and moved to 18 by hand in 2b99cb93. That
+      // was free precisely because no host had ever completed a first init —
+      // there was no 17 PGDATA on disk anywhere to be incompatible with, on any
+      // of the four Dockge hosts. That will NOT be true of the next major, which
+      // is the whole point of this rule. It also bounds a subtler failure: all
+      // three services in that compose file share one major, and pg_dump refuses
+      // to dump a server newer than itself while backup.sh only warns — so a
+      // partial major bump silently stops every backup, without ever failing a
+      // container. Bump all three together or none.
       description: "Container Postgres majors are a data migration, not an image bump",
       matchDatasources: ["docker"],
       matchPackageNames: ["postgres"],
