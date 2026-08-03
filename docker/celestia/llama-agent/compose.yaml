@@ -1,0 +1,39 @@
+services:
+  # llama.cpp Vulkan server hosting gemma-4-E4B for agent workloads (Hermes,
+  # scheduled jobs). Runs on the Ryzen 5825U iGPU (RADV RENOIR) — decode is
+  # ~10 tok/s and memory-bandwidth bound, prefill holds 100-125 tok/s out to
+  # 12K-token prompts (validated 2026-08-03 against the same GGUF; TensorSharp
+  # was rejected for this host because its unchunked PLE prefill dispatch
+  # trips the amdgpu ~10s job watchdog above ~2K-token prompts).
+  #
+  # -c 65536 with -np 2 gives two slots of ~32K each (kv_unified shares the
+  # window). KV + weights peak ~5 GB of the host's 7.7 GB GTT allowance —
+  # GTT is HOST kernel memory, not counted against this LXC's cgroup, so the
+  # host needs that headroom to actually exist (see the LXC memory sizing
+  # note in the PR that added this stack).
+  llama-agent:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:f8ec293aa54a6d42fa60bbfe3f37f6d4878d9df0d2e96e80f5d2dc514bcea182
+    container_name: llama-agent
+    restart: unless-stopped
+    ports:
+      # 8080 is taken by the _common llama-vulkan stack when it is deployed.
+      - "8081:8080"
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "992" # host "render" group GID -> /dev/dri/renderD128 access
+    volumes:
+      - ./models:/models
+    environment:
+      - LLAMA_CACHE=/models # cache downloaded GGUFs here (persists across restarts)
+    command: >
+      -hf ggml-org/gemma-4-E4B-it-GGUF:Q4_0
+      --host 0.0.0.0
+      --port 8080
+      -ngl 999
+      -c 65536
+      -np 2
+      --jinja
+x-dockge:
+  urls:
+    - http://${ipAddress}:8081

@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: llama-agent
+spec:
+  name: llama.cpp Agent Server (gemma-4-E4B)
+  category: AI
+  url: &url http://${ipAddress}:8081
+  icon: https://avatars.githubusercontent.com/u/134263123
+  gatus:
+    - url: http://${ipAddress}:8081/health
+      method: GET
+      group: "Applications"
+      conditions:
+        - "[STATUS] == 200"
