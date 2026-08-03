@@ -28,5 +28,15 @@
     "status": "active",
     "createdAt": "2026-08-03T17:49:40.124Z",
     "updatedAt": "2026-08-03T17:49:40.124Z"
+  },
+  {
+    "id": "855951c6-f93f-4948-a6bf-9ffc5066dacb",
+    "class": "LOCAL",
+    "loadGuidance": "ON-DEMAND",
+    "title": "Docker-in-container on equestria: Sysbox unavailable on Talos, Kata is the path",
+    "path": ".crew/memory/local/link-docker-in-container-on-equestria-sysbox-unavailable-on-talos-kat-855951c6.md",
+    "status": "active",
+    "createdAt": "2026-08-03T17:49:52.791Z",
+    "updatedAt": "2026-08-03T17:49:52.791Z"
   }
 ]
