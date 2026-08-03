@@ -18,5 +18,15 @@
     "status": "active",
     "createdAt": "2026-07-29T01:17:41.875Z",
     "updatedAt": "2026-07-29T01:17:41.875Z"
+  },
+  {
+    "id": "fc94baeb-31f6-4f2c-8a0d-9fc08ad461a6",
+    "class": "POLICY",
+    "loadGuidance": "ALWAYS",
+    "title": "No branch protection on any of the four estate repos",
+    "path": ".crew/memory/policy-inbox/link-no-branch-protection-on-any-of-the-four-estate-repos-fc94baeb.md",
+    "status": "active",
+    "createdAt": "2026-08-03T17:49:40.124Z",
+    "updatedAt": "2026-08-03T17:49:40.124Z"
   }
 ]
