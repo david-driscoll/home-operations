@@ -40,7 +40,7 @@ const host = new ProxmoxHost("luna", {
   authentikOutputs: outputs,
   tailscaleIpAddress: "100.111.10.104",
   proxmox: mainProxmoxCredentials,
-  remote: true,
+  remote: false, // once this gets shipped to the new location, flip this to true so that tailscale accepts routes from the LAN
   cluster: cluster,
   tailscaleArgs: {
     advertiseExitNode: true,
