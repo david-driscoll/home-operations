@@ -57,7 +57,17 @@ const dockgeRuntime = new DockgeLxc("luna-dockge", {
   host: host,
   vmId: dockgeId.result,
   cluster: cluster,
-  tailscaleArgs: { acceptDns: true, acceptRoutes: host.remote },
+  // acceptRoutes MUST stay false while this LXC physically sits on the home
+  // 10.10.0.0/16 LAN, even though the host is modeled `remote: true` for its
+  // eventual move. With accept-routes on, tailscale's table 52 carries the
+  // tailnet-advertised 10.10.0.0/16 and wins over the connected eth0 route, so
+  // replies to LAN clients leave via tailscale0 — LAN-inbound blackhole (SYNs
+  // arrive, no SYN-ACK; found 2026-08-03 when Home Assistant on SGC could not
+  // reach the wyoming/llama-voice ports; fixed live with
+  // `tailscale set --accept-routes=false`). Flip this back to `host.remote`
+  // as part of the physical move, when the LXC is no longer on the subnet it
+  // would be accepting.
+  tailscaleArgs: { acceptDns: true, acceptRoutes: false },
   sftpKey: sftpClientKey,
   createDockerLxc: true,
   monitor,
