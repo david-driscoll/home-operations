@@ -6,11 +6,33 @@ services:
   # was rejected for this host because its unchunked PLE prefill dispatch
   # trips the amdgpu ~10s job watchdog above ~2K-token prompts).
   #
-  # -c 65536 with -np 2 gives two slots of ~32K each (kv_unified shares the
-  # window). KV + weights peak ~5 GB of the host's 7.7 GB GTT allowance —
-  # GTT is HOST kernel memory, not counted against this LXC's cgroup, so the
-  # host needs that headroom to actually exist (see the LXC memory sizing
-  # note in the PR that added this stack).
+  # -c 65536 with -np 1 gives ONE slot of the full 65536. It used to be -np 2,
+  # which splits the window into two 32K slots (n_ctx_slot = 32768) — and the
+  # per-slot number is what llama.cpp advertises on /props and /v1/models, so
+  # Hermes read 32,768 and refused to boot against its own 64,000-token floor
+  # ("agent init failed: ...below the minimum 64,000 required by Hermes
+  # Agent", 2026-08-03). Hermes is the primary consumer, so the window wins
+  # over the slot count.
+  #
+  # Do NOT "fix" this by setting model.context_length in Hermes' config.yaml.
+  # That override exists for servers that under-report a model's true window;
+  # here 32,768 was the honest per-slot budget and the override would just
+  # move the failure to a mid-session context overflow.
+  #
+  # Losing the second slot costs little on this box: decode is memory-
+  # bandwidth bound, so two concurrent slots split ~10 tok/s rather than
+  # adding throughput — concurrency only ever bought head-of-line avoidance,
+  # and requests now queue instead. The alternative that keeps both (-c 131072
+  # -np 2, two 64K slots) is deliberately NOT taken: gemma-4-E4B has 4 unique
+  # global-attention layers at 2 KV heads x 512+512 f16 = ~16 KiB/token, so
+  # doubling the window adds ~1 GB, and the host is already sitting on a full
+  # 1 GB swap with ~2.4 GB free. Revisit only after the LXC gets more RAM.
+  #
+  # n_ctx_train is 131072, so 65536 is a serving choice, not a model limit.
+  # KV + weights peak ~5 GB of the host's 7.7 GB GTT allowance — GTT is HOST
+  # kernel memory, not counted against this LXC's cgroup, so the host needs
+  # that headroom to actually exist (see the LXC memory sizing note in the PR
+  # that added this stack).
   llama-agent:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:f8ec293aa54a6d42fa60bbfe3f37f6d4878d9df0d2e96e80f5d2dc514bcea182
     container_name: llama-agent
@@ -38,9 +60,40 @@ services:
       --host 0.0.0.0
       --port 8080
       -ngl 999
-      -c 65536
-      -np 2
+      -c 131072
+      -np 1
       --jinja
+    networks:
+      - dockge_default
+    labels:
+      traefik.enable: true
+
+      # Hostname for the built-in llama.cpp web UI and for anything that would
+      # rather speak to a name than an IP:port. The published 8081 above stays
+      # — Hermes' model.base_url and any host-local caller keep using it, so
+      # this route is additive and nothing breaks if Traefik is down.
+      #
+      # No authentik middleware, same as docker/celestia/zot: these names
+      # resolve to the LXC's 100.x tailnet address in both split-horizon views
+      # (public Cloudflare included), so websecure here is tailnet/LAN-only,
+      # not an internet edge. A forward-auth gate would also break every
+      # OpenAI-compatible client on this hostname, which is the point of it.
+      traefik.http.routers.llama-agent.rule: Host(`llama-agent.${searchDomain}`)
+      traefik.http.routers.llama-agent.entrypoints: websecure
+      traefik.http.routers.llama-agent.tls.certresolver: le
+      traefik.http.routers.llama-agent.service: llama-agent
+
+      traefik.http.routers.llama-agent-tailscale.rule: Host(`llama-agent.${tailscaleDomain}`)
+      traefik.http.routers.llama-agent-tailscale.entrypoints: tailscale
+      traefik.http.routers.llama-agent-tailscale.service: llama-agent
+
+      traefik.http.services.llama-agent.loadbalancer.server.port: 8080
+
+networks:
+  dockge_default:
+    external: true
+
 x-dockge:
   urls:
+    - https://llama-agent.${searchDomain}
     - http://${ipAddress}:8081
