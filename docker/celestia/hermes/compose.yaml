@@ -28,6 +28,15 @@ services:
     image: nousresearch/hermes-agent:v2026.7.30@sha256:b869e64d6496d4763d5e4fb675b5f504cb23b0e35ec9b790481a56118602b10f
     container_name: hermes
     hostname: hermes
+    # With no CMD the entrypoint wrapper runs the interactive chat CLI, which
+    # exits immediately in a TTY-less container ("Input is not a terminal") and
+    # takes the whole container with it — that was the tail end of the restart
+    # loop (see the model block in config.seed.yaml for the first half). The
+    # main-hermes s6 service is deliberately a no-op; upstream's run script
+    # names `sleep infinity` as a preserved CMD contract for exactly this
+    # "dashboard-only, container stays up" deployment. Sessions are driven by
+    # the dashboard over the `cli` platform, not by this process.
+    command: sleep infinity
     env_file:
       - .env
     environment:
