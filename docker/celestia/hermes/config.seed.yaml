@@ -15,9 +15,57 @@
 # change it in the dashboard or with `hermes config set`, and update this file
 # so a rebuilt host comes back the same way.
 #
-# A partial config is fine — Hermes merges it over its defaults. Verified
-# against v2026.7.30: the container boots and `hermes tools list` reflects the
-# narrowed toolset below.
+# A partial config is fine — Hermes merges it over its defaults.
+# `hermes_cli/config.py::_load_config_impl` deep-copies DEFAULT_CONFIG and
+# `_deep_merge`s this file over it on every read, with no reference to the
+# schema version. Dict sections merge key-by-key; a list (like
+# `platform_toolsets.cli` below) REPLACES the default outright, which is the
+# behaviour the narrowed toolset depends on.
+
+# --- schema version ---------------------------------------------------------
+# Not decoration. Without this key the container logged, on every single boot:
+#
+#   [config-migrate] WARNING: This config predates version 12 (~2 years old)
+#   and can no longer be auto-migrated.
+#
+# The cause is a gap between two upstream code paths at v2026.7.30:
+#
+#   * `hermes_cli/config.py::migrate_config` deliberately does NOT floor-refuse
+#     a config with no `_config_version` key. It calls
+#     `_raw_config_has_explicit_version()` first and treats a missing key as "a
+#     fresh minimal config (profile clones write bare keys; users hand-write
+#     two-line configs), not an ancient install" — exactly our case — so the
+#     CLI would migrate and stamp it normally.
+#   * `scripts/docker_config_migrate.py`, which is what actually runs at boot,
+#     does NOT make that distinction. It compares
+#     `check_config_version()` (a missing key coerces to 0) against
+#     SUPPORT_FLOOR_VERSION and takes the below-floor branch, printing the
+#     warning and returning 0 without ever calling `migrate_config`.
+#
+# So the file was never stamped and the warning repeated forever.
+#
+# WHAT IT DID NOT DO: discard this file. The below-floor branch is
+# warn-and-continue by design — `config_migrations.py` documents it as
+# "left byte-for-byte untouched ... the process continues with the config as-is
+# (defaults deep-merged at read time)". `load_config()` has no version gate at
+# all, and `tools_config.py::_get_platform_tools` reads `platform_toolsets`
+# straight off the merged config. The containment below was in force the whole
+# time; the warning was noise, not a silent revert to upstream defaults.
+#
+# 33 is not a guess: it is `DEFAULT_CONFIG["_config_version"]` in
+# `hermes_cli/config_defaults.py` at the tag pinned in compose.yaml, and it is
+# what a fresh `hermes setup` on this image writes. Stamping it latest means
+# `docker_config_migrate.py` returns at its `current_ver >= latest_ver`
+# short-circuit — no warning, and no migration pass that would rewrite this
+# file and strip every comment in it.
+#
+# WHEN RENOVATE BUMPS THE IMAGE: if the new tag raises the latest version, the
+# boot migrator will run the ladder against the LIVE /opt/data/config.yaml and
+# rewrite it (comments included — that file is Hermes-owned state, see above).
+# That is the normal upgrade path and needs no action here, but bump this
+# number to match when re-seeding a rebuilt host, or the next fresh volume
+# starts one schema behind.
+_config_version: 33
 
 # --- terminal ---------------------------------------------------------------
 terminal:
