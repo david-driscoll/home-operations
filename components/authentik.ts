@@ -421,6 +421,23 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       .apply(([mappings, scopeNames]) => scopeNames.map(scopeName => mappings[scopeName.replace(/\//g, "~1")]).filter((mapping): mapping is string => !!mapping));
   }
 
+  /**
+   * Authentik validates `meta_launch_url` with Django's URL validator, which accepts only
+   * http/https (and ftp/ftps). A headless service — a Wyoming satellite, a database — has no
+   * browser-facing surface, and omitting `spec.url` is the correct shape for it (see the
+   * `database/postgres` and `network/crowdsec` definitions). Any other scheme is a definition
+   * bug that would otherwise 400 and stall the whole stack, so drop it and warn instead of
+   * taking the run down. Non-HTTP endpoints belong in `spec.gatus`, not in the launch URL.
+   */
+  private resolveLaunchUrl(definition: ApplicationDefinitionSchema) {
+    const url = definition.spec.url;
+    if (!url) return undefined;
+    if (/^(?:https?|ftps?):\/\//i.test(url)) return url;
+
+    pulumi.log.warn(`Application "${definition.metadata.name}" has a non-HTTP spec.url (${url}); omitting metaLaunchUrl. Use spec.gatus for non-HTTP health checks.`, this);
+    return undefined;
+  }
+
   private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
     const resourceName = this.resolveResourceName(definition);
     const args: authentik.ApplicationArgs = {
@@ -430,7 +447,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
-      metaLaunchUrl: definition.spec.url,
+      metaLaunchUrl: this.resolveLaunchUrl(definition),
       openInNewTab: true,
     };
 

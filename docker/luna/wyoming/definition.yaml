@@ -7,7 +7,10 @@ metadata:
 spec:
   name: Wyoming Speech (whisper + piper)
   category: AI
-  url: &url tcp://${ipAddress}:10300
+  # No `url:` on purpose. Wyoming is Home Assistant's satellite protocol, spoken over raw
+  # TCP — there is no web UI, so there is no launch URL. Authentik validates
+  # meta_launch_url with Django's URL validator (http/https/ftp/ftps only), so a tcp://
+  # value 400s and stalls the stack. The TCP endpoints below are correct for Gatus.
   icon: https://brands.home-assistant.io/wyoming/icon.png
   gatus:
     - url: tcp://${ipAddress}:10300
