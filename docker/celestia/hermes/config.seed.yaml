@@ -67,6 +67,24 @@
 # starts one schema behind.
 _config_version: 33
 
+# --- model ------------------------------------------------------------------
+# Hermes refuses to start its services with no provider configured — the boot
+# log prints "It looks like Hermes isn't configured yet" and s6 tears the
+# container down, which is exactly the crash-loop this block ends (372 restarts
+# before it was wired, 2026-08-03).
+#
+# The provider is the llama-agent stack on THIS host: llama.cpp Vulkan serving
+# gemma-4-E4B (OpenAI-compatible, no API key — the traffic never leaves the
+# LXC). The hostname resolves through Technitium split-horizon to the LXC's
+# LAN address; the llama-agent stack publishes 8081 on the host, so
+# cross-stack container DNS is not needed. `default` is the model id the
+# server reports in /v1/models, though llama.cpp serves a single model and
+# does not enforce the name.
+model:
+  provider: custom
+  base_url: http://dockge-celestia.driscoll.tech:8081/v1
+  default: "ggml-org/gemma-4-E4B-it-GGUF:Q4_0"
+
 # --- terminal ---------------------------------------------------------------
 terminal:
   # "local" means tool commands run inside THIS container as the unprivileged
