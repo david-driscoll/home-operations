@@ -1,0 +1,34 @@
+services:
+  # llama.cpp Vulkan server hosting gemma-4-E2B for the Home Assistant voice
+  # pipeline. E2B (not E4B) is deliberate: voice lives on time-to-first-token,
+  # and the smaller model roughly doubles decode speed on this iGPU (~17 tok/s
+  # measured for a same-size model vs ~10 for E4B). Single slot + small window
+  # keep latency down; HA's system prompt (exposed entities) stays in the
+  # prompt cache so each utterance only prefills the spoken words.
+  #
+  # Pairs with the wyoming stack (whisper STT + piper TTS) on this host.
+  llama-voice:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:f8ec293aa54a6d42fa60bbfe3f37f6d4878d9df0d2e96e80f5d2dc514bcea182
+    container_name: llama-voice
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "992" # host "render" group GID -> /dev/dri/renderD128 access
+    volumes:
+      - ./models:/models
+    environment:
+      - LLAMA_CACHE=/models # cache downloaded GGUFs here (persists across restarts)
+    command: >
+      -hf ggml-org/gemma-4-E2B-it-GGUF:Q4_0
+      --host 0.0.0.0
+      --port 8080
+      -ngl 999
+      -c 8192
+      -np 1
+      --jinja
+x-dockge:
+  urls:
+    - http://${ipAddress}:8080

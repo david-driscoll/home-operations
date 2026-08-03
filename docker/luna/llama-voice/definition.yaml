@@ -1,0 +1,17 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: llama-voice
+spec:
+  name: llama.cpp Voice Server (gemma-4-E2B)
+  category: AI
+  url: &url http://${ipAddress}:8080
+  icon: https://avatars.githubusercontent.com/u/134263123
+  gatus:
+    - url: http://${ipAddress}:8080/health
+      method: GET
+      group: "Applications"
+      conditions:
+        - "[STATUS] == 200"

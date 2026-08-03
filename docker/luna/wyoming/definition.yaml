@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: wyoming
+spec:
+  name: Wyoming Speech (whisper + piper)
+  category: AI
+  url: &url tcp://${ipAddress}:10300
+  icon: https://brands.home-assistant.io/wyoming/icon.png
+  gatus:
+    - url: tcp://${ipAddress}:10300
+      group: "Applications"
+      conditions:
+        - "[CONNECTED] == true"
+    - url: tcp://${ipAddress}:10200
+      group: "Applications"
+      conditions:
+        - "[CONNECTED] == true"
