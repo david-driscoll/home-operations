@@ -13,6 +13,13 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    # The Dockge LXCs have no IPv6 egress (ipv6_method: none), but huggingface.co
+    # resolves to AAAA records and llama.cpp's HTTP client does not fall back to
+    # IPv4 the way curl does — every -hf model download fails instantly with
+    # "HTTPLIB failed: Could not establish connection". Disabling IPv6 inside
+    # the container forces the v4 path. Verified on celestia 2026-08-03.
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: 1
     devices:
       - /dev/dri:/dev/dri
     group_add:
