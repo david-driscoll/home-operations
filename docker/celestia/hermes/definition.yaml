@@ -5,8 +5,8 @@ kind: ApplicationDefinition
 metadata:
   name: hermes
 spec:
-  name: Hermes Agent
-  category: ${CLUSTER_TITLE}
+  name: Hermes
+  category: Applications
   description: NousResearch agent runtime — dashboard, gateway, and skills
   url: &url https://hermes.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nous-research.svg
@@ -42,7 +42,7 @@ spec:
     # the OIDC env vars ever go missing or get misconfigured, the gate
     # disengages and this check fires. A plain 200 would not catch that.
     - name: Dashboard
-      group: ${CLUSTER_TITLE}
+      group: Applications
       url: https://hermes.${searchDomain}/api/health
       method: GET
       conditions:

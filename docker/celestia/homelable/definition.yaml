@@ -6,7 +6,7 @@ metadata:
   name: homelable
 spec:
   name: Homelable
-  category: ${CLUSTER_TITLE}
+  category: Applications
   description: Homelab network topology map and LAN device discovery
   url: &url https://homelable.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homelable.svg
@@ -28,7 +28,7 @@ spec:
   gatus:
     # The SPA shell. nginx serves it regardless of session, so a plain 200 is
     # the right signal that the frontend is up.
-    - group: ${CLUSTER_TITLE}
+    - group: Applications
       url: *url
       method: GET
       conditions:
@@ -36,7 +36,7 @@ spec:
     # Deeper: /api/v1/health has no auth dependency and is proxied by nginx to
     # the backend, so this covers frontend -> nginx -> backend in one check.
     - name: API
-      group: ${CLUSTER_TITLE}
+      group: Applications
       url: https://homelable.${searchDomain}/api/v1/health
       method: GET
       conditions:
@@ -48,7 +48,7 @@ spec:
     # outcome (404 from error-pages, 502 if error-pages is down) still passes,
     # so it only alerts on the thing that actually matters.
     - name: Live View Blocked
-      group: ${CLUSTER_TITLE}
+      group: Applications
       url: https://homelable.${searchDomain}/view
       method: GET
       conditions:

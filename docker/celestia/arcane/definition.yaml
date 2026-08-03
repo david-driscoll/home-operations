@@ -7,7 +7,7 @@ metadata:
   name: arcane
 spec:
   name: Arcane
-  category: ${CLUSTER_TITLE}
+  category: Applications
   description: Arcane docker manager
   url: &url https://arcane.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/arcane.png
@@ -28,7 +28,7 @@ spec:
       includeClaimsInIdToken: true
       subMode: user_email
   gatus:
-    - group: ${CLUSTER_TITLE}
+    - group: Applications
       url: *url
       method: GET
       conditions:

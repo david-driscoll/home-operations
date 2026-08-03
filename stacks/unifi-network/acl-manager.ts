@@ -137,7 +137,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
         dst: [tag.apps, tag.dockge, tag.dns, tag.idp],
-        ip: ports.web,
+        ip: [...ports.web, ...ports.git],
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );

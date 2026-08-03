@@ -68,6 +68,10 @@ export const Tailscale = {
     dns: ["tcp:53", "udp:53", "tcp:853", "udp:853", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],
     ssh: ["tcp:22", "udp:22"] as TailscaleNetworkCapability[],
     dockge: ["tcp:80", "tcp:443"] as TailscaleNetworkCapability[],
+    // Forgejo's built-in SSH server (docker/celestia/forgejo) — git clone/push
+    // over ssh://git@git.driscoll.tech:2222. Forgejo authenticates by public
+    // key, so the network grant is deliberately admin-only (see acl-manager).
+    git: ["tcp:2222"] as TailscaleNetworkCapability[],
     nfs: ["tcp:2049", "udp:2049", "tcp:111", "udp:111"] as TailscaleNetworkCapability[],
     dockgeManagement: ["tcp:5001", "udp:5001", "tcp:2022", "udp:2022", "tcp:2375", "udp:2375", "tcp:8082", "tcp:4000", "tcp:53443"] as TailscaleNetworkCapability[],
     observability: ["tcp:9093", "tcp:19291", "tcp:10902", "tcp:9090", "tcp:3100", "tcp:8266", "udp:8266", "tcp:1883", "udp:1883", "tcp:8080", "udp:8080", "tcp:443", "udp:443"] as TailscaleNetworkCapability[],

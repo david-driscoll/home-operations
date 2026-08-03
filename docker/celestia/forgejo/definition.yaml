@@ -6,7 +6,7 @@ metadata:
   name: forgejo
 spec:
   name: Forgejo
-  category: ${CLUSTER_TITLE}
+  category: Applications
   description: Self-hosted git forge — repositories, issues, and Actions
   url: &url https://git.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/forgejo.svg
