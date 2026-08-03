@@ -1,3 +1,4 @@
+import { hash } from "node:crypto";
 import * as pulumi from "@pulumi/pulumi";
 import * as firewall from "@pulumi/terrifi";
 import * as unifi from "@pulumiverse/unifi";
@@ -23,6 +24,27 @@ interface DropTarget {
 /** Collapse `{ip, port}` observations into one {@link DropTarget} per IP, with ports sorted so the members list is stable. */
 function toDropTargets(ports: Map<string, Set<number>>): DropTarget[] {
   return [...ports].map(([ip, p]) => ({ ip, ports: [...p].sort((a, b) => a - b) })).sort((a, b) => a.ip.localeCompare(b.ip));
+}
+
+/**
+ * Longest logical resource name we may hand to Pulumi for a UniFi firewall object.
+ *
+ * The controller rejects `firewallgroup`/`firewallpolicy` names past 64 characters with
+ * `api.err.InvalidPayload` (400), and Pulumi auto-naming appends 8 more (`-` plus 7 hex digits),
+ * which leaves 56. We stop at 54 for headroom. IPv6 endpoints are what actually blow the budget:
+ * `2600-1700-c99-8830-a897-2c40-d2bc-9380` is 26 characters longer than its IPv4 equivalent.
+ */
+const MAX_LOGICAL_NAME = 54;
+
+/**
+ * Shorten `name` to {@link MAX_LOGICAL_NAME}, keeping a digest of the full value so two identities
+ * that share a prefix cannot collide once truncated. Names already inside the budget are returned
+ * untouched, so existing resources keep their logical name and are not replaced.
+ */
+function boundName(name: string): string {
+  if (name.length <= MAX_LOGICAL_NAME) return name;
+  const digest = hash("sha1", name, "hex").slice(0, 6);
+  return `${name.slice(0, MAX_LOGICAL_NAME - digest.length - 1)}-${digest}`;
 }
 
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
@@ -95,7 +117,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         for (const { ip, ports } of ipv4IpsToDrop) {
           const name = `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}`;
           const portGroup = new firewall.FirewallGroup(
-            `${name}-ports`,
+            boundName(`${name}-ports`),
             {
               type: "port-group",
               members: ports.map(String),
@@ -106,7 +128,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
           );
 
           const _firewallRule = new firewall.FirewallPolicy(
-            name,
+            boundName(name),
             {
               enabled: true,
 
@@ -142,7 +164,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
         for (const { ip, ports } of ipv6IpsToDrop) {
           const name = `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}`;
           const portGroup = new firewall.FirewallGroup(
-            `${name}-ports`,
+            boundName(`${name}-ports`),
             {
               type: "port-group",
               members: ports.map(String),
@@ -153,7 +175,7 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
           );
 
           const _firewallRule = new firewall.FirewallPolicy(
-            name,
+            boundName(name),
             {
               enabled: true,
 
