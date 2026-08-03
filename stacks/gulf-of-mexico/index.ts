@@ -39,13 +39,20 @@ const host = new ProxmoxHost("luna", {
   globals: globals,
   authentikOutputs: outputs,
   tailscaleIpAddress: "100.111.10.104",
+  // Required while remote: false (ProxmoxHost throws without it) and feeds the
+  // tailscale exports that local-dns.ts uses to pin the DHCP reservation.
+  internalIpAddress: "10.10.10.104",
   proxmox: mainProxmoxCredentials,
   remote: false, // once this gets shipped to the new location, flip this to true so that tailscale accepts routes from the LAN
   cluster: cluster,
   tailscaleArgs: {
     advertiseExitNode: true,
     acceptDns: true,
-    acceptRoutes: true,
+    // Same hazard as the dockge LXC below: accepting the tailnet-advertised
+    // 10.10.0.0/16 while sitting ON that subnet routes replies to LAN clients
+    // out tailscale0 and blackholes all LAN-inbound traffic. Flip to true
+    // together with `remote` at move time.
+    acceptRoutes: false,
   },
   tailscaleSubnetRoutes: [],
   vmIdRange: vmRange,
