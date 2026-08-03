@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: itsaplan
+spec:
+  name: Its a Plan
+  category: ${CLUSTER_TITLE}
+  description: Self-hosted issue tracking and project planning
+  url: &url https://itsaplan.${CLUSTER_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/planka.svg
+  access_policy:
+    groups:
+      - admins
+  # No `authentik:` block, deliberately.
+  #
+  # itsaplan authenticates natively (better-auth: password, passkeys, optional
+  # Google OAuth) and does not speak OIDC to an external provider, so there is
+  # no oauth2 client to create. A forward-auth proxy would not help either: the
+  # browser calls the api origin directly with NEXT_PUBLIC_API_URL baked into
+  # its bundle, so gating only the web origin would leave registration reachable
+  # on the api origin — the gate would look real without being one.
+  #
+  # Registration mode therefore has to be closed IN THE APP, from god mode,
+  # immediately after the first account is created. Until that is done, anyone
+  # who can reach these hostnames can self-register. That is the reason both
+  # origins are internal-only; see the routing note in .env.
+  gatus:
+    - group: ${CLUSTER_TITLE}
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+    # The api is a separate origin and a separate container; the web app
+    # rendering fine says nothing about it. This is also the check that fails
+    # if the shared Postgres is down, since the api will not serve without it.
+    - name: API
+      group: ${CLUSTER_TITLE}
+      url: https://itsaplan-api.${CLUSTER_DOMAIN}/
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

@@ -133,6 +133,21 @@
       matchPackageNames: ["nousresearch/hermes-agent"],
       versioning: "loose",
     },
+    {
+      // The repo extends "docker:enableMajor", so without this rule Renovate
+      // would happily open a postgres 17 -> 18 PR for docker/_common/postgres.
+      // Merging it would not be an upgrade, it would be an outage: PGDATA is
+      // bound to the major version that created it, and an 18 binary starting
+      // on a 17 data directory exits with "database files are incompatible
+      // with server" and crash-loops. A major move is a pg_upgrade or a
+      // dump/restore, planned alongside the CNPG decision in vault#114 — never
+      // an image bump. Minor, patch and digest updates still flow normally.
+      description: "Container Postgres majors are a data migration, not an image bump",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["postgres"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
   ],
   customManagers: [
     {

@@ -1,0 +1,296 @@
+# itsaplan — self-hosted issue tracker / planning tool (AGPL-3.0).
+# Upstream: https://github.com/croffasia/itsaplan
+#
+# Migrated from upstream's docker-compose.yml with three estate-shaped changes:
+#
+#   1. No postgres service. The database comes from docker/_common/postgres,
+#      the per-node shared instance, where role and database `itsaplan` are
+#      provisioned by that stack's provision.sh.
+#   2. Every service is renamed with an `itsaplan-` prefix. Four of them join
+#      the host-wide dockge_default network, where the container name is a DNS
+#      name every container on the node resolves — and upstream's names (`api`,
+#      `web`, `worker`, `bot`, `minio`) are exactly the generic names that
+#      collide, the hazard docker/celestia/homelable/compose.yaml documents.
+#   3. No published ports. Traefik fronts web and api; MinIO stays off the
+#      network entirely, as upstream intends.
+#
+# BUILDS FROM SOURCE, deliberately and unavoidably: upstream publishes no
+# images (see init.sh). `./src` is populated by init.sh at the pinned release
+# and components/DockgeLxc.ts:1012 runs `docker compose build` before `up -d`.
+# These four images are therefore the estate's only non-digest-pinned images.
+# What Renovate tracks instead is the source revision, via the annotation on
+# ITSAPLAN_VERSION in init.sh (the "Process annotated dependencies" custom
+# manager in .github/renovate.json5 covers *.sh). The two supporting images
+# below are ordinary pinned images.
+
+x-itsaplan-build: &itsaplan-build
+  context: ./src
+
+services:
+  # Applies database migrations on startup, then serves the API.
+  itsaplan-api:
+    build:
+      <<: *itsaplan-build
+      dockerfile: apps/api/Dockerfile
+    image: itsaplan-api:local
+    container_name: itsaplan-api
+    hostname: itsaplan-api
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      S3_ENDPOINT: http://itsaplan-minio:9000
+    depends_on:
+      itsaplan-minio-init:
+        condition: service_completed_successfully
+    # The image's CMD is `bun run packages/db/src/migrate.ts && bun run
+    # apps/api/src/index.ts` — it does not listen until migrations finish.
+    # Upstream allows 90s; this is 180s because upstream's number assumes an
+    # already-migrated database and the first boot here replays the entire
+    # migration chain against an empty one. Nothing kills the container during
+    # start_period, so the cost of being generous is only a later first alert.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      # dockge_default to reach postgres-shared and to be routable by traefik;
+      # itsaplan for MinIO and the internal worker/bot hops.
+      - itsaplan
+      - dockge_default
+    labels:
+      traefik.enable: true
+      traefik.docker.network: dockge_default
+
+      # The browser talks to this origin directly — NEXT_PUBLIC_API_URL is
+      # inlined into the web bundle — so it needs a real router, not just
+      # in-network access.
+      traefik.http.routers.itsaplan-api.rule: Host(`itsaplan-api.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.itsaplan-api.entrypoints: websecure
+      traefik.http.routers.itsaplan-api.tls.certresolver: le
+      traefik.http.routers.itsaplan-api.service: itsaplan-api
+
+      traefik.http.routers.itsaplan-api-tailscale.rule: Host(`itsaplan-api.${tailscaleDomain}`)
+      traefik.http.routers.itsaplan-api-tailscale.entrypoints: tailscale
+      traefik.http.routers.itsaplan-api-tailscale.service: itsaplan-api
+
+      traefik.http.services.itsaplan-api.loadbalancer.server.port: 3000
+
+  # Webhook delivery, notification delivery, agent schedules and agent runs.
+  # Shares the database with the api. No ports, no router.
+  itsaplan-worker:
+    build:
+      <<: *itsaplan-build
+      dockerfile: apps/worker/Dockerfile
+    image: itsaplan-worker:local
+    container_name: itsaplan-worker
+    hostname: itsaplan-worker
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      SERVICE_URL_API: http://itsaplan-api:3000
+    depends_on:
+      itsaplan-api:
+        condition: service_started
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      # dockge_default only for postgres-shared; no traefik labels.
+      - itsaplan
+      - dockge_default
+
+  # Telegram bot: long-polls getUpdates. The bot token lives in the database
+  # and is edited in god mode, so it is not an environment variable.
+  #
+  # MUST STAY AT EXACTLY ONE INSTANCE. Telegram hands each getUpdates call to a
+  # single caller, so a second instance silently steals updates from the first.
+  # `container_name` is the structural guarantee rather than a comment: Docker
+  # requires container names to be unique, so `docker compose up --scale
+  # itsaplan-bot=2` fails outright instead of half-working.
+  itsaplan-bot:
+    build:
+      <<: *itsaplan-build
+      dockerfile: apps/bot/Dockerfile
+    image: itsaplan-bot:local
+    container_name: itsaplan-bot
+    hostname: itsaplan-bot
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      SERVICE_URL_API: http://itsaplan-api:3000
+    depends_on:
+      itsaplan-api:
+        condition: service_started
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # No database access at all, so it never needs dockge_default.
+    networks:
+      - itsaplan
+
+  # Next.js frontend. NEXT_PUBLIC_API_URL is inlined into the browser bundle at
+  # BUILD time, so this image is bound to the api origin it was built for.
+  # Changing API_URL in .env means a rebuild, not a restart — that is why the
+  # hostnames have to be settled before the first build rather than after.
+  itsaplan-web:
+    build:
+      <<: *itsaplan-build
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${API_URL}
+    image: itsaplan-web:local
+    container_name: itsaplan-web
+    hostname: itsaplan-web
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      itsaplan-api:
+        condition: service_started
+    # /login renders without a session and without reaching the api.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3001/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - itsaplan
+      - dockge_default
+    labels:
+      traefik.enable: true
+      traefik.docker.network: dockge_default
+
+      traefik.http.routers.itsaplan.rule: Host(`itsaplan.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.itsaplan.entrypoints: websecure
+      traefik.http.routers.itsaplan.tls.certresolver: le
+      traefik.http.routers.itsaplan.service: itsaplan
+
+      traefik.http.routers.itsaplan-tailscale.rule: Host(`itsaplan.${tailscaleDomain}`)
+      traefik.http.routers.itsaplan-tailscale.entrypoints: tailscale
+      traefik.http.routers.itsaplan-tailscale.service: itsaplan
+
+      traefik.http.services.itsaplan.loadbalancer.server.port: 3001
+
+  # S3-compatible object store for issue attachments.
+  #
+  # Stays in-stack and stays OFF the network: no published ports, no traefik
+  # labels, not on dockge_default, and the console is disabled outright. The
+  # api streams attachment bytes through itself, so nothing else needs to reach
+  # :9000, and upstream's own comment makes the same choice. Administer with mc
+  # from inside the stack network.
+  #
+  # NOTE: minio/minio on Docker Hub has not shipped since RELEASE.2025-09-07
+  # (verified — `latest` still resolves to that same digest), so this image is
+  # ~11 months stale and is not receiving security updates. Keeping it entirely
+  # off the network is part of why that is tolerable here; it is still the
+  # weakest component in this stack and a long-term home for attachments is
+  # worth revisiting.
+  itsaplan-minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    container_name: itsaplan-minio
+    hostname: itsaplan-minio
+    command: server /data
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
+      # No console. Upstream leaves it listening on :9001 unpublished; off is
+      # strictly better than unpublished-but-listening.
+      MINIO_BROWSER: "off"
+    volumes:
+      # Attachment blobs — not reproducible from git, and the database holds
+      # only their metadata. Covered by the celestia dockge backrest plan,
+      # which syncs /opt/stacks-data minus an explicit exclude list
+      # (stacks/backups/index.ts).
+      - /opt/stacks-data/itsaplan/minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - itsaplan
+
+  # One-shot: waits for MinIO, creates the attachments bucket, exits.
+  # `service_completed_successfully` on the api is what guarantees the bucket
+  # exists before the first upload, and `service_healthy` here is what
+  # guarantees mc is talking to a MinIO that is actually listening.
+  itsaplan-minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    container_name: itsaplan-minio-init
+    depends_on:
+      itsaplan-minio:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        mc alias set local http://itsaplan-minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing local/"$$S3_BUCKET"
+        echo "bucket ready: $$S3_BUCKET"
+    restart: "no"
+    dns:
+      - 100.100.100.100
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - itsaplan
+
+networks:
+  # Stack-private: MinIO, and the worker/bot -> api hops. Keeps the generic
+  # service names off the host-wide network.
+  itsaplan: {}
+  dockge_default:
+    external: true
+
+x-dockge:
+  urls:
+    - https://itsaplan.${CLUSTER_DOMAIN}
+    - https://itsaplan.${tailscaleDomain}

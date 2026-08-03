@@ -1,0 +1,168 @@
+services:
+  # Shared Postgres for this Docker node. One instance per host (this is a
+  # `_common` stack, so components/DockgeLxc.ts:641 deploys it to celestia,
+  # alpha-site, luna and skystar alike), serving every consumer stack on that
+  # host rather than each app shipping its own database container.
+  #
+  # NAMING — deliberate, and the single most important line in this file.
+  # The service, container and DNS name is `postgres-shared`, NOT `postgres`.
+  # This stack sits on the host-wide `dockge_default` network, where every
+  # container name is a DNS name every other container on the host resolves.
+  # `postgres` is the single most likely name for some future stack to claim:
+  # vendor compose files use it constantly — itsaplan's own upstream
+  # docker-compose.yml has a service called exactly `postgres`. Two containers
+  # answering to one name on one network is a round-robin coin flip on every
+  # connection, which is the hazard docker/celestia/homelable/compose.yaml
+  # documents for the name `backend`. A stack literally called `postgres` on a
+  # shared network is the sharpest possible version of that problem, so the
+  # generic name is left unclaimed on purpose. Consumers dial
+  # `postgres-shared:5432`.
+  postgres-shared:
+    # Postgres 17, chosen rather than inherited:
+    #   * upstream itsaplan pins `postgres:17-alpine` and runs its test suite
+    #     against it (docker-compose.test.yml), so 17 is the tested target;
+    #   * the estate's CNPG clusters are on 17 today, and vault#114 (the 17->18
+    #     conversation) is still open. Following the CNPG decision rather than
+    #     getting ahead of it keeps one Postgres major across the estate.
+    # When vault#114 lands on 18, this moves with it — deliberately second.
+    #
+    # A major bump here is NOT an image bump: PGDATA is major-version-bound and
+    # a 17->18 image swap crash-loops on "database files are incompatible".
+    # `.github/renovate.json5` disables major updates for this image for that
+    # reason; minor/patch/digest still flow normally.
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    container_name: postgres-shared
+    hostname: postgres-shared
+    env_file:
+      - .env
+    environment:
+      TZ: ${TIMEZONE}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      # The maintenance database. Application databases are created by the
+      # postgres-provision service below, never here.
+      POSTGRES_DB: postgres
+      # First-init only. Checksums make torn pages loud instead of silent;
+      # they cannot be turned on later without a dump/restore, so the choice
+      # has to be made now.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # Runs as the image's own postgres user (uid/gid 70 on Alpine) rather than
+    # starting as root and stepping down. init.sh pre-creates and chowns the
+    # data directories, so the entrypoint's chown pass is unnecessary — which
+    # in turn means the container needs no capabilities at all.
+    user: "70:70"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # Live data. NOT usable as a backup source — a file copy of a running
+      # cluster is torn, not crash-consistent. `stacks/backups/index.ts`
+      # excludes this path and backs up the dumps below instead.
+      - /opt/stacks-data/postgres/pgdata:/var/lib/postgresql/data
+    # Postgres uses POSIX shared memory for parallel query; Docker's 64m
+    # default is small enough to cause "could not resize shared memory segment".
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # The image sets STOPSIGNAL SIGINT (fast shutdown). The grace period is
+    # headroom for the resulting checkpoint on a busy cluster.
+    stop_grace_period: 1m
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    # Deliberately NOT autoheal-labelled. autoheal restarts unhealthy
+    # containers, and a database that is slow to answer pg_isready is usually
+    # in crash recovery — the one moment when restarting it repeatedly is the
+    # worst available action.
+    #
+    # No traefik labels and no published ports. Reachable only from
+    # dockge_default by name. See the exposure note in .env.
+    mem_limit: 2g
+    cpus: 2
+    networks:
+      - dockge_default
+
+  # Idempotent provisioner. Runs to completion on every stack start and
+  # reconciles roles + databases to whatever the .env declares.
+  #
+  # This exists because the postgres image's own /docker-entrypoint-initdb.d
+  # hook runs ONCE, on first init of an empty PGDATA. Adding a second consumer
+  # six months from now would never re-run it, and the failure would be silent.
+  # A provisioner that runs every time makes "add a consumer" a git edit.
+  #
+  # Convention: any variable named PGAPP_<NAME>_PASSWORD provisions a login
+  # role <name> and a database <name> owned by it. Nothing else is read, so a
+  # host with no consumers provisions nothing and this container exits 0.
+  postgres-provision:
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    container_name: postgres-shared-provision
+    depends_on:
+      postgres-shared:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: ${TIMEZONE}
+      PGHOST: postgres-shared
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+    user: "70:70"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./provision.sh:/provision.sh:ro
+    entrypoint: ["/bin/sh", "/provision.sh"]
+    # One-shot. `no` rather than `on-failure` so a persistently broken
+    # declaration is visible in `docker compose ps` instead of looping.
+    restart: "no"
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+
+  # Periodic logical dumps — the actual backup source for this database.
+  #
+  # The celestia dockge backrest plan (stacks/backups/index.ts) rclone-pulls
+  # /opt/stacks-data/ from each host and restic-snapshots it. That is a file
+  # copy of a live cluster, which for Postgres is not a restorable artifact.
+  # pg_dump produces one that is: each dump is a consistent snapshot taken
+  # inside a single transaction.
+  postgres-backup:
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    container_name: postgres-shared-backup
+    depends_on:
+      postgres-shared:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: ${TIMEZONE}
+      PGHOST: postgres-shared
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+    user: "70:70"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - /opt/stacks-data/postgres/dumps:/dumps
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true

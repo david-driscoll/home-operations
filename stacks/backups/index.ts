@@ -25,6 +25,16 @@ const dockgeInstances = dockgeDetails.apply(details => {
           sourcePath: "/stacks/",
           exclude: [
             // "/adguard/confdir/AdGuardHome.yaml*",
+            // The shared Postgres live data directory (docker/_common/postgres).
+            // A file-level copy of a running cluster is torn, not
+            // crash-consistent: the data files and the WAL are captured at
+            // different instants, so the snapshot can restore to nothing while
+            // still looking like a successful backup. That failure is silent
+            // until someone needs it. The restorable artifact is the nightly
+            // pg_dump output in /postgres/dumps, which is NOT excluded and is
+            // what this plan actually protects. Do not remove this line without
+            // replacing it with a proper WAL-archiving setup.
+            "/postgres/pgdata",
             "/authentik-outpost",
             "/backrest",
             "/autoheal",

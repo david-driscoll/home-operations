@@ -1,0 +1,46 @@
+This stack is staged, not deployed. Delete this file to enable it on celestia.
+
+components/DockgeLxc.ts:754 makes getStackFiles return null before any file
+here is read, so none of the `op://` references in .env resolve and none of the
+source fetching or image building in init.sh runs. Nothing about this directory
+touches the estate while this file exists.
+
+BEFORE DELETING THIS FILE
+-------------------------
+1. Enable the shared database first. `docker/_common/postgres/.ignore` must be
+   gone and that stack must have run at least once on celestia, so that the
+   `itsaplan` role and database exist. The api applies its migrations on start
+   and will crash-loop against a database that is not there.
+
+2. Create a 1Password item in the Eris vault titled `Itsaplan` with six fields,
+   each generated with `openssl rand -hex 32`:
+
+     db_password            also read by docker/celestia/postgres/.env
+     better_auth_secret
+     app_encryption_key     write-once in practice — see .env
+     worker_internal_token
+     s3_access_key_id
+     s3_secret_access_key
+
+   A missing item aborts the whole stacks/home run (HO#636), so create it
+   before deleting this file, not after.
+
+3. Confirm the two hostnames are what you want:
+     itsaplan.<cluster domain>       web
+     itsaplan-api.<cluster domain>   api
+   The api origin is compiled into the web browser bundle at build time, so
+   changing it later is a rebuild rather than an edit. Settle it first.
+
+4. Accept the build. There is no upstream image to pull (see init.sh), so the
+   first deploy runs `bun install` and a Next.js production build for four
+   images on celestia. Expect that to be slow the first time and effectively
+   free afterwards, since init.sh no-ops on an unchanged version and Docker's
+   layer cache covers the rest. The duration is UNVERIFIED — nothing has been
+   built on the host.
+
+IMMEDIATELY AFTER THE FIRST DEPLOY
+----------------------------------
+Log in, then close registration from god mode. itsaplan's registration mode
+defaults to `open`, so until that is done anyone who can reach the hostnames
+can create an account. Both origins are internal-only for this reason, but
+internal-only is a smaller boundary than closed.
