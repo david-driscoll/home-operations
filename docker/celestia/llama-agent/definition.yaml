@@ -7,10 +7,14 @@ metadata:
 spec:
   name: llama.cpp Agent Server (gemma-4-E4B)
   category: AI
-  url: &url http://${ipAddress}:8081
+  url: &url https://llama-agent.${searchDomain}
   icon: https://avatars.githubusercontent.com/u/134263123
   gatus:
-    - url: http://${ipAddress}:8081/health
+    # Probed through Traefik rather than ${ipAddress}:8081 so the check covers
+    # the route Hermes' operators actually click. The container port stays
+    # published, so a failure here means "hostname is broken", not "llama.cpp
+    # is down" — /health only returns 200 once the model is fully loaded.
+    - url: https://llama-agent.${searchDomain}/health
       method: GET
       group: "Applications"
       conditions:

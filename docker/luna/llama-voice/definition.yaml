@@ -7,10 +7,13 @@ metadata:
 spec:
   name: llama.cpp Voice Server (gemma-4-E2B)
   category: AI
-  url: &url http://${ipAddress}:8080
+  url: &url https://llama-voice.${searchDomain}
   icon: https://avatars.githubusercontent.com/u/134263123
   gatus:
-    - url: http://${ipAddress}:8080/health
+    # Probed through Traefik, same reasoning as docker/celestia/llama-agent.
+    # The Home Assistant voice pipeline still talks to ${ipAddress}:8080
+    # directly, so this check does not gate the thing HA depends on.
+    - url: https://llama-voice.${searchDomain}/health
       method: GET
       group: "Applications"
       conditions:

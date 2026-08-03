@@ -36,6 +36,36 @@ services:
       -c 8192
       -np 1
       --jinja
+    networks:
+      - dockge_default
+    labels:
+      traefik.enable: true
+
+      # Hostname for the built-in llama.cpp web UI. The published 8080 stays —
+      # the Home Assistant voice pipeline points at ${ipAddress}:8080 and that
+      # path must not depend on Traefik being up.
+      #
+      # luna's _common traefik is deployed like every other dockge host (the
+      # "no Traefik labels on luna" note in docker/AGENTS.md is about the
+      # network_mode: host stacks, which this is not). No authentik middleware,
+      # same reasoning as docker/celestia/llama-agent: the name resolves to the
+      # LXC's tailnet address, and forward-auth would break API clients.
+      traefik.http.routers.llama-voice.rule: Host(`llama-voice.${searchDomain}`)
+      traefik.http.routers.llama-voice.entrypoints: websecure
+      traefik.http.routers.llama-voice.tls.certresolver: le
+      traefik.http.routers.llama-voice.service: llama-voice
+
+      traefik.http.routers.llama-voice-tailscale.rule: Host(`llama-voice.${tailscaleDomain}`)
+      traefik.http.routers.llama-voice-tailscale.entrypoints: tailscale
+      traefik.http.routers.llama-voice-tailscale.service: llama-voice
+
+      traefik.http.services.llama-voice.loadbalancer.server.port: 8080
+
+networks:
+  dockge_default:
+    external: true
+
 x-dockge:
   urls:
+    - https://llama-voice.${searchDomain}
     - http://${ipAddress}:8080
