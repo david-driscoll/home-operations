@@ -80,7 +80,7 @@ export const Tailscale = {
     proxmoxManagement: ["tcp:8006"] as TailscaleNetworkCapability[],
     technitiumManagement: ["tcp:53443"] as TailscaleNetworkCapability[],
     proxmoxBackupServer: ["tcp:8007"] as TailscaleNetworkCapability[],
-    wyoming: ["tcp:10300", "tcp:10200"] as TailscaleNetworkCapability[],
+    wyoming: ["tcp:8080", "tcp:10300", "tcp:10200"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {
     admin: "autogroup:admin" as TailscaleAutogroups,
