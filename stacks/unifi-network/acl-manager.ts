@@ -406,8 +406,8 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     manager.setGrant(
       "home-assistant-wyoming",
       {
-        src: [tag.operator, tag.sgc, tag.equestria],
-        dst: [tag.dockge],
+        src: [tag.dockge, tag.egress],
+        dst: [tag.dockge, tag.ingress],
         ip: ports.wyoming,
       },
       { accept: [] },
