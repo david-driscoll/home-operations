@@ -403,6 +403,16 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [tag.egress] },
     );
 
+    manager.setGrant(
+      "home-assistant-wyoming",
+      {
+        src: [tag.operator, tag.sgc, tag.equestria],
+        dst: [tag.dockge],
+        ip: ports.wyoming,
+      },
+      { accept: [] },
+    );
+
     pulumi.output(manager.getJson()).apply(json => {
       writeFileSync("tailscale-acl.json", json);
     });
