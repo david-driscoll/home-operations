@@ -9,8 +9,20 @@ services:
   # Rootless image variant: runs as uid/gid 1000 from the start, so no
   # capabilities are needed at all and DockgeLxc's `user:`-driven chown pass
   # keeps /opt/stacks-data/forgejo owned by the runtime user.
+  #
+  # Registry is data.forgejo.org, the Forgejo project's own mirror, NOT the
+  # codeberg.org reference the upstream docs lead with. Same repository path,
+  # same tags, byte-identical manifests (the digest below resolves on both) —
+  # upstream documents swapping the host as a straight substitution. Codeberg
+  # is a Forgejo instance and its registry answers /v2/ with a Bearer
+  # challenge; Renovate intermittently fails to complete that handshake and
+  # drops the dep with "no-result", which silently strands this pin — the
+  # exact failure mode this stack can least afford, since it hosts the git
+  # remote everything else is repaired from. data.forgejo.org serves /v2/
+  # anonymously with no challenge at all, so the lookup has nothing to fail
+  # at. Keep both `image:` lines in this file on the same host.
   forgejo:
-    image: codeberg.org/forgejo/forgejo:16.0.2-rootless@sha256:23ccc146e6dc2cd1f5c5435909baae64db873201717f1726490dae649283e6cd
+    image: data.forgejo.org/forgejo/forgejo:16.0.2-rootless@sha256:23ccc146e6dc2cd1f5c5435909baae64db873201717f1726490dae649283e6cd
     container_name: forgejo
     hostname: forgejo
     env_file:
@@ -122,7 +134,7 @@ services:
   # container's entrypoint has already materialized from env by the time the
   # healthcheck passes.
   forgejo-provision:
-    image: codeberg.org/forgejo/forgejo:16.0.2-rootless@sha256:23ccc146e6dc2cd1f5c5435909baae64db873201717f1726490dae649283e6cd
+    image: data.forgejo.org/forgejo/forgejo:16.0.2-rootless@sha256:23ccc146e6dc2cd1f5c5435909baae64db873201717f1726490dae649283e6cd
     container_name: forgejo-provision
     depends_on:
       forgejo:
