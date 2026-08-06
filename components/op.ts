@@ -1,7 +1,14 @@
-import { type FullItem, OPConnect } from "@1password/connect";
-import type { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
+import { FullItem, OPConnect } from "@1password/connect";
+import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import type { ItemFile, ItemUrls } from "@1password/connect/dist/model/models.js";
 import { removeUndefinedProperties } from "./helpers.ts";
+
+export const TypeEnum = FullItemAllOfFields.TypeEnum;
+export type TypeEnum = FullItemAllOfFields.TypeEnum;
+export const PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export type PurposeEnum = FullItemAllOfFields.PurposeEnum;
+export const CategoryEnum = FullItem.CategoryEnum;
+export type CategoryEnum = FullItem.CategoryEnum;
 
 export interface OPClientItemFields {
   [key: string]: FullItemAllOfFields;
@@ -125,7 +132,8 @@ export class OPClient {
     try {
       const allItems = await this.client.listItems(vaultUuid);
       // Connect returns items in an unspecified order that varies between calls; sorting by
-      // title keeps every derived list byte-stable so resyncs don't push pure permutations.
+      // title keeps every derived list (ACL tests, grant dsts, backup plans) byte-stable so
+      // resyncs don't push pure permutations of the same data.
       const filtered = allItems.filter(item => item.tags?.includes(tag)).sort((a, b) => a.title!.localeCompare(b.title!));
       return Promise.all(filtered.map(z => this.getItemByTitle(z.title!)));
     } catch (e) {

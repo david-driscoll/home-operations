@@ -1,4 +1,4 @@
-import type { CategoryEnum } from "./op.ts";
+import type { CategoryEnum } from "../op.ts";
 
 export type ClusterDefinition = DockgeClusterDefinition | KubernetesClusterDefinition;
 
