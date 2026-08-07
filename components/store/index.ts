@@ -1,6 +1,6 @@
 import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
 import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
-import { OPClient, TypeEnum } from "./op.ts";
+import { OPClient, TypeEnum } from "../op.ts";
 
 const op = new OPClient();
 
