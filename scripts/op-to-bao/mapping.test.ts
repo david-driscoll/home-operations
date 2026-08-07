@@ -97,13 +97,13 @@ describe("toPayload", () => {
   it("keeps root fields flat and sections nested", () => {
     const { data } = toPayload(
       item({
-        fields: { username: plain("admin"), credential: concealed("hunter2") },
+        fields: { username: plain("admin"), credential: concealed("CONCEALED-VALUE-1") },
         sections: { ssh: { id: "ssh", fields: { host: plain("h1"), key: concealed("k") }, files: {} } },
       }),
       "2026-01-01T00:00:00Z",
     );
     assert.equal(data.username, "admin");
-    assert.equal(data.credential, "hunter2");
+    assert.equal(data.credential, "CONCEALED-VALUE-1");
     assert.deepEqual(data.ssh, { host: "h1", key: "k" });
   });
 
