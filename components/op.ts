@@ -1,7 +1,10 @@
 import { FullItem, OPConnect } from "@1password/connect";
 import { FullItemAllOfFields } from "@1password/connect/dist/model/fullItemAllOfFields.js";
 import type { ItemFile, ItemUrls } from "@1password/connect/dist/model/models.js";
-import { removeUndefinedProperties } from "./helpers.ts";
+// Deliberately NOT from ./helpers.ts — that import closes a cycle back through
+// @dynamic/1password/OnePasswordItem.ts into components/store/index.ts, which
+// constructs an OPClient at module scope. See removeUndefinedProperties.ts.
+import { removeUndefinedProperties } from "./removeUndefinedProperties.ts";
 
 export const TypeEnum = FullItemAllOfFields.TypeEnum;
 export type TypeEnum = FullItemAllOfFields.TypeEnum;

@@ -178,22 +178,11 @@ export function pushLxcDefinition(
   );
 }
 
-export function removeUndefinedProperties<T>(obj: T): T {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.filter(item => item !== undefined).map(item => removeUndefinedProperties(item)) as T;
-  }
-  if (typeof obj === "object" && !(obj instanceof Date)) {
-    return Object.fromEntries(
-      Object.entries(obj)
-        .filter(([_, v]) => v !== undefined)
-        .map(([k, v]) => [k, removeUndefinedProperties(v)] as const),
-    ) as T;
-  }
-  return obj;
-}
+// Moved to its own dependency-free module so op.ts can use it without
+// importing helpers.ts, which would close an import cycle back through
+// @dynamic/1password/OnePasswordItem.ts. Re-exported here so existing
+// consumers keep working unchanged.
+export { removeUndefinedProperties } from "./removeUndefinedProperties.ts";
 
 export function addUptimeGatus(
   name: string,
