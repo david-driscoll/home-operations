@@ -413,6 +413,26 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
+    // The equestria OpenBao cluster auto-unseals against bao-transit on
+    // dockge-as. Its pods have no route to the tailnet, so the traffic leaves
+    // through the tailnet-inbound ProxyGroup, whose devices carry tag:egress —
+    // this grant is what lets that proxy actually reach 8200. Without it the
+    // egress Service forwards the port and the connection still dies in the
+    // ACL, which looks exactly like a misconfigured seal address.
+    //
+    // src is tag:egress alone, not dockgeManagement: this is the key that
+    // unseals the estate, and it should be reachable from the one hop that
+    // needs it rather than from every management source.
+    manager.setGrant(
+      "openbao-transit-unseal",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.baoTransit,
+      },
+      { accept: [] },
+    );
+
     pulumi.output(manager.getJson()).apply(json => {
       writeFileSync("tailscale-acl.json", json);
     });

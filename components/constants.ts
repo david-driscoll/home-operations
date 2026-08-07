@@ -81,6 +81,12 @@ export const Tailscale = {
     technitiumManagement: ["tcp:53443"] as TailscaleNetworkCapability[],
     proxmoxBackupServer: ["tcp:8007"] as TailscaleNetworkCapability[],
     wyoming: ["tcp:8080", "tcp:10300", "tcp:10200"] as TailscaleNetworkCapability[],
+    // bao-transit on dockge-as — the seal root that auto-unseals the equestria
+    // OpenBao cluster. Deliberately its own entry rather than folded into
+    // dockgeManagement: that set is granted broadly (proxmox→dockge,
+    // dockge→dockge, management→dockge) and this port must not ride along with
+    // it. See the `openbao-transit-unseal` grant in acl-manager.ts.
+    baoTransit: ["tcp:8200"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {
     admin: "autogroup:admin" as TailscaleAutogroups,
