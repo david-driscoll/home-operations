@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: bao-transit
+spec:
+  name: OpenBao Transit (Alpha Site)
+  category: Infrastructure
+  description: Seal root — auto-unseals the equestria OpenBao cluster
+  url: &url https://bao-transit.${tailscaleDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vault.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    # This check is load-bearing, not cosmetic: if this node is down, the
+    # equestria OpenBao pods cannot unseal on restart. Already-unsealed pods
+    # keep serving, so the failure is silent until something reschedules —
+    # which is exactly why it needs to alert on its own.
+    - url: "https://bao-transit.${tailscaleDomain}/v1/sys/health"
+      method: GET
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"

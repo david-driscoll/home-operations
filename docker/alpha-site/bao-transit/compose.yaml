@@ -1,0 +1,73 @@
+services:
+  bao-transit:
+    container_name: bao-transit
+    image: ghcr.io/openbao/openbao:2.6.1@sha256:5b2486ab0fb90bbc788cc345b0a08616dfb375873ee8be5df3a2fd4d378a67e0
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    # Verify on first run: the image follows the vault-image convention where
+    # the entrypoint forwards arguments to `bao`. If it does not, run
+    # `docker run --rm --entrypoint sh <image> -c 'command -v bao'` and set an
+    # explicit entrypoint rather than guessing.
+    command: server -config=/openbao/config/config.hcl
+    env_file:
+      - path: .env
+    # mlock keeps the unsealed root key out of swap. The alternative is
+    # disable_mlock = true in config.hcl, which is strictly worse on a host that
+    # has swap enabled.
+    cap_add:
+      - IPC_LOCK
+    ports:
+      # Bound to the tailnet address, NOT 0.0.0.0 — this is the seal root and
+      # has no business being reachable from the LAN. equestria's seal stanza
+      # dials exactly this: http://${tailscaleIpAddress}:8200
+      - "${tailscaleIpAddress}:8200:8200"
+    volumes:
+      - /opt/stacks-data/${APP}/data:/openbao/data
+      - ./config/config.hcl:/openbao/config/config.hcl:ro
+    labels:
+      traefik.enable: true
+
+      # Tailscale entrypoint only. There is deliberately no `websecure` router:
+      # the UI for the estate's seal root should not be published alongside
+      # ordinary services.
+      traefik.http.routers.bao-transit.rule: Host(`bao-transit.${tailscaleDomain}`)
+      traefik.http.routers.bao-transit.entrypoints: tailscale
+      traefik.http.routers.bao-transit.service: bao-transit
+      traefik.http.services.bao-transit.loadbalancer.server.port: 8200
+    networks:
+      - dockge_default
+
+x-dockge:
+  notes: |
+    Seal root for the estate. Holds ONLY the transit key that auto-unseals the
+    equestria OpenBao cluster — no application secrets. Do not co-locate the
+    break-glass standby here; that would put the ciphertext and its key on one
+    host. See vault/bootstrap/RUNBOOK.md.
+
+    First-run setup, once BAO_UNSEAL_KEY is populated:
+      export BAO_ADDR=http://<tailscale-ip>:8200
+      bao operator init          # save recovery shares to vault/bootstrap/openbao/
+      bao secrets enable transit
+      bao write -f transit/keys/openbao-equestria-unseal
+      bao policy write equestria-unseal - <<'EOF'
+      path "transit/encrypt/openbao-equestria-unseal" { capabilities = ["update"] }
+      path "transit/decrypt/openbao-equestria-unseal" { capabilities = ["update"] }
+      EOF
+      bao token create -policy=equestria-unseal -orphan -period=768h
+    That token is equestria's VAULT_TRANSIT_SEAL_TOKEN. Orphan so it survives
+    its parent expiring, periodic so it renews indefinitely.
+
+    Do NOT create the transit key exportable — an exportable key can be read by
+    anyone holding a read token. Back up this container's /openbao/data plus the
+    static unseal key instead.
+
+    If the container cannot write /openbao/data on first start, it is the
+    volume owner: the image runs as a non-root user. Chown the host directory to
+    the image's uid rather than switching the container to root.
+  urls:
+    - https://bao-transit.${tailscaleDomain}
+
+networks:
+  dockge_default:
+    external: true
