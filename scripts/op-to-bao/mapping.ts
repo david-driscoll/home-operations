@@ -75,7 +75,8 @@ const SKIP_POLICIES: Array<{ match: (title: string, tags: string[]) => boolean; 
   // OpenBao instead of copying out of 1Password.
   { match: t => t.endsWith("-oidc-credentials"), reason: "Pulumi stacks will create OIDC credentials in OpenBao directly" },
   { match: t => t.startsWith("Proxmox Backup Server"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
-  { match: t => t.endsWith("PBS Backup User"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
+  // Case-insensitive: the live vault has "Luna PBS backup user" (lowercase b/u).
+  { match: t => t.toLowerCase().endsWith("pbs backup user"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
   // Excluded from migration scope by estate decision, 2026-08-07.
   { match: t => t === "Authentik Outputs", reason: "excluded from migration scope (estate decision 2026-08-07)" },
   { match: t => t.startsWith("B2 Database"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
@@ -84,6 +85,14 @@ const SKIP_POLICIES: Array<{ match: (title: string, tags: string[]) => boolean; 
   { match: t => t === "Backup Plan", reason: "inventory — moves to Pulumi stack outputs" },
   // Tailnet user entries stay in 1Password for now.
   { match: (_t, tags) => tags.includes("opossum-yo.ts.net/user"), reason: "user entries excluded for now (estate decision 2026-08-07)" },
+  // Seal-chain and pre-auth material. INVENTORY.md §2: these can never live in
+  // OpenBao — the unseal key unseals the thing that unseals OpenBao, and
+  // Pulumi must authenticate before it can read anything. Their destination is
+  // vault/bootstrap/openbao/*.sops.yaml, not a KV mount.
+  { match: t => t === "OpenBao Alpha Site Static Unseal", reason: "seal chain — belongs in vault/bootstrap (INVENTORY §2), never inside the thing it unseals" },
+  { match: t => t === "Pulumi Passphrase", reason: "pre-auth bootstrap — belongs in vault/bootstrap pulumi-approle.sops.yaml (INVENTORY §2)" },
+  // Personal-scope, retained in 1Password by design (PLAN §G, Phase 11 notes).
+  { match: t => t === "GitHub Personal Access Token", reason: "personal-scope — 1Password remains its home (PLAN §G)" },
 ];
 
 export function classify(item: OPItem): Omit<MappingEntry, "fields" | "concealed" | "files"> {
