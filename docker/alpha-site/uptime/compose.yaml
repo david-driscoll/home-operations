@@ -23,7 +23,19 @@ services:
       traefik.http.services.uptime.loadbalancer.server.port: 9595
     volumes:
       - /opt/stacks-data/${APP}/data/:/data/
-      - /opt/stacks-data/${APP}/config:/config:ro
+      # NOT :ro, and it cannot be. Gatus reads every YAML in GATUS_CONFIG_PATH
+      # as one merged config, so the Pulumi-written endpoint files (here) and
+      # the in-repo static files (below) have to arrive in the same directory —
+      # the static ones as individual file mounts layered on top of this one.
+      # runc has to CREATE a mountpoint inside this directory for any such file
+      # that does not already exist in it, and on a :ro mount that create fails
+      # with "make mountpoint: read-only file system" before the container
+      # process ever starts. `default.yaml` only escaped it by having a stale
+      # 0-byte twin in stacks-data from June; `openbao-break-glass.yaml` had no
+      # such twin and took the whole uptime stack down when it was added.
+      # Keep the individual file mounts below :ro — that is where read-only
+      # actually belongs.
+      - /opt/stacks-data/${APP}/config:/config
       - ./config/default.yaml:/config/default.yaml:ro
       # Heartbeat endpoints the equestria openbao-replica cronjobs report
       # into — in-repo rather than Pulumi-written because the consumers are
