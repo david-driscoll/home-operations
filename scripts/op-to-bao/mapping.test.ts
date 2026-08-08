@@ -44,10 +44,11 @@ describe("slug", () => {
 });
 
 describe("classify", () => {
-  it("routes generated oidc credentials without review", () => {
+  it("routes generated oidc credentials, skipped: Pulumi will create them in OpenBao", () => {
     const c = classify(item({ title: "equestria-headlamp-oidc-credentials" }));
     assert.equal(c.path, "clusters/equestria/apps/headlamp/oidc");
     assert.equal(c.review, false);
+    assert.equal(c.skip, true);
   });
 
   it("routes generated postgres credentials without review", () => {
@@ -73,6 +74,22 @@ describe("classify", () => {
     const c = classify(item({ title: "Celestia Backup Plan", tags: ["backup-plan"] }));
     assert.equal(c.skip, true);
     assert.equal(c.review, true);
+  });
+
+  it("applies the estate skip policies, preserving the would-be path", () => {
+    // Decided 2026-08-07: these families never migrate. skip: true with
+    // review: false — the decision is made, there is nothing to review.
+    for (const title of ["B2 Backup - Sonarr", "Backblaze Master", "Luna PBS Backup User", "Proxmox Backup Server (skystar)"]) {
+      const c = classify(item({ title }));
+      assert.equal(c.skip, true, title);
+      assert.equal(c.review, false, title);
+    }
+    const byTag = classify(item({ title: "Abbie", tags: ["opossum-yo.ts.net/user"] }));
+    assert.equal(byTag.skip, true);
+    // And a control: an ordinary shared secret is untouched by the policies.
+    const control = classify(item({ title: "Cloudflare (driscoll.tech)" }));
+    assert.equal(control.skip, undefined);
+    assert.equal(control.review, true);
   });
 
   it("flags uuid-addressed items for naming", () => {

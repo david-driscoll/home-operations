@@ -64,7 +64,39 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  */
 const INVENTORY_TAGS = new Set(["backup-plan", "tailscale-export", "cluster-definition"]);
 
+/**
+ * Estate-level exclusions, decided 2026-08-07. Encoded here rather than as
+ * hand edits to mapping.yaml so a --plan re-run reproduces them. Skipped items
+ * are still emitted (with their would-be path) so the mapping stays a complete
+ * record of the vault.
+ */
+const SKIP_POLICIES: Array<{ match: (title: string, tags: string[]) => boolean; reason: string }> = [
+  // Generated credential families the Pulumi stacks will create directly in
+  // OpenBao instead of copying out of 1Password.
+  { match: t => t.endsWith("-oidc-credentials"), reason: "Pulumi stacks will create OIDC credentials in OpenBao directly" },
+  { match: t => t.startsWith("Proxmox Backup Server"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
+  { match: t => t.endsWith("PBS Backup User"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
+  // Excluded from migration scope by estate decision, 2026-08-07.
+  { match: t => t === "Authentik Outputs", reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("B2 Database"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("B2 Backup"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("Backblaze"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t === "Backup Plan", reason: "inventory — moves to Pulumi stack outputs" },
+  // Tailnet user entries stay in 1Password for now.
+  { match: (_t, tags) => tags.includes("opossum-yo.ts.net/user"), reason: "user entries excluded for now (estate decision 2026-08-07)" },
+];
+
 export function classify(item: OPItem): Omit<MappingEntry, "fields" | "concealed" | "files"> {
+  const entry = classifyPath(item);
+  const policy = SKIP_POLICIES.find(p => p.match(item.title, item.tags ?? []));
+  if (policy) {
+    // review: false — the decision is already made; there is nothing to review.
+    return { ...entry, skip: true, review: false, rule: `${entry.rule} — SKIP: ${policy.reason}` };
+  }
+  return entry;
+}
+
+function classifyPath(item: OPItem): Omit<MappingEntry, "fields" | "concealed" | "files"> {
   const title = item.title;
   const tags = item.tags ?? [];
   const base = { title, uuid: item.id, tags };

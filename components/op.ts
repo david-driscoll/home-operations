@@ -130,6 +130,19 @@ export class OPClient {
     }
   }
 
+  public async listAllItems() {
+    const vaultUuid = await this.getVaultUuid("Eris");
+    try {
+      // The unfiltered list endpoint. listItemsByTitleContains("") is NOT an
+      // equivalent: Connect 500s on an empty `title co` filter.
+      const items = await this.client.listItems(vaultUuid);
+      return items.map(item => this.mapItem(item, item.id));
+    } catch (e) {
+      console.error("Error listing all items", e);
+      throw e;
+    }
+  }
+
   public async findItemsByTag(tag: string) {
     const vaultUuid = await this.getVaultUuid("Eris");
     try {
