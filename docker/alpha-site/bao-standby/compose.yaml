@@ -1,0 +1,136 @@
+services:
+  # ── Always running: the dump receiver ──────────────────────────────────────
+  # A second rclone SFTP server, separate from the estate-wide read-only
+  # rclone-sftp stack on 2022, because this one must accept WRITES into its
+  # dump directory — the nightly openbao-replica CronJob in equestria pushes
+  # the age-encrypted pg_dump here and prunes it to 30 days, and the monthly
+  # restore test pulls the newest dump back out. Auth reuses the keys DockgeLxc
+  # already seeds for rclone-sftp: same host key, same authorized client key,
+  # zero new key material.
+  dump-sftp:
+    user: "65534:65534"
+    container_name: bao-standby-dump-sftp
+    image: rclone/rclone:1.75.0@sha256:b06aed988cf5967de7c25be5925240983981c757f4ed1ac9d2fa659d51d60548
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    command: >-
+      serve sftp /data/dumps --addr :2023
+      --authorized-keys /config/ssh/authorized_keys
+      --key /config/ssh/host_key
+    ports:
+      # Bound to the tailnet address, NOT 0.0.0.0 — the only clients are the
+      # equestria cronjobs, arriving through the dockge-as egress Service
+      # (port 2023 is declared in equestria's tailscale-system/services).
+      - "${tailscaleIpAddress}:2023:2023"
+    volumes:
+      - /opt/stacks-data/${APP}/dumps:/data/dumps
+      - /opt/stacks-data/rclone-sftp/keys:/config/ssh:ro
+    tmpfs:
+      - /.cache:uid=65534,gid=65534
+    networks:
+      - dockge_default
+
+  # ── Stopped by default: the break-glass standby ────────────────────────────
+  # `profiles: [break-glass]` keeps both of these DOWN on a normal
+  # `docker compose up -d`. That is deliberate and load-bearing: this host also
+  # runs bao-transit, so a running standby would put the ciphertext and the key
+  # that decrypts it live on one machine. Start them only during an actual
+  # break-glass, via restore.sh (vault/bootstrap/RUNBOOK.md Scenario B).
+  standby-postgres:
+    profiles: ["break-glass"]
+    container_name: bao-standby-postgres
+    # Same major as the CNPG cluster the dumps come from (17.5).
+    image: docker.io/library/postgres:17.5-alpine@sha256:6567bca8d7bc8c82c5922425a0baee57be8402df92bae5eacad5f01ae9544daa
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      POSTGRES_USER: openbao
+      POSTGRES_DB: openbao
+      # Scratch credential for a database that only ever holds ciphertext
+      # OpenBao already encrypted, on a container network. Overridable from
+      # .env; not worth a secret store entry.
+      POSTGRES_PASSWORD: ${BAO_STANDBY_PG_PASSWORD:-break-glass}
+    volumes:
+      - /opt/stacks-data/${APP}/postgres:/var/lib/postgresql/data
+    networks:
+      - dockge_default
+
+  bao-standby:
+    profiles: ["break-glass"]
+    container_name: bao-standby
+    image: ghcr.io/openbao/openbao:2.6.1@sha256:5b2486ab0fb90bbc788cc345b0a08616dfb375873ee8be5df3a2fd4d378a67e0
+    restart: unless-stopped
+    depends_on:
+      - standby-postgres
+    dns:
+      - 100.100.100.100
+    command: server -config=/openbao/config/config.hcl
+    cap_add:
+      - IPC_LOCK
+    environment:
+      # Env beats config for both of these (confirmed against source, see
+      # vault docs/openbao-migration/STATUS.md "facts established the hard
+      # way"), so config.hcl deliberately omits them.
+      BAO_PG_CONNECTION_URL: postgres://openbao:${BAO_STANDBY_PG_PASSWORD:-break-glass}@standby-postgres:5432/openbao?sslmode=disable
+      # The SAME transit token equestria seals with — supplied by the operator
+      # at break-glass time from vault/bootstrap/openbao/transit-token.sops.yaml.
+      # Deliberately NOT resolved from a secret store here: at the moment this
+      # container matters, the secret stores are what's broken.
+      VAULT_TRANSIT_SEAL_TOKEN: ${BAO_STANDBY_TRANSIT_TOKEN:-}
+    ports:
+      # 8201 on the tailnet address; 8200 is bao-transit's.
+      - "${tailscaleIpAddress}:8201:8200"
+    volumes:
+      - ./config/config.hcl:/openbao/config/config.hcl:ro
+    labels:
+      traefik.enable: true
+      # Tailscale entrypoint only, mirroring bao-transit: the break-glass
+      # standby has even less business on the LAN than the seal root does.
+      traefik.http.routers.bao-standby.rule: Host(`bao-standby.${tailscaleDomain}`)
+      traefik.http.routers.bao-standby.entrypoints: tailscale
+      traefik.http.routers.bao-standby.service: bao-standby
+      traefik.http.services.bao-standby.loadbalancer.server.port: 8200
+    networks:
+      - dockge_default
+
+x-dockge:
+  notes: |
+    Break-glass standby for the equestria OpenBao cluster (migration Phase 5).
+    Three services, one running:
+
+      dump-sftp         ALWAYS UP. Receives the nightly age-encrypted pg_dump
+                        from the equestria openbao-replica CronJob into
+                        /opt/stacks-data/bao-standby/dumps (30-day retention,
+                        pruned by the sender).
+      standby-postgres  STOPPED (profile break-glass).
+      bao-standby       STOPPED (profile break-glass).
+
+    The dumps CANNOT be decrypted on this host: they are age-encrypted to the
+    estate recipients and no age identity lives here — deliberately, because
+    this host also runs bao-transit (the key that decrypts OpenBao's own
+    storage encryption). Keep it that way. Do not add an age key to this
+    host, and do not start the standby outside a break-glass.
+
+    Break-glass (full procedure: vault/bootstrap/RUNBOOK.md Scenario B):
+      1. On a machine with age.key: decrypt the newest dump
+      2. Copy the decrypted .sql here, then:
+           cd /opt/stacks/bao-standby
+           BAO_STANDBY_TRANSIT_TOKEN=<token> bash restore.sh /path/to/openbao.sql
+         (the token comes from vault/bootstrap/openbao/transit-token.sops.yaml)
+      3. Verify, then re-point consumers at
+         https://bao-standby.${tailscaleDomain} (or http://<tailnet-ip>:8201)
+
+    First-run: /opt/stacks-data/bao-standby/dumps must be writable by uid
+    65534 (rclone runs as nobody, same as the rclone-sftp stack):
+      mkdir -p /opt/stacks-data/bao-standby/dumps
+      chown 65534:65534 /opt/stacks-data/bao-standby/dumps
+    Like the bao-transit data chown, this is a host-side fix that belongs in
+    the Pulumi DockgeLxc definition eventually.
+  urls:
+    - https://bao-standby.${tailscaleDomain}
+
+networks:
+  dockge_default:
+    external: true
