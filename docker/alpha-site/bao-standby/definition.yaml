@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: bao-standby
+spec:
+  name: OpenBao Standby (Alpha Site)
+  category: Infrastructure
+  description: Break-glass standby — stopped by default, restores the nightly dump
+  url: &url https://bao-standby.${tailscaleDomain}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vault.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    # Only the dump RECEIVER is checked. The standby itself is stopped by
+    # default — an HTTP check against it would page forever about a state
+    # that is deliberate. Whether the dumps it receives are fresh and usable
+    # is covered separately by the "OpenBao Break Glass" heartbeat endpoints
+    # (uptime stack config), which the equestria cronjobs report into.
+    - name: bao-standby-dump-receiver
+      url: "tcp://${tailscaleIpAddress}:2023"
+      interval: 5m
+      conditions:
+        - "[CONNECTED] == true"

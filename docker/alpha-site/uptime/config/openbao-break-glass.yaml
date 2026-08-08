@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+#
+# Heartbeats for the OpenBao break-glass pipeline (migration Phase 5).
+# Both endpoints are REPORTED INTO by the openbao-replica cronjobs in the
+# equestria cluster (kubernetes/apps/kube-system/openbao-replica/), which
+# POST success/failure through the dockge-as egress. Two failure modes, both
+# loud:
+#
+#   - a job reports success=false      → endpoint goes red immediately
+#   - a job stops reporting AT ALL     → the heartbeat interval lapses and
+#                                        the endpoint goes red anyway
+#
+# Silence is the dangerous one: RUNBOOK Scenario D says a backup that has not
+# proven itself in over a month is UNTRUSTED. These heartbeats are what makes
+# that statement enforceable.
+#
+# Token convention matches toGatusKey(group, name) in
+# home-operations/components/helpers.ts, like the Pulumi-generated backup
+# endpoints.
+external-endpoints:
+  - name: nightly-dump
+    group: "OpenBao Break Glass"
+    token: openbao-break-glass_nightly-dump
+    # Nightly at 03:00 — 26h of silence means a dump was missed.
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: pushover
+        enabled: true
+        success-threshold: 1
+        failure-threshold: 1
+        minimum-reminder-interval: 24h
+  - name: restore-test
+    group: "OpenBao Break Glass"
+    token: openbao-break-glass_restore-test
+    # Monthly on the 1st at 05:00. 33 days of headroom covers a 31-day month
+    # plus one retry window; past that the backup is formally untrusted
+    # (RUNBOOK Scenario D) and someone should hear about it every day.
+    heartbeat:
+      interval: 792h
+    alerts:
+      - type: pushover
+        enabled: true
+        success-threshold: 1
+        failure-threshold: 1
+        minimum-reminder-interval: 24h
