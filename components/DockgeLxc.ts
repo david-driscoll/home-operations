@@ -976,7 +976,18 @@ export class DockgeLxc extends ComponentResource {
           connection: this.remoteConnection,
           remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
           content: replacedContent,
-          triggers: [replacedContent, absoluteFilePath],
+          // The source path is a trigger because provenance matters on its own:
+          // the same remotePath can be fed by docker/_common/<stack>/… or by the
+          // host-specific docker/<host>/<stack>/… override, and a switch between
+          // the two is a real change even when the bytes are identical.
+          //
+          // It must be relative to `dockerPath`, never absolute. An absolute path
+          // encodes WHERE THE REPO IS CHECKED OUT, which differs per machine —
+          // state written from a checkout at /share/source and a run from
+          // ~/Development/... disagree on every single file, and each run replaces
+          // all ~100 of them back and forth forever while `triggers[0]` (the
+          // content hash) sits there unchanged, proving nothing actually differs.
+          triggers: [replacedContent, relative(dockerPath, absoluteFilePath)],
           parent: stackParent,
           dependsOn: dependsOn,
         }),
