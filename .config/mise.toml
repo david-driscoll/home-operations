@@ -15,7 +15,7 @@ hk = "1.54.1"
 pkl = "0.32.1"
 biome = "2.5.2"
 typos = "1.49.0"
-"npm:typescript" = "5.9.3"
+"npm:typescript" = "7.0.2"
 node = "24.19.0"
 pulumi = "3.256.0"
 "github:microsoft/apm" = { version = "v0.28.0", bin = "apm" }
