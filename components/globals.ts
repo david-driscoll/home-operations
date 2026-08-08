@@ -134,6 +134,23 @@ export class GlobalResources extends ComponentResource {
   }
 
   /**
+   * Whether the Phase 8a dual-writes should run at all.
+   *
+   * The in-cluster Pulumi operator has no BAO_TOKEN wiring yet (the AppRole in
+   * `vault/bootstrap/openbao/pulumi-approle.sops.yaml` is still delivered by
+   * hand), so demanding a token unconditionally stalls every stack that reaches
+   * a dual-write site. Callers skip the write when this is false and say so;
+   * the paired `retainOnDelete` on those resources means a token-less run drops
+   * them from state WITHOUT deleting anything already in OpenBao, so a skip can
+   * never destroy migrated data.
+   *
+   * Remove this once the operator mints tokens and go back to hard-failing.
+   */
+  public get baoDualWriteEnabled(): boolean {
+    return !!process.env.BAO_TOKEN || runtime.isDryRun();
+  }
+
+  /**
    * OpenBao (Phase 8a of the 1Password→OpenBao migration).
    *
    * Lazy on purpose, unlike every other provider here. Constructing it eagerly
@@ -146,9 +163,10 @@ export class GlobalResources extends ComponentResource {
     if (this._baoProvider) return this._baoProvider;
 
     const token = process.env.BAO_TOKEN ?? "";
-    // Preview never calls the API, so an absent token must not break it — but
-    // an update would write nowhere and silently leave the canonical paths
-    // empty, which is exactly the failure Phase 6/7 depends on not happening.
+    // Preview never calls the API, so an absent token must not break it. On a
+    // real update this getter must never hand back a provider that would write
+    // nowhere — callers gate on `baoDualWriteEnabled` before reaching here, so
+    // arriving without a token means that gate was bypassed.
     if (!token && !runtime.isDryRun()) {
       throw new Error("BAO_TOKEN is not set — OpenBao writes would be skipped. Mint a token from the `pulumi` AppRole (vault repo: bootstrap/openbao/pulumi-approle.sops.yaml) and export BAO_ADDR/BAO_TOKEN.");
     }
