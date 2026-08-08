@@ -35,6 +35,14 @@ const dockgeInstances = dockgeDetails.apply(details => {
             // what this plan actually protects. Do not remove this line without
             // replacing it with a proper WAL-archiving setup.
             "/postgres/pgdata",
+            // Technitium's hourly query-statistics files (1103 of them, 222 MB
+            // on celestia). The current hour's .stat is being appended to for
+            // the whole hour, so rclone reliably copies it mid-write and fails
+            // the transfer with "corrupted on transfer: md5 hashes differ" —
+            // which aborts the ON_ERROR_FATAL pre-sync hook and takes the
+            // entire plan's snapshot with it. Pure telemetry for the DNS
+            // dashboards; nothing is reconstructed from it.
+            "/technitium/config/stats",
             "/authentik-outpost",
             "/backrest",
             "/autoheal",

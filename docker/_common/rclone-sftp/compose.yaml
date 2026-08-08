@@ -1,6 +1,34 @@
 services:
+  # Read-only SFTP view of this host's stack data, consumed by backrest on
+  # celestia as the pre-sync source for every dockge backup plan.
+  #
+  # Runs as uid 0 with CAP_DAC_READ_SEARCH and nothing else. That combination
+  # is deliberate and load-bearing: as uid 65534 this server could not read
+  # anything mode-0700 owned by a stack's runtime user, and an EPERM here does
+  # not reach the client as an error — the serve side answers the directory
+  # request with an EMPTY LISTING, so the client copies nothing and exits 0.
+  # Those paths were therefore absent from every snapshot while the backup
+  # went on reporting success. That covered forgejo's git repositories
+  # (data/git, 0700 uid 1000), all 1.2 GB of hermes, pdm's acme/auth/access,
+  # and technitium/tailscale.
+  #
+  # CAP_DAC_READ_SEARCH is exactly "bypass file read and directory search
+  # permission checks" and nothing more. cap_drop ALL removes the rest,
+  # including DAC_OVERRIDE (write-permission bypass), and every mount below
+  # is :ro, so this container can read the host's stack data and cannot alter
+  # it. Do NOT relax this to plain root — the dropped caps are the reason
+  # running as uid 0 is acceptable here.
+  #
+  # A non-root user cannot hold the capability: docker's cap_add populates the
+  # permitted set, but caps are cleared on the setuid to a non-root user
+  # unless they are ambient, and compose cannot set ambient caps. uid 0 with
+  # a minimal cap set is the workable form.
   rclone-sftp:
-    user: "65534:65534"
+    user: "0:0"
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_READ_SEARCH
     container_name: rclone-sftp
     image: rclone/rclone:1.75.0@sha256:b06aed988cf5967de7c25be5925240983981c757f4ed1ac9d2fa659d51d60548
     restart: unless-stopped
@@ -17,7 +45,7 @@ services:
       - /opt/stacks-data/:/data/stacks/:ro
       - /opt/stacks-data/${APP}/keys:/config/ssh:ro
     tmpfs:
-      - /.cache:uid=65534,gid=65534
+      - /.cache:uid=0,gid=0
     networks:
       - dockge_default
     labels:
