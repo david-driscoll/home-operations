@@ -144,10 +144,18 @@ export class GlobalResources extends ComponentResource {
    * them from state WITHOUT deleting anything already in OpenBao, so a skip can
    * never destroy migrated data.
    *
+   * It must accept the SAME credentials as `baoProvider` below — a token OR the
+   * AppRole. Checking only BAO_TOKEN made an AppRole run authenticate fine and
+   * then silently skip every dual-write, so `pulumi up` reported success while
+   * `secrets/hosts/pbs/` and the app `.../oidc` paths stayed empty. The
+   * `isDryRun()` arm hides that from preview too: preview advertises the creates
+   * and the apply quietly drops them, so a clean preview proves nothing here.
+   *
    * Remove this once the operator mints tokens and go back to hard-failing.
    */
   public get baoDualWriteEnabled(): boolean {
-    return !!process.env.BAO_TOKEN || runtime.isDryRun();
+    const haveApprole = !!process.env.BAO_ROLE_ID && !!process.env.BAO_SECRET_ID;
+    return !!process.env.BAO_TOKEN || haveApprole || runtime.isDryRun();
   }
 
   /**
