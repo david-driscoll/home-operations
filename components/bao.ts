@@ -7,38 +7,33 @@
  * 1. `BaoClient` — the minimal KV v2 REST client. This is the long-lived home
  *    of the client that started life in `scripts/op-to-bao/bao.ts` (that file
  *    now re-exports from here); the migration script gets deleted after
- *    Phase 11, this component does not.
+ *    Phase 11, this component does not. It is for imperative callers (the
+ *    migration tool); Pulumi resources go through the provider below.
  *
- * 2. `BaoKvSecret` — a Pulumi dynamic resource that writes a secret to a KV v2
- *    path, following the same dynamic-provider pattern as
- *    `dynamic/1password/OnePasswordItem.ts`.
+ * 2. `baoKvSecret()` — a thin factory over `vault.kv.SecretV2` from the
+ *    official Pulumi Vault provider. OpenBao is an API-compatible Vault fork,
+ *    so the upstream provider drives it directly: real diffing against the
+ *    live secret, import support, and provider-managed state, none of which a
+ *    hand-rolled dynamic resource gets for free.
  *
- * ## Authentication: BAO_ADDR + BAO_TOKEN environment variables
+ * ## Authentication
  *
- * Deliberately env-based rather than Pulumi config, for the same reason
- * `OPClient` reads CONNECT_HOST/CONNECT_TOKEN from the environment:
- *
- * - Dynamic-provider callbacks are serialized closures executed at operation
- *   time; `process.env` is the only channel that is dependable both during
- *   `pulumi up` and during a later `pulumi destroy` run from different code.
- * - BAO_ADDR/BAO_TOKEN are the standard OpenBao CLI variables, so `bao login`,
- *   the op-to-bao migration script, and these resources all share one
- *   credential. Mint the token from the `pulumi` AppRole
- *   (vault repo: bootstrap/openbao/pulumi-approle.sops.yaml).
- * - `.mise.toml` already provides secret-backed env vars; adding BAO_* there
- *   follows the existing pattern without teaching every stack a new config key.
- *
- * The env vars are only required when an operation actually touches OpenBao —
- * `pulumi preview` does not invoke create/update/delete and works without them.
+ * The provider itself is constructed once in `components/globals.ts`
+ * (`GlobalResources.baoProvider`) like every other provider in this repo, and
+ * reads BAO_ADDR / BAO_TOKEN from the environment — the standard OpenBao CLI
+ * variables, so `bao`, the op-to-bao migration script and Pulumi all share one
+ * credential. Mint the token from the `pulumi` AppRole (vault repo:
+ * bootstrap/openbao/pulumi-approle.sops.yaml).
  *
  * ## Dual-run rule (until Phase 11)
  *
- * 1Password stays authoritative. `BaoKvSecret` is written ALONGSIDE the
+ * 1Password stays authoritative. These secrets are written ALONGSIDE the
  * existing `OnePasswordItem` at every generation site, never instead of it.
  * Rolling back Phase 8a must be a plain `git revert` of the wiring commit.
  */
 
 import * as pulumi from "@pulumi/pulumi";
+import * as vault from "@pulumi/vault";
 
 export interface KvReadResult {
   data: Record<string, unknown>;
@@ -197,81 +192,53 @@ export function baoProvenance(extra: Record<string, pulumi.Input<string>> = {}):
 }
 
 // ---------------------------------------------------------------------------
-// BaoKvSecret dynamic resource
+// KV v2 secret resource
 // ---------------------------------------------------------------------------
 
-export interface BaoKvSecretInputs {
+export interface BaoKvSecretArgs {
   /** KV v2 mount name, e.g. `secrets`. */
   mount: pulumi.Input<string>;
   /** Path within the mount, no leading slash, e.g. `clusters/equestria/apps/headlamp/oidc`. */
   path: pulumi.Input<string>;
   /**
    * Secret payload. Nested objects become nested KV data (the section shape
-   * op-to-bao uses). Always stored encrypted in Pulumi state — the resource
-   * wraps this in `pulumi.secret()`.
+   * op-to-bao uses). Serialized to `dataJson` and marked secret, so it is
+   * encrypted in Pulumi state.
    */
   data: pulumi.Input<Record<string, unknown>>;
   /** Provenance labels only, never values. See `baoProvenance()`. */
   customMetadata?: pulumi.Input<Record<string, pulumi.Input<string>>>;
 }
 
-interface BaoKvSecretProviderInputs {
-  mount: string;
-  path: string;
-  data: Record<string, unknown>;
-  customMetadata?: Record<string, string>;
-}
-
-class BaoKvSecretProvider implements pulumi.dynamic.ResourceProvider {
-  private client() {
-    try {
-      return new BaoClient();
-    } catch (error) {
-      throw new Error(`${(error as Error).message} — BaoKvSecret needs BAO_ADDR and BAO_TOKEN in the environment. Mint a token from the pulumi AppRole (vault repo: bootstrap/openbao/pulumi-approle.sops.yaml).`);
-    }
-  }
-
-  private async apply(inputs: BaoKvSecretProviderInputs) {
-    const client = this.client();
-    await client.write(inputs.mount, inputs.path, inputs.data);
-    if (inputs.customMetadata && Object.keys(inputs.customMetadata).length > 0) {
-      await client.writeCustomMetadata(inputs.mount, inputs.path, inputs.customMetadata);
-    }
-  }
-
-  async create(inputs: BaoKvSecretProviderInputs): Promise<pulumi.dynamic.CreateResult> {
-    await this.apply(inputs);
-    return { id: `${inputs.mount}/${inputs.path}`, outs: inputs };
-  }
-
-  async update(_id: string, _olds: BaoKvSecretProviderInputs, news: BaoKvSecretProviderInputs): Promise<pulumi.dynamic.UpdateResult> {
-    await this.apply(news);
-    return { outs: news };
-  }
-
-  async delete(_id: string, props: BaoKvSecretProviderInputs): Promise<void> {
-    await this.client().destroy(props.mount, props.path);
-  }
-}
-
 /**
- * A secret written to OpenBao KV v2 at `<mount>/<path>`.
+ * Write a secret to OpenBao KV v2 at `<mount>/<path>`.
  *
- * A mount+path change is a replace (the old path is destroyed); a data or
- * metadata change is an in-place new secret version.
+ * `opts.provider` must be `GlobalResources.baoProvider` — this is a
+ * provider-backed resource, so without it Pulumi falls back to the ambient
+ * Vault provider config and the write silently targets the wrong server (or
+ * nothing at all).
+ *
+ * `deleteAllVersions` is on: destroying this resource must remove the secret
+ * outright rather than soft-deleting the latest version and leaving the
+ * ciphertext of every prior one behind.
  */
-export class BaoKvSecret extends pulumi.dynamic.Resource {
-  constructor(name: string, props: BaoKvSecretInputs, opts?: pulumi.CustomResourceOptions) {
-    super(
-      new BaoKvSecretProvider(),
-      name,
-      { ...props, data: pulumi.secret(props.data) },
-      {
-        replaceOnChanges: ["mount", "path"],
-        deleteBeforeReplace: false,
-        additionalSecretOutputs: ["data"],
-        ...opts,
-      },
-    );
-  }
+export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.CustomResourceOptions): vault.kv.SecretV2 {
+  return new vault.kv.SecretV2(
+    name,
+    {
+      mount: args.mount,
+      // SecretV2.name IS the path within the mount, not a display name.
+      name: args.path,
+      dataJson: pulumi.secret(pulumi.jsonStringify(args.data)),
+      customMetadata: { data: args.customMetadata },
+      deleteAllVersions: true,
+    },
+    {
+      // The provider reads the secret back to detect drift, so the read-back
+      // copy has to be marked secret too — otherwise values reach state (and
+      // `pulumi stack export`) in the clear.
+      additionalSecretOutputs: ["data", "dataJson"],
+      ...opts,
+    },
+  );
 }

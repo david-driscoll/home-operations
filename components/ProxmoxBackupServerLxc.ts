@@ -1,7 +1,7 @@
 import { FullItem } from "@1password/connect";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import type { AuthentikOutputs } from "@components/authentik.ts";
-import { BaoKvSecret, baoProvenance, pbsBaoPath } from "@components/bao.ts";
+import { baoKvSecret, baoProvenance, pbsBaoPath } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -566,7 +566,7 @@ systemctl reload proxmox-backup-proxy.service
     // 1Password stays authoritative until Phase 11 — this is written
     // ALONGSIDE the item, never instead of it; rollback is a plain
     // `git revert` of this block.
-    new BaoKvSecret(
+    baoKvSecret(
       `${args.host.name}-pbs-bao`,
       {
         mount: "secrets",
@@ -595,7 +595,7 @@ systemctl reload proxmox-backup-proxy.service
           source_tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"].join(",")),
         }),
       },
-      mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
+      mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])], provider: args.globals.baoProvider }),
     );
 
     this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);

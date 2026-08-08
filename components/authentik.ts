@@ -9,7 +9,7 @@ import type { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import type { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
-import { BaoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
+import { baoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
 import type { Roles } from "./constants.ts";
 import type { GlobalResources } from "./globals.ts";
 import { awaitOutput, clientIdPair } from "./helpers.ts";
@@ -254,7 +254,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       // authoritative until Phase 11 — this is written ALONGSIDE the
       // OnePasswordItem above, never instead of it; rollback is a plain
       // `git revert` of this block.
-      new BaoKvSecret(
+      baoKvSecret(
         `${resourceName}-oidc-bao`,
         {
           mount: "secrets",
@@ -274,7 +274,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
             source_title: `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
           }),
         },
-        { parent: provider },
+        { parent: provider, provider: this.args.globals.baoProvider },
       );
 
       return {
