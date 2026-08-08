@@ -9,6 +9,7 @@ import * as minio from "@pulumi/minio";
 import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
+import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime } from "../../components/StandardDns.ts";
@@ -325,3 +326,8 @@ export const celestia = {
   dockge: getDockageProperties(celestiaDockgeRuntime),
   backup: celestiaHost.backupVolumes!,
 };
+
+// OpenBao human login (Authentik OIDC): admins -> policy `admin`,
+// family -> read-only `viewer`. This is barrier state, so it cannot come from
+// the HelmRelease config or an env var — see components/openbao/oidc.ts.
+const _openbaoOidc = new OpenBaoOidc("openbao-oidc", { globals });
