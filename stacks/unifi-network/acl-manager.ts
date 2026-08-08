@@ -433,6 +433,24 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
+    // The Phase 5 nightly dump: equestria's openbao-replica CronJob ships an
+    // age-encrypted pg_dump to the bao-standby receiver on dockge-as:2023.
+    // Same shape and same reasoning as the grant above — the traffic leaves
+    // through the tailnet-inbound ProxyGroup carrying tag:egress, and the
+    // egress Service already declares the port (bao-dumps=2023), so without
+    // this grant the connection is forwarded and then dies in the ACL. It
+    // presents as a plain "connection refused" from the pod, which reads like
+    // the receiver is down rather than like a policy problem.
+    manager.setGrant(
+      "openbao-dump-replication",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.baoDumps,
+      },
+      { accept: [] },
+    );
+
     pulumi.output(manager.getJson()).apply(json => {
       writeFileSync("tailscale-acl.json", json);
     });

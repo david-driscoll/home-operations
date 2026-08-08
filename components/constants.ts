@@ -87,6 +87,12 @@ export const Tailscale = {
     // dockge→dockge, management→dockge) and this port must not ride along with
     // it. See the `openbao-transit-unseal` grant in acl-manager.ts.
     baoTransit: ["tcp:8200"] as TailscaleNetworkCapability[],
+    // The bao-standby dump receiver on dockge-as (rclone serve sftp). The
+    // equestria replication CronJob writes the nightly age-encrypted pg_dump
+    // here. Separate from baoTransit for the same reason that one is separate
+    // from dockgeManagement: the two ports serve different jobs and should be
+    // grantable independently.
+    baoDumps: ["tcp:2023"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {
     admin: "autogroup:admin" as TailscaleAutogroups,
