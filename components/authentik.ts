@@ -9,6 +9,7 @@ import type { ProviderOauth2 } from "../sdks/authentik/bin/providerOauth2.js";
 import type { ProviderProxy } from "../sdks/authentik/bin/providerProxy.js";
 import { ApplicationCertificate } from "./authentik/application-certificate.ts";
 import { addPolicyBindingToApplication } from "./authentik/extension-methods.ts";
+import { BaoKvSecret, baoProvenance, oidcBaoPath } from "./bao.ts";
 import type { Roles } from "./constants.ts";
 import type { GlobalResources } from "./globals.ts";
 import { awaitOutput, clientIdPair } from "./helpers.ts";
@@ -242,6 +243,35 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
               value: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
               type: TypeEnum.String,
             },
+          }),
+        },
+        { parent: provider },
+      );
+
+      // Phase 8a dual-write (openbao-migration PLAN §G): the same generated
+      // OIDC credential also lands at its canonical OpenBao path so the
+      // Phase 6-7 ESO cutovers have data to read. 1Password stays
+      // authoritative until Phase 11 — this is written ALONGSIDE the
+      // OnePasswordItem above, never instead of it; rollback is a plain
+      // `git revert` of this block.
+      new BaoKvSecret(
+        `${resourceName}-oidc-bao`,
+        {
+          mount: "secrets",
+          path: oidcBaoPath(this.args.clusterKey, definition.metadata.name),
+          data: {
+            client_id: clientId,
+            client_secret: clientSecret,
+            authorization_url: providerConfig.authorizeUrl,
+            token_url: providerConfig.tokenUrl,
+            userinfo_url: providerConfig.userInfoUrl,
+            issuer: providerConfig.issuerUrl,
+            end_session_url: providerConfig.logoutUrl,
+            jwks_url: providerConfig.jwksUrl,
+            openid_configuration_url: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
+          },
+          customMetadata: baoProvenance({
+            source_title: `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
           }),
         },
         { parent: provider },
