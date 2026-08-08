@@ -35,9 +35,9 @@ function loadMapping(): MappingEntry[] {
   return parsed.items;
 }
 
-/** Every item in Eris. listItemsByTitleContains("") is the only full-vault read OPClient exposes. */
+/** Every item in Eris, from the unfiltered list endpoint (stubs only — values re-fetched below). */
 async function allItems(op: OPClient): Promise<OPItem[]> {
-  const stubs = await op.listItemsByTitleContains("");
+  const stubs = await op.listAllItems();
   const items: OPItem[] = [];
   for (const stub of stubs) {
     // Re-fetch by id: the list endpoint omits field values.
@@ -53,9 +53,10 @@ async function plan(): Promise<number> {
   const entries: MappingEntry[] = items.map(item => ({ ...classify(item), ...describe(item) }));
 
   // Collisions are the failure mode that would silently overwrite one secret
-  // with another, so they are a hard error rather than a warning.
+  // with another, so they are a hard error rather than a warning. Skipped
+  // entries are excluded: --apply never writes them, so they cannot collide.
   const byPath = new Map<string, MappingEntry[]>();
-  for (const e of entries) {
+  for (const e of entries.filter(e => !e.skip)) {
     const key = `${e.mount}/${e.path}`;
     byPath.set(key, [...(byPath.get(key) ?? []), e]);
   }

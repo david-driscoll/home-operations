@@ -64,7 +64,51 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  */
 const INVENTORY_TAGS = new Set(["backup-plan", "tailscale-export", "cluster-definition"]);
 
+/**
+ * Estate-level exclusions, decided 2026-08-07. Encoded here rather than as
+ * hand edits to mapping.yaml so a --plan re-run reproduces them. Skipped items
+ * are still emitted (with their would-be path) so the mapping stays a complete
+ * record of the vault.
+ */
+const SKIP_POLICIES: Array<{ match: (title: string, tags: string[]) => boolean; reason: string }> = [
+  // Generated credential families the Pulumi stacks will create directly in
+  // OpenBao instead of copying out of 1Password.
+  { match: t => t.endsWith("-oidc-credentials"), reason: "Pulumi stacks will create OIDC credentials in OpenBao directly" },
+  { match: t => t.startsWith("Proxmox Backup Server"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
+  // Case-insensitive: the live vault has "Luna PBS backup user" (lowercase b/u).
+  // Unlike the "Proxmox Backup Server*" family above, NO Pulumi code generates
+  // these — they are hand-created items (verified during Phase 8a). Estate
+  // decision 2026-08-08: they stay in 1Password for now.
+  { match: t => t.toLowerCase().endsWith("pbs backup user"), reason: "hand-created; stays in 1Password for now (estate decision 2026-08-08)" },
+  // Excluded from migration scope by estate decision, 2026-08-07.
+  { match: t => t === "Authentik Outputs", reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("B2 Database"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("B2 Backup"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t.startsWith("Backblaze"), reason: "excluded from migration scope (estate decision 2026-08-07)" },
+  { match: t => t === "Backup Plan", reason: "inventory — moves to Pulumi stack outputs" },
+  // Tailnet user entries stay in 1Password for now.
+  { match: (_t, tags) => tags.includes("opossum-yo.ts.net/user"), reason: "user entries excluded for now (estate decision 2026-08-07)" },
+  // Seal-chain and pre-auth material. INVENTORY.md §2: these can never live in
+  // OpenBao — the unseal key unseals the thing that unseals OpenBao, and
+  // Pulumi must authenticate before it can read anything. Their destination is
+  // vault/bootstrap/openbao/*.sops.yaml, not a KV mount.
+  { match: t => t === "OpenBao Alpha Site Static Unseal", reason: "seal chain — belongs in vault/bootstrap (INVENTORY §2), never inside the thing it unseals" },
+  { match: t => t === "Pulumi Passphrase", reason: "pre-auth bootstrap — belongs in vault/bootstrap pulumi-approle.sops.yaml (INVENTORY §2)" },
+  // Personal-scope, retained in 1Password by design (PLAN §G, Phase 11 notes).
+  { match: t => t === "GitHub Personal Access Token", reason: "personal-scope — 1Password remains its home (PLAN §G)" },
+];
+
 export function classify(item: OPItem): Omit<MappingEntry, "fields" | "concealed" | "files"> {
+  const entry = classifyPath(item);
+  const policy = SKIP_POLICIES.find(p => p.match(item.title, item.tags ?? []));
+  if (policy) {
+    // review: false — the decision is already made; there is nothing to review.
+    return { ...entry, skip: true, review: false, rule: `${entry.rule} — SKIP: ${policy.reason}` };
+  }
+  return entry;
+}
+
+function classifyPath(item: OPItem): Omit<MappingEntry, "fields" | "concealed" | "files"> {
   const title = item.title;
   const tags = item.tags ?? [];
   const base = { title, uuid: item.id, tags };
