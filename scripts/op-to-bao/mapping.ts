@@ -76,7 +76,10 @@ const SKIP_POLICIES: Array<{ match: (title: string, tags: string[]) => boolean; 
   { match: t => t.endsWith("-oidc-credentials"), reason: "Pulumi stacks will create OIDC credentials in OpenBao directly" },
   { match: t => t.startsWith("Proxmox Backup Server"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
   // Case-insensitive: the live vault has "Luna PBS backup user" (lowercase b/u).
-  { match: t => t.toLowerCase().endsWith("pbs backup user"), reason: "Pulumi stacks will create PBS credentials in OpenBao directly" },
+  // Unlike the "Proxmox Backup Server*" family above, NO Pulumi code generates
+  // these — they are hand-created items (verified during Phase 8a). Estate
+  // decision 2026-08-08: they stay in 1Password for now.
+  { match: t => t.toLowerCase().endsWith("pbs backup user"), reason: "hand-created; stays in 1Password for now (estate decision 2026-08-08)" },
   // Excluded from migration scope by estate decision, 2026-08-07.
   { match: t => t === "Authentik Outputs", reason: "excluded from migration scope (estate decision 2026-08-07)" },
   { match: t => t.startsWith("B2 Database"), reason: "excluded from migration scope (estate decision 2026-08-07)" },

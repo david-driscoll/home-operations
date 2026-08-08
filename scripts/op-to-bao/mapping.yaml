@@ -3297,8 +3297,8 @@ items:
     mount: secrets
     path: shared/luna-pbs-backup-user
     rule: >-
-      default — SKIP: Pulumi stacks will create PBS credentials in OpenBao
-      directly
+      default — SKIP: hand-created; stays in 1Password for now (estate decision
+      2026-08-08)
     review: false
     skip: true
     fields:
