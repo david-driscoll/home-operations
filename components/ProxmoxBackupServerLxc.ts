@@ -1,6 +1,7 @@
 import { FullItem } from "@1password/connect";
 import { ApplicationCertificate } from "@components/authentik/application-certificate.ts";
 import type { AuthentikOutputs } from "@components/authentik.ts";
+import { baoKvSecret, baoProvenance, pbsBaoPath } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { installTailscaleLxc } from "@components/tailscale.ts";
 import { OnePasswordItem, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -556,6 +557,45 @@ systemctl reload proxmox-backup-proxy.service
         },
       },
       mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])] }),
+    );
+
+    // Phase 8a dual-write (openbao-migration PLAN §G): the PBS credential
+    // also lands at its canonical OpenBao path (`secrets/hosts/pbs/<slug>`,
+    // the tag:pbs rule in scripts/op-to-bao/mapping.ts) with the exact field
+    // shape of the OnePasswordItem above — root fields flat, sections nested.
+    // 1Password stays authoritative until Phase 11 — this is written
+    // ALONGSIDE the item, never instead of it; rollback is a plain
+    // `git revert` of this block.
+    baoKvSecret(
+      `${args.host.name}-pbs-bao`,
+      {
+        mount: "secrets",
+        path: args.host.title.apply(title => pbsBaoPath(`Proxmox Backup Server LXC: ${title}`)),
+        data: {
+          name: name,
+          username: "root",
+          password: rootPassword.result,
+          cluster: cluster.meta.title,
+          dockge: interpolate`DockgeLxc: ${args.dockge.cluster.title}`,
+          hostname: this.tailscaleHostname,
+          webUrl: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
+          ssh: {
+            hostname: this.tailscaleHostname,
+            username: "root",
+            password: rootPassword.result,
+          },
+          backrest: {
+            publicKey: backrestPrivateKey.publicKeyPem,
+            privateKey: backrestPrivateKey.privateKeyPem,
+            privateKeyId: backrestPrivateKey.id,
+          },
+        },
+        customMetadata: baoProvenance({
+          source_title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
+          source_tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"].join(",")),
+        }),
+      },
+      mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])], provider: args.globals.baoProvider }),
     );
 
     this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);

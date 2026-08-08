@@ -1,9 +1,10 @@
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
+import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
 import { VaultStore } from "./store/index.ts";
 
@@ -29,6 +30,7 @@ export class GlobalResources extends ComponentResource {
   public readonly cloudflareZoneId: Output<string>;
   public readonly cloudFlareAccountId: Output<string>;
   public readonly store: VaultStore;
+  private _baoProvider?: VaultProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -129,5 +131,42 @@ export class GlobalResources extends ComponentResource {
       },
       cro,
     );
+  }
+
+  /**
+   * OpenBao (Phase 8a of the 1Password→OpenBao migration).
+   *
+   * Lazy on purpose, unlike every other provider here. Constructing it eagerly
+   * would make BAO_ADDR/BAO_TOKEN a hard requirement of `GlobalResources`, and
+   * therefore of `pulumi preview` on every stack in the repo — including the
+   * ones that never touch OpenBao. Only the two dual-write sites
+   * (`authentik.ts`, `ProxmoxBackupServerLxc.ts`) reach for it.
+   */
+  public get baoProvider(): VaultProvider {
+    if (this._baoProvider) return this._baoProvider;
+
+    const token = process.env.BAO_TOKEN ?? "";
+    // Preview never calls the API, so an absent token must not break it — but
+    // an update would write nowhere and silently leave the canonical paths
+    // empty, which is exactly the failure Phase 6/7 depends on not happening.
+    if (!token && !runtime.isDryRun()) {
+      throw new Error("BAO_TOKEN is not set — OpenBao writes would be skipped. Mint a token from the `pulumi` AppRole (vault repo: bootstrap/openbao/pulumi-approle.sops.yaml) and export BAO_ADDR/BAO_TOKEN.");
+    }
+
+    this._baoProvider = new VaultProvider(
+      "openbao",
+      {
+        address: process.env.BAO_ADDR ?? "https://bao.equestria.driscoll.tech",
+        token,
+        // The `pulumi` policy grants secrets/, docs/ and meta/ — and nothing
+        // on auth/token/create. The provider's default behaviour is to mint
+        // itself a short-lived CHILD token, which that policy cannot do, so
+        // every run would fail at configure time with a 403. Use the AppRole
+        // token as-is; it is already short-lived (1h TTL, 4h max).
+        skipChildToken: true,
+      },
+      { parent: this },
+    );
+    return this._baoProvider;
   }
 }
