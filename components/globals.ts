@@ -1,6 +1,6 @@
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
@@ -162,25 +162,55 @@ export class GlobalResources extends ComponentResource {
   public get baoProvider(): VaultProvider {
     if (this._baoProvider) return this._baoProvider;
 
+    // Two ways in, in priority order:
+    //
+    //   BAO_TOKEN                   an already-minted token. Break-glass, CI,
+    //                               or a human who just ran `bao login`.
+    //   BAO_ROLE_ID/BAO_SECRET_ID   the `pulumi` AppRole, which the provider
+    //                               exchanges for a token itself.
+    //
+    // The AppRole path is the normal one, and it is what removes the manual
+    // step this used to require: nobody has to mint a token by hand before a
+    // deploy. Source the two values from the vault repo with
+    // `eval "$(bootstrap/openbao/pulumi-env.sh)"` — they live in SOPS rather
+    // than 1Password on purpose (INVENTORY §2: this is the credential Pulumi
+    // authenticates WITH, so it cannot live in the store it unlocks).
     const token = process.env.BAO_TOKEN ?? "";
-    // Preview never calls the API, so an absent token must not break it. On a
-    // real update this getter must never hand back a provider that would write
-    // nowhere — callers gate on `baoDualWriteEnabled` before reaching here, so
-    // arriving without a token means that gate was bypassed.
-    if (!token && !runtime.isDryRun()) {
-      throw new Error("BAO_TOKEN is not set — OpenBao writes would be skipped. Mint a token from the `pulumi` AppRole (vault repo: bootstrap/openbao/pulumi-approle.sops.yaml) and export BAO_ADDR/BAO_TOKEN.");
+    const roleId = process.env.BAO_ROLE_ID ?? "";
+    const secretId = process.env.BAO_SECRET_ID ?? "";
+    const haveApprole = roleId !== "" && secretId !== "";
+
+    // Preview never calls the API, so absent credentials must not break it. On
+    // a real update this getter must never hand back a provider that would
+    // write nowhere.
+    if (!token && !haveApprole && !runtime.isDryRun()) {
+      throw new Error('No OpenBao credentials — writes would be skipped. Run `eval "$(bootstrap/openbao/pulumi-env.sh)"` from the vault repo to export BAO_ADDR/BAO_ROLE_ID/BAO_SECRET_ID, or set BAO_TOKEN directly.');
     }
 
     this._baoProvider = new VaultProvider(
       "openbao",
       {
         address: process.env.BAO_ADDR ?? "https://bao.equestria.driscoll.tech",
-        token,
-        // The `pulumi` policy grants secrets/, docs/ and meta/ — and nothing
-        // on auth/token/create. The provider's default behaviour is to mint
-        // itself a short-lived CHILD token, which that policy cannot do, so
-        // every run would fail at configure time with a 403. Use the AppRole
-        // token as-is; it is already short-lived (1h TTL, 4h max).
+        ...(token
+          ? { token }
+          : haveApprole
+            ? {
+                // The provider has no dedicated approle block in v7; the
+                // generic authLogin covers it, and `parameters` is exactly the
+                // login payload.
+                authLogin: {
+                  path: "auth/approle/login",
+                  parameters: { role_id: roleId, secret_id: secret(secretId) },
+                },
+              }
+            : // Dry run with no credentials: a placeholder keeps provider
+              // construction from throwing, and preview makes no API call.
+              { token: "" }),
+        // The `pulumi` policy grants secrets/, docs/, meta/ and the narrow OIDC
+        // paths — and nothing on auth/token/create. The provider's default is
+        // to mint itself a short-lived CHILD token, which that policy cannot
+        // do, so every run would fail at configure time with a 403. The token
+        // it gets is already short-lived (1h TTL, 4h max).
         skipChildToken: true,
       },
       { parent: this },
