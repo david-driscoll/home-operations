@@ -254,28 +254,32 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       // authoritative until Phase 11 — this is written ALONGSIDE the
       // OnePasswordItem above, never instead of it; rollback is a plain
       // `git revert` of this block.
-      baoKvSecret(
-        `${resourceName}-oidc-bao`,
-        {
-          mount: "secrets",
-          path: oidcBaoPath(this.args.clusterKey, definition.metadata.name),
-          data: {
-            client_id: clientId,
-            client_secret: clientSecret,
-            authorization_url: providerConfig.authorizeUrl,
-            token_url: providerConfig.tokenUrl,
-            userinfo_url: providerConfig.userInfoUrl,
-            issuer: providerConfig.issuerUrl,
-            end_session_url: providerConfig.logoutUrl,
-            jwks_url: providerConfig.jwksUrl,
-            openid_configuration_url: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
+      if (this.args.globals.baoDualWriteEnabled) {
+        baoKvSecret(
+          `${resourceName}-oidc-bao`,
+          {
+            mount: "secrets",
+            path: oidcBaoPath(this.args.clusterKey, definition.metadata.name),
+            data: {
+              client_id: clientId,
+              client_secret: clientSecret,
+              authorization_url: providerConfig.authorizeUrl,
+              token_url: providerConfig.tokenUrl,
+              userinfo_url: providerConfig.userInfoUrl,
+              issuer: providerConfig.issuerUrl,
+              end_session_url: providerConfig.logoutUrl,
+              jwks_url: providerConfig.jwksUrl,
+              openid_configuration_url: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
+            },
+            customMetadata: baoProvenance({
+              source_title: `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
+            }),
           },
-          customMetadata: baoProvenance({
-            source_title: `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
-          }),
-        },
-        { parent: provider, provider: this.args.globals.baoProvider },
-      );
+          { parent: provider, provider: this.args.globals.baoProvider },
+        );
+      } else {
+        pulumi.log.warn(`BAO_TOKEN is not set — skipping the OpenBao dual-write for ${resourceName}. 1Password stays authoritative; the canonical OpenBao path will be empty until a tokened run.`, provider);
+      }
 
       return {
         provider,

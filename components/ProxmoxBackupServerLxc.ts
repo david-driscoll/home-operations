@@ -566,37 +566,41 @@ systemctl reload proxmox-backup-proxy.service
     // 1Password stays authoritative until Phase 11 — this is written
     // ALONGSIDE the item, never instead of it; rollback is a plain
     // `git revert` of this block.
-    baoKvSecret(
-      `${args.host.name}-pbs-bao`,
-      {
-        mount: "secrets",
-        path: args.host.title.apply(title => pbsBaoPath(`Proxmox Backup Server LXC: ${title}`)),
-        data: {
-          name: name,
-          username: "root",
-          password: rootPassword.result,
-          cluster: cluster.meta.title,
-          dockge: interpolate`DockgeLxc: ${args.dockge.cluster.title}`,
-          hostname: this.tailscaleHostname,
-          webUrl: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
-          ssh: {
-            hostname: this.tailscaleHostname,
+    if (args.globals.baoDualWriteEnabled) {
+      baoKvSecret(
+        `${args.host.name}-pbs-bao`,
+        {
+          mount: "secrets",
+          path: args.host.title.apply(title => pbsBaoPath(`Proxmox Backup Server LXC: ${title}`)),
+          data: {
+            name: name,
             username: "root",
             password: rootPassword.result,
+            cluster: cluster.meta.title,
+            dockge: interpolate`DockgeLxc: ${args.dockge.cluster.title}`,
+            hostname: this.tailscaleHostname,
+            webUrl: interpolate`https://${name}.${args.globals.tailscaleDomain}`,
+            ssh: {
+              hostname: this.tailscaleHostname,
+              username: "root",
+              password: rootPassword.result,
+            },
+            backrest: {
+              publicKey: backrestPrivateKey.publicKeyPem,
+              privateKey: backrestPrivateKey.privateKeyPem,
+              privateKeyId: backrestPrivateKey.id,
+            },
           },
-          backrest: {
-            publicKey: backrestPrivateKey.publicKeyPem,
-            privateKey: backrestPrivateKey.privateKeyPem,
-            privateKeyId: backrestPrivateKey.id,
-          },
+          customMetadata: baoProvenance({
+            source_title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
+            source_tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"].join(",")),
+          }),
         },
-        customMetadata: baoProvenance({
-          source_title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
-          source_tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"].join(",")),
-        }),
-      },
-      mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])], provider: args.globals.baoProvider }),
-    );
+        mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])], provider: args.globals.baoProvider }),
+      );
+    } else {
+      pulumi.log.warn(`BAO_TOKEN is not set — skipping the OpenBao dual-write for ${args.host.name}. 1Password stays authoritative; the canonical OpenBao path will be empty until a tokened run.`, this);
+    }
 
     this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);
     this.provider = new pbs.Provider(

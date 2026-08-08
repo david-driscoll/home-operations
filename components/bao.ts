@@ -238,6 +238,12 @@ export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.Cu
       // copy has to be marked secret too — otherwise values reach state (and
       // `pulumi stack export`) in the clear.
       additionalSecretOutputs: ["data", "dataJson"],
+      // Dual-write is conditional while the operator has no BAO_TOKEN (see
+      // GlobalResources.baoDualWriteEnabled). A run without a token drops these
+      // from the program, and without this a drop would DELETE the live secret
+      // — the one outcome Phase 6/7 cannot survive. Retaining orphans the
+      // secret instead, which the next tokened run overwrites in place.
+      retainOnDelete: true,
       ...opts,
     },
   );
