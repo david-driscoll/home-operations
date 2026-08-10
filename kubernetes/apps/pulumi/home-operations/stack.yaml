@@ -68,6 +68,11 @@ spec:
     # GlobalResources.baoDualWriteEnabled is false and every dual-write is
     # silently skipped while the run still reports success.
     #
+    # Set on EVERY stack, not just the ones that dual-write today: the getter
+    # is lazy, so a stack that never touches OpenBao never builds the provider
+    # and these are inert. Wiring them uniformly means the next stack to grow a
+    # dual-write site just works, instead of failing the same silent way.
+    #
     # openbao-active, not openbao: the general Service also routes to standbys,
     # which answer with a 307 redirect to the leader.
     BAO_ADDR:
