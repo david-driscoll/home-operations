@@ -21,6 +21,15 @@ export function configureTechnitiumZones(globals: GlobalResources) {
     {
       name: "driscoll.tech",
       type: "Forwarder",
+      // external-dns runs `--rfc2136-tsig-axfr` against this zone to learn what
+      // already exists before it reconciles. A new Technitium zone denies zone
+      // transfer, so every AXFR came back REFUSED ("bad xfr rcode: 5"), every
+      // cycle re-created every record, and the writes succeeding kept it
+      // silent. The requests arrive through each cluster's tailscale egress
+      // proxy, so they source from the tailnet CGNAT range rather than a fixed
+      // address; the TSIG key below is the actual authentication.
+      allowTransfers: ["100.64.0.0/10"],
+      zoneTransferTsigKeyNames: ["external-dns"],
     },
     { ...cro, protect: true, retainOnDelete: true },
   );
