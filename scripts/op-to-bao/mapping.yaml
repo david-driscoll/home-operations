@@ -507,11 +507,9 @@ items:
     tags: []
     mount: secrets
     path: shared/celestia-pbs-backup-user
-    rule: >-
-      default — SKIP: Pulumi stacks will create PBS credentials in OpenBao
-      directly
+    rule: 'migrated 2026-08-10: dynacat-env consumes it in-cluster'
     review: false
-    skip: true
+    skip: false
     fields:
       - password
       - username
@@ -804,9 +802,9 @@ items:
       - cluster-definition
     mount: secrets
     path: clusters/_inventory/cluster-alpha-site
-    rule: tag:cluster-definition — INVENTORY, moves to Pulumi stack outputs
+    rule: 'migrated 2026-08-10: dynacat-env needs it and no Pulumi stack generates it'
     review: true
-    skip: true
+    skip: false
     fields:
       - arcane_token
       - authentikDomain
@@ -3052,9 +3050,9 @@ items:
       - 1Password Shell Plugins
     mount: secrets
     path: shared/github-personal-access-token
-    rule: 'default — SKIP: personal-scope — 1Password remains its home (PLAN §G)'
+    rule: 'migrated 2026-08-10: dynacat-env needs it in-cluster; the op:// laptop reference stays on 1Password'
     review: false
-    skip: true
+    skip: false
     fields:
       - token
     concealed:
@@ -3296,11 +3294,9 @@ items:
     tags: []
     mount: secrets
     path: shared/luna-pbs-backup-user
-    rule: >-
-      default — SKIP: hand-created; stays in 1Password for now (estate decision
-      2026-08-08)
+    rule: 'migrated 2026-08-10: dynacat-env consumes it in-cluster'
     review: false
-    skip: true
+    skip: false
     fields:
       - password
       - username
@@ -3383,9 +3379,9 @@ items:
       - opossum-yo.ts.net/user
     mount: secrets
     path: shared/maddie
-    rule: 'default — SKIP: user entries excluded for now (estate decision 2026-08-07)'
+    rule: 'migrated 2026-08-10: dynacat-env needs it and no Pulumi stack generates it'
     review: false
-    skip: true
+    skip: false
     fields:
       - Display Name
       - email
