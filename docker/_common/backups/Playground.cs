@@ -1,5 +1,5 @@
 #:sdk Microsoft.NET.Sdk
-#:package SSH.NET@2025.1.0
+#:package SSH.NET@2026.0.0
 #:package CliWrap@3.10.4
 #:package Dumpify@0.7.0
 #:package 1Password.Connect.Sdk@1.0.4
