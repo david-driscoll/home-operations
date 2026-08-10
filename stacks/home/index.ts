@@ -10,6 +10,7 @@ import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
 import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
+import { OpenBaoClusterAuth } from "../../components/openbao/clusterAuth.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime } from "../../components/StandardDns.ts";
@@ -331,3 +332,20 @@ export const celestia = {
 // family -> read-only `viewer`. This is barrier state, so it cannot come from
 // the HelmRelease config or an env var — see components/openbao/oidc.ts.
 const _openbaoOidc = new OpenBaoOidc("openbao-oidc", { globals });
+
+// Phase 7: SGC's ESO gets its own kubernetes auth mount. One OpenBao serves
+// the estate, but one `kubernetes` mount pins a single API server and rejects
+// every other cluster's ServiceAccount tokens — so it is one mount per
+// cluster. equestria's equivalent still belongs to the bootstrap script and
+// would need `pulumi import` to adopt; see components/openbao/clusterAuth.ts.
+//
+// The API server is addressed by IP on purpose: a *.driscoll.tech name
+// resolves through split-horizon DNS, which would put Technitium in the login
+// path for every SGC secret read. 10.10.209.201 is in the API server cert's
+// SANs and reachable from an openbao pod — both verified before this landed.
+const _openbaoSgcAuth = new OpenBaoClusterAuth("openbao-sgc-auth", {
+  globals,
+  clusterKey: "sgc",
+  clusterTitle: "Cluster: Stargate Command",
+  kubernetesHost: "https://10.10.209.201:6443",
+});
