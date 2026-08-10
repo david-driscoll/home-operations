@@ -1,0 +1,28 @@
+---
+# SOPS config for home-operations. Mirrors equestria-cluster/.sops.yaml and uses
+# the SAME three estate age recipients, so the existing age.key decrypts these
+# files unchanged and Flux's `sops-age` Secret works without any new key
+# material.
+#
+# Why this repo needs SOPS at all: the Pulumi operator authenticates to OpenBao
+# with the `pulumi` AppRole, and per vault:bootstrap/INVENTORY.md §2 the
+# credential Pulumi authenticates WITH cannot live in a store that mediates
+# access. Sourcing it from 1Password would make the operator depend on
+# 1Password Connect in order to reach OpenBao — exactly the dependency Phase 11
+# exists to remove.
+#
+# encrypted_regex keeps Kubernetes Secret keys (`data`/`stringData`) encrypted
+# while leaving apiVersion/kind/metadata readable, so Flux and kustomize can
+# still parse the manifest before decryption.
+creation_rules:
+  - path_regex: kubernetes/.*\.sops\.ya?ml
+    encrypted_regex: "^(data|stringData)$"
+    mac_only_encrypted: true
+    key_groups:
+      - age:
+        - "age1eurl2t7pepw66guv8m7lxh5fjhs4t4frsntqjp08lmypwudlsp7qdusgnf"
+        - "age1klzrc4tp666ykn8u4y2nt80n0tcx52lvezrr54zswz55w2pdsgyqhcdfyr"
+        - "age150z0s36kl9vud8728c5e4zqq6nmyywekk76rwvjclcsfc8mrxuuqr0qfg6"
+stores:
+  yaml:
+    indent: 2
