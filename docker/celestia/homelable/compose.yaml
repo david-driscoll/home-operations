@@ -41,7 +41,7 @@ services:
           - backend
 
   homelable:
-    image: ghcr.io/pouzor/homelable-frontend:3.1.2@sha256:3c2fa58a512042bd2a5e07340d6b7d7660fa00591e09e646e0302d47e7911230
+    image: ghcr.io/pouzor/homelable-frontend:3.2.0@sha256:672165f35e619a3d87b8d7c97943dfd1c9f7dcac84a57b9858e899011ab5ca27
     container_name: homelable
     hostname: homelable
     depends_on:
