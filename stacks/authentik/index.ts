@@ -1,4 +1,5 @@
 import { FullItem } from "@1password/connect";
+import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem, type OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
@@ -79,6 +80,34 @@ const _authentikSecret = new OnePasswordItem("authentik-outputs", {
     },
   }),
 });
+
+// Phase 8 dual-write. `Authentik Outputs` is the estate's one piece of
+// cross-stack inventory with four consumers (home, ocracoke, gulf-of-mexico,
+// applications), and PLAN §G's `StackReference` answer is unavailable here —
+// every stack has its own DIY backend, so nothing can reference this project.
+// OpenBao is the channel instead.
+//
+// Written ALONGSIDE the OnePasswordItem above, never instead of it: 1Password
+// stays authoritative until Phase 11, and the consumers do not read this path
+// until a `pulumi up` on THIS stack has populated it. Switching a reader first
+// would give it an empty object rather than an error.
+if (globals.baoDualWriteEnabled) {
+  baoKvSecret(
+    "authentik-outputs-bao",
+    {
+      mount: "secrets",
+      path: "clusters/_inventory/authentik-outputs",
+      // The same four sections the 1Password item carries, as nested objects.
+      // These are Authentik object IDs, not credentials — but they go in the
+      // `secrets` mount because that is the only KV mount consumers can read.
+      data: pulumi.output({ groups, roles, flows, scopeMappings }),
+      customMetadata: baoProvenance({ source_title: "Authentik Outputs" }),
+    },
+    { provider: globals.baoProvider, parent: globals },
+  );
+} else {
+  pulumi.log.warn("BAO credentials absent — skipping the Authentik Outputs dual-write; consumers still read 1Password");
+}
 
 const clusterDefinition = await awaitOutput(globals.store.getCluster("Cluster: Stargate Command"));
 const _tailscaleBrand = new Brand(
