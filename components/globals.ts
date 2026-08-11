@@ -1,11 +1,12 @@
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, log, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
+import { BaoStore, baoStoreReadsEnabled } from "./store/bao.ts";
 import { VaultStore } from "./store/index.ts";
 
 export type GlobalResourcesArgs = object;
@@ -39,7 +40,15 @@ export class GlobalResources extends ComponentResource {
     this.searchDomain = output("driscoll.tech");
     this.gateway = output("10.10.0.1");
 
-    const store = (this.store = new VaultStore());
+    // Phase 8: BAO_STORE_READS flips every `globals.store` read from 1Password
+    // to OpenBao in one place. Deliberately explicit — see the comment on
+    // `baoStoreReadsEnabled` for why this must not be inferred from whether
+    // credentials happen to be present. Logged at info so the run's own output
+    // says which store its values came from; a value that differs between the
+    // two is otherwise indistinguishable from a real config change.
+    const useBao = baoStoreReadsEnabled();
+    log.info(`Secret reads: ${useBao ? "OpenBao (BAO_STORE_READS)" : "1Password Connect"}`);
+    const store = (this.store = useBao ? new BaoStore() : new VaultStore());
     this.tailscaleDomain = store.tailscaleDomain;
     this.tailscaleCredential = store.getSecretByTitle<{
       hostname: string;

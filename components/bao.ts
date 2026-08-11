@@ -47,20 +47,64 @@ export interface KvReadResult {
 
 export class BaoClient {
   private readonly addr: string;
-  private readonly token: string;
+  /**
+   * Resolved lazily so an AppRole login happens on first use rather than at
+   * construction — `BaoStore` is built for every stack, including the ones
+   * that never read a secret, and a login there would be a network call in
+   * `pulumi preview` on stacks that do not touch OpenBao.
+   */
+  private tokenPromise?: Promise<string>;
+  private readonly staticToken?: string;
+  private readonly roleId?: string;
+  private readonly secretId?: string;
 
-  constructor(addr = process.env.BAO_ADDR, token = process.env.BAO_TOKEN) {
+  constructor(addr = process.env.BAO_ADDR, token = process.env.BAO_TOKEN, roleId = process.env.BAO_ROLE_ID, secretId = process.env.BAO_SECRET_ID) {
     if (!addr) throw new Error("BAO_ADDR is not set");
-    if (!token) throw new Error("BAO_TOKEN is not set");
+    // Two ways in, matching `GlobalResources.baoProvider` exactly. They must
+    // stay matched: a client that accepts only BAO_TOKEN while the provider
+    // accepts the AppRole is how Phase 8a's dual-write gate silently skipped
+    // every write on an AppRole run.
+    if (!token && !(roleId && secretId)) {
+      throw new Error('No OpenBao credentials — set BAO_TOKEN, or BAO_ROLE_ID/BAO_SECRET_ID. Run `eval "$(bootstrap/openbao/pulumi-env.sh)"` from the vault repo.');
+    }
     this.addr = addr.replace(/\/+$/, "");
-    this.token = token;
+    this.staticToken = token || undefined;
+    this.roleId = roleId || undefined;
+    this.secretId = secretId || undefined;
+  }
+
+  /**
+   * Exchange the AppRole for a token, once per process.
+   *
+   * `skipChildToken` has no analogue here because this client never mints a
+   * child: the `pulumi` policy has no capability on `auth/token/create`, which
+   * is the same 403 the provider works around.
+   */
+  private token(): Promise<string> {
+    if (this.staticToken) return Promise.resolve(this.staticToken);
+    this.tokenPromise ??= (async () => {
+      const res = await fetch(`${this.addr}/v1/auth/approle/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role_id: this.roleId, secret_id: this.secretId }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(`AppRole login failed: ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`);
+      }
+      const body = (await res.json()) as { auth?: { client_token?: string } };
+      const clientToken = body.auth?.client_token;
+      if (!clientToken) throw new Error("AppRole login returned no client_token");
+      return clientToken;
+    })();
+    return this.tokenPromise;
   }
 
   private async request(method: string, path: string, body?: unknown): Promise<unknown> {
     const res = await fetch(`${this.addr}/v1/${path}`, {
       method,
       headers: {
-        "X-Vault-Token": this.token,
+        "X-Vault-Token": await this.token(),
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
