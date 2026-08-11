@@ -5,7 +5,7 @@ import * as pulumi from "@pulumi/pulumi";
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
 
-const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
+const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator", globals);
 
 const dockgeInstances = dockgeDetails.apply(details => {
   return details.map(detail => {

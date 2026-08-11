@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
+import { baoKvSecret, baoProvenance, baoSlug } from "@components/bao.ts";
 import { OnePasswordItem, type OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
 import type { TailscaleCidr } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
@@ -86,6 +87,13 @@ export function getTailscaleIp(name: pulumi.Input<string>, globals: GlobalResour
 
 export class TailscaleMonitor {
   private readonly services: string[] = [];
+  /**
+   * `globals` is here for `baoProvider`/`baoDualWriteEnabled` only — the
+   * monitor itself needs nothing else from it. Threading it through the
+   * construction sites is what PLAN §G-8 costs: the export is cross-stack
+   * inventory, and the producing side owns the OpenBao write.
+   */
+  constructor(private readonly globals: GlobalResources) {}
   public addService(name: string) {
     this.services.push(name);
   }
@@ -95,11 +103,13 @@ export class TailscaleMonitor {
       fields: Object.fromEntries(nodeState.map(z => [z.name, { value: z.externalIp }] as const)),
     };
 
-    return new OnePasswordItem(
-      `${pulumi.runtime.getStack()}-tailnet`,
+    const stack = pulumi.runtime.getStack();
+    const title = `Tailscale Export - ${stack}`;
+    const item = new OnePasswordItem(
+      `${stack}-tailnet`,
       {
         category: FullItem.CategoryEnum.SecureNote,
-        title: `Tailscale Export - ${pulumi.runtime.getStack()}`,
+        title: title,
         tags: ["tailscale-export"],
         sections: pulumi.output(nodeState).apply(nodes =>
           Object.fromEntries(
@@ -122,12 +132,56 @@ export class TailscaleMonitor {
           ),
         ),
         fields: {
-          name: { value: pulumi.runtime.getStack() },
+          name: { value: stack },
           services: { value: pulumi.jsonStringify(this.services) },
         },
       },
       cro,
     );
+
+    // Phase 8 dual-write (openbao-migration PLAN §G-8): the export also lands
+    // at its reserved inventory path (`clusters/_inventory/<slug(title)>`, the
+    // tag:tailscale-export rule in scripts/op-to-bao/mapping.ts) with the exact
+    // field shape of the OnePasswordItem above — `name`/`services` flat, one
+    // nested object per node. 1Password stays authoritative until Phase 11 —
+    // written ALONGSIDE the item, never instead of it; rollback is a plain
+    // `git revert`. `BaoStore.getTailscaleExports` refuses to serve consumers
+    // until every producing stack has run this once.
+    if (this.globals.baoDualWriteEnabled) {
+      baoKvSecret(
+        `${stack}-tailnet-bao`,
+        {
+          mount: "secrets",
+          path: `clusters/_inventory/${baoSlug(title)}`,
+          data: pulumi.output(nodeState).apply(nodes => ({
+            name: stack,
+            services: pulumi.jsonStringify(this.services),
+            ...Object.fromEntries(
+              [...nodes]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(
+                  z =>
+                    [
+                      z.name,
+                      {
+                        externalIp: z.externalIp,
+                        internalIp: z.internalIp,
+                        mac: z.mac,
+                        nodeType: z.nodeType ?? "unknown",
+                      },
+                    ] as const,
+                ),
+            ),
+          })),
+          customMetadata: baoProvenance({ source_title: title, source_tags: "tailscale-export" }),
+        },
+        pulumi.mergeOptions(cro, { provider: this.globals.baoProvider }) as pulumi.CustomResourceOptions,
+      );
+    } else {
+      pulumi.log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the tailscale-export dual-write for ${stack}. 1Password stays authoritative; the inventory path stays stale until a credentialed run.`);
+    }
+
+    return item;
   }
 }
 

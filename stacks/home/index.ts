@@ -17,7 +17,7 @@ import { createGatusDnsUptime } from "../../components/StandardDns.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 
 const globals = new GlobalResources({}, {});
-const monitor = new TailscaleMonitor();
+const monitor = new TailscaleMonitor(globals);
 const backupDirector = new BackupPlanDirector("backup-plan-director", {
   globals,
 });

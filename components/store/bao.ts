@@ -19,9 +19,8 @@
  *
  * Still on 1Password after this file (each is a later slice):
  *
- *   getBackupPlans                 producer-side write-back moves to OpenBao
- *   getTailscaleExports            same
- *   proxmoxBackupServers           needs both of the above to resolve
+ *   proxmoxBackupServers           its items reference dockge/cluster items by
+ *                                  title; moves once those reads are proven
  *   replaceOnePasswordPlaceholders `vals` replaces it (PLAN §D.1)
  *
  * ## Field shapes carry over unchanged
@@ -49,11 +48,34 @@
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug } from "../bao.ts";
 import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
-import { VaultStore } from "./index.ts";
+import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
 /** The KV v2 mount every credential lives in. `docs` holds reference material. */
 const SECRETS_MOUNT = "secrets";
+
+/**
+ * Where cross-stack inventory lives (PLAN §G-8) — values PRODUCED by one
+ * Pulumi stack and read by others, dual-written because `StackReference`
+ * cannot cross this repo's per-stack backends.
+ */
+const INVENTORY_PREFIX = "clusters/_inventory";
+
+/** Key prefix of one stack's tailscale export: `tailscale-export-<stack>`. */
+const TAILSCALE_EXPORT_PREFIX = "tailscale-export-";
+
+/**
+ * The stacks that call `TailscaleMonitor.exportNodeStateToOnePassword` today.
+ * `getTailscaleExports` refuses a partial set — see the override for why.
+ */
+const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"];
+
+/**
+ * The plans `BackupPlanOrchestrator.savePlan` produces today: `Backup Plan`
+ * from stacks/backups, `<Cluster Title> Backup Plan` from each applications
+ * stack. `getBackupPlans` refuses a partial set — see the override for why.
+ */
+const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
 
 /**
  * Whether stacks read secrets from OpenBao instead of 1Password.
@@ -162,6 +184,53 @@ export class BaoStore extends VaultStore {
     return this.listUnder("hosts/dockge") as ReturnType<VaultStore["getDockgeInstances"]>;
   }
 
+  /**
+   * `tag:tailscale-export` became the `tailscale-export-*` keys under
+   * `clusters/_inventory/` — one per producing stack, dual-written by
+   * `TailscaleMonitor` at the paths mapping.yaml reserves.
+   *
+   * An incomplete set (including an empty one) is an ERROR, never a smaller
+   * result — see `tailscaleExportKeys`. This feeds ACL grants and DHCP
+   * reservations in `stacks/unifi-network`; a reader switched before the
+   * producers ran would compute an empty estate and start REMOVING live
+   * config — the exact §G-8 failure, made loud.
+   */
+  public override getTailscaleExports() {
+    return output(this.bao.list(SECRETS_MOUNT, INVENTORY_PREFIX))
+      .apply(keys =>
+        all(
+          tailscaleExportKeys(keys).map(key => {
+            assertNotDirectory(INVENTORY_PREFIX, key);
+            return this.read(`${INVENTORY_PREFIX}/${key}`);
+          }),
+        ),
+      )
+      .apply(items => shapeTailscaleExports(items)) as ReturnType<VaultStore["getTailscaleExports"]>;
+  }
+
+  /**
+   * `tag:backup-plan` became the `*backup-plan` keys under
+   * `clusters/_inventory/` — one per producing stack, dual-written by
+   * `BackupPlanOrchestrator.savePlan`.
+   *
+   * Same refusal as `getTailscaleExports`, same reason: the three
+   * `BackupPlanDirector`s create backrest plans from this list, so a torn
+   * inventory quietly shrinks the set of things being backed up — a failure
+   * with no symptom until a restore is needed. See `backupPlanKeys`.
+   */
+  public override getBackupPlans<T>() {
+    return output(this.bao.list(SECRETS_MOUNT, INVENTORY_PREFIX))
+      .apply(keys =>
+        all(
+          backupPlanKeys(keys).map(key => {
+            assertNotDirectory(INVENTORY_PREFIX, key);
+            return this.read(`${INVENTORY_PREFIX}/${key}`);
+          }),
+        ),
+      )
+      .apply(items => shapeBackupPlans<T>(items as unknown as { plan: string }[])) as ReturnType<VaultStore["getBackupPlans"]> & Output<T[]>;
+  }
+
   private listUnder(prefix: string): Output<BaoItem[]> {
     return output(this.bao.list(SECRETS_MOUNT, prefix)).apply(keys =>
       all(
@@ -199,7 +268,6 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  */
 const NOT_IN_OPENBAO: Record<string, string> = {
   "OpenBao Alpha Site Static Unseal": "seal-chain material; INVENTORY §2 forbids it from ever living in OpenBao",
-  "Backup Plan": "cross-stack inventory; moves to secrets/clusters/_inventory/ in a later Phase 8 slice",
 };
 
 /**
@@ -247,6 +315,15 @@ export function resolveBaoPath(title: string): { path: string; reason?: undefine
   const inventory = INVENTORY_IN_OPENBAO[title];
   if (inventory) return { path: inventory };
 
+  // The tag-shaped inventory families (`Backup Plan`, `<Title> Backup Plan`,
+  // `Tailscale Export - <stack>`). Every consumer reads these through
+  // `getBackupPlans`/`getTailscaleExports` rather than by title, but a title
+  // reaching this resolver must still land on the reserved _inventory path —
+  // the default rule below would derive `shared/…`, a path that never exists.
+  if (/(^| )Backup Plan$/.test(title) || /^Tailscale Export - .+$/.test(title)) {
+    return { path: `${INVENTORY_PREFIX}/${baoSlug(title)}` };
+  }
+
   if (title.startsWith("Cluster: ")) return { reason: "cluster definitions become checked-in code in a later Phase 8 slice" };
 
   // 1Password item ids are 26 lowercase base32 characters. A title that IS one
@@ -261,6 +338,44 @@ export function resolveBaoPath(title: string): { path: string; reason?: undefine
   }
 
   return { path: `shared/${baoSlug(title)}` };
+}
+
+/**
+ * The `tailscale-export-*` keys to read from an `_inventory` LIST — or an
+ * error when the set is not complete.
+ *
+ * Exported for its tests. A MISSING known stack is an error rather than a
+ * smaller result because two of three stacks having run is a torn inventory
+ * that shapes into a plausible, incomplete estate; stacks beyond the known set
+ * are included automatically, so the list is a floor, not a ceiling.
+ */
+export function tailscaleExportKeys(keys: string[]): string[] {
+  const exports = keys.filter(key => key.startsWith(TAILSCALE_EXPORT_PREFIX));
+  const missing = TAILSCALE_EXPORT_STACKS.filter(stack => !exports.includes(`${TAILSCALE_EXPORT_PREFIX}${stack}`));
+  if (missing.length > 0) {
+    throw new Error(
+      `tailscale-export inventory is incomplete under ${SECRETS_MOUNT}/${INVENTORY_PREFIX}/ — missing ${missing.map(stack => `${TAILSCALE_EXPORT_PREFIX}${stack}`).join(", ")}. ` +
+        `Each producing stack must run its dual-write before any consumer reads OpenBao (PLAN §G-8: dual-write, producer run, THEN the reader).`,
+    );
+  }
+  return exports;
+}
+
+/**
+ * The `*backup-plan` keys to read from an `_inventory` LIST — or an error
+ * when the set is not complete. Same floor-not-ceiling contract as
+ * `tailscaleExportKeys`; exported for its tests.
+ */
+export function backupPlanKeys(keys: string[]): string[] {
+  const plans = keys.filter(key => key === "backup-plan" || key.endsWith("-backup-plan"));
+  const missing = BACKUP_PLAN_KEYS.filter(key => !plans.includes(key));
+  if (missing.length > 0) {
+    throw new Error(
+      `backup-plan inventory is incomplete under ${SECRETS_MOUNT}/${INVENTORY_PREFIX}/ — missing ${missing.join(", ")}. ` +
+        `Each producing stack must run its dual-write before any consumer reads OpenBao (PLAN §G-8: dual-write, producer run, THEN the reader).`,
+    );
+  }
+  return plans;
 }
 
 /**

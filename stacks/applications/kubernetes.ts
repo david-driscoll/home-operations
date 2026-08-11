@@ -173,7 +173,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     },
     { parent: applicationManager.outpostsComponent, deleteBeforeReplace: true },
   );
-  const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator");
+  const backupPlanOrchestrator = new BackupPlanOrchestrator("backup-plan-orchestrator", globals);
 
   await awaitOutput(
     pulumi.all([kubernetesBackups(globals, backupPlanOrchestrator, clusterDefinition)]).apply(() => {
