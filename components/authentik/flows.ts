@@ -185,12 +185,25 @@ export class FlowsManager extends pulumi.ComponentResource {
   }
 
   private createTailscaleSource(enrollmentFlow: authentik.Flow, authenticationFlow: authentik.Flow): authentik.SourceOauth {
-    const items = pulumi.output(this.vault.getAllClusters()).apply(items => {
-      return Array.from(new Set(items.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`)).values()).concat([
-        pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
-        pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
-      ]);
-    });
+    // `redirect_uris` is a SET as far as the IdP is concerned, but it is
+    // serialized into a JSON body, so its ORDER is part of the resource input.
+    // Built naively it inherits the order `getAllClusters()` happens to return,
+    // which differs between the 1Password tag lookup and the checked-in
+    // definitions — a perpetual `~body` diff that says nothing about intent.
+    // Deduplicate on the resolved strings and sort, so the body is canonical
+    // whatever the source order.
+    const items = pulumi
+      .output(this.vault.getAllClusters())
+      .apply(clusters =>
+        pulumi.all([
+          ...clusters.map(z => pulumi.interpolate`https://${z.authentikDomain!}/source/oauth/callback/tailscale/`),
+          pulumi.interpolate`https://authentik.driscoll.tech/source/oauth/callback/tailscale/`,
+          pulumi.interpolate`https://authentik.${this.globals.tailscaleDomain}/source/oauth/callback/tailscale/`,
+        ]),
+      )
+      // Dedupe AFTER resolution: a Set of Outputs compares object identity, so
+      // the original never actually removed a duplicate URL.
+      .apply(urls => Array.from(new Set(urls)).sort((a, b) => a.localeCompare(b)));
     const { clientId, clientSecret } = clientIdPair("tailscale-oauth-client", {
       options: { parent: this.sourcesComponent },
     });

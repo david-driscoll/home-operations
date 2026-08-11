@@ -1,0 +1,14 @@
+# Cluster definition. Loaded by components/store/clusters.ts — the filename must
+# match `key`. Nothing here is secret; see `secretField` below.
+sourceTitle: "Cluster: Luna"
+key: luna
+title: Luna
+type: dockge
+location: home
+rootDomain: luna.driscoll.tech
+authentikDomain: canterlot.driscoll.tech
+icon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
+favicon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
+background: https://img2.joyreactor.cc/pics/post/full/Princess-Luna-royal-my-little-pony-8778525.jpeg
+# Read from secrets/clusters/luna/cluster at load time, never stored here.
+secretField: arcane_token

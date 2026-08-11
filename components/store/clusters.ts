@@ -12,135 +12,166 @@
  * (`s3://home-operations/<stack>`), so `stacks/unifi-network` cannot reference
  * `stacks/home`. Estate decision 2026-08-10: since no stack PRODUCES a cluster
  * definition, there is no cross-stack channel to build — the definitions are
- * just code, reviewable in git and diffable in a PR, which is strictly better
+ * just config, reviewable in git and diffable in a PR, which is strictly better
  * than either store.
  *
- * ## The two secret fields do NOT live here
+ * One YAML file per cluster in `/clusters` at the repo root, named for its
+ * `key`. Adding a cluster is adding a file, and the diff for a domain change is
+ * one line rather than a hunk in the middle of a TypeScript array. They sit at
+ * the root because they are estate configuration someone edits deliberately,
+ * not an implementation detail of the store that happens to read them.
+ *
+ * ## Nothing in those files is secret
  *
  * `secret` (the kubernetes clusters' shared substitution key) and
  * `arcane_token` are real credentials and stay in a secret store, read from
- * `secrets/clusters/<key>/cluster`. Everything in this file is safe to read in
- * a public diff; if you are about to add a field that is not, it belongs at
- * that path instead.
+ * `secrets/clusters/<key>/cluster`. The YAML names WHICH field a cluster has
+ * (`secretField`) and never its value. If you are about to add a field whose
+ * value is sensitive, it belongs at that path instead.
  *
- * ## `title` vs `meta.title`
+ * ## `title` vs `sourceTitle`
  *
  * Both exist and they differ. `title` is the display name (`Celestia`);
- * `meta.title` is the 1Password item title (`Cluster: Celestia`) and is what
- * `ProxmoxBackupServerLxc` writes into its `cluster` field and what names a
- * Gatus group. Changing either is a user-visible rename, so both are pinned
- * here rather than derived from one another.
+ * `sourceTitle` is the 1Password item title (`Cluster: Celestia`), surfaced as
+ * `meta.title`, and is what `ProxmoxBackupServerLxc` writes into its `cluster`
+ * field and what names a Gatus group. Changing either is a user-visible
+ * rename, so both are written out rather than derived from one another.
+ *
+ * ## Validation is not optional here
+ *
+ * As TypeScript literals these were typechecked. YAML is not, and a mistyped
+ * key would surface as `undefined` deep inside a provider call — or worse,
+ * silently render an empty string into a URL. `loadClusters()` therefore
+ * validates every field and fails loudly at module load, which is the moment
+ * a human is looking at the error.
  */
 
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import * as yaml from "yaml";
 import type { ClusterDefinition } from "./interfaces.ts";
 
+// Repo root, not next to this file: these are estate configuration a human
+// edits, not internals of the store implementation. `components/store/` is
+// two levels down.
+const CLUSTERS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "clusters");
+
+/** The credential field a cluster owns, or null when it has none. */
+export type ClusterSecretField = "secret" | "arcane_token";
+
 /** The 1Password item title, retained because consumers read `meta.title`. */
-export type ClusterEntry = ClusterDefinition & { readonly sourceTitle: string };
+export type ClusterEntry = ClusterDefinition & {
+  readonly sourceTitle: string;
+  readonly secretField: ClusterSecretField | null;
+};
+
+const CLUSTER_TYPES = ["dockge", "kubernetes"] as const;
+const LOCATIONS = ["home", "remote"] as const;
+const SECRET_FIELDS: readonly ClusterSecretField[] = ["secret", "arcane_token"];
+
+/** Fields every cluster must declare. `secretField` is checked separately — it is nullable. */
+const REQUIRED = ["sourceTitle", "key", "title", "type", "location", "rootDomain", "authentikDomain", "icon", "favicon", "background"] as const;
 
 /**
- * Ordered by key, matching what `findItemsByTag` returned sorted — several
- * callers derive Pulumi inputs from `getAllClusters()`, and an unstable order
- * means spurious diffs.
+ * Exported for its tests: this is the whole of what the TypeScript compiler
+ * used to do for this data.
  */
-export const CLUSTERS: readonly ClusterEntry[] = [
-  {
-    sourceTitle: "Cluster: Alpha Site",
-    type: "dockge",
-    key: "alpha-site",
-    title: "Alpha Site",
-    rootDomain: "as.driscoll.tech",
-    authentikDomain: "iris.driscoll.tech",
-    icon: "https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png",
-    background: "https://images.playground.com/43f58221d361456293f38739b6c69cea.jpeg",
-    favicon: "https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png",
-    location: "home",
-  },
-  {
-    sourceTitle: "Cluster: Celestia",
-    type: "dockge",
-    key: "celestia",
-    title: "Celestia",
-    rootDomain: "celestia.driscoll.tech",
-    authentikDomain: "canterlot.driscoll.tech",
-    icon: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7be3c9c2-9f29-4df6-a6cd-b9eac6f29a9d/d77sw6q-9445f061-ef8f-4847-9d80-161062ea5ebd.png/v1/fill/w_400,h_333,strp/celestia_and_luna___favicon_works_by_agnessangel_d77sw6q-fullview.png",
-    background: "https://get.wallhere.com/photo/My-Little-Pony-Princess-Celestia-1176459.jpg",
-    favicon:
-      "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7be3c9c2-9f29-4df6-a6cd-b9eac6f29a9d/d77sw6q-9445f061-ef8f-4847-9d80-161062ea5ebd.png/v1/fill/w_400,h_333,strp/celestia_and_luna___favicon_works_by_agnessangel_d77sw6q-fullview.png",
-    location: "home",
-  },
-  {
-    sourceTitle: "Cluster: Equestria",
-    type: "kubernetes",
-    key: "equestria",
-    title: "Equestria",
-    rootDomain: "equestria.driscoll.tech",
-    authentikDomain: "canterlot.driscoll.tech",
-    icon: "https://cdn.imgbin.com/5/21/5/imgbin-equestria-royal-guards-emblem-army-others-TaRExRmRe5mJ6PtYBQxYQK0eX.jpg",
-    background: "https://i.pinimg.com/originals/01/7e/aa/017eaa00416cf59928265f7f5697b8be.jpg",
-    favicon: "https://vectorified.com/images/my-little-pony-icon-7.png",
-    location: "home",
-    // `secret` is supplied from OpenBao at read time — see clusterSecretPath().
-    secret: "",
-  },
-  {
-    sourceTitle: "Cluster: Luna",
-    type: "dockge",
-    key: "luna",
-    title: "Luna",
-    rootDomain: "luna.driscoll.tech",
-    authentikDomain: "canterlot.driscoll.tech",
-    icon: "https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png",
-    background: "https://img2.joyreactor.cc/pics/post/full/Princess-Luna-royal-my-little-pony-8778525.jpeg",
-    favicon: "https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png",
-    location: "home",
-  },
-  {
-    sourceTitle: "Cluster: Skystar",
-    type: "dockge",
-    key: "skystar",
-    title: "Skystar",
-    rootDomain: "skystar.driscoll.tech",
-    authentikDomain: "canterlot.driscoll.tech",
-    icon: "https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest",
-    background: "https://img2.joyreactor.cc/pics/post/full/Princess-Luna-royal-my-little-pony-8778525.jpeg",
-    favicon: "https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest",
-    location: "remote",
-  },
-  {
-    sourceTitle: "Cluster: Stargate Command",
-    type: "kubernetes",
-    key: "sgc",
-    title: "Stargate Command",
-    rootDomain: "sgc.driscoll.tech",
-    authentikDomain: "iris.driscoll.tech",
-    icon: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
-    background: "https://wallpapercave.com/wp/wp10853006.jpg",
-    favicon: "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg",
-    location: "home",
-    // `secret` is supplied from OpenBao at read time — see clusterSecretPath().
-    secret: "",
-  },
-];
+export function parseCluster(file: string, raw: unknown): ClusterEntry {
+  const where = `clusters/${file}`;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw new Error(`${where}: expected a YAML mapping`);
+  const doc = raw as Record<string, unknown>;
+
+  for (const field of REQUIRED) {
+    const value = doc[field];
+    if (typeof value !== "string" || value === "") throw new Error(`${where}: '${field}' must be a non-empty string`);
+  }
+
+  // An unknown key is almost always a typo for a real one, and silently
+  // ignoring it is how a cluster ends up with a default nobody chose.
+  const known = new Set<string>([...REQUIRED, "secretField"]);
+  const unknown = Object.keys(doc).filter(k => !known.has(k));
+  if (unknown.length > 0) throw new Error(`${where}: unknown field(s) ${unknown.join(", ")} — remove them or add them to REQUIRED`);
+
+  const key = doc.key as string;
+  // The filename is how `clusterSecretPath` and the OpenBao layout line up, so
+  // a mismatch would read another cluster's credential.
+  if (file !== `${key}.yaml`) throw new Error(`${where}: 'key' is '${key}' but the file is named '${file}' — they must match`);
+
+  const type = doc.type as string;
+  if (!CLUSTER_TYPES.includes(type as (typeof CLUSTER_TYPES)[number])) throw new Error(`${where}: 'type' must be one of ${CLUSTER_TYPES.join(" | ")}, got '${type}'`);
+
+  const location = doc.location as string;
+  if (!LOCATIONS.includes(location as (typeof LOCATIONS)[number])) throw new Error(`${where}: 'location' must be one of ${LOCATIONS.join(" | ")}, got '${location}'`);
+
+  // Explicit rather than optional: a cluster added without deciding about its
+  // credential should fail here, not quietly read nothing. `null` is the way
+  // to say "this one genuinely has none" (celestia).
+  if (!("secretField" in doc)) throw new Error(`${where}: 'secretField' is required — use 'null' if this cluster has no credential`);
+  const secretField = doc.secretField;
+  if (secretField !== null && !SECRET_FIELDS.includes(secretField as ClusterSecretField)) {
+    throw new Error(`${where}: 'secretField' must be null or one of ${SECRET_FIELDS.join(" | ")}, got ${JSON.stringify(secretField)}`);
+  }
+
+  return {
+    ...(doc as unknown as ClusterDefinition),
+    secretField: secretField as ClusterSecretField | null,
+    // The kubernetes definitions carry a `secret` field in their type. The
+    // value is spread in from OpenBao by the caller; this placeholder only
+    // satisfies the shape, and is always overwritten.
+    ...(type === "kubernetes" ? { secret: "" } : {}),
+  } as ClusterEntry;
+}
+
+function loadClusters(): readonly ClusterEntry[] {
+  const files = readdirSync(CLUSTERS_DIR)
+    .filter(f => f.endsWith(".yaml"))
+    // Sorted by filename, which the key check pins to the cluster key. Several
+    // callers derive Pulumi inputs from `getAllClusters()`, and an unstable
+    // order means spurious diffs — the same class of churn as the
+    // trigger-ordering bug in DockgeLxc.
+    .sort((a, b) => a.localeCompare(b));
+  if (files.length === 0) throw new Error(`no cluster definitions found in ${CLUSTERS_DIR}`);
+
+  const clusters = files.map(file => parseCluster(file, yaml.parse(readFileSync(join(CLUSTERS_DIR, file), "utf8"))));
+
+  const titles = new Set<string>();
+  for (const c of clusters) {
+    // Duplicate sourceTitles would make clusterBySourceTitle() silently return
+    // whichever sorted first.
+    if (titles.has(c.sourceTitle)) throw new Error(`duplicate sourceTitle '${c.sourceTitle}' across cluster definitions`);
+    titles.add(c.sourceTitle);
+  }
+  return clusters;
+}
+
+export const CLUSTERS: readonly ClusterEntry[] = loadClusters();
 
 /**
  * Which clusters carry a credential field, and which one.
  *
- * Kept explicit rather than inferred from the shape of `CLUSTERS`, so adding a
- * cluster without deciding about its secret is a compile-time gap rather than
- * a silently-empty field at runtime.
+ * Derived from the YAML rather than maintained alongside it — the decision
+ * lives with the cluster it belongs to.
  */
-export const CLUSTER_SECRET_FIELDS: Readonly<Record<string, "secret" | "arcane_token">> = {
-  "alpha-site": "arcane_token",
-  equestria: "secret",
-  luna: "arcane_token",
-  sgc: "secret",
-  skystar: "arcane_token",
-  // celestia has neither.
-};
+export const CLUSTER_SECRET_FIELDS: Readonly<Record<string, ClusterSecretField>> = Object.fromEntries(CLUSTERS.filter(c => c.secretField !== null).map(c => [c.key, c.secretField as ClusterSecretField]));
 
-/** Where a cluster's credential fields live in the `secrets` mount. */
-export function clusterSecretPath(key: string): string {
-  return `clusters/${key}/cluster`;
+/**
+ * Where a cluster's credential lives in the `secrets` mount.
+ *
+ * Named for the CONSUMER, not for a generic per-cluster bucket, matching the
+ * `clusters/<key>/apps/<app>/oidc` paths Phase 8a already writes:
+ *
+ *   arcane_token  ->  clusters/<key>/arcane-agent   the arcane-agent's token
+ *   secret        ->  clusters/<key>/cluster        the cluster-wide Flux
+ *                                                   substitution key, which
+ *                                                   belongs to no single app
+ *
+ * A single `clusters/<key>/cluster` holding both would mean a consumer that
+ * only needs the arcane token has to be granted the substitution key too, and
+ * the ACL cannot separate them once they share a path.
+ */
+export function clusterSecretPath(key: string, field: ClusterSecretField): string {
+  return field === "arcane_token" ? `clusters/${key}/arcane-agent` : `clusters/${key}/cluster`;
 }
 
 /** Look up by the 1Password item title callers still pass (`Cluster: Luna`). */

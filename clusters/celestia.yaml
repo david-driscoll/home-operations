@@ -1,0 +1,14 @@
+# Cluster definition. Loaded by components/store/clusters.ts — the filename must
+# match `key`. Nothing here is secret; see `secretField` below.
+sourceTitle: "Cluster: Celestia"
+key: celestia
+title: Celestia
+type: dockge
+location: home
+rootDomain: celestia.driscoll.tech
+authentikDomain: canterlot.driscoll.tech
+icon: https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7be3c9c2-9f29-4df6-a6cd-b9eac6f29a9d/d77sw6q-9445f061-ef8f-4847-9d80-161062ea5ebd.png/v1/fill/w_400,h_333,strp/celestia_and_luna___favicon_works_by_agnessangel_d77sw6q-fullview.png
+favicon: https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7be3c9c2-9f29-4df6-a6cd-b9eac6f29a9d/d77sw6q-9445f061-ef8f-4847-9d80-161062ea5ebd.png/v1/fill/w_400,h_333,strp/celestia_and_luna___favicon_works_by_agnessangel_d77sw6q-fullview.png
+background: https://get.wallhere.com/photo/My-Little-Pony-Princess-Celestia-1176459.jpg
+# The only cluster with no credential field of its own.
+secretField: null

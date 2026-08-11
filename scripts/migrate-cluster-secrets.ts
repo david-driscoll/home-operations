@@ -54,7 +54,7 @@ for (const [key, field] of Object.entries(CLUSTER_SECRET_FIELDS)) {
     continue;
   }
 
-  const path = clusterSecretPath(key);
+  const path = clusterSecretPath(key, field);
   const existing = await bao.read("secrets", path);
   if (existing) {
     // Report rather than diff-and-skip: comparing would mean holding both

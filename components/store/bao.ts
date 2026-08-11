@@ -48,7 +48,7 @@
 
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug } from "../bao.ts";
-import { CLUSTER_SECRET_FIELDS, CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
+import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
 import { VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
@@ -124,7 +124,7 @@ export class BaoStore extends VaultStore {
    */
   public override getCluster(title: string) {
     const entry = clusterBySourceTitle(title);
-    if (!entry) throw new Error(`no cluster definition titled '${title}' — add it to components/store/clusters.ts (known: ${CLUSTERS.map(c => c.sourceTitle).join(", ")})`);
+    if (!entry) throw new Error(`no cluster definition titled '${title}' — add a definition under /clusters (known: ${CLUSTERS.map(c => c.sourceTitle).join(", ")})`);
     return this.hydrateCluster(entry) as ReturnType<VaultStore["getCluster"]>;
   }
 
@@ -141,11 +141,14 @@ export class BaoStore extends VaultStore {
    * reading a path that does not exist.
    */
   private hydrateCluster(entry: ClusterEntry): Output<Record<string, unknown>> {
-    const field = CLUSTER_SECRET_FIELDS[entry.key];
-    const { sourceTitle, ...definition } = entry;
+    const field = entry.secretField;
+    // `sourceTitle` and `secretField` are loader bookkeeping, not part of the
+    // definition a stack consumes — leaving either in would add a key the
+    // 1Password shape never had.
+    const { sourceTitle, secretField: _secretField, ...definition } = entry;
     const base = { ...definition, meta: { title: sourceTitle, tags: ["cluster-definition"] } };
     if (!field) return output(base);
-    return this.getSecretByPath<Record<string, unknown>>(clusterSecretPath(entry.key)).apply(secretItem => ({
+    return this.getSecretByPath<Record<string, unknown>>(clusterSecretPath(entry.key, field)).apply(secretItem => ({
       ...base,
       [field]: secretItem[field],
     }));
