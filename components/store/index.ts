@@ -48,8 +48,8 @@ export class VaultStore {
 
   public getBackupPlans<T>() {
     return output(op().findItemsByTag("backup-plan"))
-      .apply(items => all(items.map(getSecretItem<{ plan: string }>)).apply(items => items.map(item => JSON.parse(item.plan) as { plans: T[] })))
-      .apply(plans => plans.flatMap(z => z.plans));
+      .apply(items => all(items.map(getSecretItem<{ plan: string }>)))
+      .apply(items => shapeBackupPlans<T>(items));
   }
 
   public getTailscaleExports() {
@@ -154,6 +154,18 @@ export class VaultStore {
         return output(value).apply(v => v.replace(this.vaultRegex, fullMatch => items.get(fullMatch) || fullMatch));
       });
   }
+}
+
+/**
+ * Item-shaped backup plans → the flat plan list the directors consume.
+ *
+ * Shared between `VaultStore` (items found by `tag:backup-plan`) and
+ * `BaoStore` (paths listed under `clusters/_inventory/*backup-plan`) for the
+ * same reason as `shapeTailscaleExports` below: one transform, so the stores
+ * can only differ in data.
+ */
+export function shapeBackupPlans<T>(items: { plan: string }[]): T[] {
+  return items.map(item => JSON.parse(item.plan) as { plans: T[] }).flatMap(z => z.plans);
 }
 
 /**

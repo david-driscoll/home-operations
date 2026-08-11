@@ -19,8 +19,8 @@
  *
  * Still on 1Password after this file (each is a later slice):
  *
- *   getBackupPlans                 producer-side write-back moves to OpenBao
- *   proxmoxBackupServers           waits on the remaining inventory flows
+ *   proxmoxBackupServers           its items reference dockge/cluster items by
+ *                                  title; moves once those reads are proven
  *   replaceOnePasswordPlaceholders `vals` replaces it (PLAN §D.1)
  *
  * ## Field shapes carry over unchanged
@@ -48,7 +48,7 @@
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug } from "../bao.ts";
 import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
-import { shapeTailscaleExports, VaultStore } from "./index.ts";
+import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
 /** The KV v2 mount every credential lives in. `docs` holds reference material. */
@@ -69,6 +69,13 @@ const TAILSCALE_EXPORT_PREFIX = "tailscale-export-";
  * `getTailscaleExports` refuses a partial set — see the override for why.
  */
 const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"];
+
+/**
+ * The plans `BackupPlanOrchestrator.savePlan` produces today: `Backup Plan`
+ * from stacks/backups, `<Cluster Title> Backup Plan` from each applications
+ * stack. `getBackupPlans` refuses a partial set — see the override for why.
+ */
+const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
 
 /**
  * Whether stacks read secrets from OpenBao instead of 1Password.
@@ -201,6 +208,29 @@ export class BaoStore extends VaultStore {
       .apply(items => shapeTailscaleExports(items)) as ReturnType<VaultStore["getTailscaleExports"]>;
   }
 
+  /**
+   * `tag:backup-plan` became the `*backup-plan` keys under
+   * `clusters/_inventory/` — one per producing stack, dual-written by
+   * `BackupPlanOrchestrator.savePlan`.
+   *
+   * Same refusal as `getTailscaleExports`, same reason: the three
+   * `BackupPlanDirector`s create backrest plans from this list, so a torn
+   * inventory quietly shrinks the set of things being backed up — a failure
+   * with no symptom until a restore is needed. See `backupPlanKeys`.
+   */
+  public override getBackupPlans<T>() {
+    return output(this.bao.list(SECRETS_MOUNT, INVENTORY_PREFIX))
+      .apply(keys =>
+        all(
+          backupPlanKeys(keys).map(key => {
+            assertNotDirectory(INVENTORY_PREFIX, key);
+            return this.read(`${INVENTORY_PREFIX}/${key}`);
+          }),
+        ),
+      )
+      .apply(items => shapeBackupPlans<T>(items as unknown as { plan: string }[])) as ReturnType<VaultStore["getBackupPlans"]> & Output<T[]>;
+  }
+
   private listUnder(prefix: string): Output<BaoItem[]> {
     return output(this.bao.list(SECRETS_MOUNT, prefix)).apply(keys =>
       all(
@@ -238,7 +268,6 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  */
 const NOT_IN_OPENBAO: Record<string, string> = {
   "OpenBao Alpha Site Static Unseal": "seal-chain material; INVENTORY §2 forbids it from ever living in OpenBao",
-  "Backup Plan": "cross-stack inventory; moves to secrets/clusters/_inventory/ in a later Phase 8 slice",
 };
 
 /**
@@ -286,6 +315,15 @@ export function resolveBaoPath(title: string): { path: string; reason?: undefine
   const inventory = INVENTORY_IN_OPENBAO[title];
   if (inventory) return { path: inventory };
 
+  // The tag-shaped inventory families (`Backup Plan`, `<Title> Backup Plan`,
+  // `Tailscale Export - <stack>`). Every consumer reads these through
+  // `getBackupPlans`/`getTailscaleExports` rather than by title, but a title
+  // reaching this resolver must still land on the reserved _inventory path —
+  // the default rule below would derive `shared/…`, a path that never exists.
+  if (/(^| )Backup Plan$/.test(title) || /^Tailscale Export - .+$/.test(title)) {
+    return { path: `${INVENTORY_PREFIX}/${baoSlug(title)}` };
+  }
+
   if (title.startsWith("Cluster: ")) return { reason: "cluster definitions become checked-in code in a later Phase 8 slice" };
 
   // 1Password item ids are 26 lowercase base32 characters. A title that IS one
@@ -321,6 +359,23 @@ export function tailscaleExportKeys(keys: string[]): string[] {
     );
   }
   return exports;
+}
+
+/**
+ * The `*backup-plan` keys to read from an `_inventory` LIST — or an error
+ * when the set is not complete. Same floor-not-ceiling contract as
+ * `tailscaleExportKeys`; exported for its tests.
+ */
+export function backupPlanKeys(keys: string[]): string[] {
+  const plans = keys.filter(key => key === "backup-plan" || key.endsWith("-backup-plan"));
+  const missing = BACKUP_PLAN_KEYS.filter(key => !plans.includes(key));
+  if (missing.length > 0) {
+    throw new Error(
+      `backup-plan inventory is incomplete under ${SECRETS_MOUNT}/${INVENTORY_PREFIX}/ — missing ${missing.join(", ")}. ` +
+        `Each producing stack must run its dual-write before any consumer reads OpenBao (PLAN §G-8: dual-write, producer run, THEN the reader).`,
+    );
+  }
+  return plans;
 }
 
 /**

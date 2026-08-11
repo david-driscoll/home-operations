@@ -254,4 +254,29 @@ try {
   console.log(`FAIL  getTailscaleExports: ${error instanceof Error ? error.message : String(error)}`);
 }
 
+// Backup plans: produced by stacks/backups and both applications stacks,
+// consumed by the three BackupPlanDirectors. A wrong SET here silently shrinks
+// what gets backed up. Same gate semantics as getTailscaleExports: this
+// section FAILS until every producing stack has run its dual-write — do not
+// flip BAO_STORE_READS while it is red.
+try {
+  const [a, b] = await Promise.all([resolve(op.getBackupPlans<{ source: string; name: string }>()), resolve(bao.getBackupPlans<{ source: string; name: string }>())]);
+  const key = (plans: { source: string; name: string }[]) =>
+    plans
+      .map(p => `${p.source}/${p.name}`)
+      .sort()
+      .join(", ");
+  if (JSON.stringify([...a].sort((x, y) => `${x.source}/${x.name}`.localeCompare(`${y.source}/${y.name}`))) === JSON.stringify([...b].sort((x, y) => `${x.source}/${x.name}`.localeCompare(`${y.source}/${y.name}`)))) {
+    console.log(`OK    getBackupPlans (${a.length} plans)`);
+  } else {
+    failures++;
+    console.log("DIFF  getBackupPlans");
+    console.log(`        tag:backup-plan   ${key(a)}`);
+    console.log(`        _inventory/       ${key(b)}`);
+  }
+} catch (error) {
+  failures++;
+  console.log(`FAIL  getBackupPlans: ${error instanceof Error ? error.message : String(error)}`);
+}
+
 process.exit(failures === 0 ? 0 : 1);
