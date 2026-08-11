@@ -13,13 +13,25 @@
  * out of OpenBao when virtual dispatch once sent `op://` lookups there
  * (STATUS.md, "the read seam").
  *
- * ## Resolution is `vals eval`, batched
+ * ## vals is the only parser of the reference syntax
  *
- * The unresolved references of a document are collected into one YAML doc and
- * resolved by a single `vals eval` subprocess (helmfile/vals ≥0.45 speaks
- * `ref+openbao://` natively — verified against the live server); results are
- * memoized per reference for the life of the process, so however many files
- * share a credential, vals runs once for it. `vals` comes from mise locally
+ * There is deliberately NO reference regex here. The whole document is handed
+ * to `vals eval` as one YAML value (`content: <file>`), and vals expands every
+ * embedded reference inside the string — helmfile/vals ≥0.45 resolves
+ * `ref+openbao://` natively and expands refs mid-string, delimiting correctly
+ * at quotes and line ends (verified live: a plex-style URL query, a dotenv
+ * `KEY="ref+…"` line inside a block scalar, and surrounding text all survive
+ * byte-for-byte). Matching the syntax ourselves would make this file a second
+ * implementation of vals' grammar that silently skips whatever it gets wrong
+ * — a `?version=` query, an exotic field name — and a skipped reference
+ * becomes a literal credential-shaped string in a running container.
+ *
+ * Do NOT hand vals a raw non-YAML file instead of wrapping it: `vals eval` of
+ * a bare dotenv line exits 0 with EMPTY output, which a pipeline would write
+ * out as an empty file.
+ *
+ * One `vals eval` per document that contains references, memoized by content
+ * for the life of the process. `vals` comes from mise locally
  * (`.config/mise.toml [tools]`) and from the `vals` initContainer on the
  * operator's workspace pods, which exports its path as `VALS_BIN` — see
  * `kubernetes/apps/pulumi/<stack>/stack.yaml`.
@@ -32,10 +44,12 @@
  *
  * The `op://` resolver logs and passes the literal through, relying on the
  * `provision.sh` guard to catch it at container runtime. Here a missing path
- * or field fails the `vals eval` and therefore the Pulumi run — the guard
- * stays as defense-in-depth, but the failure belongs to the run that caused
- * it, not to the container that later boots with a literal `ref+…` as its
- * password.
+ * or field fails the `vals eval` — and any `ref+` string that SURVIVES
+ * resolution (an unsupported provider like `ref+sops://`, or a reference vals
+ * did not recognize) fails the run too, naming the scheme but never echoing
+ * content. The guard stays as defense-in-depth, but the failure belongs to
+ * the run that caused it, not to the container that later boots with a
+ * literal `ref+…` as its password.
  */
 
 import { execFile } from "node:child_process";
@@ -43,17 +57,7 @@ import { type Input, type Output, output, secret } from "@pulumi/pulumi";
 import * as yaml from "yaml";
 import { BaoClient } from "../bao.ts";
 
-/**
- * One reference: mount, path within the mount, field name.
- *
- * The field charset has no space on purpose: OpenBao stores 1Password field
- * names verbatim (`known hosts`), but a space savagely complicates parsing
- * inside URLs and env files, and no file-resolved reference needs one today.
- * Reference a spaced field by renaming the field, not by widening this.
- */
-const REF_PATTERN = /ref\+openbao:\/\/([\w-]+)\/([\w./-]+)#\/([\w.-]+)/g;
-
-/** How a batch of references reaches vals. Injectable for the tests. */
+/** How a wrapped document reaches vals. Injectable for the tests. */
 export type ValsExec = (doc: string, env: Record<string, string>) => Promise<string>;
 
 export class SecretRefResolver {
@@ -62,7 +66,7 @@ export class SecretRefResolver {
    * store never demands BAO_ADDR on a stack that resolves no references.
    */
   private client?: BaoClient;
-  /** One vals resolution per reference per process, however many files use it. */
+  /** One vals run per distinct document per process, however often it recurs. */
   private readonly resolved = new Map<string, Promise<string>>();
 
   constructor(
@@ -79,64 +83,60 @@ export class SecretRefResolver {
    */
   public resolve(value: Input<string>): Output<string> {
     return output(value).apply(v => {
-      if (!hasRefs(v)) return output(v);
+      if (!v.includes("ref+openbao://")) return output(v);
       return secret(output(this.resolveText(v)));
     });
   }
 
   /**
-   * The async core `resolve` wraps: every reference in `v` replaced, or a
-   * thrown error for the first batch that cannot be. Public so the failure
-   * contract is testable as a plain promise — a rejected Output fans out
-   * through the SDK's internal sibling promises, which only the engine
-   * observes.
+   * The async core `resolve` wraps: the document with every reference
+   * expanded, or a thrown error. Public so the failure contract is testable
+   * as a plain promise — a rejected Output fans out through the SDK's
+   * internal sibling promises, which only the engine observes.
    */
-  public async resolveText(v: string): Promise<string> {
-    const refs = unique(Array.from(v.matchAll(REF_PATTERN))).map(m => m[0]);
-    const pending = refs.filter(ref => !this.resolved.has(ref));
-    if (pending.length > 0) this.register(pending);
-    const entries = await Promise.all(refs.map(async ref => [ref, await this.resolved.get(ref)!] as const));
-    const byRef = new Map(entries);
-    // matchAll found every occurrence, so the replace cannot miss: every full
-    // match is a key in the map.
-    return v.replace(REF_PATTERN, match => byRef.get(match) as string);
+  public resolveText(v: string): Promise<string> {
+    let pending = this.resolved.get(v);
+    if (!pending) {
+      pending = this.evaluate(v);
+      this.resolved.set(v, pending);
+      // A failed eval must not poison the memo forever — a retry (the
+      // operator reconciles on backoff) should re-run vals, not replay the
+      // rejection.
+      pending.catch(() => this.resolved.delete(v));
+    }
+    return pending;
   }
 
-  /**
-   * One `vals eval` for a batch of references: `{r0: ref, r1: ref, …}` in,
-   * the same keys with values out. Every reference in the batch settles from
-   * the one subprocess; if vals fails, they all reject with its stderr, which
-   * names the path it could not read.
-   */
-  private register(refs: string[]): void {
-    const batch = (async () => {
-      this.client ??= this.makeClient();
-      const doc = yaml.stringify(Object.fromEntries(refs.map((ref, i) => [`r${i}`, ref])));
-      const resolvedDoc = await this.exec(doc, {
-        VAULT_ADDR: this.client.address,
-        VAULT_TOKEN: await this.client.authToken(),
-      });
-      const parsed = yaml.parse(resolvedDoc) as Record<string, unknown>;
-      return refs.map((ref, i) => {
-        const value = parsed[`r${i}`];
-        // vals resolved it or errored the whole eval, so a non-string here is
-        // a shape surprise (a nested object from a directory-style path).
-        if (typeof value !== "string") throw new Error(`${ref}: vals returned ${value === undefined ? "nothing" : typeof value} rather than a string`);
-        return value;
-      });
-    })();
-    refs.forEach((ref, i) => this.resolved.set(ref, batch.then(values => values[i])));
-    // A failed batch must not poison the memo forever — a retry (the operator
-    // reconciles on backoff) should re-run vals, not replay the rejection.
-    batch.catch(() => refs.forEach(ref => this.resolved.delete(ref)));
+  private async evaluate(v: string): Promise<string> {
+    this.client ??= this.makeClient();
+    const doc = yaml.stringify({ content: v });
+    const resolvedDoc = await this.exec(doc, {
+      VAULT_ADDR: this.client.address,
+      VAULT_TOKEN: await this.client.authToken(),
+    });
+    const parsed = yaml.parse(resolvedDoc) as { content?: unknown } | null;
+    const content = parsed?.content;
+    if (typeof content !== "string") {
+      throw new Error(`vals eval returned ${content === undefined ? "no content" : typeof content} for a ${v.length}-byte document — expected the wrapped string back`);
+    }
+    // Scheme-shaped only (`ref+x://`): the provision.sh guard's `ref+*)` glob
+    // and prose mentioning "ref+" must not trip this when they share a file
+    // with a real reference.
+    const residue = Array.from(new Set(Array.from(content.matchAll(/ref\+[a-z0-9]+:\/\//g), m => m[0])));
+    if (residue.length > 0) {
+      // Schemes only, never spans: the surrounding content is resolved
+      // secrets by now, and an error message must not carry any of it.
+      throw new Error(`document still contains ${residue.length} unresolved secret-reference scheme(s) after vals eval: ${residue.join(", ")} — an unsupported provider, or a reference vals did not recognize`);
+    }
+    return content;
   }
 }
 
 /**
  * Spawn the real vals binary: `VALS_BIN` when set (the operator workspace
  * pods point it at the initContainer-installed copy), otherwise `vals` from
- * PATH (mise, locally). The batch goes in on stdin and comes back on stdout,
- * so no secret value ever touches argv or a file.
+ * PATH (mise, locally). The document goes in on stdin and comes back on
+ * stdout, so no secret value ever touches argv or a file.
  */
 function execVals(doc: string, env: Record<string, string>): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -158,16 +158,4 @@ function execVals(doc: string, env: Record<string, string>): Promise<string> {
     );
     child.stdin?.end(doc);
   });
-}
-
-function hasRefs(v: string): boolean {
-  // `search`, not `test`: the pattern is /g and `test` advances its
-  // lastIndex, which `matchAll` in resolveText would then inherit and skip
-  // the first reference. `search` neither reads nor writes lastIndex.
-  return v.search(REF_PATTERN) !== -1;
-}
-
-function unique(matches: RegExpMatchArray[]): RegExpMatchArray[] {
-  const seen = new Set<string>();
-  return matches.filter(m => (seen.has(m[0]) ? false : (seen.add(m[0]), true)));
 }
