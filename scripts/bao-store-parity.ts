@@ -221,4 +221,37 @@ try {
   console.log(`FAIL  Authentik Outputs (inventory): ${error instanceof Error ? error.message : String(error)}`);
 }
 
+// Tailscale exports: produced by three stacks, consumed by unifi-network's ACL
+// and DHCP generation — the read where a wrong SET quietly removes live
+// config. Both stores shape through the same function, so what is compared
+// here is the data each store found. This section FAILS until every producing
+// stack has run its dual-write; that failing is the §G-8 gate doing its job —
+// do not flip BAO_STORE_READS while it is red.
+try {
+  const [a, b] = await Promise.all([resolve(op.getTailscaleExports()), resolve(bao.getTailscaleExports())]);
+  const aJson = JSON.stringify(a);
+  const bJson = JSON.stringify(b);
+  if (aJson === bJson) {
+    console.log(`OK    getTailscaleExports (${a.length} stacks, ${a.reduce((n, e) => n + e.hosts.length, 0)} hosts)`);
+  } else {
+    failures++;
+    console.log("DIFF  getTailscaleExports");
+    console.log(`        tag:tailscale-export   ${a.map(e => `${e.name}(${e.hosts.length})`).join(", ")}`);
+    console.log(`        _inventory/            ${b.map(e => `${e.name}(${e.hosts.length})`).join(", ")}`);
+    // IPs and MACs are addressing, not credentials, but stay consistent with
+    // the rest of this script: name the hosts, never print field values.
+    for (const exp of a) {
+      const other = b.find(e => e.name === exp.name);
+      if (!other) continue;
+      const drifted = exp.hosts.filter(h => JSON.stringify(h) !== JSON.stringify(other.hosts.find(o => o.name === h.name)));
+      if (drifted.length || JSON.stringify(exp.services) !== JSON.stringify(other.services)) {
+        console.log(`        ${exp.name}: differing hosts: ${drifted.map(h => h.name).join(", ") || "none"}${JSON.stringify(exp.services) !== JSON.stringify(other.services) ? "; services differ" : ""}`);
+      }
+    }
+  }
+} catch (error) {
+  failures++;
+  console.log(`FAIL  getTailscaleExports: ${error instanceof Error ? error.message : String(error)}`);
+}
+
 process.exit(failures === 0 ? 0 : 1);

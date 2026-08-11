@@ -15,7 +15,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isSecret, runtime } from "@pulumi/pulumi";
-import { assertNotDirectory, BaoStore, baoStoreReadsEnabled, resolveBaoPath, shapeItem } from "./bao.ts";
+import { assertNotDirectory, BaoStore, baoStoreReadsEnabled, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
+import { shapeTailscaleExports } from "./index.ts";
 
 runtime.setMocks({
   newResource: args => ({ id: `${args.name}-id`, state: args.inputs }),
@@ -205,6 +206,58 @@ describe("resolveBaoPath", () => {
     const r = resolveBaoPath("soz3lyvs6k24e5gh3udqp4sngi");
     assert.equal(r.path, undefined);
     assert.match(r.reason ?? "", /addressed by UUID/);
+  });
+});
+
+describe("tailscaleExportKeys", () => {
+  const complete = ["tailscale-export-gulf-of-mexico", "tailscale-export-home-operations", "tailscale-export-ocracoke"];
+
+  it("selects only the tailscale-export keys from an _inventory LIST", () => {
+    // The prefix also holds authentik-outputs and (later) the backup plans;
+    // neither is a tailscale export.
+    assert.deepEqual(tailscaleExportKeys(["authentik-outputs", ...complete]), complete);
+  });
+
+  it("refuses an EMPTY inventory rather than returning []", () => {
+    // [] here would flow into stacks/unifi-network as "the estate has no
+    // nodes" and start removing live ACL grants — the §G-8 failure, silent.
+    assert.throws(() => tailscaleExportKeys(["authentik-outputs"]), /incomplete .* missing tailscale-export-gulf-of-mexico, tailscale-export-home-operations, tailscale-export-ocracoke/);
+  });
+
+  it("refuses a TORN inventory, naming the stack that has not run", () => {
+    assert.throws(() => tailscaleExportKeys(complete.filter(k => k !== "tailscale-export-ocracoke")), /missing tailscale-export-ocracoke/);
+  });
+
+  it("includes exports beyond the known set — the list is a floor, not a ceiling", () => {
+    assert.deepEqual(tailscaleExportKeys([...complete, "tailscale-export-new-stack"]), [...complete, "tailscale-export-new-stack"]);
+  });
+});
+
+describe("shapeTailscaleExports", () => {
+  // One shaping function serves both stores; these pin the behaviors the
+  // unifi-network consumers depend on.
+  const item = (name: string, hosts: Record<string, unknown>, services?: string) => ({ name, ...(services === undefined ? {} : { services }), ...hosts });
+
+  it("splits node objects from flat fields and sorts at both levels", () => {
+    const shaped = shapeTailscaleExports([
+      item("ocracoke", { zebra: { externalIp: "100.1.1.2", internalIp: "10.0.0.2", mac: "bb", nodeType: "dockge" }, alpha: { externalIp: "100.1.1.1", internalIp: "10.0.0.1", mac: "aa", nodeType: "proxmox" } }),
+      item("gulf-of-mexico", {}, "[\"svc:llm\"]"),
+    ]);
+    assert.deepEqual(
+      shaped.map(z => z.name),
+      ["gulf-of-mexico", "ocracoke"],
+    );
+    assert.deepEqual(
+      shaped[1].hosts.map(h => h.name),
+      ["alpha", "zebra"],
+    );
+    assert.deepEqual(shaped[0].services, ["svc:llm"]);
+    assert.deepEqual(shaped[1].services, []);
+  });
+
+  it("tolerates the pre-rename `ip` key", () => {
+    const shaped = shapeTailscaleExports([item("home-operations", { node: { ip: "100.1.1.3", internalIp: "10.0.0.3", mac: "cc", nodeType: "pbs" } })]);
+    assert.equal(shaped[0].hosts[0].externalIp, "100.1.1.3");
   });
 });
 

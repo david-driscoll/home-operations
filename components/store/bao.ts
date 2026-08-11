@@ -20,8 +20,7 @@
  * Still on 1Password after this file (each is a later slice):
  *
  *   getBackupPlans                 producer-side write-back moves to OpenBao
- *   getTailscaleExports            same
- *   proxmoxBackupServers           needs both of the above to resolve
+ *   proxmoxBackupServers           waits on the remaining inventory flows
  *   replaceOnePasswordPlaceholders `vals` replaces it (PLAN §D.1)
  *
  * ## Field shapes carry over unchanged
@@ -49,11 +48,27 @@
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug } from "../bao.ts";
 import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
-import { VaultStore } from "./index.ts";
+import { shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
 /** The KV v2 mount every credential lives in. `docs` holds reference material. */
 const SECRETS_MOUNT = "secrets";
+
+/**
+ * Where cross-stack inventory lives (PLAN §G-8) — values PRODUCED by one
+ * Pulumi stack and read by others, dual-written because `StackReference`
+ * cannot cross this repo's per-stack backends.
+ */
+const INVENTORY_PREFIX = "clusters/_inventory";
+
+/** Key prefix of one stack's tailscale export: `tailscale-export-<stack>`. */
+const TAILSCALE_EXPORT_PREFIX = "tailscale-export-";
+
+/**
+ * The stacks that call `TailscaleMonitor.exportNodeStateToOnePassword` today.
+ * `getTailscaleExports` refuses a partial set — see the override for why.
+ */
+const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"];
 
 /**
  * Whether stacks read secrets from OpenBao instead of 1Password.
@@ -162,6 +177,30 @@ export class BaoStore extends VaultStore {
     return this.listUnder("hosts/dockge") as ReturnType<VaultStore["getDockgeInstances"]>;
   }
 
+  /**
+   * `tag:tailscale-export` became the `tailscale-export-*` keys under
+   * `clusters/_inventory/` — one per producing stack, dual-written by
+   * `TailscaleMonitor` at the paths mapping.yaml reserves.
+   *
+   * An incomplete set (including an empty one) is an ERROR, never a smaller
+   * result — see `tailscaleExportKeys`. This feeds ACL grants and DHCP
+   * reservations in `stacks/unifi-network`; a reader switched before the
+   * producers ran would compute an empty estate and start REMOVING live
+   * config — the exact §G-8 failure, made loud.
+   */
+  public override getTailscaleExports() {
+    return output(this.bao.list(SECRETS_MOUNT, INVENTORY_PREFIX))
+      .apply(keys =>
+        all(
+          tailscaleExportKeys(keys).map(key => {
+            assertNotDirectory(INVENTORY_PREFIX, key);
+            return this.read(`${INVENTORY_PREFIX}/${key}`);
+          }),
+        ),
+      )
+      .apply(items => shapeTailscaleExports(items)) as ReturnType<VaultStore["getTailscaleExports"]>;
+  }
+
   private listUnder(prefix: string): Output<BaoItem[]> {
     return output(this.bao.list(SECRETS_MOUNT, prefix)).apply(keys =>
       all(
@@ -261,6 +300,27 @@ export function resolveBaoPath(title: string): { path: string; reason?: undefine
   }
 
   return { path: `shared/${baoSlug(title)}` };
+}
+
+/**
+ * The `tailscale-export-*` keys to read from an `_inventory` LIST — or an
+ * error when the set is not complete.
+ *
+ * Exported for its tests. A MISSING known stack is an error rather than a
+ * smaller result because two of three stacks having run is a torn inventory
+ * that shapes into a plausible, incomplete estate; stacks beyond the known set
+ * are included automatically, so the list is a floor, not a ceiling.
+ */
+export function tailscaleExportKeys(keys: string[]): string[] {
+  const exports = keys.filter(key => key.startsWith(TAILSCALE_EXPORT_PREFIX));
+  const missing = TAILSCALE_EXPORT_STACKS.filter(stack => !exports.includes(`${TAILSCALE_EXPORT_PREFIX}${stack}`));
+  if (missing.length > 0) {
+    throw new Error(
+      `tailscale-export inventory is incomplete under ${SECRETS_MOUNT}/${INVENTORY_PREFIX}/ — missing ${missing.map(stack => `${TAILSCALE_EXPORT_PREFIX}${stack}`).join(", ")}. ` +
+        `Each producing stack must run its dual-write before any consumer reads OpenBao (PLAN §G-8: dual-write, producer run, THEN the reader).`,
+    );
+  }
+  return exports;
 }
 
 /**
