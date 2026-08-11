@@ -10,5 +10,5 @@ authentikDomain: canterlot.driscoll.tech
 icon: https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest
 favicon: https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest
 background: https://img2.joyreactor.cc/pics/post/full/Princess-Luna-royal-my-little-pony-8778525.jpeg
-# Read from secrets/clusters/skystar/cluster at load time, never stored here.
+# Read from secrets/clusters/skystar/arcane-agent at load time, never stored here.
 secretField: arcane_token

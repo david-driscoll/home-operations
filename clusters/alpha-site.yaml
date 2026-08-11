@@ -10,5 +10,5 @@ authentikDomain: iris.driscoll.tech
 icon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
 favicon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
 background: https://images.playground.com/43f58221d361456293f38739b6c69cea.jpeg
-# Read from secrets/clusters/alpha-site/cluster at load time, never stored here.
+# Read from secrets/clusters/alpha-site/arcane-agent at load time, never stored here.
 secretField: arcane_token

@@ -10,5 +10,5 @@ authentikDomain: canterlot.driscoll.tech
 icon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
 favicon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
 background: https://img2.joyreactor.cc/pics/post/full/Princess-Luna-royal-my-little-pony-8778525.jpeg
-# Read from secrets/clusters/luna/cluster at load time, never stored here.
+# Read from secrets/clusters/luna/arcane-agent at load time, never stored here.
 secretField: arcane_token
