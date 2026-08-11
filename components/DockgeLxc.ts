@@ -755,6 +755,18 @@ export class DockgeLxc extends ComponentResource {
       return null;
     }
 
+    // glob() gives NO ordering guarantee — it walks directories concurrently and yields
+    // entries in completion order, so a deeply nested stack (prometheus, with config/,
+    // config/rules/ and config/alloy/) comes back in a different order from run to run
+    // once several stacks are globbing at once. That order flows into this Map, into the
+    // per-file resource list in createStack(), and finally into the compose Command's
+    // positional `triggers` array — where a pure reshuffle showed up as a diff on
+    // `triggers[6]`…`triggers[9]` with inputDiff:false and replaced the Command, i.e.
+    // restarted a healthy Docker stack for no reason. Sort so the order is a property of
+    // the file names rather than of disk timing.
+    commonFiles.sort();
+    files.sort();
+
     const filesMap = new Map<string, string>();
     for (const file of files) {
       const relativePath = relative(path, file);
@@ -1019,6 +1031,13 @@ export class DockgeLxc extends ComponentResource {
         `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
+          // Positional: Pulumi diffs this array slot by slot, so the ORDER of `copyFiles`
+          // is load-bearing, not just its contents. That order comes from getStackFiles(),
+          // which sorts for exactly this reason — keep it that way. If `copyFiles` ever
+          // gains entries from a source that does not preserve a stable order, a pure
+          // reshuffle shows up here as a diff on `triggers[n]` with inputDiff:false and
+          // replaces this command, and `deleteBeforeReplace` + `docker compose up -d`
+          // means that restarts a healthy stack.
           triggers: [...copyFiles.map(f => f.id)],
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
