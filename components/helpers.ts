@@ -29,12 +29,19 @@ function mkdirOutput({ remotePath, connection }: { remotePath: string; connectio
       }
     }
 
+    // Name and trigger on `dir`, never on `remotePath`. The map is keyed by
+    // (host, dir), so exactly one Command is created per directory and WHICH
+    // file got there first is decided by async resolution order inside this
+    // apply() — it varies run to run. Naming the resource after that file made
+    // the URN vary too, so every preview reported a handful of phantom
+    // create/delete pairs on *-mkdir and the set differed each time. `dir` is
+    // the thing the identity actually depends on, so it is stable.
     const mkdir = new remote.Command(
-      `${host}-${remotePath.replace(/\//g, "-")}-mkdir`,
+      `${host}-${dir.replace(/\//g, "-")}-mkdir`,
       {
         connection: connection,
         create: interpolate`mkdir -p ${dir}`,
-        triggers: [remotePath],
+        triggers: [dir],
       },
       {
         parent: mkdirParent,
