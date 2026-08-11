@@ -186,10 +186,17 @@ describe("resolveBaoPath", () => {
     assert.match(r.reason ?? "", /INVENTORY §2/);
   });
 
-  it("keeps cross-stack inventory and cluster definitions on 1Password for now", () => {
-    for (const title of ["Authentik Outputs", "Backup Plan", "Cluster: Alpha Site"]) {
+  it("keeps not-yet-migrated inventory and cluster definitions on 1Password for now", () => {
+    for (const title of ["Backup Plan", "Cluster: Alpha Site"]) {
       assert.equal(resolveBaoPath(title).path, undefined, title);
     }
+  });
+
+  it("serves Authentik Outputs from the _inventory path its producer dual-writes", () => {
+    // The gate for this entry is that the authentik stack has RUN since #717
+    // merged — verified live 2026-08-11 before the route landed. A consumer
+    // switched before that read an empty object rather than an error (§G-8).
+    assert.equal(resolveBaoPath("Authentik Outputs").path, "clusters/_inventory/authentik-outputs");
   });
 
   it("does not slug a UUID-addressed item into a UUID-shaped path", () => {
