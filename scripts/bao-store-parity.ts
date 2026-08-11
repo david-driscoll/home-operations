@@ -142,6 +142,50 @@ try {
   console.log(`FAIL  getDockgeInstances: ${error instanceof Error ? error.message : String(error)}`);
 }
 
-const checks = TITLES.length + 1;
-console.log(failures === 0 ? `\n${checks}/${checks} in parity` : `\n${failures} of ${checks} mismatched`);
+// Cluster definitions moved from 1Password items to checked-in code plus a
+// credential read. That is the biggest shape change in Phase 8, so compare the
+// whole set field by field — `meta.title` included, because it names Gatus
+// groups and is written into PBS items.
+try {
+  const [opClusters, baoClusters] = await Promise.all([resolve(op.getAllClusters()), resolve(bao.getAllClusters())]);
+  const byTitle = (items: readonly Record<string, unknown>[]) => new Map(items.map(i => [(i.meta as { title: string }).title, i]));
+  const opBy = byTitle(opClusters as unknown as Record<string, unknown>[]);
+  const baoBy = byTitle(baoClusters as unknown as Record<string, unknown>[]);
+
+  const missing = [...opBy.keys()].filter(t => !baoBy.has(t));
+  const extra = [...baoBy.keys()].filter(t => !opBy.has(t));
+  if (missing.length || extra.length) {
+    failures++;
+    console.log(`DIFF  getAllClusters (set): missing=${missing.join(", ") || "none"} extra=${extra.join(", ") || "none"}`);
+  }
+
+  for (const [title, a] of opBy) {
+    const b = baoBy.get(title);
+    if (!b) continue;
+    // `notesPlain` is intentionally dropped: it is human commentary and no code
+    // reads it. Everything else must survive the move byte for byte.
+    const drop = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== "notesPlain" && k !== "meta"));
+    const keysA = Object.keys(drop(a)).sort();
+    const keysB = Object.keys(drop(b)).sort();
+    const differing = keysA.filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+    const metaSame = JSON.stringify((a.meta as { title: string }).title) === JSON.stringify((b.meta as { title: string }).title);
+    if (differing.length === 0 && keysA.join() === keysB.join() && metaSame) {
+      console.log(`OK    ${title}`);
+    } else {
+      failures++;
+      console.log(`DIFF  ${title}`);
+      if (keysA.join() !== keysB.join()) {
+        console.log(`        1Password keys: ${keysA.join(", ")}`);
+        console.log(`        code+OpenBao  : ${keysB.join(", ")}`);
+      }
+      // Name the fields, never the values — `secret` and `arcane_token` are here.
+      if (differing.length) console.log(`        differing: ${differing.join(", ")}`);
+      if (!metaSame) console.log(`        meta.title differs`);
+    }
+  }
+} catch (error) {
+  failures++;
+  console.log(`FAIL  getAllClusters: ${error instanceof Error ? error.message : String(error)}`);
+}
+
 process.exit(failures === 0 ? 0 : 1);
