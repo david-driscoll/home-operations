@@ -127,6 +127,11 @@ spec:
         # instead of ballooning until the kernel OOM-kills the whole process tree.
         - name: NODE_OPTIONS
           value: "--max-old-space-size=4096"
+        # Where the vals initContainer put the binary; the ref+openbao://
+        # resolver spawns it (components/store/refs.ts). Locally VALS_BIN is
+        # unset and vals comes from mise's PATH.
+        - name: VALS_BIN
+          value: /opt/vals/vals
       resources:
         requests:
           cpu: 200m
@@ -141,6 +146,38 @@ spec:
               hostPath:
                 path: /var/lib/pulumi-npm-cache
                 type: DirectoryOrCreate
+            - name: vals-bin
+              emptyDir: {}
+            - name: mise-data
+              hostPath:
+                path: /var/lib/pulumi-mise-data
+                type: DirectoryOrCreate
+          # Installs the vals binary for the ref+openbao:// resolver
+          # (components/store/refs.ts, PLAN §D.1). mise does the fetching so
+          # the pin lives in the mise ecosystem — keep the version in step
+          # with .config/mise.toml [tools] — and MISE_DATA_DIR is a hostPath
+          # cache mirroring npm-cache, so after the first run on a node this
+          # is a copy, not a download. Kubernetes `command:` replaces the
+          # image's `mise` entrypoint, deliberately.
+          initContainers:
+            - name: vals
+              # renovate: datasource=docker depName=jdxcode/mise
+              image: jdxcode/mise:2026.8.3
+              command: ["/bin/sh", "-ec"]
+              args:
+                - |
+                  mise install vals@0.45.0
+                  mise exec vals@0.45.0 -- /bin/sh -ec 'cp "$(command -v vals)" /opt/vals/vals'
+              env:
+                - name: MISE_DATA_DIR
+                  value: /mise-data
+                - name: MISE_YES
+                  value: "1"
+              volumeMounts:
+                - name: vals-bin
+                  mountPath: /opt/vals
+                - name: mise-data
+                  mountPath: /mise-data
           containers:
             - name: pulumi
               resources:
@@ -152,4 +189,6 @@ spec:
               volumeMounts:
                 - name: npm-cache
                   mountPath: /root/.npm
+                - name: vals-bin
+                  mountPath: /opt/vals
       # pulumiLogLevel: 11

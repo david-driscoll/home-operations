@@ -22,6 +22,10 @@ pulumi = "3.256.0"
 "github:eljulians/skillfile" = { version = "v1.9.1", bin = "skillfile" }
 "github:home-operations/flate" = "v0.5.0"
 dotnet = { version = "10.0.203" }
+# Secret-reference resolver for ref+openbao:// (PLAN §D.1). Keep this version
+# in step with the vals initContainer in kubernetes/apps/pulumi/*/stack.yaml —
+# the workspace pods install the same pin via mise.
+vals = "0.45.0"
 
 [tasks.update]
 description = 'Update all apps that have an update script'
