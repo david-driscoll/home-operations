@@ -45,12 +45,14 @@ for var_name in $(env | sed -n 's/^\(PGAPP_[A-Za-z0-9_]*_PASSWORD\)=.*/\1/p'); d
     continue
   fi
 
-  # An unresolved 1Password reference means the item or field is missing and
-  # the placeholder was passed through verbatim. Creating a role whose password
-  # is the literal string "op://..." would be worse than failing loudly.
+  # An unresolved secret reference means the item or field is missing and the
+  # placeholder was passed through verbatim. Creating a role whose password is
+  # the literal string "op://..." or "ref+..." would be worse than failing
+  # loudly. Both syntaxes are guarded during the 1Password->OpenBao dual-run:
+  # op:// is the 1Password resolver, ref+ is the OpenBao one (PLAN section D.1).
   case "$app_pw" in
-    op://*)
-      echo "[provision] SKIP ${var_name}: 1Password reference did not resolve" >&2
+    op://* | ref+*)
+      echo "[provision] SKIP ${var_name}: secret reference did not resolve" >&2
       continue
       ;;
   esac
