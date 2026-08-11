@@ -52,6 +52,12 @@ CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "op://Eris/Eris 1Password Connect Access Token/credential"
 AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
 AUTHENTIK_URL = "op://Eris/Authentik Token/url"
+# Phase 8 cutover: local runs read secrets from OpenBao (BaoStore), matching
+# the operator's Stack CRs. Local runs now REQUIRE the OpenBao credentials —
+# eval "$(bootstrap/openbao/pulumi-env.sh)" from the vault repo first; without
+# them GlobalResources fails loudly at construction rather than silently
+# reading a different store than the operator does.
+BAO_STORE_READS = "1"
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"
 # UNIFI_PASSWORD = "op://Eris/unifipoller/password"
