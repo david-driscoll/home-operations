@@ -15,8 +15,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isSecret, runtime } from "@pulumi/pulumi";
-import { assertNotDirectory, BaoStore, baoStoreReadsEnabled, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
-import { shapeTailscaleExports } from "./index.ts";
+import { assertNotDirectory, backupPlanKeys, BaoStore, baoStoreReadsEnabled, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
+import { shapeBackupPlans, shapeTailscaleExports } from "./index.ts";
 
 runtime.setMocks({
   newResource: args => ({ id: `${args.name}-id`, state: args.inputs }),
@@ -187,10 +187,8 @@ describe("resolveBaoPath", () => {
     assert.match(r.reason ?? "", /INVENTORY §2/);
   });
 
-  it("keeps not-yet-migrated inventory and cluster definitions on 1Password for now", () => {
-    for (const title of ["Backup Plan", "Cluster: Alpha Site"]) {
-      assert.equal(resolveBaoPath(title).path, undefined, title);
-    }
+  it("keeps cluster-definition titles off OpenBao — they are checked-in code", () => {
+    assert.equal(resolveBaoPath("Cluster: Alpha Site").path, undefined);
   });
 
   it("serves Authentik Outputs from the _inventory path its producer dual-writes", () => {
@@ -198,6 +196,15 @@ describe("resolveBaoPath", () => {
     // merged — verified live 2026-08-11 before the route landed. A consumer
     // switched before that read an empty object rather than an error (§G-8).
     assert.equal(resolveBaoPath("Authentik Outputs").path, "clusters/_inventory/authentik-outputs");
+  });
+
+  it("routes the inventory families to their reserved _inventory paths, never shared/", () => {
+    assert.equal(resolveBaoPath("Backup Plan").path, "clusters/_inventory/backup-plan");
+    assert.equal(resolveBaoPath("Equestria Backup Plan").path, "clusters/_inventory/equestria-backup-plan");
+    assert.equal(resolveBaoPath("Stargate Command Backup Plan").path, "clusters/_inventory/stargate-command-backup-plan");
+    assert.equal(resolveBaoPath("Tailscale Export - home-operations").path, "clusters/_inventory/tailscale-export-home-operations");
+    // A title merely containing the words is not the family.
+    assert.equal(resolveBaoPath("Backup Plan Review Notes").path, "shared/backup-plan-review-notes");
   });
 
   it("does not slug a UUID-addressed item into a UUID-shaped path", () => {
@@ -258,6 +265,35 @@ describe("shapeTailscaleExports", () => {
   it("tolerates the pre-rename `ip` key", () => {
     const shaped = shapeTailscaleExports([item("home-operations", { node: { ip: "100.1.1.3", internalIp: "10.0.0.3", mac: "cc", nodeType: "pbs" } })]);
     assert.equal(shaped[0].hosts[0].externalIp, "100.1.1.3");
+  });
+});
+
+describe("backupPlanKeys", () => {
+  const complete = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
+
+  it("selects the bare key and the -backup-plan suffixed keys, nothing else", () => {
+    assert.deepEqual(backupPlanKeys(["authentik-outputs", "tailscale-export-ocracoke", ...complete]), complete);
+  });
+
+  it("refuses an empty or torn inventory, naming what is missing", () => {
+    // A smaller list here quietly shrinks what the directors back up — a
+    // failure with no symptom until a restore is needed.
+    assert.throws(() => backupPlanKeys([]), /missing backup-plan, equestria-backup-plan, stargate-command-backup-plan/);
+    assert.throws(() => backupPlanKeys(complete.filter(k => k !== "equestria-backup-plan")), /missing equestria-backup-plan/);
+  });
+
+  it("includes plans beyond the known set — a floor, not a ceiling", () => {
+    assert.deepEqual(backupPlanKeys([...complete, "luna-backup-plan"]), [...complete, "luna-backup-plan"]);
+  });
+});
+
+describe("shapeBackupPlans", () => {
+  it("flattens every item's plans into one list", () => {
+    const shaped = shapeBackupPlans<{ name: string }>([{ plan: JSON.stringify({ plans: [{ name: "a" }, { name: "b" }] }) }, { plan: JSON.stringify({ plans: [{ name: "c" }] }) }]);
+    assert.deepEqual(
+      shaped.map(p => p.name),
+      ["a", "b", "c"],
+    );
   });
 });
 
