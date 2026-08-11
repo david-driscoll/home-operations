@@ -764,6 +764,10 @@ export class DockgeLxc extends ComponentResource {
     // `triggers[6]`…`triggers[9]` with inputDiff:false and replaced the Command, i.e.
     // restarted a healthy Docker stack for no reason. Sort so the order is a property of
     // the file names rather than of disk timing.
+    //
+    // createStack() now sorts the trigger list independently as well, so this is no
+    // longer the only thing standing between a concurrent directory walk and a stack
+    // restart — but it is still what makes the resources get built in a sane order.
     commonFiles.sort();
     files.sort();
 
@@ -795,6 +799,16 @@ export class DockgeLxc extends ComponentResource {
     applications: ApplicationReturn[];
   }> {
     const copyFiles = [];
+    // Trigger identities for this stack's compose Command, tracked separately
+    // from `copyFiles` because the two need different guarantees. `copyFiles`
+    // is a dependency set, where order is irrelevant; `triggers` is an ORDERED
+    // array that the command provider treats as force-new, so a pure reorder —
+    // same resources, same ids — is enough to replace the Command and restart
+    // the stack's containers. Each entry therefore carries the Pulumi resource
+    // name as a stable key and the array is sorted by it before use, so the
+    // triggers depend only on WHICH resources exist, never on the order they
+    // happened to be constructed in.
+    const composeTriggers: { key: string; id: any }[] = [];
     const _cluster = this.cluster;
     const tailscaleDomain = this.args.globals.tailscaleDomain;
     // Prepend stack-specific substitutions so they run BEFORE the vaultRegex resolver.
@@ -880,17 +894,18 @@ export class DockgeLxc extends ComponentResource {
 
         const chownCmd = stackUsers.apply(users => (users.length > 0 ? users.flatMap(u => [`chown -R ${u} /opt/stacks-data/${stackName}`, `chown -R ${u} /opt/stacks/${stackName}`]).join(" && ") : "true"));
 
-        copyFiles.push(
-          new remote.Command(
-            `${this.shortName}-${stackName}-chown-stack`,
-            {
-              connection: this.remoteConnection,
-              create: chownCmd,
-              update: chownCmd,
-            },
-            { parent: stackParent, dependsOn: [stackParent] },
-          ),
+        const chownName = `${this.shortName}-${stackName}-chown-stack`;
+        const chownStack = new remote.Command(
+          chownName,
+          {
+            connection: this.remoteConnection,
+            create: chownCmd,
+            update: chownCmd,
+          },
+          { parent: stackParent, dependsOn: [stackParent] },
         );
+        copyFiles.push(chownStack);
+        composeTriggers.push({ key: chownName, id: chownStack.id });
 
         const tailscaleServices: Resource[] = [];
         const hostRegex = /Host\(`(.*?)`\)/g;
@@ -983,27 +998,28 @@ export class DockgeLxc extends ComponentResource {
         continue;
       }
 
-      copyFiles.push(
-        copyFileToRemote(`${this.shortName}-${stackName}-${file.replace(/\//g, "-")}-copy-file`, {
-          connection: this.remoteConnection,
-          remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
-          content: replacedContent,
-          // The source path is a trigger because provenance matters on its own:
-          // the same remotePath can be fed by docker/_common/<stack>/… or by the
-          // host-specific docker/<host>/<stack>/… override, and a switch between
-          // the two is a real change even when the bytes are identical.
-          //
-          // It must be relative to `dockerPath`, never absolute. An absolute path
-          // encodes WHERE THE REPO IS CHECKED OUT, which differs per machine —
-          // state written from a checkout at /share/source and a run from
-          // ~/Development/... disagree on every single file, and each run replaces
-          // all ~100 of them back and forth forever while `triggers[0]` (the
-          // content hash) sits there unchanged, proving nothing actually differs.
-          triggers: [replacedContent, relative(dockerPath, absoluteFilePath)],
-          parent: stackParent,
-          dependsOn: dependsOn,
-        }),
-      );
+      const copyName = `${this.shortName}-${stackName}-${file.replace(/\//g, "-")}-copy-file`;
+      const copy = copyFileToRemote(copyName, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`/opt/stacks/${stackName}/${file}`,
+        content: replacedContent,
+        // The source path is a trigger because provenance matters on its own:
+        // the same remotePath can be fed by docker/_common/<stack>/… or by the
+        // host-specific docker/<host>/<stack>/… override, and a switch between
+        // the two is a real change even when the bytes are identical.
+        //
+        // It must be relative to `dockerPath`, never absolute. An absolute path
+        // encodes WHERE THE REPO IS CHECKED OUT, which differs per machine —
+        // state written from a checkout at /share/source and a run from
+        // ~/Development/... disagree on every single file, and each run replaces
+        // all ~100 of them back and forth forever while `triggers[0]` (the
+        // content hash) sits there unchanged, proving nothing actually differs.
+        triggers: [replacedContent, relative(dockerPath, absoluteFilePath)],
+        parent: stackParent,
+        dependsOn: dependsOn,
+      });
+      copyFiles.push(copy);
+      composeTriggers.push({ key: copyName, id: copy.id });
     }
 
     if (hasCompose) {
@@ -1019,8 +1035,15 @@ export class DockgeLxc extends ComponentResource {
             create: interpolate`cd /opt/stacks/${stackName} && bash init.sh`,
           },
           {
+            // Snapshot, not the live array. Pulumi reads `dependsOn` inside an
+            // async prepare step, so passing `copyFiles` by reference let it
+            // pick up whatever the tailscale/DNS resources built inside the
+            // `.apply()` above had managed to push by then — a set that varied
+            // per run and was never something to rely on. Those resources are
+            // registered strictly after this point in every run, so the honest
+            // dependency set is the file copies, and only those.
             parent: stackParent,
-            dependsOn: copyFiles,
+            dependsOn: [...copyFiles],
             deleteBeforeReplace: true,
           },
         );
@@ -1031,14 +1054,20 @@ export class DockgeLxc extends ComponentResource {
         `${this.shortName}-${stackName}-compose`,
         {
           connection: this.remoteConnection,
-          // Positional: Pulumi diffs this array slot by slot, so the ORDER of `copyFiles`
-          // is load-bearing, not just its contents. That order comes from getStackFiles(),
-          // which sorts for exactly this reason — keep it that way. If `copyFiles` ever
-          // gains entries from a source that does not preserve a stable order, a pure
-          // reshuffle shows up here as a diff on `triggers[n]` with inputDiff:false and
-          // replaces this command, and `deleteBeforeReplace` + `docker compose up -d`
-          // means that restarts a healthy stack.
-          triggers: [...copyFiles.map(f => f.id)],
+          // Positional: Pulumi diffs this array slot by slot, so the ORDER is load-bearing,
+          // not just the contents. A pure reshuffle shows up as a diff on `triggers[n]`
+          // with inputDiff:false and replaces this command, and `deleteBeforeReplace` +
+          // `docker compose up -d` means that restarts a healthy stack.
+          //
+          // So it is built from `composeTriggers` rather than from `copyFiles` directly:
+          // every entry carries its Pulumi resource name and the array is sorted by it,
+          // making the order a property of WHICH resources exist rather than of when they
+          // were constructed. getStackFiles() sorting its glob results is what keeps the
+          // construction order sane; this is what keeps the plan from depending on it.
+          //
+          // Plain codepoint order, NOT localeCompare — that would make the plan depend on
+          // the runner's locale.
+          triggers: [...composeTriggers].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)).map(t => t.id),
           create: interpolate`cd /opt/stacks/${stackName} && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml start`,
         },
         {
