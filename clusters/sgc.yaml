@@ -5,7 +5,7 @@ key: sgc
 title: Stargate Command
 type: kubernetes
 location: home
-rootDomain: sgc.driscoll.tech
+domainPrefix: sgc
 authentikDomain: iris.driscoll.tech
 icon: https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg
 favicon: https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg

@@ -70,8 +70,26 @@ const CLUSTER_TYPES = ["dockge", "kubernetes"] as const;
 const LOCATIONS = ["home", "remote"] as const;
 const SECRET_FIELDS: readonly ClusterSecretField[] = ["secret", "arcane_token"];
 
+/**
+ * The estate's public domain, appended to each cluster's `domainPrefix`.
+ *
+ * Every cluster's root domain was `<something>.driscoll.tech`, so the suffix
+ * was repeated six times and could drift in one file without the others. The
+ * YAML now carries only the prefix (`skystar`) and this is added on load.
+ *
+ * Kept as a literal rather than read from `GlobalResources.searchDomain`:
+ * that is a Pulumi `Output` on a class this module must not depend on — the
+ * store is constructed BY globals — and these definitions have to parse
+ * without a Pulumi runtime at all, which is what makes them unit-testable.
+ * The two must agree; `GlobalResources.searchDomain` is the other copy.
+ */
+const ROOT_DOMAIN = "driscoll.tech";
+
+/** A single DNS label: what `domainPrefix` must be, with the suffix removed. */
+const DNS_LABEL = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+
 /** Fields every cluster must declare. `secretField` is checked separately — it is nullable. */
-const REQUIRED = ["sourceTitle", "key", "title", "type", "location", "rootDomain", "authentikDomain", "icon", "favicon", "background"] as const;
+const REQUIRED = ["sourceTitle", "key", "title", "type", "location", "domainPrefix", "authentikDomain", "icon", "favicon", "background"] as const;
 
 /**
  * Exported for its tests: this is the whole of what the TypeScript compiler
@@ -113,8 +131,20 @@ export function parseCluster(file: string, raw: unknown): ClusterEntry {
     throw new Error(`${where}: 'secretField' must be null or one of ${SECRET_FIELDS.join(" | ")}, got ${JSON.stringify(secretField)}`);
   }
 
+  const domainPrefix = doc.domainPrefix as string;
+  // Catch the obvious mistake first and name it, because pasting the old value
+  // back in would otherwise yield `skystar.driscoll.tech.driscoll.tech` — a
+  // domain that resolves nowhere and looks fine in a diff.
+  if (domainPrefix.includes(".")) {
+    throw new Error(`${where}: 'domainPrefix' is a single label with no '.${ROOT_DOMAIN}' suffix — use '${domainPrefix.replace(new RegExp(`\\.${ROOT_DOMAIN}$`), "")}', not '${domainPrefix}'`);
+  }
+  if (!DNS_LABEL.test(domainPrefix)) throw new Error(`${where}: 'domainPrefix' must be a DNS label (lowercase letters, digits, inner hyphens), got '${domainPrefix}'`);
+
+  const { domainPrefix: _prefix, ...rest } = doc;
   return {
-    ...(doc as unknown as ClusterDefinition),
+    ...(rest as unknown as ClusterDefinition),
+    // The suffix is added here, not stored six times in the YAML.
+    rootDomain: `${domainPrefix}.${ROOT_DOMAIN}`,
     secretField: secretField as ClusterSecretField | null,
     // The kubernetes definitions carry a `secret` field in their type. The
     // value is spread in from OpenBao by the caller; this placeholder only

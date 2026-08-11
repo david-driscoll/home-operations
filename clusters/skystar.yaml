@@ -5,7 +5,7 @@ key: skystar
 title: Skystar
 type: dockge
 location: remote
-rootDomain: skystar.driscoll.tech
+domainPrefix: skystar
 authentikDomain: canterlot.driscoll.tech
 icon: https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest
 favicon: https://static.wikia.nocookie.net/mlp/images/7/77/Princess_Skystar_ID_MLPTM.png/revision/latest

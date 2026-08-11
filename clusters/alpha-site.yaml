@@ -5,7 +5,7 @@ key: alpha-site
 title: Alpha Site
 type: dockge
 location: home
-rootDomain: as.driscoll.tech
+domainPrefix: as
 authentikDomain: iris.driscoll.tech
 icon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
 favicon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png

@@ -107,7 +107,7 @@ describe("parseCluster rejects what the compiler used to", () => {
     title: "Test",
     type: "dockge",
     location: "home",
-    rootDomain: "test.driscoll.tech",
+    domainPrefix: "test",
     authentikDomain: "canterlot.driscoll.tech",
     icon: "https://example.invalid/i.png",
     favicon: "https://example.invalid/f.png",
@@ -120,7 +120,7 @@ describe("parseCluster rejects what the compiler used to", () => {
   });
 
   it("rejects a missing or empty required field", () => {
-    assert.throws(() => parseCluster("test.yaml", { ...good, rootDomain: undefined }), /'rootDomain' must be a non-empty string/);
+    assert.throws(() => parseCluster("test.yaml", { ...good, domainPrefix: undefined }), /.domainPrefix. must be a non-empty string/);
     assert.throws(() => parseCluster("test.yaml", { ...good, title: "" }), /'title' must be a non-empty string/);
   });
 
@@ -158,5 +158,49 @@ describe("error messages name the file", () => {
     // error read `clusters/:` with no filename, which is useless when six
     // files can produce the same message.
     assert.throws(() => parseCluster("skystar.yaml", { key: "skystar" }), /^Error: clusters\/skystar\.yaml: /);
+  });
+});
+
+describe("domainPrefix", () => {
+  const good = {
+    sourceTitle: "Cluster: Test",
+    key: "test",
+    title: "Test",
+    type: "dockge",
+    location: "home",
+    domainPrefix: "test",
+    authentikDomain: "canterlot.driscoll.tech",
+    icon: "https://example.invalid/i.png",
+    favicon: "https://example.invalid/f.png",
+    background: "https://example.invalid/b.jpg",
+    secretField: null,
+  };
+
+  it("appends the estate domain to build rootDomain", () => {
+    assert.equal(parseCluster("test.yaml", good).rootDomain, "test.driscoll.tech");
+  });
+
+  it("does not leak domainPrefix into the object stacks consume", () => {
+    // Stacks read `rootDomain`; an extra key here is a shape difference from
+    // what the 1Password items produced.
+    assert.equal((parseCluster("test.yaml", good) as Record<string, unknown>).domainPrefix, undefined);
+  });
+
+  it("rejects a prefix that still carries the suffix, and says what to use", () => {
+    // The realistic mistake while doing this refactor by hand. Left alone it
+    // would produce test.driscoll.tech.driscoll.tech, which looks fine in a diff.
+    assert.throws(() => parseCluster("test.yaml", { ...good, domainPrefix: "test.driscoll.tech" }), /use 'test', not 'test\.driscoll\.tech'/);
+  });
+
+  it("rejects anything that is not a DNS label", () => {
+    for (const bad of ["Test", "-test", "test-", "te_st", "test "]) {
+      assert.throws(() => parseCluster("test.yaml", { ...good, domainPrefix: bad }), /must be a DNS label|non-empty string/, `accepted '${bad}'`);
+    }
+  });
+
+  it("still produces the real clusters' domains", () => {
+    assert.equal(CLUSTERS.find(c => c.key === "alpha-site")?.rootDomain, "as.driscoll.tech");
+    assert.equal(CLUSTERS.find(c => c.key === "skystar")?.rootDomain, "skystar.driscoll.tech");
+    assert.equal(CLUSTERS.find(c => c.key === "sgc")?.rootDomain, "sgc.driscoll.tech");
   });
 });

@@ -5,7 +5,7 @@ key: equestria
 title: Equestria
 type: kubernetes
 location: home
-rootDomain: equestria.driscoll.tech
+domainPrefix: equestria
 authentikDomain: canterlot.driscoll.tech
 icon: https://cdn.imgbin.com/5/21/5/imgbin-equestria-royal-guards-emblem-army-others-TaRExRmRe5mJ6PtYBQxYQK0eX.jpg
 favicon: https://vectorified.com/images/my-little-pony-icon-7.png

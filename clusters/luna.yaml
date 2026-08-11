@@ -5,7 +5,7 @@ key: luna
 title: Luna
 type: dockge
 location: home
-rootDomain: luna.driscoll.tech
+domainPrefix: luna
 authentikDomain: canterlot.driscoll.tech
 icon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
 favicon: https://ami.animecharactersdatabase.com/uploads/chars/1-1230888771.png
