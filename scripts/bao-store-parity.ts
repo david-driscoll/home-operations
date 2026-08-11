@@ -188,4 +188,37 @@ try {
   console.log(`FAIL  getAllClusters: ${error instanceof Error ? error.message : String(error)}`);
 }
 
+// Cross-stack inventory: `Authentik Outputs` is produced by the authentik
+// stack (dual-write, #717) and read back through the _inventory path. The two
+// sides are compared section by section rather than through the generic TITLES
+// loop because the 1Password item carries a `notesPlain` field the KV path
+// deliberately does not — it is human commentary, `AuthentikOutputs` does not
+// declare it, and no code reads it.
+try {
+  const title = "Authentik Outputs";
+  const [a, b] = await Promise.all([resolve(op.getSecretByTitle<Record<string, unknown>>(title)), resolve(bao.getSecretByTitle<Record<string, unknown>>(title))]);
+  const drop = (o: Record<string, unknown>) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== "notesPlain" && k !== "notePlain" && k !== "meta"));
+  const keysA = Object.keys(drop(a)).sort();
+  const keysB = Object.keys(drop(b)).sort();
+  const differing = keysA.filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+  const titleMatches = (a.meta as { title: string }).title === (b.meta as { title: string }).title;
+  if (keysA.join() === keysB.join() && differing.length === 0 && titleMatches) {
+    console.log(`OK    ${title} (inventory)`);
+  } else {
+    failures++;
+    console.log(`DIFF  ${title} (inventory)`);
+    if (keysA.join() !== keysB.join()) {
+      console.log(`        1Password keys: ${keysA.join(", ")}`);
+      console.log(`        OpenBao   keys: ${keysB.join(", ")}`);
+    }
+    // These are Authentik object IDs, not credentials, but stay consistent
+    // with the rest of this script: name the sections, never print values.
+    if (differing.length) console.log(`        differing sections: ${differing.join(", ")}`);
+    if (!titleMatches) console.log(`        meta.title differs`);
+  }
+} catch (error) {
+  failures++;
+  console.log(`FAIL  Authentik Outputs (inventory): ${error instanceof Error ? error.message : String(error)}`);
+}
+
 process.exit(failures === 0 ? 0 : 1);

@@ -199,8 +199,24 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  */
 const NOT_IN_OPENBAO: Record<string, string> = {
   "OpenBao Alpha Site Static Unseal": "seal-chain material; INVENTORY §2 forbids it from ever living in OpenBao",
-  "Authentik Outputs": "cross-stack inventory; moves to secrets/clusters/_inventory/ in a later Phase 8 slice",
   "Backup Plan": "cross-stack inventory; moves to secrets/clusters/_inventory/ in a later Phase 8 slice",
+};
+
+/**
+ * Cross-stack inventory served from `clusters/_inventory/` — the paths
+ * `mapping.yaml` reserves and the PRODUCING stack dual-writes (PLAN §G-8:
+ * `StackReference` cannot cross this repo's per-stack backends, so OpenBao is
+ * the channel).
+ *
+ * An entry moves here only after its producer has BOTH merged the dual-write
+ * AND run — a consumer switched first reads an empty object rather than an
+ * error, which is exactly the failure §G-8 warns about. `Authentik Outputs`
+ * cleared that gate on 2026-08-11: `clusters/_inventory/authentik-outputs`
+ * version 1, written by the authentik stack (verified live before this entry
+ * landed).
+ */
+const INVENTORY_IN_OPENBAO: Record<string, string> = {
+  "Authentik Outputs": "clusters/_inventory/authentik-outputs",
 };
 
 /**
@@ -227,6 +243,9 @@ const NOT_IN_OPENBAO: Record<string, string> = {
 export function resolveBaoPath(title: string): { path: string; reason?: undefined } | { path?: undefined; reason: string } {
   const excluded = NOT_IN_OPENBAO[title];
   if (excluded) return { reason: excluded };
+
+  const inventory = INVENTORY_IN_OPENBAO[title];
+  if (inventory) return { path: inventory };
 
   if (title.startsWith("Cluster: ")) return { reason: "cluster definitions become checked-in code in a later Phase 8 slice" };
 
