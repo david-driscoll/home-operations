@@ -16,7 +16,14 @@ export interface PreSyncArgs {
 
 export interface BackupPlanItem {
   source: "celestia" | "skystar" | "luna" | "volsync";
+  /**
+   * Identity: the backrest repo id, plan id, and backup path all derive from
+   * this. Must be id-safe and STABLE — renaming it re-roots the plan's restic
+   * history.
+   */
   name: string;
+  /** Display label (Gatus, dashboards). Safe to change; nothing derives from it. */
+  title?: string;
   planConfig?: Omit<BackrestPlan, "id" | "repo" | "paths">;
   repositoryConfig?: Omit<BackrestRepository, "guid" | "uri" | "id" | "autoUnlock" | "autoInitialize">;
   path: string;
