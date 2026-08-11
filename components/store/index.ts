@@ -1,26 +1,45 @@
 import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
-import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 import { OPClient, TypeEnum } from "../op.ts";
+import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 
-const op = new OPClient();
+/**
+ * Lazy, not module-scope. `new OPClient()` constructs a 1Password Connect
+ * client eagerly and throws without CONNECT_HOST/CONNECT_TOKEN, so importing
+ * this module at all used to demand 1Password credentials — including from
+ * `BaoStore`, which subclasses `VaultStore` and may never touch 1Password, and
+ * from unit tests, which never should.
+ */
+let _op: OPClient | undefined;
+function op(): OPClient {
+  return (_op ??= new OPClient());
+}
 
 export * from "./interfaces.ts";
 
 type OnePasswordItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 export class VaultStore {
-  public readonly tailscaleDomain;
-  constructor() {
-    this.tailscaleDomain = this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply(z => z.hostname);
+  private _tailscaleDomain?: Output<string>;
+  /**
+   * Lazy, not constructor-assigned. `BaoStore extends VaultStore` and overrides
+   * `getSecretByTitle`, so reading a secret from the base constructor would
+   * dispatch into the subclass BEFORE its own fields (the client, the cache)
+   * are initialised — class fields run after `super()` returns — and throw on
+   * an undefined client. Nothing else here reads a secret at construction time;
+   * keep it that way.
+   */
+  public get tailscaleDomain(): Output<string> {
+    this._tailscaleDomain ??= this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply(z => z.hostname);
+    return this._tailscaleDomain;
   }
   public getDockgeInstances() {
-    return output(op.findItemsByTag("dockge")).apply(items => all(items.map(getSecretItem<DockgeLxcDefinition>)));
+    return output(op().findItemsByTag("dockge")).apply(items => all(items.map(getSecretItem<DockgeLxcDefinition>)));
   }
   public getCluster(title: string) {
-    return output(op.getItemByTitle(title)).apply(getSecretItem<ClusterDefinition>);
+    return output(op().getItemByTitle(title)).apply(getSecretItem<ClusterDefinition>);
   }
 
   public getAllClusters() {
-    return output(op.findItemsByTag("cluster-definition")).apply(items => all(items.map(getSecretItem<ClusterDefinition>)));
+    return output(op().findItemsByTag("cluster-definition")).apply(items => all(items.map(getSecretItem<ClusterDefinition>)));
   }
 
   public getDockerClusters() {
@@ -28,13 +47,13 @@ export class VaultStore {
   }
 
   public getBackupPlans<T>() {
-    return output(op.findItemsByTag("backup-plan"))
+    return output(op().findItemsByTag("backup-plan"))
       .apply(items => all(items.map(getSecretItem<{ plan: string }>)).apply(items => items.map(item => JSON.parse(item.plan) as { plans: T[] })))
       .apply(plans => plans.flatMap(z => z.plans));
   }
 
   public getTailscaleExports() {
-    return output(op.findItemsByTag("tailscale-export"))
+    return output(op().findItemsByTag("tailscale-export"))
       .apply(items =>
         all(
           items.map(
@@ -79,7 +98,7 @@ export class VaultStore {
   }
 
   public getKubeConfig(title: string) {
-    return output(op.getItemByTitle(title)).apply(generateKubeConfig);
+    return output(op().getItemByTitle(title)).apply(generateKubeConfig);
   }
 
   public getKubernetesClusters(): Output<(KubernetesClusterDefinition & { kubeConfig: string })[]> {
@@ -105,11 +124,26 @@ export class VaultStore {
   }
 
   public proxmoxBackupServers(withTag: string = "pbs") {
-    return output(op.findItemsByTag(withTag)).apply(items => all(items.map(item => createProxmoxBackupServerDefinition(op, item))));
+    return output(op().findItemsByTag(withTag)).apply(items => all(items.map(item => createProxmoxBackupServerDefinition(op(), item))));
   }
 
   public getSecretByTitle<T>(title: string) {
-    return output(op.getItemByTitle(title)).apply(getSecretItem<T>);
+    return this.getOnePasswordItemByTitle<T>(title);
+  }
+
+  /**
+   * Read from 1Password specifically, bypassing any subclass override.
+   *
+   * `BaoStore` overrides `getSecretByTitle`, so anything below that calls
+   * `this.getSecretByTitle` dispatches to OpenBao — including the `op://Eris/…`
+   * placeholder resolver, whose reference syntax names 1Password by
+   * construction. That mattered immediately: `op://Eris/OpenBao Alpha Site
+   * Static Unseal/…` is seal-chain material INVENTORY §2 forbids from ever
+   * entering OpenBao, so resolving it there is not a lookup failure to paper
+   * over, it is a category error.
+   */
+  protected getOnePasswordItemByTitle<T>(title: string) {
+    return output(op().getItemByTitle(title)).apply(getSecretItem<T>);
   }
 
   private readonly vaultRegex = /op:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
@@ -121,7 +155,7 @@ export class VaultStore {
           matches
             .map(match => match.slice(1) as [string, string])
             .map(([itemTitle, fieldName]) =>
-              this.getSecretByTitle<{ [key: string]: string | undefined }>(itemTitle).apply(
+              this.getOnePasswordItemByTitle<{ [key: string]: string | undefined }>(itemTitle).apply(
                 item =>
                   ({
                     itemTitle,
