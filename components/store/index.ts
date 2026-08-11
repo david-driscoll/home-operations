@@ -48,8 +48,8 @@ export class VaultStore {
 
   public getBackupPlans<T>() {
     return output(op().findItemsByTag("backup-plan"))
-      .apply(items => all(items.map(getSecretItem<{ plan: string }>)).apply(items => items.map(item => JSON.parse(item.plan) as { plans: T[] })))
-      .apply(plans => plans.flatMap(z => z.plans));
+      .apply(items => all(items.map(getSecretItem<{ plan: string }>)))
+      .apply(items => shapeBackupPlans<T>(items));
   }
 
   public getTailscaleExports() {
@@ -68,33 +68,7 @@ export class VaultStore {
           ),
         ),
       )
-      .apply(items => {
-        // Sorted at both levels — the exported node name drives ACL tests/grant dsts, and the
-        // 1Password item title it is sorted by upstream can diverge from it.
-        return items
-          .map(item => {
-            return {
-              name: item.name as unknown as string,
-              services: item.services ? (JSON.parse(item.services as unknown as string) as string[]) : [],
-              hosts: Object.entries(item)
-                .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && ("externalIp" in value || "ip" in value))
-                .map(
-                  // `ip` fallback tolerates items written before the externalIp rename;
-                  // safe to drop once every exporting stack has redeployed.
-                  ([key, value]) =>
-                    ({ name: key, ...value, externalIp: (value as { externalIp?: string; ip?: string }).externalIp ?? (value as { ip?: string }).ip }) as {
-                      name: string;
-                      externalIp: string;
-                      internalIp: string;
-                      mac: string;
-                      nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
-                    },
-                )
-                .sort((a, b) => a.name.localeCompare(b.name)),
-            };
-          })
-          .sort((a, b) => a.name.localeCompare(b.name));
-      });
+      .apply(shapeTailscaleExports);
   }
 
   public getKubeConfig(title: string) {
@@ -180,6 +154,62 @@ export class VaultStore {
         return output(value).apply(v => v.replace(this.vaultRegex, fullMatch => items.get(fullMatch) || fullMatch));
       });
   }
+}
+
+/**
+ * Item-shaped backup plans → the flat plan list the directors consume.
+ *
+ * Shared between `VaultStore` (items found by `tag:backup-plan`) and
+ * `BaoStore` (paths listed under `clusters/_inventory/*backup-plan`) for the
+ * same reason as `shapeTailscaleExports` below: one transform, so the stores
+ * can only differ in data.
+ */
+export function shapeBackupPlans<T>(items: { plan: string }[]): T[] {
+  return items.map(item => JSON.parse(item.plan) as { plans: T[] }).flatMap(z => z.plans);
+}
+
+/**
+ * Item-shaped tailscale exports → the object every consumer reads.
+ *
+ * Shared between `VaultStore` (items found by `tag:tailscale-export`) and
+ * `BaoStore` (paths listed under `clusters/_inventory/tailscale-export-*`) so
+ * the two stores cannot drift in the TRANSFORM — the parity script compares the
+ * data, this function being singular is what makes the shaping identical.
+ */
+export function shapeTailscaleExports(
+  items: {
+    [key: string]: unknown;
+  }[],
+): {
+  name: string;
+  services: string[];
+  hosts: { name: string; externalIp: string; internalIp: string; mac: string; nodeType: "dockge" | "proxmox" | "pbs" | "truenas" }[];
+}[] {
+  // Sorted at both levels — the exported node name drives ACL tests/grant dsts, and the
+  // 1Password item title it is sorted by upstream can diverge from it.
+  return items
+    .map(item => {
+      return {
+        name: item.name as string,
+        services: item.services ? (JSON.parse(item.services as string) as string[]) : [],
+        hosts: Object.entries(item)
+          .filter(([_key, value]) => typeof value === "object" && !Array.isArray(value) && value !== null && ("externalIp" in value || "ip" in value))
+          .map(
+            // `ip` fallback tolerates items written before the externalIp rename;
+            // safe to drop once every exporting stack has redeployed.
+            ([key, value]) =>
+              ({ name: key, ...value, externalIp: (value as { externalIp?: string; ip?: string }).externalIp ?? (value as { ip?: string }).ip }) as {
+                name: string;
+                externalIp: string;
+                internalIp: string;
+                mac: string;
+                nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
+              },
+          )
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function getSecretItem<T = { urls: { href: string; label?: string }[] }>(item: Pick<OnePasswordItem, "title" | "category" | "tags" | "urls" | "fields" | "files" | "sections">): Output<Unwrap<T & Meta>> {

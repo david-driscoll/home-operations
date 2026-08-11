@@ -11,7 +11,7 @@ import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 
 const globals = new GlobalResources({}, {});
-const monitor = new TailscaleMonitor();
+const monitor = new TailscaleMonitor(globals);
 const backupDirector = new BackupPlanDirector("backup-plan-director", {
   globals,
 });
