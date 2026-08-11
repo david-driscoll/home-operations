@@ -19,7 +19,6 @@
  *
  * Still on 1Password after this file (each is a later slice):
  *
- *   getCluster / getAllClusters    cluster definitions become checked-in code
  *   getBackupPlans                 producer-side write-back moves to OpenBao
  *   getTailscaleExports            same
  *   proxmoxBackupServers           needs both of the above to resolve
@@ -49,6 +48,7 @@
 
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug } from "../bao.ts";
+import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
 import { VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
@@ -115,6 +115,43 @@ export class BaoStore extends VaultStore {
     // stale 1Password copy that nothing would ever surface.
     log.warn(`${title}: reading from 1Password — ${resolved.reason}`);
     return this.getOnePasswordItemByTitle<T>(title) as Output<T & Meta>;
+  }
+
+  /**
+   * Cluster definitions come from git, their two credential fields from
+   * OpenBao. Neither store is involved in the shape any more — see
+   * `store/clusters.ts` for why code beat both.
+   */
+  public override getCluster(title: string) {
+    const entry = clusterBySourceTitle(title);
+    if (!entry) throw new Error(`no cluster definition titled '${title}' — add a definition under /clusters (known: ${CLUSTERS.map(c => c.sourceTitle).join(", ")})`);
+    return this.hydrateCluster(entry) as ReturnType<VaultStore["getCluster"]>;
+  }
+
+  public override getAllClusters() {
+    return all(CLUSTERS.map(entry => this.hydrateCluster(entry))) as ReturnType<VaultStore["getAllClusters"]>;
+  }
+
+  /**
+   * Merge a checked-in definition with its credential field.
+   *
+   * The `secret`/`arcane_token` value is read from `clusters/<key>/cluster` and
+   * spread in LAST, so the empty placeholder in `clusters.ts` can never win. A
+   * cluster with no credential (celestia) reads nothing at all rather than
+   * reading a path that does not exist.
+   */
+  private hydrateCluster(entry: ClusterEntry): Output<Record<string, unknown>> {
+    const field = entry.secretField;
+    // `sourceTitle` and `secretField` are loader bookkeeping, not part of the
+    // definition a stack consumes — leaving either in would add a key the
+    // 1Password shape never had.
+    const { sourceTitle, secretField: _secretField, ...definition } = entry;
+    const base = { ...definition, meta: { title: sourceTitle, tags: ["cluster-definition"] } };
+    if (!field) return output(base);
+    return this.getSecretByPath<Record<string, unknown>>(clusterSecretPath(entry.key, field)).apply(secretItem => ({
+      ...base,
+      [field]: secretItem[field],
+    }));
   }
 
   /**

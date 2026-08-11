@@ -1,0 +1,14 @@
+# Cluster definition. Loaded by components/store/clusters.ts — the filename must
+# match `key`. Nothing here is secret; see `secretField` below.
+sourceTitle: "Cluster: Alpha Site"
+key: alpha-site
+title: Alpha Site
+type: dockge
+location: home
+domainPrefix: as
+authentikDomain: iris.driscoll.tech
+icon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
+favicon: https://www.candyicons.com/style-image-examples/abstract-uYcg0JhhxK7bQ54KOtzsLX9U.png
+background: https://images.playground.com/43f58221d361456293f38739b6c69cea.jpeg
+# Read from secrets/clusters/alpha-site/arcane-agent at load time, never stored here.
+secretField: arcane_token

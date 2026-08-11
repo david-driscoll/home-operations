@@ -1,0 +1,14 @@
+# Cluster definition. Loaded by components/store/clusters.ts — the filename must
+# match `key`. Nothing here is secret; see `secretField` below.
+sourceTitle: "Cluster: Stargate Command"
+key: sgc
+title: Stargate Command
+type: kubernetes
+location: home
+domainPrefix: sgc
+authentikDomain: iris.driscoll.tech
+icon: https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg
+favicon: https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg
+background: https://wallpapercave.com/wp/wp10853006.jpg
+# Read from secrets/clusters/sgc/cluster at load time, never stored here.
+secretField: secret

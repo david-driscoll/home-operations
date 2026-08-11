@@ -1,0 +1,14 @@
+# Cluster definition. Loaded by components/store/clusters.ts — the filename must
+# match `key`. Nothing here is secret; see `secretField` below.
+sourceTitle: "Cluster: Equestria"
+key: equestria
+title: Equestria
+type: kubernetes
+location: home
+domainPrefix: equestria
+authentikDomain: canterlot.driscoll.tech
+icon: https://cdn.imgbin.com/5/21/5/imgbin-equestria-royal-guards-emblem-army-others-TaRExRmRe5mJ6PtYBQxYQK0eX.jpg
+favicon: https://vectorified.com/images/my-little-pony-icon-7.png
+background: https://i.pinimg.com/originals/01/7e/aa/017eaa00416cf59928265f7f5697b8be.jpg
+# Read from secrets/clusters/equestria/cluster at load time, never stored here.
+secretField: secret
