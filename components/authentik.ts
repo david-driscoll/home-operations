@@ -546,7 +546,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           // definitions live in the cluster repos and convert to the ref+
           // syntax on their own schedule, so both must resolve here until no
           // definition carries op://.
-          return pulumi.output(this.store.resolveSecretReferences(yamlString)).apply(y => yaml.parse(y) as GatusDefinition);
+          return pulumi.output(this.store.resolveSecretReferences(yamlString, `gatus definition for ${definition.metadata.name}`)).apply(y => yaml.parse(y) as GatusDefinition);
         }),
       );
     });

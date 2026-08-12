@@ -99,8 +99,8 @@ export abstract class VaultStore {
    * none on `op://`.
    */
   private readonly refResolver = new SecretRefResolver();
-  public resolveSecretReferences(value: Input<string>): Output<string> {
-    return this.refResolver.resolve(value);
+  public resolveSecretReferences(value: Input<string>, label?: string): Output<string> {
+    return this.refResolver.resolve(value, label);
   }
 
   /**
