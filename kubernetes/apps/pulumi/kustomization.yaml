@@ -9,6 +9,7 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./secrets/ks.yaml
+  - ./system/ks.yaml
   - ./pulumi-operator/ks.yaml
   - ./lock-canceller/ks.yaml
   - ./history-pruner/ks.yaml

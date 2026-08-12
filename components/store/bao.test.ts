@@ -15,7 +15,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isSecret, runtime } from "@pulumi/pulumi";
-import { assertNotDirectory, BaoStore, backupPlanKeys, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
+import { assertClustersFound, assertNotDirectory, BaoStore, backupPlanKeys, parseClusterDetails, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
 import { shapeBackupPlans, shapeTailscaleExports } from "./index.ts";
 
 runtime.setMocks({
@@ -294,5 +294,117 @@ describe("shapeBackupPlans", () => {
       shaped.map(p => p.name),
       ["a", "b", "c"],
     );
+  });
+});
+
+describe("parseClusterDetails", () => {
+  const good = {
+    key: "equestria",
+    title: "Equestria",
+    type: "kubernetes",
+    location: "home",
+    rootDomain: "equestria.driscoll.tech",
+    authentikDomain: "canterlot.driscoll.tech",
+    icon: "https://example.invalid/i.png",
+    favicon: "https://example.invalid/f.png",
+    background: "https://example.invalid/b.jpg",
+    secretField: "secret",
+  };
+  const meta = { source_title: "Cluster: Equestria" };
+
+  it("parses a published definition and takes meta.title from custom_metadata", () => {
+    const c = parseClusterDetails("equestria", good, meta);
+    assert.equal(c.key, "equestria");
+    assert.equal(c.sourceTitle, "Cluster: Equestria");
+    assert.equal(c.secretField, "secret");
+    assert.equal(c.rootDomain, "equestria.driscoll.tech");
+  });
+
+  it("maps the 'none' sentinel to null rather than carrying it through", () => {
+    // KV values are strings: null does not round-trip and "" is
+    // indistinguishable from a real field name.
+    assert.equal(parseClusterDetails("celestia", { ...good, key: "celestia", secretField: "none" }, {}).secretField, null);
+  });
+
+  it("rejects a key that disagrees with its path", () => {
+    // clusterSecretPath derives from the path key, so a mismatch would read
+    // ANOTHER cluster's credential.
+    assert.throws(() => parseClusterDetails("luna", good, meta), /'key' is 'equestria' but the path says 'luna'/);
+  });
+
+  it("rejects a missing or empty required field rather than rendering undefined into a URL", () => {
+    for (const field of ["title", "type", "rootDomain", "authentikDomain", "icon", "favicon", "background"]) {
+      assert.throws(() => parseClusterDetails("equestria", { ...good, [field]: "" }, meta), new RegExp(`'${field}' must be a non-empty string`), field);
+      const { [field]: _dropped, ...missing } = good as Record<string, unknown>;
+      assert.throws(() => parseClusterDetails("equestria", missing, meta), new RegExp(`'${field}' must be a non-empty string`), `${field} (absent)`);
+    }
+  });
+
+  it("rejects an unrecognised secretField instead of silently merging nothing", () => {
+    assert.throws(() => parseClusterDetails("equestria", { ...good, secretField: "token" }, meta), /must be 'none', 'secret' or 'arcane_token'/);
+    assert.throws(() => parseClusterDetails("equestria", { ...good, secretField: "" }, meta), /must be 'none', 'secret' or 'arcane_token'/);
+  });
+
+  it("does not leak the sentinel into the object stacks consume", () => {
+    const c = parseClusterDetails("celestia", { ...good, key: "celestia", secretField: "none" }, {}) as Record<string, unknown>;
+    assert.equal(c.secretField, null);
+    assert.notEqual(c.secretField, "none");
+  });
+});
+
+describe("BaoStore cluster reads", () => {
+  function stub(paths: Record<string, any>, listing: string[]) {
+    return {
+      read: async (_m: string, path: string) => paths[path],
+      list: async (_m: string, prefix: string) =>
+        prefix === "clusters"
+          ? listing
+          : Object.keys(paths)
+              .filter(p => p.startsWith(`${prefix}/`))
+              .map(p => p.slice(prefix.length + 1))
+              .sort(),
+    } as unknown as ConstructorParameters<typeof BaoStore>[0];
+  }
+  const details = (key: string, extra: Record<string, unknown> = {}) => ({
+    data: {
+      key,
+      title: key,
+      type: "dockge",
+      location: "home",
+      rootDomain: `${key}.driscoll.tech`,
+      authentikDomain: "a.driscoll.tech",
+      icon: "https://i",
+      favicon: "https://f",
+      background: "https://b",
+      secretField: "none",
+      ...extra,
+    },
+    metadata: { version: 1, created_time: "", custom_metadata: { source_title: `Cluster: ${key}` } },
+  });
+
+  it("skips _inventory and any directory with no details path", async () => {
+    // `twilight-sparkle` has app credentials but no definition; `_inventory`
+    // is not a cluster at all. A directory listing proves nothing.
+    const store = new BaoStore(stub({ "clusters/celestia/details": details("celestia"), "clusters/luna/details": details("luna") }, ["_inventory/", "celestia/", "luna/", "twilight-sparkle/"]));
+    const got = await new Promise<any[]>(res => store.getAllClusters().apply(v => (res(v as any[]), v)));
+    assert.deepEqual(
+      got.map(c => c.key),
+      ["celestia", "luna"],
+    );
+  });
+
+  it("refuses an EMPTY set rather than reporting an estate with no clusters", () => {
+    // Consumers turn this list into DNS records, ACL grants and backup plans:
+    // "no clusters" reads as "remove everything". If this fires in anger,
+    // stacks/system has not run.
+    assert.throws(() => assertClustersFound([]), /stacks\/system publishes them from \/clusters and has not run/);
+    assert.equal(assertClustersFound([{ key: "celestia", sourceTitle: "Cluster: Celestia", secretField: null }]).length, 1);
+  });
+
+  it("resolves a cluster by its source title", async () => {
+    const store = new BaoStore(stub({ "clusters/celestia/details": details("celestia") }, ["celestia/"]));
+    const got = await new Promise<any>(res => store.getCluster("Cluster: celestia").apply(v => (res(v), v)));
+    assert.equal(got.key, "celestia");
+    assert.deepEqual(got.meta.tags, ["cluster-definition"]);
   });
 });
