@@ -315,12 +315,10 @@ export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.Cu
   // Fold the concealment declaration into custom_metadata, so a caller cannot
   // set one and forget the other. `contains_secrets` is what makes shapeItem's
   // "marked secret but lists nothing" guard meaningful.
-  const customMetadata = pulumi
-    .all([args.customMetadata ?? {}, pulumi.all(args.concealedFields)])
-    .apply(([provenance, concealed]) => ({
-      ...provenance,
-      ...(concealed.length > 0 ? { contains_secrets: "true", concealed_fields: concealed.join(",") } : {}),
-    }));
+  const customMetadata = pulumi.all([args.customMetadata ?? {}, pulumi.all(args.concealedFields)]).apply(([provenance, concealed]) => ({
+    ...provenance,
+    ...(concealed.length > 0 ? { contains_secrets: "true", concealed_fields: concealed.join(",") } : {}),
+  }));
 
   return new vault.kv.SecretV2(
     name,
