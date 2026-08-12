@@ -100,6 +100,22 @@ export class BaoClient {
     return this.tokenPromise;
   }
 
+  /** The normalized server address, for handing to a child process. */
+  public get address(): string {
+    return this.addr;
+  }
+
+  /**
+   * The session token, for handing to a child process (the `vals` resolver
+   * spawns with VAULT_TOKEN set to this). Same trust domain — the child runs
+   * with this process's credentials either way — and minting here keeps every
+   * consumer on the one proven auth path instead of teaching each tool the
+   * AppRole dance separately.
+   */
+  public authToken(): Promise<string> {
+    return this.token();
+  }
+
   private async request(method: string, path: string, body?: unknown): Promise<unknown> {
     const res = await fetch(`${this.addr}/v1/${path}`, {
       method,

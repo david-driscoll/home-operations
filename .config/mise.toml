@@ -22,6 +22,10 @@ pulumi = "3.256.0"
 "github:eljulians/skillfile" = { version = "v1.9.1", bin = "skillfile" }
 "github:home-operations/flate" = "v0.5.0"
 dotnet = { version = "10.0.203" }
+# Secret-reference resolver for ref+openbao:// (PLAN §D.1). Keep this version
+# in step with the vals initContainer in kubernetes/apps/pulumi/*/stack.yaml —
+# the workspace pods install the same pin via mise.
+vals = "0.45.0"
 
 [tasks.update]
 description = 'Update all apps that have an update script'
@@ -52,6 +56,12 @@ CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "op://Eris/Eris 1Password Connect Access Token/credential"
 AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
 AUTHENTIK_URL = "op://Eris/Authentik Token/url"
+# Phase 8 cutover: local runs read secrets from OpenBao (BaoStore), matching
+# the operator's Stack CRs. Local runs now REQUIRE the OpenBao credentials —
+# eval "$(bootstrap/openbao/pulumi-env.sh)" from the vault repo first; without
+# them GlobalResources fails loudly at construction rather than silently
+# reading a different store than the operator does.
+BAO_STORE_READS = "1"
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"
 # UNIFI_PASSWORD = "op://Eris/unifipoller/password"
