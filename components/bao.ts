@@ -237,6 +237,16 @@ export function pbsBaoPath(title: string): string {
 }
 
 /**
+ * Canonical OpenBao path (within the `secrets` mount) for a Dockge LXC item,
+ * from its 1Password title — matches the `tag:dockge` rule in
+ * `scripts/op-to-bao/mapping.ts` (`hosts/dockge/<slug(title)>`), which is the
+ * prefix `BaoStore.getDockgeInstances` lists.
+ */
+export function dockgeBaoPath(title: string): string {
+  return `hosts/dockge/${baoSlug(title)}`;
+}
+
+/**
  * Standard custom_metadata provenance for Pulumi-generated secrets, mirroring
  * the op-to-bao convention: labels about the secret live in custom_metadata,
  * values consumers need live in data (vals cannot read metadata).
