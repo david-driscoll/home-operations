@@ -126,6 +126,15 @@ describe("SecretRefResolver", () => {
     );
   });
 
+  it("a document with ONLY an unsupported provider still fails loudly", async () => {
+    // The gate matches any scheme-shaped reference, not just openbao — a
+    // sops-only file must enter resolution and die in the residue guard, not
+    // skip vals and ship the literal into a container.
+    const fake = fakeVals({});
+    await assert.rejects(() => resolver(fake).resolveText("b: ref+sops://bootstrap/thing.sops.yaml#/key"), /unresolved secret-reference scheme.*ref\+sops:\/\//);
+    assert.equal(fake.calls.length, 1);
+  });
+
   it("does not trip the residue guard on ref+ prose or shell globs", async () => {
     // provision.sh carries `ref+*)` and comments saying "ref+..." — scheme
     // shapes only (`ref+x://`) count as residue.

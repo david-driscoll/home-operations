@@ -60,6 +60,18 @@ import { BaoClient } from "../bao.ts";
 /** How a wrapped document reaches vals. Injectable for the tests. */
 export type ValsExec = (doc: string, env: Record<string, string>) => Promise<string>;
 
+/**
+ * Any scheme-shaped reference (`ref+x://`), NOT just openbao. The gate and
+ * the residue guard share this on purpose: a document whose only references
+ * use a not-yet-wired provider (`ref+sops://` is next, PLAN §D.2) must enter
+ * resolution and FAIL there — a gate that only knew openbao would skip vals
+ * for that document and ship the literal into a container, silently, with
+ * the residue guard never running. Deliberately loose on the provider name
+ * and strict on the shape, so the provision.sh guard's `ref+*)` glob and
+ * prose saying "ref+..." never match.
+ */
+const REF_SCHEME = /ref\+[a-z0-9]+:\/\//g;
+
 export class SecretRefResolver {
   /**
    * Constructed lazily on the first reference actually seen, so building a
@@ -83,7 +95,9 @@ export class SecretRefResolver {
    */
   public resolve(value: Input<string>): Output<string> {
     return output(value).apply(v => {
-      if (!v.includes("ref+openbao://")) return output(v);
+      // `search`, not `test`: the shared pattern is /g and `test` advances
+      // its lastIndex; `search` neither reads nor writes it.
+      if (v.search(REF_SCHEME) === -1) return output(v);
       return secret(output(this.resolveText(v)));
     });
   }
@@ -119,10 +133,7 @@ export class SecretRefResolver {
     if (typeof content !== "string") {
       throw new Error(`vals eval returned ${content === undefined ? "no content" : typeof content} for a ${v.length}-byte document — expected the wrapped string back`);
     }
-    // Scheme-shaped only (`ref+x://`): the provision.sh guard's `ref+*)` glob
-    // and prose mentioning "ref+" must not trip this when they share a file
-    // with a real reference.
-    const residue = Array.from(new Set(Array.from(content.matchAll(/ref\+[a-z0-9]+:\/\//g), m => m[0])));
+    const residue = Array.from(new Set(Array.from(content.matchAll(REF_SCHEME), m => m[0])));
     if (residue.length > 0) {
       // Schemes only, never spans: the surrounding content is resolved
       // secrets by now, and an error message must not carry any of it.
