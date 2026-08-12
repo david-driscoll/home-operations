@@ -284,7 +284,10 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           { parent: provider, provider: this.args.globals.baoProvider },
         );
       } else {
-        pulumi.log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${resourceName}. 1Password stays authoritative; the canonical OpenBao path will be empty until a credentialed run.`, provider);
+        pulumi.log.warn(
+          `No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${resourceName}. 1Password stays authoritative; the canonical OpenBao path will be empty until a credentialed run.`,
+          provider,
+        );
       }
 
       return {
@@ -543,7 +546,7 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           // definitions live in the cluster repos and convert to the ref+
           // syntax on their own schedule, so both must resolve here until no
           // definition carries op://.
-          return pulumi.output(this.store.resolveSecretReferences(this.store.replaceOnePasswordPlaceholders(yamlString))).apply(y => yaml.parse(y) as GatusDefinition);
+          return pulumi.output(this.store.resolveSecretReferences(yamlString)).apply(y => yaml.parse(y) as GatusDefinition);
         }),
       );
     });

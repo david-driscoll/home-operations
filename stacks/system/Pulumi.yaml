@@ -1,0 +1,12 @@
+name: system
+description: Estate configuration that other stacks read — cluster definitions published to OpenBao.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+    nodeargs: "--import tsx/esm"
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript

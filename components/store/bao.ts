@@ -21,7 +21,6 @@
  *
  *   proxmoxBackupServers           its items reference dockge/cluster items by
  *                                  title; moves once those reads are proven
- *   replaceOnePasswordPlaceholders `vals` replaces it (PLAN §D.1)
  *
  * ## Field shapes carry over unchanged
  *
@@ -46,8 +45,8 @@
  */
 
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
-import { BaoClient, baoSlug } from "../bao.ts";
-import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
+import { BaoClient, baoSlug, dockgeBaoPath } from "../bao.ts";
+import { clusterSecretPath } from "./clusters.ts";
 import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
 
@@ -60,6 +59,9 @@ const SECRETS_MOUNT = "secrets";
  * cannot cross this repo's per-stack backends.
  */
 const INVENTORY_PREFIX = "clusters/_inventory";
+
+/** Where `stacks/system` publishes the checked-in cluster definitions. */
+const CLUSTER_PREFIX = "clusters";
 
 /** Key prefix of one stack's tailscale export: `tailscale-export-<stack>`. */
 const TAILSCALE_EXPORT_PREFIX = "tailscale-export-";
@@ -78,19 +80,11 @@ const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"
 const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
 
 /**
- * Whether stacks read secrets from OpenBao instead of 1Password.
- *
- * Explicit rather than inferred from credential presence. The Phase 8a
- * dual-write gate inferred, and an AppRole run then authenticated fine and
- * silently skipped every write while `pulumi up` reported success (STATUS.md,
- * "OIDC is live"). The same failure mode here would be worse: a silent
- * fallback means nobody can tell which store a value came from, and the two
- * agree only for as long as dual-run holds.
+ * `baoStoreReadsEnabled` used to live here, gating whether reads went to
+ * OpenBao or 1Password. Phase 11 removed the 1Password side, so there is
+ * nothing left to switch: `BaoStore` is the store. BAO_STORE_READS is inert
+ * and gets removed from the Stack CRs separately, once every repo is on this.
  */
-export function baoStoreReadsEnabled(): boolean {
-  const v = (process.env.BAO_STORE_READS ?? "").toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
 
 /** A KV path shaped like a 1Password item. */
 type BaoItem = Record<string, unknown> & Meta;
@@ -103,6 +97,8 @@ export class BaoStore extends VaultStore {
    * `globals.ts` alone), and `OPClient` memoises for the same reason.
    */
   private readonly cache = new Map<string, Output<BaoItem>>();
+  /** One LIST + N reads per process; every cluster read goes through it. */
+  private _clusterDetails?: Output<ClusterDetails[]>;
 
   constructor(bao?: BaoClient) {
     super();
@@ -131,27 +127,77 @@ export class BaoStore extends VaultStore {
   public override getSecretByTitle<T>(title: string): Output<T & Meta> {
     const resolved = resolveBaoPath(title);
     if (resolved.path) return this.getSecretByPath<T>(resolved.path);
-    // Warn, every time, naming the reason. These are enumerated exceptions,
-    // not a blanket "try OpenBao, fall back if it 404s" — that would turn a
-    // typo'd path, or a secret deleted from OpenBao, into a silent read of a
-    // stale 1Password copy that nothing would ever surface.
-    log.warn(`${title}: reading from 1Password — ${resolved.reason}`);
-    return this.getOnePasswordItemByTitle<T>(title) as Output<T & Meta>;
+    // These used to warn and read 1Password instead. They throw now: Pulumi no
+    // longer writes 1Password, so its copies are frozen, and "fall back to the
+    // other store" would mean silently authenticating with a stale credential
+    // — the failure this migration keeps meeting, and the one with no symptom.
+    // Every title this repo names resolves; anything reaching here is a call
+    // site that needs a decision, not a fallback.
+    throw new Error(`${title}: no OpenBao path — ${resolved.reason}. 1Password is no longer read; give this call site a path, or handle it as configuration.`);
   }
 
   /**
-   * Cluster definitions come from git, their two credential fields from
-   * OpenBao. Neither store is involved in the shape any more — see
-   * `store/clusters.ts` for why code beat both.
+   * Cluster definitions come from `clusters/<key>/details`, published by
+   * `stacks/system` from the checked-in YAML at `/clusters`.
+   *
+   * They used to be read straight off disk. That worked for home-operations
+   * and forced the vault repo to carry a byte-identical copy of six files
+   * under a "diff -r must come back empty" convention — a maintenance trap,
+   * because copies drift the moment someone forgets and nothing fails when
+   * they do. Publishing once and reading everywhere keeps the YAML as the
+   * single source and makes OpenBao the distribution.
+   *
+   * Credential fields are still merged from their own paths — see
+   * `hydrateCluster`.
    */
   public override getCluster(title: string) {
-    const entry = clusterBySourceTitle(title);
-    if (!entry) throw new Error(`no cluster definition titled '${title}' — add a definition under /clusters (known: ${CLUSTERS.map(c => c.sourceTitle).join(", ")})`);
-    return this.hydrateCluster(entry) as ReturnType<VaultStore["getCluster"]>;
+    return this.listClusterDetails().apply(entries => {
+      const match = entries.find(e => e.sourceTitle === title);
+      if (!match) {
+        throw new Error(`no cluster definition titled '${title}' in secrets/${CLUSTER_PREFIX}/*/details (found: ${entries.map(e => e.sourceTitle).join(", ") || "none"}) — add it under /clusters and run stacks/system`);
+      }
+      return this.hydrateCluster(match);
+    }) as unknown as ReturnType<VaultStore["getCluster"]>;
   }
 
   public override getAllClusters() {
-    return all(CLUSTERS.map(entry => this.hydrateCluster(entry))) as ReturnType<VaultStore["getAllClusters"]>;
+    return this.listClusterDetails().apply(entries => all(entries.map(entry => this.hydrateCluster(entry)))) as unknown as ReturnType<VaultStore["getAllClusters"]>;
+  }
+
+  /**
+   * Every published cluster definition, sorted by key.
+   *
+   * `clusters/` also holds `_inventory/` and per-app paths for clusters with
+   * no definition of their own (`twilight-sparkle` has oidc credentials but no
+   * YAML), so the presence of a directory proves nothing — only a readable
+   * `details` path counts. Sorted because callers derive Pulumi inputs from
+   * this list, and an unstable order means spurious diffs.
+   *
+   * An EMPTY result is an error, never an empty estate: consumers turn this
+   * list into DNS records, ACL grants and backup plans, so "no clusters" reads
+   * as "remove everything". That is the §G-8 failure made loud — if it fires,
+   * `stacks/system` has not run.
+   */
+  private listClusterDetails(): Output<ClusterDetails[]> {
+    this._clusterDetails ??= output(this.bao.list(SECRETS_MOUNT, CLUSTER_PREFIX))
+      .apply(keys =>
+        all(
+          keys
+            .filter(key => key.endsWith("/") && key !== "_inventory/")
+            .map(key => key.slice(0, -1))
+            .sort((a, b) => a.localeCompare(b))
+            .map(key =>
+              output(this.bao.read(SECRETS_MOUNT, `${CLUSTER_PREFIX}/${key}/details`)).apply(result => (result ? JSON.stringify(parseClusterDetails(key, result.data, result.metadata.custom_metadata ?? {})) : "")),
+            ),
+        ),
+      )
+      .apply(serialised => {
+        // Serialised through the apply boundary and parsed back: Pulumi's
+        // Unwrap<> turns a union with undefined into a shape TypeScript cannot
+        // narrow, and the values here are plain config with no Outputs inside.
+        return assertClustersFound(serialised.filter(z => z !== "").map(z => JSON.parse(z) as ClusterDetails));
+      });
+    return this._clusterDetails;
   }
 
   /**
@@ -162,17 +208,15 @@ export class BaoStore extends VaultStore {
    * cluster with no credential (celestia) reads nothing at all rather than
    * reading a path that does not exist.
    */
-  private hydrateCluster(entry: ClusterEntry): Output<Record<string, unknown>> {
-    const field = entry.secretField;
-    // `sourceTitle` and `secretField` are loader bookkeeping, not part of the
-    // definition a stack consumes — leaving either in would add a key the
-    // 1Password shape never had.
-    const { sourceTitle, secretField: _secretField, ...definition } = entry;
-    const base = { ...definition, meta: { title: sourceTitle, tags: ["cluster-definition"] } };
-    if (!field) return output(base);
-    return this.getSecretByPath<Record<string, unknown>>(clusterSecretPath(entry.key, field)).apply(secretItem => ({
+  private hydrateCluster(entry: ClusterDetails): Output<unknown> {
+    const { sourceTitle, secretField, key, ...definition } = entry;
+    const base = { ...definition, key, meta: { title: sourceTitle, tags: ["cluster-definition"] } };
+    if (!secretField) return output(base);
+    // Spread in LAST, so nothing in the published definition can win over the
+    // real credential.
+    return this.getSecretByPath<Record<string, unknown>>(clusterSecretPath(key, secretField)).apply(secretItem => ({
       ...base,
-      [field]: secretItem[field],
+      [secretField]: secretItem[secretField],
     }));
   }
 
@@ -231,6 +275,46 @@ export class BaoStore extends VaultStore {
       .apply(items => shapeBackupPlans<T>(items as unknown as { plan: string }[])) as ReturnType<VaultStore["getBackupPlans"]> & Output<T[]>;
   }
 
+  /**
+   * `tag:pbs` became the `hosts/pbs/` prefix — the last read in this repo that
+   * still went to 1Password.
+   *
+   * The 1Password items themselves STAY and keep being written: they are how a
+   * human logs into the generated LXC (estate decision 2026-08-12). This moves
+   * only where PULUMI reads, so the browser-fill copy and the machine copy stop
+   * being the same lookup.
+   *
+   * Each item cross-references two others BY TITLE — `dockge` names a
+   * `DockgeLxc: <host>` item and `cluster` names a `Cluster: <name>` — and both
+   * of those already moved: dockge to `hosts/dockge/<slug>`, cluster
+   * definitions to checked-in YAML. So the two title fields resolve through
+   * the same machinery every other read now uses, rather than through a second
+   * round of 1Password lookups.
+   */
+  public override proxmoxBackupServers(withTag: string = "pbs") {
+    if (withTag !== "pbs") throw new Error(`proxmoxBackupServers('${withTag}') — OpenBao has no tags; only the 'pbs' family has a path prefix (hosts/pbs/)`);
+    return this.listUnder("hosts/pbs").apply(items =>
+      all(
+        items.map(item => {
+          const dockgeTitle = item.dockge as string;
+          const clusterTitle = item.cluster as string;
+          if (typeof dockgeTitle !== "string" || typeof clusterTitle !== "string") {
+            throw new Error(`${SECRETS_MOUNT}/hosts/pbs/${baoSlug(String(item.meta?.title ?? "?"))}: 'dockge' and 'cluster' must be item titles — the PBS item shape changed`);
+          }
+          // Same shape the 1Password path produced: the referenced items
+          // inlined, not their titles. The cluster resolves through the same
+          // published definitions every other read uses — one lookup
+          // mechanism, so a PBS item cannot disagree with getAllClusters.
+          return all([this.getSecretByPath<Record<string, unknown>>(dockgeBaoPath(dockgeTitle)), this.getCluster(clusterTitle)]).apply(([dockge, cluster]) => ({
+            ...item,
+            dockge,
+            cluster,
+          }));
+        }),
+      ),
+    ) as unknown as ReturnType<VaultStore["proxmoxBackupServers"]>;
+  }
+
   private listUnder(prefix: string): Output<BaoItem[]> {
     return output(this.bao.list(SECRETS_MOUNT, prefix)).apply(keys =>
       all(
@@ -267,6 +351,11 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  *           is produced by the authentik stack and read by four others).
  */
 const NOT_IN_OPENBAO: Record<string, string> = {
+  // Kept deliberately although nothing reaches it any more: the only reference
+  // was bao-transit's `.env`, and Phase 11 moved that key to a root-owned file
+  // on its host. The entry stays as the machine-readable form of INVENTORY §2 —
+  // if a future call site ever asks for this title, it must get a refusal that
+  // names the reason, not a 404 from a path that was never allowed to exist.
   "OpenBao Alpha Site Static Unseal": "seal-chain material; INVENTORY §2 forbids it from ever living in OpenBao",
 };
 
@@ -376,6 +465,73 @@ export function backupPlanKeys(keys: string[]): string[] {
     );
   }
   return plans;
+}
+
+/**
+ * A cluster definition as published by `stacks/system`.
+ *
+ * Same fields the YAML carries, plus the two the loader used to keep to
+ * itself: `sourceTitle` (what `meta.title` must report — it names Gatus groups
+ * and is written into PBS items) and `secretField` (which credential path to
+ * merge, if any).
+ */
+export type ClusterDetails = {
+  key: string;
+  sourceTitle: string;
+  secretField: "secret" | "arcane_token" | null;
+  [field: string]: unknown;
+};
+
+/** The fields every published definition must carry. */
+const REQUIRED_DETAILS = ["key", "title", "type", "rootDomain", "authentikDomain", "icon", "favicon", "background"] as const;
+
+/**
+ * KV data → a validated cluster definition.
+ *
+ * Validated rather than trusted, for the reason `parseCluster` validates the
+ * YAML: these values reach provider calls and get rendered into URLs, and a
+ * missing one surfaces as `undefined` somewhere far away. Exported for its
+ * tests.
+ *
+ * The path's own key wins over a `key` field that disagrees with it — the path
+ * is what `clusterSecretPath` derives from, so a mismatch would read another
+ * cluster's credential.
+ */
+export function parseClusterDetails(key: string, data: Record<string, unknown>, customMetadata: Record<string, string>): ClusterDetails {
+  const where = `${SECRETS_MOUNT}/${CLUSTER_PREFIX}/${key}/details`;
+  for (const field of REQUIRED_DETAILS) {
+    if (typeof data[field] !== "string" || data[field] === "") throw new Error(`${where}: '${field}' must be a non-empty string — republish with stacks/system`);
+  }
+  if (data.key !== key) throw new Error(`${where}: 'key' is '${String(data.key)}' but the path says '${key}' — they must match, or a cluster reads another's credential`);
+
+  const raw = data.secretField;
+  // `none` rather than null/"": KV values are strings, and an empty string is
+  // indistinguishable from a real field name.
+  if (raw !== "none" && raw !== "secret" && raw !== "arcane_token") {
+    throw new Error(`${where}: 'secretField' must be 'none', 'secret' or 'arcane_token', got ${JSON.stringify(raw)}`);
+  }
+  const { secretField: _s, ...rest } = data;
+  return {
+    ...rest,
+    key,
+    sourceTitle: customMetadata.source_title ?? (data.sourceTitle as string) ?? key,
+    secretField: raw === "none" ? null : raw,
+  } as ClusterDetails;
+}
+
+/**
+ * The published definitions, or an error when there are none.
+ *
+ * Exported for its tests, and separate for the same reason
+ * `tailscaleExportKeys` is: an EMPTY set must never be served as a small one.
+ * Consumers turn this list into DNS records, ACL grants and backup plans, so
+ * "no clusters" reads as "remove everything" — the §G-8 failure, made loud.
+ */
+export function assertClustersFound(found: ClusterDetails[]): ClusterDetails[] {
+  if (found.length === 0) {
+    throw new Error(`no cluster definitions under ${SECRETS_MOUNT}/${CLUSTER_PREFIX}/*/details — stacks/system publishes them from /clusters and has not run`);
+  }
+  return found;
 }
 
 /**

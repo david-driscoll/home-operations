@@ -1,24 +1,27 @@
 import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
-import { OPClient, TypeEnum } from "../op.ts";
+import { type OPClient, TypeEnum } from "../op.ts";
 import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 import { SecretRefResolver } from "./refs.ts";
-
-/**
- * Lazy, not module-scope. `new OPClient()` constructs a 1Password Connect
- * client eagerly and throws without CONNECT_HOST/CONNECT_TOKEN, so importing
- * this module at all used to demand 1Password credentials — including from
- * `BaoStore`, which subclasses `VaultStore` and may never touch 1Password, and
- * from unit tests, which never should.
- */
-let _op: OPClient | undefined;
-function op(): OPClient {
-  return (_op ??= new OPClient());
-}
 
 export * from "./interfaces.ts";
 
 type OnePasswordItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
-export class VaultStore {
+/**
+ * The shape every stack reads secrets through.
+ *
+ * This used to carry 1Password implementations, with `BaoStore` overriding the
+ * ones OpenBao could serve. Phase 11 removed them: once Pulumi stops WRITING
+ * 1Password, its copies go stale by design, so a store that could silently
+ * fall back to them is not a safety net — it is a way to read a frozen
+ * credential with no symptom. That is the failure mode this migration has hit
+ * more than once (Phase 8's dead write-back, `hosts/dockge` frozen at Phase 4,
+ * `keeper`/`vikunja` dumped from frozen items for months).
+ *
+ * So the reads are abstract now and `BaoStore` is the only implementation.
+ * Everything left here is either derived from those reads or independent of
+ * any store.
+ */
+export abstract class VaultStore {
   private _tailscaleDomain?: Output<string>;
   /**
    * Lazy, not constructor-assigned. `BaoStore extends VaultStore` and overrides
@@ -32,45 +35,18 @@ export class VaultStore {
     this._tailscaleDomain ??= this.getSecretByTitle<{ hostname: string }>("Tailscale Terraform OAuth Client").apply(z => z.hostname);
     return this._tailscaleDomain;
   }
-  public getDockgeInstances() {
-    return output(op().findItemsByTag("dockge")).apply(items => all(items.map(getSecretItem<DockgeLxcDefinition>)));
-  }
-  public getCluster(title: string) {
-    return output(op().getItemByTitle(title)).apply(getSecretItem<ClusterDefinition>);
-  }
+  public abstract getDockgeInstances(): Output<Unwrap<DockgeLxcDefinition & Meta>[]>;
+  public abstract getCluster(title: string): Output<Unwrap<ClusterDefinition & Meta>>;
 
-  public getAllClusters() {
-    return output(op().findItemsByTag("cluster-definition")).apply(items => all(items.map(getSecretItem<ClusterDefinition>)));
-  }
+  public abstract getAllClusters(): Output<Unwrap<ClusterDefinition & Meta>[]>;
 
   public getDockerClusters() {
     return this.getAllClusters().apply(items => items.filter(item => item.type === "dockge"));
   }
 
-  public getBackupPlans<T>() {
-    return output(op().findItemsByTag("backup-plan"))
-      .apply(items => all(items.map(getSecretItem<{ plan: string }>)))
-      .apply(items => shapeBackupPlans<T>(items));
-  }
+  public abstract getBackupPlans<T>(): Output<T[]>;
 
-  public getTailscaleExports() {
-    return output(op().findItemsByTag("tailscale-export"))
-      .apply(items =>
-        all(
-          items.map(
-            getSecretItem<{
-              [key: string]: {
-                externalIp: string;
-                internalIp: string;
-                mac: string;
-                nodeType: "dockge" | "proxmox" | "pbs" | "truenas";
-              };
-            }>,
-          ),
-        ),
-      )
-      .apply(shapeTailscaleExports);
-  }
+  public abstract getTailscaleExports(): Output<{ name: string; services: string[]; hosts: { name: string; externalIp: string; internalIp: string; mac: string; nodeType: "dockge" | "proxmox" | "pbs" | "truenas" }[] }[]>;
 
   /**
    * `getKubeConfig` used to live here: it read a 1Password item by title and
@@ -107,36 +83,16 @@ export class VaultStore {
     );
   }
 
-  public proxmoxBackupServers(withTag: string = "pbs") {
-    return output(op().findItemsByTag(withTag)).apply(items => all(items.map(item => createProxmoxBackupServerDefinition(op(), item))));
-  }
+  public abstract proxmoxBackupServers(withTag?: string): Output<Unwrap<ProxmoxBackupServerLxcDefinition>[]>;
 
-  public getSecretByTitle<T>(title: string) {
-    return this.getOnePasswordItemByTitle<T>(title);
-  }
-
-  /**
-   * Read from 1Password specifically, bypassing any subclass override.
-   *
-   * `BaoStore` overrides `getSecretByTitle`, so anything below that calls
-   * `this.getSecretByTitle` dispatches to OpenBao — including the `op://Eris/…`
-   * placeholder resolver, whose reference syntax names 1Password by
-   * construction. That mattered immediately: `op://Eris/OpenBao Alpha Site
-   * Static Unseal/…` is seal-chain material INVENTORY §2 forbids from ever
-   * entering OpenBao, so resolving it there is not a lookup failure to paper
-   * over, it is a category error.
-   */
-  protected getOnePasswordItemByTitle<T>(title: string) {
-    return output(op().getItemByTitle(title)).apply(getSecretItem<T>);
-  }
+  public abstract getSecretByTitle<T>(title: string): Output<Unwrap<T & Meta>>;
 
   /**
    * `ref+openbao://secrets/<path>#/<field>` resolution (PLAN §D.1), the
-   * OpenBao counterpart of `replaceOnePasswordPlaceholders` below. Both run
-   * during the transition: each syntax names its store by construction, so
-   * chaining them cannot cross-resolve. `op://` disappears file by file; when
-   * no file carries it, the 1Password resolver below goes with it (that is the
-   * `dynamic/1password` retirement slice, deliberately last).
+   * `ref+openbao://secrets/<path>#/<field>` resolution — now the ONLY
+   * reference syntax a rendered file can carry. It had a 1Password counterpart
+   * during the transition (`replaceOnePasswordPlaceholders`, chained after
+   * this one); Phase 11 converted the last reference and deleted it.
    *
    * On the base class rather than per-store because the reference itself picks
    * the backend — `BAO_STORE_READS` has no bearing here, exactly as it has
@@ -147,40 +103,21 @@ export class VaultStore {
     return this.refResolver.resolve(value);
   }
 
-  private readonly vaultRegex = /op:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
-  public replaceOnePasswordPlaceholders(value: Input<string>): Output<string> {
-    return output(value)
-      .apply(v => Array.from(v.matchAll(this.vaultRegex)))
-      .apply(matches =>
-        all(
-          matches
-            .map(match => match.slice(1) as [string, string])
-            .map(([itemTitle, fieldName]) =>
-              this.getOnePasswordItemByTitle<{ [key: string]: string | undefined }>(itemTitle).apply(
-                item =>
-                  ({
-                    itemTitle,
-                    fieldName,
-                    fieldValue: item[fieldName],
-                  }) as const,
-              ),
-            ),
-        ),
-      )
-      .apply(matches => {
-        const items = new Map();
-        for (const { fieldName, fieldValue, itemTitle } of matches) {
-          if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
-            continue;
-          }
-          if (!fieldValue) {
-            log.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
-          }
-          items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
-        }
-        return output(value).apply(v => v.replace(this.vaultRegex, fullMatch => items.get(fullMatch) || fullMatch));
-      });
-  }
+  /**
+   * `replaceOnePasswordPlaceholders` used to live here: it rewrote
+   * `op://Eris/<Item>/<field>` inside rendered stack files by looking each item
+   * up in 1Password.
+   *
+   * Deleted in Phase 11 once the last 37 of those references became
+   * `ref+openbao://` — the resolver had no input left to act on. Documents now
+   * carry one reference syntax, and it names OpenBao.
+   *
+   * Note what this does NOT remove: `getOnePasswordItemByTitle` and the
+   * 1Password implementations above stay, because BAO_STORE_READS is still a
+   * switch and 1Password is being handed over rather than torn down (PLAN §G
+   * row 11). What is gone is the ability for a rendered file to reach into
+   * 1Password by reference.
+   */
 }
 
 /**
@@ -299,19 +236,4 @@ function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<
       },
     ],
   });
-}
-
-
-function createProxmoxBackupServerDefinition(client: OPClient, item: OnePasswordItem): Output<ProxmoxBackupServerLxcDefinition> {
-  const backupServerDefinition = getSecretItem<Exclude<ProxmoxBackupServerLxcDefinition, "dockge" | "cluster">>(item);
-  const dockge = output(client.getItemByTitle(item.fields.dockge.value!)).apply(getSecretItem<DockgeLxcDefinition>);
-  const cluster = output(client.getItemByTitle(item.fields.cluster.value!)).apply(getSecretItem<ClusterDefinition>) as Output<DockgeClusterDefinition>;
-
-  return all([backupServerDefinition, dockge, cluster]).apply(([backupServerDefinition, dockge, cluster]) =>
-    output({
-      ...backupServerDefinition,
-      dockge: dockge,
-      cluster: cluster,
-    }),
-  );
 }
