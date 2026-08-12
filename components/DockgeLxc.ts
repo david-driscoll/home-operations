@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
+import { baoKvSecret, baoProvenance, dockgeBaoPath } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import type { OPClient } from "@components/op.ts";
@@ -452,6 +453,50 @@ export class DockgeLxc extends ComponentResource {
       },
       cro,
     );
+
+    // Phase 8 dual-write (openbao-migration PLAN §G): the item also lands at
+    // its canonical OpenBao path (`secrets/hosts/dockge/<slug>`, the
+    // tag:dockge rule in scripts/op-to-bao/mapping.ts) with the exact field
+    // shape of the OnePasswordItem above. That prefix was seeded by the
+    // one-time Phase 4 migration and then FROZE — found live the day the
+    // 1Password write-back was fixed, when `DockgeLxc: Luna`'s new ipAddress
+    // reached 1Password while BAO_STORE_READS consumers kept reading the
+    // Phase 4 copy. 1Password stays authoritative until Phase 11 — written
+    // ALONGSIDE the item, never instead of it; rollback is a plain
+    // `git revert` of this block.
+    if (args.globals.baoDualWriteEnabled) {
+      baoKvSecret(
+        `${args.host.name}-dockge-bao`,
+        {
+          mount: "secrets",
+          path: output(args.host.title).apply(title => dockgeBaoPath(`DockgeLxc: ${title}`)),
+          data: {
+            name: name,
+            hostname: this.hostname,
+            ipAddress: this.ipAddress,
+            tailscaleIpAddress: this.tailscaleIpAddress,
+            ssh: {
+              hostname: this.tailscaleHostname,
+              username: args.globals.proxmoxCredential.username,
+              password: args.globals.proxmoxCredential.password,
+            },
+            tailscale: {
+              hostname: this.tailscaleHostname,
+              ipAddress: this.tailscaleIpAddress,
+            },
+          },
+          customMetadata: baoProvenance({
+            source_title: interpolate`DockgeLxc: ${args.host.title}`,
+            source_tags: "dockge,lxc",
+            contains_secrets: "true",
+            concealed_fields: "ssh.password",
+          }),
+        },
+        mergeOptions(cro, { provider: args.globals.baoProvider }),
+      );
+    } else {
+      log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${args.host.name}'s dockge item. 1Password stays authoritative; the hosts/dockge/ copy stays frozen at its Phase 4 state until a credentialed run.`, this);
+    }
 
     const deleteDockerDaemon = new remote.Command(
       `${name}-delete-docker-daemon`,
