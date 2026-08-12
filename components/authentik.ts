@@ -271,6 +271,12 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
               jwks_url: providerConfig.jwksUrl,
               openid_configuration_url: pulumi.interpolate`${providerConfig.issuerUrl}.well-known/openid-configuration`,
             },
+            // The OAuth client secret. This path is READ live through
+            // BaoStore (`<cluster>-<app>-oidc-credentials` resolves here), and
+            // it carried no concealment declaration at all until Phase 11 —
+            // the value only stayed out of state in the clear because the
+            // Vault provider happens to declare its own field sensitive.
+            concealedFields: ["client_secret"],
             customMetadata: baoProvenance({
               source_title: `${this.args.clusterKey}-${definition.metadata.name}-oidc-credentials`,
             }),

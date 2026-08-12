@@ -88,11 +88,10 @@ export class BackupPlanOrchestrator extends ComponentResource {
           mount: "secrets",
           path: `clusters/_inventory/${baoSlug(title)}`,
           data: { plan },
+          concealedFields: ["plan"],
           customMetadata: baoProvenance({
             source_title: title,
             source_tags: "backup-plan",
-            contains_secrets: "true",
-            concealed_fields: "plan",
           }),
         },
         { parent: this, provider: this.globals.baoProvider },

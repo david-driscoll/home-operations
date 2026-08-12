@@ -1,4 +1,5 @@
 import type { AuthentikOutputs } from "@components/authentik.ts";
+import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
 import { Tailscale } from "@components/constants.ts";
 import { awaitOutput } from "@components/helpers.ts";
@@ -135,6 +136,40 @@ const _thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
     },
   },
 });
+
+// The OpenBao twin of the item above.
+//
+// This one was missing, and it is the Phase 8 "frozen twin" bug live: TWO
+// ExternalSecrets read `shared/thanos-s3-storage` (equestria observability/thanos
+// and SGC observability/prometheus-proxy), but the only producer wrote
+// 1Password. What they were reading is the one-time op-to-bao copy from
+// 2026-08-08, version 1, never refreshed — so the day this Minio credential
+// rotates, Pulumi updates 1Password, OpenBao keeps the stale value, and Thanos
+// starts failing against object storage with a credential nothing shows as
+// wrong. A one-time seed is a freeze, not a source.
+//
+// Key names must match the 1Password item exactly: both consumers `extract`
+// the whole path and rewrite every key to `minio_<key>`.
+if (globals.baoDualWriteEnabled) {
+  baoKvSecret(
+    "thanos-minio-secret-bao",
+    {
+      mount: "secrets",
+      path: "shared/thanos-s3-storage",
+      data: {
+        username: globals.truenasMinioProvider.minioUser,
+        password: globals.truenasMinioProvider.minioPassword,
+        bucket: thanosStorage.bucket,
+        endpoint: globals.truenasMinioProvider.minioServer,
+      },
+      concealedFields: ["password"],
+      customMetadata: baoProvenance({ source_title: "Thanos S3 Storage" }),
+    },
+    { provider: globals.baoProvider },
+  );
+} else {
+  pulumi.log.warn("No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for Thanos S3 Storage. The shared/thanos-s3-storage path its ExternalSecrets read stays frozen until a credentialed run.");
+}
 
 const celestiaHost = new ProxmoxHost("celestia", {
   globals: globals,

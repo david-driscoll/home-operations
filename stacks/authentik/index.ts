@@ -101,7 +101,10 @@ if (globals.baoDualWriteEnabled) {
       // These are Authentik object IDs, not credentials — but they go in the
       // `secrets` mount because that is the only KV mount consumers can read.
       data: pulumi.output({ groups, roles, flows, scopeMappings }),
-      customMetadata: baoProvenance({ source_title: "Authentik Outputs" }),
+      // Authentik object IDs (flows, groups, mappings) — identifiers, not
+    // credentials. Declared empty deliberately rather than omitted.
+    concealedFields: [],
+    customMetadata: baoProvenance({ source_title: "Authentik Outputs" }),
     },
     { provider: globals.baoProvider, parent: globals },
   );
