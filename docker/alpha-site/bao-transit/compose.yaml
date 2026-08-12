@@ -12,6 +12,31 @@ services:
     command: server -config=/openbao/config/config.hcl
     env_file:
       - path: .env
+      # BAO_UNSEAL_KEY comes from a root-owned env-file on the HOST, not from
+      # the rendered .env above. This key unseals the node that unseals
+      # equestria's OpenBao, which holds everything else — so while it was an
+      # op:// reference in .env, 1Password stayed a root of trust for the whole
+      # estate, which INVENTORY.md §2 forbids. It cannot move INTO OpenBao
+      # either (that is the circular dependency the seal chain exists to
+      # avoid), and the Pulumi operator cannot render it from SOPS: its
+      # workspace pods have neither a vault-repo checkout nor the age key.
+      #
+      # So it lives where the recovery shares and the Pulumi passphrase already
+      # live — bootstrap-tier material, provisioned onto its host out of band
+      # and never rendered by anything automated. See the vault repo:
+      # bootstrap/openbao/provision-static-unseal.sh.
+      #
+      # `required: true` on purpose: a recreate with the file missing must fail
+      # to start, loudly. The alternative is a container that comes up with an
+      # empty BAO_UNSEAL_KEY and fails at unseal instead, which reads like a
+      # config bug rather than a missing key.
+      #
+      # Still `env://` rather than a `file://` seal path: the key is base64 and
+      # the seal's file:// form takes raw bytes, so switching would silently
+      # change how a 44-character value is interpreted. This changes only where
+      # the variable comes from, never how the key is parsed.
+      - path: /var/local/unseal-key
+        required: true
     # mlock keeps the unsealed root key out of swap. The alternative is
     # disable_mlock = true in config.hcl, which is strictly worse on a host that
     # has swap enabled.
