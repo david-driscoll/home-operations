@@ -692,13 +692,12 @@ export class DockgeLxc extends ComponentResource {
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? interpolate`authentik.${this.args.globals.tailscaleDomain}` : this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`https://uptime.${this.args.globals.searchDomain}`),
       ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
-      (input: Input<string>) => this.args.globals.store.replaceOnePasswordPlaceholders(input),
-      // Both secret-reference resolvers run last, after every ${VAR}
+      // The secret-reference resolver runs last, after every ${VAR}
       // substitution above and the ${APP}/${STACK_NAME} pair prepended in
       // createStack — references are composed dynamically, so a resolver
       // running before substitution would see a syntax that matches nothing.
-      // Each syntax names its store by construction (op:// is 1Password,
-      // ref+openbao:// is OpenBao), so the chain cannot cross-resolve.
+      // There is only one resolver now: Phase 11 converted the last 1Password
+      // references, so every reference in a rendered file names OpenBao.
       (input: Input<string>) => this.args.globals.store.resolveSecretReferences(input),
     ];
 

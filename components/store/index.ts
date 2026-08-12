@@ -132,11 +132,10 @@ export class VaultStore {
 
   /**
    * `ref+openbao://secrets/<path>#/<field>` resolution (PLAN §D.1), the
-   * OpenBao counterpart of `replaceOnePasswordPlaceholders` below. Both run
-   * during the transition: each syntax names its store by construction, so
-   * chaining them cannot cross-resolve. `op://` disappears file by file; when
-   * no file carries it, the 1Password resolver below goes with it (that is the
-   * `dynamic/1password` retirement slice, deliberately last).
+   * `ref+openbao://secrets/<path>#/<field>` resolution — now the ONLY
+   * reference syntax a rendered file can carry. It had a 1Password counterpart
+   * during the transition (`replaceOnePasswordPlaceholders`, chained after
+   * this one); Phase 11 converted the last reference and deleted it.
    *
    * On the base class rather than per-store because the reference itself picks
    * the backend — `BAO_STORE_READS` has no bearing here, exactly as it has
@@ -147,40 +146,21 @@ export class VaultStore {
     return this.refResolver.resolve(value);
   }
 
-  private readonly vaultRegex = /op:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;
-  public replaceOnePasswordPlaceholders(value: Input<string>): Output<string> {
-    return output(value)
-      .apply(v => Array.from(v.matchAll(this.vaultRegex)))
-      .apply(matches =>
-        all(
-          matches
-            .map(match => match.slice(1) as [string, string])
-            .map(([itemTitle, fieldName]) =>
-              this.getOnePasswordItemByTitle<{ [key: string]: string | undefined }>(itemTitle).apply(
-                item =>
-                  ({
-                    itemTitle,
-                    fieldName,
-                    fieldValue: item[fieldName],
-                  }) as const,
-              ),
-            ),
-        ),
-      )
-      .apply(matches => {
-        const items = new Map();
-        for (const { fieldName, fieldValue, itemTitle } of matches) {
-          if (items.has(`op://Eris/${itemTitle}/${fieldName}`)) {
-            continue;
-          }
-          if (!fieldValue) {
-            log.error(`Field ${fieldName} not found in 1Password item ${itemTitle}`);
-          }
-          items.set(`op://Eris/${itemTitle}/${fieldName}`, fieldValue);
-        }
-        return output(value).apply(v => v.replace(this.vaultRegex, fullMatch => items.get(fullMatch) || fullMatch));
-      });
-  }
+  /**
+   * `replaceOnePasswordPlaceholders` used to live here: it rewrote
+   * `op://Eris/<Item>/<field>` inside rendered stack files by looking each item
+   * up in 1Password.
+   *
+   * Deleted in Phase 11 once the last 37 of those references became
+   * `ref+openbao://` — the resolver had no input left to act on. Documents now
+   * carry one reference syntax, and it names OpenBao.
+   *
+   * Note what this does NOT remove: `getOnePasswordItemByTitle` and the
+   * 1Password implementations above stay, because BAO_STORE_READS is still a
+   * switch and 1Password is being handed over rather than torn down (PLAN §G
+   * row 11). What is gone is the ability for a rendered file to reach into
+   * 1Password by reference.
+   */
 }
 
 /**
@@ -300,7 +280,6 @@ function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<
     ],
   });
 }
-
 
 function createProxmoxBackupServerDefinition(client: OPClient, item: OnePasswordItem): Output<ProxmoxBackupServerLxcDefinition> {
   const backupServerDefinition = getSecretItem<Exclude<ProxmoxBackupServerLxcDefinition, "dockge" | "cluster">>(item);

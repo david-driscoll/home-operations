@@ -21,7 +21,6 @@
  *
  *   proxmoxBackupServers           its items reference dockge/cluster items by
  *                                  title; moves once those reads are proven
- *   replaceOnePasswordPlaceholders `vals` replaces it (PLAN §D.1)
  *
  * ## Field shapes carry over unchanged
  *
@@ -46,7 +45,7 @@
  */
 
 import { all, log, type Output, output, secret } from "@pulumi/pulumi";
-import { BaoClient, baoSlug } from "../bao.ts";
+import { BaoClient, baoSlug, dockgeBaoPath } from "../bao.ts";
 import { CLUSTERS, type ClusterEntry, clusterBySourceTitle, clusterSecretPath } from "./clusters.ts";
 import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
 import type { Meta } from "./interfaces.ts";
@@ -231,6 +230,46 @@ export class BaoStore extends VaultStore {
       .apply(items => shapeBackupPlans<T>(items as unknown as { plan: string }[])) as ReturnType<VaultStore["getBackupPlans"]> & Output<T[]>;
   }
 
+  /**
+   * `tag:pbs` became the `hosts/pbs/` prefix — the last read in this repo that
+   * still went to 1Password.
+   *
+   * The 1Password items themselves STAY and keep being written: they are how a
+   * human logs into the generated LXC (estate decision 2026-08-12). This moves
+   * only where PULUMI reads, so the browser-fill copy and the machine copy stop
+   * being the same lookup.
+   *
+   * Each item cross-references two others BY TITLE — `dockge` names a
+   * `DockgeLxc: <host>` item and `cluster` names a `Cluster: <name>` — and both
+   * of those already moved: dockge to `hosts/dockge/<slug>`, cluster
+   * definitions to checked-in YAML. So the two title fields resolve through
+   * the same machinery every other read now uses, rather than through a second
+   * round of 1Password lookups.
+   */
+  public override proxmoxBackupServers(withTag: string = "pbs") {
+    if (withTag !== "pbs") throw new Error(`proxmoxBackupServers('${withTag}') — OpenBao has no tags; only the 'pbs' family has a path prefix (hosts/pbs/)`);
+    return this.listUnder("hosts/pbs").apply(items =>
+      all(
+        items.map(item => {
+          const dockgeTitle = item.dockge as string;
+          const clusterTitle = item.cluster as string;
+          if (typeof dockgeTitle !== "string" || typeof clusterTitle !== "string") {
+            throw new Error(`${SECRETS_MOUNT}/hosts/pbs/${baoSlug(String(item.meta?.title ?? "?"))}: 'dockge' and 'cluster' must be item titles — the PBS item shape changed`);
+          }
+          // Same shape the 1Password path produced: the referenced items
+          // inlined, not their titles.
+          const entry = clusterBySourceTitle(clusterTitle);
+          if (!entry) throw new Error(`no cluster definition titled '${clusterTitle}' (referenced by a hosts/pbs/ item) — add one under /clusters`);
+          return all([this.getSecretByPath<Record<string, unknown>>(dockgeBaoPath(dockgeTitle)), this.hydrateCluster(entry)]).apply(([dockge, cluster]) => ({
+            ...item,
+            dockge,
+            cluster,
+          }));
+        }),
+      ),
+    ) as unknown as ReturnType<VaultStore["proxmoxBackupServers"]>;
+  }
+
   private listUnder(prefix: string): Output<BaoItem[]> {
     return output(this.bao.list(SECRETS_MOUNT, prefix)).apply(keys =>
       all(
@@ -267,6 +306,11 @@ const CLUSTER_KEYS = ["equestria", "sgc", "celestia", "luna", "skystar", "alpha-
  *           is produced by the authentik stack and read by four others).
  */
 const NOT_IN_OPENBAO: Record<string, string> = {
+  // Kept deliberately although nothing reaches it any more: the only reference
+  // was bao-transit's `.env`, and Phase 11 moved that key to a root-owned file
+  // on its host. The entry stays as the machine-readable form of INVENTORY §2 —
+  // if a future call site ever asks for this title, it must get a refusal that
+  // names the reason, not a 404 from a path that was never allowed to exist.
   "OpenBao Alpha Site Static Unseal": "seal-chain material; INVENTORY §2 forbids it from ever living in OpenBao",
 };
 
