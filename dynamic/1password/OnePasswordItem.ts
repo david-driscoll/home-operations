@@ -145,10 +145,18 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
     const compareOlds = await awaitOutput(getSecretItem(oldOutputs));
     const compareNews = await awaitOutput(getSecretItem(fullNewInputs));
     const delta = differ.diff(compareOlds, compareNews);
+    // Drop `move` noise and `add`s of null; KEEP replace/remove. The previous
+    // form (`z.op === "add" && z.value !== null`) kept ONLY adds, so a changed
+    // field VALUE reported "no changes detected" and the item never updated —
+    // silently, for months: the Backup Plan items froze on 2026-06-09 and the
+    // Tailscale Exports on 2026-07-27 (the last time something was ADDED),
+    // while Authentik Outputs kept updating because new scope mappings are
+    // adds. Found by the Phase 8 parity gate, which compared these items
+    // against the fresh OpenBao dual-writes from the very same runs.
     const patch = jsonpatch
       .format(delta)
       .filter(z => z.op !== "move")
-      .filter(z => z.op === "add" && z.value !== null);
+      .filter(z => !(z.op === "add" && z.value === null));
     // .filter((change) => {
     //   if (change.op === "remove" && (change.path.endsWith("/id") || change.path.endsWith("/section"))) return false;
     //   if (change.path.startsWith("/fields") && change.path.endsWith("/id")) return false;

@@ -70,7 +70,16 @@ export async function kubernetesBackups(_globals: GlobalResources, planManager: 
           return planManager.addBackupPlan(
             pulumi.output({
               source: "volsync",
-              name: pulumi.interpolate`${clusterDefinition.title} ${relatedApp?.spec.name ?? job}`,
+              // `name` is an IDENTITY, not a label: BackupPlanDirector uses it
+              // as the backrest repo id, plan id, and the /data/backup/<name>/
+              // path — so it must stay the id-safe slug production backrest
+              // already carries, or every volsync backup re-roots into a new
+              // restic history. The display-cased form ("Equestria autobrr")
+              // lives in `title`. It shipped as `name` in ced3c316 but never
+              // took effect: the OnePasswordItem diff bug (fixed alongside
+              // this) meant the directors kept reading the pre-rename plans.
+              name: `${clusterDefinition.key}-volsync-${job}`,
+              title: pulumi.interpolate`${clusterDefinition.title} ${relatedApp?.spec.name ?? job}`,
               repository: `${clusterDefinition.key}-volsync-${job}`,
               path: `/spike/backup/${clusterDefinition.key}/volsync/${job}`,
             }),
