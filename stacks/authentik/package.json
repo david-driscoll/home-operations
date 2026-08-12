@@ -5,8 +5,8 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "up": "op run --no-masking -- pulumi up --skip-preview",
-    "cancel": "op run --no-masking -- pulumi cancel --yes",
-    "refresh": "op run --no-masking -- pulumi refresh --yes"
+    "up": "../../scripts/vals-run pulumi up --skip-preview",
+    "cancel": "../../scripts/vals-run pulumi cancel --yes",
+    "refresh": "../../scripts/vals-run pulumi refresh --yes"
   }
 }
