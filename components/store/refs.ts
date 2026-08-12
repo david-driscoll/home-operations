@@ -30,6 +30,15 @@
  * a bare dotenv line exits 0 with EMPTY output, which a pipeline would write
  * out as an empty file.
  *
+ * A consequence to respect when WRITING files this pipeline renders:
+ * references are live wherever they appear — vals does not know what a
+ * comment is. A well-formed `ref+…://` URL in a comment resolves (baking a
+ * secret into the rendered file) or fails the run (an unreadable one killed
+ * every home-operations run the day this landed, from a Phase 2 MIGRATION
+ * NOTE in bao-transit's .env). This is the envsubst-expands-in-comments
+ * lesson from Phase 6, one layer up. Break the scheme apart in prose:
+ * `<ref+sops scheme>://…`, never the real thing.
+ *
  * One `vals eval` per document that contains references, memoized by content
  * for the life of the process. `vals` comes from mise locally
  * (`.config/mise.toml [tools]`) and from the `vals` initContainer on the
