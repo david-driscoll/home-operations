@@ -10,7 +10,6 @@ import * as pulumi from "@pulumi/pulumi";
 import { kebabCase } from "moderndash";
 import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
 import * as yaml from "yaml";
-import type { OPClient } from "../../components/op.ts";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
 
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
@@ -126,7 +125,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
       ).apply(() => apps);
     });
 
-  const outpostCredential = globals.store.getKubeConfig(`${clusterDefinition.key}-authentik-outpost`);
+  const outpostCredential = await outpostKubeConfig(coreApi, clusterDefinition);
 
   const serviceConnection = new authentik.ServiceConnectionKubernetes(clusterDefinition.key, {
     name: clusterDefinition.key,
@@ -189,38 +188,71 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
   return {};
 }
 
-function _generateKubeConfig(credential: pulumi.Output<ReturnType<OPClient["mapItem"]>>) {
-  return pulumi.interpolate`{
-  "kind": "Config",
-  "apiVersion": "v1",
-  "clusters": [
-    {
-      "cluster": {
-        "certificate-authority-data": "${credential.fields.certificate.apply(z => Buffer.from(z.value!, "utf8").toString("base64"))}",
-        "server": "https://${credential.fields.cluster_api.value}:6443"
+/**
+ * The kubeconfig Authentik's Kubernetes ServiceConnection authenticates with,
+ * built from the credential in the target cluster itself.
+ *
+ * This used to be a 1Password item: two PushSecrets in each cluster pushed the
+ * ServiceAccount token and CA there, and Pulumi read them back by title
+ * (`<key>-authentik-outpost`) through `VaultStore.getKubeConfig`. Phase 10 of
+ * the 1Password->OpenBao migration (vault repo docs/openbao-migration/PLAN.md
+ * SS-G row 10) deletes that hop rather than moving it to OpenBao:
+ *
+ *   - Of the five fields the item carried, only `token` and `ca.crt` were ever
+ *     secrets. `sa`, `cluster` and `cluster_api` are config this function
+ *     already has -- they were being laundered through a secret store to get
+ *     from the cluster to Pulumi.
+ *   - This function is ALREADY talking to that cluster: `coreApi` above lists
+ *     namespaces and ApplicationDefinitions over the tailnet kubeproxy, and the
+ *     `tailnet-cluster-ops` ClusterRole it is impersonated as already grants
+ *     `secrets: get`. So reading the Secret costs no new provider, no new
+ *     network path and no new RBAC.
+ *   - Pushing to OpenBao instead would have meant widening the read-only
+ *     `eso-<cluster>` policy to allow writes, making every consuming cluster a
+ *     writer of the shared store, and would have kept a second copy of the
+ *     credential forever. This keeps zero copies in either store.
+ */
+async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
+  // Created by the authentik-remote-cluster HelmRelease in the target cluster,
+  // in the namespace named for the cluster (kubernetes/apps/<key>/idp/).
+  const secretName = "authentik-remote-cluster";
+  const secret = await coreApi.readNamespacedSecret({ name: secretName, namespace: clusterDefinition.key });
+
+  const field = (key: string) => {
+    const value = secret.data?.[key];
+    if (!value) throw new Error(`${clusterDefinition.key}/${secretName} has no '${key}' -- the ServiceAccount token Secret is missing or not yet populated`);
+    return Buffer.from(value, "base64").toString("utf8");
+  };
+
+  // `sa` is the ServiceAccount this token belongs to; it was a literal in the
+  // pushed Secret too. `cluster_api` was `apiserver.${CLUSTER_DOMAIN}`, which is
+  // this cluster's rootDomain -- verified against both live values before the
+  // switch (apiserver.equestria.driscoll.tech / apiserver.sgc.driscoll.tech).
+  const kubeConfig = pulumi.jsonStringify({
+    kind: "Config",
+    apiVersion: "v1",
+    clusters: [
+      {
+        cluster: {
+          // The pushed item stored the CA verbatim and re-encoded it here, so
+          // the b64 of the raw PEM is the byte-identical result.
+          "certificate-authority-data": Buffer.from(field("ca.crt"), "utf8").toString("base64"),
+          server: `https://apiserver.${clusterDefinition.rootDomain}:6443`,
+        },
+        name: clusterDefinition.key,
       },
-      "name": "${credential.fields.cluster.value}"
-    }
-  ],
-  "contexts": [
-    {
-      "context": {
-        "cluster": "${credential.fields.cluster.value}",
-        "user": "${credential.fields.sa.value}"
-      },
-      "name": "${credential.fields.cluster.value}"
-    }
-  ],
-  "current-context": "${credential.fields.cluster.value}",
-  "users": [
-    {
-      "name": "${credential.fields.sa.value}",
-      "user": {
-        "token": "${credential.fields.token.value}"
-      }
-    }
-  ]
-}`;
+    ],
+    contexts: [{ context: { cluster: clusterDefinition.key, user: secretName }, name: clusterDefinition.key }],
+    "current-context": clusterDefinition.key,
+    // The token came from a Concealed 1Password field, so `getSecretItem`
+    // marked it secret() and the whole kubeconfig inherited that. Reading the
+    // API directly loses the marker, and an unmarked kubeconfig writes a
+    // cluster-scoped token into Pulumi state in the clear -- with no symptom
+    // until someone runs `pulumi stack export`. Mark it here.
+    users: [{ name: secretName, user: { token: pulumi.secret(field("token")) } }],
+  });
+
+  return kubeConfig;
 }
 
 function mapAuthentikResource<T extends keyof AuthentikDefinition, K extends keyof NonNullable<AuthentikDefinition[T]>>(type: T, resource: { [V in K]: string }): NonNullable<AuthentikDefinition[T]> {

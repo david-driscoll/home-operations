@@ -72,9 +72,18 @@ export class VaultStore {
       .apply(shapeTailscaleExports);
   }
 
-  public getKubeConfig(title: string) {
-    return output(op().getItemByTitle(title)).apply(generateKubeConfig);
-  }
+  /**
+   * `getKubeConfig` used to live here: it read a 1Password item by title and
+   * assembled a kubeconfig from its sa/cluster/cluster_api/token/certificate
+   * fields. Its only caller was the authentik outpost ServiceConnection, which
+   * now reads that credential from the cluster that issued it (Phase 10 --
+   * home-operations stacks/applications/kubernetes.ts).
+   *
+   * Deleted rather than kept: `BaoStore` never overrode it, so under
+   * BAO_STORE_READS it read 1Password SILENTLY, with no warning -- the one
+   * fallback class the flag exists to eliminate. Dead code that quietly reads
+   * the wrong store is a trap for whoever adds the next caller.
+   */
 
   public getKubernetesClusters(): Output<(KubernetesClusterDefinition & { kubeConfig: string })[]> {
     return this.getAllClusters()
@@ -292,46 +301,6 @@ function generateTailscaleKubeConfig(clusterKey: string, tailscaleDomain: Input<
   });
 }
 
-function generateKubeConfig(item: OnePasswordItem) {
-  const credential = getSecretItem<{
-    sa: string;
-    cluster: string;
-    cluster_api: string;
-    token: string;
-    certificate: string;
-  }>(item);
-  return interpolate`{
-  "kind": "Config",
-  "apiVersion": "v1",
-  "clusters": [
-    {
-      "cluster": {
-        "certificate-authority-data": "${credential.certificate.apply(c => Buffer.from(c, "utf8").toString("base64"))}",
-        "server": "https://${credential.cluster_api}:6443"
-      },
-      "name": "${credential.cluster}"
-    }
-  ],
-  "contexts": [
-    {
-      "context": {
-        "cluster": "${credential.cluster}",
-        "user": "${credential.sa}"
-      },
-      "name": "${credential.cluster}"
-    }
-  ],
-  "current-context": "${credential.cluster}",
-  "users": [
-    {
-      "name": "${credential.sa}",
-      "user": {
-        "token": "${credential.token}"
-      }
-    }
-  ]
-}`;
-}
 
 function createProxmoxBackupServerDefinition(client: OPClient, item: OnePasswordItem): Output<ProxmoxBackupServerLxcDefinition> {
   const backupServerDefinition = getSecretItem<Exclude<ProxmoxBackupServerLxcDefinition, "dockge" | "cluster">>(item);
