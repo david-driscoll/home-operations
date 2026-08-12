@@ -485,11 +485,10 @@ export class DockgeLxc extends ComponentResource {
               ipAddress: this.tailscaleIpAddress,
             },
           },
+          concealedFields: ["ssh.password"],
           customMetadata: baoProvenance({
             source_title: interpolate`DockgeLxc: ${args.host.title}`,
             source_tags: "dockge,lxc",
-            contains_secrets: "true",
-            concealed_fields: "ssh.password",
           }),
         },
         mergeOptions(cro, { provider: args.globals.baoProvider }),

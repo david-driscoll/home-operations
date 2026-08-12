@@ -278,6 +278,25 @@ export interface BaoKvSecretArgs {
   data: pulumi.Input<Record<string, unknown>>;
   /** Provenance labels only, never values. See `baoProvenance()`. */
   customMetadata?: pulumi.Input<Record<string, pulumi.Input<string>>>;
+  /**
+   * Which keys in `data` are credentials, dotted for nested ones
+   * (`ssh.password`). REQUIRED — pass `[]` to state that nothing here is
+   * secret, and mean it.
+   *
+   * `BaoStore.shapeItem` marks a field `secret()` if and only if it appears in
+   * `custom_metadata.concealed_fields`; OpenBao has no field types, so this
+   * list IS the secrecy. A writer that omitted it produced a path whose
+   * credentials read back as PLAINTEXT, and nothing downstream complained:
+   * shapeItem's guard fires on "claims contains_secrets but lists none", which
+   * is the opposite mistake. Phase 11 found exactly that on the OIDC paths
+   * (client_secret, read live) and the PBS paths (root password, SSH password,
+   * backrest private key).
+   *
+   * Required rather than defaulted so adding a call site forces the decision
+   * at the moment the data is written, which is the only moment anyone knows
+   * the answer.
+   */
+  concealedFields: pulumi.Input<string>[];
 }
 
 /**
@@ -293,6 +312,16 @@ export interface BaoKvSecretArgs {
  * ciphertext of every prior one behind.
  */
 export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.CustomResourceOptions): vault.kv.SecretV2 {
+  // Fold the concealment declaration into custom_metadata, so a caller cannot
+  // set one and forget the other. `contains_secrets` is what makes shapeItem's
+  // "marked secret but lists nothing" guard meaningful.
+  const customMetadata = pulumi
+    .all([args.customMetadata ?? {}, pulumi.all(args.concealedFields)])
+    .apply(([provenance, concealed]) => ({
+      ...provenance,
+      ...(concealed.length > 0 ? { contains_secrets: "true", concealed_fields: concealed.join(",") } : {}),
+    }));
+
   return new vault.kv.SecretV2(
     name,
     {
@@ -300,7 +329,7 @@ export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.Cu
       // SecretV2.name IS the path within the mount, not a display name.
       name: args.path,
       dataJson: pulumi.secret(pulumi.jsonStringify(args.data)),
-      customMetadata: { data: args.customMetadata },
+      customMetadata: { data: customMetadata },
       deleteAllVersions: true,
     },
     {

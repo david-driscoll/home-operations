@@ -173,6 +173,9 @@ export class TailscaleMonitor {
                 ),
             ),
           })),
+          // Addressing, not credentials: node names, IPs, MACs, node types.
+          // Declared empty deliberately rather than omitted.
+          concealedFields: [],
           customMetadata: baoProvenance({ source_title: title, source_tags: "tailscale-export" }),
         },
         pulumi.mergeOptions(cro, { provider: this.globals.baoProvider }) as pulumi.CustomResourceOptions,

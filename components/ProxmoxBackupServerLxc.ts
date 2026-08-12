@@ -591,6 +591,12 @@ systemctl reload proxmox-backup-proxy.service
               privateKeyId: backrestPrivateKey.id,
             },
           },
+          // A root password, an SSH password and a backrest private key, none
+          // of which were declared before Phase 11. Nothing reads this path
+          // today — the 1Password item stays authoritative for this family
+          // because it is a human login credential — but an undeclared
+          // credential in KV is a trap for the first reader, not a non-issue.
+          concealedFields: ["password", "ssh.password", "backrest.privateKey"],
           customMetadata: baoProvenance({
             source_title: interpolate`Proxmox Backup Server LXC: ${args.host.title}`,
             source_tags: output(args.tags).apply(tags => [...tags, "pbs", "lxc", "backup"].join(",")),
