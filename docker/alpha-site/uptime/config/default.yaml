@@ -10,8 +10,8 @@ concurrency: 2
 
 alerting:
   pushover:
-    application-token: "op://Eris/Gatus Pushover Key/credential"
-    user-key: "op://Eris/Gatus Pushover Key/username"
+    application-token: "ref+openbao://secrets/shared/gatus-pushover-key#/credential"
+    user-key: "ref+openbao://secrets/shared/gatus-pushover-key#/username"
     priority: 1
     resolved-priority: -1
     default-alert:

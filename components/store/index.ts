@@ -1,6 +1,7 @@
 import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
 import { OPClient, TypeEnum } from "../op.ts";
 import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
+import { SecretRefResolver } from "./refs.ts";
 
 /**
  * Lazy, not module-scope. `new OPClient()` constructs a 1Password Connect
@@ -118,6 +119,23 @@ export class VaultStore {
    */
   protected getOnePasswordItemByTitle<T>(title: string) {
     return output(op().getItemByTitle(title)).apply(getSecretItem<T>);
+  }
+
+  /**
+   * `ref+openbao://secrets/<path>#/<field>` resolution (PLAN §D.1), the
+   * OpenBao counterpart of `replaceOnePasswordPlaceholders` below. Both run
+   * during the transition: each syntax names its store by construction, so
+   * chaining them cannot cross-resolve. `op://` disappears file by file; when
+   * no file carries it, the 1Password resolver below goes with it (that is the
+   * `dynamic/1password` retirement slice, deliberately last).
+   *
+   * On the base class rather than per-store because the reference itself picks
+   * the backend — `BAO_STORE_READS` has no bearing here, exactly as it has
+   * none on `op://`.
+   */
+  private readonly refResolver = new SecretRefResolver();
+  public resolveSecretReferences(value: Input<string>): Output<string> {
+    return this.refResolver.resolve(value);
   }
 
   private readonly vaultRegex = /op:\/\/Eris\/([\w| -]+)\/([\w| -]+)/g;

@@ -533,7 +533,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
           pulumi.log.info(`Adding Gatus endpoint ${endpoint.name} in cluster ${cluster.title} with group ${endpoint.group}`, this);
 
           const yamlString = yaml.stringify(endpoint, { lineWidth: 0 });
-          return pulumi.output(this.store.replaceOnePasswordPlaceholders(yamlString)).apply(y => yaml.parse(y) as GatusDefinition);
+          // Both resolvers, op:// then ref+openbao:// — application
+          // definitions live in the cluster repos and convert to the ref+
+          // syntax on their own schedule, so both must resolve here until no
+          // definition carries op://.
+          return pulumi.output(this.store.resolveSecretReferences(this.store.replaceOnePasswordPlaceholders(yamlString))).apply(y => yaml.parse(y) as GatusDefinition);
         }),
       );
     });
