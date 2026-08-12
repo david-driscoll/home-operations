@@ -58,8 +58,29 @@ function fields(item: Record<string, unknown>): Record<string, unknown> {
   return rest;
 }
 
+/**
+ * Deep key-sorted serialization. NOT `JSON.stringify(x, sortedKeys)` — a
+ * replacer ARRAY filters properties at EVERY nesting depth, so any key that
+ * exists only inside a section object (`ssh.username`, `backrest.privateKey`)
+ * would be dropped from BOTH serializations and section-level drift would
+ * compare equal. That bug shipped in the Phase 8 version of this file and
+ * silently hollowed out the getDockgeInstances check until the Phase 9 port
+ * review caught it (vault repo, docs/openbao-migration/STATUS.md).
+ */
+function stable(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stable);
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => [k, stable(v)]),
+    );
+  }
+  return value;
+}
+
 function canonical(item: Record<string, unknown>): string {
-  return JSON.stringify(fields(item), Object.keys(fields(item)).sort());
+  return JSON.stringify(stable(fields(item)));
 }
 
 let failures = 0;
