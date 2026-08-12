@@ -5,7 +5,7 @@ services:
   # claiming a name that generic on the host-wide `dockge_default` would
   # collide with any other stack that ever adds a `backend` service.
   homelable-backend:
-    image: ghcr.io/pouzor/homelable-backend:3.1.2@sha256:1d7ffebcbbc2de6363ce6c46009e6dd59be8603fcba75b0c6d9bc473ab104d81
+    image: ghcr.io/pouzor/homelable-backend:3.2.0@sha256:0e6f230e341cee1766fa590faa70ff9c8f35df95bf2dbf23cf2d528e12ec256e
     container_name: homelable-backend
     hostname: homelable-backend
     env_file:
