@@ -698,7 +698,7 @@ export class DockgeLxc extends ComponentResource {
       // running before substitution would see a syntax that matches nothing.
       // There is only one resolver now: Phase 11 converted the last 1Password
       // references, so every reference in a rendered file names OpenBao.
-      (input: Input<string>) => this.args.globals.store.resolveSecretReferences(input),
+      (input: Input<string>, label: string) => this.args.globals.store.resolveSecretReferences(input, label),
     ];
 
     const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
@@ -853,7 +853,7 @@ export class DockgeLxc extends ComponentResource {
     stackName: string,
     files: Map<string, string>,
     path: string,
-    replacements: ((input: Output<string>) => Output<string>)[],
+    replacements: ((input: Output<string>, label: string) => Output<string>)[],
     dependsOn: Input<Resource[]>,
   ): Output<{
     name: string;
@@ -912,7 +912,7 @@ export class DockgeLxc extends ComponentResource {
       .apply(defs =>
         defs.map(([, absoluteFilePath]) => {
           const content = output(readFile(absoluteFilePath, "utf-8"));
-          const replacedContent = replacements.reduce((p, r) => r(p), content);
+          const replacedContent = replacements.reduce((p, r) => r(p, absoluteFilePath), content);
           // intercept definition file and create the client id / client secret and inject that into the yaml.
           return replacedContent.apply(content => {
             const docs = yaml.parseAllDocuments(content);
@@ -933,7 +933,9 @@ export class DockgeLxc extends ComponentResource {
     for (const [relativeFilePath, absoluteFilePath] of others) {
       const content = output(readFile(absoluteFilePath, "utf-8"));
       const file = relativeFilePath;
-      const replacedContent = replacements.reduce((p, r) => r(p), content);
+      // Name the document: an unresolved reference reports WHICH file and which
+      // line, instead of leaving you to grep the whole tree for a scheme.
+      const replacedContent = replacements.reduce((p, r) => r(p, absoluteFilePath), content);
 
       if (file.endsWith("init.sh")) {
         hasInit = true;

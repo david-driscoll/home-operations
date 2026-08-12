@@ -102,12 +102,12 @@ export class SecretRefResolver {
    * every resolved value is a credential by construction, and the containing
    * file content must not reach Pulumi state in the clear.
    */
-  public resolve(value: Input<string>): Output<string> {
+  public resolve(value: Input<string>, label?: string): Output<string> {
     return output(value).apply(v => {
       // `search`, not `test`: the shared pattern is /g and `test` advances
       // its lastIndex; `search` neither reads nor writes it.
       if (v.search(REF_SCHEME) === -1) return output(v);
-      return secret(output(this.resolveText(v)));
+      return secret(output(this.resolveText(v, label)));
     });
   }
 
@@ -117,10 +117,10 @@ export class SecretRefResolver {
    * as a plain promise — a rejected Output fans out through the SDK's
    * internal sibling promises, which only the engine observes.
    */
-  public resolveText(v: string): Promise<string> {
+  public resolveText(v: string, label?: string): Promise<string> {
     let pending = this.resolved.get(v);
     if (!pending) {
-      pending = this.evaluate(v);
+      pending = this.evaluate(v, label);
       this.resolved.set(v, pending);
       // A failed eval must not poison the memo forever — a retry (the
       // operator reconciles on backoff) should re-run vals, not replay the
@@ -130,26 +130,59 @@ export class SecretRefResolver {
     return pending;
   }
 
-  private async evaluate(v: string): Promise<string> {
+  private async evaluate(v: string, label?: string): Promise<string> {
     this.client ??= this.makeClient();
     const doc = yaml.stringify({ content: v });
-    const resolvedDoc = await this.exec(doc, {
-      VAULT_ADDR: this.client.address,
-      VAULT_TOKEN: await this.client.authToken(),
-    });
+    let resolvedDoc: string;
+    try {
+      resolvedDoc = await this.exec(doc, {
+        VAULT_ADDR: this.client.address,
+        VAULT_TOKEN: await this.client.authToken(),
+      });
+    } catch (error) {
+      // vals' own failures — a path that does not exist, a backend that will
+      // not authenticate — are the COMMON case, and they arrived with no
+      // indication of which document held the reference. vals names the ref;
+      // this names the file it came from. The original message is preserved
+      // verbatim: it carries the reference and the provider's reason, never a
+      // resolved value.
+      throw new Error(`${where(label)}${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    }
     const parsed = yaml.parse(resolvedDoc) as { content?: unknown } | null;
     const content = parsed?.content;
     if (typeof content !== "string") {
-      throw new Error(`vals eval returned ${content === undefined ? "no content" : typeof content} for a ${v.length}-byte document — expected the wrapped string back`);
+      throw new Error(`${where(label)}vals eval returned ${content === undefined ? "no content" : typeof content} for a ${v.length}-byte document — expected the wrapped string back`);
     }
     const residue = Array.from(new Set(Array.from(content.matchAll(REF_SCHEME), m => m[0])));
     if (residue.length > 0) {
       // Schemes only, never spans: the surrounding content is resolved
-      // secrets by now, and an error message must not carry any of it.
-      throw new Error(`document still contains ${residue.length} unresolved secret-reference scheme(s) after vals eval: ${residue.join(", ")} — an unsupported provider, or a reference vals did not recognize`);
+      // secrets by now, and an error message must not carry any of it. Line
+      // numbers come from the ORIGINAL document, which holds references and
+      // no resolved values — and the original is the file a human edits.
+      throw new Error(
+        `${where(label)}document still contains ${residue.length} unresolved secret-reference scheme(s) after vals eval: ${residue.map(scheme => `${scheme}${lineOf(v, scheme)}`).join(", ")} — an unsupported provider, a reference vals did not recognize, or a scheme written in prose (see the estate rule: never write a resolvable scheme, even in a comment)`,
+      );
     }
     return content;
   }
+}
+
+/**
+ * `path: ` when the caller named the document, empty when it did not.
+ *
+ * Every one of these errors used to be anonymous, which is why a single
+ * well-formed scheme in a comment cost a hunt across eleven files to find
+ * rather than a glance.
+ */
+function where(label?: string): string {
+  return label ? `${label}: ` : "";
+}
+
+/** ` (line N)` for the first occurrence in the ORIGINAL document, or "". */
+function lineOf(original: string, scheme: string): string {
+  const index = original.indexOf(scheme);
+  if (index === -1) return "";
+  return ` (line ${original.slice(0, index).split("\n").length})`;
 }
 
 /**

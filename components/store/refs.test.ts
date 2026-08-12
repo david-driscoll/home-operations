@@ -126,6 +126,50 @@ describe("SecretRefResolver", () => {
     );
   });
 
+  it("names the document and the LINE, which is what makes the failure findable", async () => {
+    // The motivating incident: a well-formed scheme inside a COMMENT explaining
+    // that the reference should not exist. The old error named neither the file
+    // nor the line, so a one-line fix took a hunt across eleven files.
+    const fake = fakeVals({});
+    const doc = ["# first line", "# second line", "# it can never become `ref+sops://` — putting it there is circular", "KEY=plain"].join("\n");
+    await assert.rejects(
+      () => resolver(fake).resolveText(doc, "docker/alpha-site/bao-transit/.env"),
+      (error: Error) => {
+        assert.match(error.message, /^docker\/alpha-site\/bao-transit\/\.env: /, "must lead with the document");
+        assert.match(error.message, /\(line 3\)/, "must name the line the scheme is on");
+        // Still no content: the line NUMBER is safe, the line's text is not a
+        // promise this error should make.
+        assert.doesNotMatch(error.message, /circular/);
+        return true;
+      },
+    );
+  });
+
+  it("says nothing about a document when the caller did not name one", async () => {
+    const fake = fakeVals({});
+    await assert.rejects(
+      () => resolver(fake).resolveText("a: ref+sops://x.sops.yaml#/k"),
+      (error: Error) => {
+        assert.match(error.message, /^document still contains/);
+        return true;
+      },
+    );
+  });
+
+  it("names the document when VALS itself fails, which is the common case", async () => {
+    // A reference to a path that does not exist. vals names the reference; the
+    // error must also name the file, or you are grepping for it.
+    const fake = fakeVals({});
+    await assert.rejects(
+      () => resolver(fake).resolveText("PASSWORD=ref+openbao://secrets/shared/nope#/password", "docker/celestia/forgejo/.env"),
+      (error: Error) => {
+        assert.match(error.message, /^docker\/celestia\/forgejo\/\.env: /);
+        assert.match(error.message, /does not exist/, "the provider's own reason survives");
+        return true;
+      },
+    );
+  });
+
   it("a document with ONLY an unsupported provider still fails loudly", async () => {
     // The gate matches any scheme-shaped reference, not just openbao — a
     // sops-only file must enter resolution and die in the residue guard, not
