@@ -77,19 +77,11 @@ const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"
 const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
 
 /**
- * Whether stacks read secrets from OpenBao instead of 1Password.
- *
- * Explicit rather than inferred from credential presence. The Phase 8a
- * dual-write gate inferred, and an AppRole run then authenticated fine and
- * silently skipped every write while `pulumi up` reported success (STATUS.md,
- * "OIDC is live"). The same failure mode here would be worse: a silent
- * fallback means nobody can tell which store a value came from, and the two
- * agree only for as long as dual-run holds.
+ * `baoStoreReadsEnabled` used to live here, gating whether reads went to
+ * OpenBao or 1Password. Phase 11 removed the 1Password side, so there is
+ * nothing left to switch: `BaoStore` is the store. BAO_STORE_READS is inert
+ * and gets removed from the Stack CRs separately, once every repo is on this.
  */
-export function baoStoreReadsEnabled(): boolean {
-  const v = (process.env.BAO_STORE_READS ?? "").toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
 
 /** A KV path shaped like a 1Password item. */
 type BaoItem = Record<string, unknown> & Meta;
@@ -130,12 +122,13 @@ export class BaoStore extends VaultStore {
   public override getSecretByTitle<T>(title: string): Output<T & Meta> {
     const resolved = resolveBaoPath(title);
     if (resolved.path) return this.getSecretByPath<T>(resolved.path);
-    // Warn, every time, naming the reason. These are enumerated exceptions,
-    // not a blanket "try OpenBao, fall back if it 404s" — that would turn a
-    // typo'd path, or a secret deleted from OpenBao, into a silent read of a
-    // stale 1Password copy that nothing would ever surface.
-    log.warn(`${title}: reading from 1Password — ${resolved.reason}`);
-    return this.getOnePasswordItemByTitle<T>(title) as Output<T & Meta>;
+    // These used to warn and read 1Password instead. They throw now: Pulumi no
+    // longer writes 1Password, so its copies are frozen, and "fall back to the
+    // other store" would mean silently authenticating with a stale credential
+    // — the failure this migration keeps meeting, and the one with no symptom.
+    // Every title this repo names resolves; anything reaching here is a call
+    // site that needs a decision, not a fallback.
+    throw new Error(`${title}: no OpenBao path — ${resolved.reason}. 1Password is no longer read; give this call site a path, or handle it as configuration.`);
   }
 
   /**
@@ -146,11 +139,11 @@ export class BaoStore extends VaultStore {
   public override getCluster(title: string) {
     const entry = clusterBySourceTitle(title);
     if (!entry) throw new Error(`no cluster definition titled '${title}' — add a definition under /clusters (known: ${CLUSTERS.map(c => c.sourceTitle).join(", ")})`);
-    return this.hydrateCluster(entry) as ReturnType<VaultStore["getCluster"]>;
+    return this.hydrateCluster(entry) as unknown as ReturnType<VaultStore["getCluster"]>;
   }
 
   public override getAllClusters() {
-    return all(CLUSTERS.map(entry => this.hydrateCluster(entry))) as ReturnType<VaultStore["getAllClusters"]>;
+    return all(CLUSTERS.map(entry => this.hydrateCluster(entry))) as unknown as ReturnType<VaultStore["getAllClusters"]>;
   }
 
   /**
@@ -161,7 +154,7 @@ export class BaoStore extends VaultStore {
    * cluster with no credential (celestia) reads nothing at all rather than
    * reading a path that does not exist.
    */
-  private hydrateCluster(entry: ClusterEntry): Output<Record<string, unknown>> {
+  private hydrateCluster(entry: ClusterEntry): Output<unknown> {
     const field = entry.secretField;
     // `sourceTitle` and `secretField` are loader bookkeeping, not part of the
     // definition a stack consumes — leaving either in would add a key the

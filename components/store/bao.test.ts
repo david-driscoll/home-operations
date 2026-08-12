@@ -15,7 +15,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isSecret, runtime } from "@pulumi/pulumi";
-import { assertNotDirectory, backupPlanKeys, BaoStore, baoStoreReadsEnabled, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
+import { assertNotDirectory, BaoStore, backupPlanKeys, resolveBaoPath, shapeItem, tailscaleExportKeys } from "./bao.ts";
 import { shapeBackupPlans, shapeTailscaleExports } from "./index.ts";
 
 runtime.setMocks({
@@ -248,7 +248,7 @@ describe("shapeTailscaleExports", () => {
   it("splits node objects from flat fields and sorts at both levels", () => {
     const shaped = shapeTailscaleExports([
       item("ocracoke", { zebra: { externalIp: "100.1.1.2", internalIp: "10.0.0.2", mac: "bb", nodeType: "dockge" }, alpha: { externalIp: "100.1.1.1", internalIp: "10.0.0.1", mac: "aa", nodeType: "proxmox" } }),
-      item("gulf-of-mexico", {}, "[\"svc:llm\"]"),
+      item("gulf-of-mexico", {}, '["svc:llm"]'),
     ]);
     assert.deepEqual(
       shaped.map(z => z.name),
@@ -294,30 +294,5 @@ describe("shapeBackupPlans", () => {
       shaped.map(p => p.name),
       ["a", "b", "c"],
     );
-  });
-});
-
-describe("baoStoreReadsEnabled", () => {
-  it("is off unless explicitly turned on", () => {
-    const prior = process.env.BAO_STORE_READS;
-    try {
-      for (const [value, expected] of [
-        [undefined, false],
-        ["", false],
-        ["0", false],
-        ["false", false],
-        ["1", true],
-        ["true", true],
-        ["TRUE", true],
-        ["yes", true],
-      ] as const) {
-        if (value === undefined) delete process.env.BAO_STORE_READS;
-        else process.env.BAO_STORE_READS = value;
-        assert.equal(baoStoreReadsEnabled(), expected, `BAO_STORE_READS=${String(value)}`);
-      }
-    } finally {
-      if (prior === undefined) delete process.env.BAO_STORE_READS;
-      else process.env.BAO_STORE_READS = prior;
-    }
   });
 });
