@@ -1,7 +1,7 @@
 services:
   traefik:
     container_name: speedtest
-    image: ghcr.io/librespeed/speedtest:latest@sha256:ffb90a15c11380ad7ae0bd7ade07243af93f5ab8e1cc9dee8b172118b9502eda
+    image: ghcr.io/librespeed/speedtest:latest@sha256:69088bd3be31aabc33682e408993da841008cc55325364c62979909a8783970b
     restart: unless-stopped
     dns:
       - 100.100.100.100
