@@ -140,6 +140,26 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
       },
     });
 
+    // During `preview`, any input Pulumi cannot resolve yet arrives as the
+    // unknown-value SENTINEL — a 36-character string standing in for the real
+    // value. Diffing through it is not a near-miss, it is garbage: `sections`
+    // becomes that string, `Object.entries()` over a string yields one numeric
+    // key PER CHARACTER, and the item appears to lose every named section and
+    // gain 36 empty ones ("add /0 {}" … "add /35 {}", "remove /celestia" …).
+    //
+    // That patch then populates `replaces`, and this resource declares
+    // `deleteBeforeReplace: true` — so an unknown surviving into an `up` would
+    // DELETE the 1Password item and recreate it, losing its id and history.
+    // Today these inputs happen to be known by then, which is the only reason
+    // this has been noise rather than data loss.
+    //
+    // So: refuse to diff against unknowns. Report that something may change —
+    // it may — but never claim to know WHAT, and never claim a replacement.
+    if (containsUnknown(newInputs)) {
+      pulumi.log.info(`OnePasswordItem ${newInputs.title} (${id}): inputs are not known yet (preview) — reporting a possible change without a diff`);
+      return { changes: true, replaces: [], stables: [], deleteBeforeReplace: true };
+    }
+
     const fullNewInputs = client.mapItem(client.mapToFullItem(newInputs), id);
 
     const compareOlds = await awaitOutput(getSecretItem(oldOutputs));
@@ -180,6 +200,20 @@ class OnePasswordItemProvider implements pulumi.dynamic.ResourceProvider {
       deleteBeforeReplace: true,
     };
   }
+}
+
+/**
+ * Does this value contain Pulumi's unknown-value sentinel anywhere?
+ *
+ * `pulumi.runtime.unknownValue` is the wire-protocol stand-in for "not known
+ * until apply". It is an ordinary 36-character string, so nothing downstream
+ * can tell it apart from real data by shape — it has to be looked for.
+ */
+export function containsUnknown(value: unknown): boolean {
+  if (typeof value === "string") return value === pulumi.runtime.unknownValue;
+  if (Array.isArray(value)) return value.some(containsUnknown);
+  if (value && typeof value === "object") return Object.values(value).some(containsUnknown);
+  return false;
 }
 
 export class OnePasswordItem extends pulumi.dynamic.Resource implements OnePasswordItemOutputs {
