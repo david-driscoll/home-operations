@@ -67,15 +67,16 @@ idiomatic_version_file_enable_tools = ["dotnet"]
 AWS_ACCESS_KEY_ID = "ref+openbao://secrets/shared/minio-root-user#/username"
 AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/shared/minio-root-user#/password"
 AWS_REGION = "home"
-# The one value that can never come from OpenBao: it decrypts the Pulumi state,
-# so it cannot live in the store Pulumi unlocks (INVENTORY.md §2). Its home is
-# the vault repo's SOPS bootstrap material, alongside the recovery shares —
-# written by bootstrap/openbao/save-pulumi-passphrase.sh from the live cluster
-# Secret, which is what actually decrypts state.
+# The Pulumi state passphrase. It lives in OpenBao like everything else
+# (estate decision 2026-08-12), reached through the AppRole that
+# pulumi-env.sh exports — so the chain is age key -> sops -> AppRole ->
+# OpenBao, and no step needs 1Password.
 #
-# {{config_root}} because a relative sops path resolves against the CURRENT
-# DIRECTORY, and these commands are run from stacks/<name>/.
-PULUMI_CONFIG_PASSPHRASE = "ref+sops://{{config_root}}/../vault/bootstrap/openbao/pulumi-passphrase.sops.yaml#/passphrase"
+# bootstrap/openbao/pulumi-passphrase.sops.yaml is KEPT as break-glass: if
+# OpenBao is sealed or unreachable, that offline copy is what still lets
+# you decrypt state and run Pulumi to fix it. Point this at the sops file
+# if you ever need that.
+PULUMI_CONFIG_PASSPHRASE = "ref+openbao://secrets/shared/pulumi-passphrase#/password"
 CONNECT_HOST = "https://op-connect.sgc.driscoll.tech/"
 CONNECT_VAULT = "Eris"
 # Still needed: Pulumi WRITES the PBS items a human logs into the generated
