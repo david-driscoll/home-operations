@@ -494,7 +494,10 @@ export class DockgeLxc extends ComponentResource {
         mergeOptions(cro, { provider: args.globals.baoProvider }),
       );
     } else {
-      log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${args.host.name}'s dockge item. 1Password stays authoritative; the hosts/dockge/ copy stays frozen at its Phase 4 state until a credentialed run.`, this);
+      log.warn(
+        `No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${args.host.name}'s dockge item. 1Password stays authoritative; the hosts/dockge/ copy stays frozen at its Phase 4 state until a credentialed run.`,
+        this,
+      );
     }
 
     const deleteDockerDaemon = new remote.Command(
@@ -676,6 +679,16 @@ export class DockgeLxc extends ComponentResource {
         output(this.cluster.location).apply(loc => loc ?? "unknown"),
       ),
       replaceVariable(/\$\{CLUSTER_DOMAIN\}/g, this.cluster.rootDomain),
+      // The cluster's icon URL. It used to be read as `op://Eris/Cluster: ${CLUSTER_TITLE}/icon`,
+      // which was the only reference in docker/ pointing at a CLUSTER DEFINITION
+      // rather than a credential — and those stopped living in a secret store in
+      // Phase 8; they are checked-in YAML under /clusters. It is a public image
+      // URL, so it belongs in a substitution alongside the other cluster fields,
+      // not behind a secret lookup that can no longer resolve.
+      replaceVariable(
+        /\$\{CLUSTER_ICON\}/g,
+        output(this.cluster.icon).apply(icon => icon ?? ""),
+      ),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? interpolate`authentik.${this.args.globals.tailscaleDomain}` : this.cluster.authentikDomain),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`https://uptime.${this.args.globals.searchDomain}`),
       ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
