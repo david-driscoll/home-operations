@@ -109,7 +109,7 @@ services:
       traefik.http.services.homelable.loadbalancer.server.port: 80
 
   homelable-mcp:
-    image: ghcr.io/pouzor/homelable-mcp:3.1.2@sha256:60f9bdb43c0822730b9e3d88567b8b4bcf1a2bc220c33648fca4e5d0e88ddefc
+    image: ghcr.io/pouzor/homelable-mcp:3.2.0@sha256:0476ec0f036dc0394ebb76ae26060f1dd6fa036601bedd83e6a88f89d0783481
     container_name: homelable-mcp
     hostname: homelable-mcp
     depends_on:
