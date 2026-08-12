@@ -159,13 +159,10 @@ spec:
           # with .config/mise.toml [tools]. Kubernetes `command:` replaces the
           # image's `mise` entrypoint, deliberately.
           #
-          # The INSTALL dir is pod-local on purpose: concurrent installs into
-          # a shared hostPath wedge it permanently — observed live, five
-          # workspace pods in Init:CrashLoopBackOff on 'Permission denied'
-          # after racing a cold node cache. Only the DOWNLOAD cache is shared
-          # (the expensive part); the extract is cheap. Any node's old
-          # /var/lib/pulumi-mise-data is that wedged predecessor — safe to
-          # delete, never reuse.
+          # The INSTALL dir is pod-local (emptyDir); only the DOWNLOAD cache
+          # is shared — the expensive part, the extract is cheap. Any node's
+          # old /var/lib/pulumi-mise-data is an abandoned predecessor — safe
+          # to delete, never reuse.
           initContainers:
             - name: vals
               # renovate: datasource=docker depName=jdxcode/mise
@@ -188,6 +185,16 @@ spec:
                   value: /mise-cache
                 - name: MISE_YES
                   value: "1"
+              # The workspace pod template pins runAsUser 1000/runAsNonRoot,
+              # under which a root-owned hostPath is unwritable — every EACCES
+              # in the first rollout was this, not an install race (the pods
+              # that "worked" predated the vals init entirely). This one init
+              # runs as root to use the shared cache; the binary it drops is
+              # 0755 root-owned, which uid 1000 executes fine.
+              securityContext:
+                runAsUser: 0
+                runAsGroup: 0
+                runAsNonRoot: false
               volumeMounts:
                 - name: vals-bin
                   mountPath: /opt/vals
