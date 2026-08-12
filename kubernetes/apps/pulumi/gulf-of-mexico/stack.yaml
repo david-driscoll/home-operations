@@ -88,14 +88,6 @@ spec:
       secret:
         name: pulumi-operator-bao-approle
         key: secret-id
-    # Phase 8 cutover: secret reads come from OpenBao (BaoStore) instead of
-    # 1Password. Explicit, never inferred from credential presence — see
-    # baoStoreReadsEnabled in components/store/bao.ts. The gate for setting
-    # this was scripts/bao-store-parity.ts fully green, inventory included.
-    BAO_STORE_READS:
-      type: Literal
-      literal:
-        value: "1"
   secretsRef:
     github:token:
       type: Secret
