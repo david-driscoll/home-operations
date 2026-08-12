@@ -46,16 +46,45 @@ prereleases = true
 idiomatic_version_file_enable_tools = ["dotnet"]
 
 [env]
-_.python.venv = { path = "{{config_root}}/.venv", create = true }
-AWS_ACCESS_KEY_ID = "op://Eris/minio root user/username"
-AWS_SECRET_ACCESS_KEY = "op://Eris/minio root user/password"
+# Secret values are `vals` references, resolved per command:
+#
+#   mise exec -- ./scripts/vals-run pulumi preview
+#
+# They were `op://` literals, which mise passed through untouched and `op run`
+# substituted — so every value had to come from 1Password. Each one now names
+# its own backend (openbao, sops, op, …), and moving a value between stores is
+# a one-line edit here.
+#
+# Resolution is per command rather than by mise itself on purpose: mise
+# re-evaluates `[env]` on EVERY load with no caching, so resolving here would
+# hit OpenBao on every `cd` into the repo and break the shell whenever you are
+# off-network or without an age key.
+#
+# `scripts/vals-run` is the `op run` replacement — it resolves whatever `ref+`
+# values are in the environment. First run
+# `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"`, which exports the
+# VAULT_ADDR/VAULT_TOKEN vals needs for the openbao references.
+AWS_ACCESS_KEY_ID = "ref+openbao://secrets/shared/minio-root-user#/username"
+AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/shared/minio-root-user#/password"
 AWS_REGION = "home"
-PULUMI_CONFIG_PASSPHRASE = "op://Eris/Pulumi Passphrase/password"
+# The Pulumi state passphrase. It lives in OpenBao like everything else
+# (estate decision 2026-08-12), reached through the AppRole that
+# pulumi-env.sh exports — so the chain is age key -> sops -> AppRole ->
+# OpenBao, and no step needs 1Password.
+#
+# bootstrap/openbao/pulumi-passphrase.sops.yaml is KEPT as break-glass: if
+# OpenBao is sealed or unreachable, that offline copy is what still lets
+# you decrypt state and run Pulumi to fix it. Point this at the sops file
+# if you ever need that.
+PULUMI_CONFIG_PASSPHRASE = "ref+openbao://secrets/shared/pulumi-passphrase#/password"
 CONNECT_HOST = "https://op-connect.sgc.driscoll.tech/"
 CONNECT_VAULT = "Eris"
-CONNECT_TOKEN = "op://Eris/Eris 1Password Connect Access Token/credential"
-AUTHENTIK_TOKEN = "op://Eris/Authentik Token/credential"
-AUTHENTIK_URL = "op://Eris/Authentik Token/url"
+# Still needed: Pulumi WRITES the PBS items a human logs into the generated
+# LXCs with (Phase 11 estate decision). Nothing READS 1Password any more.
+CONNECT_TOKEN = "ref+openbao://secrets/shared/eris-1password-connect-access-token#/credential"
+AUTHENTIK_TOKEN = "ref+openbao://secrets/shared/authentik-token#/credential"
+AUTHENTIK_URL = "ref+openbao://secrets/shared/authentik-token#/url"
+_.python.venv = { path = "{{config_root}}/.venv", create = true }
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"
 # UNIFI_PASSWORD = "op://Eris/unifipoller/password"
