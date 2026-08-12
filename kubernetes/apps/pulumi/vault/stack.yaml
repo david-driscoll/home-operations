@@ -89,6 +89,16 @@ spec:
       secret:
         name: pulumi-operator-bao-approle
         key: secret-id
+    # Phase 9 cutover: secret reads come from OpenBao (BaoStore) instead of
+    # 1Password — the vault repo's own copy of the Phase 8 seam. Explicit,
+    # never inferred from credential presence — see baoStoreReadsEnabled in
+    # vault components/store/bao.ts. The gate for setting this was that
+    # repo's scripts/bao-store-parity.ts fully green plus stable dual
+    # preview pairs (vault docs/openbao-migration/STATUS.md, Phase 9).
+    BAO_STORE_READS:
+      type: Literal
+      literal:
+        value: "1"
   secretsRef:
     github:token:
       type: Secret
