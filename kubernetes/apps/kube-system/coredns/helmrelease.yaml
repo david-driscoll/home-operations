@@ -19,9 +19,6 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: coredns
-  annotations:
-    # See cilium/helmrelease.yaml for why -- same incident, same fix.
-    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   chartRef:
     kind: OCIRepository

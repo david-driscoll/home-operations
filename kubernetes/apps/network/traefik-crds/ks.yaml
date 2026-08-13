@@ -17,6 +17,11 @@ spec:
   dependsOn: []
   path: ./kubernetes/apps/network/traefik-crds
   prune: true
+  # This is the highest-value place in the whole tree for this -- deleting
+  # this Kustomization must never cascade-delete the CRDs themselves (every
+  # instance of every kind goes with them, cluster-wide). See
+  # docs/cluster-consolidation/26-bootstrap-apps-to-pulumi.md.
+  deletionPolicy: Orphan
   wait: false
   force: false
   interval: 1h
