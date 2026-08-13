@@ -77,7 +77,7 @@ AWS_REGION = "home"
 # you decrypt state and run Pulumi to fix it. Point this at the sops file
 # if you ever need that.
 PULUMI_CONFIG_PASSPHRASE = "ref+openbao://secrets/shared/pulumi-passphrase#/password"
-CONNECT_HOST = "https://op-connect.sgc.driscoll.tech/"
+CONNECT_HOST = "https://op-connect.equestria.driscoll.tech/"
 CONNECT_VAULT = "Eris"
 # Still needed: Pulumi WRITES the PBS items a human logs into the generated
 # LXCs with (Phase 11 estate decision). Nothing READS 1Password any more.
