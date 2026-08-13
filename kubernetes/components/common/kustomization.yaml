@@ -42,3 +42,22 @@ patches:
               kind: Secret
             - name: shared-secrets
               kind: Secret
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+    patch: |-
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: not-used
+      spec:
+        decryption:
+          provider: sops
+          secretRef:
+            name: sops-age
+        postBuild:
+          substituteFrom:
+            - name: cluster-secrets
+              kind: Secret
+            - name: shared-secrets
+              kind: Secret
