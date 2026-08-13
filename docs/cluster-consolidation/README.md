@@ -200,6 +200,8 @@ The v2/v2.1 discovery predates two waves of change; the plans reflect **today**:
 | [21-repo-consolidation-flux-repoint.md](21-repo-consolidation-flux-repoint.md) | T | One tree in home-operations; Flux re-pointed with `prune: false` during the switch |
 | [22-decommission-sgc.md](22-decommission-sgc.md) | U | Every SGC reference retired: VIP, DNS, stacks, OpenBao mounts, cluster definitions, repos archived |
 | [23-talos-in-pulumi.md](23-talos-in-pulumi.md) | V | Follow-on: machine config via `@pulumiverse/talos`, talhelper retired |
+| [24-power-states.md](24-power-states.md) | *(unfiled)* | Full/Low Power/Battery three-state model; amends 20's Tier-1 list and placement, adds `longhorn-controlplane` |
+| [25-unseal-key-scope.md](25-unseal-key-scope.md) | *(unfiled)* | A scoped age key for the alpha-site static-unseal file, additive to D5 |
 
 ## Sequencing
 
@@ -228,9 +230,16 @@ graph TD
   R --> T[21 Repo consolidation]
   T --> U[22 Decommission SGC]
   T --> V[23 Talos in Pulumi]
+  K --> W[24 Power states]
+  S --> W
   P[17 NVMe — deferred]:::deferred -.opportunistic during any wipe.-> Q
   classDef deferred stroke-dasharray: 5 5
 ```
+
+[25-unseal-key-scope.md](25-unseal-key-scope.md) has no dependency edge into the
+migration sequencing above — it's a standalone amendment to
+[06](06-age-key-consolidation.md)'s recipient set, applicable independent of
+where the migration itself stands.
 
 Critical path: **01 → 10 → 18 → 19 → 20**, with **07 (authentik) off to the side and
 finishing before 15**. 07 is the highest-value early item: it removes SSO from the

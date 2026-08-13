@@ -494,7 +494,14 @@ tolerance to the control plane's.
   [20-low-power-tier.md](20-low-power-tier.md). This piece makes the
   *storage* placement safe by construction; making the *pod* placement safe
   by construction (so nothing needs to reschedule when workers go dark) is
-  a separate mechanism layered on top.
+  a separate mechanism layered on top. **Amended by
+  [24-power-states.md](24-power-states.md):** not every Tier-1 application
+  wants permanent CP residency — some float on a worker normally and
+  relocate only during Battery mode. That pattern needs a *third* storage
+  class, `longhorn-controlplane` (2 replicas, Longhorn zone anti-affinity
+  across a `critical`/`bulk` zone split — a different mechanism from this
+  piece's tag-based `nodeSelector`), which 24 specs. Out of scope here, same
+  as the taint/affinity work.
 - **Longhorn's `taint-toleration` setting.** Still empty today and doesn't
   need to change until [20](20-low-power-tier.md) adds the `critical` taint
   — but note it then, since applying a taint without updating
@@ -561,6 +568,10 @@ tolerance to the control plane's.
 - [20-low-power-tier.md](20-low-power-tier.md) — the taint, toleration,
   required affinity, PriorityClass, and enter/exit runbook that this piece's
   storage guarantee is built to support.
+- [24-power-states.md](24-power-states.md) — the three-state (Full/Low
+  Power/Battery) model that adds `longhorn-controlplane` alongside this
+  piece's two classes, and amends 20's placement model for float+relocate
+  workloads.
 - [vault#113](https://github.com/david-driscoll/vault/issues/113) — the
   two-default-StorageClasses fix this piece assumes is already live.
 - [Expansion v2.1 §3.3–3.4](https://github.com/david-driscoll/vault/issues/84#issuecomment-5138811583) —

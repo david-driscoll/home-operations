@@ -41,6 +41,17 @@ graph LR
   S20 -.rehearsal gates.-> done((Ready for real outages))
 ```
 
+> **Amended by [24-power-states.md](24-power-states.md), 2026-08-13.** This
+> file's "S′" mode is now one of three power states (Full / Low Power /
+> Battery) — S′ maps to Battery, unchanged in mechanism, but two things below
+> are superseded: **§1**'s Tier-1 namespace list drops `observability` and
+> `pulumi` to Tier 2, and **§4**'s placement model pins every Tier-1
+> application permanently to the control planes. 24 keeps both in Tier 1 and
+> moves application workloads (Home Assistant, etc.) to a float-on-worker,
+> relocate-on-Battery model instead of permanent CP residency. Read 24
+> alongside this file — the taint/toleration/PriorityClass mechanism here is
+> still the foundation, it's applied differently.
+
 ---
 
 ## 1. The tiers, updated for the OpenBao era
@@ -90,11 +101,21 @@ entry for equestria). Free to pin to any control plane.
 
 **Tier 2 — dropped in low-power**
 
-All of `equestria` namespace (media stack, immich, n8n, windmill, romm, …) · all
-`observability` (prometheus, loki, tempo, thanos, grafana, alloy) · `github-actions`
-runners · `pulumi` operator · `headlamp` · `node-feature-discovery` · GPU device plugins ·
+All of `equestria` namespace (media stack, immich, n8n, windmill, romm, …) · `github-actions`
+runners · `headlamp` · `node-feature-discovery` · GPU device plugins ·
 `descheduler` · `librespeed` / `openspeedtest` / `traefik-whoami` · **`database`
 (CNPG shared postgres + valkey)** · **`openbao` (+ `openbao-replica`)**.
+
+> **Superseded 2026-08-13 by [24-power-states.md](24-power-states.md) §1.**
+> `observability` (prometheus, loki, tempo, thanos, grafana, alloy) and the
+> `pulumi` operator move to Tier 1 — both stay up during Battery. The
+> reasoning below (alpha-site covers observability externally, Pulumi isn't
+> runnable during an outage anyway) was this file's original justification
+> for dropping them; 24 records the decision to keep them instead and the
+> capacity cost of doing so (≈7.4 GiB additional, checked live 2026-08-13 —
+> stacks on top of this file's own unverified-since-07-31 headroom estimate,
+> §3/§8 item 6). Left below for the historical reasoning, not as current
+> Tier assignment.
 
 Observability during the window comes from **alpha-site**, which already runs Prometheus,
 blackbox, and Gatus (`uptime.driscoll.tech`) and scrapes the estate from outside — see §6.
@@ -204,6 +225,18 @@ exactly as before.
 ---
 
 ## 4. Placement mechanism — taint, required affinity, PriorityClass
+
+> **Superseded in part 2026-08-13 by [24-power-states.md](24-power-states.md).**
+> Everything below still applies to Tier 0 (DaemonSets — toleration only, as
+> written) and to Tier-1 workloads that genuinely should be permanently
+> CP-resident. It no longer applies unconditionally to every Tier-1
+> **application** (Home Assistant named explicitly): 24 moves those to a
+> float-on-worker / relocate-on-Battery model instead of the permanent
+> required-affinity pin described here, using a new `longhorn-controlplane`
+> StorageClass rather than `longhorn-critical`. The actual relocation trigger
+> for that model is still an open item in 24 — this section's taint +
+> PriorityClass mechanism is the foundation either way, it's just not applied
+> as a permanent pin for those workloads anymore.
 
 `NoSchedule` alone only stops new arrivals; it doesn't guarantee the critical tier is
 *already* running on the control planes when the workers go dark. The mechanism has to make
