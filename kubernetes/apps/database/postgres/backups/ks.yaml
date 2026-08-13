@@ -21,6 +21,11 @@ spec:
     - name: external-secrets
       namespace: kube-system
   prune: true
+  # Never cascade-delete what this manages on a Kustomization ownership
+  # change. On 2026-08-13 an external-secrets CRD cascade took the CNPG
+  # Cluster CR *and its PVCs* with it -- see
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
   wait: true
   force: false
   suspend: false
