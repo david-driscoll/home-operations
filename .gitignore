@@ -15,7 +15,7 @@ bin/
 # APM dependencies
 apm_modules/
 stacks/unifi-network/tailscale-acl.json
-headlamp/
+/headlamp/
 # Crew: ignore runtime state (logs, inbox, sessions)
 # Note: .crew/casting/* is identity and MUST be committed to main, not ignored
 .crew/orchestration-log/
