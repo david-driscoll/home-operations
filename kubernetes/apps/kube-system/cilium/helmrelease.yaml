@@ -15,6 +15,12 @@ kind: HelmRelease
 metadata:
   name: &app cilium
   namespace: &namespace kube-system
+  annotations:
+    # Never let a Kustomization ownership change (e.g. the piece-21 redirect
+    # flip) delete-then-recreate this HelmRelease -- that's a full Cilium
+    # uninstall/reinstall, and it's what happened live on 2026-08-13. See
+    # docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   chart:
     spec:

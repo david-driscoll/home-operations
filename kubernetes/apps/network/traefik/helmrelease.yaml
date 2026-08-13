@@ -5,6 +5,13 @@ kind: HelmRelease
 metadata:
   name: &app traefik
   namespace: network
+  annotations:
+    # See kube-system/cilium/helmrelease.yaml for why. Traefik's L2
+    # announcement getting orphaned during a HelmRelease delete/recreate is
+    # the mechanism behind the 2026-08-13 traefik L2-election incident too
+    # (docs/cluster-consolidation/27-migration-churn-failure-modes.md) --
+    # keeping the release object continuous removes that trigger.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   chart:
     spec:
