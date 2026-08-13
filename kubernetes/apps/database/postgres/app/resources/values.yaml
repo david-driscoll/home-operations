@@ -8,10 +8,10 @@ version:
 # Flip to "recovery" to restore from the barman archive, then back to
 # "standalone" once the restored cluster is promoted.
 #
-# BEFORE FLIPPING, read the serverName warning in the backups block below.
-# Recovering and re-archiving under the same serverName at the same
-# destinationPath is a known CNPG hazard, and this cluster is configured to
-# do exactly that unless you intervene.
+# BEFORE FLIPPING, read the ARCHIVE-COLLISION HAZARD note in the backups
+# block below, and give backups a fresh path. Recovering while archiving to
+# the path being recovered from fails the WAL archive check every time --
+# see docs/cluster-consolidation/28-postgres-restore-and-bootstrap-deadlock.md.
 mode: standalone
 recovery:
   # Was `object_store` pointing at a "-restore" bucket with clusterName
@@ -48,31 +48,42 @@ backups:
   method: plugin
   pluginConfiguration:
     name: barman-cloud.cloudnative-pg.io
-    # ⚠️ SERVERNAME HAZARD, read before any restore.
+    # ⚠️ ARCHIVE-COLLISION HAZARD, read before any restore.
+    #    Confirmed the hard way during the 2026-08-13 restore.
     #
-    # The barman-cloud plugin defaults serverName to the cluster name
-    # ("postgres"), and the recovery block above reads from that same
-    # serverName at this same destinationPath. On a restore, the new cluster
-    # would therefore try to archive INTO the lineage it just recovered FROM.
-    # CNPG's WAL archive check is expected to refuse that (it requires an
-    # empty destination for a new server), so the restore surfaces as a
-    # failing first WAL archive rather than silent corruption -- but it does
-    # block the cluster from reaching a healthy state.
+    # barman-cloud-check-wal-archive runs before the restored cluster may
+    # archive anything, and it REQUIRES AN EMPTY DESTINATION for the new
+    # cluster's serverName. The plugin defaults serverName to the cluster
+    # name ("postgres") -- exactly the lineage the recovery block above
+    # reads from -- so a restore into the same destinationPath always dies
+    # with:
     #
-    # When restoring, set a fresh lineage here so the recovered cluster
-    # archives somewhere new and the source archive stays immutable:
+    #   WAL archive check failed for server postgres: Expected empty archive
     #
-    #   parameters:
-    #     serverName: postgres-<something-new>
+    # It fails closed rather than corrupting the source archive, but the
+    # cluster never reaches a healthy state.
     #
-    # Left unset in steady state: the current lineage is "postgres" and
-    # nothing should change it outside a restore.
+    # DO NOT try to fix this with a serverName override here. The chart
+    # emits only `barmanObjectName` into .spec.plugins[] and silently drops
+    # backups.pluginConfiguration.parameters, so a serverName set here has
+    # no effect -- verified against the rendered Cluster CR.
+    #
+    # What DOES work: move the destination. Give the restored cluster a
+    # fresh archive path (recovery keeps reading the old one, which stays
+    # immutable):
+    #
+    #   backups.s3.path: "/barman/${CLUSTER_CNAME}-<stamp>"
+    #
+    # This is almost certainly why the recovery block used to point at a
+    # separate "-restore" bucket: the same collision, worked around by
+    # separating read from write. Separating the write path is the cheaper
+    # half of that trick -- no bucket copy required.
   endpointURL: "{{ .minio_endpoint }}"
   provider: s3
   s3:
     region: "{{ .minio_region }}"
     bucket: "cnpg-${CLUSTER_CNAME}"
-    path: "/barman/${CLUSTER_CNAME}"
+    path: "/barman/${CLUSTER_CNAME}-20260813"
     accessKey: "{{ .minio_username }}"
     secretKey: "{{ .minio_password }}"
   wal:
