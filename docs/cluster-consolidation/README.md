@@ -202,6 +202,7 @@ The v2/v2.1 discovery predates two waves of change; the plans reflect **today**:
 | [23-talos-in-pulumi.md](23-talos-in-pulumi.md) | V | Follow-on: machine config via `@pulumiverse/talos`, talhelper retired |
 | [24-power-states.md](24-power-states.md) | *(unfiled)* | Full/Low Power/Battery three-state model; amends 20's Tier-1 list and placement, adds `longhorn-controlplane` |
 | [25-unseal-key-scope.md](25-unseal-key-scope.md) | *(unfiled)* | A scoped age key for the alpha-site static-unseal file, additive to D5 |
+| [26-bootstrap-apps-to-pulumi.md](26-bootstrap-apps-to-pulumi.md) | *(unfiled)* | Move `scripts/bootstrap-apps.sh` (namespaces, secrets, CRDs, helmfile) into Pulumi; grounded in a live 2026-08-13 incident where a `21`-pattern redirect flip cascade-deleted every Traefik/Gateway API CRD cluster-wide |
 
 ## Sequencing
 
@@ -240,6 +241,10 @@ graph TD
 migration sequencing above — it's a standalone amendment to
 [06](06-age-key-consolidation.md)'s recipient set, applicable independent of
 where the migration itself stands.
+
+[26-bootstrap-apps-to-pulumi.md](26-bootstrap-apps-to-pulumi.md) likewise has
+no dependency edge — it's a follow-on to [21](21-repo-consolidation-flux-repoint.md)
+motivated by a live incident during 21's own execution, not a blocker of it.
 
 Critical path: **01 → 10 → 18 → 19 → 20**, with **07 (authentik) off to the side and
 finishing before 15**. 07 is the highest-value early item: it removes SSO from the
