@@ -19,6 +19,8 @@ spec:
   components:
     - ../../../components/postgres
   prune: true
+  # See home-operations:docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
   wait: true
   interval: 1h
   retryInterval: 2m

@@ -15,6 +15,8 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   prune: true
+  # See home-operations:docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
   wait: true
   force: false
   interval: 1h
