@@ -1,0 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: database
+components:
+  - ../../components/alerts
+  - ../../components/common
+  - ../../components/repos/app-template
+resources:
+  - ./postgres
+  - ./valkey/ks.yaml
+  # - ./neo4j/ks.yaml
