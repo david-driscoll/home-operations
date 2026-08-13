@@ -31,8 +31,8 @@ spec:
   # this ordering the pods can come up before the port exists and sit
   # crash-looping on a seal they cannot reach.
   dependsOn:
-    - name: postgres
-      namespace: database
+    # - name: postgres
+    #   namespace: database
     # The stores ks, not the controller ks — ClusterSecretStore/database is
     # defined there. Note it currently dependsOn onepassword-connect, so until
     # Phase 11 drops that, OpenBao transitively waits on 1Password Connect at
