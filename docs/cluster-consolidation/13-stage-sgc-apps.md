@@ -318,6 +318,20 @@ touches an existing PVC).
 - [ ] `longhorn-critical` tracked as a follow-up retag for the three already-migrated PVCs once
       [12](12-longhorn-critical-tier.md) lands.
 
+## Known gap: staged apps with a `gatus:` block crash Gatus while SGC's copy stays live
+
+**Hit live staging tsidp, 2026-08-13** — see
+[27-migration-churn-failure-modes.md](27-migration-churn-failure-modes.md)
+for the full incident. Staging copies the app's `ApplicationDefinition`
+verbatim, including its `gatus:` block; if the SGC source is still live
+(which staging deliberately keeps true), both clusters register the same
+`(name, group)` pair with Gatus's merged config, and Gatus **panics** on
+load — taking down monitoring for every app, not just the staged one, until
+noticed. Before staging any future app, check whether it carries a `gatus:`
+block and resolve the collision (comment it out on the staged copy until
+[14](14-cutover-runbook.md)'s cutover, or dedupe upstream) before merging —
+not after the dashboard goes stale.
+
 ## See also
 
 - [09-mqtt-ntp-renumber-ip-audit.md](09-mqtt-ntp-renumber-ip-audit.md) — the LB address decisions
