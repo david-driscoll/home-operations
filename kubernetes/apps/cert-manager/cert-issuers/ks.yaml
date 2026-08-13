@@ -12,7 +12,7 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    - name: cert-manager
+    - name: cert-manager-controller
       namespace: cert-manager
   path: ./kubernetes/apps/cert-manager/cert-issuers
   prune: true
