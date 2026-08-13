@@ -3,11 +3,13 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 resources:
+  - ./cluster-secrets.sops.yaml
   - ./shared-secrets.sops.yaml
   - ./namespace.yaml
   - ./sops-age.sops.yaml
   - ./service-account.yaml
   - ./middleware.yaml
+  - ./limit-range.yaml
   - ./templates
 patches:
   - target:
@@ -39,5 +41,7 @@ patches:
             name: sops-age
         postBuild:
           substituteFrom:
+            - name: cluster-secrets
+              kind: Secret
             - name: shared-secrets
               kind: Secret
