@@ -37,8 +37,8 @@ spec:
     # defined there. Note it currently dependsOn onepassword-connect, so until
     # Phase 11 drops that, OpenBao transitively waits on 1Password Connect at
     # boot. Irritating but not circular, and it resolves itself at cutover.
-    - name: external-secrets-stores
-      namespace: kube-system
+    # - name: external-secrets-stores
+    #   namespace: kube-system
     - name: tailscale-services
       namespace: tailscale-system
   # SUSPENDED UNTIL BOOTSTRAP IS COMPLETE. All four preconditions now hold:
