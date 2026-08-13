@@ -30,6 +30,13 @@ const alphaSiteProxmoxCredentials = globals.store.getSecretByTitle<CredentialDef
 const dockgeCredential = globals.store.getSecretByTitle<PasswordDefinition>("Dockge Credential");
 const celestiaCluster = globals.store.getCluster("Cluster: Celestia");
 const alphaSiteCluster = globals.store.getCluster("Cluster: Alpha Site");
+// `protect: true` + `retainOnDelete: true` guard this bucket against the
+// failure mode that `deleteBeforeReplace: true` enabled twice elsewhere in
+// this repo — see components/StandardDns.ts and project memory
+// (standarddns-cloudflare-import-outage, standarddns-unifi-import-armed-
+// deletes) for what happens when a bad replace plan can delete-then-adopt
+// an `import:` resource without a human in the loop. Don't drop `protect`
+// here without reading those first. See docs/cluster-consolidation/05-import-audit.md.
 const _minioBucket = new minio.S3Bucket(
   `home-operations-minio-bucket`,
   {
@@ -41,6 +48,23 @@ const _minioBucket = new minio.S3Bucket(
     protect: true,
     retainOnDelete: true,
     import: "home-operations",
+  },
+);
+
+// Versioning on the state-archive bucket: cheap protection against a bad
+// `pulumi stack export`/backend write clobbering a prior good one.
+// Additive-only — does not touch the import: behavior above.
+const _minioBucketVersioning = new minio.S3BucketVersioning(
+  `home-operations-minio-bucket-versioning`,
+  {
+    bucket: _minioBucket.bucket,
+    versioningConfiguration: {
+      status: "Enabled",
+    },
+  },
+  {
+    provider: globals.truenasMinioProvider,
+    protect: true,
   },
 );
 
