@@ -50,7 +50,13 @@ defaultSettings:
   storageOverProvisioningPercentage: 600
   upgradeChecker: true
   priorityClass: system-node-critical
-  # taintToleration: key1=value1:NoSchedule; key2:NoExecute
+  # Lands months ahead of the taint it tolerates (docs/cluster-consolidation/20-low-power-tier.md
+  # applies node-role.driscoll.tech/critical=true:NoSchedule to the future control planes).
+  # Longhorn only applies a taintToleration change to a running instance-manager once its
+  # engine/replica instances are idle or volumes are detached -- otherwise it waits for the next
+  # ~1h sync. Setting it now, while nothing is tainted yet, means it's already synced by the time
+  # 20 actually applies the taint. See docs/cluster-consolidation/10-drain-safety.md work item 1.
+  taintToleration: node-role.driscoll.tech/critical=true:NoSchedule
   # systemManagedComponentsNodeSelector: "label-key1:label-value1"
   # disableSchedulingOnCordonedNode: false
   # replicaZoneSoftAntiAffinity: false
