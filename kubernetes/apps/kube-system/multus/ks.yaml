@@ -13,6 +13,8 @@ spec:
       driscoll.dev/name: *app
   path: ./kubernetes/apps/kube-system/multus
   prune: true
+  # See kube-system/cilium/ks.yaml.
+  deletionPolicy: Orphan
   wait: true
   force: false
   interval: 1h

@@ -63,6 +63,9 @@ spec:
   # `git revert` — the database will have been written to.
   suspend: false
   prune: true
+  # See kube-system/cilium/ks.yaml. Especially load-bearing here: this is
+  # the estate's secret store.
+  deletionPolicy: Orphan
   wait: true
   force: false
   interval: 1h

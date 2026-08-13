@@ -12,6 +12,10 @@ spec:
       driscoll.dev/name: *app
   path: ./kubernetes/apps/kube-system/cilium
   prune: true
+  # Never cascade-delete what this Kustomization manages just because
+  # ownership of it changes (e.g. a namespace-redirect flip) -- see
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
   wait: false
   force: false
   interval: 1h
