@@ -17,6 +17,10 @@ spec:
       namespace: *namespace
   path: ./kubernetes/apps/kube-system/snapshot-controller
   prune: true
+  # Must not race the CRDs it renders CRs against.
+  dependsOn:
+    - name: snapshot-crds
+      namespace: kube-system
   wait: true
   force: false
   interval: 1h

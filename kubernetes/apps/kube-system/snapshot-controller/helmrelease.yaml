@@ -47,8 +47,15 @@ spec:
     # Chart v5 enables webhook by default; disable to avoid TLS setup
     webhook:
       enabled: false
-    # Ensure CRDs are installed as part of the chart
-    installCRDs: true
+    # CRDs are owned by ../snapshot-crds, NOT by this chart. Two owners for a
+    # CRD is how they end up deleted: on 2026-08-13 every
+    # snapshot.storage.k8s.io CRD was cascade-removed, and this chart then
+    # could not reinstall itself -- it renders volumeSnapshotClasses below in
+    # the same apply pass, so without the CRD already established it dies with
+    # "no matches for kind VolumeSnapshotClass". Splitting the CRDs into their
+    # own Orphan-protected Kustomization fixes both the ordering and the
+    # ownership.
+    installCRDs: false
     controller:
       replicaCount: 2
       serviceMonitor:
