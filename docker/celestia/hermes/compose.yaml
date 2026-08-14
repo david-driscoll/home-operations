@@ -25,7 +25,7 @@ services:
     # Image is ~1GB compressed / ~5GB extracted. That is upstream's size, not a
     # packaging mistake on our side: the image bakes a full Python 3.13 venv,
     # a Node toolchain, ffmpeg, and the dashboard's web bundle.
-    image: nousresearch/hermes-agent:v2026.8.3@sha256:16788311e2fa3035456bdc1bafb8ec2b1777db64ebf020af9bb7eb73c3712c9e
+    image: nousresearch/hermes-agent:v2026.8.13@sha256:68e15ae2a6d894d0ccbd9f8aacbbe13d4d28fa5dc9b6a303970b67bb2499b1a6
     container_name: hermes
     hostname: hermes
     # With no CMD the entrypoint wrapper runs the interactive chat CLI, which
