@@ -8,6 +8,24 @@ resources:
   - ./middleware.yaml
   - ./limit-range.yaml
   - ./templates
+# Generates the `cluster-versions` ConfigMap in every namespace, from the
+# repo-root versions.env. Both substituteFrom lists below reference it, as does
+# kubernetes/flux/cluster/ks.yaml's cluster-apps patch -- all three must carry
+# it or drop it together, since substituteFrom is not optional by default and a
+# dangling reference fails the Kustomization outright.
+#
+# disableNameSuffixHash is required: the substituteFrom references are by the
+# literal name `cluster-versions`, so a content hash suffix would break them.
+#
+# The env file is outside this component's directory, so a local
+# `kustomize build` needs `--load-restrictor LoadRestrictionsNone`. Flux's
+# kustomize-controller already runs with that setting.
+configMapGenerator:
+  - name: cluster-versions
+    envs:
+      - ../../../versions.env
+    options:
+      disableNameSuffixHash: true
 patches:
   - target:
       group: helm.toolkit.fluxcd.io/v2
@@ -40,6 +58,8 @@ patches:
           substituteFrom:
             - name: cluster-secrets
               kind: Secret
+            - name: cluster-versions
+              kind: ConfigMap
             - name: shared-secrets
               kind: Secret
   - target:
@@ -59,5 +79,7 @@ patches:
           substituteFrom:
             - name: cluster-secrets
               kind: Secret
+            - name: cluster-versions
+              kind: ConfigMap
             - name: shared-secrets
               kind: Secret
