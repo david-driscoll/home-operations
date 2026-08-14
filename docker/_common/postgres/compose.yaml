@@ -167,6 +167,33 @@ services:
       - ./backup.sh:/backup.sh:ro
       - /opt/stacks-data/postgres/dumps:/dumps
     entrypoint: ["/bin/sh", "/backup.sh"]
+    # A stalled or failing dump loop is otherwise indistinguishable from a
+    # healthy one: the container stays up either way, and restic goes on
+    # snapshotting whatever is already in /dumps. backup.sh writes
+    # "<epoch> ok|failed" to /dumps/.last-run at the end of every cycle; this
+    # turns that into container health, so `docker ps` and Arcane show it
+    # without anyone reading logs. The paging signal is the Gatus heartbeat
+    # (POSTGRES_DUMP_UPTIME_TOKEN in .env), not this.
+    #
+    # Deliberately NOT autoheal-labelled, like the server above: restarting the
+    # loop cannot fix an unreachable database or a full disk, and a restart
+    # resets the very state this reads.
+    #
+    # `$$` is compose's escape for a literal `$`. The image has no bash, and
+    # every construct here is POSIX sh -- verified against the pinned digest.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          set -- $$(cat /dumps/.last-run 2>/dev/null);
+          [ "$${2:-}" = ok ] || exit 1;
+          [ $$(( $$(date +%s) - $${1:-0} )) -lt $$(( $${POSTGRES_DUMP_INTERVAL_SECONDS:-86400} + 10800 )) ]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      # A cold start dumps every database on the node before it can write the
+      # first result, so nothing is judged until that has had room to finish.
+      start_period: 30m
     restart: unless-stopped
     dns:
       - 100.100.100.100
