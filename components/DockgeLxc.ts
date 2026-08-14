@@ -47,6 +47,44 @@ export interface DockgeLxcArgs {
   legacyTun?: boolean;
   sftpKey: Input<SshKeyDefinition>;
   monitor: TailscaleMonitor;
+  /**
+   * Docker service name that Traefik's `authentik-outpost` forwardAuth middleware
+   * dials, substituted into `docker/_common/traefik/compose.yaml` as
+   * `${AUTHENTIK_FORWARDAUTH_HOST}`.
+   *
+   * Defaults to `authentik_proxy` — the service in `docker/_common/authentik-outpost`,
+   * which is what every host that runs the sidecar needs. A host running authentik
+   * *locally* has no sidecar (see `useEmbeddedOutpost`) and must point this at the
+   * authentik server container instead.
+   *
+   * This is an arg rather than a `deployStacks({ variables })` entry deliberately: the
+   * variables channel has no defaulting, so a host added later that forgot the entry
+   * would render a literal `${AUTHENTIK_FORWARDAUTH_HOST}` into a Traefik label and
+   * fail that host's forwardAuth closed. Resolves open question 8 in
+   * docs/cluster-consolidation/07-authentik-to-alpha-site.md.
+   */
+  authentikForwardAuthHost?: Input<string>;
+  /**
+   * Use the authentik server's built-in *embedded* outpost for this host's proxy
+   * providers instead of standing up a per-host `Outpost` and a sidecar container.
+   *
+   * Only correct on a host that runs authentik itself — otherwise the embedded outpost
+   * has no route to the host's services. Exactly one host in the estate qualifies
+   * (alpha-site, once piece 07 lands); see that document's section 2.5 for why, and
+   * for the `.ignore` that suppresses the sidecar stack alongside this flag.
+   *
+   * When set, `createOutpost` skips the API token mint and the `.env-token` SSH write
+   * entirely — the embedded outpost needs neither, which is also what removes the
+   * bootstrap loop described in section 2.4.
+   */
+  useEmbeddedOutpost?: boolean;
+  /**
+   * Name of the embedded outpost to look up when `useEmbeddedOutpost` is set.
+   * authentik's built-in is conventionally "authentik Embedded Outpost", but that
+   * string is a server-side default rather than anything this repo controls — hence
+   * the override. Verify against the live server before relying on the default.
+   */
+  embeddedOutpostName?: Input<string>;
 }
 export interface ExternalServiceOpts {
   name: Input<string>;
@@ -698,6 +736,10 @@ export class DockgeLxc extends ComponentResource {
         output(this.cluster.icon).apply(icon => icon ?? ""),
       ),
       replaceVariable(/\$\{CLUSTER_AUTHENTIK_DOMAIN\}/g, this.args.host.remote ? interpolate`authentik.${this.args.globals.tailscaleDomain}` : this.cluster.authentikDomain),
+      // Defaulted, NOT sourced from args.variables — see DockgeLxcArgs. Every host
+      // that runs the authentik-outpost sidecar wants the sidecar's service name;
+      // only a host running authentik locally overrides it.
+      replaceVariable(/\$\{AUTHENTIK_FORWARDAUTH_HOST\}/g, output(this.args.authentikForwardAuthHost ?? "authentik_proxy")),
       replaceVariable(/\$UPTIME_API_URL/g, interpolate`https://uptime.${this.args.globals.searchDomain}`),
       ...Object.entries(args.variables ?? {}).map(([key, value]) => replaceVariable(new RegExp(`\\$\\{${key}\\}`, "g"), value)),
       // The secret-reference resolver runs last, after every ${VAR}
@@ -747,6 +789,41 @@ export class DockgeLxc extends ComponentResource {
 
     if (proxyProviders.length === 0) {
       return;
+    }
+
+    // A host that runs authentik itself uses that server's embedded outpost rather
+    // than a per-host Outpost fronted by a sidecar container. Two things fall away
+    // with it: the sidecar (suppressed by an .ignore on the host's authentik-outpost
+    // directory) and this method's live API round-trip — the embedded outpost needs
+    // no token, so nothing here has to reach a running authentik to succeed. That is
+    // what keeps the deploy from depending on the very server it is deploying.
+    // docs/cluster-consolidation/07-authentik-to-alpha-site.md section 2.5.
+    if (this.args.useEmbeddedOutpost) {
+      const embeddedName = output(this.args.embeddedOutpostName ?? "authentik Embedded Outpost");
+      // getOutpost returns an optional id, and a name that matches nothing comes back
+      // as a successful lookup with no id rather than an error — which would otherwise
+      // surface much later as an attachment against an empty outpost. Fail loudly here
+      // instead, and say which knob fixes it.
+      const embeddedId = all([authentik.getOutpostOutput({ name: embeddedName }, { parent: applicationManager.outpostsComponent }), embeddedName]).apply(([result, name]) => {
+        if (!result.id) {
+          throw new Error(`No authentik outpost named "${name}" — set embeddedOutpostName on the ` + `${this.args.host.name} DockgeLxc to whatever the live server calls its embedded outpost.`);
+        }
+        return result.id;
+      });
+      return proxyProviders.map(
+        (provider, index) =>
+          new authentik.OutpostProviderAttachment(
+            `${this.args.host.name}-embedded-outpost-${index}`,
+            {
+              outpost: embeddedId,
+              protocolProvider: provider.id.apply(parseFloat),
+            },
+            {
+              parent: applicationManager.outpostsComponent,
+              dependsOn: [provider],
+            },
+          ),
+      );
     }
 
     const outpost = new authentik.Outpost(
