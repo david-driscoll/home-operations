@@ -8,7 +8,11 @@ components:
   - ../../components/common
   - ../../components/repos/app-template
 resources:
+  # - ./books   # deliberately disabled upstream; carried for parity only
   - ./dns
+  - ./downloads
+  - ./games
+  - ./home
   - ./idp
   - ./shared
   - ./utils
