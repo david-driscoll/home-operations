@@ -15,5 +15,6 @@ resources:
   - ./home
   - ./idp
   - ./media
+  - ./pvr
   - ./shared
   - ./utils
