@@ -13,29 +13,6 @@ instance:
     - helm-controller
     - notification-controller
   sync:
-    # >>> THE PHASE C ROOT FLIP HAPPENS ON THE `url` LINE BELOW. <<<
-    #
-    # This block is the actual root of the whole estate: flux-operator turns it
-    # into GitRepository/flux-system, which cluster-meta and cluster-apps
-    # consume. Changing `url` re-points every Kustomization in the cluster at
-    # once.
-    #
-    # It still says equestria-cluster on purpose. Piece 21 Phase B moved the
-    # FILE here without moving the POINTER -- so this repo now *defines* the
-    # root while equestria-cluster still *is* the root. Phase C is the one-line
-    # change to home-operations.git, made here, in this repo.
-    #
-    # DO NOT make that change until:
-    #   1. kubernetes/flux/cluster/ks.yaml carries `prune: false` on BOTH
-    #      cluster-meta and cluster-apps -- and it is live, not merely merged.
-    #      Verify against the cluster, not the PR:
-    #        kubectl get kustomization -n flux-system cluster-apps \
-    #          -o jsonpath='{.spec.prune}'
-    #      Without this, an incomplete tree here does not surface as drift; it
-    #      garbage-collects the cluster.
-    #   2. Every namespace reconciles from GitRepository/home-operations and
-    #      `flux get kustomizations -A` is clean.
-    # `path` stays as-is -- Phase B copied the same relative layout.
     name: flux-system
     kind: GitRepository
     url: "https://github.com/david-driscoll/equestria-cluster.git"
