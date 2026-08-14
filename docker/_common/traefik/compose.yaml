@@ -13,7 +13,13 @@ services:
       traefik.enable: true
       # Dashboard configuration
       traefik.http.routers.dashboard.rule: Host(`internal.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.dashboard.middlewares: authentik-outpost@docker
+      # BREAK-GLASS: network-gated, NOT authentik-gated. This dashboard is on
+      # EVERY Dockge host (_common), including the one that will host authentik
+      # itself -- gating it behind authentik makes it unreachable exactly when it
+      # is needed. See docs/cluster-consolidation/07-authentik-to-alpha-site.md
+      # section 3.3. The authentik-outpost middleware below stays defined: other
+      # stacks on this host still reference it.
+      traefik.http.routers.dashboard.middlewares: internal-network@file
       traefik.http.routers.dashboard.entrypoints: websecure
       traefik.http.routers.dashboard.service: api@internal
       traefik.http.routers.dashboard.tls.certresolver: le

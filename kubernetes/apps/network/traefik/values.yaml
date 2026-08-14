@@ -172,7 +172,13 @@ ingressRoute:
       - "traefik"
       - "websecure"
     middlewares:
-      - name: authenticated-user
+      # BREAK-GLASS: network-gated, NOT authentik-gated. `authenticated-user`
+      # chains error-pages -> outpost -> internal-network; `local-user` is the
+      # same chain without the outpost hop. The Traefik dashboard is one of the
+      # tools used to diagnose an authentik outage, so it must not depend on
+      # authentik being up. See docs/cluster-consolidation/07-authentik-to-alpha-site.md
+      # section 3.3 -- a hard prerequisite of moving authentik off-cluster.
+      - name: local-user
         namespace: network
     tls:
       secretName: "le-production-tls"

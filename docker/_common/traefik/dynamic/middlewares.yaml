@@ -3,6 +3,17 @@ http:
     compress:
       compress:
         minResponseBodyBytes: 1024
+    # The Dockge-side equivalent of the cluster's network/internal-network
+    # Middleware. Same intent, same ranges minus the two Kubernetes-only ones
+    # (CLUSTER_NETWORK/SERVICE_NETWORK), which have no meaning on a Docker host.
+    # This exists so the dashboard has a network-only gate to use instead of the
+    # authentik forwardAuth one -- see compose.yaml's dashboard router.
+    internal-network:
+      ipAllowList:
+        sourceRange:
+          - 10.0.0.0/8
+          - 192.168.0.0/16
+          - 100.64.0.0/10
     errors:
       errors:
         status:
