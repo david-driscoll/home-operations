@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app repositories
+  namespace: &namespace flux-system
+spec:
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: flux-instance
+      namespace: flux-system
+  interval: 1h
+  path: ./kubernetes/apps/flux-system/repositories
+  prune: true
+  # PERMANENT, unlike the blanket Orphan the piece 21 sweep put on ordinary
+  # namespaces (which is stripped as each one lands here). This Kustomization
+  # owns GitRepository/home-operations -- the source every single -ref
+  # redirect in equestria-cluster reads from, and the source this very
+  # Kustomization reads from. Cascade-deleting it does not break one app; it
+  # severs the tree from the repo that defines it, with no path back through
+  # GitOps. Same reasoning as flux-instance/ks.yaml and flux-operator/ks.yaml.
+  # See docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  targetNamespace: *namespace
+  timeout: 10m
+  wait: false
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
