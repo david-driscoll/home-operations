@@ -1,6 +1,15 @@
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
 import { GlobalResources } from "@components/globals.ts";
+import { addUptimeGatus, toGatusKey } from "@components/helpers.ts";
+import type { ExternalEndpoint } from "@openapi/application-definition.js";
 import * as pulumi from "@pulumi/pulumi";
+
+// Gatus group for the per-node Postgres dumps produced by
+// docker/_common/postgres. `docker/_common/postgres/.env` restates
+// toGatusKey(this, <dockge name>) to build POSTGRES_DUMP_UPTIME_TOKEN, so this
+// string and `detail.name` below are load-bearing on both sides -- changing
+// either orphans every push and every endpoint goes permanently red.
+const DOCKGE_POSTGRES_DUMP_GROUP = "Dockge Postgres Dumps";
 
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
@@ -56,6 +65,44 @@ const dockgeInstances = dockgeDetails.apply(details => {
       }),
     );
   });
+});
+
+// The dockge plans above snapshot /postgres/dumps, but restic cannot tell a
+// fresh dump from a fortnight-old one -- it copies whatever is on disk and
+// reports success either way. So a node whose postgres-backup loop has been
+// failing, or whose postgres is unreachable, keeps producing green backups of
+// increasingly stale dumps. These heartbeats close that hole: backup.sh pushes
+// the result of each cycle here, and Gatus pages when no push arrives inside
+// 25h -- which also covers the container being stopped or never started. It is
+// the docker-side equivalent of a failed CronJob in
+// kubernetes/apps/database/postgres/backups.
+addUptimeGatus("dockge-postgres-dumps", globals, {
+  endpoints: [],
+  "external-endpoints": dockgeDetails.apply(details =>
+    details.map(
+      detail =>
+        ({
+          enabled: true,
+          name: detail.name,
+          token: toGatusKey(DOCKGE_POSTGRES_DUMP_GROUP, detail.name),
+          group: DOCKGE_POSTGRES_DUMP_GROUP,
+          // Dumps run every POSTGRES_DUMP_INTERVAL_SECONDS (24h) with the
+          // clock starting at container start, so the window has to absorb a
+          // restart's worth of drift plus the dump itself. Same 25h the
+          // backrest plans use.
+          heartbeat: { interval: "25h" },
+          alerts: [
+            {
+              type: "pushover",
+              enabled: true,
+              "success-threshold": 1,
+              "failure-threshold": 1,
+              "minimum-reminder-interval": "24h",
+            },
+          ],
+        }) as ExternalEndpoint,
+    ),
+  ),
 });
 
 backupPlanOrchestrator.addBackupPlan(

@@ -662,6 +662,14 @@ export class DockgeLxc extends ComponentResource {
 
     const replacements = [
       replaceVariable(/\$\{host\}/g, output(this.args.host.shortName ?? this.args.host.name)),
+      // The dockge instance's STABLE identity — the ComponentResource name
+      // ("celestia-dockge"), which is also the `name` field written to
+      // `hosts/dockge/<slug>` and therefore what `getDockgeInstances()` hands
+      // stacks/backups as `detail.name`. `${host}` is NOT a substitute: it is
+      // `shortName ?? name`, so on alpha-site it renders "as". Anything that
+      // has to line up with a cross-stack consumer of the dockge inventory
+      // must use this one.
+      replaceVariable(/\$\{DOCKGE_NAME\}/g, this.name),
       replaceVariable(/\$\{searchDomain\}/g, this.args.globals.searchDomain),
       replaceVariable(/\$\{ROOT_DOMAIN\}/g, this.args.globals.searchDomain),
       replaceVariable(/\$\{TIMEZONE\}/g, "America/New_York"),
