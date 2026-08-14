@@ -1,0 +1,147 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/controlplaneio-fluxcd/charts/refs/heads/main/charts/flux-instance/values.schema.json
+instance:
+  distribution:
+    # renovate: datasource=github-releases depName=controlplaneio-fluxcd/distribution
+    version: 2.9.4
+    registry: "ghcr.io/fluxcd"
+  cluster:
+    networkPolicy: false
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  sync:
+    # >>> THE PHASE C ROOT FLIP HAPPENS ON THE `url` LINE BELOW. <<<
+    #
+    # This block is the actual root of the whole estate: flux-operator turns it
+    # into GitRepository/flux-system, which cluster-meta and cluster-apps
+    # consume. Changing `url` re-points every Kustomization in the cluster at
+    # once.
+    #
+    # It still says equestria-cluster on purpose. Piece 21 Phase B moved the
+    # FILE here without moving the POINTER -- so this repo now *defines* the
+    # root while equestria-cluster still *is* the root. Phase C is the one-line
+    # change to home-operations.git, made here, in this repo.
+    #
+    # DO NOT make that change until:
+    #   1. kubernetes/flux/cluster/ks.yaml carries `prune: false` on BOTH
+    #      cluster-meta and cluster-apps -- and it is live, not merely merged.
+    #      Verify against the cluster, not the PR:
+    #        kubectl get kustomization -n flux-system cluster-apps \
+    #          -o jsonpath='{.spec.prune}'
+    #      Without this, an incomplete tree here does not surface as drift; it
+    #      garbage-collects the cluster.
+    #   2. Every namespace reconciles from GitRepository/home-operations and
+    #      `flux get kustomizations -A` is clean.
+    # `path` stays as-is -- Phase B copied the same relative layout.
+    name: flux-system
+    kind: GitRepository
+    url: "https://github.com/david-driscoll/equestria-cluster.git"
+    ref: "refs/heads/main"
+    path: kubernetes/flux/cluster
+  kustomize:
+    patches:
+    - # Increase the number of workers
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --concurrent=10
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --requeue-dependency=5s
+      target:
+        kind: Deployment
+        name: (kustomize-controller|helm-controller|source-controller)
+    - # Increase the memory limits
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: all
+        spec:
+          template:
+            spec:
+              containers:
+                - name: manager
+                  resources:
+                    limits:
+                      memory: 1Gi
+      target:
+        kind: Deployment
+        name: (kustomize-controller|helm-controller|source-controller)
+    - # Enable in-memory kustomize builds
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --concurrent=20
+        - op: replace
+          path: /spec/template/spec/volumes/0
+          value:
+            name: temp
+            emptyDir:
+              medium: Memory
+      target:
+        kind: Deployment
+        name: kustomize-controller
+    - # Enable Helm repositories caching
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --helm-cache-max-size=10
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --helm-cache-ttl=60m
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --helm-cache-purge-interval=5m
+      target:
+        kind: Deployment
+        name: source-controller
+    - # Flux near OOM detection for Helm
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --feature-gates=OOMWatch=true
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --oom-watch-memory-threshold=95
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --oom-watch-interval=500ms
+      target:
+        kind: Deployment
+        name: helm-controller
+    - # Disable chart digest tracking
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --feature-gates=DisableChartDigestTracking=true
+      target:
+        kind: Deployment
+        name: helm-controller
+    - # Controller-level SOPS decryption
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --sops-age-secret=sops-age
+      target:
+        kind: Deployment
+        name: kustomize-controller
+    - # Watch configmaps and secrets attached to HelmReleases and Kustomizations
+      patch: |-
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --watch-configs-label-selector=owner!=helm
+      target:
+        kind: Deployment
+        name: (helm-controller|kustomize-controller)
+    - # Cancel health checks on new Kustomizations revisions
+      patch: |-
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --feature-gates=CancelHealthCheckOnNewRevision=true
+      target:
+        kind: Deployment
+        name: kustomize-controller
