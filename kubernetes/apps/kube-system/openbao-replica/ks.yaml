@@ -34,8 +34,8 @@ spec:
     # ClusterSecretStore/database (the dump credential) and
     # ClusterSecretStore/onepassword-connect (the SFTP key — dual-run: 1Password
     # is still authoritative for estate credentials until Phase 11).
-    - name: external-secrets-stores
-      namespace: kube-system
+    # - name: external-secrets-stores
+    #   namespace: kube-system
     # Both jobs cross to alpha-site only through the dockge-as egress Service:
     # port 2023 (dump receiver), 8200 (transit unseal for the restore test) and
     # 443 (Gatus heartbeat reports) are declared in
