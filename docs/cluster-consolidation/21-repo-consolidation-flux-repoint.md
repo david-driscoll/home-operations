@@ -281,6 +281,61 @@ Parity findings from step 3 worth recording, neither of which blocks the flip:
 
 ### Phase C — the root flip (self-modifying, do this with `prune: false` already in place)
 
+> **Revised 2026-08-14, three changes to the steps below.** Read this box first;
+> it overrides the numbered list where they disagree.
+>
+> **1. `flux-system` migrates as a no-op, not as a `-ref` redirect.** Phase A's
+> instruction to treat `flux-system` as "part of Phase B" was followed to the
+> point of writing the redirect (equestria-cluster#3170), then reversed. The
+> `-ref` pattern exists to move a namespace's source *ahead of* the flip; for
+> `flux-system` the flip does it for free, so the redirect bought nothing and
+> cost two things: a prune event on Flux's own Kustomizations at the one moment
+> when the thing that repairs a failure *is* the thing that broke, and the
+> rollback path (deleting equestria's `flux-instance/`, `flux-operator/`,
+> `repositories/` means reverting `instance.sync.url` lands on a tree that no
+> longer defines Flux).
+>
+> Instead, `home-operations:kubernetes/apps/flux-system/**` is staged with
+> `sourceRef: flux-system` — the *self* GitRepository, which is what the live
+> objects already say. At the flip, `cluster-apps` finds the same three
+> Kustomization names in the new tree and **updates them in place rather than
+> pruning and recreating them.** Verified by rendering both trees: the only
+> delta is `decryption` + `substituteFrom`, which `equestria-cluster` injects at
+> *apply* time via `cluster-apps`'s patch and `home-operations` injects at
+> *build* time via `components/common`. The live objects already carry exactly
+> those values, so the flip re-applies an identical spec.
+>
+> **2. Step 2 edits `equestria-cluster`'s `values.yaml`, not this repo's.**
+> That is still the live one at that moment — this repo *defines* the root while
+> `equestria-cluster` still *is* the root. Editing this repo's copy before the
+> flip does nothing.
+>
+> **NEVER put a comment in `flux-instance/helm/values.yaml`.** Its
+> `kustomization.yaml` embeds the file into a `configMapGenerator` with `files:`
+> and no `disableNameSuffixHash`, and `kustomizeconfig.yaml` rewrites
+> `spec/valuesFrom/name` to the hashed ConfigMap. A comment changes the hash,
+> which renames the ConfigMap, which changes the HelmRelease's `valuesFrom`,
+> which triggers a Helm upgrade of the chart that manages Flux itself. Document
+> around this file, never in it.
+>
+> **3. Delete the 16 `-ref` Kustomizations deliberately, between steps 3 and 4 —
+> while `prune: false` is still in force.** As written, step 4 re-enables prune
+> and lets `cluster-apps` discover all 16 stale `-ref` objects at once (they
+> exist only in `equestria-cluster`'s tree, which stops being read at the flip).
+> All 16 carry `deletionPolicy: Orphan` — verified live, 16/16, none defaulted
+> to `Delete` — so their inventories are orphaned rather than cascade-deleted.
+> But "survivable" is a worse property than "one at a time, watched". Removing
+> them by hand first means a bad first one stops the process at 1/16, and leaves
+> nothing stale for the restored prune to find.
+>
+> What is *not* at risk at the flip, checked explicitly: the `-ref` stubs also
+> generate `Middleware`, `LimitRange`, `Alert`, `Provider` and the
+> `github-status` `ExternalSecret` per namespace. This repo's per-namespace
+> `kustomization.yaml` files carry the same
+> `components: [alerts, common, repos/app-template]`, so all of those are
+> re-created identically — re-owned, not pruned. The sole exception was
+> `cluster-versions`, now resolved by porting `versions.env` (see Phase B).
+
 This is the step the brief's "wrong path + `prune: true` garbage-collects the
 cluster" warning is about, made concrete: `cluster-apps` diffs its **entire**
 apply set (335+ objects) against whatever `GitRepository/flux-system`
