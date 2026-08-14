@@ -12,6 +12,7 @@ resources:
   - ./dns
   - ./downloads
   - ./games
+  - ./home
   - ./idp
   - ./shared
   - ./utils
