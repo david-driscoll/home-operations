@@ -1,27 +1,76 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["local>david-driscoll/.github:renovate-config", "config:recommended", "docker:enableMajor", "helpers:pinGitHubActionDigests", ":dependencyDashboard", ":disableRateLimiting", ":semanticCommits"],
+  extends: [
+    "local>david-driscoll/.github:renovate-config",
+    "config:recommended",
+    "docker:enableMajor",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    ":disableRateLimiting",
+    ":semanticCommits",
+  ],
   dependencyDashboard: true,
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
-  suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
-  schedule: ["every weekend"],
-  ignorePaths: ["**/*.sops.*", "sdks/**"],
+  suppressNotifications: [
+    "prEditedNotification",
+    "prIgnoreNotification",
+    // "Excess registryUrls found for datasource lookup - using first
+    // configured only" is NOT caused by overlapping managers, as previously
+    // assumed here. The flux manager resolves a HelmRelease's sourceRef by
+    // filtering every HelmRepository in the repo on name + namespace
+    // (modules/manager/flux/extract.ts resolveHelmRepository), so two
+    // HelmRepository documents that share a name and namespace produce the
+    // same URL twice in registryUrls and trigger the warning. The fix is to
+    // dedupe the HelmRepository, not to suppress the warning — see
+    // stargate-command-cluster#1720, which collapsed two `authentik`
+    // HelmRepositories into kubernetes/flux/meta/repos/authentik.yaml.
+    // Suppression is kept only to keep unrelated lookup noise off the
+    // dashboard; it does not make a duplicate registry safe.
+    "dependencyLookupWarnings",
+  ],
+  schedule: [
+    "every weekend"
+  ],
+  ignorePaths: [
+    "**/*.sops.*"
+  ],
   flux: {
+    managerFilePatterns: [
+      "/(^|/)kubernetes/.+\\.ya?ml$/"
+    ],
     pinDigests: false,
   },
   "helm-values": {
+    managerFilePatterns: [
+      "/(^|/)kubernetes/.+\\.ya?ml$/"
+    ],
     pinDigests: true,
   },
   helmfile: {
+    managerFilePatterns: [
+      "/(^|/)helmfile\\.ya?ml$/"
+    ],
+    // WARNING: this line does nothing on its own. Manager-level config is
+    // merged before packageRules (workers/repository/process/fetch.ts calls
+    // applyPackageRules at 'pre-lookup' *after* the manager config), so the
+    // shared preset's `docker:pinDigests` rule
+    // ({ matchDatasources: ["docker"], pinDigests: true }) overrides it, and
+    // helmfile's oci:// charts use the docker datasource. The effective
+    // suppression is a packageRule in local>david-driscoll/.github:renovate-config
+    // ({ matchManagers: ["helmfile"], pinDigests: false }). Kept here as
+    // documentation of intent — do not rely on it alone.
     pinDigests: false,
   },
   kubernetes: {
+    managerFilePatterns: [
+      "/(^|/)kubernetes/.+\\.ya?ml$/"
+    ],
     pinDigests: true,
   },
   kustomize: {
-    pinDigests: true,
-  },
-  "docker-compose": {
+    managerFilePatterns: [
+      "/(^|/)kustomization\\.ya?ml$/"
+    ],
     pinDigests: true,
   },
   customDatasources: {
@@ -38,155 +87,350 @@
   },
   packageRules: [
     {
+      description: "CoreDNS Group",
+      groupName: "CoreDNS",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/coredns/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Flux Operator Group",
+      groupName: "Flux Operator",
+      matchPackageNames: [
+        "/flux-operator/",
+        "/flux-instance/"
+      ],
+      matchDatasources: [
+        "docker"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Siderolabs Talos",
+      groupName: "Siderolabs Talos",
+      matchDepNames: [
+        "ghcr.io/siderolabs/installer",
+        "ghcr.io/siderolabs/talosctl",
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Siderolabs Kubernetes",
+      groupName: "Siderolabs Kubernetes",
+      matchDepNames: [
+        "ghcr.io/siderolabs/kubelet"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Tailscale",
+      groupName: "Tailscale",
+      matchPackageNames: [
+        "ghcr.io/tailscale/*",
+        "tailscale/*",
+        "tailscale*"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Traefik",
+      groupName: "Traefik",
+      matchPackageNames: [
+        "ghcr.io/traefik/*",
+        "traefik/*",
+        "traefik*"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Immich",
+      groupName: "Immich",
+      matchPackageNames: [
+        "ghcr.io/immich-app/*"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "CloudNative-PG Cluster",
+      groupName: "CloudNative-PG Cluster",
+      matchPackageNames: [
+        "ghcr.io/cloudnative-pg/postgresql"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "CloudNative-PG Cluster",
+      groupName: "CloudNative-PG Cluster",
+      matchPackageNames: [
+        "ghcr.io/cloudnative-pg/postgresql"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
+      description: "Spegel Group",
+      groupName: "Spegel",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "/spegel/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "Auto-merge GitHub Actions",
-      matchManagers: ["github-actions"],
+      matchManagers: [
+        "github-actions"
+      ],
       automerge: true,
       automergeType: "branch",
-      matchUpdateTypes: ["minor", "patch", "digest"],
+      matchUpdateTypes: [
+        "minor",
+        "patch",
+        "digest"
+      ],
       minimumReleaseAge: "3 days",
       ignoreTests: true,
     },
     {
-      matchUpdateTypes: ["major"],
+      // Flux OCIRepository Helm charts are cosign-verified and tag-pinned; the
+      // flux manager owns these files and should never write a digest. The
+      // shared preset's docker:pinDigests otherwise generates pinDigest
+      // updates for them. helm-values/kubernetes also scan kubernetes/**.yaml
+      // with pinDigests: true and race flux to patch the same OCI chart ref.
+      // Excluding all three managers here stops both.
+      //
+      // Note this rule does NOT cover the helmfile manager, which is why the
+      // four "pin image ..." entries for coredns / spegel / cert-manager /
+      // flux-operator survived it and sat on the dashboard indefinitely. That
+      // is fixed in the shared preset, not here — see vault#104 and
+      // david-driscoll/.github#2.
+      //
+      // matchUpdateTypes is a post-lookup matcher (updateType does not exist
+      // pre-lookup), so this rule does not prevent the lookup; the update is
+      // generated and then dropped by the `enabled !== false` filter in
+      // workers/repository/updates/flatten.ts. That is fine here, but it is
+      // why the helmfile fix uses `pinDigests: false` + matchManagers instead:
+      // that form is evaluated pre-lookup and suppresses generation outright.
+      description: "Don't pin digests on flux-managed OCI Helm charts",
+      matchManagers: [
+        "flux",
+        "helm-values",
+        "kubernetes"
+      ],
+      matchUpdateTypes: [
+        "pinDigest"
+      ],
+      enabled: false,
+    },
+    {
+      // bootstrap/helmfile.yaml mirrors chart versions that are otherwise
+      // owned by the flux manager (kubernetes/apps/**/helmrelease.yaml).
+      // Renovate treats same-named deps found by different managers as one
+      // logical update and tries to combine both files' edits into a single
+      // branch. Force helmfile-manager updates onto their own branch
+      // namespace so they never share a branch with the flux-managed update
+      // for the same chart.
+      //
+      // Correction: the "Error updating branch: update failure" warning that
+      // originally motivated this rule was NOT a rebase race. It was the
+      // helmfile manager being handed pinDigest updates it cannot apply —
+      // helmfile's extractor never sets currentDigest and the manager exports
+      // no updateDependency/autoReplaceStringTemplate, so doAutoReplace always
+      // throws WORKER_FILE_UPDATE_FAILED. Fixed in the shared preset
+      // (david-driscoll/.github#2). This rule is kept because separate branch
+      // namespaces are still the right shape for a mirrored chart version.
+      description: "Keep bootstrap helmfile chart bumps off the flux-managed branch",
+      matchManagers: [
+        "helmfile"
+      ],
+      additionalBranchPrefix: "helmfile-",
+    },
+    {
+      // Talos/Kubernetes upgrade manifests carry a plain `version: vX.Y.Z`
+      // field (TalosUpgrade/KubernetesUpgrade) extracted via the custom regex
+      // manager. A digest does not belong in that field, so suppress the
+      // docker:pinDigests-driven pinDigest updates for these images.
+      description: "Don't pin digests on siderolabs upgrade image versions",
+      matchDatasources: [
+        "docker"
+      ],
+      matchDepNames: [
+        "ghcr.io/siderolabs/installer",
+        "ghcr.io/siderolabs/kubelet",
+      ],
+      matchUpdateTypes: [
+        "pinDigest"
+      ],
+      enabled: false,
+    },
+    {
+      matchUpdateTypes: [
+        "major"
+      ],
       semanticCommitType: "feat",
       commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
       commitMessageExtra: "( {{currentVersion}} → {{newVersion}} )",
     },
     {
-      matchUpdateTypes: ["minor"],
+      matchUpdateTypes: [
+        "minor"
+      ],
       semanticCommitType: "feat",
       commitMessageExtra: "( {{currentVersion}} → {{newVersion}} )",
     },
     {
-      matchUpdateTypes: ["patch"],
+      matchUpdateTypes: [
+        "patch"
+      ],
       semanticCommitType: "fix",
       commitMessageExtra: "( {{currentVersion}} → {{newVersion}} )",
     },
     {
-      matchUpdateTypes: ["digest"],
+      matchUpdateTypes: [
+        "digest"
+      ],
       semanticCommitType: "chore",
       commitMessageExtra: "( {{currentDigestShort}} → {{newDigestShort}} )",
     },
     {
-      matchDatasources: ["docker"],
+      matchDatasources: [
+        "docker"
+      ],
       semanticCommitScope: "container",
       commitMessageTopic: "image {{depName}}",
     },
     {
-      matchDatasources: ["helm"],
+      matchDatasources: [
+        "helm"
+      ],
       semanticCommitScope: "helm",
       commitMessageTopic: "chart {{depName}}",
     },
     {
-      matchManagers: ["github-actions"],
+      matchManagers: [
+        "github-actions"
+      ],
       semanticCommitType: "ci",
       semanticCommitScope: "github-action",
       commitMessageTopic: "action {{depName}}",
     },
     {
-      matchDatasources: ["github-releases"],
+      matchDatasources: [
+        "github-releases"
+      ],
       semanticCommitScope: "github-release",
       commitMessageTopic: "release {{depName}}",
     },
     {
-      matchUpdateTypes: ["major"],
-      labels: ["type/major"],
+      matchUpdateTypes: [
+        "major"
+      ],
+      labels: [
+        "type/major"
+      ],
     },
     {
-      matchUpdateTypes: ["minor"],
-      labels: ["type/minor"],
+      matchUpdateTypes: [
+        "minor"
+      ],
+      labels: [
+        "type/minor"
+      ],
     },
     {
-      matchUpdateTypes: ["patch"],
-      labels: ["type/patch"],
+      matchUpdateTypes: [
+        "patch"
+      ],
+      labels: [
+        "type/patch"
+      ],
     },
     {
-      matchDatasources: ["docker"],
-      addLabels: ["renovate/container"],
+      matchDatasources: [
+        "docker"
+      ],
+      addLabels: [
+        "renovate/container"
+      ],
     },
     {
-      matchDatasources: ["helm"],
-      addLabels: ["renovate/helm"],
+      matchDatasources: [
+        "helm"
+      ],
+      addLabels: [
+        "renovate/helm"
+      ],
     },
     {
-      matchManagers: ["github-actions"],
-      addLabels: ["renovate/github-action"],
+      matchManagers: [
+        "github-actions"
+      ],
+      addLabels: [
+        "renovate/github-action"
+      ],
     },
     {
-      matchDatasources: ["github-releases"],
-      addLabels: ["renovate/github-release"],
+      matchDatasources: [
+        "github-releases"
+      ],
+      addLabels: [
+        "renovate/github-release"
+      ],
     },
     {
       description: "Override 1password-cli datasource: aqua type:http uses AgileBits CDN, no GitHub releases exist",
-      matchManagers: ["mise"],
-      matchDepNames: ["1password-cli"],
+      matchManagers: [
+        "mise"
+      ],
+      matchDepNames: [
+        "1password-cli"
+      ],
       overrideDatasource: "custom.1password-cli",
-    },
-    {
-      // Hermes Agent tags are CalVer and inconsistently shaped: v2026.7.30 has
-      // three components, v2026.7.7.2 and v2026.5.29.2 have four. Renovate's
-      // default docker versioning is semver-like and silently skips the
-      // four-component releases, which would strand the pin on an older tag
-      // with no visible failure. `loose` orders them all.
-      description: "Hermes Agent uses 4-component CalVer tags that semver versioning skips",
-      matchDatasources: ["docker"],
-      matchPackageNames: ["nousresearch/hermes-agent"],
-      versioning: "loose",
-    },
-    {
-      // The repo extends "docker:enableMajor", so without this rule Renovate
-      // would happily open a postgres 18 -> 19 PR for docker/_common/postgres.
-      // Merging it would not be an upgrade, it would be an outage: PGDATA is
-      // bound to the major version that created it, and a 19 binary starting
-      // on an 18 data directory exits with "database files are incompatible
-      // with server" and crash-loops. A major move is a pg_upgrade or a
-      // dump/restore — never an image bump. Minor, patch and digest updates
-      // still flow normally.
-      //
-      // The stack was authored on 17 and moved to 18 by hand in 2b99cb93. That
-      // was free precisely because no host had ever completed a first init —
-      // there was no 17 PGDATA on disk anywhere to be incompatible with, on any
-      // of the four Dockge hosts. That will NOT be true of the next major, which
-      // is the whole point of this rule. It also bounds a subtler failure: all
-      // three services in that compose file share one major, and pg_dump refuses
-      // to dump a server newer than itself while backup.sh only warns — so a
-      // partial major bump silently stops every backup, without ever failing a
-      // container. Bump all three together or none.
-      description: "Container Postgres majors are a data migration, not an image bump",
-      matchDatasources: ["docker"],
-      matchPackageNames: ["postgres"],
-      matchUpdateTypes: ["major"],
-      enabled: false,
     },
   ],
   customManagers: [
     {
       description: "Process annotated dependencies",
       customType: "regex",
-      managerFilePatterns: ["/(^|/).+\\.env$/", "/(^|/).+\\.sh$/", "/(^|/).+\\.ya?ml$/"],
+      managerFilePatterns: [
+        "/(^|/).+\\.env$/",
+        "/(^|/).+\\.sh$/",
+        "/(^|/).+\\.ya?ml$/",
+      ],
       matchStrings: [
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n.+(:\\s|=)(&\\S+\\s)?(?<currentValue>\\S+)",
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n.+/(?<currentValue>(v|\\d)[^/]+)",
+        // Quoted YAML string values: key: "1.2.3"
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n[^:]+:\\s\"(?<currentValue>[^\"]+)\"",
+        // Full docker image references: key: registry/image:tag
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n[^:\\n]+:\\s[^:\\n]+:(?<currentValue>[^\\s@]+)",
       ],
       datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
-    },
-    {
-      description: "Pulumi terraform provider (registry.terraform.io)",
-      customType: "regex",
-      managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
-      matchStrings: ["parameters: \\[registry\\.terraform\\.io/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
-      datasourceTemplate: "terraform-provider",
-      registryUrlTemplate: "https://registry.terraform.io",
-      autoReplaceStringTemplate: "parameters: [registry.terraform.io/{{{packageName}}}, {{{newValue}}}]",
-    },
-    {
-      description: "Pulumi terraform provider (registry.opentofu.org)",
-      customType: "regex",
-      managerFilePatterns: ["/(^|/)Pulumi\\.ya?ml$/"],
-      matchStrings: ["parameters: \\[registry\\.opentofu\\.org/(?<packageName>[^\\n]+), ?(?<currentValue>\\S+)\\]"],
-      datasourceTemplate: "terraform-provider",
-      registryUrlTemplate: "https://registry.opentofu.org",
-      autoReplaceStringTemplate: "parameters: [registry.opentofu.org/{{{packageName}}}, {{{newValue}}}]",
     },
   ],
 }
