@@ -1,0 +1,39 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app mosquitto
+  namespace: &namespace stargate-command
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/stargate-command/mosquitto
+  prune: true
+  # Kept deliberately, NOT migration-sweep scaffolding. This namespace runs the
+  # live home-automation stack (Home Assistant, Mosquitto, Matter, chrony) and
+  # its fate is decided in piece 22, not here. Until then a Kustomization
+  # ownership change must never be able to cascade-delete it.
+  # See docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    - name: sgc-secrets
+      namespace: *namespace
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
