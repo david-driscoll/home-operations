@@ -16,6 +16,11 @@ bin/
 apm_modules/
 stacks/unifi-network/tailscale-acl.json
 /headlamp/
+# Runtime caches that must never be committed. xcproxy writes a ~20MB
+# tmdb_cache.db into its resources/ dir; equestria-cluster ignores these
+# and home-operations did not, so a verbatim copy during the piece 21
+# migration committed it. Matches equestria-cluster's own rule.
+*.db*
 # Crew: ignore runtime state (logs, inbox, sessions)
 # Note: .crew/casting/* is identity and MUST be committed to main, not ignored
 .crew/orchestration-log/
