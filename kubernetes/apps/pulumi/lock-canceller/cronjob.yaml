@@ -21,7 +21,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: lock-canceller
-              image: bitnami/kubectl@sha256:b9f4412e53f09d76b0991cdd29c0feff4c1d1e112b307e0ab155e5b050a9f4ec
+              image: bitnami/kubectl@sha256:30aa809595d2116189165449ee39d3d9d490237631e7b0e882146fb27964de95
               command: ["/bin/bash", "-c"]
               args:
                 - |
