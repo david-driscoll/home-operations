@@ -7,7 +7,7 @@
 #:package System.Text.RegularExpressions@4.3.1
 #:package Xtream.Client@1.0.7
 #:package ZiggyCreatures.FusionCache@2.6.0
-#:package NeoSmart.Caching.Sqlite.AspNetCore@9.0.1
+#:package NeoSmart.Caching.Sqlite.AspNetCore@9.0.3
 #:package ZiggyCreatures.FusionCache.Serialization.SystemTextJson@2.6.0
 #:package TMDbLib@3.0.0
 #:package System.Reactive@7.0.0
