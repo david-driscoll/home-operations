@@ -5,10 +5,21 @@ kind: ApplicationDefinition
 metadata:
   name: authentik
 spec:
-  name: Authentik
+  # "(Alpha Site)", not bare "Authentik", and this is load-bearing while SGC is
+  # still live. addGatusInstances builds each endpoint's Gatus name from
+  # spec.name, and Gatus enforces global uniqueness on (name, group) across the
+  # whole merged config from every cluster — it PANICS on a duplicate rather than
+  # skipping it, which takes down monitoring for the entire estate, not just this
+  # endpoint. That exact failure happened on 2026-08-13 staging tsidp; see
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md. SGC's copy
+  # publishes ("Authentik ", "Applications"), so this must not be able to collide.
+  # Rename to plain "Authentik" only once SGC's definition is gone.
+  name: Authentik (Alpha Site)
   category: Infrastructure
   description: Authentik is an open-source identity provider focused on flexibility and security.
-  url: &url https://authentik.${searchDomain}
+  # Staging hostname — see compose.yaml's router comment for why this is not the
+  # production vanity alias. Flipped at cutover.
+  url: &url https://authentik.${CLUSTER_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
   # NO `authentik:` block, and there never will be one. Authentik cannot be an
   # OAuth client of itself, and this host serves its own forwardAuth from the
@@ -18,34 +29,20 @@ spec:
   # NO `access_policy` either, for the same reason: there is no provider for a
   # policy to bind to. Authentik's own admin interface is gated by authentik.
   gatus:
-    # Load-bearing, not cosmetic. Once this host answers for the vanity aliases,
-    # every OIDC login and every outpost in the estate depends on it — and it is
-    # a single Pi on a single PoE switch (section 6, accepted).
+    # One check while staging, against the staging hostname. /-/health/live/ is
+    # authentik's unauthenticated liveness endpoint; it answers before and
+    # independently of a working login flow.
     #
-    # /-/health/live/ is authentik's unauthenticated liveness endpoint; it
-    # answers before and independently of a working login flow.
-    - name: Authentik
-      group: ${CLUSTER_TITLE}
-      url: https://authentik.${searchDomain}/-/health/live/
+    # Deliberately NOT checking canterlot/iris yet: those names still resolve to
+    # SGC, so checks against them would report green for a server this stack has
+    # nothing to do with — monitoring theatre that would go on passing straight
+    # through a failed cutover. They are added in the cutover change, alongside
+    # the router flip, when they actually point here. At that moment they become
+    # load-bearing: every OIDC login and every outpost in the estate depends on a
+    # single Pi on a single PoE switch (section 6, accepted), and "one alias did
+    # not repoint" is a failure only a per-alias check can see.
+    - url: https://authentik.${CLUSTER_DOMAIN}/-/health/live/
       method: GET
       interval: 1m
-      conditions:
-        - "[STATUS] == 204"
-    # The two vanity aliases get their own checks rather than riding on the one
-    # above: they are separate DNS names published by separate providers, and the
-    # failure this needs to catch is "one alias did not repoint", which a check
-    # against the primary hostname cannot see.
-    - name: Authentik (canterlot alias)
-      group: ${CLUSTER_TITLE}
-      url: https://canterlot.${searchDomain}/-/health/live/
-      method: GET
-      interval: 5m
-      conditions:
-        - "[STATUS] == 204"
-    - name: Authentik (iris alias)
-      group: ${CLUSTER_TITLE}
-      url: https://iris.${searchDomain}/-/health/live/
-      method: GET
-      interval: 5m
       conditions:
         - "[STATUS] == 204"

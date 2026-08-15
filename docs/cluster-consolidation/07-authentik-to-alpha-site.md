@@ -522,6 +522,19 @@ outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge hos
    external-dns retract them from cloudflare/technitium/unifi, and confirm all three are gone from
    each provider before publishing the alpha-site side. Leaving the `HTTPRoute` hostnames in place
    means external-dns re-asserts them at SGC's gateway and wins.
+
+   **"Publishing the alpha-site side" is a concrete edit, not a DNS console action.** The stack
+   deploys on staging names (`authentik.${CLUSTER_DOMAIN}`, `authentik-as.${tailscaleDomain}`)
+   precisely so that unlocking it cannot touch live SSO DNS: `DockgeLxc`'s `hostRegex`
+   (`components/DockgeLxc.ts:1061`) turns every `Host(...)` rule in a compose file into either a
+   `StandardDns` CNAME or a `tailscale.Service`, so naming the production aliases there *is* a DNS
+   change — made by a second writer, against records external-dns is publishing at the same moment.
+   The flip is therefore: swap `docker/alpha-site/authentik/compose.yaml`'s two router rules for the
+   three vanity aliases, repoint `definition.yaml`'s `url`, add the per-alias gatus checks, and drop
+   the `(Alpha Site)` suffix from `spec.name` — but that last one **only once SGC's own
+   `ApplicationDefinition` is gone**, since until then the distinct name is what keeps Gatus from
+   panicking on a duplicate `(name, group)` and taking estate-wide monitoring down with it
+   ([27](27-migration-churn-failure-modes.md)).
 6. **Repoint `AUTHENTIK_URL`/`AUTHENTIK_TOKEN`** in OpenBao (§3.5), then confirm reachability
    **from a pod in equestria**, not from a workstation — `stacks/authentik` reconciles in-cluster.
 7. **Post-check:** every outpost re-registers and reports healthy against the new server

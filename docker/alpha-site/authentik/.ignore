@@ -59,3 +59,31 @@
 # After deleting this file, `pulumi up` on stacks/home deploys authentik here
 # against a FRESH, EMPTY database. Confirm it starts healthy against that empty
 # DB before restoring anything into it.
+#
+# ---------------------------------------------------------------------------
+# WHAT THE CUTOVER STILL HAS TO FLIP (this stack deploys on STAGING names)
+# ---------------------------------------------------------------------------
+#
+# Unlocking does NOT make this instance answer for the estate's SSO hostnames,
+# on purpose. compose.yaml routes only:
+#
+#      authentik.${CLUSTER_DOMAIN}          (as.driscoll.tech)
+#      authentik-as.${tailscaleDomain}
+#
+# because every `Host(...)` rule here becomes real infrastructure — a StandardDns
+# CNAME or a tailscale.Service — so naming the production aliases would repoint
+# live SSO DNS on deploy, against records external-dns is publishing from SGC's
+# HTTPRoute at the same time. Verified live 2026-08-15: all of
+# authentik/iris/canterlot.driscoll.tech resolve to SGC's gateway, and
+# `svc:authentik` is already taken on the tailnet.
+#
+# At cutover (section 4 step 5), in ONE change:
+#   - swap compose.yaml's two router rules for the three vanity aliases
+#   - point definition.yaml's `url` at authentik.${ROOT_DOMAIN} and add the
+#     per-alias gatus checks
+#   - rename definition.yaml's `spec.name` back to plain "Authentik" ONLY after
+#     SGC's own definition is gone — until then the "(Alpha Site)" suffix is what
+#     stops Gatus panicking on a duplicate (name, group) and taking estate-wide
+#     monitoring down with it (piece 27)
+#   - remove the three hostnames from SGC's HelmRelease HTTPRoute and confirm
+#     external-dns has retracted them from all three providers FIRST

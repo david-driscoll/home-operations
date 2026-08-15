@@ -95,20 +95,39 @@ services:
       autoheal: true
       traefik.enable: true
 
-      # All three vanity aliases answer here, because all three answer on ONE
-      # HTTPRoute in SGC today (section 1.4) and every cluster's outposts and
-      # Dockge hosts know authentik by a cluster-specific one:
-      #   canterlot -> equestria, celestia, luna, skystar
-      #   iris      -> sgc, alpha-site
-      #   authentik -> the chart's own default, and DockgeLxc's remote-host fallback
+      # STAGING HOSTNAMES — deliberately NOT the production vanity aliases.
+      #
+      # Every `Host(...)` rule in this file is parsed by DockgeLxc's hostRegex
+      # (components/DockgeLxc.ts:1061) and turned into infrastructure, not just
+      # routing: a name under the tailnet domain becomes a `tailscale.Service`
+      # (`svc:<name>`), and any other name becomes a StandardDns CNAME pointing at
+      # this Dockge host. So naming the production aliases here does not merely
+      # duplicate a route — it REPOINTS LIVE SSO DNS the moment the stack deploys,
+      # against records external-dns is simultaneously publishing from SGC's
+      # HTTPRoute. Two writers on the same names, one of which has wiped live DNS
+      # before. Verified 2026-08-15, all four are live and in use:
+      #   authentik/iris/canterlot.driscoll.tech -> odyssey (SGC gateway), 10.10.209.101
+      #   authentik.<tailnet>                    -> 100.106.100.188
+      #
+      # So staging runs on names nothing else claims. The cutover swaps these two
+      # rules for the three vanity aliases in the SAME change that removes them
+      # from SGC's HTTPRoute — see section 4 step 5 of
+      # docs/cluster-consolidation/07-authentik-to-alpha-site.md, and the
+      # "cutover" section of the .ignore in this directory.
+      #
       # Issuer URLs do not change in this migration; only what answers behind
       # them does, which is why no app's OIDC config is touched.
-      traefik.http.routers.authentik.rule: Host(`authentik.${searchDomain}`) || Host(`iris.${searchDomain}`) || Host(`canterlot.${searchDomain}`)
+      traefik.http.routers.authentik.rule: Host(`authentik.${CLUSTER_DOMAIN}`)
       traefik.http.routers.authentik.entrypoints: websecure
       traefik.http.routers.authentik.tls.certresolver: le
       traefik.http.routers.authentik.service: authentik
 
-      traefik.http.routers.authentik-tailscale.rule: Host(`authentik.${tailscaleDomain}`)
+      # authentik-as, NOT authentik: `svc:authentik` already exists on the tailnet
+      # (and DockgeLxc:700 hands remote hosts `authentik.<tailnet>` as their
+      # CLUSTER_AUTHENTIK_DOMAIN). Claiming it here would both collide on the
+      # service name and silently repoint every remote Dockge host's outpost at
+      # this empty instance.
+      traefik.http.routers.authentik-tailscale.rule: Host(`authentik-as.${tailscaleDomain}`)
       traefik.http.routers.authentik-tailscale.entrypoints: tailscale
       traefik.http.routers.authentik-tailscale.service: authentik
 
@@ -156,9 +175,8 @@ services:
 
 x-dockge:
   urls:
-    - https://authentik.${searchDomain}
-    - https://iris.${searchDomain}
-    - https://canterlot.${searchDomain}
+    - https://authentik.${CLUSTER_DOMAIN}
+    - https://authentik-as.${tailscaleDomain}
 
 networks:
   dockge_default:
