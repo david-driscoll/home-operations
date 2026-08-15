@@ -18,6 +18,16 @@ spec:
   interval: 1h
   path: ./kubernetes/apps/cert-manager/cert-manager
   prune: true
+  # The cert-manager HelmRelease installs the cert-manager CRDs
+  # (`crds: CreateReplace`) -- certificates, issuers, clusterissuers,
+  # certificaterequests, orders, challenges. Deleting this Kustomization
+  # without this would cascade into those CRDs and take every Certificate in
+  # the cluster with them (9 live today), plus every Issuer. Same failure
+  # class as the Traefik CRD cascade in
+  # docs/cluster-consolidation/26-bootstrap-apps-to-pulumi.md, and it was on
+  # the protect list but never actually landed here -- caught by the
+  # deletionPolicy audit at the end of piece 21 Phase C.
+  deletionPolicy: Orphan
   wait: true
   force: false
   retryInterval: 2m

@@ -16,6 +16,10 @@ spec:
       namespace: cert-manager
   path: ./kubernetes/apps/cert-manager/trust-manager
   prune: true
+  # Installs the trust-manager CRDs (`crds: CreateReplace`) -- bundles.trust.
+  # cert-manager.io. Same reasoning as cert-manager/ks.yaml next door: a
+  # Kustomization ownership change must never be able to cascade into a CRD.
+  deletionPolicy: Orphan
   wait: true
   force: false
   interval: 1h

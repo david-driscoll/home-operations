@@ -8,8 +8,8 @@
 # equestria-cluster at this same relative path; this copy only becomes live at
 # the Phase C root flip, when `instance.sync.url` changes to this repo.
 #
-# One deliberate difference from equestria-cluster's copy is recorded at its
-# site below: `prune: false`.
+# This is now the live root: equestria-cluster is no longer a GitOps source.
+# Phase C is complete and prune is restored on both Kustomizations below.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -22,21 +22,14 @@ spec:
       name: sops-age
   interval: 1h
   path: ./kubernetes/flux/meta
-  # THE deliberate difference vs equestria-cluster (`prune: true` there).
-  #
-  # TEMPORARY, and load-bearing. At the instant of the Phase C flip both roots
-  # re-diff their entire apply set against a tree they have never read before.
-  # If anything in this repo is missing or misnamed, `prune: true` would
-  # garbage-collect the live objects rather than report drift -- at this
-  # cluster's scale, most of it. With `prune: false` the same gap surfaces as
-  # drift you can read and fix, which is the whole reason Phase B exists as a
-  # separate step from Phase C.
-  #
-  # Restore to `true` in Phase C step 4, AFTER `flux get kustomizations -A`
-  # confirms every Applied revision is a home-operations SHA and nothing is
-  # NotReady. Re-enabling prune is its own deliberate act; do not bundle it
-  # into the flip commit.
-  prune: false
+  # Restored 2026-08-14, Phase C step 4. This was `false` across the root flip
+  # so that an incomplete tree would surface as drift rather than as garbage
+  # collection; that window is closed. Re-enabled only after ALL of: the flip
+  # settled on this repo, the 16 -ref stubs were deleted by hand, cluster-apps
+  # re-owned all 155 children, and a dry run confirmed prune had nothing to
+  # collect -- 401 rendered objects against 401 inventory entries, zero
+  # difference.
+  prune: true
   retryInterval: 2m
   sourceRef:
     kind: GitRepository
@@ -62,9 +55,9 @@ spec:
       namespace: flux-system
   interval: 1h
   path: ./kubernetes/apps
-  # See the note on cluster-meta above -- same reason, and this is the one
+  # See the note on cluster-meta above -- same restore, and this is the one
   # that matters: cluster-apps owns the entire ./kubernetes/apps apply set.
-  prune: false
+  prune: true
   retryInterval: 2m
   sourceRef:
     kind: GitRepository
