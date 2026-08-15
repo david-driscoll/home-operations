@@ -33,7 +33,7 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
-        replicas: 0 # staging: piece 14 flips this to 1 at cutover
+        replicas: 1 # cutover complete 2026-08-15 (runbook 14 step 4)
         pod:
           restartPolicy: Always
           terminationGracePeriodSeconds: 30
