@@ -18,7 +18,23 @@ spec:
   # providers, so each host keeps a non-empty proxyProviders list and its
   # Outpost resource survives (components/DockgeLxc.ts:748).
   gatus:
-    - url: *url
+    # Probe the dashboard on the TAILSCALE entrypoint, not the public one.
+    # `dashboard-tailscale` (compose.yaml) deliberately carries no middleware,
+    # so this genuinely exercises the dashboard -- verified 200 from the Gatus
+    # host for all four dockge hosts.
+    #
+    # Do NOT point this at `internal.${CLUSTER_DOMAIN}` and do NOT widen
+    # `internal-network@file` to make that pass. Those hosts publish traefik's
+    # :443 through docker with `userland-proxy` enabled (no /etc/docker/
+    # daemon.json), so docker-proxy re-originates every connection from the
+    # bridge gateway: traefik observes 172.18.0.1 as the client for ALL
+    # traffic -- LAN, tailnet and public internet alike. Adding 172.16.0.0/12
+    # (or 172.18.0.1/32) to the allowlist would therefore not "allow Gatus",
+    # it would allow everyone, silently turning the break-glass gate on an
+    # admin dashboard into no gate at all. Restoring a meaningful ipAllowList
+    # needs real client IPs first (userland-proxy false, host networking, or
+    # PROXY protocol) -- tracked separately.
+    - url: "https://internal-${host}.${tailscaleDomain}"
       method: GET
       conditions:
         - "[STATUS] == 200"
