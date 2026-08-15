@@ -127,8 +127,8 @@ Deployment shape (`stargate-command-cluster` repo,
 | Redis | `valkey.database.svc.cluster.local`, DB index 5 | shared, in-cluster — **does not move**, alpha-site needs its own |
 
 Secrets come from OpenBao today (`kubernetes/apps/sgc/idp/authentik/externalsecret.yaml`,
-`ClusterSecretStore: openbao`): `shared/authentik-token` (bootstrap token), `clusters/alpha-site/apps/authentik/admin`,
-`shared/authentik-secret-key`, plus a `ClusterSecretStore: database`-sourced Postgres credential.
+`ClusterSecretStore: openbao`): `clusters/alpha-site/apps/authentik/token` (bootstrap token), `clusters/alpha-site/apps/authentik/admin`,
+`clusters/alpha-site/apps/authentik/secret-key`, plus a `ClusterSecretStore: database`-sourced Postgres credential.
 Authentik is an almost inert database — three orders of magnitude of headroom under the USB SSD's
 measured ~700 writes/s at 1.4 ms (§1.2).
 
@@ -473,15 +473,15 @@ Confirm that path is documented and current before relying on it.
 `.config/mise.toml` (verified):
 
 ```
-AUTHENTIK_TOKEN = "ref+openbao://secrets/shared/authentik-token#/credential"
-AUTHENTIK_URL   = "ref+openbao://secrets/shared/authentik-token#/url"
+AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/credential"
+AUTHENTIK_URL   = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
 ```
 
 These are Pulumi *provider* inputs for `stacks/authentik`, which manages authentik's objects via
 `@pulumi/authentik` — it does not deploy authentik itself. No code change is needed here; the
 repoint is a **secret-value update**: after alpha-site's authentik is up and has a fresh API
-token, update the `url` and `credential` fields of the `secrets/shared/authentik-token` OpenBao
-secret. Every consumer (`stacks/authentik`, `components/DockgeLxc.ts:779`'s outpost-token
+token, update the `url` and `credential` fields of the `secrets/clusters/alpha-site/apps/authentik/token` OpenBao
+secret. Every consumer (`stacks/authentik`, `components/DockgeLxc.ts:774`'s outpost-token
 minting, `stacks/applications/kubernetes.ts`) reads from that one place.
 
 **The repoint carries a reachability requirement, not just a value change.** `stacks/authentik`
@@ -574,7 +574,6 @@ Two properties worth stating plainly, because they set the rollback deadline:
   piece repoints what they talk to; it does not rebuild them. **Alpha-site is the exception**: it
   drops the sidecar for the embedded outpost (§2.5). That is a deliberate, host-scoped change, and
   it is the only place outpost *mechanics* change at all.
-- **Every app's own OIDC client configuration** — issuer URLs are the vanity aliases in §1.4,
   which don't change; only what answers behind them does.
 - **`stacks/authentik`'s object management** (flows, groups, roles, providers) — it only needs a
   reachable `AUTHENTIK_URL`/`AUTHENTIK_TOKEN` (§3.5); it has no opinion on where the server runs.
@@ -643,6 +642,7 @@ Two properties worth stating plainly, because they set the rollback deadline:
 5. **Whether `docker/_common/postgres`'s `mem_limit: 2g` per host is a hard ceiling that other
    consumers on the same instance (if any land later) would need to share** — not a concern for
    authentik alone (§2.2's footprint math holds), but worth resolving if this shared-Postgres
+   pattern gets a second consumer on alpha-site.
    pattern gets a second consumer on alpha-site.
 6. **The embedded outpost's exact name is unverified** (§2.5). `getOutpost` matches on `name`;
    authentik's built-in is conventionally `authentik Embedded Outpost`, but nothing in this repo
