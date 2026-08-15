@@ -1,0 +1,61 @@
+# GATED — this stack is intentionally not deployed yet.
+#
+# getStackFiles (components/DockgeLxc.ts) skips any stack directory containing a
+# `.ignore`, so while this file exists the compose below is inert: nothing is
+# rendered, nothing is copied to the host, and no reference in .env is resolved.
+# That last point is the reason this file exists rather than the stack simply
+# being merged live — see the "unlock" checklist.
+#
+# This is piece G' of docs/cluster-consolidation/07-authentik-to-alpha-site.md
+# (vault#84 decision D4): the estate's SSO moves off Kubernetes onto alpha-site.
+# Deleting this file is NOT the cutover. It only makes the stack deployable
+# against an empty database while SGC keeps serving every hostname. The cutover
+# itself is section 4 of that document, steps 3 onward.
+#
+# ---------------------------------------------------------------------------
+# UNLOCK CHECKLIST — every item must be true before deleting this file
+# ---------------------------------------------------------------------------
+#
+# 1. fsync/flush test on alpha-site's USB SSD is recorded and passing (section
+#    3.1). This is the one genuinely unmeasured risk in the whole piece, and it
+#    is specifically a database risk: everything already on that Pi survives a
+#    bridge that ignores FUA, and Postgres does not.
+#
+# 2. Create the OpenBao secret this stack's postgres password comes from. It
+#    does NOT exist yet — it is the only new secret the stack needs; the other
+#    three (authentik-secret-key, authentik-token, authentik-admin) are already
+#    live and used by SGC today.
+#
+#      bao kv put secrets/clusters/alpha-site/apps/authentik/postgres password=<generated>
+#
+#    A missing item is not a soft failure: the resolver hands whole files to
+#    vals, and an unresolvable reference aborts the ENTIRE stacks/home program,
+#    not just this stack (HO#636). That is what this gate is protecting.
+#
+# 3. Declare the database in the shared Postgres instance by adding this line
+#    to docker/alpha-site/postgres/.env-local, using the SAME field as .env
+#    here so the two can never drift:
+#
+#      PGAPP_AUTHENTIK_PASSWORD="ref+openbao<colon>//secrets/clusters/alpha-site/apps/authentik/postgres#/password"
+#
+#    Replace <colon> with a literal colon. It is written this way ON PURPOSE:
+#    the resolver is a plain regex with no notion of comments, vals expands
+#    references wherever they appear — comments included — and a reference-shaped
+#    string in a comment fails exactly like a real one. Never write a resolvable
+#    scheme in a comment in this tree, not even a disabled one.
+#
+#    That one line is all the backup wiring needed: stacks/backups already
+#    rclone-pulls /opt/stacks-data/ for every Dockge host, so the pg_dump ->
+#    backrest -> PBS chain covers this database generically the moment the role
+#    exists (section 2.1). Proving the RESTORE half is still manual (3.2).
+#
+# 4. Re-measure the Pi's headroom (`node_memory_MemAvailable_bytes`,
+#    cluster="alpha-site"). The ~1.5-2 GiB figure in section 2.2 is arithmetic
+#    against a 2026-07-30 measurement taken before bao-transit and bao-standby
+#    landed on this host.
+#
+# 5. Break-glass paths fixed (section 3.3) and piece 03 landed (section 3.4).
+#
+# After deleting this file, `pulumi up` on stacks/home deploys authentik here
+# against a FRESH, EMPTY database. Confirm it starts healthy against that empty
+# DB before restoring anything into it.

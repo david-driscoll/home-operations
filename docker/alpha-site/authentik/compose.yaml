@@ -1,0 +1,165 @@
+# Authentik — the estate's identity provider, on alpha-site.
+#
+# GATED by the .ignore in this directory. Read it before deploying.
+#
+# Piece G' of docs/cluster-consolidation/07-authentik-to-alpha-site.md: SSO moves
+# off Kubernetes so that the SGC -> equestria cluster merge cannot take identity
+# down with it. Embedded and proxy outposts STAY in their clusters next to the
+# apps they front; only the central server relocates here.
+#
+# Two deliberate differences from every other stack in this tree:
+#
+#   - No `authentik:` block in definition.yaml. Authentik cannot be an OAuth
+#     client of itself, and this host uses the server's own embedded outpost
+#     rather than the authentik-outpost sidecar (section 2.5) — the sidecar is
+#     suppressed by docker/alpha-site/authentik-outpost/.ignore, and Traefik's
+#     forwardAuth address is repointed here via DockgeLxc's
+#     authentikForwardAuthHost arg. Both land with the cutover, not with this file.
+#
+#   - Single replica. In-cluster this runs 2 server pods with anti-affinity; here
+#     it is N, not N+1 — one Pi, one PSU, one USB cable. That is an accepted risk
+#     (section 6), and the mitigation is a rehearsed, verified restore, not
+#     redundancy.
+services:
+  # ---------------------------------------------------------------------------
+  # Redis (valkey) — cache and websocket bus, bundled rather than shared.
+  #
+  # In-cluster authentik uses valkey.database.svc.cluster.local DB index 5. That
+  # instance does not move, and there is no docker/_common/redis to join: this is
+  # the estate's only Docker-side consumer, so a shared component for one consumer
+  # would be infrastructure built on spec. Bundled here, and therefore DB 0.
+  # ---------------------------------------------------------------------------
+  authentik-redis:
+    image: valkey/valkey:9-alpine@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    container_name: authentik-redis
+    hostname: authentik-redis
+    command: --save 60 1 --loglevel warning
+    environment:
+      TZ: ${TIMEZONE}
+    user: "999:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/stacks-data/authentik/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    mem_limit: 256m
+    networks:
+      - dockge_default
+
+  # ---------------------------------------------------------------------------
+  # Server — the API and the UI, and the embedded outpost this host's own
+  # forwardAuth will use once section 2.5 lands.
+  # ---------------------------------------------------------------------------
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2026.5.6@sha256:ed120caf710ccf82ef0026f0bc74e51615bc95ebff228a7a2d6fc60c441c3868
+    container_name: authentik-server
+    hostname: authentik-server
+    command: server
+    env_file:
+      - path: .env
+        required: true
+    depends_on:
+      authentik-redis:
+        condition: service_healthy
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/stacks-data/authentik/media:/media
+      - /opt/stacks-data/authentik/templates:/templates
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      # First boot runs the full schema migration against an empty database, and
+      # this is a Pi. Generous on purpose.
+      start_period: 300s
+    restart: unless-stopped
+    mem_limit: 1500m
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+    labels:
+      autoheal: true
+      traefik.enable: true
+
+      # All three vanity aliases answer here, because all three answer on ONE
+      # HTTPRoute in SGC today (section 1.4) and every cluster's outposts and
+      # Dockge hosts know authentik by a cluster-specific one:
+      #   canterlot -> equestria, celestia, luna, skystar
+      #   iris      -> sgc, alpha-site
+      #   authentik -> the chart's own default, and DockgeLxc's remote-host fallback
+      # Issuer URLs do not change in this migration; only what answers behind
+      # them does, which is why no app's OIDC config is touched.
+      traefik.http.routers.authentik.rule: Host(`authentik.${searchDomain}`) || Host(`iris.${searchDomain}`) || Host(`canterlot.${searchDomain}`)
+      traefik.http.routers.authentik.entrypoints: websecure
+      traefik.http.routers.authentik.tls.certresolver: le
+      traefik.http.routers.authentik.service: authentik
+
+      traefik.http.routers.authentik-tailscale.rule: Host(`authentik.${tailscaleDomain}`)
+      traefik.http.routers.authentik-tailscale.entrypoints: tailscale
+      traefik.http.routers.authentik-tailscale.service: authentik
+
+      # NO forwardAuth middleware here, on purpose: the identity provider cannot
+      # be gated behind itself.
+      traefik.http.services.authentik.loadbalancer.server.port: 9000
+      traefik.http.services.authentik.loadbalancer.healthcheck.path: /-/health/live/
+      traefik.http.services.authentik.loadbalancer.healthcheck.port: 9000
+
+  # ---------------------------------------------------------------------------
+  # Worker — background tasks, blueprint application, outpost reconciliation.
+  # Shares .env with the server; the only difference is the command.
+  # ---------------------------------------------------------------------------
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.5.6@sha256:ed120caf710ccf82ef0026f0bc74e51615bc95ebff228a7a2d6fc60c441c3868
+    container_name: authentik-worker
+    hostname: authentik-worker
+    command: worker
+    env_file:
+      - path: .env
+        required: true
+    depends_on:
+      authentik-redis:
+        condition: service_healthy
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/stacks-data/authentik/media:/media
+      - /opt/stacks-data/authentik/templates:/templates
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 300s
+    restart: unless-stopped
+    mem_limit: 1g
+    dns:
+      - 100.100.100.100
+    networks:
+      - dockge_default
+
+x-dockge:
+  urls:
+    - https://authentik.${searchDomain}
+    - https://iris.${searchDomain}
+    - https://canterlot.${searchDomain}
+
+networks:
+  dockge_default:
+    external: true

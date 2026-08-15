@@ -89,8 +89,8 @@ CONNECT_VAULT = "Eris"
 # Still needed: Pulumi WRITES the PBS items a human logs into the generated
 # LXCs with (Phase 11 estate decision). Nothing READS 1Password any more.
 CONNECT_TOKEN = "ref+openbao://secrets/shared/eris-1password-connect-access-token#/credential"
-AUTHENTIK_TOKEN = "ref+openbao://secrets/shared/authentik-token#/credential"
-AUTHENTIK_URL = "ref+openbao://secrets/shared/authentik-token#/url"
+AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/credential"
+AUTHENTIK_URL = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 
 # How every ref+openbao:// value above authenticates.
