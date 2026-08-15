@@ -12,6 +12,27 @@ http:
       ipAllowList:
         sourceRange:
           - 10.0.0.0/8
+          # Required on a Docker host, and the reason the dashboard check was
+          # red 0/50. Tailnet-originated requests are proxied into the
+          # container by tailscaled running on the host, so traefik sees the
+          # bridge gateway (172.18.0.1 on celestia/luna, 172.19.0.1 on
+          # alpha-site) rather than the caller's 100.64/10 address. Measured
+          # inside traefik's netns: a held connection from alpha-site appears
+          # as 172.18.0.1.
+          #
+          # This does NOT widen the gate to the internet. `internal.<domain>`
+          # has no public record -- it resolves only to a 100.64/10 CGNAT
+          # address -- so the sole ways in are the tailnet (authenticated by
+          # Tailscale) and the LAN. LAN callers keep their real source via
+          # Docker's DNAT rule (`! -i br-...`, no inbound masquerade), verified
+          # as 10.10.216.234 for a request from luna, and are already matched
+          # by 10.0.0.0/8 above. What it does newly admit is other containers
+          # on the host's own bridge, which are on the trusted host already.
+          #
+          # Also restores parity with the estate's own definition of internal:
+          # crowdsec's `driscoll/internal-networks` lists this same range
+          # (kubernetes/apps/network/crowdsec/values.yaml).
+          - 172.16.0.0/12
           - 192.168.0.0/16
           - 100.64.0.0/10
     errors:
