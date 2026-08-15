@@ -179,6 +179,16 @@
       },
     },
     {
+      // A Postgres major is not an image bump: PGDATA is bound to the major that
+      // created it, so crossing one is a pg_upgrade or a dump/restore, never a
+      // tag change. Postgres 18 additionally moved its data directory layout and
+      // refuses to start when the mount IS the data directory.
+      //
+      // Both docker/_common/postgres/compose.yaml and the openbao-replica restore
+      // test carried comments asserting this rule was enforced here. It was not —
+      // docker.io/library/postgres matched no rule at all, and an unguarded major
+      // silently broke the OpenBao break-glass restore drill, which nothing
+      // noticed because that drill only runs on the 1st of the month.
       description: "CloudNative-PG Cluster",
       groupName: "CloudNative-PG Cluster",
       matchPackageNames: [
@@ -187,6 +197,19 @@
       group: {
         commitMessageTopic: "{{{groupName}}} group",
       },
+    },
+    {
+      description: "Postgres majors are migrations, not updates",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "docker.io/library/postgres"
+      ],
+      matchUpdateTypes: [
+        "major"
+      ],
+      enabled: false,
     },
     {
       description: "Spegel Group",
