@@ -13,10 +13,9 @@ spec:
   access_policy:
     groups:
       - admins
-  authentik:
-    proxy:
-      mode: "forward_single"
-      externalHost: *url
+  # No `authentik:` block by design -- the dashboard is deliberately not behind a
+  # proxy provider (see values.yaml's middleware comment). Leaving one here would
+  # keep minting a forward_single provider that nothing routes through.
   gatus:
     - url: *url
       method: GET

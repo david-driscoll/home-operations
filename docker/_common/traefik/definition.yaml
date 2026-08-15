@@ -13,10 +13,10 @@ spec:
   access_policy:
     groups:
       - admins
-  authentik:
-    proxy:
-      mode: "forward_single"
-      externalHost: *url
+  # No `authentik:` block by design -- see compose.yaml's dashboard router. The
+  # other _common stacks (backrest, neo4j, prometheus) still declare proxy
+  # providers, so each host keeps a non-empty proxyProviders list and its
+  # Outpost resource survives (components/DockgeLxc.ts:748).
   gatus:
     - url: *url
       method: GET
