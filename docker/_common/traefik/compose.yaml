@@ -28,8 +28,17 @@ services:
       traefik.http.routers.dashboard-tailscale.entrypoints: tailscale
       traefik.http.routers.dashboard-tailscale.service: api@internal
 
-      # The middleware
-      traefik.http.middlewares.authentik-outpost.forwardauth.address: http://authentik_proxy:9000/outpost.goauthentik.io/auth/traefik
+      # The middleware.
+      #
+      # ${AUTHENTIK_FORWARDAUTH_HOST} defaults to `authentik_proxy` — the service in
+      # docker/_common/authentik-outpost, i.e. the sidecar every host runs. A host
+      # that runs authentik ITSELF has no sidecar and points this at the authentik
+      # server container instead, because the embedded outpost serves this same
+      # /outpost.goauthentik.io path. Set per host via DockgeLxc's
+      # authentikForwardAuthHost arg, which defaults rather than requiring every host
+      # to remember it. See docs/cluster-consolidation/07-authentik-to-alpha-site.md
+      # section 2.5.
+      traefik.http.middlewares.authentik-outpost.forwardauth.address: http://${AUTHENTIK_FORWARDAUTH_HOST}:9000/outpost.goauthentik.io/auth/traefik
       traefik.http.middlewares.authentik-outpost.forwardauth.trustForwardHeader: true
       traefik.http.middlewares.authentik-outpost.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-entitlements,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
 
