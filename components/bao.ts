@@ -45,6 +45,33 @@ export interface KvReadResult {
   };
 }
 
+/**
+ * Read an OpenBao credential from the environment, treating an UNRESOLVED
+ * `vals` reference as absent.
+ *
+ * `.config/mise.toml` sets BAO_ROLE_ID / BAO_SECRET_ID to `ref+sops://` values,
+ * so every process started through a mise shim sees the reference itself unless
+ * it was started through `mise run vals-run`, which resolves it first. Taking
+ * that string at face value is worse than having no credential at all: it
+ * satisfies every "do we have credentials?" check — including
+ * `GlobalResources.baoDualWriteEnabled`, whose whole job is to decide whether
+ * dual-writes run — and then fails at the API with "invalid role ID", which
+ * reads as a policy or rotation problem rather than a missing wrapper command.
+ */
+export function baoEnv(name: string): string | undefined {
+  const value = process.env[name];
+  if (!value || value.startsWith("ref+")) return undefined;
+  return value;
+}
+
+/** True when a BAO_* variable is set but still an unresolved `ref+` reference. */
+export function baoEnvUnresolved(): boolean {
+  return ["BAO_TOKEN", "BAO_ROLE_ID", "BAO_SECRET_ID"].some(n => process.env[n]?.startsWith("ref+"));
+}
+
+/** Appended to credential errors so the fix is in the message that reports them. */
+export const BAO_CREDENTIAL_HINT = "Run it through `mise run vals-run <command>`, which resolves the AppRole in .config/bao-approle.sops.yaml (or set BAO_TOKEN directly).";
+
 export class BaoClient {
   private readonly addr: string;
   /**
@@ -58,14 +85,16 @@ export class BaoClient {
   private readonly roleId?: string;
   private readonly secretId?: string;
 
-  constructor(addr = process.env.BAO_ADDR, token = process.env.BAO_TOKEN, roleId = process.env.BAO_ROLE_ID, secretId = process.env.BAO_SECRET_ID) {
+  constructor(addr = baoEnv("BAO_ADDR"), token = baoEnv("BAO_TOKEN"), roleId = baoEnv("BAO_ROLE_ID"), secretId = baoEnv("BAO_SECRET_ID")) {
     if (!addr) throw new Error("BAO_ADDR is not set");
     // Two ways in, matching `GlobalResources.baoProvider` exactly. They must
     // stay matched: a client that accepts only BAO_TOKEN while the provider
     // accepts the AppRole is how Phase 8a's dual-write gate silently skipped
     // every write on an AppRole run.
     if (!token && !(roleId && secretId)) {
-      throw new Error('No OpenBao credentials — set BAO_TOKEN, or BAO_ROLE_ID/BAO_SECRET_ID. Run `eval "$(bootstrap/openbao/pulumi-env.sh)"` from the vault repo.');
+      throw new Error(
+        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`vals\` references, not values. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — set BAO_TOKEN, or BAO_ROLE_ID/BAO_SECRET_ID. ${BAO_CREDENTIAL_HINT}`,
+      );
     }
     this.addr = addr.replace(/\/+$/, "");
     this.staticToken = token || undefined;
@@ -315,12 +344,10 @@ export function baoKvSecret(name: string, args: BaoKvSecretArgs, opts: pulumi.Cu
   // Fold the concealment declaration into custom_metadata, so a caller cannot
   // set one and forget the other. `contains_secrets` is what makes shapeItem's
   // "marked secret but lists nothing" guard meaningful.
-  const customMetadata = pulumi
-    .all([args.customMetadata ?? {}, pulumi.all(args.concealedFields)])
-    .apply(([provenance, concealed]) => ({
-      ...provenance,
-      ...(concealed.length > 0 ? { contains_secrets: "true", concealed_fields: concealed.join(",") } : {}),
-    }));
+  const customMetadata = pulumi.all([args.customMetadata ?? {}, pulumi.all(args.concealedFields)]).apply(([provenance, concealed]) => ({
+    ...provenance,
+    ...(concealed.length > 0 ? { contains_secrets: "true", concealed_fields: concealed.join(",") } : {}),
+  }));
 
   return new vault.kv.SecretV2(
     name,

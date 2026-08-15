@@ -1,11 +1,12 @@
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as MinioProvider } from "@pulumi/minio";
-import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, log, type Output, output, runtime, secret } from "@pulumi/pulumi";
+import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
 import { Provider as TechnitiumProvider } from "@pulumi/technitium";
 import { Provider as UnifiFirewallProvider } from "@pulumi/terrifi";
 import { Provider as VaultProvider } from "@pulumi/vault";
 import { Provider as UnifiProvider } from "@pulumiverse/unifi";
+import { BAO_CREDENTIAL_HINT, baoEnv, baoEnvUnresolved } from "./bao.ts";
 import { BaoStore } from "./store/bao.ts";
 import type { VaultStore } from "./store/index.ts";
 
@@ -158,8 +159,12 @@ export class GlobalResources extends ComponentResource {
    * Remove this once the operator mints tokens and go back to hard-failing.
    */
   public get baoDualWriteEnabled(): boolean {
-    const haveApprole = !!process.env.BAO_ROLE_ID && !!process.env.BAO_SECRET_ID;
-    return !!process.env.BAO_TOKEN || haveApprole || runtime.isDryRun();
+    // baoEnv(), not process.env: .config/mise.toml sets BAO_ROLE_ID/BAO_SECRET_ID
+    // to `ref+sops://` references, which are only values when the command ran
+    // under `mise run vals-run`. Reading the raw variables would flip this gate
+    // to true on a bare `pulumi up` and fail at the API instead of here.
+    const haveApprole = !!baoEnv("BAO_ROLE_ID") && !!baoEnv("BAO_SECRET_ID");
+    return !!baoEnv("BAO_TOKEN") || haveApprole || runtime.isDryRun();
   }
 
   /**
@@ -183,20 +188,24 @@ export class GlobalResources extends ComponentResource {
     //
     // The AppRole path is the normal one, and it is what removes the manual
     // step this used to require: nobody has to mint a token by hand before a
-    // deploy. Source the two values from the vault repo with
-    // `eval "$(bootstrap/openbao/pulumi-env.sh)"` — they live in SOPS rather
-    // than 1Password on purpose (INVENTORY §2: this is the credential Pulumi
+    // deploy. `.config/mise.toml` supplies both from
+    // `.config/bao-approle.sops.yaml`, resolved by `mise run vals-run`; the
+    // vault repo's `eval "$(bootstrap/openbao/pulumi-env.sh)"` still works and
+    // is the break-glass path. Either way they live in SOPS rather than
+    // 1Password on purpose (INVENTORY §2: this is the credential Pulumi
     // authenticates WITH, so it cannot live in the store it unlocks).
-    const token = process.env.BAO_TOKEN ?? "";
-    const roleId = process.env.BAO_ROLE_ID ?? "";
-    const secretId = process.env.BAO_SECRET_ID ?? "";
+    const token = baoEnv("BAO_TOKEN") ?? "";
+    const roleId = baoEnv("BAO_ROLE_ID") ?? "";
+    const secretId = baoEnv("BAO_SECRET_ID") ?? "";
     const haveApprole = roleId !== "" && secretId !== "";
 
     // Preview never calls the API, so absent credentials must not break it. On
     // a real update this getter must never hand back a provider that would
     // write nowhere.
     if (!token && !haveApprole && !runtime.isDryRun()) {
-      throw new Error('No OpenBao credentials — writes would be skipped. Run `eval "$(bootstrap/openbao/pulumi-env.sh)"` from the vault repo to export BAO_ADDR/BAO_ROLE_ID/BAO_SECRET_ID, or set BAO_TOKEN directly.');
+      throw new Error(
+        baoEnvUnresolved() ? `OpenBao credentials are unresolved \`vals\` references, so writes would be skipped. ${BAO_CREDENTIAL_HINT}` : `No OpenBao credentials — writes would be skipped. ${BAO_CREDENTIAL_HINT}`,
+      );
     }
 
     this._baoProvider = new VaultProvider(

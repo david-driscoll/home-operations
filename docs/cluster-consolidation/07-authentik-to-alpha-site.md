@@ -127,7 +127,7 @@ Deployment shape (`stargate-command-cluster` repo,
 | Redis | `valkey.database.svc.cluster.local`, DB index 5 | shared, in-cluster — **does not move**, alpha-site needs its own |
 
 Secrets come from OpenBao today (`kubernetes/apps/sgc/idp/authentik/externalsecret.yaml`,
-`ClusterSecretStore: openbao`): `shared/authentik-token` (bootstrap token), `shared/authentik-admin`,
+`ClusterSecretStore: openbao`): `shared/authentik-token` (bootstrap token), `clusters/alpha-site/apps/authentik/admin`,
 `shared/authentik-secret-key`, plus a `ClusterSecretStore: database`-sourced Postgres credential.
 Authentik is an almost inert database — three orders of magnitude of headroom under the USB SSD's
 measured ~700 writes/s at 1.4 ms (§1.2).

@@ -10,6 +10,7 @@ node_modules/
 .github/instructions/nx.instructions.md
 _home-operations-pulumi/
 bin/
+age.key
 
 
 # APM dependencies

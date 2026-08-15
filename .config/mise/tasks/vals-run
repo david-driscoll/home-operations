@@ -26,6 +26,24 @@
 # only in the environment vals hands to the child. It is a real file rather
 # than a pipe because `-f /dev/stdin` leaves the child with a consumed stdin,
 # which breaks anything interactive (a `pulumi up` confirmation).
+#
+# ## Two passes, because the credential is itself a reference
+#
+# .config/mise.toml sets BAO_ROLE_ID / BAO_SECRET_ID to `ref+sops://` values —
+# the AppRole vals authenticates to OpenBao WITH. Resolving everything in one
+# pass does not work: vals reads those variables straight out of the
+# environment, finds the literal string "ref+sops://…", and every
+# `ref+openbao://` value fails with a bare 403 that names no cause.
+#
+# So the bootstrap variables are split out and resolved first, by NESTING two
+# `vals exec` calls rather than capturing anything:
+#
+#   vals exec -f bootstrap.yaml -- vals exec -f refs.yaml -- <command>
+#
+# The outer call puts the resolved AppRole in the inner call's environment,
+# where its openbao provider picks it up. No secret is ever assigned to a shell
+# variable or written to disk — which a `vals get` + `export` version could not
+# claim.
 set -Eeuo pipefail
 
 [[ $# -gt 0 ]] || { printf 'usage: mise run vals-run <command> [args…]\n' >&2; exit 2; }
@@ -35,17 +53,45 @@ set -Eeuo pipefail
 # mostly run. vals picks its parser from the extension, so the file needs one.
 refsdir="$(mktemp -d "${TMPDIR:-/tmp}/vals-run.XXXXXX")"
 refs="${refsdir}/refs.yaml"
+bootstrap="${refsdir}/bootstrap.yaml"
 trap 'rm -rf "${refsdir}"' EXIT
+
+# The credentials vals (and `components/bao.ts`) authenticate WITH, which have
+# to be resolved before anything that needs them. VAULT_* are here too because
+# vals' vault provider reads those, and a repo that moves back to it should not
+# rediscover this ordering from a 403.
+is_bootstrap() {
+  case "$1" in
+    BAO_ROLE_ID | BAO_SECRET_ID | BAO_TOKEN | VAULT_ROLE_ID | VAULT_SECRET_ID | VAULT_TOKEN) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 while IFS= read -r line; do
   name="${line%%=*}"
   value="${line#*=}"
   case "${value}" in
-    ref+*) printf '%s: %s\n' "${name}" "$(printf '%s' "${value}" | sed 's/"/\\"/g; s/^/"/; s/$/"/')" >> "${refs}" ;;
+    ref+*) ;;
+    *) continue ;;
   esac
+  quoted="$(printf '%s' "${value}" | sed 's/"/\\"/g; s/^/"/; s/$/"/')"
+  if is_bootstrap "${name}"; then
+    case "${value}" in
+      ref+openbao://* | ref+vault://*)
+        # Nothing can break this cycle at runtime, so name it precisely rather
+        # than letting it surface as a 403 from the store itself.
+        printf 'vals-run: %s is an OpenBao/Vault reference, but it is the credential used to REACH OpenBao.\n' "${name}" >&2
+        printf 'vals-run: point it at a backend that needs no OpenBao (ref+sops://, ref+file://).\n' >&2
+        exit 2
+        ;;
+    esac
+    printf '%s: %s\n' "${name}" "${quoted}" >> "${bootstrap}"
+  else
+    printf '%s: %s\n' "${name}" "${quoted}" >> "${refs}"
+  fi
 done < <(env)
 
-if [[ ! -s "${refs}" ]]; then
+if [[ ! -s "${refs}" && ! -s "${bootstrap}" ]]; then
   # Nothing to resolve is not an error, but say so: the alternative is a silent
   # run against unresolved config that fails much further along, somewhere that
   # does not mention secrets at all.
@@ -54,4 +100,14 @@ if [[ ! -s "${refs}" ]]; then
 fi
 
 command -v vals >/dev/null || { printf 'vals-run: vals is not installed — `mise install` in this repo.\n' >&2; exit 127; }
-exec vals exec -i -f "${refs}" -- "$@"
+
+# Resolving the bootstrap credential alone is still worth doing when nothing
+# else references OpenBao: `pulumi` itself reads BAO_ROLE_ID/BAO_SECRET_ID
+# (components/bao.ts), so this is what replaces `eval "$(pulumi-env.sh)"`.
+if [[ -s "${bootstrap}" && -s "${refs}" ]]; then
+  exec vals exec -i -f "${bootstrap}" -- vals exec -i -f "${refs}" -- "$@"
+elif [[ -s "${bootstrap}" ]]; then
+  exec vals exec -i -f "${bootstrap}" -- "$@"
+else
+  exec vals exec -i -f "${refs}" -- "$@"
+fi

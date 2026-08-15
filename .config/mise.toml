@@ -65,10 +65,12 @@ idiomatic_version_file_enable_tools = ["dotnet"]
 # hit OpenBao on every `cd` into the repo and break the shell whenever you are
 # off-network or without an age key.
 #
-# `scripts/vals-run` is the `op run` replacement — it resolves whatever `ref+`
-# values are in the environment. First run
-# `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"`, which exports the
-# VAULT_ADDR/VAULT_TOKEN vals needs for the openbao references.
+# `mise run vals-run` is the `op run` replacement — it resolves whatever `ref+`
+# values are in the environment. It is self-contained: the OpenBao credential
+# comes from the BAO_* references at the bottom of this block, so there is no
+# `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"` step any more. That
+# script still works and is still the break-glass path when this repo's
+# AppRole is revoked.
 AWS_ACCESS_KEY_ID = "ref+openbao://secrets/shared/minio-root-user#/username"
 AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/shared/minio-root-user#/password"
 AWS_REGION = "home"
@@ -90,11 +92,36 @@ CONNECT_TOKEN = "ref+openbao://secrets/shared/eris-1password-connect-access-toke
 AUTHENTIK_TOKEN = "ref+openbao://secrets/shared/authentik-token#/credential"
 AUTHENTIK_URL = "ref+openbao://secrets/shared/authentik-token#/url"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
+
+# How every ref+openbao:// value above authenticates.
+#
+# `vals` reads BAO_ADDR / BAO_ROLE_ID / BAO_SECRET_ID (its openbao provider is
+# BAO_*-only — it does not fall back to VAULT_*), and BAO_AUTH_METHOD selects
+# AppRole over the default token auth. `components/bao.ts` reads the same three
+# for the Pulumi provider, so one credential covers vals and Pulumi both.
+#
+# The role_id/secret_id are themselves `ref+`, which is why the ordering is not
+# free: .config/mise/tasks/vals-run resolves these BAO_* references in a first
+# pass (sops, age key only) before resolving anything that needs OpenBao. A
+# single-pass resolve authenticates with the literal string "ref+sops://…" and
+# fails with a bare 403.
+#
+# The AppRole lives in SOPS, not in OpenBao: the credential you authenticate
+# WITH cannot live in the store it unlocks (vault:bootstrap/INVENTORY.md §2).
+# Create or rotate it with ./scripts/bao-mise-approle.sh — the sealed file is
+# committed, and the age key is what actually gates access.
+BAO_ADDR = "https://bao.equestria.driscoll.tech"
+BAO_AUTH_METHOD = "approle"
+BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
+BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
+SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
+
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"
 # UNIFI_PASSWORD = "op://Eris/unifipoller/password"
 # UNIFI_API_KEY = "op://Eris/Unifi Api Key Eris Cluster/credential"
 # UNIFI_PORT = "443"
+#
 # UNIFI_SITE = "default"
 # UNIFI_VERIFY_SSL = "false"
 # UNIFI_TOOL_REGISTRATION_MODE = "lazy"

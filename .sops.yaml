@@ -15,6 +15,16 @@
 # while leaving apiVersion/kind/metadata readable, so Flux and kustomize can
 # still parse the manifest before decryption.
 creation_rules:
+  # Tooling credentials under .config/ — the AppRole .config/mise.toml
+  # authenticates to OpenBao with (scripts/bao-mise-approle.sh). No
+  # encrypted_regex: these are not Kubernetes manifests, nothing needs to parse
+  # them before decryption, so every value is encrypted. Listed first because
+  # sops applies the FIRST matching rule.
+  - path_regex: \.config/.*\.sops\.ya?ml
+    key_groups:
+      - age:
+        - "age1eurl2t7pepw66guv8m7lxh5fjhs4t4frsntqjp08lmypwudlsp7qdusgnf"
+        - "age150z0s36kl9vud8728c5e4zqq6nmyywekk76rwvjclcsfc8mrxuuqr0qfg6"
   - path_regex: kubernetes/.*\.sops\.ya?ml
     encrypted_regex: "^(data|stringData)$"
     mac_only_encrypted: true

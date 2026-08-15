@@ -77,7 +77,7 @@ exclude = excludes
 
 hooks {
     ["pre-commit"] {
-        fix = false
+        fix = true
         stash = "none"
         steps = linters
     }
