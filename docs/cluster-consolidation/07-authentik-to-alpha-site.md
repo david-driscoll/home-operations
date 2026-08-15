@@ -10,6 +10,22 @@ node is touched. Everything in this file can be executed and verified independen
 other piece except **[03 — secrets bootstrap independence](03-secrets-bootstrap-independence.md)**,
 which is a hard prerequisite (§3.4 below).
 
+> **Revision 2026-08-14.** The design below was re-verified against the repos as authored
+> (nothing has been executed: `docker/alpha-site/` still has no `authentik` stack and
+> `docker/alpha-site/postgres/.env-local` still declares no `PGAPP_*` entries). The shape held;
+> five corrections were folded in, three of them load-bearing at cutover time: the stack must be
+> host-scoped, not `_common` (§2.4); the three hostnames are external-dns-owned from a single SGC
+> `HTTPRoute`, which breaks the "scale to zero" rollback as originally written (§1.4.1, §4);
+> alpha-site's *own* Traefik dashboard is authentik-gated too (§3.3); the deploy run has a
+> bootstrap loop through `createOutpost` (§2.4); and `stacks/authentik` reconciles from inside
+> equestria, so the §3.5 repoint carries a reachability requirement.
+>
+> **Design change, same date (David):** alpha-site does **not** run the `authentik-outpost`
+> sidecar. The stack is `.ignore`d on that host and everything needing an outpost there uses the
+> embedded outpost of the local authentik instance — see **§2.5**, which supersedes §1.5 *for
+> alpha-site only* (in-cluster outposts are unaffected) and dissolves the §2.4 bootstrap loop
+> rather than sequencing around it.
+
 ## Scope
 
 Move authentik's **server and worker** processes, its **PostgreSQL database**, and a bundled
@@ -19,8 +35,10 @@ server relocates. Traefik's `forwardAuth` target repoints at alpha-site. The SGC
 restored, verified, cut over, soaked, then scaled to zero (never deleted, until
 [22 — decommission SGC](22-decommission-sgc.md)).
 
-This piece does **not** touch: outpost creation/registration mechanics (already cross-cluster,
-§1.5), the `stacks/authentik` Pulumi stack that manages authentik's *objects* (flows/groups/
+This piece does **not** touch: outpost creation/registration mechanics for anything in
+Kubernetes or on any other Dockge host (already cross-cluster, §1.5) — the one exception is
+alpha-site's own outpost, which is replaced by authentik's embedded outpost (§2.5). Nor does it
+touch the `stacks/authentik` Pulumi stack that manages authentik's *objects* (flows/groups/
 providers — unaffected, it only needs a reachable API endpoint), or any app's own OIDC client
 config (unaffected — the issuer URL doesn't change, only what answers behind it).
 
@@ -141,23 +159,58 @@ cluster-specific vanity alias, all of which the SGC HelmRelease currently answer
 |---|---|
 | `canterlot.driscoll.tech` | equestria, celestia, luna, skystar |
 | `iris.driscoll.tech` | sgc, **alpha-site** (already — alpha-site inherited SGC's alias when its outpost was first set up) |
-| `authentik.driscoll.tech` | The HelmRelease's own default hostname; also `DockgeLxc.ts:692`'s fallback for `host.remote` hosts |
+| `authentik.driscoll.tech` | The HelmRelease's own default hostname; also `DockgeLxc.ts:700`'s fallback for `host.remote` hosts |
 
 All three currently resolve to SGC's in-cluster Traefik. The cutover (§4) repoints DNS/ingress for
 all three to alpha-site's Dockge Traefik instead — this is the actual "repoint" in "Traefik
 `forwardAuth` target repointed," not a code change to any app's OIDC config (issuer URLs don't
 change, only what answers behind them).
 
+#### 1.4.1 Who owns those records — and why that breaks the naive rollback
+
+Verified 2026-08-14. All three hostnames are declared in **one place**: the HelmRelease's own
+route block (`stargate-command-cluster`,
+`kubernetes/apps/sgc/idp/authentik/helmrelease.yaml:163-166`), a single `HTTPRoute` on the
+`network/internal` Gateway:
+
+```yaml
+route:
+  main:
+    hostnames:
+      - "authentik.${ROOT_DOMAIN}"
+      - "iris.${ROOT_DOMAIN}"
+      - "canterlot.${ROOT_DOMAIN}"
+```
+
+There is no `StandardDns` resource, no `DNSEndpoint`, and no hand-written record for any of the
+three anywhere in either repo. They exist because **external-dns publishes them from that
+`HTTPRoute`** — and it does so from *three* providers at once: `external-dns/cloudflare`,
+`external-dns/technitium` and `external-dns/unifi` each list `gateway-httproute` in their
+`sources` (`kubernetes/apps/network/external-dns/*/helmrelease.yaml`).
+
+**The consequence the original §4 missed:** scaling the SGC Deployments to zero does *not* remove
+the `HTTPRoute`. external-dns keeps re-asserting all three names at SGC's gateway IP across all
+three providers, and will fight — and win against — whatever the cutover points at alpha-site.
+"Scale to zero, never delete" and "repoint DNS" are therefore mutually exclusive as originally
+written. §4 resolves this: the cutover removes the **hostnames** (not the workload), and the
+rollback is "put the three hostnames back and reconcile," not "scale the Deployments back up."
+That is still a fast, complete, in-repo rollback — the database, PVC and CNPG role all stay
+untouched — it is just a different lever than the one the runbook named.
+
 ### 1.5 The outpost-split precedent already exists and is already cross-cluster
+
+> **Superseded for alpha-site only** by §2.5 (2026-08-14): that host drops the sidecar outpost
+> described below in favour of the local authentik's embedded outpost. Everything in this section
+> remains accurate for in-cluster outposts and for every other Dockge host.
 
 Two facts make "outposts stay in-cluster, server moves" a *smaller* architectural change than it
 sounds:
 
 1. **`docker/_common/authentik-outpost`** is a real, already-deployed component (`.env` +
    `compose.yaml`) — any Dockge host can run a proxy outpost that dials *out* to a remote
-   authentik server. `components/DockgeLxc.ts:708-734` (`deployStacks`'s `outpost` block) creates
+   authentik server. `components/DockgeLxc.ts:712-738` (`deployStacks`'s `outpost` block) creates
    one automatically per Dockge host whenever any deployed app declares a proxy provider, and
-   `components/DockgeLxc.ts:794` (`createOutpost`) is the exact line that writes the outpost's API
+   `components/DockgeLxc.ts:802` (`createOutpost`) is the exact line that writes the outpost's API
    token to `/opt/stacks/authentik-outpost/.env-token` on the remote host over SSH. This already
    runs today, pointed at SGC, on every Dockge host that needs it (celestia's forgejo, for one).
    Nothing about this mechanism needs to change — only where `CLUSTER_AUTHENTIK_DOMAIN` resolves.
@@ -175,11 +228,12 @@ Per v2.1 §2, adjusted for what's actually in the repo today (§1.1):
 
 | Component | Where | How |
 |---|---|---|
-| `authentik-server` (×1, arm64) | alpha-site Dockge | New `docker/alpha-site/authentik` (or `docker/_common/authentik`) stack. No `authentik:` self-provisioning block in its own `definition.yaml` — authentik can't be an OAuth client of itself. |
+| `authentik-server` (×1, arm64) | alpha-site Dockge | New **host-scoped** `docker/alpha-site/authentik` stack — see §2.4, it must **not** go in `docker/_common/`. No `authentik:` self-provisioning block in its own `definition.yaml` — authentik can't be an OAuth client of itself. |
 | `authentik-worker` (×1, arm64) | alpha-site Dockge | Same stack. |
 | PostgreSQL | alpha-site Dockge, **shared `docker/_common/postgres` instance** | Add `PGAPP_AUTHENTIK_PASSWORD` to `docker/alpha-site/postgres/.env-local`. See §2.2 — this is a deliberate deviation from v2.1's "dedicated Postgres container," made possible by infrastructure that didn't exist in July. |
 | Redis | alpha-site Dockge, bundled in the authentik stack | No shared `docker/_common/redis` exists (verified — grep across `docker/` for `redis`/`valkey` in any `compose.yaml` returns nothing). Authentik's Redis usage (cache/websocket, DB index 5 in-cluster today) is low-stakes and app-scoped; bundle it in the same compose file rather than building shared infrastructure for one consumer. |
-| Embedded/proxy outposts | **stay in the cluster**, in the namespace of the app they front | Unchanged mechanism, §1.5. |
+| Embedded/proxy outposts (Kubernetes apps) | **stay in the cluster**, in the namespace of the app they front | Unchanged mechanism, §1.5. |
+| Outpost **on alpha-site itself** | authentik's **embedded** outpost — no sidecar container | **Changed 2026-08-14 (David).** `docker/alpha-site/authentik-outpost/.ignore` suppresses the `_common` sidecar on this host only; Traefik's `forwardAuth` points at the authentik server container, and alpha-site's proxy providers attach to the embedded outpost instead of a per-host `Outpost` object. Full mechanics and the three code changes in §2.5. |
 | Traefik `forwardAuth` / `outpost` middleware | Unchanged in-cluster | Target repoints at alpha-site (§1.4), the middleware chain itself doesn't change. |
 
 ### 2.1 Why reuse the shared Postgres instead of a dedicated container
@@ -209,6 +263,10 @@ back up, and monitor.
 
 ### 2.2 Footprint
 
+(Slightly better than stated below since §2.5 landed: dropping alpha-site's sidecar outpost
+returns the ~61 MiB §1.3 measured for that container, and one less process competing for the Pi's
+I/O. Not enough to change any conclusion here — the rule in §1.1 still stands.)
+
 Measured (from live SGC pods, v2.1 §2.2, reproduced in §1.3's table): server + worker ≈
 1.4 GiB across two replicas today; a single-replica Docker deployment (server ×1, worker ×1,
 shared Postgres marginal cost for one more small database, bundled Redis) lands at **~2.5–3.0 GiB
@@ -226,6 +284,118 @@ the outpost image is already pulled as arm64-capable on alpha-site today via
 `docker/_common/authentik-outpost`, which is proof this isn't a fresh unknown). Postgres arm64
 (`postgres:18-alpine`) is the same image already running on alpha-site's shared instance today.
 Redis/Valkey publishes arm64 images as a matter of course.
+
+### 2.4 Stack placement, and the bootstrap loop in the deploy run
+
+Two mechanics of `DockgeLxc.deployStacks` constrain how this stack is authored and when it can be
+applied. Both verified 2026-08-14.
+
+**The stack must be host-scoped.** `components/DockgeLxc.ts:712` (`deployStacks`) builds each host's stack list as
+the *union* of `docker/_common/*` and `docker/<host>/*`:
+
+```ts
+const stacks = all([output(readdir(resolve(dockerPath, "_common"))), output(readdir(resolve(dockerPath, this.args.host.name)))]).apply(([commonFiles, hostFiles]) =>
+  unique([...hostFiles, ...commonFiles].filter(z => z !== ".keep" && !z.startsWith("."))),
+);
+```
+
+`_common` is not a library of optional parts — it is "deploy this on **every** Dockge host."
+Putting authentik there would stand up a full authentik server on celestia, luna and skystar as
+well. It goes in `docker/alpha-site/authentik`, and the fact that only one host should ever run
+it is the reason. (Contrast `docker/_common/authentik-outpost`, which is correctly `_common`:
+every host *should* have an outpost.)
+
+**The sidecar outpost run would otherwise close a bootstrap loop.** `createOutpost`
+(`components/DockgeLxc.ts:744-809`) runs at the end of `deployStacks` for **every** host, and it
+makes a **real API call against the running authentik server** — it reads the `Authentik Token`
+secret, builds an `authentikApi.Configuration` from that secret's `url`, and calls
+`coreTokensViewKeyRetrieve` to fetch the outpost's token before writing it to
+`/opt/stacks/authentik-outpost/.env-token` over SSH. Alpha-site is not exempt today: it already
+runs a sidecar outpost, and `docker/_common/traefik`'s own `definition.yaml` declares a proxy
+provider (§3.3), so the host always has at least one.
+
+Once authentik lives on alpha-site, that closes a loop. Alpha-site's `authentikDomain` is
+`iris.driscoll.tech` (`clusters/alpha-site.yaml`), which post-cutover resolves to alpha-site's own
+Traefik — so the Pulumi run deploying authentik would be asking the authentik it is deploying to
+mint a token for the host it is deploying to, dialed in a full circle out through DNS and back
+through the same box's Traefik. §2.5 removes the loop rather than sequencing around it.
+
+### 2.5 Alpha-site drops the sidecar outpost and uses authentik's embedded outpost
+
+**Decision (David, 2026-08-14): on alpha-site the `authentik-outpost` stack is ignored, and
+everything that needs an outpost on that host uses the embedded outpost of the authentik instance
+running there.**
+
+This is the right call on the merits and not only on tidiness. The sidecar exists to let a Dockge
+host reach a *remote* authentik; on the one host where authentik is local, it is a second copy of
+the proxy running beside the server that already contains one, holding a token minted over the
+network to reach a service on `localhost`. Dropping it removes a container (~61 MiB measured,
+§1.3) from the thinnest-headroom box in the estate, removes the token file and its SSH write,
+and — see the paragraph above — removes the bootstrap loop outright instead of sequencing around
+it. Three changes make it real:
+
+**1. Ignore the stack on alpha-site.** `getStackFiles` (`components/DockgeLxc.ts:811`, guard at `:825`) returns
+`null` — skipping `createStack` entirely, so neither the compose nor its applications are
+deployed — if *either* the `_common` path or the host path contains any file ending in `.ignore`:
+
+```ts
+if (commonFiles.some(z => z.endsWith(".ignore")) || files.some(z => z.endsWith(".ignore"))) {
+  return null;
+}
+```
+
+So a bare `docker/alpha-site/authentik-outpost/.ignore` is sufficient and is the established
+convention on this exact host (`docker/alpha-site/{backrest,backups,librespeed,lmstudio,neo4j,openspeedtest}/.ignore`
+all exist today). The `_common` stack stays untouched for every other Dockge host, which still
+needs it.
+
+**2. Repoint Traefik's `forwardAuth` address on that host.**
+`docker/_common/traefik/compose.yaml:26` hardcodes the sidecar's service name:
+
+```yaml
+traefik.http.middlewares.authentik-outpost.forwardauth.address: http://authentik_proxy:9000/outpost.goauthentik.io/auth/traefik
+```
+
+`authentik_proxy` is the service in `docker/_common/authentik-outpost/compose.yaml`. With the
+sidecar ignored, that name does not resolve on alpha-site and every `forwardAuth`-gated route on
+the host fails closed — including the Traefik dashboard itself (§3.3). The embedded outpost serves
+the identical `/outpost.goauthentik.io/auth/traefik` path from the authentik **server** container
+on the same port, so the fix is the address only, not the middleware chain. Two ways to author it,
+both already supported:
+
+- **Preferred — a substitution variable.** Replace the literal with
+  `http://${AUTHENTIK_FORWARDAUTH_HOST}:9000/outpost.goauthentik.io/auth/traefik` and supply the
+  value per host through the existing `deployStacks({ variables })` channel
+  (`components/DockgeLxc.ts:702` maps every `args.variables` entry to a `${KEY}` replacement;
+  `stacks/home/index.ts` already passes `alphaSitePveVariables` and `celestiaPveVariables` this
+  way). Every other host keeps `authentik_proxy`; alpha-site gets the authentik server's service
+  name. One line changes in `_common`, no file is duplicated.
+- **Alternative — a host-level file override.** `getStackFiles` seeds its map from the host
+  directory *first* and only falls back to `_common` for paths the host does not define, so a
+  `docker/alpha-site/traefik/compose.yaml` would shadow the common one wholesale. Rejected as the
+  default: it forks an entire compose file to change one label, and it will drift.
+
+**3. Attach alpha-site's proxy providers to the embedded outpost instead of creating a new one.**
+`createOutpost` currently constructs `new authentik.Outpost(this.args.host.name, …)` per host and
+then mints its token. For alpha-site that object should not exist at all. The SDK already carries
+both halves of the replacement — `sdks/authentik/getOutpost.ts` (`getOutpostOutput({ name })`,
+a data source that resolves an existing outpost by name) and
+`sdks/authentik/outpostProviderAttachment.ts` (`OutpostProviderAttachment { outpost,
+protocolProvider }`, one attachment per provider). The alpha-site path becomes: look up the
+embedded outpost by name, then emit an attachment per proxy provider — and skip the
+`coreTokensViewKeyRetrieve` call and the `.env-token` SSH write entirely, because the embedded
+outpost needs neither.
+
+**Do not** move the existing per-host `Outpost` resource out from under alpha-site without
+accounting for what happens to the providers currently attached to it; this is a resource
+replacement in a stack where `deleteBeforeReplace: true` is already set on that exact resource.
+Preview it, read the plan, and confirm the providers land on the embedded outpost before applying
+— the estate has been bitten before by a `deleteBeforeReplace` on a live-serving resource.
+
+**Verify the embedded outpost's actual name before writing the lookup.** `getOutpost` matches on
+`name`; authentik's built-in is conventionally `authentik Embedded Outpost`, but that string is
+not asserted anywhere in this repo and a renamed outpost turns the data source into a confusing
+apply-time failure. Read it off the live server first.
 
 ## 3. Hard prerequisites — gated, in order
 
@@ -270,6 +440,7 @@ Verified state, not assumed:
 | Path | Current state (verified) | Action needed |
 |---|---|---|
 | **Traefik dashboard** | **Currently routes through authentik.** `kubernetes/apps/network/traefik/definition.yaml` sets `authentik: proxy: mode: forward_single` on `internal.${CLUSTER_DOMAIN}` — the exact opposite of break-glass today. | **Must fix.** Give it a network-only middleware (the repo already has the pattern: `local-user`/`local-api` in `kubernetes/components/common/middleware.yaml` chain `internal-network` without the `outpost` hop `authenticated-user` uses) before authentik moves, or accept that the tool used to diagnose Traefik is unreachable exactly when authentik is down. |
+| **Traefik dashboard — Dockge hosts, incl. alpha-site itself** | **Also routes through authentik**, and this is worse than the row above. `docker/_common/traefik/definition.yaml` sets the same `authentik: proxy: mode: forward_single` on `internal.${CLUSTER_DOMAIN}`, and because it lives in `_common` it applies to *every* Dockge host (§2.4) — including the one that will be hosting authentik. Post-move, an authentik outage makes the Traefik dashboard on the box serving authentik unreachable. Missed in the original draft, which only checked the Kubernetes Traefik. | **Must fix, same as above.** Either drop the `authentik:` block from `docker/_common/traefik/definition.yaml` in favour of a network-only gate, or special-case alpha-site. Fixing only the Kubernetes side leaves the more important instance gated. Note this row's `forwardAuth` address also changes on alpha-site per §2.5 — sequence the two together, since getting the address wrong fails this route closed in exactly the same way. |
 | **Headlamp** | Reachable at the Traefik layer without authentik (`kubernetes/apps/kube-system/headlamp/httproute.yaml` uses the `local-user` middleware — network-gated, not `outpost`-gated). But Headlamp's own login is wired as an authentik OIDC client (`definition.yaml`'s `authentik: oauth2` block) with no other auth method visible in this repo. | **Verify live** whether Headlamp still permits a non-OIDC (token-based) login as the actual break-glass — the network gate alone doesn't help if the login page itself calls out to a dead authentik. |
 | **Longhorn UI** | No `HTTPRoute`/`definition.yaml` for it found anywhere in `equestria-cluster` — it does not appear to be exposed through Traefik at all. | `kubectl port-forward svc/longhorn-frontend -n longhorn-system 8000:80` is the confirmed-independent path; verify this is still how it's reached live, since it may also be provisioned by a platform bootstrap path this search didn't cover. |
 | **Proxmox** | Own built-in local authentication, entirely outside Kubernetes and this repo. | Already independent by construction; no action. |
@@ -310,8 +481,18 @@ These are Pulumi *provider* inputs for `stacks/authentik`, which manages authent
 `@pulumi/authentik` — it does not deploy authentik itself. No code change is needed here; the
 repoint is a **secret-value update**: after alpha-site's authentik is up and has a fresh API
 token, update the `url` and `credential` fields of the `secrets/shared/authentik-token` OpenBao
-secret. Every consumer (`stacks/authentik`, `components/DockgeLxc.ts:774`'s outpost-token
+secret. Every consumer (`stacks/authentik`, `components/DockgeLxc.ts:779`'s outpost-token
 minting, `stacks/applications/kubernetes.ts`) reads from that one place.
+
+**The repoint carries a reachability requirement, not just a value change.** `stacks/authentik`
+does not run from a laptop in the normal case — it reconciles **from inside equestria**, via the
+Pulumi operator (`kubernetes/apps/pulumi/authentik/stack.yaml` + `serviceaccount.yaml` in this
+repo). Today that workload talks to an authentik in another Kubernetes cluster; afterwards it must
+reach a Docker container on alpha-site at `iris.driscoll.tech`. Confirm from an actual pod in
+equestria — not from a workstation, whose DNS view and tailnet position differ — that the new URL
+resolves and answers before flipping the secret, and re-preview `stacks/authentik` and
+`stacks/applications` afterward (§7). The same check covers `createOutpost`'s
+outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge host (§2.4).
 
 ## 4. Cutover runbook
 
@@ -319,31 +500,80 @@ minting, `stacks/applications/kubernetes.ts`) reads from that one place.
    dump), §3.3 (break-glass paths fixed/confirmed), §3.4 (piece 03 landed).
 2. **Deploy** the alpha-site authentik stack (server, worker, bundled Redis) pointed at a **fresh,
    empty** database via the shared Postgres instance. Confirm it starts healthy against an empty
-   DB before touching real data.
+   DB before touching real data. **Do this while SGC is still authoritative for all three
+   hostnames** — `createOutpost` still runs for every other Dockge host and resolves through
+   `iris`/`canterlot`, so the live SGC server must still be answering.
 3. **Cutover dump:** `pg_dump` authentik's database from SGC's CNPG primary → restore into the
    alpha-site Postgres via the shared instance. Verify row counts / a login round-trip before
    proceeding — this is the same "don't suspend mid-upgrade, watch for ownership drift on
    restore" caution the estate has hit before with `romm`/`windmill` restores.
-4. **Repoint DNS/ingress** for `canterlot.driscoll.tech`, `iris.driscoll.tech`, and
-   `authentik.driscoll.tech` (§1.4) from SGC's Traefik to alpha-site's Dockge Traefik.
-5. **Repoint `AUTHENTIK_URL`/`AUTHENTIK_TOKEN`** in OpenBao (§3.5).
-6. **Post-check:** every outpost re-registers and reports healthy against the new server
-   (`authentik-remote-cluster` on both equestria and sgc, plus every Dockge-hosted proxy
+4. **Cut alpha-site over to the embedded outpost** (§2.5), before the DNS flip, so the host is
+   already self-sufficient when it becomes the server: land the
+   `docker/alpha-site/authentik-outpost/.ignore`, the `forwardAuth` address change, and the
+   `getOutpost` + `OutpostProviderAttachment` path; **preview first** and confirm the per-host
+   `Outpost` teardown moves its providers rather than orphaning them. Verify a `forwardAuth`-gated
+   route on alpha-site still authenticates *while SGC is still the server* — that isolates a
+   mistake in this step from a mistake in step 5.
+5. **Repoint DNS/ingress** for `canterlot.driscoll.tech`, `iris.driscoll.tech`, and
+   `authentik.driscoll.tech` from SGC to alpha-site's Dockge Traefik. **This is not a record
+   edit** — all three are external-dns-published from the SGC `HTTPRoute` across three providers
+   (§1.4.1). Remove the three `hostnames` entries from
+   `kubernetes/apps/sgc/idp/authentik/helmrelease.yaml` (leaving the workload running), let
+   external-dns retract them from cloudflare/technitium/unifi, and confirm all three are gone from
+   each provider before publishing the alpha-site side. Leaving the `HTTPRoute` hostnames in place
+   means external-dns re-asserts them at SGC's gateway and wins.
+6. **Repoint `AUTHENTIK_URL`/`AUTHENTIK_TOKEN`** in OpenBao (§3.5), then confirm reachability
+   **from a pod in equestria**, not from a workstation — `stacks/authentik` reconciles in-cluster.
+7. **Post-check:** every outpost re-registers and reports healthy against the new server
+   (`authentik-remote-cluster` on both equestria and sgc, plus every Dockge-hosted sidecar
    outpost); `forwardAuth`-gated apps still authenticate; a full login round-trip on at least one
-   app per outpost type (embedded, proxy, Dockge-proxy).
-7. **Soak.** No fixed duration specified here — align with whatever cadence
+   app per outpost type — in-cluster embedded, in-cluster proxy, Dockge sidecar (another host),
+   and **alpha-site's embedded outpost** (§2.5), which is the newest and least-exercised path.
+   Then run `stacks/home` once more and confirm the hairpin case is healthy: every *other* Dockge
+   host's `createOutpost` now resolves `iris.driscoll.tech` to alpha-site and mints tokens against
+   it.
+8. **Soak.** No fixed duration specified here — align with whatever cadence
    [16 — soak and gate](16-soak-and-gate.md) establishes for the rest of the plan; authentik
    being wrong is worse than most things this plan touches, so err toward longer.
-8. **Scale the SGC copy to zero.** Not delete — kept as the soft-rollback path (`kubectl scale
+9. **Scale the SGC copy to zero.** Not delete (`kubectl scale
    deployment/authentik-server deployment/authentik-worker --replicas=0`, CNPG cluster left
-   running or paused per its own guidance). Full teardown is
+   running or paused per its own guidance) — what this preserves is the **database and its
+   state**, which is what rollback actually needs; the traffic lever is the `HTTPRoute`
+   hostnames, not the replica count (§4.1). Full teardown is
    [22 — decommission SGC](22-decommission-sgc.md)'s job, after the node phases complete.
+
+### 4.1 What rollback actually is
+
+Corrected 2026-08-14; the original runbook implied a lever that does not exist (§1.4.1). Scaling
+the SGC Deployments back up does **not** restore service, because by then the `HTTPRoute` no
+longer claims the three hostnames and external-dns has retracted them.
+
+**To roll back:** restore the three `hostnames` entries in
+`kubernetes/apps/sgc/idp/authentik/helmrelease.yaml`, scale the Deployments back to their original
+replica counts, and let external-dns re-publish. SGC's database, PVC, CNPG managed role and
+`Database` CRD are never touched by this piece, so the old server comes back with its own state
+intact — the alpha-site copy simply stops receiving traffic. Revert §2.5's alpha-site outpost
+change in the same commit, since with SGC authoritative again the host needs its sidecar back.
+
+Two properties worth stating plainly, because they set the rollback deadline:
+
+- **Rollback is only clean until the two databases diverge.** After cutover, every login, token,
+  session and object write lands in the alpha-site copy alone. Rolling back past that point
+  discards it. Treat the SGC database as a point-in-time copy that ages out, not a warm standby —
+  which is why the soak (step 8) is a *decision* window, not just an observation window.
+- **DNS propagation bounds both directions.** Retraction and re-publication each cross three
+  providers plus whatever caching sits in front of them, so neither the cutover nor the rollback
+  is instantaneous. Check all three providers explicitly rather than trusting one resolver's
+  answer.
 
 ## 5. What does not change
 
-- **Outpost creation and registration mechanics** (§1.5) — the Dockge per-host outpost pattern
-  and the cross-cluster `authentik-remote-cluster` chart are both already-proven, already-running
-  infrastructure. This piece repoints what they talk to; it does not rebuild them.
+- **Outpost creation and registration mechanics everywhere except alpha-site** (§1.5) — the
+  Dockge per-host sidecar pattern and the cross-cluster `authentik-remote-cluster` chart are both
+  already-proven, already-running infrastructure. For every other host and both clusters this
+  piece repoints what they talk to; it does not rebuild them. **Alpha-site is the exception**: it
+  drops the sidecar for the embedded outpost (§2.5). That is a deliberate, host-scoped change, and
+  it is the only place outpost *mechanics* change at all.
 - **Every app's own OIDC client configuration** — issuer URLs are the vanity aliases in §1.4,
   which don't change; only what answers behind them does.
 - **`stacks/authentik`'s object management** (flows, groups, roles, providers) — it only needs a
@@ -414,3 +644,14 @@ minting, `stacks/applications/kubernetes.ts`) reads from that one place.
    consumers on the same instance (if any land later) would need to share** — not a concern for
    authentik alone (§2.2's footprint math holds), but worth resolving if this shared-Postgres
    pattern gets a second consumer on alpha-site.
+6. **The embedded outpost's exact name is unverified** (§2.5). `getOutpost` matches on `name`;
+   authentik's built-in is conventionally `authentik Embedded Outpost`, but nothing in this repo
+   asserts that string. Read it off the live server before writing the lookup, or the data source
+   fails at apply time with a confusing error.
+7. **Whether any *other* Dockge host should follow alpha-site's pattern.** No, by construction —
+   §2.5 applies only where authentik is local, and alpha-site is the only such host. Recorded so
+   the `.ignore` is not later read as a general recommendation.
+8. **Whether `${AUTHENTIK_FORWARDAUTH_HOST}` should be given a repo-wide default** rather than
+   supplied per host in `stacks/home/index.ts` (§2.5). Supplying it everywhere is explicit but
+   means a host added later that forgets it renders a literal `${…}` into a Traefik label and
+   fails that host's `forwardAuth` closed. Decide when the substitution is written.
