@@ -277,6 +277,12 @@ non-technical output is the rule already stated in §1.1: **nothing else new lan
 Re-measure `node_memory_MemAvailable_bytes` for `cluster="alpha-site"` immediately before
 deploying (§3.1) rather than trusting the July number to have held exactly.
 
+**RE-MEASURED 2026-08-15, before unlocking:** 7819 MiB total, **4246 MiB available**, 4 cores,
+15-minute load 1.30. Essentially unchanged from the 4.55 GiB July figure despite `bao-transit` and
+`bao-standby` having landed since, so the arithmetic above holds: ~1.2–1.7 GiB of headroom once
+authentik is up. Thin, exactly as predicted — **§1.1's "nothing else new lands on this Pi" rule is
+now load-bearing, not advisory.**
+
 ### 2.3 Images
 
 Authentik publishes arm64 images (`ghcr.io/goauthentik/proxy`, `ghcr.io/goauthentik/server` —
@@ -417,7 +423,39 @@ hdparm -W /dev/sda            # write-caching enabled?
 dmesg | grep -i "usb.*\(uas\|bot\)"   # UAS (queued) vs BOT (bulk-only) bridge mode
 ```
 
-Gate: fsync latency should be single-digit ms and consistent; if `dmesg` shows the bridge running
+**RESULT — executed 2026-08-15, gate cleared with one accepted caveat.** Measured with
+`pg_test_fsync` run inside the existing `postgres` container on `dockge-as`, so the number covers
+the real path end to end (container → LXC rootfs on `loop0` → host `ext4` on `sda2` → USB → SSD),
+with no packages installed on the host:
+
+| method | ops/sec | per op |
+|---|---|---|
+| `fdatasync` (Linux default `wal_sync_method`) | 770.9 | **1.30 ms** |
+| `open_datasync` | 744.0 | 1.34 ms |
+| `fsync` | 383.4 | 2.61 ms |
+| non-sync'ed 8 kB write | 317,312 | 0.003 ms |
+
+**Flushes are genuinely honored — this is the finding that mattered.** The last row is the control:
+unsynced writes are ~430× faster than synced ones. A bridge silently dropping FUA would show those
+two converging. They do not, so the device is really paying for each flush, and the "data loss on a
+power cut, not a latency number" risk this section was written to catch is closed empirically.
+
+**The caveat: the bridge is BOT, not UAS.** `/sys/bus/usb/drivers/usb-storage/` has the device bound
+(`1-1.3:1.0`); the `uas` driver has no device bindings at all. Consistent with `nr_requests: 2` —
+no command queuing, so concurrent I/O serializes. `hdparm -W` reports write-caching on
+(`/sys/block/sda/queue/write_cache` = `write back`).
+
+That is literally the condition this gate names below. **Accepted, deliberately** (David,
+2026-08-15): BOT costs throughput under concurrency, not correctness, and correctness is the half
+that was unmeasured and is now proven. Authentik commits at 0.07/s (§1.3) against 770 fsync/s of
+measured capacity — roughly four orders of magnitude of headroom. Revisit only if a second database
+consumer is ever added to this host, which §1.1's rule already forbids.
+
+Also corrected while measuring: the "43.7 GiB free" figure in §1.2 is the **LXC** (`/dev/loop0`,
+42 GiB free), not the host — `sda2` itself has 364 GiB free. Authentik's database is 2611 MB, so
+either reading is ample.
+
+Original gate text, for the record: fsync latency should be single-digit ms and consistent; if `dmesg` shows the bridge running
 BOT rather than UAS, or `hdparm -W` shows write-caching with no way to confirm FUA is honored,
 that changes the answer for a database specifically (and does not change the answer for
 everything else already running on alpha-site, which doesn't need durable fsync — this is why
@@ -606,14 +644,32 @@ Two properties worth stating plainly, because they set the rollback deadline:
 
 ## 7. Definition of done
 
-- [ ] `pg_test_fsync`/`fio --fsync=1` result recorded for `sda`; UAS/BOT mode confirmed via `dmesg`
-- [ ] `PGAPP_AUTHENTIK_PASSWORD` provisioned on alpha-site's shared Postgres; backrest plan
-      confirmed picking it up (it should, generically, per §2.1 — verify, don't assume)
-      including a **restore into a scratch target that opens and validates**
-- [ ] Traefik dashboard no longer gated by the `outpost` middleware (§3.3)
+- [x] `pg_test_fsync` result recorded for `sda` (§3.1). Bridge confirmed **BOT, not UAS** — from
+      driver bindings, since `dmesg`/`journalctl -k` were empty. Flushes proven honored; BOT
+      accepted 2026-08-15
+- [x] `PGAPP_AUTHENTIK_PASSWORD` provisioned on alpha-site's shared Postgres — verified live
+      2026-08-15: role `authentik` (canlogin), database `authentik` owned by it,
+      `postgres-provision` reporting `ok: authentik`. Every secret ref in the stack's `.env`
+      resolves, and two equality checks passed **without exposing values**: the new per-app
+      `secret-key` is byte-identical to SGC's, so the cutover restore will decrypt (a fresh key
+      here would have failed silently, not loudly); and the `postgres` item's `username` is exactly
+      `authentik`, which it must be — `provision.sh` derives the role name from the *variable* name
+      and never reads that field
+- [ ] backrest plan confirmed picking the dump up (it should, generically, per §2.1 — verify,
+      don't assume) including a **restore into a scratch target that opens and validates**
+- [x] Traefik dashboard no longer gated by the `outpost` middleware (§3.3) — both the Kubernetes
+      one and `docker/_common/traefik`'s, which covers alpha-site itself (PR #806)
+- [x] Stack authored host-scoped at `docker/alpha-site/authentik` (§2.4), staged on
+      non-conflicting hostnames so unlocking cannot touch live SSO DNS (PRs #808, #831)
 - [ ] Headlamp's non-OIDC login path confirmed live, or an alternative break-glass documented
 - [ ] Longhorn UI path (`kubectl port-forward`) confirmed live
-- [ ] [Piece 03](03-secrets-bootstrap-independence.md) landed
+- [ ] [Piece 03](03-secrets-bootstrap-independence.md) landed — **partial.** Deliverable 1 (the
+      `CONNECT_HOST` repoint) landed in `eb6755c5`. The restore half of the exit gate is now
+      **proven for the first time**: the monthly drill had never run once and was broken by an
+      unguarded Postgres major; fixed and verified live 2026-08-15 (PR #835), Gatus
+      `openbao-break-glass_restore-test` green. Deliverable 3 — a full RUNBOOK Scenario B
+      rehearsal against a real `pulumi preview` — **remains outstanding**, and is the only
+      prerequisite this unlock proceeds without
 - [ ] Cutover dump/restore/repoint executed (§4 steps 2–5); post-check green (§4 step 6)
 - [ ] Soak complete per [16](16-soak-and-gate.md)'s cadence; SGC copy scaled to zero, not deleted
 - [ ] `AUTHENTIK_URL`/`AUTHENTIK_TOKEN` repointed in OpenBao; every stack that reads them
