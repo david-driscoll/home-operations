@@ -8,7 +8,7 @@ kubectl = "1.36.3"
 # forcing a failover by hand.
 "github:cloudnative-pg/cloudnative-pg" = { version = "v1.30.0", bin = "kubectl-cnpg" }
 powershell-core = "7.6.4"
-1password-cli = "2.38.1"
+1password-cli = "2.39.0"
 yq = "4.53.3"
 jq = "1.8.2"
 task = "3.52.0"
