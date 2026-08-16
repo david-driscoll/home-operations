@@ -695,6 +695,14 @@ Two properties worth stating plainly, because they set the rollback deadline:
   session and object write lands in the alpha-site copy alone. Rolling back past that point
   discards it. Treat the SGC database as a point-in-time copy that ages out, not a warm standby —
   which is why the soak (step 8) is a *decision* window, not just an observation window.
+**Where this stands after the 2026-08-16 cutover.** Both properties above are now live, not
+hypothetical. Alpha-site is the sole writer — every login, token, session and object write since
+the flip exists only there — so the SGC database is already a point-in-time copy that has begun
+aging out. And David has confirmed SGC is being shut down, which sets a hard end to the window
+rather than a soft one: **rollback stops existing when that happens**, not when the copy merely
+gets stale. Step 8's soak is therefore the whole of the decision window, and the last opportunity
+to exercise it is before the cluster goes down, not before piece 22 formally retires it.
+
 - **DNS propagation bounds both directions.** Retraction and re-publication each cross three
   providers plus whatever caching sits in front of them, so neither the cutover nor the rollback
   is instantaneous. Check all three providers explicitly rather than trusting one resolver's
@@ -816,6 +824,10 @@ a backup — but it does mean **the media PVC has no working backup on the sourc
 migration is in flight, so the live copy is the only copy until the files land on alpha-site. Worth
 its own issue; it is a pre-existing defect, unrelated to this piece.
 
+**Closed 2026-08-16, won't fix (David):** SGC is being shut down, so its VolSync repo has no future
+to protect. The media files reached alpha-site in step 3 and are covered there by the backrest plan
+in §7. What this does remove is a *source-side* safety net during the soak — see §4.1.
+
 #### If a gate fails
 
 Nothing here is one-way. SGC has not been touched — the dump is a read on a live primary — and the
@@ -926,7 +938,9 @@ one window is how the 2026-08-16 abort happened.
       `authentik`, which it must be — `provision.sh` derives the role name from the *variable* name
       and never reads that field
 - [ ] backrest plan confirmed picking the dump up (it should, generically, per §2.1 — verify,
-      don't assume) including a **restore into a scratch target that opens and validates**
+      don't assume) including a **restore into a scratch target that opens and validates**. This is
+      now the *only* backup of authentik that matters — see the §4.2 note on SGC's media VolSync,
+      which is no longer worth fixing
 - [x] Traefik dashboard no longer gated by the `outpost` middleware (§3.3) — both the Kubernetes
       one and `docker/_common/traefik`'s, which covers alpha-site itself (PR #806)
 - [x] Stack authored host-scoped at `docker/alpha-site/authentik` (§2.4), staged on
@@ -945,17 +959,25 @@ one window is how the 2026-08-16 abort happened.
 - [x] **Step 3** — the dump/restore executed and gated green (§4.2), row counts an exact match for
       the SGC baseline. **Procedure proven, copy perishable**: it diverges from the moment it
       lands, so a retry of step 5 re-runs §4.2 rather than reusing it
-- [ ] **`stacks/home` completes a run** — the gate the 2026-08-16 abort earned, and a precondition
-      of every remaining step. Nothing below can be applied while it is stalled
-- [~] **Step 4** — embedded outpost authored and merged (#852), **not applied**: the sidecar still
-      runs on `dockge-as` and the server still carries staging labels. Completes on the first
-      successful `stacks/home` run
-- [ ] **Step 5** — attempted and reverted (#856 → #864). Retry as a real window: re-sync the
-      database, release the three names from SGC, confirm retraction across cloudflare, technitium
-      **and** unifi, then claim
-- [ ] **§4.3** — `svc:authentik` released from `sgc/authentik-tailscale-ingress` and claimed by
-      alpha-site; skystar's outpost re-registered. Must land before step 9
-- [ ] Post-check green (§4 step 7), covering all four outpost types
+- [x] **`stacks/home` completes a run** — the gate the 2026-08-16 abort earned. Cleared by #863's
+      pin plus #867/#868, which adopted the four contested `StandardDns` records with **opt-in,
+      transient import ids** dropped again on the following run — the first safe answer this estate
+      has had to "Pulumi must own a record that already exists"
+- [x] **Step 4** — embedded outpost applied. **The `.ignore` removes the stack files, not the
+      running container**: `/opt/stacks/authentik-outpost/` went away and the container stayed,
+      orphaned from any compose project, looping `403 Token invalid/expired` against the new server
+      and resurrected on every cycle by `restart: unless-stopped` + `autoheal: true`. Inert for
+      traffic (nothing on the host carried the middleware) but permanent until removed by hand.
+      **Piece 22 will hit this on every stack it retires — budget a `docker rm -f` per host**
+- [x] **Step 5** — the SSO names cut over on the second attempt (#869). All three resolve to
+      `dockge-as` and answer 200 on both public and internal resolvers
+- [x] **§4.3** — `sgc/authentik-tailscale-ingress` released and `svc:authentik` claimed by
+      `dockge-as` (#871), no collision. The VIPService **kept `100.106.100.188`** across the
+      handover, so no consumer saw an address change; skystar's outpost reconnected without
+      intervention and resumed loading application config
+- [x] Post-check green (§4 step 7) across all four outpost types — in-cluster embedded and proxy
+      (both clusters serving `auth/traefik`, no token errors), Dockge sidecar on another host
+      (skystar), and alpha-site's embedded outpost
 - [ ] Soak complete per [16](16-soak-and-gate.md)'s cadence; SGC copy scaled to zero, not deleted
 - [ ] `AUTHENTIK_URL`/`AUTHENTIK_TOKEN` confirmed (§4 step 6 — **confirmation, not a value change**:
       both follow the vanity name and the restored token is identical); every stack that reads them
