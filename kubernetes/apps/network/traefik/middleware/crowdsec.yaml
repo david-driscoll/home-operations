@@ -3,7 +3,21 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: crowdsec-bouncer
+  # NOT `crowdsec-bouncer`. components/common/middleware.yaml defines a
+  # per-namespace alias of that name, and `network` includes components/common
+  # like every other namespace -- so both manifests targeted
+  # network/crowdsec-bouncer, the alias won, and this plugin config was
+  # overwritten in-cluster by a chain pointing at itself:
+  #
+  #   recursion detected in middleware:
+  #     equestria-crowdsec-bouncer -> network-crowdsec-bouncer
+  #                                -> network-crowdsec-bouncer
+  #
+  # Traefik then dropped every router carrying the filter. Distinct names keep
+  # the alias and the implementation from colliding in the one namespace that
+  # holds both. Routes still reference `crowdsec-bouncer` (the alias); only
+  # this object is renamed.
+  name: crowdsec-bouncer-plugin
 spec:
   plugin:
     # This key MUST match the key under `experimental.plugins` in

@@ -61,12 +61,24 @@ kind: Middleware
 # property it exists to guarantee. The plugin config stays single-source in
 # `network` and this only forwards to it -- the same shape `local-user` and
 # `authenticated-user` above already use.
+#
+# The target is `crowdsec-bouncer-PLUGIN`, and the distinct name is load-bearing.
+# This component is applied to EVERY namespace, `network` included, so an alias
+# named the same as its target collides there: both manifests write
+# network/crowdsec-bouncer, the alias wins, and the plugin config is replaced
+# in-cluster by a chain pointing at itself --
+#
+#   recursion detected in middleware:
+#     equestria-crowdsec-bouncer -> network-crowdsec-bouncer
+#                                -> network-crowdsec-bouncer
+#
+# -- after which Traefik drops every router carrying the filter. The chain
+# entries above get away with a bare `namespace: network` only because no
+# namespace defines an `error-pages`/`outpost`/`internal-network` of its own.
 metadata:
   name: crowdsec-bouncer
 spec:
   chain:
     middlewares:
-      # Not self-referential: this object is `<ns>/crowdsec-bouncer`, the target
-      # is `network/crowdsec-bouncer`. Traefik keys middlewares by name@namespace.
-      - name: crowdsec-bouncer
+      - name: crowdsec-bouncer-plugin
         namespace: network
