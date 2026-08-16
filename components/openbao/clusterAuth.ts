@@ -34,7 +34,14 @@
  *      `bootstrap/openbao/equestria-init.sh` write_policies().
  *   2. An `eso-<clusterKey>` policy. Those are already written for every
  *      cluster by the same script, granting read on `secrets/shared/*` plus
- *      `secrets/clusters/<key>/*`.
+ *      `secrets/clusters/*` — every cluster subtree, not just this cluster's.
+ *      It was once scoped to `secrets/clusters/<key>/*`, which only works
+ *      while a secret's readers all run on the cluster it is filed under.
+ *      They do not: alpha-site is a Dockge host, so no `eso-alpha-site` role
+ *      exists to grant, yet `clusters/alpha-site/apps/authentik/token` is read
+ *      by two workloads on equestria. Under the old scope those got a 403 and
+ *      blocked 15 Kustomizations behind `pulumi-secrets`. Still read-only;
+ *      `secrets/shared/*` is still where genuinely estate-wide values belong.
  *
  * REACHABILITY IS A PRECONDITION, not an assumption. OpenBao dials the API
  * server on every login, so the cluster running OpenBao must be able to reach
@@ -65,8 +72,10 @@ export interface OpenBaoClusterAuthArgs {
   globals: GlobalResources;
   /**
    * The cluster's `CLUSTER_KEY` (`equestria`, `sgc`, …). Drives the derived
-   * mount path and policy name, and must match the `secrets/clusters/<key>/`
-   * subtree the `eso-<key>` policy grants.
+   * mount path and policy name, and names the `secrets/clusters/<key>/`
+   * subtree this cluster's own secrets are filed under. Since the widening to
+   * `secrets/clusters/*` it no longer bounds what `eso-<key>` can READ — it is
+   * a filing convention now, not a permission boundary.
    */
   clusterKey: string;
   /**
