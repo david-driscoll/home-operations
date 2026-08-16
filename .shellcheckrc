@@ -1,0 +1,26 @@
+# shellcheck config for the hk `shellcheck` step (see .config/hk.pkl).
+#
+# Three codes are disabled. Each was reviewed at every site in the repo before
+# being turned off -- this is not a blanket severity floor, and every other
+# rule (including the whole error/warning tier) stays on.
+#
+#   SC2015  `A && B || C` is not if-then-else -- C also runs when A is true if
+#           B fails. All 11 sites are `[ cond ] && ok "..." || bad "..."` in
+#           scripts/crew-sync-regression.sh, where `ok`/`bad` terminate in
+#           `printf`. B cannot realistically fail, so C cannot double-fire.
+#   SC2329  "function is never invoked" -- the 5 sites are dispatched
+#           indirectly (built into a name and called through a variable),
+#           which shellcheck cannot follow.
+#   SC2001  prefers ${var//search/replace} over `sed`. Style only; the single
+#           site (dashboard/resources/test.sh) is correct as written.
+#
+# NOTE: `severity=warning` does NOT work here. Only `disable`, `enable`,
+# `source`, `source-path`, `external-sources` and `shell` are valid .shellcheckrc
+# directives; `severity` is a CLI-only flag and is silently ignored in this file.
+#
+# Unlike equestria-cluster, this repo does NOT disable SC1091 or SC2155 --
+# neither fires here, so carrying those across would suppress rules that
+# currently find nothing.
+disable=SC2015
+disable=SC2329
+disable=SC2001

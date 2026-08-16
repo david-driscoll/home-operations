@@ -35,7 +35,7 @@ The discovery asked this as item 3 of ["Still needs David"](https://github.com/d
 
 > alpha-site, assuming that it doesn't have any performance issues is the
 > idea[l] machine. IDP needs to stay online more than any other service.
-> Alpha site is a rasberry pi 4 that is poe powered, so it's downtime is
+> Alpha site is a raspberry pi 4 that is poe powered, so it's downtime is
 > dependent on the PoE switch it is getting powered by.
 
 Read literally, this answers a different question than the one asked. It

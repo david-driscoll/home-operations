@@ -109,7 +109,7 @@ test-target question read:
 
 > *"alpha-site, assuming that it doesn't have any performance issues is the
 > idea[l] machine. IDP needs to stay online more than any other service.
-> Alpha site is a rasberry pi 4 that is poe powered, so it's downtime is
+> Alpha site is a raspberry pi 4 that is poe powered, so it's downtime is
 > dependent on the PoE switch it is getting powered by."*
 
 That does not cleanly resolve to "yes, still rehearse there" or "no, move

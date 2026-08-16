@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #MISE description="Run dynacat for testing"
 
-cd "$MISE_CONFIG_ROOT/dashboard/resources"
+# `|| exit` is load-bearing: without it an unset MISE_CONFIG_ROOT leaves the
+# cd failing and the two commands below running against whatever directory
+# the caller happened to be in.
+cd "$MISE_CONFIG_ROOT/dashboard/resources" || exit 1
 open http://localhost:8080
 mise exec -- ./test.sh

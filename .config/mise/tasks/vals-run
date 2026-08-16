@@ -99,6 +99,8 @@ if [[ ! -s "${refs}" && ! -s "${bootstrap}" ]]; then
   exec "$@"
 fi
 
+# shellcheck disable=SC2016  # the backticks are prose emphasis in the message,
+# not a command substitution -- the single quotes are intentional.
 command -v vals >/dev/null || { printf 'vals-run: vals is not installed — `mise install` in this repo.\n' >&2; exit 127; }
 
 # Resolving the bootstrap credential alone is still worth doing when nothing

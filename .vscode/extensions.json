@@ -1,0 +1,68 @@
+{
+  // Ported from david-driscoll/equestria-cluster and adapted to this repo's
+  // shape (Pulumi TypeScript + Flux manifests, rather than Talos + helmfile).
+  //
+  // Deliberately NOT carried across from equestria's list:
+  //   * esbenp.prettier-vscode        — this repo formats with Biome, and the
+  //                                     two fight over the same files.
+  //   * streetsidesoftware.code-spell-checker
+  //                                   — superseded by the `typos` hk step,
+  //                                     which keeps its wordlist in typos.toml
+  //                                     rather than in .vscode/settings.json.
+  //   * hoovercj.vscode-power-mode, PKief.material-icon-theme, and the other
+  //                                     personal-taste extensions — those
+  //                                     belong in a user profile, not a repo
+  //                                     recommendation.
+  "recommendations": [
+    // Pkl language support for .config/hk.pkl.
+    //
+    // This one CANNOT be installed from here — it is not published to the VS
+    // Code marketplace, so VS Code's "install recommended extensions" silently
+    // finds nothing. Install it with:
+    //
+    //     mise run pkl-vscode
+    //
+    // which fetches the pinned VSIX from GitHub releases (scripts/install-pkl-vscode.sh,
+    // ported from rocketsurgeonsguild/Specular). Listing it here is still worth
+    // doing: once installed, VS Code stops offering to "find" it and treats the
+    // workspace as satisfied.
+    //
+    // NB the id is `pkl.pkl-vscode` (publisher `Pkl`). Specular's
+    // extensions.json says `apple.pkl-vscode`, which matches nothing — harmless
+    // there only because the VSIX task is what actually installs it.
+    //
+    // The extension downloads its own pkl-lsp jar from Maven, but locates Java
+    // from $JAVA_HOME or $PATH and requires Java 22+; without one it shows a
+    // "Cannot find suitable Java" prompt and nothing else is affected. mise does
+    // not pin a JDK for this on purpose — that would add a JDK download to every
+    // `mise install` and to CI for an editor-only feature. If you need one:
+    // `mise use java@temurin-25`.
+    "pkl.pkl-vscode",
+
+    // Flux / Kubernetes manifests — the largest artifact class in the repo.
+    "redhat.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "weaveworks.vscode-gitops-tools",
+
+    // SOPS. Decrypt-on-open for the *.sops.* files that .config/hk.pkl guards
+    // so carefully; editing one as raw ciphertext is how MACs get broken.
+    "signageos.signageos-vscode-sops",
+
+    // TypeScript / Pulumi. Biome is this repo's formatter AND linter (biome.json).
+    "biomejs.biome",
+
+    // The linters hk runs, surfaced inline instead of only at commit time.
+    "timonwong.shellcheck",
+    "editorconfig.editorconfig",
+
+    // GitHub.
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "github.copilot",
+    "github.copilot-chat",
+
+    // Navigation.
+    "christian-kohler.path-intellisense",
+    "gruntfuggly.todo-tree"
+  ]
+}
