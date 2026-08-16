@@ -427,9 +427,19 @@ const _openbaoSgcAuth = new OpenBaoClusterAuth("openbao-sgc-auth", {
 });
 
 function clusterWideDns(globals: GlobalResources) {
+  // ONE-RUN ADOPTION IDS — delete all four `*ImportId` lines once this stack has gone green.
+  //
+  // These four names existed in UniFi and Cloudflare before Pulumi ever described them (they
+  // are not external-dns-managed and no other stack owns them), so plain creates fail with
+  // "Static DNS Record Already Exists" / Cloudflare 81054 and wedge the whole stack. The ids
+  // below adopt the live records instead. See components/StandardDns.ts for why they must not
+  // stay: the import id can never equal the state id, so every later run re-plans a replace.
+  // That now fails closed rather than deleting live DNS, but it will still wedge this stack.
   StandardDns.create(
     "spike-a",
     {
+      unifiImportId: "default:68f45bc5015fc104b3a3db19",
+      cloudflareImportId: "c2eddc69f9b07cd0e6a73c4d59b52189/9493f82e733d2901068732152f731dc1",
       type: "A",
       hostname: pulumi.interpolate`spike.${globals.searchDomain}`,
       ipAddress: `10.10.10.10`,
@@ -441,6 +451,8 @@ function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(
     "spikespike-cname",
     {
+      unifiImportId: "default:68f45bc5015fc104b3a3db16",
+      cloudflareImportId: "c2eddc69f9b07cd0e6a73c4d59b52189/c0115e6662ca3070331f73d3c4b4171f",
       type: "CNAME",
       hostname: pulumi.interpolate`truenas.${globals.searchDomain}`,
       record: pulumi.interpolate`spike.${globals.searchDomain}`,
@@ -452,6 +464,8 @@ function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(
     "discord-a",
     {
+      unifiImportId: "default:68f45bc5015fc104b3a3db12",
+      cloudflareImportId: "c2eddc69f9b07cd0e6a73c4d59b52189/631dcde6e22c40611cb29a0774ea975c",
       type: "A",
       hostname: pulumi.interpolate`discord.${globals.searchDomain}`,
       ipAddress: `10.10.0.1`,
@@ -463,6 +477,8 @@ function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(
     "discord-cname",
     {
+      unifiImportId: "default:68f45bc5015fc104b3a3db1c",
+      cloudflareImportId: "c2eddc69f9b07cd0e6a73c4d59b52189/edde1ca9f6032cc7731d2896bf42a193",
       type: "CNAME",
       hostname: pulumi.interpolate`unifi.${globals.searchDomain}`,
       record: pulumi.interpolate`discord.${globals.searchDomain}`,
