@@ -199,7 +199,7 @@
       },
     },
     {
-      description: "Sppostgegel Group",
+      description: "Spegel Group",
       groupName: "Spegel",
       matchDatasources: [
         "docker"
