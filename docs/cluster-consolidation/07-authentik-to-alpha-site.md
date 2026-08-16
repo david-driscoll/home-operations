@@ -617,6 +617,128 @@ Two properties worth stating plainly, because they set the rollback deadline:
   is instantaneous. Check all three providers explicitly rather than trusting one resolver's
   answer.
 
+### 4.2 Step 3 in detail — the dump and restore
+
+Step 3 above is one bullet; it is the step that moves real data, and every fact below was
+verified live 2026-08-16 before it was written down.
+
+**Ground truth, both ends**
+
+| | source | target |
+|---|---|---|
+| where | SGC, ns `sgc`; CNPG `postgres-1` in ns `database` | alpha-site, `postgres` container on `dockge-as` |
+| engine | PostgreSQL **17.5** (CNPG) | PostgreSQL **18.6** (`postgres:18-alpine`) |
+| database | `authentik`, **2702 MB**, 215 tables | `authentik`, bootstrapped by the step-2 deploy |
+| owner | every one of the 215 public tables owned by role `authentik` | role `authentik` (canlogin), database owned by it |
+| extensions | `plpgsql`, `pg_stat_statements` | `shared_preload_libraries` is **empty** |
+| authentik | `ghcr.io/goauthentik/server:2026.5.6` | `2026.5.6`, digest-pinned |
+
+**The version match is the load-bearing fact.** Both ends run 2026.5.6, so the restored schema is
+the schema this server expects and nothing migrates on first start. If these ever diverge, stop:
+a newer server will silently migrate a restored database, and that is not a step you can undo by
+restoring again.
+
+**Baseline to verify against** (SGC, at time of writing):
+
+```
+users=13  groups=8  apps=128  tokens=9  flows=25
+```
+
+Re-take this immediately before the dump rather than trusting the numbers above — SGC is still
+serving, so they move.
+
+#### The four traps
+
+1. **`pg_stat_statements` will fail the restore.** It is installed in SGC's `authentik` database
+   but the target has an empty `shared_preload_libraries`, and `CREATE EXTENSION
+   pg_stat_statements` errors outright in that state. It is CNPG operational tooling, not
+   authentik data. Exclude it at dump time — `pg_dump --exclude-extension` exists in 17.
+2. **`--no-owner` alone reproduces the ownership drift this estate has already been bitten by**
+   (`romm`, `windmill`). Restoring as `postgres` with `--no-owner` leaves all 215 tables owned by
+   `postgres`, and authentik then connects as `authentik` and cannot write. Use `--role=authentik`
+   as well, so `pg_restore` issues `SET ROLE` and the objects are created under the right owner.
+   Verify ownership afterwards; do not assume it.
+3. **`restart: unless-stopped` plus any `stacks/home` run will restart the containers mid-restore.**
+   `docker stop` holds until something runs `compose up -d`, and the Pulumi operator does exactly
+   that on every reconcile. Do this in a window where no run is in flight, and re-check before
+   starting the restore.
+4. **The `media` PVC is not in the database and is easy to forget.** SGC's holds 4 files, 108 KB —
+   three application icons and one source icon under `/media/public/`. Small enough to look like
+   nothing, load-bearing enough that the apps using them lose their icons in the UI if it is
+   skipped. Copy it in the same window.
+
+#### Sequence
+
+```sh
+# 0. Pre-flight — SGC still authoritative, and a fresh baseline.
+dig +short authentik.driscoll.tech iris.driscoll.tech canterlot.driscoll.tech   # all -> SGC gw
+kubectl --context admin@sgc exec -n database postgres-1 -c postgres -- psql -U postgres -d authentik -tAc \
+  "select 'users='||(select count(*) from authentik_core_user)||' groups='||(select count(*) from authentik_core_group)||' apps='||(select count(*) from authentik_core_application)||' tokens='||(select count(*) from authentik_core_token)||' flows='||(select count(*) from authentik_flows_flow)"
+
+# 1. Quiesce the target only. SGC keeps serving throughout — this is not an outage.
+ssh root@dockge-as 'docker stop authentik-server authentik-worker'
+
+# 2. Dump from the CNPG primary, with pg_dump 17.5 matching the 17.5 server.
+kubectl --context admin@sgc exec -n database postgres-1 -c postgres -- \
+  pg_dump -U postgres -d authentik -Fc --no-owner --no-privileges \
+          --exclude-extension=pg_stat_statements \
+  > authentik-$(date +%Y%m%d).dump
+
+# 3. Land it on the Pi and checksum both ends before trusting it.
+scp authentik-*.dump root@dockge-as:/opt/stacks-data/authentik/restore.dump
+
+# 4. Drop the bootstrapped database and recreate it empty, owned by authentik.
+#    FORCE terminates authentik's own idle connections (PG13+).
+ssh root@dockge-as 'docker exec postgres psql -U postgres -c "DROP DATABASE authentik WITH (FORCE)"'
+ssh root@dockge-as 'docker exec postgres psql -U postgres -c "CREATE DATABASE authentik OWNER authentik"'
+
+# 5. Restore. --role is trap 2; without it every table lands owned by postgres.
+ssh root@dockge-as 'docker exec -i postgres pg_restore -U postgres -d authentik \
+  --no-owner --no-privileges --role=authentik < /opt/stacks-data/authentik/restore.dump'
+
+# 6. Media.
+kubectl --context admin@sgc exec -n sgc <authentik-server-pod> -- tar cf - -C /media public \
+  | ssh root@dockge-as 'docker exec -i authentik-server tar xf - -C /media'
+
+# 7. Start, and watch the first boot.
+ssh root@dockge-as 'docker start authentik-server authentik-worker'
+```
+
+#### Gates — all must pass before the cutover proceeds to step 4
+
+- Row counts match the pre-flight baseline exactly, on all five tables
+- `select count(*) from pg_tables where schemaname='public'` returns **215**
+- Every one of those tables is owned by `authentik` — one row, one owner:
+  `select tableowner, count(*) from pg_tables where schemaname='public' group by 1`
+- `authentik-server` reaches `(healthy)`, and its log shows **no migration activity** — a
+  same-version restore should apply none
+- The bootstrap variables are still set in `.env`; confirm they were a **no-op**, i.e. the restored
+  admin survived and was not overwritten by `AUTHENTIK_BOOTSTRAP_*`
+- A full login round-trip against `https://authentik.${CLUSTER_DOMAIN}` — the staging hostname, not
+  a vanity alias, which still points at SGC
+- The three vanity names *still* resolve to SGC. Step 3 must not move them; that is step 5
+
+#### Noticed in passing, not this piece's to fix
+
+SGC's **VolSync backup of authentik's `media` PVC is currently failing**, every run:
+
+```
+Fatal: create repository at /repository/authentik failed:
+Fatal: unable to open repository at /repository/authentik: mkdir /repository/authentik: file exists
+```
+
+A restic repo-init failure against a path that already exists but is not a valid repository. It
+does not block anything above — step 3 copies `/media` directly out of the running pod, not out of
+a backup — but it does mean **the media PVC has no working backup on the source side** while this
+migration is in flight, so the live copy is the only copy until the files land on alpha-site. Worth
+its own issue; it is a pre-existing defect, unrelated to this piece.
+
+#### If a gate fails
+
+Nothing here is one-way. SGC has not been touched — the dump is a read on a live primary — and the
+target held only step-2 bootstrap data. Drop the database, recreate it, and let authentik
+re-bootstrap; you are back to the end of step 2. The only cost is the transfer.
+
 ## 5. What does not change
 
 - **Outpost creation and registration mechanics everywhere except alpha-site** (§1.5) — the
