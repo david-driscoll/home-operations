@@ -135,30 +135,38 @@ spec:
           # container — does not stop the Job from ever completing.
           postgres:
             image:
-              # Same major as the CNPG cluster (17.5) so the restored dump is
-              # read by the engine version that wrote it. That was always the
-              # intent; the pin had drifted across a major to 18.x while the
-              # comment stayed at 17.5, because nothing ever ran this job to notice.
+              # Postgres 18, deliberately NEWER than the CNPG cluster this dump
+              # comes from (17.5) — see #843. The old comment claimed the scratch
+              # engine had to be the same major as CNPG "so the restored dump is
+              # read by the engine version that wrote it". That rationale does not
+              # survive contact with what dump.sh actually produces:
               #
-              # The drift was not cosmetic. Postgres 18 images changed their data
-              # directory layout and refuse to start when the mount IS the data
-              # directory — which is exactly how `pgdata` is mounted below:
+              #   pg_dump --schema=openbao --format=plain --no-owner --no-privileges
               #
-              #   "there appears to be PostgreSQL data in /var/lib/postgresql/data
-              #    (unused mount/volume)"
+              # a PLAIN SQL dump, which restores into any equal-or-newer major. The
+              # direction that genuinely breaks is the other one — a pg_dump OLDER
+              # than the server it reads — and that constraint lives on the dump
+              # side, which stays pinned to postgresql17-client against CNPG 17.5.
               #
-              # so the sidecar exits and main fails with "scratch postgres never
-              # became ready". The whole restore test has failed closed since the
-              # major landed. Verified live 2026-08-15 by running the job manually:
-              # it pulled the dump fine, then died here.
+              # What this job verifies is the ARTIFACT: that the nightly dump is
+              # intact, decrypts, loads, and that the transit seal can unseal the
+              # restored keyring. It is not a rehearsal of the production engine —
+              # that is piece 03's Scenario B rehearsal, which is a separate gate.
+              # So the scratch engine only has to be >= the dump's origin major,
+              # and staying current is worth more than mirroring 17.5.
               #
-              # Staying on 17 restores both the stated intent and a working mount
-              # layout, and matches the postgresql17-client the main container
-              # installs. renovate.json5 now blocks majors for this image — the
-              # guard that docker/_common/postgres's comment already claimed
-              # existed but which was never actually written.
+              # Getting here took a detour worth recording. Renovate crossed this
+              # major on its own once, and 18 broke the job outright — the image
+              # refuses to start when the mount IS the data directory, which is how
+              # `pgdata` was mounted. Nothing noticed for weeks: this job runs on
+              # the 1st of the month and had never run at all. #835 reverted to 17
+              # and added the renovate rule that now blocks majors for this image.
+              #
+              # So this bump is a deliberate, hand-made decision rather than a tag
+              # moving on its own, and it carries the actual fix — PGDATA below.
+              # Leave the renovate guard in place; it is doing its job.
               repository: docker.io/library/postgres
-              tag: 17-alpine@sha256:d4bb0a8c1b7bb2e29f976d099e7bfb9a5d8858cffe9e46b35cd302cd1f1f8168
+              tag: 18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
               pullPolicy: IfNotPresent
             restartPolicy: Always
             env:
@@ -168,6 +176,23 @@ spec:
               POSTGRES_USER: &scratchUser openbao
               POSTGRES_PASSWORD: &scratchPw restore-test
               POSTGRES_DB: &scratchDb openbao
+              # THE 18 FIX. Postgres 18 images refuse to start when the mount IS
+              # the data directory:
+              #
+              #   "there appears to be PostgreSQL data in /var/lib/postgresql/data
+              #    (unused mount/volume)"
+              #
+              # and the pgdata volume below mounts exactly there. Pointing PGDATA at
+              # a SUBDIRECTORY of the mount is the fix, and it is the same one
+              # docker/_common/postgres already uses — which is the only reason that
+              # stack survived the identical major bump while this job broke closed
+              # for weeks (#835).
+              #
+              # Chosen over the upstream suggestion of mounting at
+              # /var/lib/postgresql: that path is also the postgres user's home in
+              # the image, and replacing it wholesale with an empty emptyDir is a
+              # larger blast radius than this needs.
+              PGDATA: /var/lib/postgresql/data/pgdata
             resources:
               requests:
                 memory: 256Mi
@@ -225,7 +250,7 @@ spec:
               - -c
               - >-
                 set -eu;
-                apk add --no-cache bash coreutils postgresql17-client age rclone curl jq
+                apk add --no-cache bash coreutils postgresql18-client age rclone curl jq
                 && exec bash /scripts/restore-test.sh
             resources:
               requests:
