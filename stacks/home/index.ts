@@ -1,6 +1,6 @@
 import type { AuthentikOutputs } from "@components/authentik.ts";
-import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { BackupPlanDirector } from "@components/BackupPlanDirector.ts";
+import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { awaitOutput } from "@components/helpers.ts";
 import type { CredentialDefinition, PasswordDefinition, SshKeyDefinition } from "@components/store/index.ts";
@@ -10,8 +10,8 @@ import * as minio from "@pulumi/minio";
 import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
-import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { OpenBaoClusterAuth } from "../../components/openbao/clusterAuth.ts";
+import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
 import { createGatusDnsUptime } from "../../components/StandardDns.ts";
@@ -192,7 +192,9 @@ if (globals.baoDualWriteEnabled) {
     { provider: globals.baoProvider },
   );
 } else {
-  pulumi.log.warn("No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for Thanos S3 Storage. The shared/thanos-s3-storage path its ExternalSecrets read stays frozen until a credentialed run.");
+  pulumi.log.warn(
+    "No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for Thanos S3 Storage. The shared/thanos-s3-storage path its ExternalSecrets read stays frozen until a credentialed run.",
+  );
 }
 
 const celestiaHost = new ProxmoxHost("celestia", {
@@ -258,6 +260,19 @@ const alphaSiteDockgeRuntime = new DockgeLxc("alpha-site-dockge", {
   sftpKey: sftpClientKey,
   legacyTun: true, // jiangcuo ARM64 Proxmox port stubs out mknod; dev2 passthrough is unusable
   monitor,
+  // This host runs authentik itself, so it uses the server's embedded outpost
+  // rather than the authentik-outpost sidecar, which is suppressed by
+  // docker/alpha-site/authentik-outpost/.ignore. Step 4 of section 4 in
+  // docs/cluster-consolidation/07-authentik-to-alpha-site.md.
+  //
+  // No embeddedOutpostName: the live server calls it exactly "authentik Embedded
+  // Outpost", the default in DockgeLxc — checked against the API rather than
+  // assumed, which closes open question 6 in that document.
+  useEmbeddedOutpost: true,
+  // The forwardAuth target moves from the sidecar's service name to the authentik
+  // server container on this host. Inert today — nothing here routes through that
+  // middleware — but it has to be right before this host answers for SSO.
+  authentikForwardAuthHost: "authentik-server",
 });
 
 const celestiaPbs = new ProxmoxBackupServerLxc("celestia-pbs", {
