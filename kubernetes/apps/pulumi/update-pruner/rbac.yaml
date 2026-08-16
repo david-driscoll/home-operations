@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pulumi-update-pruner
+  namespace: pulumi
+---
+# Both Stacks and Updates are namespaced and both live in `pulumi`, so a Role is
+# enough -- unlike lock-canceller, which needs a ClusterRole to sweep Stacks in
+# every namespace. `delete` is granted on updates only; stacks stay read-only so
+# a bug here can never remove a Stack.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pulumi-update-pruner
+  namespace: pulumi
+rules:
+  - apiGroups: [auto.pulumi.com]
+    resources: [updates]
+    verbs: [get, list, delete]
+  - apiGroups: [pulumi.com]
+    resources: [stacks]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pulumi-update-pruner
+  namespace: pulumi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pulumi-update-pruner
+subjects:
+  - kind: ServiceAccount
+    name: pulumi-update-pruner
+    namespace: pulumi
