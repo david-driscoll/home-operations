@@ -548,10 +548,33 @@ outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge hos
 4. **Cut alpha-site over to the embedded outpost** (§2.5), before the DNS flip, so the host is
    already self-sufficient when it becomes the server: land the
    `docker/alpha-site/authentik-outpost/.ignore`, the `forwardAuth` address change, and the
-   `getOutpost` + `OutpostProviderAttachment` path; **preview first** and confirm the per-host
-   `Outpost` teardown moves its providers rather than orphaning them. Verify a `forwardAuth`-gated
-   route on alpha-site still authenticates *while SGC is still the server* — that isolates a
-   mistake in this step from a mistake in step 5.
+   `useEmbeddedOutpost` flag on this host's `DockgeLxc`.
+
+   **Two instructions this step used to carry do not survive contact with the live estate**
+   (verified 2026-08-16, before executing):
+
+   - *"Verify a `forwardAuth`-gated route on alpha-site still authenticates."* **There is no such
+     route.** Every container on the host was inspected: none carries the
+     `authentik-outpost@docker` middleware in its labels. The Traefik dashboard was the only
+     consumer and stopped being one when [#806](https://github.com/david-driscoll/home-operations/pull/806)
+     network-gated it. The sidecar has been idle, logging nothing but session-cleanup ticks.
+     `alloy` is the host's one proxy provider, and its route carries **no middleware at all**. So
+     this step's real blast radius is one registered-but-unrouted provider, and the gate as written
+     cannot be executed — do not invent a substitute that looks like it passed.
+   - *"Preview first."* `pulumi preview` is **not trustworthy on `stacks/home`**: it invents
+     phantom deletes (`StandardDns`, `TailnetKey`, `DeviceTags`) because `tailscale.ts` builds
+     resources inside `apply()` behind an `isDryRun` early return. A genuine one-resource change
+     would be indistinguishable from the noise. Judge this step from the **authentik API
+     afterwards** — the provider should end up attached to the embedded outpost — and from
+     `pulumi stack history`, not from preview output.
+
+   **Where the attachment actually lands, and why that is fine.** `createOutpost` talks to whatever
+   `AUTHENTIK_URL` points at, which at this point in the sequence is still **SGC**. So the
+   `OutpostProviderAttachment` this step creates is written into SGC's database, not into
+   alpha-site's restored copy. That is not a defect and needs no manual repair: step 6 repoints
+   `AUTHENTIK_URL` at alpha-site, and the `stacks/home` run in step 7's post-check then re-creates
+   the attachment against the new server. Worth knowing so the gap between steps 4 and 7 is not
+   mistaken for a failed step.
 5. **Repoint DNS/ingress** for `canterlot.driscoll.tech`, `iris.driscoll.tech`, and
    `authentik.driscoll.tech` from SGC to alpha-site's Dockge Traefik. **This is not a record
    edit** — all three are external-dns-published from the SGC `HTTPRoute` across three providers
@@ -835,10 +858,10 @@ re-bootstrap; you are back to the end of step 2. The only cost is the transfer.
    authentik alone (§2.2's footprint math holds), but worth resolving if this shared-Postgres
    pattern gets a second consumer on alpha-site.
    pattern gets a second consumer on alpha-site.
-6. **The embedded outpost's exact name is unverified** (§2.5). `getOutpost` matches on `name`;
-   authentik's built-in is conventionally `authentik Embedded Outpost`, but nothing in this repo
-   asserts that string. Read it off the live server before writing the lookup, or the data source
-   fails at apply time with a confusing error.
+6. ~~**The embedded outpost's exact name is unverified**~~ — **resolved 2026-08-16.** Read off the
+   live server via `/api/v3/outposts/instances/`: it is exactly `authentik Embedded Outpost`, which
+   is the default already coded into `DockgeLxc`. No `embeddedOutpostName` override is needed. It
+   carried 0 providers at the time of checking, as expected.
 7. **Whether any *other* Dockge host should follow alpha-site's pattern.** No, by construction —
    §2.5 applies only where authentik is local, and alpha-site is the only such host. Recorded so
    the `.ignore` is not later read as a general recommendation.

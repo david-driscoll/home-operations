@@ -1,0 +1,18 @@
+# alpha-site does not run the authentik-outpost sidecar.
+#
+# This host runs authentik ITSELF, so the sidecar would be a second copy of the
+# proxy sitting beside the server that already contains one, holding an API token
+# minted over the network to reach a service on localhost. It uses the server's
+# built-in embedded outpost instead — see section 2.5 of
+# docs/cluster-consolidation/07-authentik-to-alpha-site.md, and the
+# useEmbeddedOutpost flag on this host's DockgeLxc in stacks/home/index.ts.
+#
+# getStackFiles skips a stack when EITHER docker/_common/<stack>/ or
+# docker/<host>/<stack>/ contains a .ignore, so this file suppresses the _common
+# stack on this host only. Every other Dockge host still gets it, and must — they
+# reach a REMOTE authentik and genuinely need the sidecar.
+#
+# Verified before landing (2026-08-16): nothing on this host routes through the
+# `authentik-outpost@docker` middleware. The Traefik dashboard stopped using it in
+# PR #806, and no other container on the host carries it in its labels — the
+# sidecar has been idle, logging only session-cleanup ticks.
