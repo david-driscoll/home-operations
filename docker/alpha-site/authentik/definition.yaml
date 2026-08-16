@@ -41,8 +41,13 @@ spec:
     # load-bearing: every OIDC login and every outpost in the estate depends on a
     # single Pi on a single PoE switch (section 6, accepted), and "one alias did
     # not repoint" is a failure only a per-alias check can see.
+    #
+    # 200, not 204. Verified against the live server after deploy:
+    # /-/health/live/ and /-/health/ready/ both answer 200. The 204 this
+    # originally asserted was wrong, so the check could never pass — it sat red
+    # from the moment the stack came up while the endpoint itself was healthy.
     - url: https://authentik.${CLUSTER_DOMAIN}/-/health/live/
       method: GET
       interval: 1m
       conditions:
-        - "[STATUS] == 204"
+        - "[STATUS] == 200"
