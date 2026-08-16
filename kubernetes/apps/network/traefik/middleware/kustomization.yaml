@@ -15,8 +15,14 @@ resources:
   - ./error-pages.yaml
   - ./default-cors.yaml
   - ./outpost.yaml
-  # Creates the crowdsec-bouncer Middleware object. Inert on its own: the
-  # plugin ships with `enabled: false` and no HTTPRoute references it yet.
+  # Creates the crowdsec-bouncer Middleware object in THIS namespace only, and
+  # holds the plugin config (including the `enabled: false` kill switch).
+  # Inert on its own: the plugin ships disabled.
+  #
+  # Routes do not reference this copy directly -- Traefik resolves an
+  # ExtensionRef in the route's own namespace, so each namespace gets a thin
+  # alias chaining here from components/common/middleware.yaml. Stage 3's
+  # whoami route (apps/equestria/utils/whoami) is the one live reference today.
   # See docs/crowdsec-enforcement-rollout.md before changing either.
   - ./crowdsec.yaml
   # - ./fail2ban.yaml
