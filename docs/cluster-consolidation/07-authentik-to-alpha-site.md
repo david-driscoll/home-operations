@@ -515,9 +515,16 @@ AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/toke
 AUTHENTIK_URL   = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
 ```
 
+> **Superseded 2026-08-16 — see §4 step 6.** The section below describes this as a secret-value
+> update. It is not: `AUTHENTIK_URL` is `https://authentik.driscoll.tech`, one of the three vanity
+> names step 5 moves, so the DNS flip repoints every consumer on its own. The token is identical on
+> both sides because alpha-site's database is a restore of SGC's. No OpenBao edit is required —
+> only confirmation from inside equestria. The text below is kept for the consumer list, which is
+> still correct.
+
 These are Pulumi *provider* inputs for `stacks/authentik`, which manages authentik's objects via
 `@pulumi/authentik` — it does not deploy authentik itself. No code change is needed here; the
-repoint is a **secret-value update**: after alpha-site's authentik is up and has a fresh API
+repoint was expected to be a **secret-value update**: after alpha-site's authentik is up and has a fresh API
 token, update the `url` and `credential` fields of the `secrets/clusters/alpha-site/apps/authentik/token` OpenBao
 secret. Every consumer (`stacks/authentik`, `components/DockgeLxc.ts:774`'s outpost-token
 minting, `stacks/applications/kubernetes.ts`) reads from that one place.
@@ -573,8 +580,22 @@ outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge hos
    `ApplicationDefinition` is gone**, since until then the distinct name is what keeps Gatus from
    panicking on a duplicate `(name, group)` and taking estate-wide monitoring down with it
    ([27](27-migration-churn-failure-modes.md)).
-6. **Repoint `AUTHENTIK_URL`/`AUTHENTIK_TOKEN`** in OpenBao (§3.5), then confirm reachability
-   **from a pod in equestria**, not from a workstation — `stacks/authentik` reconciles in-cluster.
+6. **`AUTHENTIK_URL`/`AUTHENTIK_TOKEN` — verified 2026-08-16 to need no change at all.** §3.5
+   described this as a secret-value update. It is not, because
+   `AUTHENTIK_URL = https://authentik.driscoll.tech` — **a vanity name, one of the three step 5
+   moves.** So the DNS flip *is* the Pulumi repoint: every consumer follows DNS with no secret
+   edit. And `AUTHENTIK_TOKEN` needs no change either, because alpha-site's database is a restore
+   of SGC's and carries the identical token (checked by comparing the two OpenBao values without
+   printing them). What remains here is confirmation, not action: check reachability **from a pod
+   in equestria**, not from a workstation, since `stacks/authentik` reconciles in-cluster.
+
+   **The tailnet name is a THIRD family and does not move with the other two.** `DockgeLxc.ts:700`
+   hands `remote: true` hosts `authentik.${tailscaleDomain}` — not a public vanity name — as their
+   `CLUSTER_AUTHENTIK_DOMAIN`. `stacks/ocracoke` is such a host. That name is the tailscale service
+   `svc:authentik`, still owned by SGC, and it needs its own release-then-claim pair on the same
+   pattern as step 5. Claiming it early collides on the service name, which in this estate produces
+   a `Terminating` service and a stuck finalizer. **It must migrate before SGC is scaled to zero in
+   step 9**, or ocracoke's outpost is left pointing at a dead server.
 7. **Post-check:** every outpost re-registers and reports healthy against the new server
    (`authentik-remote-cluster` on both equestria and sgc, plus every Dockge-hosted sidecar
    outpost); `forwardAuth`-gated apps still authenticate; a full login round-trip on at least one
