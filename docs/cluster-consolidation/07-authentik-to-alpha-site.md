@@ -26,6 +26,33 @@ which is a hard prerequisite (§3.4 below).
 > alpha-site only* (in-cluster outposts are unaffected) and dissolves the §2.4 bootstrap loop
 > rather than sequencing around it.
 
+> **Revision 2026-08-16 — the cutover was attempted, aborted, and partly rolled back.** Read this
+> before treating any step below as un-run. Steps 2 and 3 executed and hold; steps 4 and 5 did not,
+> for a reason that had nothing to do with authentik.
+>
+> - **Step 2 holds.** Server, worker and bundled Redis run on `dockge-as`, healthy.
+> - **Step 3 executed and verified.** The dump/restore ran; alpha-site's database carries
+>   `users=13 groups=8 apps=128 tokens=9 flows=25`, an exact match for §4.2's SGC baseline. **It
+>   ages from the moment it lands** — SGC is still serving every login, so the copy diverges
+>   continuously. Any retry of step 5 re-runs §4.2 first; the existing restore proves the procedure,
+>   it is not the copy that goes live.
+> - **Step 4 is authored, not applied** (#852). The `.ignore`, `useEmbeddedOutpost` and
+>   `authentikForwardAuthHost` are all on `main`, but `stacks/home` has not completed a run since
+>   `d4a7e16f`, which predates it. On the host the `authentik-outpost` sidecar is **still running**
+>   and `authentik-server` still carries the staging labels. Do not read the merge as the change.
+> - **Step 5 was claimed, never applied, then reverted** (#856 → #864). The estate's Pulumi state
+>   backend broke — every stack failing `PutObject … InvalidArgument: Invalid checksum provided`
+>   against Minio, traced by experiment to `pulumi-nodejs:3.257.0` and pinned back to `3.254.0`
+>   (#863). The names had already been released from SGC and were then put back
+>   (stargate-command-cluster#1832), leaving **both sides claiming them** with alpha-site's
+>   `StandardDns` armed to fire on the next successful run. #864 reverted the claim half. SSO is on
+>   SGC and uncontested; alpha-site is back on staging names.
+>
+> **The gate this earned, and it is now a precondition of step 5:** *confirm `stacks/home` can
+> complete a run before releasing any name from SGC.* The release half is cheap to do and slow to
+> undo; the claim half depends on a pipeline that had been broken for hours without anyone noticing,
+> because nothing in the cutover sequence checked it.
+
 ## Scope
 
 Move authentik's **server and worker** processes, its **PostgreSQL database**, and a bundled
@@ -583,8 +610,18 @@ outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge hos
    the attachment against the new server. Worth knowing so the gap between steps 4 and 7 is not
    mistaken for a failed step.
 5. **Repoint DNS/ingress** for `canterlot.driscoll.tech`, `iris.driscoll.tech`, and
-   `authentik.driscoll.tech` from SGC to alpha-site's Dockge Traefik. **This is not a record
-   edit** — all three are external-dns-published from the SGC `HTTPRoute` across three providers
+   `authentik.driscoll.tech` from SGC to alpha-site's Dockge Traefik.
+
+   **Gate, added 2026-08-16 after this step was attempted and aborted: confirm `stacks/home` can
+   complete a run before releasing anything.** The release half lands in seconds and takes a
+   cross-repo PR plus three-provider propagation to undo; the claim half needs a working Pulumi
+   pipeline. Last time the pipeline had been broken for hours — an S3 checksum failure against the
+   state backend, nothing to do with authentik — and the sequence had no step that would notice.
+   The names ended up released from SGC with nothing able to claim them, then restored to SGC, with
+   alpha-site's `StandardDns` left armed against them on `main`. Check the stack is green *now*,
+   not that it was green when the window was planned.
+
+   **This is not a record edit** — all three are external-dns-published from the SGC `HTTPRoute` across three providers
    (§1.4.1). Remove the three `hostnames` entries from
    `kubernetes/apps/sgc/idp/authentik/helmrelease.yaml` (leaving the workload running), let
    external-dns retract them from cloudflare/technitium/unifi, and confirm all three are gone from
@@ -618,7 +655,9 @@ outpost-token minting (`components/DockgeLxc.ts:791`) for every other Dockge hos
    `svc:authentik`, still owned by SGC, and it needs its own release-then-claim pair on the same
    pattern as step 5. Claiming it early collides on the service name, which in this estate produces
    a `Terminating` service and a stuck finalizer. **It must migrate before SGC is scaled to zero in
-   step 9**, or ocracoke's outpost is left pointing at a dead server.
+   step 9**, or ocracoke's outpost is left pointing at a dead server. **§4.3 is that migration,
+   written out** — including the fact that the name is owned by an Ingress in the
+   stargate-command-cluster repo, and that skystar's dependency on it is live today, not latent.
 7. **Post-check:** every outpost re-registers and reports healthy against the new server
    (`authentik-remote-cluster` on both equestria and sgc, plus every Dockge-hosted sidecar
    outpost); `forwardAuth`-gated apps still authenticate; a full login round-trip on at least one
@@ -783,6 +822,71 @@ Nothing here is one-way. SGC has not been touched — the dump is a read on a li
 target held only step-2 bootstrap data. Drop the database, recreate it, and let authentik
 re-bootstrap; you are back to the end of step 2. The only cost is the transfer.
 
+### 4.3 The tailnet name — `svc:authentik`'s own release-then-claim
+
+Step 6 notes that the tailnet name is a third family that does not move with the other two. This
+is that migration, written out. Every fact below was verified live 2026-08-16.
+
+**Who owns it today.** `sgc/authentik-tailscale-ingress` — an Ingress with
+`ingressClassName: tailscale`, `tailscale.com/proxy-group: tailnet-outbound`,
+`tailscale.com/tags: tag:apps`, and `spec.tls[0].hosts: ["authentik"]`, default-backending
+`authentik-server:http`. Its status carries `authentik.opossum-yo.ts.net`. That is a **VIPService**
+(`svc:authentik`) advertised by SGC's `tailnet-outbound` ProxyGroup, resolving to
+`100.106.100.188` and answering `200` on `/-/health/live/`. It lives in the
+**stargate-command-cluster** repo, not this one — so the release half is a PR over there, exactly
+as it was for the three public names.
+
+**Who consumes it.** `components/DockgeLxc.ts:738` hands every `remote: true` host
+`CLUSTER_AUTHENTIK_DOMAIN = authentik.${tailscaleDomain}`, which substitutes into
+`docker/_common/authentik-outpost/.env` as both `AUTHENTIK_HOST` and `AUTHENTIK_HOST_BROWSER`.
+Today that is exactly one host — **skystar** (`stacks/ocracoke/index.ts:44`) — and it is a **live
+dependency, not a dormant one**: `dockge-skystar` runs `authentik-outpost` healthy, with
+`AUTHENTIK_HOST=https://authentik.opossum-yo.ts.net` on disk.
+
+A **second consumer is one flag away**. `stacks/gulf-of-mexico/index.ts:43` is `remote: false`
+today, with a comment saying to flip it to `true` once the host ships to its new location. It
+inherits this same name the moment that happens, so whatever is true here has to keep being true
+afterwards.
+
+**What the claim actually is.** `components/DockgeLxc.ts:1085` turns any `Host(...)` rule under
+the tailnet domain into a `tailscale.Service` named `svc:<name>` plus a
+`tailscale serve --service=svc:<name>` on that Dockge host. So swapping `authentik-as` for
+`authentik` in `docker/alpha-site/authentik/compose.yaml:143` **is** the claim — one line, and the
+next `stacks/home` run executes it.
+
+**Why it cannot be one commit.** The Pulumi `tailscale.Service` is built `deleteBeforeReplace: true`
+with `replaceOnChanges: ["*"]`, and this estate has already hit the operator-side failure mode for
+a contested name: the create fails with *"name exists but is not a service (400)"*, the Kubernetes
+Service sticks in `Terminating` behind an unremovable finalizer, and the ghost tailnet device stays
+online — recoverable only by deleting the machine in the admin console first. Claiming before
+release buys that, not a cutover.
+
+**Sequence**
+
+1. **Release.** Remove `authentik-tailscale-ingress` from SGC's authentik manifests
+   (stargate-command-cluster), and let the operator retract the VIPService.
+2. **Confirm the retraction, and confirm it properly.** `authentik.${tailscaleDomain}` must stop
+   resolving *and* the machine must be gone from the tailnet admin console. A name that merely
+   stopped answering is not released — a `Terminating` remnant still holds it, and that is the
+   exact state that produces the deadlock above. There is no cloudflare/technitium/unifi check
+   here: this family is MagicDNS only, which is why it is a separate migration and not three more
+   records in step 5.
+3. **Accept a bounded gap.** Between release and claim, skystar's outpost has no server. That
+   degrades authentication on skystar's routed apps; it does not take the host down. Keep the
+   window short rather than trying to overlap it — overlapping is the collision.
+4. **Claim.** Swap the router rule and the `x-dockge` url in
+   `docker/alpha-site/authentik/compose.yaml`, then run `stacks/home`.
+5. **Verify.** The name resolves to alpha-site's service IP and answers `200` on
+   `/-/health/live/`; skystar's outpost re-registers and reports healthy against the new server
+   (its own container log, plus the outpost's health in authentik's admin UI); and a full login
+   round-trip through one skystar-routed app.
+
+**Ordering.** This must complete **before step 9 scales SGC to zero**, or skystar's outpost is left
+pointing at a dead server. It is otherwise independent of steps 5 and 6 — a different name family,
+a different provider, a different repo for the release half. Do it *after* the public flip rather
+than alongside it: both halves are release-then-claim, and putting two name families in motion in
+one window is how the 2026-08-16 abort happened.
+
 ## 5. What does not change
 
 - **Outpost creation and registration mechanics everywhere except alpha-site** (§1.5) — the
@@ -836,9 +940,25 @@ re-bootstrap; you are back to the end of step 2. The only cost is the transfer.
       `openbao-break-glass_restore-test` green. Deliverable 3 — a full RUNBOOK Scenario B
       rehearsal against a real `pulumi preview` — **remains outstanding**, and is the only
       prerequisite this unlock proceeds without
-- [ ] Cutover dump/restore/repoint executed (§4 steps 2–5); post-check green (§4 step 6)
+- [x] **Step 2** — stack deployed against the empty database (#836); server, worker and Redis
+      healthy on `dockge-as`
+- [x] **Step 3** — the dump/restore executed and gated green (§4.2), row counts an exact match for
+      the SGC baseline. **Procedure proven, copy perishable**: it diverges from the moment it
+      lands, so a retry of step 5 re-runs §4.2 rather than reusing it
+- [ ] **`stacks/home` completes a run** — the gate the 2026-08-16 abort earned, and a precondition
+      of every remaining step. Nothing below can be applied while it is stalled
+- [~] **Step 4** — embedded outpost authored and merged (#852), **not applied**: the sidecar still
+      runs on `dockge-as` and the server still carries staging labels. Completes on the first
+      successful `stacks/home` run
+- [ ] **Step 5** — attempted and reverted (#856 → #864). Retry as a real window: re-sync the
+      database, release the three names from SGC, confirm retraction across cloudflare, technitium
+      **and** unifi, then claim
+- [ ] **§4.3** — `svc:authentik` released from `sgc/authentik-tailscale-ingress` and claimed by
+      alpha-site; skystar's outpost re-registered. Must land before step 9
+- [ ] Post-check green (§4 step 7), covering all four outpost types
 - [ ] Soak complete per [16](16-soak-and-gate.md)'s cadence; SGC copy scaled to zero, not deleted
-- [ ] `AUTHENTIK_URL`/`AUTHENTIK_TOKEN` repointed in OpenBao; every stack that reads them
+- [ ] `AUTHENTIK_URL`/`AUTHENTIK_TOKEN` confirmed (§4 step 6 — **confirmation, not a value change**:
+      both follow the vanity name and the restored token is identical); every stack that reads them
       (`stacks/authentik`, `stacks/applications`) previewed clean afterward
 
 ## Cross-references
