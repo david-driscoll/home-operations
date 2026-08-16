@@ -37,3 +37,36 @@ spec:
         namespace: network
       - name: internal-network
         namespace: network
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+# A per-namespace alias for network/crowdsec-bouncer. Traefik resolves an
+# HTTPRoute's ExtensionRef middleware in the ROUTE's own namespace, with no way
+# to name another one -- so a route in `equestria` asking for `crowdsec-bouncer`
+# looks up `equestria/crowdsec-bouncer` and nothing else. Only `network` had the
+# object, so the reference failed:
+#
+#   middleware "equestria-crowdsec-bouncer@kubernetescrd" does not exist
+#
+# and Traefik dropped the whole router, serving 404 for whoami -- which is
+# exactly the loud, single-route breakage the filter in
+# apps/equestria/utils/whoami/helmrelease.yaml was placed there to produce.
+#
+# Deliberately a chain alias rather than a copy of the plugin config. That
+# config carries the `enabled: false` kill switch that
+# apps/network/traefik/middleware/crowdsec.yaml calls "the standing rollback for
+# every enforcement stage"; duplicating it into every namespace would turn that
+# one line into ~18 lines that must be flipped together, which is precisely the
+# property it exists to guarantee. The plugin config stays single-source in
+# `network` and this only forwards to it -- the same shape `local-user` and
+# `authenticated-user` above already use.
+metadata:
+  name: crowdsec-bouncer
+spec:
+  chain:
+    middlewares:
+      # Not self-referential: this object is `<ns>/crowdsec-bouncer`, the target
+      # is `network/crowdsec-bouncer`. Traefik keys middlewares by name@namespace.
+      - name: crowdsec-bouncer
+        namespace: network
