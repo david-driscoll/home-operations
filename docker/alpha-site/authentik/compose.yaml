@@ -139,18 +139,19 @@ services:
       traefik.http.routers.authentik.tls.certresolver: le
       traefik.http.routers.authentik.service: authentik
 
-      # STILL authentik-as, deliberately, even at cutover. `svc:authentik` on the
-      # tailnet is a SEPARATE name from the three public ones this step moves, and
-      # it is still owned by SGC. Claiming it here would collide on the service
-      # name — the failure mode that produces a Terminating service and a stuck
-      # finalizer in this estate.
+      # The tailnet name moves here too. DockgeLxc's hostRegex turns this rule
+      # into the whole chain automatically (components/DockgeLxc.ts:1078-1118):
+      # a tailscale.Service `svc:authentik`, a `tailscale serve --service=svc:authentik
+      # --https=443 127.0.0.1:8443` on this host so it actually backs the VIP, and a
+      # monitor.addService entry. Dropping the old rule likewise runs
+      # `tailscale serve clear svc:authentik-as`.
       #
-      # It does still need to move: DockgeLxc:700 hands `remote: true` hosts
-      # `authentik.<tailnet>` as their CLUSTER_AUTHENTIK_DOMAIN, and
-      # stacks/ocracoke is such a host — so its outpost keeps pointing at SGC
-      # until that name migrates. That is its own release-then-claim pair, on the
-      # same pattern as this one, and it must happen before SGC is scaled to zero.
-      traefik.http.routers.authentik-tailscale.rule: Host(`authentik-as.${tailscaleDomain}`)
+      # This is the name remote Dockge hosts use, NOT a public vanity alias:
+      # DockgeLxc.ts:700 hands `remote: true` hosts `authentik.${tailscaleDomain}` as
+      # their CLUSTER_AUTHENTIK_DOMAIN. skystar (stacks/ocracoke) is such a host — its
+      # outpost dials https://authentik.opossum-yo.ts.net and is serving through it
+      # today — so this has to land before SGC is scaled to zero.
+      traefik.http.routers.authentik-tailscale.rule: Host(`authentik.${tailscaleDomain}`)
       traefik.http.routers.authentik-tailscale.entrypoints: tailscale
       traefik.http.routers.authentik-tailscale.service: authentik
 
@@ -202,6 +203,7 @@ x-dockge:
     - https://iris.${searchDomain}
     - https://canterlot.${searchDomain}
     - https://authentik.${CLUSTER_DOMAIN}
+    - https://authentik.${tailscaleDomain}
 
 networks:
   dockge_default:
