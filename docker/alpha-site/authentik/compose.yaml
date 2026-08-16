@@ -203,6 +203,7 @@ x-dockge:
     - https://iris.${searchDomain}
     - https://canterlot.${searchDomain}
     - https://authentik.${CLUSTER_DOMAIN}
+    - https://authentik.${tailscaleDomain}
 
 networks:
   dockge_default:
