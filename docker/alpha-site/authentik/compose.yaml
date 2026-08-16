@@ -117,16 +117,33 @@ services:
       #
       # Issuer URLs do not change in this migration; only what answers behind
       # them does, which is why no app's OIDC config is touched.
-      traefik.http.routers.authentik.rule: Host(`authentik.${CLUSTER_DOMAIN}`)
+      # CUTOVER (step 5). These three are the estate's SSO names, released by
+      # stargate-command-cluster#1831 and confirmed retracted from cloudflare,
+      # technitium and unifi before this landed. Every cluster's outposts and
+      # Dockge hosts know authentik by one of them:
+      #   canterlot -> equestria, celestia, luna, skystar
+      #   iris      -> sgc, alpha-site
+      #   authentik -> the chart default, and AUTHENTIK_URL for every Pulumi stack
+      # Issuer URLs do not change; only what answers behind them does.
+      #
+      # authentik.${CLUSTER_DOMAIN} stays alongside them, so this host keeps a
+      # name of its own that is independent of the vanity set.
+      traefik.http.routers.authentik.rule: Host(`authentik.${searchDomain}`) || Host(`iris.${searchDomain}`) || Host(`canterlot.${searchDomain}`) || Host(`authentik.${CLUSTER_DOMAIN}`)
       traefik.http.routers.authentik.entrypoints: websecure
       traefik.http.routers.authentik.tls.certresolver: le
       traefik.http.routers.authentik.service: authentik
 
-      # authentik-as, NOT authentik: `svc:authentik` already exists on the tailnet
-      # (and DockgeLxc:700 hands remote hosts `authentik.<tailnet>` as their
-      # CLUSTER_AUTHENTIK_DOMAIN). Claiming it here would both collide on the
-      # service name and silently repoint every remote Dockge host's outpost at
-      # this empty instance.
+      # STILL authentik-as, deliberately, even at cutover. `svc:authentik` on the
+      # tailnet is a SEPARATE name from the three public ones this step moves, and
+      # it is still owned by SGC. Claiming it here would collide on the service
+      # name — the failure mode that produces a Terminating service and a stuck
+      # finalizer in this estate.
+      #
+      # It does still need to move: DockgeLxc:700 hands `remote: true` hosts
+      # `authentik.<tailnet>` as their CLUSTER_AUTHENTIK_DOMAIN, and
+      # stacks/ocracoke is such a host — so its outpost keeps pointing at SGC
+      # until that name migrates. That is its own release-then-claim pair, on the
+      # same pattern as this one, and it must happen before SGC is scaled to zero.
       traefik.http.routers.authentik-tailscale.rule: Host(`authentik-as.${tailscaleDomain}`)
       traefik.http.routers.authentik-tailscale.entrypoints: tailscale
       traefik.http.routers.authentik-tailscale.service: authentik
@@ -175,8 +192,10 @@ services:
 
 x-dockge:
   urls:
+    - https://authentik.${searchDomain}
+    - https://iris.${searchDomain}
+    - https://canterlot.${searchDomain}
     - https://authentik.${CLUSTER_DOMAIN}
-    - https://authentik-as.${tailscaleDomain}
 
 networks:
   dockge_default:
