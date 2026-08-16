@@ -1,0 +1,86 @@
+# typos config for the hk `typos` step (see .config/hk.pkl).
+#
+# `typos` has been pinned in .config/mise.toml for a while but was never wired
+# to anything. Unconfigured it reports 256 findings against this tree, of which
+# 7 are real. This file is what makes the remaining 249 go away without
+# blanket-disabling the checker.
+
+[files]
+# SOPS-ENCRYPTED FILES. 61 of the 256 findings are base64 ciphertext -- `OVE`,
+# `BVE`, `Onw`, `OT` and friends are just bytes. Beyond being noise, `typos
+# --write-changes` on one of these would rewrite the ciphertext, invalidate the
+# SOPS MAC and render the file PERMANENTLY UNDECRYPTABLE. hk excludes these at
+# the top level too; this is the second, independent guard, and it also covers
+# running `typos` by hand outside hk.
+#
+# `--force-exclude` in the hk step is load-bearing: the typos builtin passes
+# explicit filenames, and without that flag typos applies excludes only when
+# walking directories, not when a path is named on the command line.
+extend-exclude = [
+  "*.sops.yaml",
+  "*.sops.yml",
+  "*.sops.json",
+  "*.sops.env",
+  "*.sops.toml",
+  "*.agekey",
+  # Vendored vendor-SDK wrappers -- 37 findings, none of them ours to fix.
+  # Already excluded in .config/hk.pkl and in biome.json.
+  "sdks/**",
+  # Generated: TrueNAS API types carry the upstream `nin`/`rin` query operators
+  # in comments, and lockfiles/sourcemaps are machine output.
+  "components/truenas/truenas-types.ts",
+  "package-lock.json",
+  "*.map",
+  # A Glance custom-api widget templating NHL scores: "OT" (overtime), "SO"
+  # (shootout) and the "nd" of "2nd" are hockey, not typos.
+  "dashboard/resources/widgets/nhl-today.yaml",
+  # ReSharper/Rider setting KEYS, misspelled upstream by JetBrains:
+  # `resharper_align_multline_type_parameter_constrains`,
+  # `resharper_space_before_pointer_asterik_declaration`,
+  # `..._referes_to_member_below_...`, `..._tag_prefix_redundand_...`.
+  # These are identifiers, not prose -- "correcting" them makes the keys match
+  # nothing and silently turns those inspections off.
+  ".editorconfig",
+  # Vendored / generated agent trees. hk already excludes all of these at the
+  # top level of .config/hk.pkl, so this entry is about the OTHER caller: a
+  # bare `typos --write-changes` run by hand. Left in, it rewrites `IIFEs` to
+  # `IFEs`, renumbers the `LOK-01` alert IDs in the loki skill to `LOOK-01`,
+  # and edits text inside the `...` of already-truncated table cells.
+  ".agents/**",
+  ".claude/**",
+  ".apm/**",
+  ".crew/**",
+  ".copilot/**",
+  ".github/skills/**",
+  # Generated from .crew/templates/*.template by crew, so any edit here is
+  # reverted on the next sync. crew.agent.md is also the last false positive in
+  # the tree: "Star Wars OT → prequel characters" is the Original Trilogy.
+  ".github/agents/**",
+]
+
+[default]
+extend-ignore-re = [
+  # Bare git SHAs quoted in the consolidation docs -- `3746ba460` reads as `ba`.
+  "`[0-9a-f]{7,40}`",
+  # "mis-parse", "mis-configure": a legitimate English prefix that typos splits
+  # at the hyphen and then flags as a misspelling of "miss".
+  "\\bmis-\\w+",
+  # DELIBERATE typo. components/store/clusters.test.ts asserts that an unknown
+  # field is rejected rather than silently dropped, and `rootDomian` IS the
+  # fixture -- "correcting" it to `rootDomain` makes the key valid and the test
+  # stops testing anything. Do not let `typos --write-changes` near it.
+  "rootDomian",
+]
+
+[default.extend-words]
+# Eclipse Mosquitto, the MQTT broker. 133 hits -- by far the loudest single
+# false positive, and it is a product name.
+mosquitto = "mosquitto"
+Mosquitto = "Mosquitto"
+# home-operations/flate, the Flux renderer this repo now runs in every hook.
+flate = "flate"
+# Home Assistant's env-var prefix (HASS_*).
+HASS = "HASS"
+# The first half of "HashiCorp" -- typos splits identifiers on the case
+# boundary, so it never sees the whole word.
+Hashi = "Hashi"

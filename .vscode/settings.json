@@ -1,4 +1,40 @@
 {
+  // --- Pkl (.config/hk.pkl) ---
+  // The extension is NOT on the marketplace. `mise run pkl-vscode` installs it
+  // from the GitHub VSIX; the entry in extensions.json only makes VS Code
+  // recognise it. Pattern ported from rocketsurgeonsguild/Specular.
+  //
+  // `pkl.cli.path` and `pkl.lsp.java.path` are deliberately NOT set here.
+  // Specular sets `pkl.cli.path` to "${env:HOME}/.local/share/mise/shims/pkl",
+  // but VS Code does not expand ${env:...} in third-party extension settings —
+  // the extension reads the value with a plain
+  // `workspace.getConfiguration().get()` and forwards the raw string to
+  // pkl-lsp. So that setting is almost certainly inert; it is harmless there
+  // only because `pkl` is already on PATH via mise, which is exactly how it is
+  // found here too. Committing a resolved absolute path instead would just be
+  // one developer's home directory.
+  //
+  // Grammar version 2 matches pkl 0.32.1 as pinned in .config/mise.toml; keep
+  // the two in step so the editor formats a file the way the `pkl-format` hk
+  // step expects it.
+  "pkl.formatter.grammarVersion": "2",
+  // .claude/worktrees holds full copies of the repo, each with its own
+  // .config/hk.pkl. Without this the extension discovers every copy as a
+  // separate Pkl project.
+  "pkl.projects.excludedDirectories": [
+    "**/.claude/**",
+    "**/.crew/**",
+    "**/node_modules/**"
+  ],
+
+  // --- YAML / Flux manifests ---
+  // The manifests already carry `# yaml-language-server: $schema=` comments
+  // (757 of them); this turns on the store those references resolve against.
+  "yaml.schemaStore.enable": true,
+  "yaml.schemas": {
+    "kubernetes": "./kubernetes/**/*.yaml"
+  },
+
   "github.copilot.chat.codeGeneration.instructions": [
     {
       "file": ".github/copilot-instructions.md"

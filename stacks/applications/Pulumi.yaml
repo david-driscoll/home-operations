@@ -12,4 +12,3 @@ config:
       pulumi:template: typescript
   applications:cluster:
     value: ""
-

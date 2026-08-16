@@ -132,7 +132,7 @@ system:
     # xbox: xbox
     # zxspectrum: zxs
 
-#   # Asociate one platform to it's main version (IGDB only)
+#   # Associate one platform to it's main version (IGDB only)
 #   versions:
 #     naomi: arcade
 

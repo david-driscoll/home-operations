@@ -1,8 +1,10 @@
-amends "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Config.pkl"
-import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtins.pkl"
+amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+
+import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
 
 // hk hook configuration — consolidated from the two competing configs that
-// both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603).
+// both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603),
+// then extended when this repo absorbed the Kubernetes tree.
 //
 // DELIBERATE SAFETY POSTURE (preserved from #601 — do not "fix" this)
 //
@@ -15,87 +17,209 @@ import "package://github.com/jdx/hk/releases/download/v1.53.0/hk@1.53.0#/Builtin
 //     nothing to stash, so hk never runs `git stash` and can never strand a
 //     concurrent agent's work in the stash if it is interrupted.
 //
+// NOTE: pre-commit previously carried `fix = true`, which contradicted the
+// paragraph directly above it — a drift bug from the #601/#603 merge. It is
+// now `false`, matching both the stated contract and the sibling config in
+// david-driscoll/equestria-cluster. This matters more than it used to: the
+// `typos` step added below rewrites file contents.
+//
 // Crew's own hooks are NOT re-expressed here. hk registers via git config
 // (`hook.hk-pre-commit.*`) and git 2.55 runs that channel *alongside*
 // `.git/hooks/*`, so crew's state-sync hooks keep working untouched.
 // See the PR body for why the crew state guard deliberately stays with crew.
 
-local excludes = new Listing<String> {
-  // SOPS-ENCRYPTED FILES — HIGHEST-SEVERITY EXCLUSION. DO NOT REMOVE.
-  // Any byte-level rewrite (trailing whitespace, final newline, reformat)
-  // invalidates the SOPS MAC and renders the file PERMANENTLY UNDECRYPTABLE.
-  // The `trailing-whitespace` and `newlines` steps below were verified to
-  // rewrite a `.sops.yaml` file under `hk fix --all` when NOT excluded here.
-  // Note: a per-step `exclude` type-checks but does NOT actually filter in
-  // hk 1.53.0 — the exclusion has to live at this top level to take effect.
-  "**/*.sops.yaml"
-  "**/*.sops.yml"
-  "**/*.sops.json"
-  "**/*.sops.env"
-  "**/*.sops.toml"
-  "**/*.agekey"
-
-  "**/obj/**/*"
-  "sdks/**/*"
-  ".vs/**/*"
-  ".vscode/**/*"
-  ".idea/**/*"
-  ".claude/**/*"
-  ".agents/**/*"
-  ".apm/**/*"
-  ".copilot/**/*"
-  ".squad/**/*"
-  // crew owns and rewrites everything under .crew/ — keep hk out of it,
-  // otherwise the two tools fight over .crew/casting/*.json and .crew/templates/*.
-  ".crew/**/*"
-  // Documents secret *detection patterns*. Its reference table quotes the
-  // PEM private-key banner verbatim as an example (no key body), which trips
-  // the detect-private-key step and would fail every commit touching it.
-  ".github/skills/secret-handling/SKILL.md"
-  "**/*.verified.*"
-  "**/*.received.*"
-}
+// NB: this is `List(...)`, not `new Listing {...}`. hk's `exclude` is typed
+// `String | List<String> | Regex`; a `Listing` is tolerated by hk's own loader
+// but is a hard type error under plain `pkl eval`, which is what the `pkl`
+// step below runs against this very file. Written as a Listing, this config
+// fails its own linter.
+local excludes =
+  List(
+    // SOPS-ENCRYPTED FILES — HIGHEST-SEVERITY EXCLUSION. DO NOT REMOVE.
+    // Any byte-level rewrite (trailing whitespace, final newline, reformat, or a
+    // `typos` spelling "correction" applied to base64 ciphertext) invalidates the
+    // SOPS MAC and renders the file PERMANENTLY UNDECRYPTABLE.
+    // The `trailing-whitespace` and `newlines` steps below were verified to
+    // rewrite a `.sops.yaml` file under `hk fix --all` when NOT excluded here.
+    // Note: a per-step `exclude` type-checks but does NOT actually filter in
+    // hk 1.53–1.55 — the exclusion has to live at this top level to take effect.
+    "**/*.sops.yaml",
+    "**/*.sops.yml",
+    "**/*.sops.json",
+    "**/*.sops.env",
+    "**/*.sops.toml",
+    "**/*.agekey",
+    "**/obj/**/*",
+    "sdks/**/*",
+    ".vs/**/*",
+    ".vscode/**/*",
+    ".idea/**/*",
+    ".claude/**/*",
+    ".agents/**/*",
+    ".apm/**/*",
+    ".copilot/**/*",
+    ".squad/**/*",
+    // crew owns and rewrites everything under .crew/ — keep hk out of it,
+    // otherwise the two tools fight over .crew/casting/*.json and .crew/templates/*.
+    ".crew/**/*",
+    // Documents secret *detection patterns*. Its reference table quotes the
+    // PEM private-key banner verbatim as an example (no key body), which trips
+    // the detect-private-key step and would fail every commit touching it.
+    // Verified: this is the ONLY PEM banner in the repo outside the vendored
+    // agent trees already excluded above.
+    ".github/skills/secret-handling/SKILL.md",
+    "**/*.verified.*",
+    "**/*.received.*",
+  )
 
 local linters = new Mapping<String, Step> {
-    // Formatter + linter. Config lives in biome.json (which already excludes sdks/).
-    ["biome"] = (Builtins.biome) {
-        fix = "biome check --write --unsafe --no-errors-on-unmatched {{ files }}"
-    }
+  // --- Flux manifests: the largest artifact class in the repo (~1070 YAML) ---
 
-    // Whitespace hygiene. These DO rewrite files under a fix-enabled hook,
-    // which is why the sops exclusions above are load-bearing.
-    ["trailing-whitespace"] = Builtins.trailing_whitespace
-    ["newlines"] = Builtins.newlines
+  // Renders every Kustomization and HelmRelease through the upstream helm,
+  // kustomize and source SDKs and reports which ones fail to reconcile. This
+  // is the check that catches a manifest Flux would reject BEFORE it reaches a
+  // cluster; yamllint below only proves the file is well-formed YAML.
+  //
+  // Whole-repo, not per-file. The command deliberately contains no
+  // `{{files}}`, so hk runs it exactly ONCE per hook no matter how many
+  // manifests changed — `glob` here decides *whether* it runs, not what it
+  // runs on. A render is only meaningful over the entire dependency graph
+  // anyway: a one-line edit to a shared component changes what every consumer
+  // renders to.
+  //
+  // `--path ./kubernetes/flux/cluster` is not optional. Without it flate walks
+  // the whole repo and tries to parse every JSON/TS file it finds, emitting
+  // `loader: file failed to parse` for each sdks/*/tsconfig.json. Scoped, the
+  // run drops from ~5s to ~1.5s warm.
+  //
+  // `--allow-missing-secrets` is what lets this run off-cluster at all: the
+  // ${VAR}s from cluster-secrets/shared-secrets render as placeholders. That
+  // is also this step's blind spot — flate does NOT run Flux postBuild envsubst
+  // or the external-secrets template engine, so it passes cleanly on a values
+  // file that would take an app to zero pods.
+  //
+  // Cold cache: the first run pulls every Helm chart and OCI source over the
+  // network and is far slower than the warm number above. `--source-retry-attempts 10`
+  // absorbs transient registry flake. If you need to commit offline with a cold
+  // cache, `HK=0 git commit` bypasses the hook entirely.
+  ["flate"] = new Step {
+    glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
+    check =
+      "flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 --no-progress"
+  }
 
-    // Repo-hygiene guards. These are pure checks — they never rewrite a file.
-    ["check-merge-conflict"] = Builtins.check_merge_conflict
-    ["detect-private-key"] = Builtins.detect_private_key
-    ["check-added-large-files"] = Builtins.check_added_large_files
+  // Configured by `.yamllint`, which disables the purely cosmetic rules and
+  // keeps the ones that catch manifests Flux would silently mis-apply — above
+  // all `key-duplicates`, where a repeated key in a HelmRelease drops the
+  // earlier value with no error anywhere in the pipeline.
+  ["yamllint"] = Builtins.yamllint
+
+  // --- GitHub Actions ---
+  // Shells out to shellcheck for `run:` blocks, which is the second reason
+  // shellcheck is pinned in .config/mise.toml.
+  ["actionlint"] = Builtins.actionlint
+
+  // --- Shell ---
+  // Configured by `.shellcheckrc`, which disables exactly three style codes,
+  // each reviewed at every site. The error and warning tiers stay on.
+  ["shellcheck"] = Builtins.shellcheck
+
+  // --- TypeScript / JSON ---
+  // Formatter + linter. Config lives in biome.json (which already excludes sdks/).
+  ["biome"] = (Builtins.biome) {
+    fix = "biome check --write --unsafe --no-errors-on-unmatched {{ files }}"
+  }
+
+  // --- Pkl ---
+  // This file is the only .pkl in the repo, so these two steps exist to keep
+  // *it* honest — nothing else was checking the thing that configures every
+  // other check. `Builtins.pkl` runs `pkl eval`, which is stricter than hk's
+  // own loader; see the note on `excludes` above for the trap that caught.
+  ["pkl"] = Builtins.pkl
+  ["pkl-format"] = Builtins.pkl_format
+
+  // --- Spelling ---
+  // Configured by `typos.toml`. Unconfigured this reports 256 findings, 249 of
+  // them false — mostly SOPS ciphertext and product names (Mosquitto, HASS,
+  // flate itself). The builtin passes `--force-exclude`, which is required for
+  // typos.toml's excludes to apply to explicitly-named files rather than only
+  // to directory walks.
+  //
+  // This step REWRITES file contents under `hk fix`. It is the reason the
+  // pre-commit `fix = false` correction at the top of this file matters.
+  ["typos"] = Builtins.typos
+
+  // --- Whitespace hygiene ---
+  // These DO rewrite files under a fix-enabled hook, which is why the sops
+  // exclusions above are load-bearing.
+  //
+  // `trailing-whitespace` carries an explicit allowlist that OMITS Markdown.
+  // Two trailing spaces are a MEANINGFUL hard line break in Markdown, and
+  // stripping them silently joins paragraphs. This repo has ~1110 tracked .md
+  // files, and the step ran unscoped here until now. pre-commit solves this
+  // with `--markdown-linebreak-ext`; hk's builtin has no equivalent flag, and
+  // neither a per-step `exclude` nor a `!` negation inside `glob` actually
+  // filters (both type-check and are then ignored). A positive `glob`
+  // allowlist is the only mechanism that works. Add extensions here as new
+  // file types arrive.
+  //
+  // `newlines` is left global: appending a missing final newline is
+  // semantically inert in every format here, Markdown included.
+  ["trailing-whitespace"] = (Builtins.trailing_whitespace) {
+    glob =
+      List(
+        "**/*.yaml",
+        "**/*.yml",
+        "**/*.json",
+        "**/*.json5",
+        "**/*.jsonl",
+        "**/*.toml",
+        "**/*.pkl",
+        "**/*.sh",
+        "**/*.bash",
+        "**/*.ps1",
+        "**/*.cs",
+        "**/*.py",
+        "**/*.js",
+        "**/*.ts",
+        "**/*.env",
+        "**/*.txt",
+      )
+  }
+  ["newlines"] = Builtins.newlines
+
+  // --- Repo-hygiene guards. These are pure checks — they never rewrite a file. ---
+  ["check-merge-conflict"] = Builtins.check_merge_conflict
+  ["detect-private-key"] = Builtins.detect_private_key
+  ["check-added-large-files"] = Builtins.check_added_large_files
+  // macOS checkouts are case-insensitive; Linux CI runners are not. This
+  // catches the pair of files that collide only on the developer's machine.
+  ["check-case-conflict"] = Builtins.check_case_conflict
 }
 
 exclude = excludes
 
 hooks {
-    ["pre-commit"] {
-        fix = true
-        stash = "none"
-        steps = linters
-    }
+  ["pre-commit"] {
+    fix = false
+    stash = "none"
+    steps = linters
+  }
 
-    ["pre-push"] {
-        fix = false
-        stash = "none"
-        steps = linters
-    }
+  ["pre-push"] {
+    fix = false
+    stash = "none"
+    steps = linters
+  }
 
-    // `hk check` — read-only, used by CI and by hand.
-    ["check"] {
-        steps = linters
-    }
+  // `hk check` — read-only, used by CI and by hand.
+  ["check"] {
+    steps = linters
+  }
 
-    // `hk fix` — explicit, human-invoked auto-fix.
-    ["fix"] {
-        fix = true
-        steps = linters
-    }
+  // `hk fix` — explicit, human-invoked auto-fix.
+  ["fix"] {
+    fix = true
+    steps = linters
+  }
 }

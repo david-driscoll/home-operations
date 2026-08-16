@@ -1,0 +1,38 @@
+# yamllint config for the hk `yamllint` step (see .config/hk.pkl).
+#
+# Adapted from david-driscoll/equestria-cluster, whose manifest conventions
+# this repo's kubernetes/ tree was seeded from.
+#
+# Intent: catch YAML that Flux would mis-apply, NOT enforce a house style on
+# ~1070 existing files. Every rule disabled below is a style disagreement with
+# the upstream home-operations manifest conventions, not a class of bug.
+#
+# The rules that are KEPT are the ones with real blast radius:
+#   * YAML syntax errors            - the file never parses
+#   * key-duplicates                - a repeated key in a HelmRelease silently
+#                                     drops the earlier value; nothing in the
+#                                     Flux pipeline surfaces an error
+#   * octal-values                  - `mode: 0644` parsing as decimal 644
+#   * empty-values                  - a key with no value becomes null
+#   * trailing-spaces / newline-at-eof - overlap with the hk builtins, kept so
+#                                     yamllint is self-consistent standalone
+#
+# Measured against the current tree: 4 findings, all newline-at-end-of-file,
+# which the `newlines` hk step already fixes.
+
+extends: default
+
+rules:
+  line-length: disable
+  document-start: disable
+  braces: disable
+  brackets: disable
+  indentation: disable
+  comments: disable
+  comments-indentation: disable
+  empty-lines: disable
+  colons: disable
+  # `on:` in GitHub Actions workflows is a legitimate key that yamllint's
+  # truthy rule flags; the value-side check is the useful half.
+  truthy:
+    check-keys: false

@@ -13,4 +13,3 @@ This definition is used to create authentik applications via pulumi.  This also 
 ## Gatus / Uptime
 
 There can also be a few definitions for uptime usage, so that the application state or other things like dns can be monitored by the alpha-site gatus instance.
-

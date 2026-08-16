@@ -36,3 +36,6 @@ stacks/unifi-network/tailscale-acl.json
 # /Crew: state owned by crew-state branch
 # Crew: SubCrew activation file (local to this machine)
 .crew-workstream
+
+# Pkl VS Code extension VSIX cache (installed via the mise `pkl-vscode` task)
+.pkl-vscode/

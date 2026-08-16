@@ -83,7 +83,7 @@ actually needs that StorageClass to exist, and nobody has verified it doesn't.
 
 **This is likely already being worked.** `home-operations`, `equestria-cluster` and
 `stargate-command-cluster` all show commits *after* the migration burst with messages like
-`more secrets`, `Add cluster and shared secrets with SOPS encryption`, `boostrap tweak` — this
+`more secrets`, `Add cluster and shared secrets with SOPS encryption`, `bootstrap tweak` — this
 reads as an in-progress fix for exactly this `substituteFrom` gap, not an abandoned change. **Do
 not "fix" it by flipping `deleting-confirmation-flag` to `true`** — that unblocks the very
 uninstall this file needs to *not* happen. The correct direction is the one already in progress:

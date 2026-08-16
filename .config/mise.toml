@@ -16,10 +16,25 @@ sops = "3.13.3"
 flux2 = "2.9.4"
 age = "1.3.1"
 gh = "2.97.0"
+# Git hook manager (see .config/hk.pkl). MUST stay pinned here: hk registers
+# itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
+# shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
+# The hook exits non-zero and git aborts the commit.
 hk = "1.55.0"
 pkl = "0.32.1"
 biome = "2.5.2"
 typos = "1.49.0"
+# Linters invoked by hk. The same pinning rule as hk applies -- an unpinned
+# shim here fails the individual step rather than the whole commit, but still
+# breaks the hook. Versions match david-driscoll/equestria-cluster, which runs
+# the same three steps against the same .yamllint / .shellcheckrc.
+#
+# actionlint shells out to `shellcheck` for `run:` blocks, so it hard-fails with
+# a `fatal error` if shellcheck is on PATH as an unpinned shim -- which is the
+# second, independent reason shellcheck is pinned rather than assumed.
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+"pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
 node = "24.19.0"
 pulumi = "3.257.0"
@@ -41,9 +56,21 @@ run = [
 
 [tasks.flate]
 description = 'Run flate'
+# `--path` scopes flate to the Flux entrypoint. Without it flate walks the whole
+# repo and tries to parse every JSON/TS file it finds, emitting a
+# `loader: file failed to parse` line for each sdks/*/tsconfig.json before
+# arriving at the same 350 resources. Scoped, the run drops from ~5s to ~1.5s.
+# Kept in step with the `flate` step in .config/hk.pkl.
 run = [
-  'flate test all --allow-missing-secrets --source-retry-attempts 10',
+  'flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10',
 ]
+
+[tasks.pkl-vscode]
+description = 'Install the Pkl VS Code extension (not on the marketplace; installed from VSIX)'
+# Ported from rocketsurgeonsguild/Specular. Not part of [hooks] postinstall on
+# purpose: it needs the `code` CLI and touches the user's editor, which is not
+# something `mise install` should do unasked. Run it once by hand.
+run = ['bash scripts/install-pkl-vscode.sh']
 
 [settings]
 experimental = true
@@ -126,6 +153,10 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 # UNIFI_VERIFY_SSL = "false"
 # UNIFI_TOOL_REGISTRATION_MODE = "lazy"
 # PULUMI_DEBUG_PROMISE_LEAKS = "1"
+# Pinned version of the Pkl VS Code extension installed by the `pkl-vscode`
+# task. Renovate has no datasource for a VSIX, so this is bumped by hand
+# against https://github.com/apple/pkl-vscode/releases.
+PKL_VSCODE_VERSION = "0.22.0"
 HK_MISE = 1
 # Keep npm's download cache inside the mise data dir so jdx/mise-action's
 # cache (which caches MISE_DATA_DIR / ~/.local/share/mise) also persists npm
@@ -133,4 +164,19 @@ HK_MISE = 1
 npm_config_cache = "{{env.HOME}}/.local/share/mise/npm-cache"
 
 [hooks]
-postinstall = ["hk install --mise", "npm install", "pulumi install"]
+# NOT `postinstall = ["hk install --mise", "npm install", "pulumi install"]`.
+# mise does not read a bare array of strings as a list of commands -- it reads
+# it as one command plus its arguments, so that form actually ran
+# `pulumi install "hk install --mise"`, failed with `accepts 0 arg(s),
+# received 1`, and silently never ran `hk install --mise` or `npm install` at
+# all. On a fresh clone that left hk's git hooks unregistered, which quietly
+# disables every check in .config/hk.pkl.
+#
+# The array-of-tables form below is the documented way to get three separate
+# subprocesses. A multiline string also works but shares one shell, so an early
+# failure would take the later commands with it.
+postinstall = [
+  { run = "hk install --mise" },
+  { run = "npm install" },
+  { run = "pulumi install" },
+]

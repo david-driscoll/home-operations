@@ -53,7 +53,7 @@ spec:
       enabled: false
 
     ## PodPeople DB configuration
-    ## Podpeople is a publically available website in which you can get details on guests and hosts for podcasts that don't maintain podcast 2.0 in their feeds.
+    ## Podpeople is a publicly available website in which you can get details on guests and hosts for podcasts that don't maintain podcast 2.0 in their feeds.
     ## If you do want to maintain it yourself you'll probably want to download a copy of the database here: https://podpeople.pinepods.online
     podpeople:
       # -- Enable PodPeople DB deployment

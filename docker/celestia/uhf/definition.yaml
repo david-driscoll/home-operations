@@ -22,4 +22,3 @@ spec:
     group: "Applications"
     conditions:
       - "[STATUS] == 200"
-
