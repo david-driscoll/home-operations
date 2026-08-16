@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/networkpolicy-networking-v1.json
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+# Restores Prometheus' ability to scrape Longhorn's metrics.
+#
+# Longhorn 1.12 turned its bundled NetworkPolicies on by default, and the chart's
+# `longhorn-manager` policy admits only same-namespace peers (longhorn-manager,
+# longhorn-ui, longhorn-csi-plugin, recurring-job pods). Prometheus runs in
+# `observability`, matches none of them, and a NetworkPolicy selecting a pod is
+# deny-by-default for everything it does not name -- so every scrape of
+# longhorn-backend:9500 started failing the moment the upgrade landed:
+#
+#   TargetDown: 100% of the longhorn-backend/longhorn-backend targets
+#               in longhorn-system namespace are down
+#
+# equestria began alerting at the exact minute 1.12.1 installed; SGC has been
+# alerting since its own 1.12.1 upgrade on 2026-08-14. Longhorn itself was never
+# unhealthy -- longhorn-manager still LISTENs on 9500 and the Service still has a
+# full set of endpoints. Only the scrape path was severed, which is the
+# unpleasant flavour of this bug: the storage-layer dashboards and alerts go
+# quiet while storage looks fine.
+#
+# Additive rather than `networkPolicies.enabled: false`. NetworkPolicies are
+# additive by design, so this grants exactly one port to exactly one namespace
+# and leaves the chart's isolation intact; disabling the chart flag would drop
+# every policy it ships to fix one scrape.
+metadata:
+  name: longhorn-manager-allow-prometheus
+  namespace: longhorn-system
+spec:
+  podSelector:
+    matchLabels:
+      app: longhorn-manager
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # Matched on the immutable `kubernetes.io/metadata.name` label the
+        # apiserver maintains, not a hand-applied one that could drift.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9500
