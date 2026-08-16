@@ -17,7 +17,7 @@ export class StandardDns extends ComponentResource {
   public static async create(
     name: string,
     args: {
-      hostname: string;
+      hostname: Input<string>;
       ipAddress?: Input<string>;
       type: "A" | "CNAME";
       record?: Input<string>;
@@ -87,7 +87,7 @@ export class StandardDns extends ComponentResource {
   private constructor(
     name: string,
     args: {
-      hostname: string;
+      hostname: Input<string>;
       ipAddress?: Input<string>;
       type: "A" | "CNAME";
       record?: Input<string>;

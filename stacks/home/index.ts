@@ -14,7 +14,7 @@ import { OpenBaoClusterAuth } from "../../components/openbao/clusterAuth.ts";
 import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
-import { createGatusDnsUptime } from "../../components/StandardDns.ts";
+import { createGatusDnsUptime, StandardDns } from "../../components/StandardDns.ts";
 import { TruenasVm } from "../../components/TruenasVm.ts";
 
 const globals = new GlobalResources({}, {});
@@ -67,6 +67,8 @@ const _minioBucketVersioning = new minio.S3BucketVersioning(
     protect: true,
   },
 );
+
+clusterWideDns(globals);
 
 const twilightSparkleHost = new ProxmoxHost("twilight-sparkle", {
   title: "Twilight Sparkle",
@@ -423,3 +425,60 @@ const _openbaoSgcAuth = new OpenBaoClusterAuth("openbao-sgc-auth", {
   clusterTitle: "Cluster: Stargate Command",
   kubernetesHost: "https://10.10.209.201:6443",
 });
+
+function clusterWideDns(globals: GlobalResources) {
+  StandardDns.create(
+    "spike-a",
+    {
+      type: "A",
+      hostname: pulumi.interpolate`spike.${globals.searchDomain}`,
+      ipAddress: `10.10.10.10`,
+    },
+    globals,
+    { parent: globals },
+  );
+
+  StandardDns.create(
+    "spikespike-cname",
+    {
+      type: "CNAME",
+      hostname: pulumi.interpolate`truenas.${globals.searchDomain}`,
+      record: pulumi.interpolate`spike.${globals.searchDomain}`,
+    },
+    globals,
+    { parent: globals },
+  );
+
+  StandardDns.create(
+    "discord-a",
+    {
+      type: "A",
+      hostname: pulumi.interpolate`discord.${globals.searchDomain}`,
+      ipAddress: `10.10.0.1`,
+    },
+    globals,
+    { parent: globals },
+  );
+
+  StandardDns.create(
+    "discord-cname",
+    {
+      type: "CNAME",
+      hostname: pulumi.interpolate`unifi.${globals.searchDomain}`,
+      record: pulumi.interpolate`discord.${globals.searchDomain}`,
+    },
+    globals,
+    { parent: globals },
+  );
+
+  StandardDns.create(
+    "automation-a",
+    {
+      type: "A",
+      hostname: pulumi.interpolate`replicator.${globals.searchDomain}`,
+      ipAddress: `10.10.206.203`,
+    },
+    globals,
+    { parent: globals },
+  );
+}
