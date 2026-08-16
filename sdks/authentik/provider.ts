@@ -28,11 +28,11 @@ export class Provider extends pulumi.ProviderResource {
     /**
      * The authentik API token, can optionally be passed as `AUTHENTIK_TOKEN` environmental variable
      */
-    declare public readonly token: pulumi.Output<string | undefined>;
+    declare public readonly token: pulumi.Output<string>;
     /**
      * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
      */
-    declare public readonly url: pulumi.Output<string | undefined>;
+    declare public readonly url: pulumi.Output<string>;
 
     /**
      * Create a Provider resource with the given unique name, arguments, and options.
@@ -41,10 +41,16 @@ export class Provider extends pulumi.ProviderResource {
      * @param args The arguments to use to populate this resource's properties.
      * @param opts A bag of options that control this resource's behavior.
      */
-    constructor(name: string, args?: ProviderArgs, opts?: pulumi.ResourceOptions) {
+    constructor(name: string, args: ProviderArgs, opts?: pulumi.ResourceOptions) {
         let resourceInputs: pulumi.Inputs = {};
         opts = opts || {};
         {
+            if (args?.token === undefined && !opts.urn) {
+                throw new Error("Missing required property 'token'");
+            }
+            if (args?.url === undefined && !opts.urn) {
+                throw new Error("Missing required property 'url'");
+            }
             resourceInputs["headers"] = pulumi.output(args?.headers ? pulumi.secret(args.headers) : undefined).apply(JSON.stringify);
             resourceInputs["insecure"] = pulumi.output(args?.insecure).apply(JSON.stringify);
             resourceInputs["token"] = args?.token ? pulumi.secret(args.token) : undefined;
@@ -82,11 +88,11 @@ export interface ProviderArgs {
     /**
      * The authentik API token, can optionally be passed as `AUTHENTIK_TOKEN` environmental variable
      */
-    token?: pulumi.Input<string | undefined>;
+    token: pulumi.Input<string>;
     /**
      * The authentik API endpoint, can optionally be passed as `AUTHENTIK_URL` environmental variable
      */
-    url?: pulumi.Input<string | undefined>;
+    url: pulumi.Input<string>;
 }
 
 export namespace Provider {
