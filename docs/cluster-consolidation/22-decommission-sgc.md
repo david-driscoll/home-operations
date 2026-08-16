@@ -7,6 +7,52 @@
 > for the decision ledger (D1–D12) and full sequencing graph. This file stands
 > alone — no prior context required.
 
+> **Revision 2026-08-16 — re-audited live, and the plan below changed shape.** Four
+> parallel read-only audits (repo grep, live cluster, Pulumi state, secrets/backups)
+> re-verified this file against the estate. The inventory's *taxonomy* held; a lot of its
+> *facts* did not. Read this block before executing any section.
+>
+> **The premise was wrong.** This file opens with "By the time this piece starts, SGC no
+> longer exists as infrastructure." SGC is a **fully live 3-node Talos cluster** —
+> `milky-way`/`othalla`/`pegasus` all Ready, 77 Flux Kustomizations Ready, 41
+> ExternalSecrets syncing. Phases 18–19 have not run. What *has* changed is that its
+> workloads are gone: only superseded authentik remains in namespace `sgc`, and tsidp/tsiam
+> now run on equestria. So this piece is executable **against a live cluster**, which several
+> steps actually require — but it is not the post-mortem cleanup the text assumes.
+>
+> **Corrections that change what you do:**
+>
+> - **§1–§8 are not independent.** The procedure said "work through §1–§8 in any order."
+>   They are strictly ordered — see *Rules that govern the order* below. Two of the
+>   orderings are the difference between a clean teardown and an estate-wide outage.
+> - **Deleting `clusters/sgc.yaml` breaks the SSO control stack**, not just a test. §4 missed
+>   that `stacks/authentik` read the SGC cluster definition. Defused in #875 — but the
+>   ordering constraint it implies (five consumers, not one) is real and enumerated below.
+> - **`pulumi destroy` on the `sgc` stack breaks three unrelated stacks.** `BACKUP_PLAN_KEYS`
+>   hard-required `stargate-command-backup-plan`, and `backupPlanKeys()` throws on a missing
+>   entry, taking `stacks/home`, `stacks/ocracoke` and `stacks/gulf-of-mexico` with it. Also
+>   defused in #875.
+> - **`pulumi destroy` does not clean OpenBao.** `baoKvSecret` sets `retainOnDelete: true`
+>   (`components/bao.ts:372`), so every `clusters/sgc/*` path survives the destroy. §4's open
+>   question — "verify the delete actually happens" — resolves to **no**. Hand-deletion with
+>   `bao kv metadata delete` is a required step, not a fallback.
+> - **§8's "no static SGC-cluster scrape config exists in `home-operations`" was wrong.**
+>   There were three blackbox probes and a `severity: critical` pager. Retired in #874,
+>   at the generator rather than the rendered YAML.
+> - **§6's file path was wrong.** `SGC_API_IP` is at `kubernetes/flux/meta/shared-secrets.sops.yaml`,
+>   not `kubernetes/components/common/`.
+> - **The exit gate was unachievable as written.** It exempts `scripts/op-to-bao/mapping.yaml`,
+>   which no longer exists, and does not account for the 108-file `$schema=` class or the
+>   incident citations that should deliberately survive. Rewritten below.
+> - **`stacks/home` owns `cnpg-sgc-backups`** with `protect: true, retainOnDelete: true` —
+>   SGC's CNPG recovery window, deliberately destroy-proof. Absent from this file entirely.
+>
+> **Naming trap, stated once because it is genuinely confusing:**
+> `kubernetes/apps/stargate-command/` is a **namespace in the merged cluster** holding chrony,
+> matter, mosquitto and home-assistant — the apps that already migrated, every `ks.yaml`
+> carrying `deletionPolicy: Orphan` on purpose. It is **not** the SGC cluster. Deleting it
+> deletes running home automation.
+
 ## What this delivers
 
 By the time this piece starts, SGC no longer exists as infrastructure — its
@@ -19,15 +65,66 @@ nobody deletes, a policy nobody revokes, a Gatus check that goes red forever.
 The discipline here is exhaustive enumeration over cleverness: grep, list,
 check off.
 
+## Rules that govern the order
+
+Four constraints, each learned from something that already went wrong. Everything in the
+inventory sections is subordinate to these.
+
+**1. Stop SGC's external-dns before touching any DNS source.** SGC runs three external-dns
+controllers — `cloudflare-dns`, `technitium-dns`, `unifi-dns` — with
+`--policy=sync --txt-owner-id=sgc --domain-filter=driscoll.tech`. That filter is the whole
+estate zone, **not** `sgc.driscoll.tech`. Under `policy=sync` a controller deletes records it
+owns when their source disappears, and Cloudflare-side TXT ownership is confirmed for
+`truenas.driscoll.tech` and `odyssey.driscoll.tech`. So deleting the SGC DNSEndpoints — or
+merely suspending SGC's Flux tree — while those controllers run makes them **delete live
+estate records on the way out**. Suspend the HelmReleases, scale the Deployments to zero,
+confirm zero pods, and only then touch a DNSEndpoint.
+
+*Executed 2026-08-16:* all three are suspended and scaled to 0 on the live cluster, with no
+corresponding commit. If anything resumes SGC's Flux they come back. See *Live state not in
+git* below.
+
+**2. `pulumi destroy` needs SGC's API reachable, but `pulumi preview` will not work later.**
+The `sgc` stack's program enumerates the live cluster (`coreApi.listNamespace()`, then
+`ApplicationDefinition` CRs per namespace) — so once SGC is down or `sgc-kubeproxy` is gone,
+`pulumi preview` on it cannot run at all. `destroy` does *not* run the program, so it still
+works — but it deletes `Secret` objects **inside** SGC, so the API and the kubeproxy path
+must both still be alive. **Gate with `pulumi destroy --preview-only`, never `pulumi preview`,
+and run it while SGC is up.**
+
+**3. Pulumi deletions do not reach OpenBao.** `retainOnDelete: true` on `baoKvSecret` means
+the destroy drops resources from state and leaves the KV paths live. Every SGC path needs an
+explicit `bao kv metadata delete`. Until that happens, the three `BackupPlanDirector`s keep
+minting backrest jobs for a dead cluster.
+
+**4. Retire monitoring before power-off, not after.** SGC's probes report healthy today, so
+removing them is a no-op now. Leave them and `BlackboxProbeFailingCritical` pages within
+**two minutes** of shutdown. Same shape for Gatus: 14 pushover-alerting checks plus 9 volsync
+heartbeats.
+
 ## Depends on / sequencing
 
-**Nothing here starts until [21](21-repo-consolidation-flux-repoint.md)'s exit
-gate: the merged cluster reconciles from `home-operations` alone.**
-Decommissioning SGC's Pulumi-managed artifacts while two repos are still live
-GitOps sources risks deleting something 21 still needs mid-flip. This piece
-is intentionally last.
+**[21](21-repo-consolidation-flux-repoint.md)'s exit gate is met.** Phase C completed
+2026-08-14 — `kubernetes/flux/cluster/ks.yaml` records *"This is now the live root:
+equestria-cluster is no longer a GitOps source"*, with prune restored. The merged cluster
+reconciles from `home-operations` alone.
+
+What remains of the original two-repo concern is that **SGC still self-reconciles from
+`stargate-command-cluster`**, which is the thing being retired rather than a blocker on
+retiring it. So this piece is no longer gated behind phases 18–19; the parts of it that need
+a live SGC (rule 2) are in fact *easier* now than after the node phases.
+
+The genuine remaining prerequisite is [07](07-authentik-to-alpha-site.md) step 9 — SGC's
+authentik scaled to zero — and that is itself gated on 07's soak, because SGC's database is
+the rollback artifact for a cutover completed 2026-08-16.
 
 ## Inventory — every class of reference found, verified 2026-08-13
+
+**Partially superseded.** The taxonomy below is sound and still the right checklist shape, but
+individual line numbers, file paths and "nothing depends on this" claims were re-audited
+2026-08-16 and several did not survive. Where a section carries an inline **corrected
+2026-08-16** note, that note wins. Re-run each section's grep before acting on it rather than
+trusting the counts here.
 
 Each row below was verified by reading or grepping the actual file, not
 inferred. Grep commands are given so this stays reproducible after other
@@ -179,7 +276,10 @@ Two different management paths, verified against
   2026-08-01 answer, "Lets renumber"). These die with the repo archival
   (§9) — no separate action needed once the repo is read-only, since nothing
   live reads from it after phases 13–15 cut the apps over.
-- `home-operations:kubernetes/components/common/shared-secrets.sops.yaml`
+- `home-operations:kubernetes/flux/meta/shared-secrets.sops.yaml` — **corrected 2026-08-16;**
+  the `kubernetes/components/common/` path named here originally does not hold it. Re-verified:
+  `SGC_API_IP` has **zero consumers** across all four repos — defined, never substituted — so
+  it is one of the few items in this file with no blocker at all
   has its own `SGC_API_IP` key (verified present, value still `ENC[...]` —
   never decrypted in this session, only confirmed the key exists). Remove it
   with `sops unset` (not hand-editing the encrypted blob) once nothing reads
@@ -241,7 +341,13 @@ own sops files and a read-only repo can't take the follow-up PR.
   whole `sgc` zone block in one edit, since this file has already been the
   site of two live-DNS-wiping incidents from careless `import`/`deleteBeforeReplace`
   changes (see the estate's standing caution on `StandardDns`).
-- **Prometheus/Thanos/Alertmanager**: no static SGC-cluster scrape config
+- **Prometheus/Thanos/Alertmanager**: ~~no static SGC-cluster scrape config~~ — **wrong,
+  corrected 2026-08-16.** `kubernetes/apps/tailscale-system/services/sgc.yaml` carried three
+  blackbox `Probe`s and a `severity: critical` `TechnitiumDnsUnhealthy` rule, and
+  `sgc-kubeproxy.yaml` a fourth probe. Worse, the shared `BlackboxProbeFailingCritical` is not
+  probe-scoped, so it matched all four at **2 minutes**. Both files are generated from
+  `Update.cs`, so the rendered YAML alone would have regenerated. Retired at the generator in
+  #874. Original text follows, for the parts that were right: no static scrape config
   exists in `home-operations` (equestria's observability stack discovers
   targets via ServiceMonitor/PodMonitor inside the cluster, not hardcoded
   hostnames) — this class of reference disappears by construction once SGC
@@ -350,46 +456,127 @@ own sops files and a read-only repo can't take the follow-up PR.
   whoever next regenerates equestria's control-plane certs, so it isn't
   carried forward by habit.
 
+## Live state not in git
+
+Things already done to the running estate that no commit records. Reconcile or remove these
+deliberately; do not let them be discovered later.
+
+| What | Where | Why it matters |
+|---|---|---|
+| `cloudflare-dns`, `technitium-dns`, `unifi-dns` HelmReleases **suspended**, Deployments scaled to **0** | SGC ns `network`, 2026-08-16 | Rule 1. If SGC's Flux resumes, they return and re-assert `replicator.driscoll.tech → 10.10.209.203`. Needs a `stargate-command-cluster` commit, or must simply outlive SGC |
+| Stale `replicator.driscoll.tech` A records deleted by hand — `10.10.209.202` (Cloudflare, by record id) and `10.10.209.203` (Technitium) | 2026-08-16 | Was a live three-way split-brain: half of all resolutions returned an address with no broker behind it. Fixed; all five Technitium resolvers, MagicDNS and public now return `10.10.206.203` alone |
+| `sgc/automation-dns`, `sgc/discord-dns`, `sgc/spike-dns` DNSEndpoints **still present** | SGC ns `sgc` | Inert only because rule 1 stopped their controllers. Delete them in the SGC repo during teardown, never by `kubectl` against a running controller |
+
 ## Procedure
 
-1. **Disable `sgc-sync.yaml` first** (§9) — do this before anything else in
-   this piece, so no later step races a scheduled sync job.
-2. **Verify OpenBao-migration Phase 7 leftovers are actually closed** (§7).
-   If not, close them inside `stargate-command-cluster` before archiving it.
-3. Work through §1–§8 in any order — they're independent of each other, but
-   each is a real `pulumi preview`/`pulumi up` or a real edit, not a batch
-   find-and-replace. Confirm each with its own preview before moving to the
-   next; this file's structure is the checklist.
-4. **Re-run backup verification end to end** — the migration phases (13–19)
-   already moved SGC's data; this is a final confirmation that nothing
-   backup-related quietly depended on SGC still existing (VolSync repos,
-   `pg_dump` targets, PBS datastore references).
-5. **Archive both cluster repos read-only** (§9) — last, after everything
-   above, so the archival can't block a fix that turned out to still be
-   needed.
-6. Update the runbooks/CLAUDE/AGENTS/crew docs enumerated in §9.
+Ordered. The first four steps are ordering-critical; the rest are genuinely independent of
+each other but all sit behind them.
+
+1. **Confirm the fuses are reconciled green.** #875 (`BACKUP_PLAN_KEYS`, `stacks/authentik`)
+   and #874 (probes and alerts) must both be live in the cluster, not merely merged —
+   otherwise steps 5 and 7 break other stacks. Check the `home-operations`, `authentik`,
+   `ocracoke` and `gulf-of-mexico` Stacks are `succeeded` at a commit at or after both.
+2. **Stop SGC's external-dns** (rule 1) if it has been resumed since 2026-08-16. Verify zero
+   pods before continuing.
+3. **Disable `sgc-sync.yaml`** — it lives in `equestria-cluster`, not here (§9). Confirmed
+   absent from `home-operations`; `.github/workflows/` holds only `label-sync.yaml`.
+4. **Scale SGC's authentik to zero** — [07](07-authentik-to-alpha-site.md) step 9, after its
+   soak. Re-probe first: SGC was still answering `authentik.${tailscaleDomain}` for skystar's
+   outpost as late as 2026-08-16 20:15Z via a serve config nobody could locate, which cleared
+   on a pod restart rather than by configuration. Send a marked request and confirm it lands
+   on alpha-site, and that skystar's outpost is bound there, before scaling down.
+5. **Destroy the `sgc` Pulumi stack** while SGC is still up (rule 2):
+   ```sh
+   pulumi stack export --stack sgc > /tmp/sgc-state.json   # read the real ledger, not the program
+   pulumi destroy --stack sgc --preview-only               # gate. NOT `pulumi preview`
+   pulumi destroy --stack sgc                              # no --yes; read the confirmation
+   ```
+   Then remove the Stack CR, `Pulumi.sgc.yaml`, and the `./sgc.yaml` kustomization entry.
+   Do **not** pass `--run-program`.
+6. **Delete the orphaned Gatus file by hand.** `addUptimeGatus` calls `copyFileToRemote`
+   *without* `withRemoveCommand: true` (`components/helpers.ts:229`, option at :114-126), so
+   the resource has no delete behaviour and
+   `/opt/stacks-data/uptime/config/uptime-cluster-apps-sgc.yaml` survives the destroy on
+   `dockge-as`. **First relocate the `Authentik ` check inside it** — that one is the
+   estate-wide SSO check, now pointing at alpha-site; deleting the file wholesale silently
+   drops SSO uptime monitoring.
+7. **Remove `openbao-sgc-auth` from `stacks/home`** and `up`. Targeted `--target` refresh only
+   — a full refresh hard-errors on the UniFi read-404 — and judge from `pulumi stack history`,
+   never from preview, which invents phantom deletes on this stack.
+8. **Delete `clusters/sgc.yaml`.** Five consumers, verified: `stacks/home:422`,
+   `stacks/authentik:115` (defused in #875), `stacks/applications` instance `sgc`,
+   `components/authentik/flows.ts:196` (tailscale OAuth redirect URIs),
+   `stacks/applications/warpgate.ts:20`, plus **seven** assertions in
+   `components/store/clusters.test.ts` — not the single `:204` this file used to name.
+9. **Hand-delete every OpenBao path** (rule 3): `clusters/sgc/details`,
+   `clusters/sgc/cluster` (written by no stack — it came from the one-shot
+   `scripts/migrate-cluster-secrets.ts`), the nine `clusters/sgc/apps/*` paths,
+   `clusters/_inventory/stargate-command-backup-plan`, the eleven unread `shared/sgc-*` and
+   `shared/stargate-command-*` keys, and `shared/authentik-{secret-key,admin,token}` once
+   SGC's authentik stops. **Keep `shared/stargate-command-cloudflare-tunnel`** until
+   `dynacat-sgc-glance` is retired — it is read by a running pod on equestria.
+   Then `bao policy delete eso-sgc` and drop `sgc` from both loops in the vault repo's
+   `equestria-init.sh` (lines ~214 and ~322).
+10. **Delete the `kubernetes-sgc` mount** — only after SGC's Flux tree is suspended. 41
+    ExternalSecrets authenticate through it; deleting it first breaks all of them at once.
+11. **Retire the backup estate together**: `/spike/backup/sgc/`, the three backrest copy jobs,
+    and the nine `sgc-volsync-*` Gatus heartbeats. They stay green after teardown because
+    they are fed by local copy jobs, then all page simultaneously when the data is removed.
+    `cnpg-sgc-backups` is `protect: true` — Pulumi cannot delete it; retiring the recovery
+    window is a separate, manual, deliberate act.
+12. **Re-run backup verification end to end**, then **archive both cluster repos read-only**
+    — last, and only after the six dead `CLOUDFLARE_*`/`BACKBLAZE_*` sops keys and the eight
+    debris ExternalSecrets in `stargate-command-cluster` are fixed, since archival freezes
+    them.
+13. Update the runbooks/CLAUDE/AGENTS/crew docs in §9 — and repoint
+    `home-operations.code-workspace`'s `sops.defaults.ageKeyFile`, which points at
+    `../stargate-command-cluster/age.key`. Archival does not break that; deleting the local
+    clone does.
 
 ## Exit gate
 
-`grep -rn "sgc\|10\.10\.209\." --include="*.ts" --include="*.yaml" --include="*.yml" --include="*.md" --include="*.json" .`
-across `home-operations` (excluding `node_modules`, `package-lock.json`, and
-this planning doc set) returns **zero live-configuration hits** — only
-historical records (`.crew/casting/history.json`) and the generated
-`scripts/op-to-bao/mapping.yaml` artifact, both explicitly exempted above.
-OpenBao has no `kubernetes-sgc` mount and no `eso-sgc` policy
-(`equestria-init.sh status` confirms). The Talos API VIP `10.10.209.201` is
-unreferenced. DNS records under `sgc.driscoll.tech` and `*.209.*` PTR/A
-records are gone from Cloudflare and Technitium. Backup verification has run
-clean end to end. Both cluster repos are archived read-only.
+The old gate was a single repo-wide grep returning "zero live-configuration hits." That is
+not achievable and never was — it exempted a file that no longer exists and ignored a
+108-file class. Replace it with these, each checkable:
+
+- **No live SGC config in the repo.** `grep -rniI -E 'sgc|stargate|10\.10\.209\.|odyssey'`
+  excluding `node_modules`, `.git`, `package-lock.json` and `docs/cluster-consolidation/`
+  returns only: the `$schema=` comment URLs (108 files — editor-time validation against a
+  public archived repo, which keeps serving raw content); the incident citations deliberately
+  kept (`.crew/casting/history.json`, `.crew/agents/seraph/charter.md`,
+  `scripts/crew-sync-baseline-2026-07-28.json`, `.github/renovate.json5`,
+  `kubernetes/components/volsync/AGENTS.md`, `kubernetes/apps/tailscale-system/iam/tsiam.yaml`,
+  `kubernetes/apps/equestria/home/dynacat/ks.yaml`, `stacks/authentik/README.md`); and the
+  `stargate-command` **namespace** tree, which stays.
+- **OpenBao is clean.** No `kubernetes-sgc` mount, no `eso-sgc` policy or role, and
+  `bao kv list secrets/clusters/sgc/` returns nothing. `equestria-init.sh status` agrees.
+- **No SGC-owned DNS anywhere.** No records under `sgc.driscoll.tech`, no `10.10.209.*` A or
+  PTR records, and no `sgc.*` TXT ownership litter, in **all three** providers — Cloudflare,
+  Technitium (check every one of the five instances, not one resolver's answer) and UniFi.
+- **Nothing pages and nothing is permanently red.** No Prometheus rule or blackbox probe
+  references SGC; Gatus has no permanently-failing SGC endpoint; the estate-wide `Authentik`
+  check still exists somewhere.
+- **Backup verification runs clean end to end**, and the CNPG recovery window has been
+  retired deliberately rather than left orphaned.
+- **Both cluster repos archived read-only**, after their own leftovers are fixed.
 
 ## Risks and rollback
 
+Re-derived 2026-08-16. The old table rated the `sgc` destroy as "None — this is intentional
+teardown, gated by preview." Both halves of that were wrong: it had three cross-stack fuses,
+and `pulumi preview` is not the gate.
+
 | Step | What breaks | How you'd know | Rollback | Point of no return |
 |---|---|---|---|---|
-| §3, `pulumi destroy` on the `sgc` application stack | Destroys live-but-unused Authentik OIDC config scoped to SGC | `pulumi preview` shows the delete before `up` applies it | None needed if previewed first — this is deliberate, not accidental | None — this is intentional teardown, gated by preview |
-| §5, OpenBao mount/policy deletion | ExternalSecrets that still (incorrectly) reference `kubernetes-sgc` fail login | ESO logs, `ClusterSecretStore` unhealthy | Recreate the mount/policy from `equestria-init.sh`'s definitions if something unexpected still needs it | None — nothing should still need it at this point in the sequence |
-| §2/§6, DNS record deletion | Deleting the wrong record (namespace collision with a similarly-named equestria record) | Something can't resolve | Re-add from Cloudflare/Technitium history | None if scoped correctly — this is the same class of risk the estate's `StandardDns` incidents came from; double-check before deleting, this repo has wiped live DNS twice before from adjacent carelessness |
-| §9, archiving too early | A leftover Phase-7 OpenBao item (§7) becomes unfixable because the repo is read-only | Discovered later, can't open a PR | Un-archive temporarily to land the fix, then re-archive | Soft — GitHub archival is reversible, just an extra round-trip |
+| Deleting a DNSEndpoint, or suspending SGC's Flux, while external-dns runs | external-dns `policy=sync` **deletes live estate records** it owns — `truenas.driscoll.tech`, `odyssey.driscoll.tech` — from Cloudflare | Something estate-wide stops resolving; this is the same class as the two prior live-DNS wipes | Re-add from Cloudflare history, or the next `stacks/home` run for Pulumi-owned names | None if rule 1 is followed. **This is the highest-consequence ordering error in the piece** |
+| §3 `pulumi destroy` on the `sgc` stack, before #875 is reconciled | `stacks/home`, `stacks/ocracoke`, `stacks/gulf-of-mexico` all throw on `backupPlanKeys()`; the SSO `authentik` stack throws on `getCluster` | Four stacks fail at once, one of them the stack whose preview output is already untrustworthy | Restore the KV path, or revert the constant | None — but verify #875 is *reconciled*, not merely merged |
+| §3 destroy, after SGC is unreachable | `pulumi preview` cannot run (the program enumerates the live cluster); the destroy cannot delete in-cluster `Secret`s | Preview errors on the provider | Bring the kubeproxy path back, or accept orphaned in-cluster objects that die with the node wipe | Soft — but the clean path closes when SGC does |
+| Deleting the `sgc` Brand | `iris.driscoll.tech` falls back to authentik's default brand. It is **not** unused — alpha-site serves that name now, and only `sgc`/`equestria` get Brands, so alpha-site has none of its own | Visibly different login page on one hostname | Recreate the Brand, or give alpha-site its own | None — cosmetic, but do not be surprised by it |
+| §5 OpenBao mount/policy deletion before SGC's Flux tree is suspended | All 41 of SGC's ExternalSecrets fail login simultaneously | ESO logs, `ClusterSecretStore` unhealthy | Recreate from `equestria-init.sh` | None if ordered |
+| §2/§6 DNS record deletion | Deleting a record an adjacent equestria record shadows | Something can't resolve | Re-add from provider history | None if scoped. **Delete Cloudflare records by record id, never by name** — a name can carry several records, and this estate has wiped live DNS twice from adjacent carelessness |
+| Retiring `/spike/backup/sgc/` | 9 `sgc-volsync-*` Gatus heartbeats page **together** — they stay green after teardown because local copy jobs feed them | Nine simultaneous pushover alerts | Recreate the paths | None — but retire data, jobs and heartbeats in one change |
+| Deleting `cnpg-sgc-backups` | Discards SGC's entire CNPG recovery window (13-day unbroken chain at audit time) | — | **None** | `protect: true` blocks Pulumi; only a deliberate manual Minio delete does it. Treat that as the real point of no return for SGC's database |
+| §9 archiving too early | The six dead `CLOUDFLARE_*`/`BACKBLAZE_*` sops keys and eight debris ExternalSecrets become unfixable | Discovered later, can't open a PR | Un-archive, land the fix, re-archive | Soft |
 
 ## Cross-references
 
