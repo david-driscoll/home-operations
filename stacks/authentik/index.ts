@@ -1,7 +1,6 @@
 import { FullItem } from "@1password/connect";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
-import { awaitOutput } from "@components/helpers.ts";
 import { OnePasswordItem, type OnePasswordItemSectionInput, PurposeEnum, TypeEnum } from "@dynamic/1password/OnePasswordItem.ts";
 import { Brand } from "@pulumi/authentik";
 import * as pulumi from "@pulumi/pulumi";
@@ -102,9 +101,9 @@ if (globals.baoDualWriteEnabled) {
       // `secrets` mount because that is the only KV mount consumers can read.
       data: pulumi.output({ groups, roles, flows, scopeMappings }),
       // Authentik object IDs (flows, groups, mappings) — identifiers, not
-    // credentials. Declared empty deliberately rather than omitted.
-    concealedFields: [],
-    customMetadata: baoProvenance({ source_title: "Authentik Outputs" }),
+      // credentials. Declared empty deliberately rather than omitted.
+      concealedFields: [],
+      customMetadata: baoProvenance({ source_title: "Authentik Outputs" }),
     },
     { provider: globals.baoProvider, parent: globals },
   );
@@ -112,15 +111,42 @@ if (globals.baoDualWriteEnabled) {
   pulumi.log.warn("BAO credentials absent — skipping the Authentik Outputs dual-write; consumers still read 1Password");
 }
 
-const clusterDefinition = await awaitOutput(globals.store.getCluster("Cluster: Stargate Command"));
+// The estate-wide tailnet brand.
+//
+// Its assets used to come from `getCluster("Cluster: Stargate Command")`.
+// `BaoStore.getCluster` THROWS on a title it cannot find, so the moment SGC's
+// cluster definition goes away (docs/cluster-consolidation/22-decommission-sgc.md
+// §4) this stack — the estate's SSO control plane, the one every other stack's
+// OIDC depends on — fails on every run, for a cluster it does not otherwise
+// touch. One cluster's teardown must not be able to take SSO down with it.
+//
+// The values below are the exact URLs the SGC definition carried, so the
+// rendered brand is byte-identical; this change is a decoupling, not a
+// restyle. They are literals rather than another cluster's definition because
+// this brand covers the TAILNET, not a cluster — there is no cluster whose
+// branding it should inherit. Alpha Site (where authentik now runs, and which
+// shares `authentikDomain: iris.driscoll.tech`) carries different
+// icon/favicon/background values, so pointing at it would have been a silent
+// rebrand smuggled in on a decommission. Restyling this brand is a one-line,
+// deliberate change to make here on its own.
+const TAILNET_BRAND_LOGO = "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg";
+// The SGC definition set `favicon` to the same URL as `icon`; kept separate so
+// either can move without dragging the other.
+const TAILNET_BRAND_FAVICON = "https://i.pinimg.com/originals/d6/1b/0f/d61b0fa0a759fd8baceedc9427246f7d.jpg";
+const TAILNET_BRAND_BACKGROUND = "https://wallpapercave.com/wp/wp10853006.jpg";
+// Was `clusterDefinition.key`, i.e. the literal string "sgc". Kept as-is
+// because it renders in the login page's title; renaming it is a visible
+// change and belongs in its own commit, not in a teardown fuse fix.
+const TAILNET_BRAND_TITLE = "sgc";
+
 const _tailscaleBrand = new Brand(
   "tailscale",
   {
     domain: pulumi.interpolate`authentik.${globals.tailscaleDomain}`,
-    brandingLogo: clusterDefinition.icon,
-    brandingTitle: clusterDefinition.key,
-    brandingFavicon: clusterDefinition.favicon ?? "",
-    brandingDefaultFlowBackground: clusterDefinition.background ?? "/static/dist/assets/images/flow_background.jpg",
+    brandingLogo: TAILNET_BRAND_LOGO,
+    brandingTitle: TAILNET_BRAND_TITLE,
+    brandingFavicon: TAILNET_BRAND_FAVICON,
+    brandingDefaultFlowBackground: TAILNET_BRAND_BACKGROUND,
     flowAuthentication: authentikFlows.authenticationFlow.uuid,
     flowInvalidation: authentikFlows.providerLogoutFlow.uuid,
     flowUserSettings: authentikFlows.userSettingsFlow.uuid,
