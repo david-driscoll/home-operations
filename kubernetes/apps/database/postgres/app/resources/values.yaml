@@ -5,25 +5,42 @@ fullnameOverride: *name
 type: postgresql
 version:
   postgresql: "17.5"
+# Flip to "recovery" to restore from the barman archive, then back to
+# "standalone" once the restored cluster is promoted.
+#
+# BEFORE FLIPPING, read the ARCHIVE-COLLISION HAZARD note in the backups
+# block below, and give backups a fresh path. Recovering while archiving to
+# the path being recovered from fails the WAL archive check every time --
+# see docs/cluster-consolidation/28-postgres-restore-and-bootstrap-deadlock.md.
 mode: standalone
 recovery:
-  method: object_store
-  clusterName: "restore"
+  # Was `object_store` pointing at a "-restore" bucket with clusterName
+  # "restore" -- stale leftover from a one-off restore, and the wrong
+  # mechanism besides. Backups have used the barman-cloud PLUGIN since chart
+  # 0.8.x, so recovery must use `plugin` too; `object_store` speaks the
+  # deprecated in-core barmanObjectStore path and would have looked in a
+  # bucket nothing has ever been written to.
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+  # The serverName INSIDE the archive, not a cluster to create. Confirmed
+  # against the live ObjectStore/postgres-backups status, whose
+  # serverRecoveryWindow is keyed "postgres".
+  clusterName: "postgres"
   endpointURL: "{{ .minio_endpoint }}"
   provider: s3
   s3:
     region: "{{ .minio_region }}"
-    # The bucket name below comes from cluster-secrets, where it is
-    # "equestria-db" — so this renders exactly what the 1Password extract
-    # produced. The endpoint above has been TrueNAS Minio for a while; only the
-    # bucket NAME still came from the Backblaze item, which is the mismatch
-    # vault#119 warned about.
+    # Deliberately identical to the backups block below: recovery reads back
+    # exactly what backups write. The chart renders both through the same
+    # helper, so keeping them in sync is what guarantees the restore looks
+    # where the data actually is.
     #
-    # The variable is named in words rather than written out, because Flux
-    # postBuild envsubst expands substitutions inside COMMENTS too: spelling it
-    # normally here would bake the live value into the ConfigMap.
-    bucket: "${BACKBLAZE_DB_BUCKET}-restore"
-    path: "/"
+    # The variables are named in words rather than written out, because Flux
+    # postBuild envsubst expands substitutions inside COMMENTS too: spelling
+    # them normally here would bake the live values into the ConfigMap.
+    bucket: "cnpg-${CLUSTER_CNAME}"
+    path: "/barman/${CLUSTER_CNAME}"
     accessKey: "{{ .minio_username }}"
     secretKey: "{{ .minio_password }}"
 backups:
@@ -31,12 +48,42 @@ backups:
   method: plugin
   pluginConfiguration:
     name: barman-cloud.cloudnative-pg.io
+    # ⚠️ ARCHIVE-COLLISION HAZARD, read before any restore.
+    #    Confirmed the hard way during the 2026-08-13 restore.
+    #
+    # barman-cloud-check-wal-archive runs before the restored cluster may
+    # archive anything, and it REQUIRES AN EMPTY DESTINATION for the new
+    # cluster's serverName. The plugin defaults serverName to the cluster
+    # name ("postgres") -- exactly the lineage the recovery block above
+    # reads from -- so a restore into the same destinationPath always dies
+    # with:
+    #
+    #   WAL archive check failed for server postgres: Expected empty archive
+    #
+    # It fails closed rather than corrupting the source archive, but the
+    # cluster never reaches a healthy state.
+    #
+    # DO NOT try to fix this with a serverName override here. The chart
+    # emits only `barmanObjectName` into .spec.plugins[] and silently drops
+    # backups.pluginConfiguration.parameters, so a serverName set here has
+    # no effect -- verified against the rendered Cluster CR.
+    #
+    # What DOES work: move the destination. Give the restored cluster a
+    # fresh archive path (recovery keeps reading the old one, which stays
+    # immutable):
+    #
+    #   backups.s3.path: "/barman/${CLUSTER_CNAME}-<stamp>"
+    #
+    # This is almost certainly why the recovery block used to point at a
+    # separate "-restore" bucket: the same collision, worked around by
+    # separating read from write. Separating the write path is the cheaper
+    # half of that trick -- no bucket copy required.
   endpointURL: "{{ .minio_endpoint }}"
   provider: s3
   s3:
     region: "{{ .minio_region }}"
     bucket: "cnpg-${CLUSTER_CNAME}"
-    path: "/barman/${CLUSTER_CNAME}"
+    path: "/barman/${CLUSTER_CNAME}-20260813"
     accessKey: "{{ .minio_username }}"
     secretKey: "{{ .minio_password }}"
   wal:

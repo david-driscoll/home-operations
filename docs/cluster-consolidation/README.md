@@ -204,6 +204,7 @@ The v2/v2.1 discovery predates two waves of change; the plans reflect **today**:
 | [25-unseal-key-scope.md](25-unseal-key-scope.md) | *(unfiled)* | A scoped age key for the alpha-site static-unseal file, additive to D5 |
 | [26-bootstrap-apps-to-pulumi.md](26-bootstrap-apps-to-pulumi.md) | *(unfiled)* | Move `scripts/bootstrap-apps.sh` (namespaces, secrets, CRDs, helmfile) into Pulumi; grounded in a live 2026-08-13 incident where a `21`-pattern redirect flip cascade-deleted every Traefik/Gateway API CRD cluster-wide |
 | [27-migration-churn-failure-modes.md](27-migration-churn-failure-modes.md) | *(unfiled)* | Two more 2026-08-13 incidents: `cilium-operator` silently dropped L2-announcement leader election under API-server pressure (cluster-wide external ingress outage, internal traffic unaffected); staging `tsidp` while SGC's copy stayed live crashed Gatus entirely (duplicate monitoring registration) |
+| [28-postgres-restore-and-bootstrap-deadlock.md](28-postgres-restore-and-bootstrap-deadlock.md) | *(unfiled)* | Restoring CNPG from the barman archive after the 2026-08-13 cascade: the archive-collision trap that blocks every same-path restore, and the OpenBao/postgres bootstrap deadlock that survives the restore (documented, deliberately unresolved) |
 
 ## Sequencing
 
