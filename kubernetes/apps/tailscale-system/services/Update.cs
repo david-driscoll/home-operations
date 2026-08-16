@@ -59,6 +59,29 @@ var tagMap = new Dictionary<string, (ServiceKind Kind, Func<string, string> Serv
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Servers that are being decommissioned
+//
+// A device stays in the Tailscale API — and therefore in this generator's input —
+// right up until its last node is wiped and the machine is removed from the
+// tailnet. That is far too late to stop monitoring it: the moment the host is
+// powered off, its probes go to zero and the generic BlackboxProbeFailingCritical
+// rule in prometheusrule.yaml pages at `severity: critical` after two minutes,
+// on top of whatever per-kind alert this file emits.
+//
+// Listing a server here drops it from the generated Services, Probes, alerts and
+// kustomization.yaml while it is still up and healthy, so the removal is a no-op
+// against live metrics rather than a scramble during the shutdown. Remove the
+// entry once the device is actually gone from the tailnet — after that the API
+// stops returning it and the exclusion is dead weight.
+//
+// sgc: Stargate Command is being decommissioned; see
+// docs/cluster-consolidation/22-decommission-sgc.md.
+var decommissionedServers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+  "sgc",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Per-device overrides
 //   excludePorts: which default port names to suppress for a given server+kind
 //   extraPorts:   additional ports to add for a given server+kind
@@ -121,7 +144,12 @@ var tailscaleStaticServices = new List<TailscaleServiceDef>
   // new("alertmanager",   [new("http", 9093,  true, "http_2xx")]),
   // new("loki",           [new("http", 3100,  true, "http_2xx")]),
   // new("thanos-receive", [new("http", 10902, true, "http_2xx"), new("grpc", 10901, false, null)]),
-  new ("sgc-kubeproxy", [new ("https", 443, true, "http_2xx", "/healthz")]),
+  // sgc-kubeproxy is gone: Stargate Command is being decommissioned, and its
+  // /healthz probe would flatline (and page via BlackboxProbeFailingCritical)
+  // the moment the cluster is powered off. The ExternalName Service that lets
+  // pulumi workspace pods reach SGC's API server lives separately in
+  // kubernetes/apps/pulumi/kubeproxies/services.yaml and is retired on its own
+  // schedule — see docs/cluster-consolidation/22-decommission-sgc.md §3.
   new ("equestria-kubeproxy", [new ("https", 443, true, "http_2xx", "/healthz")]),
 };
 
@@ -194,6 +222,11 @@ try
       AnsiConsole.MarkupLine($"[blue]  Checking tag: {tag}[/]");
       if (!tagMap.TryGetValue(tag, out var mapping)) continue;
       var server = mapping.ServerName(device.Hostname);
+      if (decommissionedServers.Contains(server))
+      {
+        AnsiConsole.MarkupLine($"[yellow]  Skipping {server} — listed in decommissionedServers[/]");
+        continue;
+      }
       if (!serverKinds.TryGetValue(server, out var kinds))
         serverKinds[server] = kinds = [];
       kinds.Add(mapping.Kind);
