@@ -10,8 +10,6 @@ resources:
   - ./celestia.yaml
   - ./equestria.yaml
   - ./luna.yaml
-  - ./sgc.yaml
   - ./skystar.yaml
   - ./twilight-sparkle.yaml
-  - ./sgc-kubeproxy.yaml
   - ./equestria-kubeproxy.yaml
