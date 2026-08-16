@@ -17,8 +17,9 @@ spec:
   name: Authentik (Alpha Site)
   category: Infrastructure
   description: Authentik is an open-source identity provider focused on flexibility and security.
-  # The estate's primary SSO name — this host answers for it as of the cutover.
-  url: &url https://authentik.${searchDomain}
+  # Staging hostname — see compose.yaml's router comment for why this is not the
+  # production vanity alias. Flipped at cutover.
+  url: &url https://authentik.${CLUSTER_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
   # NO `authentik:` block, and there never will be one. Authentik cannot be an
   # OAuth client of itself, and this host serves its own forwardAuth from the
@@ -41,35 +42,12 @@ spec:
     # single Pi on a single PoE switch (section 6, accepted), and "one alias did
     # not repoint" is a failure only a per-alias check can see.
     #
-    # 200, not 204. Verified against the live server: /-/health/live/ and
-    # /-/health/ready/ both answer 200. The 204 originally asserted here could
-    # never pass, and sat red while the endpoint was healthy.
-    - url: https://authentik.${searchDomain}/-/health/live/
-      method: GET
-      interval: 1m
-      conditions:
-        - "[STATUS] == 200"
-    # The two aliases now get their own checks, which they could not have while
-    # they still resolved to SGC — a check against them would have reported green
-    # for a server this stack had nothing to do with, and gone on passing straight
-    # through a failed cutover. They are load-bearing from here: every OIDC login
-    # and every outpost in the estate reaches this host by one of these three
-    # names, and "one alias did not repoint" is a failure only a per-alias check
-    # can see.
-    - url: https://canterlot.${searchDomain}/-/health/live/
-      method: GET
-      interval: 5m
-      conditions:
-        - "[STATUS] == 200"
-    - url: https://iris.${searchDomain}/-/health/live/
-      method: GET
-      interval: 5m
-      conditions:
-        - "[STATUS] == 200"
-    # Independent of the vanity set, so a DNS problem with those names is
-    # distinguishable from the server itself being down.
+    # 200, not 204. Verified against the live server after deploy:
+    # /-/health/live/ and /-/health/ready/ both answer 200. The 204 this
+    # originally asserted was wrong, so the check could never pass — it sat red
+    # from the moment the stack came up while the endpoint itself was healthy.
     - url: https://authentik.${CLUSTER_DOMAIN}/-/health/live/
       method: GET
-      interval: 5m
+      interval: 1m
       conditions:
         - "[STATUS] == 200"
