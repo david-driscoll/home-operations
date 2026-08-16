@@ -5,6 +5,7 @@ resources:
 - ./helmrelease.yaml
 - ./definition.yaml
 - ./recurringjob.yaml
+- ./networkpolicy.yaml
 - ./rules
 configMapGenerator:
   - name: longhorn-config
