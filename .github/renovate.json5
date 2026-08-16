@@ -199,20 +199,7 @@
       },
     },
     {
-      description: "Postgres majors are migrations, not updates",
-      matchDatasources: [
-        "docker"
-      ],
-      matchPackageNames: [
-        "docker.io/library/postgres"
-      ],
-      matchUpdateTypes: [
-        "major"
-      ],
-      enabled: false,
-    },
-    {
-      description: "Spegel Group",
+      description: "Sppostgegel Group",
       groupName: "Spegel",
       matchDatasources: [
         "docker"
