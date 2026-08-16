@@ -158,7 +158,7 @@ spec:
               # guard that docker/_common/postgres's comment already claimed
               # existed but which was never actually written.
               repository: docker.io/library/postgres
-              tag: 17-alpine@sha256:d4bb0a8c1b7bb2e29f976d099e7bfb9a5d8858cffe9e46b35cd302cd1f1f8168
+              tag: 18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
               pullPolicy: IfNotPresent
             restartPolicy: Always
             env:
