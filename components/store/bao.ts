@@ -76,8 +76,21 @@ const TAILSCALE_EXPORT_STACKS = ["gulf-of-mexico", "home-operations", "ocracoke"
  * The plans `BackupPlanOrchestrator.savePlan` produces today: `Backup Plan`
  * from stacks/backups, `<Cluster Title> Backup Plan` from each applications
  * stack. `getBackupPlans` refuses a partial set — see the override for why.
+ *
+ * `stargate-command-backup-plan` was listed here until SGC's teardown
+ * (docs/cluster-consolidation/22-decommission-sgc.md). `pulumi destroy
+ * --stack sgc` removes that `_inventory` key, and a listed-but-absent key is
+ * fatal, so leaving it here would have failed `getBackupPlans` for every
+ * consumer — the three `BackupPlanDirector`s in stacks/home, stacks/ocracoke
+ * and stacks/gulf-of-mexico, all at once, on a stack nobody touched.
+ *
+ * Removing an entry is the SAFE direction and must stay that way: the list is
+ * a floor, not a ceiling, so a producer that still writes its plan is still
+ * read whether or not it is named here. Adding an entry is the dangerous
+ * direction — it is a promise that the producing stack has already run its
+ * write (PLAN §G-8).
  */
-const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
+const BACKUP_PLAN_KEYS = ["backup-plan", "equestria-backup-plan"];
 
 /**
  * `baoStoreReadsEnabled` used to live here, gating whether reads went to

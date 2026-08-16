@@ -201,7 +201,10 @@ describe("resolveBaoPath", () => {
   it("routes the inventory families to their reserved _inventory paths, never shared/", () => {
     assert.equal(resolveBaoPath("Backup Plan").path, "clusters/_inventory/backup-plan");
     assert.equal(resolveBaoPath("Equestria Backup Plan").path, "clusters/_inventory/equestria-backup-plan");
-    assert.equal(resolveBaoPath("Stargate Command Backup Plan").path, "clusters/_inventory/stargate-command-backup-plan");
+    // A multi-word cluster title still slugs into one reserved path — this
+    // read `Stargate Command Backup Plan` until SGC's teardown; the rule it
+    // pins is the slug, not the cluster.
+    assert.equal(resolveBaoPath("Alpha Site Backup Plan").path, "clusters/_inventory/alpha-site-backup-plan");
     assert.equal(resolveBaoPath("Tailscale Export - home-operations").path, "clusters/_inventory/tailscale-export-home-operations");
     // A title merely containing the words is not the family.
     assert.equal(resolveBaoPath("Backup Plan Review Notes").path, "shared/backup-plan-review-notes");
@@ -269,7 +272,7 @@ describe("shapeTailscaleExports", () => {
 });
 
 describe("backupPlanKeys", () => {
-  const complete = ["backup-plan", "equestria-backup-plan", "stargate-command-backup-plan"];
+  const complete = ["backup-plan", "equestria-backup-plan"];
 
   it("selects the bare key and the -backup-plan suffixed keys, nothing else", () => {
     assert.deepEqual(backupPlanKeys(["authentik-outputs", "tailscale-export-ocracoke", ...complete]), complete);
@@ -278,12 +281,22 @@ describe("backupPlanKeys", () => {
   it("refuses an empty or torn inventory, naming what is missing", () => {
     // A smaller list here quietly shrinks what the directors back up — a
     // failure with no symptom until a restore is needed.
-    assert.throws(() => backupPlanKeys([]), /missing backup-plan, equestria-backup-plan, stargate-command-backup-plan/);
+    assert.throws(() => backupPlanKeys([]), /missing backup-plan, equestria-backup-plan/);
     assert.throws(() => backupPlanKeys(complete.filter(k => k !== "equestria-backup-plan")), /missing equestria-backup-plan/);
   });
 
   it("includes plans beyond the known set — a floor, not a ceiling", () => {
     assert.deepEqual(backupPlanKeys([...complete, "luna-backup-plan"]), [...complete, "luna-backup-plan"]);
+  });
+
+  it("does not demand a retired cluster's plan — SGC's key may be absent", () => {
+    // The teardown fuse: `pulumi destroy --stack sgc` removes
+    // `stargate-command-backup-plan` from the _inventory LIST. While it was
+    // in BACKUP_PLAN_KEYS that made this throw for every consumer, taking
+    // stacks/home, stacks/ocracoke and stacks/gulf-of-mexico down with it.
+    assert.doesNotThrow(() => backupPlanKeys(complete));
+    // …and while the key is still there (before the destroy), it is still read.
+    assert.deepEqual(backupPlanKeys([...complete, "stargate-command-backup-plan"]), [...complete, "stargate-command-backup-plan"]);
   });
 });
 
