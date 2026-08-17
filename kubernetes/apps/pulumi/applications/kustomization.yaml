@@ -5,4 +5,4 @@ kind: Kustomization
 resources:
   - ./serviceaccount.yaml
   - ./equestria.yaml
-  - ./sgc.yaml
+  # - ./sgc.yaml
