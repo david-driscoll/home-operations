@@ -25,7 +25,7 @@ spec:
       namespace: volsync-system
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   components:
     - ../../../../components/volsync

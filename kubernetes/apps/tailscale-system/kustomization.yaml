@@ -14,3 +14,4 @@ resources:
   - ./golink/ks.yaml
   - ./idp/ks.yaml
   - ./iam/ks.yaml
+  - ./taildrive/ks.yaml

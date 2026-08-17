@@ -32,73 +32,143 @@ spec:
     fullnameOverride: *app
     controllers:
       app:
-        initContainers:
-          sysctler:
-            image:
-              repository: tailscale/tailscale
-              tag: v1.102.2@sha256:321ce041508c19079b57a28b6666c8d81ab0b08accc0a2585b3ab663d557ac24
-            command:
-              - /bin/sh
-              - '-c'
-            args:
-              - >-
-                sysctl -w net.ipv4.ip_forward=1 && if sysctl
-                net.ipv6.conf.all.forwarding; then sysctl -w
-                net.ipv6.conf.all.forwarding=1; fi
-            terminationMessagePath: /dev/termination-log
-            terminationMessagePolicy: File
-            securityContext:
-              privileged: true
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # The PVC is RWO and Longhorn-backed, so two replicas could never both
+        # mount it -- and two tailscaled processes sharing one state dir would
+        # fight over the node key regardless. Recreate, not RollingUpdate.
+        strategy: Recreate
         containers:
           app:
             image:
-              repository: ghcr.io/tailscale/tailscale
+              repository: tailscale/tailscale
               tag: v1.102.2@sha256:321ce041508c19079b57a28b6666c8d81ab0b08accc0a2585b3ab663d557ac24
-            command:
-              - /bin/sh
-              - '-c'
-            args:
-              - >-
-              - tailscale up --hostname=${APP}
-                tailscale drive share media /media
-                tailscale drive share backup /backup
-                tailscale drive share opencloud /opencloud
-                tailscale drive share taildrive /taildrive
+            # NOTE: no `command:`/`args:` override. The image's entrypoint is
+            # containerboot, and containerboot is what actually starts
+            # tailscaled and runs `tailscale up`. Overriding the entrypoint with
+            # `/bin/sh -c 'tailscale up ...'` -- the previous shape of this file
+            # -- left no daemon for the CLI to talk to.
             env:
-              TS_AUTHKEY:
+              TS_HOSTNAME: *app
+              TS_STATE_DIR: &state /var/lib/tailscale
+              # containerboot stores state in a kube Secret when it detects
+              # Kubernetes; we keep it on the volsync PVC instead so the node
+              # identity AND the Taildrive share list (both live in tailscaled
+              # prefs) survive a restart and are covered by the nightly backup.
+              TS_KUBE_SECRET: ""
+              # Taildrive is served out of tailscaled's own peerapi, so there is
+              # nothing here that needs a TUN device, NET_ADMIN, or a privileged
+              # container. Userspace keeps this pod unprivileged.
+              TS_USERSPACE: "true"
+              TS_AUTH_ONCE: "true"
+              TS_ACCEPT_DNS: "false"
+              TS_ENABLE_HEALTH_CHECK: "true"
+              # Load-bearing. Every drive grant in stacks/unifi-network/acl-manager.ts
+              # targets tag:shared-drive, and the `drive:share` + `drive:access`
+              # nodeAttrs are granted only to tag:shared-drive and autogroup:admin.
+              # A node registered under the shared tag:apps authkey has no
+              # Taildrive capability at all and `drive share` fails silently.
+              TS_EXTRA_ARGS: --advertise-tags=tag:shared-drive
+              # OAuth rather than the shared `tailscale-authkey` Secret: that
+              # Secret is hand-applied, untracked by Flux, and pre-tagged
+              # tag:apps, so it cannot register this node under tag:shared-drive.
+              # tag:operator owns tag:shared-drive (acl-manager.ts setTagOwner),
+              # so the operator's OAuth client can mint the key, and OAuth
+              # clients do not expire the way a 90-day authkey does.
+              TS_CLIENT_ID:
                 valueFrom:
                   secretKeyRef:
-                    name: tailscale-authkey
-                    key: authkey
+                    name: tailscale-oauth
+                    key: username
+              TS_CLIENT_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: tailscale-oauth
+                    key: credential
+            # containerboot has no env var for Taildrive -- `drive share` is a
+            # LocalAPI call, so it has to be made against a running tailscaled.
+            # postStart runs concurrently with the entrypoint and the container
+            # is not marked Running until it returns, so retrying the real
+            # command until it succeeds is both the wait and the assertion.
+            # It is idempotent: re-running it on every restart just re-asserts
+            # a share that is already in prefs.
+            lifecycle:
+              postStart:
+                exec:
+                  command:
+                    - /bin/sh
+                    - -c
+                    - |
+                      n=0
+                      until tailscale drive share shared /shared; do
+                        n=$((n + 1))
+                        if [ "$n" -ge 60 ]; then
+                          echo "taildrive: tailscaled never came up; giving up after 2m" >&2
+                          exit 1
+                        fi
+                        sleep 2
+                      done
+                      tailscale drive list
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &health 9002
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probe
+              # postStart already gates Running on tailscaled being reachable.
+              startup:
+                enabled: false
             securityContext:
-              privileged: true
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 25m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
 
     defaultPodOptions:
       securityContext:
-        runAsUser: 568
-        runAsGroup: 568
-        fsGroupChangePolicy: OnRootMismatch
+        # tailscaled writes its state dir and creates /var/run/tailscale itself.
+        # Root without any capability is what the technitium tailscale container
+        # already does here; VOLSYNC_PUID/PGID in ks.yaml are pinned to 0 to
+        # match, so the restic mover can read what this pod writes.
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+
+    service:
+      # ClusterIP only, for the containerboot health endpoint. Taildrive itself
+      # is reached over the tailnet at 100.100.100.100:8080 by each peer, never
+      # through a cluster Service -- which is why this app has no tailscale
+      # Ingress component.
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          health:
+            port: *health
 
     persistence:
       data:
-        existingClaim: ${APP}
+        existingClaim: *app
         globalMounts:
-          - path: /taildrive
-      nfs-media:
-        type: nfs
-        server: ${SPIKE_IP}
-        path: /mnt/stash/media
-        globalMounts:
-          - path: /media
-      nfs-backup:
-        type: nfs
-        server: ${SPIKE_IP}
-        path: /mnt/stash/backup
-        globalMounts:
-          - path: /backup
-      nfs-opencloud:
-        type: nfs
-        server: ${SPIKE_IP}
-        path: /mnt/stash/data/opencloud
-        globalMounts:
-          - path: /opencloud
+          # Both subPaths are load-bearing. Mounting the volume root at /shared
+          # would put the tailscale state dir -- node key, machine key -- inside
+          # the directory served over WebDAV to every peer with a drive grant.
+          - path: /shared
+            subPath: shared
+          - path: *state
+            subPath: .tailscale-state

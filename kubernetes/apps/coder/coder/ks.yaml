@@ -27,7 +27,7 @@ spec:
       namespace: kube-system
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   components:
     # No failover/fast-node-eviction: it patches `defaultPodOptions`, which only

@@ -24,7 +24,7 @@ spec:
   timeout: 20m
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   path: ./kubernetes/apps/observability/loki
   dependsOn:
