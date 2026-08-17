@@ -264,8 +264,7 @@ nodes:
           grow: false
           minSize: 1TB
           maxSize: 1TB
-    nodeLabels: &nodeLabels
-      node.longhorn.io/create-default-disk: 'config'
+    nodeLabels: *nodeLabels
     nodeAnnotations: &nodeAnnotations
       node.longhorn.io/default-disks-config: |
         {
@@ -307,7 +306,14 @@ nodes:
             gateway: "10.10.0.1"
         mtu: 1500
         vip:
-          ip: "10.10.209.201"
+          # 10.10.206.201, not SGC's old 10.10.209.201. These three join
+          # equestria, whose endpoint is https://10.10.206.201:6443 — a control
+          # plane advertising a different VIP forms its own election for an
+          # address nothing routes to, and additionalApiServerCertSans does not
+          # cover .209.201, so anything reaching the API that way fails TLS.
+          # Viable as a shared VIP because every node here is /16 inside
+          # 10.10.0.0/16 behind gateway 10.10.0.1 — one broadcast domain.
+          ip: "10.10.206.201"
   - hostname: "othalla"
     ipAddress: "10.10.209.11"
     installDisk: "/dev/nvme0n1"
@@ -329,7 +335,14 @@ nodes:
             gateway: "10.10.0.1"
         mtu: 1500
         vip:
-          ip: "10.10.209.201"
+          # 10.10.206.201, not SGC's old 10.10.209.201. These three join
+          # equestria, whose endpoint is https://10.10.206.201:6443 — a control
+          # plane advertising a different VIP forms its own election for an
+          # address nothing routes to, and additionalApiServerCertSans does not
+          # cover .209.201, so anything reaching the API that way fails TLS.
+          # Viable as a shared VIP because every node here is /16 inside
+          # 10.10.0.0/16 behind gateway 10.10.0.1 — one broadcast domain.
+          ip: "10.10.206.201"
   - hostname: "pegasus"
     ipAddress: "10.10.209.12"
     installDisk: "/dev/nvme0n1"
@@ -351,7 +364,14 @@ nodes:
             gateway: "10.10.0.1"
         mtu: 1500
         vip:
-          ip: "10.10.209.201"
+          # 10.10.206.201, not SGC's old 10.10.209.201. These three join
+          # equestria, whose endpoint is https://10.10.206.201:6443 — a control
+          # plane advertising a different VIP forms its own election for an
+          # address nothing routes to, and additionalApiServerCertSans does not
+          # cover .209.201, so anything reaching the API that way fails TLS.
+          # Viable as a shared VIP because every node here is /16 inside
+          # 10.10.0.0/16 behind gateway 10.10.0.1 — one broadcast domain.
+          ip: "10.10.206.201"
 # Global patches
 patches:
   - "@./patches/global/machine-files.yaml"
