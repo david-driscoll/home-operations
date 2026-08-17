@@ -7,13 +7,16 @@
 
 ## Cluster & Node Topology
 
+The `type:` field in `clusters/<key>.yaml` is authoritative — check it there rather than
+trusting memory.
+
 | Name | Type | Role |
 |---|---|---|
-| **Celestia** | Kubernetes | Primary k8s cluster |
-| **Luna** | Kubernetes | Secondary k8s cluster |
-| **Equestria** | Dockge/Docker | Docker host |
-| **Stargate Command (SGC)** | Dockge/Docker | Docker host; hosts Authentik, 1Password Connect |
-| **Alpha Site** | Dockge/Docker | Non-production / test host |
+| **Equestria** | Kubernetes | The Kubernetes cluster (`clusters/equestria.yaml`) |
+| **Celestia** | Dockge/Docker | Docker host; Forgejo, Arcane, zot |
+| **Luna** | Dockge/Docker | Docker host; voice/Wyoming workloads |
+| **Skystar** | Dockge/Docker | Off-site Docker host (`location: remote`) |
+| **Alpha Site** | Dockge/Docker | Docker host; Authentik, OpenBao — also the non-production target for risky changes |
 
 Proxmox nodes have MLP-themed hostnames (e.g. `twilight-sparkle`). The 1Password vault for all secrets is **`Eris`**.
 
@@ -121,6 +124,6 @@ spec:
 
 - Never commit plaintext secrets — use `op://Eris/…` references in `.mise.toml`, encrypted config in `Pulumi.*.yaml`.
 - Always run `pulumi preview` before `pulumi up`, especially for DNS or provider changes.
-- Test destructive changes on **Alpha Site** before Celestia/Luna/SGC.
+- Test destructive changes on **Alpha Site** before Equestria/Celestia/Luna.
 - `OPClient` writes to the live `Eris` vault — be intentional about create/update/delete calls.
 - Never call cluster-modifying MCP tools or `pulumi up` without explicit user consent.
