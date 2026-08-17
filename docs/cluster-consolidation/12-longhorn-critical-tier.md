@@ -183,12 +183,51 @@ rather than waiting until it visibly breaks.
 
 ### Topology
 
+> **Superseded 2026-08-17 — the cluster is now seven nodes, not four.** SGC was
+> decommissioned and its three nodes wiped and rejoined to equestria as control planes
+> ([18](18-sgc-nodes-join-control-plane.md) complete; etcd 3 → 6). The table below is kept
+> because the settings analysis around it is still valid, but the topology and the
+> "only 3 nodes ever carrying `critical`" arithmetic are not. See *Topology after the
+> merge* underneath it.
+
 | Node | Role | Longhorn disk | Longhorn tags today |
 |---|---|---|---|
 | `hard-hat` | control-plane | Samsung 990 EVO Plus 1TB | *(none)* |
 | `fluttershy` | control-plane | Samsung 990 EVO Plus 1TB | *(none)* |
 | `kerfuffle` | control-plane | Samsung 990 EVO Plus 1TB | *(none)* |
 | `shining-armor` | worker | 1TB (`/dev/sdb`) | *(none)* |
+
+### Topology after the merge (2026-08-17)
+
+| Node | Role now | Role after [19](19-rotate-equestria-control-planes.md) | Longhorn disk | Tags |
+|---|---|---|---|---|
+| `hard-hat` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
+| `fluttershy` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
+| `kerfuffle` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
+| `milky-way` | control-plane | control-plane | 1 TB SATA SSD `TS1TMTS425S` (`/dev/sda1`) | *(none)* |
+| `othalla` | control-plane | control-plane | as above | *(none)* |
+| `pegasus` | control-plane | control-plane | as above | *(none)* |
+| `shining-armor` | worker | worker | 1TB (`/dev/sdb`) | *(none)* |
+
+**This inverts the piece's central assumption.** It was written when the three `critical`
+nodes would be `hard-hat`/`fluttershy`/`kerfuffle`. After [19](19-rotate-equestria-control-planes.md)
+those three become *workers* and the control planes are the ex-SGC machines. Whatever
+"critical" means — follow the control plane, or follow the faster disk — is now a real
+decision rather than an implied one, and the two answers point at different hardware: the
+originals carry Samsung 990 EVO Plus NVMe, the ex-SGC nodes a SATA SSD.
+
+The mechanism is unaffected: `replica-soft-anti-affinity: false` still forces one replica
+per tagged node, so tagging exactly three still yields exactly three replicas. Only *which*
+three changes.
+
+**One caveat on the alternative you might reach for.** Longhorn's CSI parameters offer
+`diskSelector` alongside the `nodeSelector` this piece uses. It is not available here:
+`talconfig.yaml`'s `node.longhorn.io/default-disks-config` annotation requests disk tags
+(`["ssd"]` on the ex-SGC nodes, `["nvme","ssd"]` on the originals) and **they are silently
+not applied** — every node registers `spec.disks[].tags: []`. Verified on `milky-way`, whose
+disk was created minutes after the annotation was read, so this is not a
+stale-registration artifact. Node tags, which this piece uses and applies by direct patch,
+are unaffected.
 
 `replica-soft-anti-affinity: false` (hard — confirmed live) means Longhorn
 will never put two replicas of the same volume on the same node. Combined
