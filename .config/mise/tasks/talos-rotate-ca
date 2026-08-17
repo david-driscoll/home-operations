@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#MISE description="Rotate the Talos API CA — the only way to revoke a leaked talosconfig"
+set -euo pipefail
+
+# Talos has no CRL: a leaked client certificate cannot be revoked, and issuing a
+# replacement admin cert leaves the leaked one working until it expires. Rotating
+# the CA is what invalidates it. See docs/runbooks/talos-ca-rotation.md — read it
+# before running this, particularly step 4, which the upstream docs do not cover.
+
+node="${1:-}"
+if [[ -z "$node" ]]; then
+  echo "usage: mise run talos-rotate-ca <control-plane-ip>" >&2
+  echo "       e.g. mise run talos-rotate-ca 10.10.206.14" >&2
+  exit 2
+fi
+
+echo "==> Dry run against ${node}. Nothing changes yet."
+echo
+talosctl -n "$node" rotate-ca --dry-run=true --talos=true --kubernetes=false
+
+cat <<'WARN'
+
+────────────────────────────────────────────────────────────────────────
+Read the plan above before continuing.
+
+This rotates the Talos API CA only (--kubernetes=false). A leaked
+talosconfig is a Talos-API credential; the Kubernetes CA is a separate
+rotation with its own blast radius. Rotate that too only if a kubeconfig
+leaked.
+
+After it completes you MUST:
+  - talosctl config merge ./talosconfig   (and delete the local copy)
+  - write the new CA into talos/talsecret.sops.yaml
+
+That second one is not optional and not in the upstream docs. talhelper
+renders machine configs from talsecret, and `rotate-ca` cannot update it
+(siderolabs/talos#12816). Leave it stale and the next `genconfig` pushes
+the OLD CA back, undoing this.
+
+Anyone holding a talosconfig you have not recorded loses access.
+────────────────────────────────────────────────────────────────────────
+
+WARN
+
+read -r -p "Type 'rotate' to proceed, anything else to abort: " reply
+if [[ "$reply" != "rotate" ]]; then
+  echo "Aborted. Nothing was changed."
+  exit 1
+fi
+
+echo "==> Rotating."
+talosctl -n "$node" rotate-ca --dry-run=false --talos=true --kubernetes=false
+
+cat <<'NEXT'
+
+==> Rotation command finished. It is NOT remediated until you have:
+
+  1. talosctl config merge ./talosconfig   &&  rm ./talosconfig
+  2. Updated certs.os.{crt,key} in talos/talsecret.sops.yaml (sops, in place)
+  3. Confirmed talhelper genconfig now renders the NEW CA
+  4. Proven the old credential is dead:
+       talosctl --talosconfig ./old-talosconfig -n <node> version   # must FAIL
+
+Step 4 is the gate. See docs/runbooks/talos-ca-rotation.md.
+NEXT
