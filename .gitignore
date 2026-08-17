@@ -39,3 +39,15 @@ stacks/unifi-network/tailscale-acl.json
 
 # Pkl VS Code extension VSIX cache (installed via the mise `pkl-vscode` task)
 .pkl-vscode/
+
+# Talos / Kubernetes client credentials.
+#
+# `talosconfig` carries an unencrypted `os:admin` client certificate and its
+# private key — full machine-API control: config read/write, reboot, reset,
+# and machine secrets. It must never be committed. equestria-cluster ignored
+# it at its repo root; the talhelper migration brought over
+# talos/clusterconfig/.gitignore, whose rule only scopes to that subdirectory,
+# so talos/talosconfig one level up was left uncovered and got committed.
+# Bare patterns here, so they match at any depth.
+kubeconfig
+talosconfig
