@@ -73,7 +73,7 @@ spec:
   timeout: 15m
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   components:
     - ../../../components/postgres

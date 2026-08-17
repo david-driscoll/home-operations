@@ -27,7 +27,7 @@ spec:
   deletionPolicy: Orphan
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   wait: false
   interval: 24h

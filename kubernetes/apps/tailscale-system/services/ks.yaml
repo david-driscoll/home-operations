@@ -23,7 +23,7 @@ spec:
       namespace: tailscale-system
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   postBuild:
     substitute:

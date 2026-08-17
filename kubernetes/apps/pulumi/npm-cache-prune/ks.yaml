@@ -26,7 +26,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   postBuild:
     substitute:
