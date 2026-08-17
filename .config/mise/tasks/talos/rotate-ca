@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Rotate the Talos API CA — the only way to revoke a leaked talosconfig"
 #MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:validate-config"]
 #USAGE arg "<ip>" help="Control-plane IP, as it appears in talos/talconfig.yaml"
 #
 # Not a port. Neither source repo had this task; it was written for the
@@ -13,6 +14,15 @@
 #
 # Read docs/runbooks/talos-ca-rotation.md first — in particular the talsecret
 # step, which no upstream doc covers and which this task cannot do for you.
+#
+# `depends` is talos:validate-config, not talos:genconfig. Both gate on a
+# renderable config and a talosctl matching talenv.yaml, which is worth having
+# before touching the cluster's trust root. But note validate-config itself
+# depends on genconfig, so this DOES render ./clusterconfig/*.yaml as a side
+# effect — from the CURRENT talsecret, i.e. with the OLD CA. Those files are
+# stale the moment the rotation succeeds. That is called out again in the
+# closing output, because freshly-written configs sitting there right after a
+# rotation are exactly what would tempt someone into applying them.
 #
 # No `#MISE confirm=`: that prompts BEFORE the task runs, which would ask for
 # consent before showing the dry run. The gate here is deliberately after it.
@@ -70,5 +80,10 @@ cat <<'NEXT'
        talosctl --talosconfig ./old-talosconfig -n <node> version   # must FAIL
 
 Step 4 is the gate — not this command exiting zero.
+
+./clusterconfig/*.yaml was rendered by the validate-config dependency
+BEFORE the rotation, so it carries the OLD CA. Do not apply it. It
+becomes correct once step 2 lands and you re-run talos:genconfig.
+
 See docs/runbooks/talos-ca-rotation.md.
 NEXT
