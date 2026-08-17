@@ -29,10 +29,17 @@ const dnsServers = {
     use: false,
     internal: true,
   },
+  // SGC was decommissioned and its three nodes wiped on 2026-08-17 (see
+  // docs/cluster-consolidation/22-decommission-sgc.md); this resolver no longer
+  // answers. `use` feeds dns.internalIps in stacks/unifi-network/local-dns.ts,
+  // so while it was true every IoT and Home DHCP lease still handed clients a
+  // dead nameserver in slot 4. Commit 2244059a dropped it from the Talos global
+  // nameservers but not from this path. Kept rather than deleted so the address
+  // stays on record if the entry is ever revived.
   "Stargate Command": {
     ips: ["10.10.209.202"],
-    uptime: true,
-    use: true,
+    uptime: false,
+    use: false,
     internal: true,
   },
   Quad9: {

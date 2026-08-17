@@ -10,7 +10,6 @@ import * as minio from "@pulumi/minio";
 import * as pulumi from "@pulumi/pulumi";
 import { DockgeLxc, getDockageProperties } from "../../components/DockgeLxc.ts";
 import { GlobalResources } from "../../components/globals.ts";
-import { OpenBaoClusterAuth } from "../../components/openbao/clusterAuth.ts";
 import { OpenBaoOidc } from "../../components/openbao/oidc.ts";
 import { ProxmoxBackupServerLxc } from "../../components/ProxmoxBackupServerLxc.ts";
 import { getProxmoxProperties, ProxmoxHost } from "../../components/ProxmoxHost.ts";
@@ -409,22 +408,24 @@ export const celestia = {
 // the HelmRelease config or an env var — see components/openbao/oidc.ts.
 const _openbaoOidc = new OpenBaoOidc("openbao-oidc", { globals });
 
-// Phase 7: SGC's ESO gets its own kubernetes auth mount. One OpenBao serves
-// the estate, but one `kubernetes` mount pins a single API server and rejects
-// every other cluster's ServiceAccount tokens — so it is one mount per
-// cluster. equestria's equivalent still belongs to the bootstrap script and
-// would need `pulumi import` to adopt; see components/openbao/clusterAuth.ts.
+// No OpenBaoClusterAuth here any more. This held `openbao-sgc-auth`, the
+// per-cluster kubernetes auth mount for SGC's ESO — one mount per cluster,
+// because a single `kubernetes` mount pins one API server and rejects every
+// other cluster's ServiceAccount tokens.
 //
-// The API server is addressed by IP on purpose: a *.driscoll.tech name
-// resolves through split-horizon DNS, which would put Technitium in the login
-// path for every SGC secret read. 10.10.209.201 is in the API server cert's
-// SANs and reachable from an openbao pod — both verified before this landed.
-const _openbaoSgcAuth = new OpenBaoClusterAuth("openbao-sgc-auth", {
-  globals,
-  clusterKey: "sgc",
-  clusterTitle: "Cluster: Stargate Command",
-  kubernetesHost: "https://10.10.209.201:6443",
-});
+// SGC was decommissioned and its nodes wiped on 2026-08-17, which took
+// https://10.10.209.201:6443 with it. The resource then failed every refresh
+// with `configured Kubernetes cluster is unreachable`, wedging this whole
+// stack at UpdateFailed — removing it is step 2 of Phase 2 in
+// docs/cluster-consolidation/22-decommission-sgc.md.
+//
+// equestria's equivalent is deliberately absent too: it still belongs to the
+// bootstrap script and would need `pulumi import` to adopt. See
+// components/openbao/clusterAuth.ts.
+//
+// Still outstanding from Phase 2: the `kubernetes-sgc` mount and the `eso-sgc`
+// policy/role are `retainOnDelete`, so Pulumi never reaches them — they need
+// hand-deletion (step 4).
 
 function clusterWideDns(globals: GlobalResources) {
   StandardDns.create(

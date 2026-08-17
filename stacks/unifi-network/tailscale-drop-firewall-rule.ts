@@ -14,7 +14,10 @@ import type { components } from "../../types/tailscale.ts";
  * A single AT&T endpoint IP for one device, together with every source port Tailscale currently
  * advertises for it. Tailscale reports several concurrent STUN endpoints per device, and the NAT
  * mapping behind them rotates every few minutes — so the ports are grouped under the IP rather than
- * spread across one resource each. Only the IP is identity; the ports are payload.
+ * spread across one resource each.
+ *
+ * Neither field is identity any more: the device is. See {@link createTailscaleAttDropFirewallRule}
+ * for why the IP had to stop naming the resource.
  */
 interface DropTarget {
   ip: string;
@@ -47,6 +50,20 @@ function boundName(name: string): string {
   return `${name.slice(0, MAX_LOGICAL_NAME - digest.length - 1)}-${digest}`;
 }
 
+/**
+ * Block the AT&T-side endpoints Tailscale would otherwise use for direct paths, so those devices
+ * fall back to the peer relays.
+ *
+ * One rule per device per IP family — deliberately NOT one per endpoint IP. AT&T rotates these
+ * addresses whenever the delegated prefix or the NAT mapping changes. While the IP was part of the
+ * resource name, every rotation replaced the FirewallPolicy, UniFi minted a fresh rule id, and Home
+ * Assistant's UniFi integration registered a switch entity against the new id while stranding the
+ * old one as `unavailable` forever. 712 of those had piled up by 2026-08-17, which pushed the
+ * HomeKit bridge past the 150-accessory HAP limit and took the whole bridge offline in Apple Home.
+ *
+ * Keying on the device makes an address rotation an in-place update of a stable rule: the `ips` list
+ * and the port group change, the rule id does not, and Home Assistant keeps one entity per rule.
+ */
 export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
   const matcher = new CIDRMatcher([Tailscale.subnets.home]);
   const devices = pulumi.output(getTailscaleClient(globals)).apply(async client => {
@@ -112,98 +129,104 @@ export function createTailscaleAttDropFirewallRule(globals: GlobalResources) {
       pulumi.log.info("No peer relays found, skipping firewall rule creation", globals);
       return;
     }
+    /**
+     * Union the ports observed across one device's endpoints.
+     *
+     * Ports were previously tracked per endpoint IP. Now that a device's addresses share a single
+     * rule, they share a single port group too, so a device's AT&T endpoints are all blocked on the
+     * union of the ports any of them was seen using. These are BLOCK rules aimed at one device's own
+     * ISP endpoints, so widening the set only drops more of what the rule exists to drop.
+     */
+    const unionPorts = (targets: DropTarget[]) => [...new Set(targets.flatMap(t => t.ports))].sort((a, b) => a - b).map(String);
+
     for (const { device, ipv4IpsToDrop, ipv6IpsToDrop } of devices) {
       if (ipv4IpsToDrop.length > 0) {
-        for (const { ip, ports } of ipv4IpsToDrop) {
-          const name = `att-tailscale-drop-ipv4-${device.hostname}-${ip.replace(/\./g, "-")}`;
-          const portGroup = new firewall.FirewallGroup(
-            boundName(`${name}-ports`),
-            {
-              type: "port-group",
-              members: ports.map(String),
-            },
-            {
-              provider: globals.unifiFirewallProvider,
-            },
-          );
+        const name = `att-tailscale-drop-ipv4-${device.hostname}`;
+        const portGroup = new firewall.FirewallGroup(
+          boundName(`${name}-ports`),
+          {
+            type: "port-group",
+            members: unionPorts(ipv4IpsToDrop),
+          },
+          {
+            provider: globals.unifiFirewallProvider,
+          },
+        );
 
-          const _firewallRule = new firewall.FirewallPolicy(
-            boundName(name),
-            {
-              enabled: true,
+        const _firewallRule = new firewall.FirewallPolicy(
+          boundName(name),
+          {
+            enabled: true,
 
-              action: "BLOCK", // REJECT ?
-              connectionStateType: "ALL",
-              protocol: "all",
-              ipVersion: "IPV4",
+            action: "BLOCK", // REJECT ?
+            connectionStateType: "ALL",
+            protocol: "all",
+            ipVersion: "IPV4",
 
-              source: {
-                zoneId: externalZone.id,
-                ips: [ip],
-                portGroupId: portGroup.id,
-                portMatchingType: "OBJECT",
-              },
-              destination: {
-                zoneId: internalZone.id,
-                ips: peerRelays,
-                matchOppositeIps: true,
-              },
-              schedule: {
-                mode: "ALWAYS",
-              },
+            source: {
+              zoneId: externalZone.id,
+              ips: ipv4IpsToDrop.map(t => t.ip),
+              portGroupId: portGroup.id,
+              portMatchingType: "OBJECT",
             },
-            {
-              provider: globals.unifiFirewallProvider,
-              deleteBeforeReplace: true,
+            destination: {
+              zoneId: internalZone.id,
+              ips: peerRelays,
+              matchOppositeIps: true,
             },
-          );
-        }
+            schedule: {
+              mode: "ALWAYS",
+            },
+          },
+          {
+            provider: globals.unifiFirewallProvider,
+            deleteBeforeReplace: true,
+          },
+        );
       }
 
       if (ipv6IpsToDrop.length > 0) {
-        for (const { ip, ports } of ipv6IpsToDrop) {
-          const name = `att-tailscale-drop-ipv6-${device.hostname}-${ip.replace(/:/g, "-")}`;
-          const portGroup = new firewall.FirewallGroup(
-            boundName(`${name}-ports`),
-            {
-              type: "port-group",
-              members: ports.map(String),
-            },
-            {
-              provider: globals.unifiFirewallProvider,
-            },
-          );
+        const name = `att-tailscale-drop-ipv6-${device.hostname}`;
+        const portGroup = new firewall.FirewallGroup(
+          boundName(`${name}-ports`),
+          {
+            type: "port-group",
+            members: unionPorts(ipv6IpsToDrop),
+          },
+          {
+            provider: globals.unifiFirewallProvider,
+          },
+        );
 
-          const _firewallRule = new firewall.FirewallPolicy(
-            boundName(name),
-            {
-              enabled: true,
+        const _firewallRule = new firewall.FirewallPolicy(
+          boundName(name),
+          {
+            enabled: true,
 
-              action: "BLOCK", // REJECT ?
-              connectionStateType: "ALL",
-              protocol: "all",
-              ipVersion: "IPV6",
+            action: "BLOCK", // REJECT ?
+            connectionStateType: "ALL",
+            protocol: "all",
+            ipVersion: "IPV6",
 
-              source: {
-                zoneId: externalZone.id,
-                ips: [ip],
-                portGroupId: portGroup.id,
-                portMatchingType: "OBJECT",
-              },
-              destination: {
-                zoneId: internalZone.id,
-                // TODO: peer-relays that have ipv6?
-              },
-              schedule: {
-                mode: "ALWAYS",
-              },
+            source: {
+              zoneId: externalZone.id,
+              ips: ipv6IpsToDrop.map(t => t.ip),
+              portGroupId: portGroup.id,
+              portMatchingType: "OBJECT",
             },
-            {
-              provider: globals.unifiFirewallProvider,
-              deleteBeforeReplace: true,
+            destination: {
+              zoneId: internalZone.id,
+              // TODO: peer-relays that have ipv6?
             },
-          );
-        }
+            schedule: {
+              mode: "ALWAYS",
+            },
+          },
+          {
+            provider: globals.unifiFirewallProvider,
+            deleteBeforeReplace: true,
+          },
+        );
       }
     }
   });
