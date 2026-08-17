@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#MISE description="Render Talos machine configs into talos/clusterconfig with talhelper"
+#MISE dir="{{config_root}}/talos"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:generate-config`).
+# Renamed to `genconfig` to match the talhelper subcommand it wraps — every
+# other task in this namespace is named after its talhelper verb.
+#
+# This is the root of the namespace: every task that needs a rendered machine
+# config or a working talosconfig `depends` on it, which is what replaces
+# go-task's `deps: [generate-config]`.
+#
+# Outputs land in talos/clusterconfig/, which is gitignored per node (see
+# talos/clusterconfig/.gitignore) — including the generated `talosconfig` that
+# $TALOSCONFIG points at.
+set -Eeuo pipefail
+
+# go-task expressed these as `preconditions:`; mise has no equivalent, so they
+# are inline. The `which talhelper / talosctl` checks the original carried are
+# dropped on purpose — both are pinned in .config/mise.toml [tools], so mise
+# installs them before the task body ever runs.
+[[ -f talconfig.yaml ]] || {
+  printf 'talos:genconfig: talos/talconfig.yaml is missing.\n' >&2
+  exit 1
+}
+
+[[ -f "${MISE_CONFIG_ROOT}/.sops.yaml" ]] || {
+  printf 'talos:genconfig: .sops.yaml is missing at the repo root.\n' >&2
+  exit 1
+}
+
+# talsecret.sops.yaml is SOPS-encrypted, so genconfig cannot decrypt it without
+# the age key. Absent, sops fails with a generic "no matching keys" that names
+# neither the file nor the variable — worth catching by name.
+[[ -f "${SOPS_AGE_KEY_FILE}" ]] || {
+  printf 'talos:genconfig: no age key at %s (SOPS_AGE_KEY_FILE).\n' "${SOPS_AGE_KEY_FILE}" >&2
+  printf 'talos:genconfig: it is gitignored, so a fresh clone or a git worktree will not have it.\n' >&2
+  exit 1
+}
+
+talhelper genconfig

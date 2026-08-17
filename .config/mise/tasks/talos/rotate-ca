@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+#MISE description="Rotate the Talos API CA — the only way to revoke a leaked talosconfig"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:validate-config"]
+#USAGE arg "<ip>" help="Control-plane IP, as it appears in talos/talconfig.yaml"
+#
+# Not a port. Neither source repo had this task; it was written for the
+# 2026-08-17 incident in which talos/talosconfig — an os:admin client
+# certificate and its unencrypted private key — was committed to a public repo.
+#
+# Talos has no CRL. A leaked client certificate cannot be revoked, and issuing
+# a replacement admin cert leaves the leaked one valid until it expires.
+# Rotating the CA is the only thing that invalidates it.
+#
+# Read docs/runbooks/talos-ca-rotation.md first — in particular the talsecret
+# step, which no upstream doc covers and which this task cannot do for you.
+#
+# `depends` is talos:validate-config, not talos:genconfig. Both gate on a
+# renderable config and a talosctl matching talenv.yaml, which is worth having
+# before touching the cluster's trust root. But note validate-config itself
+# depends on genconfig, so this DOES render ./clusterconfig/*.yaml as a side
+# effect — from the CURRENT talsecret, i.e. with the OLD CA. Those files are
+# stale the moment the rotation succeeds. That is called out again in the
+# closing output, because freshly-written configs sitting there right after a
+# rotation are exactly what would tempt someone into applying them.
+#
+# No `#MISE confirm=`: that prompts BEFORE the task runs, which would ask for
+# consent before showing the dry run. The gate here is deliberately after it.
+# shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
+#                            header above; shellcheck cannot see the assignment.
+set -euo pipefail
+
+node="${usage_ip}"
+
+echo "==> Dry run against ${node}. Nothing changes yet."
+echo
+talosctl -n "$node" rotate-ca --dry-run=true --talos=true --kubernetes=false
+
+cat <<'WARN'
+
+────────────────────────────────────────────────────────────────────────
+Read the plan above before continuing.
+
+Scoped to --kubernetes=false. A leaked talosconfig is a Talos-API
+credential; the Kubernetes CA is a separate rotation with its own blast
+radius. Widen it only if a kubeconfig leaked too.
+
+After this completes you MUST:
+  1. talosctl config merge ./talosconfig   &&  rm ./talosconfig
+  2. Write the new CA into talos/talsecret.sops.yaml (sops, in place)
+
+Step 2 is not optional and not in the upstream docs. talhelper renders
+machine configs from talsecret, and `rotate-ca` cannot update it
+(siderolabs/talos#12816 — --with-secrets is proposed, unimplemented).
+Leave it stale and the next `mise run talos:genconfig` renders the OLD
+CA straight back, undoing this.
+
+Anyone holding a talosconfig you have not recorded loses access now.
+────────────────────────────────────────────────────────────────────────
+
+WARN
+
+read -r -p "Type 'rotate' to proceed, anything else to abort: " reply
+if [[ "$reply" != "rotate" ]]; then
+  echo "Aborted. Nothing was changed."
+  exit 1
+fi
+
+echo "==> Rotating."
+talosctl -n "$node" rotate-ca --dry-run=false --talos=true --kubernetes=false
+
+cat <<'NEXT'
+
+==> The command finished. It is NOT remediated until you have:
+
+  1. talosctl config merge ./talosconfig   &&  rm ./talosconfig
+  2. Updated certs.os.{crt,key} in talos/talsecret.sops.yaml
+  3. Confirmed `mise run talos:genconfig` now renders the NEW CA
+  4. Proven the old credential is dead:
+       talosctl --talosconfig ./old-talosconfig -n <node> version   # must FAIL
+
+Step 4 is the gate — not this command exiting zero.
+
+./clusterconfig/*.yaml was rendered by the validate-config dependency
+BEFORE the rotation, so it carries the OLD CA. Do not apply it. It
+becomes correct once step 2 lands and you re-run talos:genconfig.
+
+See docs/runbooks/talos-ca-rotation.md.
+NEXT

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#MISE description="Apply the rendered Talos config to one node"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:genconfig"]
+#USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
+#USAGE flag "--mode <mode>" default="auto" help="talosctl apply-config --mode (auto|no-reboot|reboot|staged|try)"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:apply-node`).
+#
+#   mise run talos:apply-node 10.10.206.10
+#   mise run talos:apply-node 10.10.206.10 --mode reboot
+# shellcheck disable=SC2154  # usage_ip / usage_mode are injected by mise from
+#                            the #USAGE headers above; shellcheck cannot see
+#                            where they are assigned.
+# shellcheck disable=SC2016  # the backticks below are prose emphasis in an
+#                            operator-facing message, not a command
+#                            substitution -- the single quotes are intentional.
+set -Eeuo pipefail
+
+# The original's `talosctl --nodes {{.IP}} get machineconfig` precondition, kept
+# because it is the one that distinguishes "wrong IP" from "node in maintenance
+# mode" — the latter needs talos:add-node (--insecure), not this task, and
+# without the check that surfaces as a bare certificate error.
+talosctl --nodes "${usage_ip}" get machineconfig >/dev/null || {
+  printf 'talos:apply-node: %s did not answer an authenticated Talos API call.\n' "${usage_ip}" >&2
+  printf 'talos:apply-node: a node still in maintenance mode needs `mise run talos:add-node %s`.\n' "${usage_ip}" >&2
+  exit 1
+}
+
+talhelper gencommand apply --node "${usage_ip}" --extra-flags "--mode=${usage_mode}" | bash

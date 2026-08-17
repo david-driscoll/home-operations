@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Upgrade Kubernetes to talenv.yaml's kubernetesVersion"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:validate-config"]
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:upgrade-k8s`).
+#
+# The target version is read from talenv.yaml rather than passed in, so this
+# task always converges on what the repo declares. To step through an
+# intermediate release (Kubernetes does not support skipping a minor), use
+# `mise run talos:upgrade-k8s-to <version>`.
+set -Eeuo pipefail
+
+kubernetes_version="$(yq '.kubernetesVersion' ./talenv.yaml)"
+
+talhelper gencommand upgrade-k8s --extra-flags "--to '${kubernetes_version}'" | bash

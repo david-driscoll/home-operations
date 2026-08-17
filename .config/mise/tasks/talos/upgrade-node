@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#MISE description="Upgrade Talos on one node to talenv.yaml's talosVersion"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:genconfig"]
+#USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:upgrade-node`).
+#
+# Only `genconfig`, matching the original: the whole point of the per-node task
+# is to retry or resume a single node after `talos:upgrade` has already run its
+# validation once.
+# shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
+#                            header above; shellcheck cannot see where it is
+#                            assigned.
+set -Eeuo pipefail
+
+talosctl --nodes "${usage_ip}" get machineconfig >/dev/null || {
+  printf 'talos:upgrade-node: %s did not answer an authenticated Talos API call.\n' "${usage_ip}" >&2
+  exit 1
+}
+
+talhelper gencommand upgrade --node "${usage_ip}" --extra-flags "--timeout=10m" | bash

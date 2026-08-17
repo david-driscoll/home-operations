@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#MISE description="Force-delete a stuck Flux Kustomization by stripping its finalizer, then re-reconcile cluster-apps"
+#USAGE arg "<namespace>" help="Namespace of the Kustomization"
+#USAGE arg "<name>" help="Name of the Kustomization"
+#
+# Ported from equestria-cluster/.taskfiles/flux/Taskfile.yaml (`flux:delete-kustomization`).
+#
+# For a Kustomization wedged in Terminating: removing the finalizer is what lets
+# the delete complete, and `flux delete` on its own will not do it.
+#
+# `cluster-apps` is the parent that owns ./kubernetes/apps in this repo
+# (kubernetes/flux/cluster/ks.yaml), so reconciling it is what re-creates the
+# child if it should still exist. That name is unchanged from the source repo.
+#
+# Follows the AMBIENT kubeconfig/context.
+# shellcheck disable=SC2154  # usage_namespace / usage_name are injected by
+#                            mise from the #USAGE headers above; shellcheck
+#                            cannot see where they are assigned.
+set -Eeuo pipefail
+
+printf 'Removing finalizer from Kustomization %s/%s\n' "${usage_namespace}" "${usage_name}"
+kubectl -n "${usage_namespace}" patch kustomization "${usage_name}" \
+  --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+flux -n "${usage_namespace}" delete kustomization "${usage_name}" --silent
+
+printf 'Reconciling cluster-apps to apply changes\n'
+flux -n flux-system reconcile kustomization cluster-apps
