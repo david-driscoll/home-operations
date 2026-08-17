@@ -10,6 +10,14 @@
       "command": "npx",
       "args": ["-y", "@pulumi/mcp-server", "stdio"]
     },
+    "HA": {
+      "type": "http",
+      "url": "https://home.driscoll.tech/api/mcp",
+      "oauth": {
+        "clientId": "http://localhost:12345",
+        "callbackPort": 12345
+      }
+    },
     "unifi-network": {
       "type": "stdio",
       "command": "op",
