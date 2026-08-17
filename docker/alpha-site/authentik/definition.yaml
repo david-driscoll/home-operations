@@ -5,16 +5,22 @@ kind: ApplicationDefinition
 metadata:
   name: authentik
 spec:
-  # "(Alpha Site)", not bare "Authentik", and this is load-bearing while SGC is
-  # still live. addGatusInstances builds each endpoint's Gatus name from
-  # spec.name, and Gatus enforces global uniqueness on (name, group) across the
-  # whole merged config from every cluster — it PANICS on a duplicate rather than
-  # skipping it, which takes down monitoring for the entire estate, not just this
-  # endpoint. That exact failure happened on 2026-08-13 staging tsidp; see
-  # docs/cluster-consolidation/27-migration-churn-failure-modes.md. SGC's copy
-  # publishes ("Authentik ", "Applications"), so this must not be able to collide.
-  # Rename to plain "Authentik" only once SGC's definition is gone.
-  name: Authentik (Alpha Site)
+  # Plain "Authentik" — the suffix is retired, along with SGC's copy.
+  #
+  # This carried "(Alpha Site)" because addGatusInstances builds each endpoint's
+  # Gatus name from spec.name, and Gatus enforces uniqueness on (name, group)
+  # across the merged config from every cluster — it PANICS on a duplicate rather
+  # than skipping it, taking down monitoring for the whole estate. That happened
+  # on 2026-08-13 staging tsidp; see
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  #
+  # Two things retire it. SGC's authentik ApplicationDefinition is gone with the
+  # `sgc` applications stack, so the ("Authentik ", "Applications") entry it
+  # published no longer exists. And the collision was narrower than this comment
+  # used to claim: verified against the live merged config, SGC's entry sat in
+  # group "Applications" while this one sits in "Infrastructure" (from `category`
+  # below), so the two never shared a key even before the teardown.
+  name: Authentik
   category: Infrastructure
   description: Authentik is an open-source identity provider focused on flexibility and security.
   # The estate's primary SSO name — this host answers for it as of the cutover.
