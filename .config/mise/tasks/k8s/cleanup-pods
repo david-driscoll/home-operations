@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Delete Failed and Succeeded pods across all namespaces"
+#MISE depends=["k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/.taskfiles/k8s/Taskfile.yaml (`kubernetes:cleanup-pods`).
 #
@@ -9,7 +10,10 @@
 # placed yet, and deleting those in bulk would fight the scheduler rather than
 # clean up after it. The description here matches the code.
 #
-# Follows the AMBIENT kubeconfig/context.
+# Cluster comes from $KUBECONFIG in .config/mise.toml (repo-local ./kubeconfig
+# from `mise run talos:kubeconfig`, then ~/.kube/config); k8s:require-kubeconfig
+# fails by name if neither yields a context. This one deletes across ALL
+# namespaces, so check `kubectl config current-context` first.
 set -Eeuo pipefail
 
 for phase in Failed Succeeded; do

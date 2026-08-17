@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Roll a reboot through the control-plane nodes, one at a time"
 #MISE dir="{{config_root}}/talos"
-#MISE depends=["talos:genconfig"]
+#MISE depends=["talos:genconfig", "k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:reboot`).
 #
@@ -15,8 +15,11 @@
 # The unused `MODE` var the original declared is dropped — nothing in the body
 # ever read it.
 #
-# Uses kubectl, so it follows the AMBIENT kubeconfig/context. Unlike the source
-# repo this one does not pin KUBECONFIG to a repo-local file; check
+# Uses kubectl, so it needs a resolvable context: $KUBECONFIG in
+# .config/mise.toml is the repo-local ./kubeconfig (`mise run talos:kubeconfig`)
+# followed by ~/.kube/config, and k8s:require-kubeconfig fails by name when
+# neither entry yields one. That guard does not check WHICH cluster you are
+# pointed at, and this task reboots every control plane it finds — check
 # `kubectl config current-context` before running.
 set -Eeuo pipefail
 

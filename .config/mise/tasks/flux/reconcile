@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Force Flux to pull the three GitRepositories and re-reconcile the root"
+#MISE depends=["k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/Taskfile.yaml (the root `reconcile` task).
 #
@@ -8,9 +9,12 @@
 #   home-operations — kubernetes/apps/flux-system/repositories/home-operations.yaml
 #   vault           — kubernetes/apps/flux-system/repositories/vault.yaml
 #
-# Follows the AMBIENT kubeconfig/context: equestria-cluster's Taskfile pinned
-# KUBECONFIG to a repo-local file and this repo carries no such file, so check
-# `kubectl config current-context` first.
+# Cluster comes from $KUBECONFIG in .config/mise.toml — the repo-local
+# ./kubeconfig (`mise run talos:kubeconfig`) first, your ~/.kube/config behind
+# it. The k8s:require-kubeconfig dependency is this repo's stand-in for the
+# source Taskfile's `preconditions: - test -f {{.KUBECONFIG}}`; it fails by
+# name when neither entry yields a context. It does NOT check which cluster
+# you are pointed at — `kubectl config current-context` first.
 set -Eeuo pipefail
 
 flux --namespace flux-system reconcile source git flux-system

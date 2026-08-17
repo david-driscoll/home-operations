@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 #MISE description="Roll every Deployment, StatefulSet and DaemonSet in kube-system"
+#MISE depends=["k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/.taskfiles/k8s/Taskfile.yaml (`kubernetes:restart-kube`).
-# Follows the AMBIENT kubeconfig/context.
+# Cluster comes from $KUBECONFIG in .config/mise.toml (repo-local ./kubeconfig
+# from `mise run talos:kubeconfig`, then ~/.kube/config); k8s:require-kubeconfig
+# fails by name if neither yields a context.
 set -Eeuo pipefail
 
 kubectl rollout restart deployment,statefulset,daemonset -n kube-system

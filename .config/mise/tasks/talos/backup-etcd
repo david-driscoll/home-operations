@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Take an etcd snapshot from a control-plane node before a major upgrade"
 #MISE dir="{{config_root}}/talos"
+#MISE depends=["k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:backup-etcd`).
 #
@@ -8,8 +9,10 @@
 # .gitignore already carries `*.db*`, so it cannot be committed by accident —
 # but it also is not backed up anywhere. Move it somewhere durable if it matters.
 #
-# Uses kubectl to find a control-plane node, so it follows the AMBIENT
-# kubeconfig/context.
+# Uses kubectl to find a control-plane node, so it needs a resolvable context:
+# $KUBECONFIG in .config/mise.toml is the repo-local ./kubeconfig (`mise run
+# talos:kubeconfig`) followed by ~/.kube/config, and k8s:require-kubeconfig
+# fails by name when neither entry yields one.
 set -Eeuo pipefail
 
 cp_node_ip="$(kubectl get nodes -l node-role.kubernetes.io/control-plane \

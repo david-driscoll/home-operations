@@ -51,3 +51,9 @@ stacks/unifi-network/tailscale-acl.json
 # Bare patterns here, so they match at any depth.
 kubeconfig
 talosconfig
+
+# ...with one exception: the mise task is named after the file it fetches, and
+# "any depth" includes .config/mise/tasks/talos/. Without this line `git add`
+# silently skips the task that CREATES the ignored kubeconfig — no error, it
+# just never appears in the commit.
+!.config/mise/tasks/talos/kubeconfig

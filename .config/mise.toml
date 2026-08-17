@@ -167,12 +167,49 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 # `endpoints: []`, so every command through it would need an explicit
 # `--endpoints`.
 #
-# Note what is deliberately NOT set here: KUBECONFIG. equestria-cluster's
-# Taskfile pinned it to a repo-local ./kubeconfig; this repo carries no such
-# file, and setting it to a missing path would break every kubectl invocation
-# for anyone using their own. The migrated kubectl/flux tasks therefore follow
-# the ambient context — check `kubectl config current-context` first.
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
+
+# The repo-local kubeconfig, FIRST, with the ambient one behind it. Ported from
+# equestria-cluster's `KUBECONFIG: '{{.ROOT_DIR}}/kubeconfig'` — but as a list,
+# and the second entry is the whole point.
+#
+# `mise run talos:kubeconfig` is what creates the first entry (talhelper ->
+# talosctl kubeconfig, out of the bootstrap task it used to be buried in). It is
+# gitignored (repo-root .gitignore, bare `kubeconfig`), so a fresh clone or a
+# git worktree does not have it.
+#
+# WHY NOT the bare single path the source used. Setting KUBECONFIG to one
+# missing file does not make kubectl fall back to ~/.kube/config — the fallback
+# only happens when KUBECONFIG is UNSET. It makes kubectl fall back to
+# localhost:8080, so a bare path would break every ad-hoc `kubectl`, every
+# `kubectl --context admin@sgc`, and both migrated task namespaces for anyone
+# who has not run talos:kubeconfig. That is a much bigger regression than the
+# missing convenience it buys.
+#
+# WHY THE LIST IS SAFE (verified against kubectl 1.34, not assumed):
+#   * A list entry that does not exist is silently skipped, not an error. Before
+#     talos:kubeconfig has ever run, this behaves exactly like the ambient
+#     ~/.kube/config alone — which is the status quo.
+#   * Merging is by name, first file wins. Names only in the ambient file
+#     (admin@sgc, the *-operator.ts.net tailscale contexts) stay listed and stay
+#     selectable with `--context`, which is the estate's documented pattern
+#     (.claude/skills/k8s).
+#   * The one name both files can define is admin@equestria, and talosctl
+#     generates it pointing at talconfig.yaml's endpoint —
+#     https://10.10.206.201:6443, the same server ~/.kube/config already has —
+#     so first-wins resolves to an identical entry.
+#
+# ONE REAL BEHAVIOUR CHANGE, once the repo-local file exists: `kubectl config`
+# WRITES (use-context, set-context) land in the first file of the list rather
+# than in ~/.kube/config. Switching context inside this repo therefore becomes
+# repo-scoped instead of global. It never edits ~/.kube/config, and while the
+# repo-local file is absent the writes go to the ambient file exactly as today.
+#
+# Nothing else in the repo reads this: every Pulumi kubernetes.Provider is
+# handed an explicit `kubeconfig:` string built from a stored cluster
+# definition (stacks/applications/kubernetes.ts, components/openbao/clusterAuth.ts),
+# and no CI workflow runs kubectl.
+KUBECONFIG = "{{config_root}}/kubeconfig:{{env.HOME}}/.kube/config"
 
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"

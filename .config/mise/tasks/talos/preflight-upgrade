@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Read-only gate to run before a Talos or Kubernetes minor upgrade"
 #MISE dir="{{config_root}}/talos"
+#MISE depends=["k8s:require-kubeconfig"]
 #
 # Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:preflight-upgrade`).
 #
@@ -15,8 +16,10 @@
 # The original's `echo "\nSection"` printed a literal backslash-n under bash,
 # whose builtin echo does not interpret escapes without -e. Uses printf here.
 #
-# Uses kubectl, so it follows the AMBIENT kubeconfig/context — this repo does
-# not pin KUBECONFIG the way equestria-cluster's Taskfile did.
+# Uses kubectl, so it needs a resolvable context: $KUBECONFIG in
+# .config/mise.toml is the repo-local ./kubeconfig (`mise run talos:kubeconfig`)
+# followed by ~/.kube/config, and k8s:require-kubeconfig fails by name when
+# neither entry yields one.
 set -Eeuo pipefail
 
 printf 'Target versions from talenv.yaml\n'
