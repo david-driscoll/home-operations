@@ -36,7 +36,7 @@ docker/         # Docker/Dockge stack configs per cluster
 
 **Data flow:** 1Password Connect → `OPClient` (`components/op.ts`) → `GlobalResources` (`components/globals.ts`) → providers → ComponentResources in stacks → optional outputs written back to 1Password.
 
-**Clusters managed:** Celestia, Luna (Kubernetes); Equestria, Stargate Command, Alpha Site (Dockge/Docker).
+**Clusters managed:** Equestria (Kubernetes); Celestia, Luna, Skystar, Alpha Site (Dockge/Docker). Each is defined by a `clusters/<key>.yaml` file whose `type:` field is authoritative.
 
 ## Conventions
 

@@ -15,18 +15,14 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "up:sgc": "mise run vals-run pulumi up --yes --skip-preview -s sgc",
     "up:equestria": "mise run vals-run pulumi up --yes --skip-preview -s equestria",
-    "up": "npm run up:equestria && npm run up:sgc",
-    "down:sgc": "mise run vals-run pulumi down --yes --skip-preview -s sgc",
+    "up": "npm run up:equestria",
     "down:equestria": "mise run vals-run pulumi down --yes --skip-preview -s equestria",
-    "down": "npm run down:equestria ; npm run down:sgc",
-    "cancel:sgc": "mise run vals-run pulumi cancel --yes -s sgc",
+    "down": "npm run down:equestria",
     "cancel:equestria": "mise run vals-run pulumi cancel --yes  -s equestria",
-    "cancel": "npm run cancel:equestria ; npm run cancel:sgc",
-    "refresh:sgc": "mise run vals-run pulumi refresh --yes -s sgc",
+    "cancel": "npm run cancel:equestria",
     "refresh:equestria": "mise run vals-run pulumi refresh --yes  -s equestria",
-    "refresh": "npm run refresh:equestria ; npm run refresh:sgc",
+    "refresh": "npm run refresh:equestria",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
