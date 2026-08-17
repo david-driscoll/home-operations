@@ -110,7 +110,6 @@ pages:
   - $include: homelab.yaml
   - $include: high-seas.yaml
   - $include: servers/alpha-site.yaml
-  - $include: servers/sgc.yaml
   - $include: servers/equestria.yaml
   - $include: servers/celestia.yaml
   - $include: servers/luna.yaml

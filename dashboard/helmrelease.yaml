@@ -100,27 +100,6 @@ spec:
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
 
-      sgc-glance:
-        annotations:
-          reloader.stakater.com/auto: "true"
-        replicas: 1
-        pod:
-          securityContext:
-            runAsNonRoot: false
-        containers:
-          sgc-glance:
-            image:
-              repository: ghcr.io/lukasdietrich/glance-k8s/glance-k8s
-              tag: v0.5.2
-            env:
-              GLANCE_KUBE_CONFIG: /glance.kubeconfig
-            resources:
-              requests:
-                cpu: 10m
-                memory: 128Mi
-              limits:
-                memory: 512Mi
-
       equestria-glance:
         annotations:
           reloader.stakater.com/auto: "true"
@@ -146,35 +125,6 @@ spec:
       ${APP}-glance-kubeconfig:
         forceRename: '${APP}-glance-kubeconfig'
         data:
-          sgc.kubeconfig: |
-            {
-              "kind": "Config",
-              "apiVersion": "v1",
-              "clusters": [
-                {
-                  "cluster": {
-                    "server": "https://sgc-kubeproxy.${TAILSCALE_DOMAIN}"
-                  },
-                  "name": "sgc"
-                }
-              ],
-              "contexts": [
-                {
-                  "context": {
-                    "cluster": "sgc",
-                    "user": "sgc"
-                  },
-                  "name": "sgc"
-                }
-              ],
-              "current-context": "sgc",
-              "users": [
-                {
-                  "name": "sgc",
-                  "user": {}
-                }
-              ]
-            }
           equestria.kubeconfig: |
             {
               "kind": "Config",
@@ -259,11 +209,6 @@ spec:
         name: ${APP}-glance-kubeconfig
         defaultMode: 444
         advancedMounts:
-          sgc-glance:
-            sgc-glance:
-              - path: /glance.kubeconfig
-                subPath: sgc.kubeconfig
-                readOnly: true
           equestria-glance:
             equestria-glance:
               - path: /glance.kubeconfig
@@ -279,13 +224,6 @@ spec:
             port: &port 8080
           extensions:
             port: 8090
-
-      sgc-glance:
-        controller: sgc-glance
-        type: ClusterIP
-        ports:
-          http:
-            port: 8080
 
       equestria-glance:
         controller: equestria-glance
