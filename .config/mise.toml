@@ -9,6 +9,16 @@ kubectl = "1.36.3"
 "github:cloudnative-pg/cloudnative-pg" = { version = "v1.30.0", bin = "kubectl-cnpg" }
 powershell-core = "7.6.5"
 1password-cli = "2.39.0"
+# Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/, ported
+# from equestria-cluster alongside the talos/ tree in 9cd47c0a.
+#
+# `talosctl` MUST stay in step with talos/talenv.yaml's talosVersion. That is
+# not a convention, it is enforced: `mise run talos:validate-config` compares
+# the two and refuses to validate a machine config with a mismatched schema.
+# Renovate bumps talenv.yaml from the ghcr.io/siderolabs/installer tag; this
+# line has to move with it.
+talosctl = "1.13.8"
+talhelper = "3.1.16"
 yq = "4.53.3"
 jq = "1.8.2"
 task = "3.52.0"
@@ -142,6 +152,27 @@ BAO_AUTH_METHOD = "approle"
 BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
 BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
 SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
+
+# Where talhelper writes the generated admin talosconfig, and where every
+# `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in
+# this repo targets equestria too, matching what equestria-cluster's Taskfile
+# did with its `env:` block.
+#
+# This path does not exist until `mise run talos:genconfig` has run —
+# talos/clusterconfig/.gitignore excludes the generated files, including this
+# one. Pointing an env var at a missing file is inert; talosctl only complains
+# when you actually use it.
+#
+# NOT pointed at the tracked talos/talosconfig: that one carries
+# `endpoints: []`, so every command through it would need an explicit
+# `--endpoints`.
+#
+# Note what is deliberately NOT set here: KUBECONFIG. equestria-cluster's
+# Taskfile pinned it to a repo-local ./kubeconfig; this repo carries no such
+# file, and setting it to a missing path would break every kubectl invocation
+# for anyone using their own. The migrated kubectl/flux tasks therefore follow
+# the ambient context — check `kubectl config current-context` first.
+TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 
 # UNIFI_HOST = "unifi.driscoll.tech"
 # UNIFI_USERNAME = "op://Eris/unifipoller/username"

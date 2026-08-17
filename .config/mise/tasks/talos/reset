@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="DESTRUCTIVE: wipe every node and return the cluster to maintenance mode"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:genconfig"]
+#MISE confirm="This DESTROYS the cluster and resets every node to maintenance mode. Continue?"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:reset`).
+# go-task's `prompt:` becomes mise's `confirm=`.
+#
+# STATE and EPHEMERAL are both wiped, so this takes etcd with it. There is no
+# undo and no partial form — `talos:reset-node` is the one-node version.
+set -Eeuo pipefail
+
+talhelper gencommand reset \
+  --extra-flags="--reboot --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false --wait=false" | bash

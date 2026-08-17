@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Validate the rendered Talos machine configs, and that talosctl matches talenv.yaml"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:genconfig"]
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:validate-config`).
+#
+# CHANGED FROM THE ORIGINAL, deliberately. The source version resolved the
+# talosctl to test with as `mise exec talosctl@${expected} -- talosctl version`
+# and then compared that to ${expected} — which mise satisfies by installing
+# exactly the version asked for, so the comparison could never fail. It was a
+# tautology dressed as a drift check.
+#
+# This version compares the talosctl PINNED IN .config/mise.toml against
+# talenv.yaml's talosVersion, which is the drift that actually bites: bump
+# talenv without bumping [tools] and you validate next release's config with
+# last release's schema.
+# shellcheck disable=SC2016  # the backticks below are prose emphasis in an
+#                            operator-facing message, not a command
+#                            substitution -- the single quotes are intentional.
+set -Eeuo pipefail
+
+expected_talos_version="$(yq '.talosVersion' ./talenv.yaml)"
+talosctl_version="$(talosctl version --client | awk '/Tag:/ {print $2}')"
+
+if [[ "${talosctl_version}" != "${expected_talos_version}" ]]; then
+  printf 'talos:validate-config: talosctl is %s but talos/talenv.yaml asks for %s.\n' \
+    "${talosctl_version}" "${expected_talos_version}" >&2
+  printf 'talos:validate-config: bump `talosctl` in .config/mise.toml [tools] to match, then `mise install`.\n' >&2
+  exit 1
+fi
+
+shopt -s nullglob
+configs=(./clusterconfig/*.yaml)
+if ((${#configs[@]} == 0)); then
+  # genconfig ran (it is a dependency) yet produced nothing — that is a
+  # talconfig problem, not a missing-file problem, so say so rather than
+  # reporting a vacuous pass.
+  printf 'talos:validate-config: no ./clusterconfig/*.yaml after genconfig.\n' >&2
+  exit 1
+fi
+
+for cfg in "${configs[@]}"; do
+  printf 'Validating %s\n' "${cfg}"
+  talosctl validate --mode metal --strict --config "${cfg}"
+done
+
+printf 'Talos config validation passed.\n'

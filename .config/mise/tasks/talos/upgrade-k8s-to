@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Upgrade Kubernetes to an explicit intermediate version, without editing talenv.yaml"
+#MISE dir="{{config_root}}/talos"
+#MISE depends=["talos:validate-config"]
+#USAGE arg "<version>" help="Kubernetes version to step to, e.g. v1.35.4"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:upgrade-k8s-to`).
+#
+# Exists because Kubernetes refuses to skip a minor version. Going v1.34 -> v1.36
+# means running this once for v1.35.x and only then `talos:upgrade-k8s`.
+#
+# The version is handed over as a SECOND --env-file that shadows talenv.yaml's
+# kubernetesVersion, so talenv.yaml itself is never edited and never left
+# holding an intermediate value if the run is interrupted.
+# shellcheck disable=SC2154  # usage_version is injected by mise from the
+#                            #USAGE header above; shellcheck cannot see where
+#                            it is assigned.
+set -Eeuo pipefail
+
+tmpfile="$(mktemp)"
+trap 'rm -f "${tmpfile}"' EXIT
+printf 'kubernetesVersion: %s\n' "${usage_version}" > "${tmpfile}"
+
+talhelper gencommand upgrade-k8s --env-file talenv.yaml --env-file "${tmpfile}" | bash

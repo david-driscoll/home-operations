@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#MISE description="Take an etcd snapshot from a control-plane node before a major upgrade"
+#MISE dir="{{config_root}}/talos"
+#
+# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:backup-etcd`).
+#
+# The snapshot lands in talos/ as etcd-pre-upgrade-<timestamp>.db. The repo root
+# .gitignore already carries `*.db*`, so it cannot be committed by accident —
+# but it also is not backed up anywhere. Move it somewhere durable if it matters.
+#
+# Uses kubectl to find a control-plane node, so it follows the AMBIENT
+# kubeconfig/context.
+set -Eeuo pipefail
+
+cp_node_ip="$(kubectl get nodes -l node-role.kubernetes.io/control-plane \
+  -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')"
+
+[[ -n "${cp_node_ip}" ]] || {
+  printf 'talos:backup-etcd: no control-plane node returned — wrong kubeconfig context?\n' >&2
+  exit 1
+}
+
+snapshot="etcd-pre-upgrade-$(date +%Y%m%d-%H%M%S).db"
+printf 'Backing up etcd from %s into talos/%s\n' "${cp_node_ip}" "${snapshot}"
+talosctl -n "${cp_node_ip}" etcd snapshot "${snapshot}"
+printf 'Backup completed successfully\n'
