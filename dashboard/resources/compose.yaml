@@ -9,8 +9,6 @@ services:
       - CF_CREDENTIAL
       - EQUESTRIA_TUNNEL_USERNAME
       - EQUESTRIA_TUNNEL_CREDENTIAL
-      - SGC_TUNNEL_USERNAME
-      - SGC_TUNNEL_CREDENTIAL
       - PROWLARR_APIKEY
       - UNIFI_API_KEY
       - RADARR_API_KEY
@@ -40,9 +38,7 @@ services:
       - GRAFANA_URL
       - AUTHENTIK_URL
       - UPTIME_URL
-      - GLANCE_K8S_SGC_URL
       - GLANCE_K8S_EQUESTRIA_URL
-      - HEADLAMP_SGC_URL
       - HEADLAMP_EQUESTRIA_URL
       - BACKREST_LUNA_URL
       - BACKREST_CELESTIA_URL
@@ -84,15 +80,6 @@ services:
       - "8090:8090"
     networks:
       - dashboard
-
-  sgc-glance:
-    image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.5@sha256:98e567a30ffbe1929e19f6a3df3355a412020aca0479eacd36231dc531cd7562
-    environment:
-      GLANCE_KUBE_CONFIG: /app/config/glance.kubeconfig
-    networks:
-      - dashboard
-    volumes:
-      - ./sgc.kubeconfig.json:/app/config/glance.kubeconfig:ro
 
   equestria-glance:
     image: ghcr.io/lukasdietrich/glance-k8s/glance-k8s:v0.5.5@sha256:98e567a30ffbe1929e19f6a3df3355a412020aca0479eacd36231dc531cd7562

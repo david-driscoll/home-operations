@@ -1,36 +1,33 @@
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-CONFIG=$(cat <<EOF
+cat >equestria.kubeconfig.json <<'EOF'
 {
   "kind": "Config",
   "apiVersion": "v1",
   "clusters": [
     {
       "cluster": {
-        "server": "https://sgc-kubeproxy.opossum-yo.ts.net"
+        "server": "https://equestria-kubeproxy.opossum-yo.ts.net"
       },
-      "name": "sgc"
+      "name": "equestria"
     }
   ],
   "contexts": [
     {
       "context": {
-        "cluster": "sgc",
-        "user": "sgc"
+        "cluster": "equestria",
+        "user": "equestria"
       },
-      "name": "sgc"
+      "name": "equestria"
     }
   ],
-  "current-context": "sgc",
+  "current-context": "equestria",
   "users": [
     {
-      "name": "sgc",
+      "name": "equestria",
       "user": {}
     }
   ]
 }
 EOF
-)
-echo "$CONFIG" > sgc.kubeconfig.json
-echo "$CONFIG" | sed 's/sgc/equestria/g' > equestria.kubeconfig.json
 op run --no-masking -- docker compose up --watch
