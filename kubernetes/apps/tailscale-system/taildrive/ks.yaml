@@ -15,6 +15,11 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
+    # Not for the operator's CRDs -- this app uses none of them. It is for the
+    # `tailscale-oauth` Secret, which operator/tailscale.yaml's ExternalSecret
+    # produces and which this app reads for TS_CLIENT_ID / TS_CLIENT_SECRET.
+    - name: tailscale-operator
+      namespace: tailscale-system
     - name: volsync
       namespace: volsync-system
   path: ./kubernetes/apps/tailscale-system/taildrive
@@ -25,13 +30,25 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: home-operations
+    name: flux-system
     namespace: flux-system
   components:
-    - ../../../components/tailscale
+    # NOTE: components/tailscale is deliberately absent. That component renders
+    # a tailscale-operator Ingress pointing at Service ${APP} port `http`.
+    # Taildrive is not an HTTP app and is not reached through the cluster at
+    # all -- peers talk to it over the tailnet at 100.100.100.100:8080 -- so
+    # that Ingress had no backend and would never go Ready.
     - ../../../components/volsync
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      VOLSYNC_CAPACITY: 50Gi
+      VOLSYNC_CAPACITY: 100Gi
+      # Pinned rather than inherited: the component's defaults are asymmetric
+      # (source 2Gi, destination 8Gi), and a 100Gi restic repo wants more index
+      # cache than the 2Gi source default would give it.
+      VOLSYNC_CACHE_CAPACITY: 10Gi
+      # tailscaled runs as root in this pod, so files landing in the share are
+      # root-owned. The restic mover has to match or it cannot read them.
+      VOLSYNC_PUID: "0"
+      VOLSYNC_PGID: "0"
