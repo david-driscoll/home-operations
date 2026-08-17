@@ -102,6 +102,28 @@ removing them is a no-op now. Leave them and `BlackboxProbeFailingCritical` page
 **two minutes** of shutdown. Same shape for Gatus: 14 pushover-alerting checks plus 9 volsync
 heartbeats.
 
+**5. Two removals are only safe *after* the thing they describe is actually gone.**
+
+- `kubernetes/apps/tailscale-system/services/Update.cs`'s `decommissionedServers` entry (added by
+  #874) excludes `sgc` from the generated tailnet probes. Remove it only **after SGC's machines
+  leave the tailnet** — while the Tailscale API still returns the device, regeneration re-emits all
+  four probes, which then flatline and page at `severity: critical` within two minutes via the
+  non-probe-scoped `BlackboxProbeFailingCritical`. The entry is self-documenting about this; the
+  step just was not in any procedure.
+- `components/constants.ts:120`'s `tag:sgc` and the generated `types/tailscale-grants.d.ts` member
+  are strictly ordered behind the three `acl-manager.ts` usages (`:84`, `:106`, `:687`). Constant
+  first is a compile break; hand-editing the generated type before regenerating just gets reverted
+  by codegen.
+
+**6. Archiving `stargate-command-cluster` is itself a gated step, and more depends on it than §9
+records.** Beyond the sops keys and debris ExternalSecrets that must land first, the crew still
+routes work to that repo (`.crew/config.json`, `manifest.json`, `crew-registry.json`,
+`comment-watch.md`, `routing.md`, `team.md`, and the `link`/`morpheus`/`sparks` charters), and
+`home-operations.code-workspace` depends on the local clone both as a folder root (`:12-13`) and
+for `sops.defaults.ageKeyFile` (`:43`). **Leave the crew references in place until the SGC repo's
+own cleanup PRs have landed** — retiring the routing first means the crew cannot work the repo it
+still needs to change.
+
 ## Depends on / sequencing
 
 **[21](21-repo-consolidation-flux-repoint.md)'s exit gate is met.** Phase C completed
@@ -466,26 +488,74 @@ deliberately; do not let them be discovered later.
 | `cloudflare-dns`, `technitium-dns`, `unifi-dns` HelmReleases **suspended**, Deployments scaled to **0** | SGC ns `network`, 2026-08-16 | Rule 1. If SGC's Flux resumes, they return and re-assert `replicator.driscoll.tech → 10.10.209.203`. Needs a `stargate-command-cluster` commit, or must simply outlive SGC |
 | Stale `replicator.driscoll.tech` A records deleted by hand — `10.10.209.202` (Cloudflare, by record id) and `10.10.209.203` (Technitium) | 2026-08-16 | Was a live three-way split-brain: half of all resolutions returned an address with no broker behind it. Fixed; all five Technitium resolvers, MagicDNS and public now return `10.10.206.203` alone |
 | `sgc/automation-dns`, `sgc/discord-dns`, `sgc/spike-dns` DNSEndpoints **still present** | SGC ns `sgc` | Inert only because rule 1 stopped their controllers. Delete them in the SGC repo during teardown, never by `kubectl` against a running controller |
+| **`pulumi destroy --stack sgc` executed**, 2026-08-17 09:44 | Minio `applications/sgc` | Established from the state checkpoint (~1.1 MB → 21 KB across three writes in one minute) and corroborated live: authentik applications 128 → 113 (the stack owned exactly 15 `ApplicationDefinition`s), users 12 → 11 (the outpost's service account), no `sgc` outpost or service connection left. **The stack still exists in the backend as an empty checkpoint** — `pulumi stack rm sgc` finishes it |
+| `sgc` Stack CR pruned via `# - ./sgc.yaml`, 2026-08-17 12:37 | `kubernetes/apps/pulumi/applications/kustomization.yaml` | Safe **only because the destroy came first**. `destroyOnFinalize: false` means pruning the CR abandons resources rather than destroying them — had the order been reversed, everything the stack owned would now be live and unmanaged with no reconciler |
+| Orphaned Gatus file **deleted by hand**, 2026-08-17 | `dockge-as:/opt/stacks-data/uptime/config/uptime-cluster-apps-sgc.yaml` | Survived the destroy by construction (`addUptimeGatus` → `copyFileToRemote` with no `withRemoveCommand`, `components/helpers.ts:229`). Its estate-wide `Authentik` check needed no relocation after all — alpha-site's own definition already publishes four checks covering the same names |
+
+## Latent, not live — two things that read as emergencies and are not
+
+A 2026-08-17 sweep flagged both of these as imminent breakage. Both were checked against the
+running estate and neither is. Recorded here so the next reader does not re-raise them.
+
+- **`iptv-sync`'s S3 endpoint on SGC.** `kubernetes/apps/equestria/pvr/iptv-sync/secret.yaml:36`
+  sets `AWS_ENDPOINT_URL_S3: https://s3.sgc.${ROOT_DOMAIN}`. The app is **disabled** —
+  `kubernetes/apps/equestria/pvr/kustomization.yaml:8` is `# - ./iptv-sync/ks.yaml`, and no CronJob
+  or ExternalSecret exists in the cluster. It is a landmine for whoever re-enables it after
+  teardown, not a running failure. A warning comment at the line is the right fix, not a scramble.
+- **The `dns.config` Gatus fan-out.** `components/constants.ts:32-37` marks Stargate Command
+  `uptime: true`, and `components/StandardDns.ts:242` would emit a Gatus DNS check per record
+  against `10.10.209.202`. It does not: the generated `uptime-dns-*.yaml` files on `dockge-as`
+  contain **zero** `Stargate` and exactly one group, `DNS @ Discord`. The entry is inert. Remove it
+  as cleanup, not as an alert-storm mitigation.
+
+## Verified clean — negative space worth trusting
+
+Checked 2026-08-17 and found to need no action. Listed so the same ground is not re-audited.
+
+- **Thanos ruler.** `kubernetes/apps/observability/thanos/resources/ruler.yml:8` is
+  `sum by (cluster) (up{job=~".*prometheus.*"}) == 0`. Series *disappearance* yields no vector
+  element, so `== 0` cannot match — SGC's remote-write stopping produces no false page.
+- **Alertmanager** routes on `severity` only, with no `cluster` matcher, and no SGC-scoped silence.
+- **1Password Connect.** `kubernetes/apps/kube-system/external-secrets/stores/onepassword-store.yaml:11`
+  points in-cluster on equestria, not at `op-connect.sgc.driscoll.tech`. All 28 consumers are safe.
+- **Grafana/Prometheus** carry per-cluster `externalLabels` and label-driven dashboard variables
+  that self-prune; the GPU dashboard and intel-gpu-exporter references are comments only.
+- **No arity assumptions.** `components/store/index.ts`'s cluster getters are plain filters; no
+  `replicas: 2` or similar pair-sized value keyed to there being two clusters exists anywhere.
+
+## Additional inventory classes, found 2026-08-17
+
+Not in §1–§9. Each is small; the value is that they are written down.
+
+| Item | Where | Note |
+|---|---|---|
+| Eight `sgc` npm scripts | `stacks/applications/package.json` ~18-29 | `up:sgc`/`down:sgc`/`cancel:sgc`/`refresh:sgc` plus four aggregates. `up` and `refresh` chain with `&&`, so they exit non-zero once `Pulumi.sgc.yaml` goes. Remove **after** the destroy, **before** deleting the config |
+| `Pulumi.sgc.yaml`, and the Stack CR manifest | `stacks/applications/`, `kubernetes/apps/pulumi/applications/sgc.yaml` | Both orphans now — the CR is already commented out of its kustomization |
+| The cluster/type mapping is **wrong**, not merely stale | `CLAUDE.md:39` | Lists Celestia and Luna as Kubernetes and Equestria/SGC as Dockge. It is the reverse. Same defect class as `.github/copilot-instructions.md:15`. §9's "no `sgc` literal found, no action needed" was a `sgc`-only grep and missed `Stargate` |
+| `$cluster = 'sgc'` default in two live-ops cells | `playbook/volsync.ipynb` ~53, ~83 | Builds `/mnt/stash/backup/$cluster/volsync` paths an operator would hit post-teardown |
+| A three-repo invariant that archival makes unmaintainable | `kubernetes/apps/kube-system/openbao-replica/resources/age-recipients.txt:2` | Declares the recipient set must stay identical across this repo, `vault` and `stargate-command-cluster`. Once the third is read-only, a future rotation diverges permanently — and the failure mode the file itself names is an undecryptable dump. Reword to a two-repo invariant as part of archival |
+| `docs/codebase` regeneration is wider than §9 says | `ARCHITECTURE.md:93`, `STRUCTURE.md:133`, `CONCERNS.md:63,67` | §9 names only `STACK.md` and `INTEGRATIONS.md`. Regeneration must cover four more |
+| External-dns **TXT registry** records, not just the A records | Cloudflare | Every SGC-published record has a paired ownership TXT prefixed `sgc.` (`txtPrefix: "${CLUSTER_CNAME}."`). Equestria's external-dns will never reap records owned by `sgc`, and SGC's own is stopped — so nothing cleans either the records or their TXT twins. Grep for `sgc.`-prefixed TXT as well as the A records |
 
 ## Procedure
 
 Ordered. The first four steps are ordering-critical; the rest are genuinely independent of
 each other but all sit behind them.
 
-1. **Confirm the fuses are reconciled green.** #875 (`BACKUP_PLAN_KEYS`, `stacks/authentik`)
+1. **DONE 2026-08-17. Confirm the fuses are reconciled green.** #875 (`BACKUP_PLAN_KEYS`, `stacks/authentik`)
    and #874 (probes and alerts) must both be live in the cluster, not merely merged —
    otherwise steps 5 and 7 break other stacks. Check the `home-operations`, `authentik`,
    `ocracoke` and `gulf-of-mexico` Stacks are `succeeded` at a commit at or after both.
-2. **Stop SGC's external-dns** (rule 1) if it has been resumed since 2026-08-16. Verify zero
+2. **DONE 2026-08-16, verify it has not been resumed. Stop SGC's external-dns** (rule 1) if it has been resumed since 2026-08-16. Verify zero
    pods before continuing.
-3. **Disable `sgc-sync.yaml`** — it lives in `equestria-cluster`, not here (§9). Confirmed
+3. **N/A here. Disable `sgc-sync.yaml`** — it lives in `equestria-cluster`, not here (§9). Confirmed
    absent from `home-operations`; `.github/workflows/` holds only `label-sync.yaml`.
 4. **Scale SGC's authentik to zero** — [07](07-authentik-to-alpha-site.md) step 9, after its
    soak. Re-probe first: SGC was still answering `authentik.${tailscaleDomain}` for skystar's
    outpost as late as 2026-08-16 20:15Z via a serve config nobody could locate, which cleared
    on a pod restart rather than by configuration. Send a marked request and confirm it lands
    on alpha-site, and that skystar's outpost is bound there, before scaling down.
-5. **Destroy the `sgc` Pulumi stack** while SGC is still up (rule 2):
+5. **DONE 2026-08-17 09:44, in the correct order. Destroy the `sgc` Pulumi stack** while SGC is still up (rule 2):
    ```sh
    pulumi stack export --stack sgc > /tmp/sgc-state.json   # read the real ledger, not the program
    pulumi destroy --stack sgc --preview-only               # gate. NOT `pulumi preview`
@@ -493,7 +563,7 @@ each other but all sit behind them.
    ```
    Then remove the Stack CR, `Pulumi.sgc.yaml`, and the `./sgc.yaml` kustomization entry.
    Do **not** pass `--run-program`.
-6. **Delete the orphaned Gatus file by hand.** `addUptimeGatus` calls `copyFileToRemote`
+6. **DONE 2026-08-17. Delete the orphaned Gatus file by hand.** `addUptimeGatus` calls `copyFileToRemote`
    *without* `withRemoveCommand: true` (`components/helpers.ts:229`, option at :114-126), so
    the resource has no delete behaviour and
    `/opt/stacks-data/uptime/config/uptime-cluster-apps-sgc.yaml` survives the destroy on
@@ -531,7 +601,11 @@ each other but all sit behind them.
 13. Update the runbooks/CLAUDE/AGENTS/crew docs in §9 — and repoint
     `home-operations.code-workspace`'s `sops.defaults.ageKeyFile`, which points at
     `../stargate-command-cluster/age.key`. Archival does not break that; deleting the local
-    clone does.
+    clone does. Its `folders` entry at `:12-13` has the same dependency and is
+    not in §9. Also reword `age-recipients.txt:2`'s three-repo invariant, and regenerate the four
+    additional `docs/codebase` files listed above.
+14. **Remove `Update.cs`'s `decommissionedServers` entry — last, and only once SGC's machines have
+    left the tailnet** (rule 5). Doing it earlier regenerates the probes that #874 retired.
 
 ## Exit gate
 
