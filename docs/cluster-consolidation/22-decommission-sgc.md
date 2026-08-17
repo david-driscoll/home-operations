@@ -535,7 +535,67 @@ Not in §1–§9. Each is small; the value is that they are written down.
 | `$cluster = 'sgc'` default in two live-ops cells | `playbook/volsync.ipynb` ~53, ~83 | Builds `/mnt/stash/backup/$cluster/volsync` paths an operator would hit post-teardown |
 | A three-repo invariant that archival makes unmaintainable | `kubernetes/apps/kube-system/openbao-replica/resources/age-recipients.txt:2` | Declares the recipient set must stay identical across this repo, `vault` and `stargate-command-cluster`. Once the third is read-only, a future rotation diverges permanently — and the failure mode the file itself names is an undecryptable dump. Reword to a two-repo invariant as part of archival |
 | `docs/codebase` regeneration is wider than §9 says | `ARCHITECTURE.md:93`, `STRUCTURE.md:133`, `CONCERNS.md:63,67` | §9 names only `STACK.md` and `INTEGRATIONS.md`. Regeneration must cover four more |
+| A branch that can no longer match | `stacks/applications/index.ts:16` | `if (clusterDefinition.key === "sgc" \|\| clusterDefinition.key === "equestria")` — there is no `sgc` stack left to instantiate it. Harmless, but the condition and its comment block want a pass once the iris re-home settles |
 | External-dns **TXT registry** records, not just the A records | Cloudflare | Every SGC-published record has a paired ownership TXT prefixed `sgc.` (`txtPrefix: "${CLUSTER_CNAME}."`). Equestria's external-dns will never reap records owned by `sgc`, and SGC's own is stopped — so nothing cleans either the records or their TXT twins. Grep for `sgc.`-prefixed TXT as well as the A records |
+
+## The two phases, and why the split is where it is
+
+**Decision, David, 2026-08-17:** everything that touches a live network surface — the Tailscale
+ACL, UniFi's DHCP nameserver list, the tailnet tag set — is deferred to **the final
+decommissioning of the cluster**, not done piecemeal as reference cleanup.
+
+That is the right cut, and it is not merely about convenience. Reference rot is safe to remove
+early because nothing reads it. These are different: each one is *live configuration that
+currently works*, describing a cluster that still exists. Removing them early buys nothing and
+each carries its own preview-and-verify cost — `pulumi preview` is untrustworthy on exactly the
+three stacks involved (phantom `StandardDns`/`TailnetKey`/`DeviceTags` deletes), a full `refresh`
+hard-errors on the UniFi read-404, and the tag removal is a strict three-step ordering across a
+constant, its usages and a generated type. Doing them once, together, against a cluster that is
+actually gone, is both cheaper and safer than doing them one at a time against one that is not.
+
+### Phase 1 — reference cleanup, safe while SGC still runs
+
+Steps 1–13 below, minus the items pulled into phase 2. These remove things nothing reads, or
+things whose removal was already gated and cleared. Most are done.
+
+### Phase 2 — final decommissioning, at power-off
+
+Do these as one deliberate exercise, in this order, when the cluster is actually being retired:
+
+1. **Suspend SGC's Flux tree.** Gate for the OpenBao work below — 41 ExternalSecrets authenticate
+   through `kubernetes-sgc`, and deleting the mount first breaks all of them at once.
+2. **`openbao-sgc-auth` out of `stacks/home`**, then `up`. Targeted `--target` refresh only; judge
+   from `pulumi stack history`, never preview.
+3. **`clusters/sgc.yaml`**, and the hand-deletion of every OpenBao path behind it (rule 3 —
+   `retainOnDelete` means Pulumi never reaches them).
+4. **The `kubernetes-sgc` mount and `eso-sgc` policy/role.**
+5. **The Tailscale ACL surface**, strictly ordered: `stacks/unifi-network/acl-manager.ts`'s three
+   usages (`:84` `kubernetesDevices`, `:106-110` the `sgc` zone / `kubeApiIp` / `publicIps` /
+   `clusterNetwork`, `:687` `setExitNode`) — each previewed on its own — then
+   `components/constants.ts:120`'s `tag:sgc`, then regenerate `types/tailscale-grants.d.ts`.
+   Constant-first is a compile break; hand-editing the generated type before regenerating gets
+   reverted by codegen.
+6. **`components/constants.ts:32-37`**, the `"Stargate Command"` DNS server entry. Two consumers:
+   `stacks/unifi-network/local-dns.ts:84` (UniFi's advertised DHCP nameservers, `.slice(0, 4)`) and
+   `components/StandardDns.ts:242` (the Gatus fan-out, currently emitting nothing — see *Latent,
+   not live*). Then `up` on `home`, `gulf-of-mexico` and `ocracoke`.
+7. **`sgc-kubeproxy`** — both the `pulumi` namespace ExternalName and the `tailscale-system` one.
+   Late, because the destroy path needed it while it existed.
+8. **The backup estate, in one change**: `/spike/backup/sgc/`, the three backrest copy jobs, and
+   the nine `sgc-volsync-*` Gatus heartbeats. They stay green after teardown because local copy
+   jobs feed them, then page simultaneously when the data goes.
+9. **`cnpg-sgc-backups`.** `protect: true` + `retainOnDelete: true`, holding a 13-day CNPG recovery
+   window. Pulumi cannot delete it; only a deliberate manual Minio delete can. **This is the real
+   point of no return for SGC's data** and wants an explicit decision, not a step that falls out of
+   a checklist — see the note below.
+10. **Crew references and archival**, in that order, then `Update.cs`'s `decommissionedServers`
+    entry once the machines have left the tailnet.
+
+**On step 9, stated plainly because it is easy to let slide:** SGC's authentik database is still
+the rollback artifact for the alpha-site cutover, and the barman window is one of only two things
+protecting it (the other being the nightly `authentik.sql.gz`). Both die with the cluster. Retiring
+that bucket is the moment authentik's pre-cutover state stops existing anywhere. Piece 07's soak is
+what should decide the date, not this file.
 
 ## Procedure
 
