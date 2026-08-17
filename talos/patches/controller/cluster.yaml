@@ -1,0 +1,31 @@
+cluster:
+  allowSchedulingOnControlPlanes: true
+  apiServer:
+    admissionControl:
+      $$patch: delete
+    extraArgs:
+      # https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+      enable-aggregator-routing: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 2Gi
+      limits:
+        memory: 4Gi
+  controllerManager:
+    extraArgs:
+      bind-address: 0.0.0.0
+  coreDNS:
+    disabled: true
+  etcd:
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
+      quota-backend-bytes: 4294967296
+      election-timeout: 5000
+    advertisedSubnets:
+      - 10.10.0.0/16
+  proxy:
+    disabled: true
+  scheduler:
+    extraArgs:
+      bind-address: 0.0.0.0
