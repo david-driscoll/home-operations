@@ -6,4 +6,8 @@ machine:
       - 149.112.112.112
       - 10.10.10.9
       - 10.10.0.1
-      - 10.10.209.202
+      # 10.10.209.202 — Stargate Command's Technitium — removed 2026-08-17.
+      # SGC was decommissioned and its nodes wiped, so this stopped answering
+      # entirely; it was the fifth entry behind four live resolvers, which is
+      # why nothing visibly broke. The remaining four were each verified to
+      # resolve an internal name before this was dropped.
