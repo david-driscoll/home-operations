@@ -51,8 +51,8 @@ rotation, or leaving nodes in a split trust state.
 
 ## Procedure
 
-Run `mise run talos-rotate-ca` for the guarded version, which does the dry run first and refuses to
-proceed without an explicit confirmation. The underlying steps:
+Run `mise run talos:rotate-ca <control-plane-ip>` for the guarded version — it does the dry run
+first and refuses to proceed without an explicit typed confirmation. The underlying steps:
 
 **1. Dry run. Always.**
 
