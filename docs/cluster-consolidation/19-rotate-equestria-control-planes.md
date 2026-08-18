@@ -318,6 +318,62 @@ unavailable from this replica for the duration of the wipe and comes back once h
 as a worker with the same label (the label is regenerated from `talconfig.yaml`'s `nodeLabels`
 on every `talhelper genconfig`, so it survives the role change without manual reapplication).
 
+### Step 1b — evict the node's Longhorn replicas BEFORE wiping it
+
+**Added 2026-08-17, after running Step 1 on hard-hat without it.** The runbook as written goes
+straight from relocating the CNPG singleton to draining and wiping. That leaves every ordinary
+Longhorn replica on the node to be *rebuilt from surviving copies* after the wipe. Longhorn has a
+first-class way to avoid that, and it is strictly better:
+
+```bash
+kubectl -n longhorn-system patch nodes.longhorn.io <node> \
+  --type merge -p '{"spec":{"evictionRequested":true}}'
+# watch it drain
+kubectl -n longhorn-system get replicas.longhorn.io -o json \
+  | jq -r '[.items[]|select(.spec.nodeID=="<node>")]|length'
+```
+
+| | wipe first (what hard-hat got) | evict first |
+|---|---|---|
+| replicas | rebuilt from surviving copies, under time pressure | copied off while the source is still healthy and readable |
+| redundancy | drops for the duration | never drops |
+| second-fault exposure | real, and the window is long | none — the node is empty before anything destructive |
+
+hard-hat's wipe put **~100 replicas** into rebuild and the backlog was still draining well over an
+hour later, oscillating between 9 and 17 degraded volumes as workloads churned. kerfuffle holds
+**112** — the most of any node — so the difference is not marginal.
+
+Capacity must exist before requesting eviction (`allowScheduling: true` and free space on enough
+other nodes to satisfy `replica-soft-anti-affinity: false`, i.e. one replica per node). Check
+first; an eviction that cannot place replicas stalls rather than failing loudly.
+
+**Do not confuse this with `allowScheduling: false`.** That only stops *new* replicas landing;
+it does not move the existing ones.
+
+### Step 1c — the stuck-detach chain after `cnpg destroy`
+
+`kubectl cnpg destroy` leaves a four-link chain that pins the old replica to the node and blocks
+the drain. Every link has to clear, and none of it is obvious from the drain's error:
+
+```
+Longhorn attachment ticket  →  CSI VolumeAttachment  →  PV finalizers  →  replica pinned
+```
+
+Symptoms, in the order you meet them:
+
+- the old PV sits `Released` with `reclaimPolicy: Delete` and never reclaims
+- `kubectl delete pv` is accepted, then hangs — the PV goes `Terminating` and stays
+- the PV's finalizers include `external-attacher/driver-longhorn-io`
+- a `volumeattachment` still exists for it with `attached=true`, on the node being drained
+- `volumes.longhorn.io` shows `state: attached`, `spec.nodeID: <node>`
+- and `volumeattachments.longhorn.io` holds an **attachment ticket** named for that CSI
+  VolumeAttachment, which re-asserts `nodeID` if you clear it
+
+Clearing the CSI VolumeAttachment and the Longhorn `spec.nodeID` together resolves it; the ticket
+goes with them. Confirm the volume is genuinely stale first — the destroyed instance's PVC is
+replaced by a *new* PV with the same claim name, so check `creationTimestamp` and which PV the
+live PVC is bound to before deleting anything.
+
 ### Step 2 — remove the node from etcd
 
 ```bash
@@ -343,6 +399,19 @@ Longhorn instance-manager PDBs on this node first — a PDB with 0 allowed disru
 holding a volume's last replica is the estate's confirmed failure mode for this exact class of
 maintenance, not a CNPG or Cilium problem. Confirm with the volume's replica list before
 deleting anything.
+
+**Do not delete the PDB (corrected 2026-08-17).** On hard-hat both instance-manager PDBs still
+read `allowed=0` *after* its last replica was relocated, which looks like the blocker and invites
+deleting them. It is a lag, not a lie: Longhorn recalculates once the last-replica condition
+clears, and the drain then evicted both instance-manager pods with no intervention. Fix the
+replica situation and wait; reach for the PDB only if the drain is still blocked once the node
+provably holds no last replicas.
+
+**Judge "last replica" by `failedAt`, not by state.** A replica whose disk has died still reports
+`currentState: running` while carrying a `failedAt` timestamp. Counting running replicas alone
+will tell you a node holds the only copy of something when two healthy copies exist elsewhere —
+it produced exactly that false alarm on pegasus. The correct test is replicas with an empty
+`spec.failedAt`.
 
 ### Step 4 — wipe
 
@@ -383,7 +452,11 @@ how [18](18-sgc-nodes-join-control-plane.md) promoted the SGC nodes in the other
 
 ```bash
 kubectl get nodes <node> -o wide          # Ready, role now <none> (worker)
-kubectl uncordon <node>                    # if not auto-uncordoned by the join
+kubectl uncordon <node>                    # the join does NOT clear the Step 1 cordon
+# Kubernetes keeps the old role label regardless of what Talos rejoined as:
+kubectl label node <node> node-role.kubernetes.io/control-plane-
+# confirm the demotion from Talos, not from the label:
+talosctl -n <node-ip> get machinetype     # must read: worker
 talosctl -n <any-cp-ip> etcd members       # member count as expected, all healthy
 cilium status --wait                       # Cilium ready cluster-wide
 kubectl get volumes.longhorn.io -n longhorn-system \
