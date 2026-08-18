@@ -126,7 +126,11 @@ nodes:
       model: "KINGSTON SNV3S1000G"
     machineSpec:
       secureboot: false
-    controlPlane: true
+    # Rotated out to a worker 2026-08-17 (piece 19). Talos cannot demote a
+    # control plane in place, so this node was drained, removed from etcd,
+    # wiped and rejoined — the same mechanism piece 18 used to promote the
+    # ex-SGC nodes, run in the other direction.
+    controlPlane: false
     userVolumes:
       - name: longhorn
         filesystem:
