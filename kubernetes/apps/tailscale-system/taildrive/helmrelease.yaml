@@ -49,9 +49,15 @@ spec:
           # like an ACL problem and is not one.
           #
           # Same shape as tsidp's fix-permissions init container. Only the state
-          # dir is walked: /shared is already setgid + group-writable from
-          # fsGroup, which is all the file server needs, and -R over a 100Gi
-          # share would be a real cost on every restart.
+          # dir is walked; the share dirs get a non-recursive chown, which is
+          # all the file server needs, and -R over a 100Gi volume would be a
+          # real cost on every restart.
+          #
+          # The share chowns are not redundant with fsGroup. kubelet creates a
+          # missing subPath directory as root:root, and fsGroupChangePolicy
+          # OnRootMismatch skips the recursive walk because the volume root
+          # already matches 65534 -- so a newly added share would land
+          # unwritable by nobody without this.
           fix-permissions:
             image:
               repository: busybox
@@ -61,7 +67,7 @@ spec:
               - -c
               - |
                 chown -R 65534:65534 /var/lib/tailscale
-                chown 65534:65534 /shared
+                chown 65534:65534 /shared /family /documents
             securityContext:
               # Must be explicit: the pod sets runAsNonRoot: true, and the
               # kubelet rejects a container that inherits it while asking for
@@ -124,9 +130,13 @@ spec:
             # LocalAPI call, so it has to be made against a running tailscaled.
             # postStart runs concurrently with the entrypoint and the container
             # is not marked Running until it returns, so retrying the real
-            # command until it succeeds is both the wait and the assertion.
+            # command until it succeeds doubles as the wait for the daemon.
             # It is idempotent: re-running it on every restart just re-asserts
             # a share that is already in prefs.
+            #
+            # It is NOT an assertion that a share is serveable -- the path is
+            # never validated (see the persistence block). It only proves the
+            # LocalAPI is reachable and drive sharing is enabled.
             lifecycle:
               postStart:
                 exec:
@@ -143,6 +153,14 @@ spec:
                         fi
                         sleep 2
                       done
+
+                      # tailscaled is up by the time the loop above exits, so
+                      # the rest need no retry -- and a failure here is a real
+                      # failure (bad share name, drive not enabled) rather than
+                      # a startup race, so it should surface immediately.
+                      tailscale drive share family /family || exit 1
+                      tailscale drive share documents /documents || exit 1
+
                       tailscale drive list
             probes:
               liveness: &probe
@@ -226,10 +244,22 @@ spec:
       data:
         existingClaim: *app
         globalMounts:
-          # Both subPaths are load-bearing. Mounting the volume root at /shared
-          # would put the tailscale state dir -- node key, machine key -- inside
-          # the directory served over WebDAV to every peer with a drive grant.
+          # Every subPath here is load-bearing. Mounting the volume root at a
+          # share path would put the tailscale state dir -- node key, machine
+          # key -- inside a directory served over WebDAV to every peer with a
+          # drive grant.
+          #
+          # A share MUST be mounted here to work. `tailscale drive share` does
+          # not validate the path: cmd/tailscale/cli/drive.go only runs
+          # filepath.Abs, and ipnlocal.DriveSetShare just writes it into prefs
+          # (its only error is ErrDriveNotEnabled). So an unmounted share dir
+          # succeeds at the CLI, lists in `tailscale drive list`, goes Ready,
+          # reconciles green -- and then ENOENTs for every peer that opens it.
           - path: /shared
             subPath: shared
+          - path: /family
+            subPath: family
+          - path: /documents
+            subPath: documents
           - path: *state
             subPath: .tailscale-state
