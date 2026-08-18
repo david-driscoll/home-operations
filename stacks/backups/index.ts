@@ -121,6 +121,16 @@ backupPlanOrchestrator.addBackupPlan(
 backupPlanOrchestrator.addBackupPlan(
   pulumi.output({
     source: "celestia",
+    name: "home-operations",
+    title: "home-operations",
+    path: "/spike/data/minio/home-operations/",
+    repository: "home-operations",
+  }),
+);
+
+backupPlanOrchestrator.addBackupPlan(
+  pulumi.output({
+    source: "celestia",
     name: "pgdump",
     title: "Postgres Dumps",
     path: "/spike/data/pgdump/",
