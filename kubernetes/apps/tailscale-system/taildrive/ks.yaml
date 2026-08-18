@@ -48,7 +48,8 @@ spec:
       # (source 2Gi, destination 8Gi), and a 100Gi restic repo wants more index
       # cache than the 2Gi source default would give it.
       VOLSYNC_CACHE_CAPACITY: 10Gi
-      # tailscaled runs as root in this pod, so files landing in the share are
-      # root-owned. The restic mover has to match or it cannot read them.
-      VOLSYNC_PUID: "0"
-      VOLSYNC_PGID: "0"
+      # Must track the pod's runAsUser/fsGroup (65534/nobody -- see the
+      # helmrelease for why Taildrive forces a non-root uid). If these drift
+      # apart the mover cannot read what the file server writes.
+      VOLSYNC_PUID: "65534"
+      VOLSYNC_PGID: "65534"

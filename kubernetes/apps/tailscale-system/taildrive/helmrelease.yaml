@@ -38,6 +38,41 @@ spec:
         # mount it -- and two tailscaled processes sharing one state dir would
         # fight over the node key regardless. Recreate, not RollingUpdate.
         strategy: Recreate
+        initContainers:
+          # fsGroup alone is not enough. It sets GROUP ownership and adds group
+          # write, but never changes the uid -- so the state dir stays owned by
+          # root, and tailscaled's `chmod` on it fails with EPERM for nobody.
+          # The failure is quiet and badly downstream-shifted: tailscaled falls
+          # back to an in-memory store, never logs in, never receives a netmap,
+          # and the drive share PUT then 403s with "taildrive sharing not
+          # enabled ... add drive:share to nodeAttrs" -- which reads exactly
+          # like an ACL problem and is not one.
+          #
+          # Same shape as tsidp's fix-permissions init container. Only the state
+          # dir is walked: /shared is already setgid + group-writable from
+          # fsGroup, which is all the file server needs, and -R over a 100Gi
+          # share would be a real cost on every restart.
+          fix-permissions:
+            image:
+              repository: busybox
+              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+            command:
+              - /bin/sh
+              - -c
+              - |
+                chown -R 65534:65534 /var/lib/tailscale
+                chown 65534:65534 /shared
+            securityContext:
+              # Must be explicit: the pod sets runAsNonRoot: true, and the
+              # kubelet rejects a container that inherits it while asking for
+              # uid 0.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              capabilities:
+                add:
+                  - CHOWN
+                  - FOWNER
         containers:
           app:
             image:
@@ -139,13 +174,30 @@ spec:
 
     defaultPodOptions:
       securityContext:
-        # tailscaled writes its state dir and creates /var/run/tailscale itself.
-        # Root without any capability is what the technitium tailscale container
-        # already does here; VOLSYNC_PUID/PGID in ks.yaml are pinned to 0 to
-        # match, so the restic mover can read what this pod writes.
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
+        # 65534/nobody, and both halves of that are load-bearing.
+        #
+        # NON-ROOT, because Taildrive refuses to serve as root. tailscaled runs
+        # the file server as the share's owning UNIX account (Share.As), and
+        # drive/driveimpl/remote_impl.go tries sudo, then su, then falls back to
+        # running it in-process behind assertNotRoot() -- which hard-fails on
+        # uid 0. This pod has no sudo in the image and no CAP_SETUID/CAP_SETGID
+        # to su with, so the fallback is the only reachable branch and it must
+        # not be root. Running as nobody puts us on that branch cleanly
+        # ("starting taildrive file server as ourselves") with no capabilities.
+        #
+        # 65534 SPECIFICALLY, because assertNotRoot() calls user.Current(),
+        # which resolves uid -> name out of /etc/passwd. The estate's usual 568
+        # has no passwd entry in this image, so it would not fail open -- it
+        # would fail differently, with "failed to find current user". nobody is
+        # the only non-system account the image actually defines.
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        # Makes the volume group-owned by 65534 so tailscaled can write its
+        # state dir and clients can write the share. VOLSYNC_PUID/PGID in
+        # ks.yaml match, so the restic mover reads what this pod writes.
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
 
@@ -162,6 +214,15 @@ spec:
             port: *health
 
     persistence:
+      # containerboot puts the real socket at /tmp/tailscaled.sock and symlinks
+      # it to /run/tailscale/tailscaled.sock so the CLI finds it on its default
+      # path. /run in this image is root-owned 0755, so as nobody we cannot
+      # create that directory -- and without it the postStart hook's `tailscale`
+      # invocation has no socket to talk to. An emptyDir supplies a writable one.
+      run-tailscale:
+        type: emptyDir
+        globalMounts:
+          - path: /run/tailscale
       data:
         existingClaim: *app
         globalMounts:
