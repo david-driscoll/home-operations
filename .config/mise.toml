@@ -86,6 +86,20 @@ run = ['bash scripts/install-pkl-vscode.sh']
 experimental = true
 prereleases = true
 idiomatic_version_file_enable_tools = ["dotnet"]
+# Put mise's tool paths AHEAD of the ambient PATH.
+#
+# Without this, /opt/homebrew/bin shadows every pinned tool. Found 2026-08-17
+# when `talos:validate-config` refused to run: it compares `talosctl version`
+# against talos/talenv.yaml and reported v1.13.5 while [tools] pins 1.13.8 —
+# because all 15 talos tasks were resolving Homebrew's talosctl, not mise's.
+# The gate was right and the environment was wrong.
+#
+# It is not hypothetical or talosctl-specific: the estate has hit the same
+# shadowing with a Homebrew `pulumi` ahead of mise's. Pinning a tool version in
+# [tools] means nothing if a task can silently run a different binary, and the
+# failure is quiet — a Talos config generated for 1.13.8 validated by a 1.13.5
+# client.
+activate_aggressive = true
 
 [env]
 # Secret values are `vals` references, resolved per command:
