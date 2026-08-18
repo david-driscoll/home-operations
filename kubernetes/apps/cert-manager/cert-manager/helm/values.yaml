@@ -10,3 +10,25 @@ prometheus:
   servicemonitor:
     enabled: true
 enableCertificateOwnerRef: true
+
+# Placement flexibility once allowSchedulingOnControlPlanes goes false. These
+# are Deployments, not DaemonSets -- nothing breaks without the toleration,
+# they would just be confined to the two worker nodes.
+#
+# The chart exposes a SEPARATE tolerations key per Deployment and there is no
+# shared/global one, so all three are set. All three default to [].
+#   * top-level -> cert-manager controller
+#   * webhook   -> cert-manager-webhook
+#   * cainjector-> cert-manager-cainjector
+#
+# `startupapicheck.tolerations` also exists and is deliberately left alone: it
+# is a short-lived Helm hook Job, not a running workload, and it is fine on a
+# worker.
+tolerations: &controlPlaneToleration
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+webhook:
+  tolerations: *controlPlaneToleration
+cainjector:
+  tolerations: *controlPlaneToleration

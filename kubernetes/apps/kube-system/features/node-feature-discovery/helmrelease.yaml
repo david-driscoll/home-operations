@@ -45,3 +45,16 @@ spec:
     recreate: true
   uninstall:
     keepHistory: false
+  values:
+    # nfd-worker is the DaemonSet that has to run on EVERY node -- it is what
+    # publishes the feature labels the GPU plugins and intel-gpu-exporter
+    # select on, so a control plane without it looks featureless.
+    #
+    # Only `worker` is set here. `master.tolerations` already ships a
+    # node-role.kubernetes.io/control-plane entry as a chart default, and
+    # nfd-gc / nfd-topology-updater are not DaemonSets pinned to every node.
+    worker:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule

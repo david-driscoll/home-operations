@@ -47,3 +47,13 @@ spec:
     nodeFeatureRule: true
     sharedDevNum: 5 # Allow 5 containers per GPU (10 total slots across 2 nodes)
     allocationPolicy: balanced # Spread workloads evenly across available GPUs
+    # NOTE: this chart renders a GpuDevicePlugin CR, not a DaemonSet -- the
+    # intel-device-plugin-operator turns the CR into the
+    # intel-gpu-plugin-intel-gpu-plugin DaemonSet. `tolerations` is a passthrough
+    # field on the CR spec (templates/gpu.yaml), so it does reach the pods, but
+    # the operator is the thing that applies it: hand-patching the DaemonSet
+    # would be reverted. Chart default is [], so nothing is being replaced here.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

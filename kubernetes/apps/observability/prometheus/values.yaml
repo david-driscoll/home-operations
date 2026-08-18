@@ -36,6 +36,19 @@ prometheus:
   thanosServiceMonitor:
     enabled: true
   prometheusSpec:
+    # Placement flexibility only. Prometheus is a StatefulSet with a 20Gi
+    # Longhorn PVC (storageSpec below); a toleration widens where it MAY
+    # schedule but does not move the volume, so the pod still follows its data.
+    #
+    # Scope note: this release also renders kube-state-metrics and the
+    # Prometheus operator, which are NOT given tolerations here -- they are
+    # stateless Deployments that are fine on the workers, and the request was
+    # for Prometheus itself. prometheus-node-exporter already tolerates
+    # everything via the chart default.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     scrapeInterval: 60s
     evaluationInterval: 60s
     externalUrl: https://prometheus.${CLUSTER_DOMAIN}

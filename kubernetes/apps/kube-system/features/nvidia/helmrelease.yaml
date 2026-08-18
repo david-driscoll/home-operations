@@ -57,3 +57,24 @@ spec:
     nfd:
       enabled: false
     runtimeClassName: nvidia
+    # One list, three DaemonSets: daemonset-device-plugin.yml, daemonset-gfd.yml
+    # and daemonset-mps-control-daemon.yml all render `.Values.tolerations`
+    # verbatim, so this covers nvidia-device-plugin,
+    # nvidia-device-plugin-gpu-feature-discovery and
+    # nvidia-device-plugin-mps-control-daemon at once.
+    #
+    # Helm REPLACES lists rather than merging them, so the two entries the
+    # chart ships by default are repeated here verbatim. Dropping them would
+    # silently remove the CriticalAddonsOnly and nvidia.com/gpu tolerations.
+    # Keep them in sync when bumping the chart.
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      # Added: keeps the plugins schedulable once the control planes are
+      # tainted by allowSchedulingOnControlPlanes: false.
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

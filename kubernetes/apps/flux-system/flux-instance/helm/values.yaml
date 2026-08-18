@@ -20,6 +20,37 @@ instance:
     path: kubernetes/flux/cluster
   kustomize:
     patches:
+    - # Tolerate the control-plane taint that arrives with
+      # allowSchedulingOnControlPlanes: false.
+      #
+      # This has to be a kustomize patch. The FluxInstance CRD has no
+      # tolerations/nodeSelector field -- checked against the flux-instance
+      # chart 0.58.0 values schema, which exposes only distribution,
+      # components, cluster, commonMetadata, storage, sharding, sync and
+      # kustomize.patches. flux-operator owns these Deployments and reconciles
+      # them continuously, so patching them by hand (or with a postRenderer on
+      # some other release) would simply be reverted; kustomize.patches is the
+      # managed path and is what the rest of this file already uses.
+      #
+      # These are Deployments, so nothing breaks without this -- the four
+      # controllers would just be confined to the two worker nodes. See the PR
+      # description for the argument about whether that is actually desirable
+      # on 4-core/16GiB control planes.
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: all
+        spec:
+          template:
+            spec:
+              tolerations:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: Exists
+                  effect: NoSchedule
+      target:
+        kind: Deployment
+        name: (kustomize-controller|helm-controller|source-controller|notification-controller)
     - # Increase the number of workers
       patch: |
         - op: add

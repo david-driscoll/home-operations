@@ -32,6 +32,13 @@ alertmanager:
 
   alertmanagerSpec:
     replicas: 1
+    # Placement flexibility only. Alertmanager is a StatefulSet with a 1Gi
+    # Longhorn PVC (below); a toleration widens where it MAY schedule but does
+    # not move the volume, so the pod still follows its data.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     alertmanagerConfiguration:
       name: alertmanager
     # alertmanagerConfiguration:

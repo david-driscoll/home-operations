@@ -58,3 +58,48 @@ spec:
         repository: ghcr.io/k8snetworkplumbingwg/multus-cni
         tag: v4.3.0@sha256:ec4e5dfe12b675e4dcbf4e9cd14892f7b4c8ac27aa0dc93cf2e9be0bdd7d764a
       # resources: {}
+
+  # ---- control-plane toleration ------------------------------------------
+  # A postRenderer and not a chart value, verified rather than assumed against
+  # chart 1.3.3 itself. This is a bjw-s common-library chart whose
+  # templates/common.yaml defines a `multus.hardcodedValues` block containing
+  #
+  #     controllers.multus.pod.tolerations:
+  #       - key: CriticalAddonsOnly
+  #         operator: Exists
+  #
+  # and that block WINS the merge against user values. Both of the obvious
+  # value paths were rendered locally with `helm template` and both were
+  # silently ignored, emitting only the hardcoded CriticalAddonsOnly entry:
+  #   * controllers.multus.pod.tolerations  (the app-template per-controller key)
+  #   * defaultPodOptions.tolerations       (the app-template global key)
+  # There is no other toleration hook in the chart -- values.yaml exposes only
+  # image/resources/cni keys. So the rendered manifest is the only lever.
+  #
+  # multus is a CNI DaemonSet: a node without it cannot attach secondary
+  # network interfaces, so it must tolerate the control-plane taint that
+  # arrives with allowSchedulingOnControlPlanes: false.
+  #
+  # The patch REPLACES the whole tolerations list, so CriticalAddonsOnly is
+  # repeated here to preserve it. Re-diff against the chart's hardcodedValues
+  # when bumping the pinned digest above.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: DaemonSet
+              name: multus
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: multus
+              spec:
+                template:
+                  spec:
+                    tolerations:
+                      - key: CriticalAddonsOnly
+                        operator: Exists
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+                        effect: NoSchedule

@@ -112,6 +112,14 @@ spec:
       # and on neither AMD node.
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
+      # The nodeSelector above already confines this to the Intel Quick Sync
+      # nodes; the toleration only stops the control-plane taint from
+      # subtracting any of them once allowSchedulingOnControlPlanes is false.
+      # It does not widen the node set.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       # hostPID is deliberately NOT set, though upstream's README uses it.
       # It is only needed for the per-client breakdown (intel_gpu_top reads
       # /proc/*/fdinfo to attribute usage to processes), which powers

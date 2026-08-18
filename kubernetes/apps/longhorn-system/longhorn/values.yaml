@@ -10,6 +10,36 @@
   # backupTargetCredentialSecret: s3-secret
 preUpgradeChecker:
   upgradeVersionCheck: false
+
+# Tolerate the control-plane taint that arrives when
+# `allowSchedulingOnControlPlanes` is flipped to false in
+# talos/patches/controller/cluster.yaml. Longhorn splits its workloads in two
+# and each half needs a DIFFERENT knob -- setting only one of them leaves the
+# storage plane half-tainted:
+#
+#   * USER-DEPLOYED (longhorn-manager DaemonSet, longhorn-ui,
+#     longhorn-driver-deployer) are rendered by this chart, so they take a
+#     normal pod-spec toleration list. That is `global.tolerations` here, and
+#     it applies on the next Helm upgrade with no preconditions.
+#     Per-component `longhornManager.tolerations` etc. OVERRIDE rather than
+#     merge with this (`default .Values.global.tolerations ...`), so setting
+#     the global once is both sufficient and the safer shape.
+#
+#   * SYSTEM-MANAGED (instance-manager, engine-image, longhorn-csi-plugin,
+#     backing-image-manager, share-manager) are created by longhorn-manager at
+#     runtime, NOT by Helm. They are selected by the
+#     `longhorn.io/managed-by: longhorn-manager` label and are reachable only
+#     through the `taint-toleration` SETTING below -- a pod-spec toleration
+#     here would never reach them.
+#
+# See the detach caveat on defaultSettings.taintToleration below; it is the
+# operationally important half.
+global:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
 persistence:
   defaultDataLocality: best-effort
 defaultSettings:
@@ -50,7 +80,43 @@ defaultSettings:
   storageOverProvisioningPercentage: 600
   upgradeChecker: true
   priorityClass: system-node-critical
-  # taintToleration: key1=value1:NoSchedule; key2:NoExecute
+  # Tolerations for the SYSTEM-MANAGED components only (instance-manager,
+  # engine-image, longhorn-csi-plugin, backing-image-manager, share-manager).
+  # The user-deployed half is `global.tolerations` at the top of this file --
+  # read the comment there first, the two are not interchangeable.
+  #
+  # FORMAT: semicolon-separated `key=value:effect` or `key:effect`. A key with
+  # no `=value` parses to operator Exists, which is what we want here; all
+  # whitespace is stripped before parsing. Verified against parseToleration()
+  # in types/setting.go @ v1.12.x, not just the docs.
+  #
+  # !! DETACH CAVEAT -- READ BEFORE FLIPPING THE TAINT !!
+  # This setting is ACCEPTED but DEFERRED while any Longhorn volume is
+  # attached. Longhorn <= 1.5 hard-rejected the change ("cannot modify
+  # toleration setting before all volumes are detached"); since #7173 (1.6)
+  # the Setting CR write succeeds and updateTaintToleration() in
+  # controller/setting_controller.go instead gates on
+  # AreAllVolumesDetachedState(), logging ErrorInvalidState and requeuing on
+  # the one-hour settingControllerResyncPeriod until every volume is detached.
+  #
+  # So on a cluster with live volumes this half does NOT apply on merge, and
+  # NOTHING SURFACES THE FAILURE: `helm upgrade` succeeds, the HelmRelease goes
+  # Ready, and only longhorn-manager's log says otherwise. Adding a toleration
+  # is not a special case -- any add/change/remove takes the same gate.
+  #
+  # This is survivable rather than urgent because the control-plane taint is
+  # NoSchedule, which does not evict running pods: the existing csi-plugin and
+  # engine-image pods keep running on the control planes. It bites on the next
+  # pod RECREATE there (reboot, Talos upgrade, DaemonSet rollout), after which
+  # they cannot come back and volumes attached via that node break.
+  #
+  # BEFORE flipping allowSchedulingOnControlPlanes, confirm this actually
+  # landed rather than assuming:
+  #   kubectl -n longhorn-system get ds longhorn-csi-plugin \
+  #     -o jsonpath='{.metadata.annotations.longhorn\.io/last-applied-tolerations}'
+  # If that does not contain node-role.kubernetes.io/control-plane, the
+  # setting is still pending and needs a volumes-detached window.
+  taintToleration: node-role.kubernetes.io/control-plane:NoSchedule
   # systemManagedComponentsNodeSelector: "label-key1:label-value1"
   # disableSchedulingOnCordonedNode: false
   # replicaZoneSoftAntiAffinity: false
