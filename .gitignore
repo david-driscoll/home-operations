@@ -51,3 +51,9 @@ stacks/unifi-network/tailscale-acl.json
 # Bare patterns here, so they match at any depth.
 kubeconfig
 talosconfig
+
+# Plaintext SOPS scratch files. The VS Code SOPS extension writes a decrypted
+# twin next to the encrypted file as `.decrypted~<name>.sops.yaml` while you
+# edit it, and leaves it behind if the editor dies. Bare pattern, so it matches
+# at any depth; the trailing glob covers .sops.json/.sops.env twins too.
+.decrypted~*
