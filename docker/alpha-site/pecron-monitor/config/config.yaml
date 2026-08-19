@@ -588,21 +588,218 @@ homeassistant:
   energy_sensors: true
   energy_max_gap_seconds: 1800
 rule_state:
-  initial_state: default
+  # Named state variables, one per unit. The engine keeps ONE monitor-wide state
+  # namespace shared by all three batteries, so each unit needs its own variable.
+  #
+  # The persisted file WINS over initial_state: these values only seed a fresh
+  # file. If /opt/stacks-data/pecron-monitor/data/pecron-monitor-rules.json
+  # already has content, changing them here does nothing until it is removed.
+  initial_state:
+    primary: normal
+    backup: normal
+    spare: normal
   path: /data/pecron-monitor-rules.json
-  _comment: Persisted rules-engine state. Add path to override ~/.pecron-monitor-rules.json.
 rules:
-- name: Low battery — turn off AC
+# These rules deliberately take NO switch actions — every action is set_state.
+#
+# The rule that lived here before ("Low battery — turn off AC", battery_below 10,
+# set_ac false) was removed rather than tuned, for three independent reasons:
+#
+#  1. It was unscoped, so it fired on whichever of the three units hit 10% first,
+#     and the name-derived cooldown then muted it for the other two.
+#  2. set_ac false is a hard mains cut to whatever the homelab has plugged in.
+#     Nothing here performs a graceful shutdown first.
+#  3. Worst, it poisons restore_outputs_after_shutdown below. That feature
+#     snapshots the switch states at the moment a unit goes offline — so a rule
+#     that had already forced AC off would make the snapshot read "AC off", and
+#     the restore worker would then spend its whole retry window holding the
+#     homelab down after mains returned. The feature meant to bring things back
+#     would keep them dark.
+#
+# So restore_outputs_after_shutdown is left as the single owner of the AC/DC
+# switches, and the rules engine only tracks staging. The staging states are
+# visible in the container log ("Rule state changed") and in the JSON file
+# above; they are not published to MQTT.
+#
+# Note the engine has NO temperature condition — over-temperature protection is
+# not expressible here at all. That lives in the Prometheus alerts
+# (docker/alpha-site/prometheus/config/rules/pecron.yml) and can live in Home
+# Assistant, which already has the temperature sensor and the switch entities.
+#
+# Also note set_ups is inert on these units: ups_status_hm is access R in the
+# TSL cache above, so the write is rejected downstream while the rule still
+# reports success and burns its cooldown. Do not write rules against it.
+
+# Startup — re-arm staging so a stale `critical` latch cannot survive a restart
+# and permanently block the escalation rules. init rules run before the first
+# poll with empty telemetry (battery reads -1), so this rule may carry no other
+# condition; `init: true` plus a battery threshold would never fire.
+- name: Startup — reset discharge staging
   condition:
-    battery_below: 10
+    init: true
   action:
-    set_ac: false
-  cooldown_minutes: 30
-  _comment: Example rule. Edit or remove as needed.
+    set_state:
+      primary: normal
+      backup: normal
+      spare: normal
+  cooldown_minutes: 0
+
+# ---- Primary ----------------------------------------------------------------
+# device_key is the ONLY scoping selector the engine has (there is no name-based
+# selector), and the cooldown key is derived from the rule NAME alone with no
+# device component. So every rule below is both device-scoped AND uniquely
+# named: a shared name would let one unit's firing mute the same rule on the
+# other two.
+- name: Primary — enter low staging (25%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
+  condition:
+    battery_below: 25
+    state:
+      primary: normal
+  action:
+    set_state:
+      primary: low
+  cooldown_minutes: 0
+- name: Primary — enter critical staging (12%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
+  condition:
+    battery_below: 12
+    states:
+      primary: [normal, low]
+  action:
+    set_state:
+      primary: critical
+  cooldown_minutes: 0
+# 46.0V on a 16S LiFePO4 pack is ~2.88V/cell — genuinely near empty whatever the
+# percentage claims. SoC drift near empty is the documented reason upstream
+# offers a voltage-based shutdown threshold at all.
+- name: Primary — pack voltage safety net (46.0V)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
+  condition:
+    voltage_below: 46.0
+    states:
+      primary: [normal, low]
+  action:
+    set_state:
+      primary: critical
+  cooldown_minutes: 0
+# 33 points of hysteresis (12 -> 45) so the latch cannot chatter.
+- name: Primary — clear staging (recharged to 45%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
+  condition:
+    battery_above: 45
+    states:
+      primary: [low, critical]
+  action:
+    set_state:
+      primary: normal
+  cooldown_minutes: 0
+
+# ---- Backup ----------------------------------------------------------------
+# device_key is the ONLY scoping selector the engine has (there is no name-based
+# selector), and the cooldown key is derived from the rule NAME alone with no
+# device component. So every rule below is both device-scoped AND uniquely
+# named: a shared name would let one unit's firing mute the same rule on the
+# other two.
+- name: Backup — enter low staging (25%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
+  condition:
+    battery_below: 25
+    state:
+      backup: normal
+  action:
+    set_state:
+      backup: low
+  cooldown_minutes: 0
+- name: Backup — enter critical staging (12%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
+  condition:
+    battery_below: 12
+    states:
+      backup: [normal, low]
+  action:
+    set_state:
+      backup: critical
+  cooldown_minutes: 0
+# 46.0V on a 16S LiFePO4 pack is ~2.88V/cell — genuinely near empty whatever the
+# percentage claims. SoC drift near empty is the documented reason upstream
+# offers a voltage-based shutdown threshold at all.
+- name: Backup — pack voltage safety net (46.0V)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
+  condition:
+    voltage_below: 46.0
+    states:
+      backup: [normal, low]
+  action:
+    set_state:
+      backup: critical
+  cooldown_minutes: 0
+# 33 points of hysteresis (12 -> 45) so the latch cannot chatter.
+- name: Backup — clear staging (recharged to 45%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
+  condition:
+    battery_above: 45
+    states:
+      backup: [low, critical]
+  action:
+    set_state:
+      backup: normal
+  cooldown_minutes: 0
+
+# ---- Spare ----------------------------------------------------------------
+# device_key is the ONLY scoping selector the engine has (there is no name-based
+# selector), and the cooldown key is derived from the rule NAME alone with no
+# device component. So every rule below is both device-scoped AND uniquely
+# named: a shared name would let one unit's firing mute the same rule on the
+# other two.
+- name: Spare — enter low staging (25%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key
+  condition:
+    battery_below: 25
+    state:
+      spare: normal
+  action:
+    set_state:
+      spare: low
+  cooldown_minutes: 0
+- name: Spare — enter critical staging (12%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key
+  condition:
+    battery_below: 12
+    states:
+      spare: [normal, low]
+  action:
+    set_state:
+      spare: critical
+  cooldown_minutes: 0
+# 46.0V on a 16S LiFePO4 pack is ~2.88V/cell — genuinely near empty whatever the
+# percentage claims. SoC drift near empty is the documented reason upstream
+# offers a voltage-based shutdown threshold at all.
+- name: Spare — pack voltage safety net (46.0V)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key
+  condition:
+    voltage_below: 46.0
+    states:
+      spare: [normal, low]
+  action:
+    set_state:
+      spare: critical
+  cooldown_minutes: 0
+# 33 points of hysteresis (12 -> 45) so the latch cannot chatter.
+- name: Spare — clear staging (recharged to 45%)
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key
+  condition:
+    battery_above: 45
+    states:
+      spare: [low, critical]
+  action:
+    set_state:
+      spare: normal
+  cooldown_minutes: 0
 restore_outputs_after_shutdown:
   enabled: true
   shutdown_threshold_pct: 10
-  shutdown_threshold_voltage: null
+  shutdown_threshold_voltage: 44.0
   minimum_offline_seconds: 120
   retry_interval_seconds: 30
   retry_timeout_seconds: 600
