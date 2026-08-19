@@ -15,13 +15,11 @@ services:
       PECRON_STATE_PATH: /data/pecron-state.json
       TZ: ${TIMEZONE}
     volumes:
-      # config.yaml carries the Pecron cloud credentials and per-device auth
-      # keys, so it is hand-copied to /opt/stacks-data/${APP}/config.yaml on the
-      # host (backed up by backrest), never checked into this repo. Mounting the
-      # directory rather than the file means a deploy that lands before the copy
-      # just crash-loops until the file appears, instead of Docker manufacturing
-      # a directory at the file's path and wedging the later copy.
-      - /opt/stacks-data/${APP}:/config:ro
+      # config/config.yaml is the in-repo template: Pulumi renders it (variable
+      # substitution + vals resolving the ref+openbao:// references) and copies
+      # the result here before this compose command ever runs, so the file is
+      # guaranteed to exist — a direct file mount is safe.
+      - ./config/config.yaml:/config/config.yaml:ro
       - /opt/stacks-data/${APP}/data:/data
     networks:
       - dockge_default
