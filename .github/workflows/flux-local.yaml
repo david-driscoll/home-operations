@@ -1,0 +1,138 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: "flate"
+
+# Ported from equestria-cluster on 2026-08-18 as part of piece 21 (repo
+# consolidation). Unchanged except for this note: every path it depends on
+# already exists here -- `kubernetes/flux/cluster` is the Flux entrypoint, and
+# `flate` is pinned to the same v0.5.0 in .config/mise.toml that the action
+# below resolves, so `mise run flate` locally and the `test` job here run the
+# identical command. equestria-cluster's `sgc-sync.yaml` was deliberately NOT
+# ported: it syncs files into the SGC repo, which is being decommissioned
+# (docs/cluster-consolidation/22-decommission-sgc.md).
+
+on:
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-job:
+    name: Pre-Job
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: kubernetes/**
+
+  test:
+    name: Test
+    needs: pre-job
+    runs-on: ubuntu-latest
+    if: ${{ needs.pre-job.outputs.any_changed == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup flate
+        uses: home-operations/flate/action@2862e47ed4d6efebeffb43c7691ee6df06b4536c # v0.5.0
+        with:
+          cache: true
+
+      - name: Run flate test
+        run: flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10
+
+  # `flate test` renders Helm charts. It does NOT run Flux postBuild envsubst
+  # and it does NOT run the external-secrets template engine, so it passes
+  # cleanly on a values file that will take an app to zero pods. It did exactly
+  # that on #2977 and again on #2980 (vault#111). This job runs those two
+  # renderers, which is the only way this class of break is visible before it
+  # reaches the cluster. Not gated on `pre-job`: it also has to run when only
+  # the linter itself changes.
+  eso-values-lint:
+    name: ESO Values Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: scripts/eso-values-lint/go.mod
+          cache-dependency-path: scripts/eso-values-lint/go.sum
+
+      # The linter's own regression tests, including the negative case that
+      # `$${...}` must not be flagged. A checker nobody trusts gets disabled.
+      - name: Test eso-values-lint
+        run: go -C scripts/eso-values-lint test ./...
+
+      - name: Run eso-values-lint
+        run: go -C scripts/eso-values-lint run . "${GITHUB_WORKSPACE}/kubernetes"
+
+  diff:
+    name: Diff
+    needs: pre-job
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    if: ${{ needs.pre-job.outputs.any_changed == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup flate
+        uses: home-operations/flate/action@2862e47ed4d6efebeffb43c7691ee6df06b4536c # v0.5.0
+        with:
+          base: ${{ github.event.repository.default_branch }}
+          cache: true
+
+      - name: Run flate diff
+        id: diff
+        run: |
+          flate diff all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 -o github > diff.patch
+          cat diff.patch >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo 'diff<<EOF'
+            cat diff.patch
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Add Comment
+        if: ${{ steps.diff.outputs.diff != '' }}
+        continue-on-error: true
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59 # v3.12
+        with:
+          message-id: "${{ github.event.pull_request.number }}/kubernetes"
+          message-failure: Diff was not successful
+          message: |
+            ${{ steps.diff.outputs.diff }}
+
+  flux-local-status:
+    name: flate Success
+    needs: ["test", "diff", "eso-values-lint"]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Any jobs failed?
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
+
+      - name: All jobs passed or skipped?
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"

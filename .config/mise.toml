@@ -75,6 +75,20 @@ run = [
   'flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10',
 ]
 
+[tasks.eso-values-lint]
+description = 'Lint configMapGenerator-slurped files for live envsubst/Go-template in comments'
+# The half `flate` cannot see: Flux postBuild envsubst and the external-secrets
+# `templateAs: Values` engine both treat a comment as live text, so a `${VAR}`
+# or `{{ ... }}` inside one is executed. Twice the cause of a CrowdSec outage
+# (vault#111). Kept in step with the `eso-values-lint` step in .config/hk.pkl
+# and the job of the same name in .github/workflows/flux-local.yaml.
+#
+# `go -C` is required (nested module, no go.mod at the repo root) and it also
+# changes the program's working directory, so the target must be absolute.
+run = [
+  'go -C scripts/eso-values-lint run . "$(git rev-parse --show-toplevel)/kubernetes"',
+]
+
 [tasks.pkl-vscode]
 description = 'Install the Pkl VS Code extension (not on the marketplace; installed from VSIX)'
 # Ported from rocketsurgeonsguild/Specular. Not part of [hooks] postinstall on
