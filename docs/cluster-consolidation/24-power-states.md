@@ -240,6 +240,15 @@ needs a capacity check per node-set once the specific shutdown list is final.
    `longhorn-critical` (always-resident) vs. plain `longhorn` (Tier 2, no
    Battery guarantee at all) — Home Assistant is the one worked example here;
    mosquitto/matter/technitium need the same call made explicitly.
+   **Answered with a caveat, 2026-08-19**, in
+   [12](12-longhorn-critical-tier.md#which-volumes-get-longhorn-critical): every Tier-1
+   PVC is enumerated and measured there. `technitium`/`tsidp`/`tsiam` are
+   `longhorn-critical` unconditionally; `home-assistant`/`mosquitto`/`matter` are
+   recommended `longhorn-critical` until this file's float model is actually built,
+   because `longhorn-controlplane` as specced gives them a single control-plane replica
+   during the one window it exists for. The same audit closes §1's unresolved
+   observability-storage question: ≈178 GiB of high-write data, so it stays on the
+   default class.
 6. **PoE/host-shutdown ordering for Low Power's node list** — beyond
    `fluttershy`, which other hosts qualify as "power-hungry," and what's the
    capacity floor once they're down (open item under "Node shutdown" above).

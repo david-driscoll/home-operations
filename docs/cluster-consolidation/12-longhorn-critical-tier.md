@@ -7,6 +7,19 @@ Part of the [cluster consolidation plan](README.md) for
 [20-low-power-tier.md](20-low-power-tier.md). Read this file standalone — it
 does not assume you've read the vault issue or the discovery comments.
 
+> **Status 2026-08-19 — ready to execute.** [19](19-rotate-equestria-control-planes.md) is
+> done, so the topology this piece was blocked on is final. The design below is unchanged;
+> what has been added is an ordered, copy-pasteable procedure
+> (*[The fix — executable procedure](#the-fix--executable-procedure)*), a per-phase
+> *[Rollback](#rollback)*, the volume list under
+> *[Which volumes get `longhorn-critical`](#which-volumes-get-longhorn-critical)*, and
+> *[What still blocks piece 20](#what-still-blocks-piece-20)*. Sections dated 2026-08-13 or
+> earlier describe a four-node cluster and are kept for their reasoning, not their state;
+> where an older section and a 2026-08-19 one disagree, the later one is correct. Three
+> specific corrections are called out inline: the default StorageClass is **not** Helm-owned
+> and needs no manual recreate, Tier-1's real data is **≈4.9 GiB** rather than 68 GB, and
+> `taint-toleration` is **set but not applied**.
+
 ## What this piece is for
 
 The plan needs a **low-power mode**: equestria running on its three control
@@ -21,8 +34,9 @@ last copy."
 This piece makes that impossible **by construction**, not by runbook
 discipline:
 
-1. Tag the 3 control planes `critical` and the 1 current worker `bulk`
-   (Longhorn node tags — a separate concept from Kubernetes node labels).
+1. Tag the 3 control planes `critical` and the workers `bulk` (Longhorn node
+   tags — a separate concept from Kubernetes node labels). Post-[19](19-rotate-equestria-control-planes.md)
+   that is `milky-way`/`othalla`/`pegasus` and four workers respectively.
 2. Add a `longhorn-critical` StorageClass: 3 replicas, restricted to
    `critical`-tagged nodes. With Longhorn's hard replica anti-affinity this
    places **exactly one replica per control plane** — no scheduling gap is
@@ -159,6 +173,11 @@ exists." Flag this prominently to whoever picks up 13/15.
 
 ### 4. Today's apparent safety is a topology accident, not a guarantee — and it's about to disappear
 
+> **It has disappeared.** [19](19-rotate-equestria-control-planes.md) completed 2026-08-19.
+> The pigeonhole argument below no longer holds, and *Which volumes get `longhorn-critical`*
+> measures what replaced it: not one Tier-1 volume has all three replicas on a control
+> plane, and one Tier-2 volume has none at all. Kept for the reasoning, not the state.
+
 Equestria today has **3 control planes and exactly 1 worker**
 (`hard-hat`, `fluttershy`, `kerfuffle` control-plane; `shining-armor`
 worker — verified live, `talos/talconfig.yaml` agrees). With hard replica
@@ -179,7 +198,8 @@ day the cluster is bigger and the temptation to trust the old behavior is
 strongest. This is the concrete argument for doing this structurally now
 rather than waiting until it visibly breaks.
 
-## Current live state (verified 2026-08-13, `admin@equestria`)
+## Current live state (first written 2026-08-13; topology and settings
+re-verified against `admin@equestria` on 2026-08-19)
 
 ### Topology
 
@@ -187,8 +207,8 @@ rather than waiting until it visibly breaks.
 > decommissioned and its three nodes wiped and rejoined to equestria as control planes
 > ([18](18-sgc-nodes-join-control-plane.md) complete; etcd 3 → 6). The table below is kept
 > because the settings analysis around it is still valid, but the topology and the
-> "only 3 nodes ever carrying `critical`" arithmetic are not. See *Topology after the
-> merge* underneath it.
+> "only 3 nodes ever carrying `critical`" arithmetic are not. See *Topology after piece 19*
+> underneath it.
 
 | Node | Role | Longhorn disk | Longhorn tags today |
 |---|---|---|---|
@@ -197,43 +217,77 @@ rather than waiting until it visibly breaks.
 | `kerfuffle` | control-plane | Samsung 990 EVO Plus 1TB | *(none)* |
 | `shining-armor` | worker | 1TB (`/dev/sdb`) | *(none)* |
 
-### Topology after the merge (2026-08-17)
+### Topology after piece 19 (verified live 2026-08-19)
 
-| Node | Role now | Role after [19](19-rotate-equestria-control-planes.md) | Longhorn disk | Tags |
+[19](19-rotate-equestria-control-planes.md) is **done**. The cluster is seven nodes: three
+control planes (the ex-SGC trio) and four workers, etcd at 3 members. Verified with
+`kubectl get nodes` and `kubectl -n longhorn-system get nodes.longhorn.io` on 2026-08-19:
+
+| Node | Role | Longhorn disk ID | Block device | Hardware | Tags today |
+|---|---|---|---|---|---|
+| `milky-way` | control-plane | `default-disk-080100000000` | `sda1` (8:1) | Transcend `TS1TMTS425S` SATA | *(none)* |
+| `othalla` | control-plane | `default-disk-080100000000` | `sda1` (8:1) | Transcend `TS1TMTS425S` SATA | *(none)* |
+| `pegasus` | control-plane | `default-disk-080100000000` | `sda1` (8:1) | Transcend `TS1TMTS425S` SATA | *(none)* |
+| `hard-hat` | worker | `default-disk-1030400000000` | `nvme0n1p4` (259:4) | Kingston NVMe | *(none)* |
+| `fluttershy` | worker | `default-disk-1030100000000` | `nvme0n1p1` (259:1) | Samsung 990 EVO Plus 1TB (9–12 % wear) | *(none)* |
+| `kerfuffle` | worker | `default-disk-1030100000000` | `nvme0n1p1` (259:1) | Samsung 990 EVO Plus 1TB (9–12 % wear) | *(none)* |
+| `shining-armor` | worker | `default-disk-081100000000` | `sdb1` (8:17) | 1 TB, VM-backed | *(none)* |
+
+The disk ID is Longhorn's encoding of the backing block device's `major:minor` in hex —
+`0801` → 8:1 (`sda1`), `10304` → 0x103:0x04 = 259:4 (`nvme0n1p4`) — and it agrees with the
+hardware inventory, which is how the two columns were cross-checked rather than assumed.
+
+**Every fast Longhorn disk is now on a worker, and every slow, hot one is on a control
+plane.** That is the inversion this piece has to design around. It is settled below in
+*Answering "which three"*: `critical` stays on the control planes, and the weight of the
+work shifts to Phase 4 (the old Step 3).
+
+Live per-node Longhorn state the same day. Note that `hard-hat` and `shining-armor` are
+already scheduled past their physical size — that is `storageOverProvisioningPercentage:
+600`, not an error — and that `kerfuffle` is nearly empty because it was the last node
+piece 19 rotated:
+
+| Node | Disk max | Available | Scheduled | Replicas |
 |---|---|---|---|---|
-| `hard-hat` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
-| `fluttershy` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
-| `kerfuffle` | control-plane | **worker** | Samsung 990 EVO Plus 1TB | *(none)* |
-| `milky-way` | control-plane | control-plane | 1 TB SATA SSD `TS1TMTS425S` (`/dev/sda1`) | *(none)* |
-| `othalla` | control-plane | control-plane | as above | *(none)* |
-| `pegasus` | control-plane | control-plane | as above | *(none)* |
-| `shining-armor` | worker | worker | 1TB (`/dev/sdb`) | *(none)* |
+| `milky-way` | 930 GiB | 697 GiB | 532 GiB | 69 |
+| `othalla` | 930 GiB | 783 GiB | 684 GiB | 38 |
+| `pegasus` | 930 GiB | 731 GiB | 455 GiB | 63 |
+| `hard-hat` | 930 GiB | 624 GiB | 1009 GiB | 106 |
+| `fluttershy` | 930 GiB | 718 GiB | 519 GiB | 59 |
+| `kerfuffle` | 930 GiB | 912 GiB | 12 GiB | 2 |
+| `shining-armor` | 930 GiB | 325 GiB | 998 GiB | 79 |
 
-**This inverts the piece's central assumption.** It was written when the three `critical`
-nodes would be `hard-hat`/`fluttershy`/`kerfuffle`. After [19](19-rotate-equestria-control-planes.md)
-those three become *workers* and the control planes are the ex-SGC machines. Whatever
-"critical" means — follow the control plane, or follow the faster disk — is now a real
-decision rather than an implied one, and the two answers point at different hardware: the
-originals carry Samsung 990 EVO Plus NVMe, the ex-SGC nodes a SATA SSD.
-
-The mechanism is unaffected: `replica-soft-anti-affinity: false` still forces one replica
-per tagged node, so tagging exactly three still yields exactly three replicas. Only *which*
-three changes.
+All seven nodes are back to `allowScheduling: true` — piece 19's `allowScheduling: false`
+stopgap on `milky-way`/`pegasus` has been undone, so nothing is masking the placement
+problem any more.
 
 **One caveat on the alternative you might reach for.** Longhorn's CSI parameters offer
 `diskSelector` alongside the `nodeSelector` this piece uses. It is not available here:
-`talconfig.yaml`'s `node.longhorn.io/default-disks-config` annotation requests disk tags
-(`["ssd"]` on the ex-SGC nodes, `["nvme","ssd"]` on the originals) and **they are silently
-not applied** — every node registers `spec.disks[].tags: []`. Verified on `milky-way`, whose
-disk was created minutes after the annotation was read, so this is not a
-stale-registration artifact. Node tags, which this piece uses and applies by direct patch,
-are unaffected.
+every node registers `spec.disks[].tags: []` despite `talos/talconfig.yaml` requesting disk
+tags (`["ssd"]` on the ex-SGC nodes, `["nvme","ssd"]` on the originals). The reason is not
+a stale registration — it is that the whole annotation path is switched off. In
+`controller/kubernetes_node_controller.go` at v1.12.1, `syncDefaultDisks()` opens with:
 
-`replica-soft-anti-affinity: false` (hard — confirmed live) means Longhorn
-will never put two replicas of the same volume on the same node. Combined
-with only 3 nodes ever carrying the `critical` tag, that's what forces
-exactly one `longhorn-critical` replica per control plane — there's no
-fourth `critical` node for a spillover replica to land on.
+```go
+requireLabel, err := knc.ds.GetSettingAsBool(types.SettingNameCreateDefaultDiskLabeledNodes)
+...
+if !requireLabel { return nil }
+// only apply default disks if there is no existing disk
+if len(node.Spec.Disks) != 0 { return nil }
+```
+
+`createDefaultDiskLabeledNodes: false` is set deliberately in
+`kubernetes/apps/longhorn-system/longhorn/values.yaml`, so the
+`node.longhorn.io/default-disks-config` annotation is never read at all — the `config`
+label and the annotation are both present on all seven Kubernetes nodes and both inert.
+Even flipping the setting would not retag the existing disks, because of the second guard.
+Disk tags are therefore off the table without a disk re-registration, and this piece uses
+**node** tags, which take a different code path with no such gate (see Phase 1).
+
+`replica-soft-anti-affinity: false` (hard — confirmed live) means Longhorn will never put
+two replicas of the same volume on the same node. Combined with exactly 3 nodes carrying
+the `critical` tag, that is what forces exactly one `longhorn-critical` replica per control
+plane — there is no fourth `critical` node for a spillover replica to land on.
 
 ### Answering "which three" with measurements (2026-08-18)
 
@@ -307,113 +361,278 @@ progress each time. Lowered to **2** in
 `kubernetes/apps/longhorn-system/longhorn/values.yaml`; two rebuilds that finish beat five
 that restart. This matters most on the remaining rotations — `kerfuffle` holds ~80 replicas.
 
-### Implementation constraint step 3 has to route around
+### How the default class actually gets updated — the constraint, corrected
 
-**StorageClass `parameters` are immutable.** Turning on `persistence.defaultNodeSelector`
-changes the auto-created `longhorn` class's parameters, so `helm upgrade` **fails** rather
-than updating it — the class has to be deleted and recreated. Existing PVs are unaffected
-(they are already bound), but any PVC created in that window fails, so it wants a quiet
-moment rather than a routine reconcile.
+The paragraph this replaces said that turning on `persistence.defaultNodeSelector` makes
+`helm upgrade` **fail**, because StorageClass `parameters` are immutable. The immutability
+is real. The conclusion is wrong, and it matters, because it makes the default-class
+change (old Step 3, now Phase 4) look like a
+hand-surgery job when it is not.
 
-The same applies to adding a selector to the hand-written classes in
-`kubernetes/apps/longhorn-system/storageclass/snapshot.yaml` (`longhorn-cache`,
-`longhorn-snapshot`, `longhorn-local`) — and note that Kustomization is configured
-`force: false` (`storageclass/ks.yaml:20`), so Flux will surface an immutable-field error
-rather than recreating them. Either flip `force: true` for that Kustomization or delete the
-classes by hand as part of the change.
+**Helm does not own the `longhorn` StorageClass.** Verified live 2026-08-19:
 
-**A third trap, from landing PR #912:** `longhorn-manager`'s DaemonSet ships
-`updateStrategy.rollingUpdate.maxUnavailable: 100%`. Any change to these values rolls **all
-seven managers at once**, leaving the cluster with no Longhorn control plane for ~90 s. It
+```console
+$ kubectl get sc longhorn -o jsonpath='{.metadata.labels}{.metadata.annotations.meta\.helm\.sh/release-name}'
+                       # empty: no Helm labels, no Helm release annotation
+
+$ kubectl -n longhorn-system get cm longhorn-storageclass -o jsonpath='{.metadata.labels}'
+{"app.kubernetes.io/managed-by":"Helm",...,"helm.toolkit.fluxcd.io/name":"longhorn",...}
+```
+
+The chart's `templates/storageclass.yaml` renders a **ConfigMap** named
+`longhorn-storageclass` whose `data."storageclass.yaml"` is the class manifest. It never
+renders a StorageClass object. `longhorn-manager` watches that ConfigMap and applies it,
+and it handles the immutability itself by deleting and recreating —
+`controller/kubernetes_configmap_controller.go` at `longhorn-manager@v1.12.1`:
+
+```go
+if !needToUpdateStorageClass(storageclassYAML, existingSC) { return nil }
+storageclass, err := buildStorageClassManifestFromYAMLString(storageclassYAML)
+...
+err = kc.ds.DeleteStorageClass(types.DefaultStorageClassName)
+...
+storageclass, err = kc.ds.CreateStorageClass(storageclass)
+```
+
+`needToUpdateStorageClass` diffs the ConfigMap body against the
+`longhorn.io/last-applied-configmap` annotation the controller stamps onto the class. That
+annotation is present on the live object, which confirms this is the path in use rather
+than a theoretical one, and the `longhorn-role` ClusterRole grants `*` on
+`storageclasses`, so it has the permission to do it.
+
+**So Phase 4 needs no manual delete and no `force: true`.** Edit the values, let Flux
+reconcile, and `longhorn-manager` performs the recreate within one reconcile of the
+ConfigMap write. Three consequences follow, each of which changes how the step is run:
+
+1. **The DaemonSet does not roll.** `.Values.persistence` is referenced in exactly one
+   template in the whole chart (`templates/storageclass.yaml`, grepped against
+   `longhorn@v1.12.1`), so a `persistence`-only values change produces a single-object Helm
+   diff. The `maxUnavailable: 100%` trap is real for any `defaultSettings` or `global`
+   change — it is **not** triggered by this one. That is the reason to keep Phase 4's diff
+   surgically limited to the `persistence:` block and land any `defaultSettings` change as
+   a separate commit.
+2. **The exposure is a delete-then-create gap, not a failed upgrade.** It is sub-second on
+   the happy path. Two things can land inside it: a provisioning call naming `longhorn`
+   explicitly, which `external-provisioner` simply retries; and a PVC created with no
+   `storageClassName` at all during the moment there is no default class. The second used
+   to be permanent, but Kubernetes 1.36 has retroactive default-StorageClass assignment
+   (GA since 1.28), so such a PVC is filled in once the class returns. VolSync's movers are
+   this cluster's main creator of PVCs, so still prefer a window with no sync running —
+   but this is a far smaller hazard than "the upgrade fails."
+3. **The `force: false` problem is real, but only for the hand-written classes.**
+   `kubernetes/apps/longhorn-system/storageclass/` is applied by Flux directly and
+   `ks.yaml:20` is `force: false`, so an immutable-field change to `longhorn-cache`,
+   `longhorn-snapshot` or `longhorn-local` surfaces as a stuck Kustomization with an
+   immutable-field error. That is Phase 5 below, and it is optional. Adding a **new** file
+   to that directory — which is all Phase 3 does — is unaffected.
+
+**The `maxUnavailable: 100%` trap, restated with its actual scope.** `longhorn-manager`'s
+DaemonSet ships `updateStrategy.rollingUpdate.maxUnavailable: 100%` (confirmed live). Any
+change that reaches the DaemonSet or the `longhorn-default-setting` ConfigMap rolls all
+seven managers at once, leaving the cluster with no Longhorn control plane for ~90 s. It
 recovers on its own and eviction state survives in the CRs, but it stalls any rebuild in
-flight — so do not land a Longhorn values change while a node is draining.
+flight — so never land such a change while a node is draining. Phase 4 as specced does not
+reach either object.
 
-### Longhorn settings that matter to this piece (v1.12.0, live)
+### Longhorn settings that matter to this piece (chart 1.12.1, live 2026-08-19)
+
+The HelmRelease pins `version: 1.12.1`, not 1.12.0 as an earlier revision of this file
+said. Values below read from `settings.longhorn.io`, which is the applied state, not from
+`values.yaml`, which is the requested state — the two disagree in three places and that
+disagreement is itself a finding (below the table).
 
 | Setting | Value | Relevance |
 |---|---|---|
 | `replica-soft-anti-affinity` | `false` | Hard anti-affinity — the mechanism this piece relies on |
 | `replica-replenishment-wait-interval` | `600` | Seconds until a short-a-replica volume gets rebuilt — the timer this piece is racing |
-| `create-default-disk-labeled-nodes` | `false` | Node tags are not auto-derived from k8s labels |
-| `taint-toleration` | `""` (empty) | Longhorn tolerates nothing extra today — fine, because `allowSchedulingOnControlPlanes: true` means the CPs carry no taint yet. [20](20-low-power-tier.md) changes this when it adds a `critical` taint. |
+| `concurrent-replica-rebuild-per-node-limit` | `2` | Lowered from the chart's 5 after the piece-19 livelock; keeps a Transcend SATA from being saturated by rebuilds |
+| `create-default-disk-labeled-nodes` | `false` | Disables the `default-disks-config` annotation path entirely — this is *why* disk tags are unavailable (see the caveat above) |
+| `taint-toleration` | `node-role.kubernetes.io/control-plane:NoSchedule`, **`status.applied: false`** | **Changed since the last revision, which recorded `""`.** PR #912 set it; it has not applied. This is [20](20-low-power-tier.md)'s live blocker — see *What still blocks piece 20* below |
 | `default-longhorn-static-storage-class` | `longhorn` | The plain default class |
-| `node-down-pod-deletion-policy` | `do-nothing` | Unrelated to this piece; relevant to [20](20-low-power-tier.md) |
-| `allow-empty-node-selector-volume` | `true` | Existing volumes with no `nodeSelector` (i.e. everything provisioned before this piece) keep matching *any* node — see the open-question analysis below |
-| `allow-volume-creation-with-degraded-availability` | `true` | Load-bearing for the sequencing note below |
-| `node-drain-policy` | `allow-if-replica-is-stopped` | **Changed since v2.1**, which recorded `block-for-eviction-if-contains-last-replica`. `home-operations` values.yaml documents why: the old policy deadlocked Talos upgrades on any node holding a `longhorn-local` (strict-local, 1-replica) volume, because Longhorn would try to rebuild an un-reschedulable replica before releasing the drain. Noted here because [10](10-drain-safety.md) and [20](20-low-power-tier.md)'s enter/exit runbook both reference the old value — they should re-verify against this one. |
+| `node-down-pod-deletion-policy` | `do-nothing` | Longhorn's default. `values.yaml` asks for `Delete-both-statefulset-and-deployment-pod` and is silently not getting it — see the finding below. Relevant to [20](20-low-power-tier.md)/[24](24-power-states.md), not to this piece |
+| `allow-empty-node-selector-volume` | `true` | Existing volumes with no `nodeSelector` (i.e. everything provisioned before this piece) keep matching *any* node — see the open-question analysis below. It is also why Phase 1 is inert on its own |
+| `allow-volume-creation-with-degraded-availability` | `true` | Lets a new volume bind when it can place at least one replica |
+| `node-drain-policy` | `allow-if-replica-is-stopped` | **Changed since v2.1**, which recorded `block-for-eviction-if-contains-last-replica`. `values.yaml` documents why: the old policy deadlocked Talos upgrades on any node holding a `longhorn-local` (strict-local, 1-replica) volume. [10](10-drain-safety.md) and [20](20-low-power-tier.md) both reference the old value and should re-verify against this one |
+
+> **Three `values.yaml` keys are being silently dropped.** Found while cross-checking the
+> table above against `longhorn@v1.12.1`'s `values.yaml`, and each one is a live
+> requested-vs-applied divergence with no error anywhere:
+>
+> | In `values.yaml` | Chart key | Live effect |
+> |---|---|---|
+> | `nodeDownPoddeletionPolicy` | `nodeDownPodDeletionPolicy` (capital `D`) | setting stays `do-nothing`; the requested `Delete-both-statefulset-and-deployment-pod` never applied |
+> | `guaranteedInstanceManagerCpu` | `guaranteedInstanceManagerCPU` (capital `CPU`) | setting stays `{"v1":"12","v2":"12"}`; the requested `5` never applied |
+> | `volumeAttachmentRecoveryPolicy` | *(no such key in 1.12.1)* | dropped entirely |
+>
+> `templates/default-setting.yaml` guards every key with `if not (kindIs "invalid" ...)`,
+> so a misspelled key is indistinguishable from an unset one and the rendered
+> `longhorn-default-setting` ConfigMap simply omits it. Confirmed live: neither
+> `node-down-pod-deletion-policy` nor `guaranteed-instance-manager-cpu` appears in that
+> ConfigMap. **Out of scope for this piece** — fixing them is a `defaultSettings` change,
+> which does roll all seven managers, and `guaranteed-instance-manager-cpu` in particular
+> changes instance-manager CPU reservation across a 7-node cluster whose control planes
+> have 4 cores each. Land it as its own change with its own window.
 
 ### StorageClasses today
 
-`longhorn` (default, 3 replicas, no selector), `longhorn-cache` (2 replicas,
-disposable VolSync cache), `longhorn-snapshot` (2 replicas, VolSync restore
-staging), `longhorn-local` (1 replica, `dataLocality: strict-local` —
-**CNPG only, see "Out of scope" below**), `openebs-hostpath` (not default,
-unused — 0 PVCs on it cluster-wide per vault#113's audit).
+`longhorn` (default, 3 replicas, no selector), `longhorn-cache` (2 replicas, disposable
+VolSync cache), `longhorn-snapshot` (2 replicas, VolSync restore staging), `longhorn-local`
+(1 replica, `dataLocality: strict-local` — **CNPG only, see "Out of scope" below**),
+`openebs-hostpath` (not default, unused), `nfs-csi` (not Longhorn). Confirmed live
+2026-08-19: exactly one class carries `is-default-class: "true"`, and **no** class sets
+`nodeSelector` or `diskSelector`. Placement across all 203 Longhorn volumes is decided by
+free space alone.
 
-## The fix
+> **Naming collision worth knowing about before you type it.** The chart's default
+> `priorityClass` is itself named `longhorn-critical` (this repo overrides it to
+> `system-node-critical`). It is a PriorityClass, not a StorageClass, so there is no actual
+> conflict — but `kubectl get longhorn-critical` is ambiguous. Always qualify:
+> `kubectl get sc longhorn-critical`.
 
-All three files below live in **this repo** (`home-operations`), under
-`kubernetes/apps/longhorn-system/`, per the location change noted above.
+## The fix — executable procedure
 
-### Step 1 — tag the nodes
+> **Numbering.** Older sections of this file — and [24](24-power-states.md) — refer to
+> "Step 1/2/3". The phases below supersede them: old **Step 1** (tag the nodes) is
+> **Phase 1** plus the durable form in **Phase 2**; old **Step 2** (the `longhorn-critical`
+> class) is **Phase 3**; old **Step 3** (restrict the default class) is **Phase 4**.
+> Phase 5 is new.
 
-Longhorn node tags are a Longhorn-specific concept (`Node.spec.tags` on the
-`nodes.longhorn.io` CRD in the `longhorn-system` namespace) — not the same
-thing as a Kubernetes node label, and not something Flux manages. Today
-every node's tags are empty (verified live: `hard-hat`'s `nodes.longhorn.io`
-object shows `spec.tags: []`, same for all four).
+Every file below lives in **this repo** (`home-operations`). That now includes
+`talos/talconfig.yaml`, which an earlier revision of this file said was still in
+`equestria-cluster`; it is not, it moved with the rest of the tree.
 
-Apply directly — this is safe, immediate, and idempotent; Longhorn never
-overwrites a tag you've set (confirmed against `longhorn-manager`'s
-`syncDefaultNodeTags`, which only *ever* fills in a tag from the
-`node.longhorn.io/default-node-tags` annotation when `Node.Spec.Tags` is
-currently empty — once you set it, it's yours):
+**The order is not negotiable, and the reason is one specific failure.** Phase 4 puts
+`nodeSelector: bulk` on the default StorageClass. If no node carries the `bulk` tag when
+that lands, every newly provisioned default-class volume has **zero** eligible nodes, and
+`allow-volume-creation-with-degraded-availability: true` does not save it — that valve
+needs at least one successful placement, not zero. The PVC then sits `Pending` forever.
+VolSync creates such PVCs on every scheduled sync across ~40 apps, so the blast radius of
+getting this backwards is the whole backup system, quietly, within an hour. **Tags first.**
+
+Phases 1–3 are individually safe and individually revertible. Phase 4 is the one that
+changes behaviour. Phase 5 is optional. Do not run any of this while a node is draining or
+a rebuild is in flight.
+
+### Phase 0 — preflight, read-only
 
 ```bash
-kubectl --context admin@equestria -n longhorn-system patch nodes.longhorn.io hard-hat   --type merge -p '{"spec":{"tags":["critical"]}}'
-kubectl --context admin@equestria -n longhorn-system patch nodes.longhorn.io fluttershy --type merge -p '{"spec":{"tags":["critical"]}}'
-kubectl --context admin@equestria -n longhorn-system patch nodes.longhorn.io kerfuffle  --type merge -p '{"spec":{"tags":["critical"]}}'
-kubectl --context admin@equestria -n longhorn-system patch nodes.longhorn.io shining-armor --type merge -p '{"spec":{"tags":["bulk"]}}'
+export KC="kubectl --context admin@equestria"
+
+# Topology is what this plan assumes: 3 CPs (milky-way/othalla/pegasus) + 4 workers.
+$KC get nodes -o custom-columns='NAME:.metadata.name,ROLES:.metadata.labels.node-role\.kubernetes\.io/control-plane'
+
+# Exactly one default class, and it is `longhorn` (re-confirms vault#113 still holds).
+$KC get sc
+
+# Nothing degraded, nothing rebuilding, nothing evicting. All three must be empty.
+$KC -n longhorn-system get volumes.longhorn.io \
+  -o custom-columns='NAME:.metadata.name,ROBUSTNESS:.status.robustness' | grep -v healthy
+$KC -n longhorn-system get nodes.longhorn.io \
+  -o custom-columns='NAME:.metadata.name,SCHED:.spec.allowScheduling,EVICT:.spec.evictionRequested' \
+  | grep -Ev 'true +false'
+$KC -n longhorn-system get replicas.longhorn.io \
+  -o jsonpath='{range .items[?(@.status.currentState!="running")]}{.metadata.name}{"\n"}{end}'
 ```
 
-Verify:
+**Record the rollback baseline** — this is the only thing that makes Phase 4 reversible
+with confidence:
 
 ```bash
-kubectl --context admin@equestria -n longhorn-system get nodes.longhorn.io \
+$KC -n longhorn-system get volumes.longhorn.io -o yaml > /tmp/lh-volumes-before.yaml
+$KC -n longhorn-system get replicas.longhorn.io \
+  -o custom-columns='VOL:.spec.volumeName,NODE:.spec.nodeID' | sort > /tmp/lh-replicas-before.txt
+$KC get sc longhorn -o yaml > /tmp/sc-longhorn-before.yaml
+```
+
+### Phase 1 — tag the nodes
+
+Longhorn node tags live on `Node.spec.tags` of the `nodes.longhorn.io` CRD in
+`longhorn-system`. They are **not** Kubernetes node labels and **not** managed by Flux —
+there is no manifest for them anywhere in this repo, by design. All seven are `[]` today.
+
+Applying them is safe, immediate and idempotent, and — this is the part worth
+internalising — **it changes nothing on its own**. No StorageClass references either tag
+yet, and `allow-empty-node-selector-volume: true` means every existing volume (whose
+`Spec.NodeSelector` is `[]`) keeps matching every node regardless of tags. Nothing moves,
+nothing rebuilds, nothing is evicted. Phase 1 is inert until Phase 3 and Phase 4 give the
+tags meaning.
+
+```bash
+# critical - the three control planes (D6 needs Tier-1 data to survive here)
+for n in milky-way othalla pegasus; do
+  $KC -n longhorn-system patch nodes.longhorn.io "$n" --type merge \
+    -p '{"spec":{"tags":["critical"]}}'
+done
+
+# bulk - the four workers
+for n in hard-hat fluttershy kerfuffle shining-armor; do
+  $KC -n longhorn-system patch nodes.longhorn.io "$n" --type merge \
+    -p '{"spec":{"tags":["bulk"]}}'
+done
+```
+
+Verify — all seven rows must be tagged, with no node carrying both:
+
+```bash
+$KC -n longhorn-system get nodes.longhorn.io \
   -o custom-columns='NAME:.metadata.name,TAGS:.spec.tags'
-# expect: hard-hat/fluttershy/kerfuffle -> ["critical"], shining-armor -> ["bulk"]
+# milky-way/othalla/pegasus            -> [critical]
+# hard-hat/fluttershy/kerfuffle/shining-armor -> [bulk]
 ```
 
-**Also add the git-tracked, self-healing form**, in `equestria-cluster`'s
-`talos/talconfig.yaml` (not this repo — Talos machine config for equestria
-still lives there). Add `node.longhorn.io/default-node-tags` alongside the
-existing `node.longhorn.io/default-disks-config` annotation each node
-already carries, e.g. for `hard-hat`:
+Longhorn will not overwrite a tag you set. `syncDefaultNodeTags()` in
+`controller/kubernetes_node_controller.go@v1.12.1` opens with
+`if len(node.Spec.Tags) != 0 { return nil }` — once `Spec.Tags` is non-empty it is yours.
+
+### Phase 2 — the durable, git-tracked form of the tags
+
+Phase 1 is imperative, so a node rebuild would come back untagged and silently rejoin the
+wrong tier. `talos/talconfig.yaml` fixes that with the
+`node.longhorn.io/default-node-tags` annotation, which `syncDefaultNodeTags()` reads
+**only** when `Spec.Tags` is empty — i.e. exactly on a fresh registration, and never as a
+fight with Phase 1.
+
+Unlike the disks path, this one has **no** `create-default-disk-labeled-nodes` gate (the
+guard quoted in the topology caveat above appears in `syncDefaultDisks()`, not here), so it
+works on this cluster as configured.
+
+The file already groups the annotation by hardware with YAML anchors, and those groups
+happen to align exactly with the tier split. Four edits cover all seven nodes:
+
+| Anchor in `talos/talconfig.yaml` | Nodes | Tag to add |
+|---|---|---|
+| `&nodeAnnotations` | `milky-way`, `othalla`, `pegasus` | `'["critical"]'` |
+| `&amd_minifm_annotations` | `hard-hat` | `'["bulk"]'` |
+| `&intel_un1290_annotations` | `fluttershy`, `kerfuffle` | `'["bulk"]'` |
+| *(inline block on `shining-armor`)* | `shining-armor` | `'["bulk"]'` |
+
+For example, on the control-plane block:
 
 ```yaml
-    nodeAnnotations: &amd_minifm_annotations
-      node.longhorn.io/default-node-tags: '["critical"]'
+    nodeAnnotations: &nodeAnnotations
+      node.longhorn.io/default-node-tags: '["critical"]'   # ADD
       node.longhorn.io/default-disks-config: |
-        { "disks": [ { "path": "/var/mnt/longhorn", "allowScheduling": true, "tags":["nvme", "ssd"] } ] }
+        {
+          "disks": [
+            {
+              "path": "/var/mnt/longhorn",
+              "allowScheduling": true,
+              "tags":["ssd"]
+            }
+          ]
+        }
 ```
 
-...and `'["bulk"]'` for `shining-armor`. This doesn't do anything by itself
-right now (tags are already set by the `kubectl patch` above, and the
-annotation is a no-op once `Spec.Tags` is non-empty) — it's there so a full
-node rebuild re-seeds the correct tag automatically instead of silently
-reverting to untagged. **It is also the exact mechanism
-[18-sgc-nodes-join-control-plane.md](18-sgc-nodes-join-control-plane.md)
-should reuse**: set `default-node-tags: '["critical"]'` on the three SGC
-nodes' Talos machine config *before* they first join equestria as control
-planes, and they arrive pre-tagged with zero extra steps — worth that
-piece's author knowing this pattern exists.
+**No `talosctl apply-config` is required for this piece.** The annotation is inert while
+`Spec.Tags` is non-empty, so it can ride along with the next natural machine-config apply.
+Do not schedule a node-touching operation just to land it.
 
-### Step 2 — the `longhorn-critical` StorageClass
+### Phase 3 — add the `longhorn-critical` StorageClass
 
-New file, `kubernetes/apps/longhorn-system/storageclass/critical.yaml` (this
-directory has no `kustomization.yaml` — Flux auto-generates one covering
-every YAML file it finds, confirmed against the live `ks.yaml`, so dropping
-a new file in is sufficient, no resource list to edit):
+New file, `kubernetes/apps/longhorn-system/storageclass/critical.yaml`. That directory has
+no `kustomization.yaml` — Flux auto-generates one covering every YAML file it finds — so
+dropping a file in is sufficient. This is purely additive: no existing object changes, so
+`force: false` on that Kustomization is not in play.
 
 ```yaml
 ---
@@ -433,19 +652,28 @@ allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 ```
 
-`nodeSelector: "critical"` is the Longhorn CSI parameter that restricts
-replica placement to nodes carrying that tag (this is unrelated to
-Kubernetes' own `nodeSelector` concept — same word, different layer).
-`numberOfReplicas: "3"` against exactly 3 `critical`-tagged nodes plus hard
-anti-affinity is what forces one-per-control-plane; it is not something that
-needs separate affinity rules to hold.
+`nodeSelector: "critical"` is the Longhorn CSI parameter restricting replica placement to
+nodes carrying that tag — unrelated to Kubernetes' own `nodeSelector`, same word, different
+layer. `numberOfReplicas: "3"` against exactly three `critical` nodes plus hard
+anti-affinity is what forces one replica per control plane; no separate affinity rule is
+needed. `dataLocality: best-effort` gets a local replica when the consuming pod is on a
+control plane and is a harmless no-op when it is not — the scheduler still filters by tag,
+so it cannot place a replica on an untagged worker.
 
-### Step 3 — restrict the default class to `bulk`
+```bash
+flux reconcile kustomization storageclass -n longhorn-system --with-source
+$KC get sc longhorn-critical -o yaml | yq '.parameters'
+```
 
-Edit `kubernetes/apps/longhorn-system/longhorn/values.yaml` (consumed by the
-`longhorn` HelmRelease via `valuesFrom` → the `longhorn-config` ConfigMap —
-verified against the chart's `templates/storageclass.yaml` for the pinned
-version, `1.12.0`, which reads exactly this key):
+### Phase 4 — restrict the default class to `bulk`
+
+This is the step that matters, and the only one that changes behaviour. Read *How the
+default class actually gets updated* above first — the recreate is automatic and there is
+no `force: true` to flip.
+
+Edit `kubernetes/apps/longhorn-system/longhorn/values.yaml`. **Keep the diff to the
+`persistence:` block**; a `defaultSettings` change in the same commit would roll all seven
+`longhorn-manager` pods:
 
 ```yaml
 persistence:
@@ -455,16 +683,327 @@ persistence:
     selector: "bulk"            # ADD
 ```
 
-That's `persistence.defaultNodeSelector`, not `persistence.nodeSelector` or
-a `defaultSettings` key — verified directly against
-`longhorn/charts@longhorn-1.12.0`'s `templates/storageclass.yaml`, which
-only emits `parameters.nodeSelector` on the auto-created default class when
-`.Values.persistence.defaultNodeSelector.enable` is true, using
-`.selector` as the value. No corresponding StorageClass YAML resource
-exists in this repo for the plain `longhorn` class to hand-edit — it's
-chart-generated from these values, the same way `longhorn-critical`'s
-`nodeSelector` above is a StorageClass-level analogue but declared by hand
-because it isn't the chart's default class.
+That is `persistence.defaultNodeSelector`, not `persistence.nodeSelector` and not a
+`defaultSettings` key — verified against `longhorn@v1.12.1`'s `templates/storageclass.yaml`,
+which emits `parameters.nodeSelector` on the default class only when
+`.Values.persistence.defaultNodeSelector.enable` is true, using `.selector` as the value.
+
+Pick a quiet moment: no VolSync sync running, no node draining, no rebuild in flight
+(Phase 0's checks). Then:
+
+```bash
+flux reconcile helmrelease longhorn -n longhorn-system --with-source
+```
+
+Verify, in this order — the second check is the one that proves it reconciled rather than
+merely landed in git:
+
+```bash
+# 1. Helm wrote the ConfigMap.
+$KC -n longhorn-system get cm longhorn-storageclass \
+  -o jsonpath='{.data.storageclass\.yaml}' | grep nodeSelector
+# expect: nodeSelector: "bulk"
+
+# 2. longhorn-manager recreated the class from it.
+$KC get sc longhorn -o jsonpath='{.parameters.nodeSelector}{"\n"}'
+# expect: bulk
+
+# 3. It is still the one and only default class.
+$KC get sc | grep default
+
+# 4. Nothing went Pending in the gap.
+$KC get pvc -A --field-selector status.phase=Pending
+```
+
+If check 2 stays empty for more than a couple of minutes while check 1 passes,
+`longhorn-manager` is not reconciling. Look at its log for the ConfigMap controller before
+touching anything by hand:
+
+```bash
+$KC -n longhorn-system logs -l app=longhorn-manager --tail=200 | grep -i storageclass
+```
+
+### Phase 5 — optional: the hand-written classes
+
+`longhorn-cache` and `longhorn-snapshot` are VolSync's cache and restore-staging classes.
+They are Tier-2 by nature, they are large (`volsync-taildrive-dst-dest` alone is 100 Gi
+provisioned), and they place by free space like everything else — so they are a live route
+for bulk data back onto a control-plane disk even after Phase 4. Adding
+`nodeSelector: "bulk"` to both in
+`kubernetes/apps/longhorn-system/storageclass/snapshot.yaml` closes it.
+
+**`longhorn-local` must NOT get a selector.** It is `dataLocality: strict-local`,
+`numberOfReplicas: "1"`, and it is what CNPG's `postgres-1/2/3` sit on; constraining it to
+either tier would make those volumes unschedulable on the other.
+
+This is the only place the immutability constraint genuinely bites, because Flux applies
+these directly and `storageclass/ks.yaml:20` is `force: false`. Two ways:
+
+- **Flip `force: true` on that Kustomization** (`kubernetes/apps/longhorn-system/storageclass/ks.yaml`).
+  Durable, and correct for a directory that contains only StorageClasses — recreating one
+  is safe because bound PVs do not need the class object to exist. It also makes every
+  future parameter change to these classes a non-event. Same sub-second provisioning gap as
+  Phase 4.
+- **Delete the two classes by hand and let Flux recreate them**, leaving `force: false`.
+  Minimal blast radius, but it has to be repeated for every future parameter change, and it
+  is a hand step that will eventually be forgotten.
+
+Prefer flipping `force: true`. Either way, do it as a separate commit from Phase 4 so the
+two recreate windows do not overlap.
+
+**One consequence to accept before doing this:** a Tier-1 VolSync *restore* would then
+stage on `bulk` nodes only, so it cannot run while the workers are dark. Restores are not a
+low-power activity, so this is acceptable — but it should be a decision, not a discovery.
+
+## Rollback
+
+Per phase, because they fail differently. Nothing here needs data movement, which is the
+point of doing the tagging structurally rather than by eviction.
+
+**Phase 4 (default class restricted to `bulk`) — the one you are most likely to want.**
+Revert the `persistence.defaultNodeSelector` block in `values.yaml` and reconcile. Helm
+rewrites the ConfigMap, `longhorn-manager` recreates the class without the parameter, and
+the cluster is back to free-space placement. Same sub-second gap as landing it.
+
+```bash
+git revert <commit>            # or delete the three added lines
+flux reconcile helmrelease longhorn -n longhorn-system --with-source
+$KC get sc longhorn -o jsonpath='{.parameters.nodeSelector}{"\n"}'   # expect empty
+```
+
+**Volumes created while Phase 4 was live keep `Spec.NodeSelector: ["bulk"]`** — reverting
+the class does not reach them, because the scheduler reads the field off the Volume CR, not
+off the StorageClass. If one of them needs to be freed:
+
+```bash
+$KC -n longhorn-system patch volumes.longhorn.io <volume-name> --type merge \
+  -p '{"spec":{"nodeSelector":[]}}'
+```
+
+Find them with:
+
+```bash
+$KC -n longhorn-system get volumes.longhorn.io \
+  -o custom-columns='NAME:.metadata.name,SEL:.spec.nodeSelector,PVC:.status.kubernetesStatus.pvcName' \
+  | grep -v '\[\]'
+```
+
+**Phase 5 (`force: true` / selectors on the hand-written classes).** Revert the YAML and
+reconcile. If `force: true` was flipped, leaving it flipped is harmless — it only takes
+effect on an immutable-field error — but revert it too if the intent is a clean undo.
+
+**Phase 3 (`longhorn-critical`).** Delete `critical.yaml` and let Flux prune it
+(`prune: true` on that Kustomization). Safe only while nothing is bound to the class; check
+first, and if anything is, that PVC has to be migrated off before the class can go:
+
+```bash
+$KC get pvc -A -o json | jq -r '.items[]|select(.spec.storageClassName=="longhorn-critical")|"\(.metadata.namespace)/\(.metadata.name)"'
+```
+
+**Phase 1 (node tags).** Only meaningful after Phases 3–5 are reverted, since the tags are
+what those reference. Clearing them restores free-space placement everywhere:
+
+```bash
+for n in milky-way othalla pegasus hard-hat fluttershy kerfuffle shining-armor; do
+  $KC -n longhorn-system patch nodes.longhorn.io "$n" --type merge -p '{"spec":{"tags":[]}}'
+done
+```
+
+Reverting in the wrong order — clearing tags while a selector still references them —
+strands new provisioning exactly the way running Phase 4 before Phase 1 would. **Undo in
+reverse: 5, 4, 3, 1.**
+
+**Phase 2 (talconfig annotation).** Revert the YAML. Nothing to undo in the cluster; the
+annotation was never read, because `Spec.Tags` was non-empty the whole time.
+
+**What no rollback can undo:** replicas that were placed while the selectors were live have
+moved, and reverting does not move them back. Compare against
+`/tmp/lh-replicas-before.txt` from Phase 0 to see what actually shifted, then decide
+deliberately — do not evict reflexively, given what eviction onto the Transcend SATAs did
+during piece 19.
+
+## Which volumes get `longhorn-critical`
+
+Answered here so that [13](13-stage-sgc-apps.md)/[15](15-migrate-apps.md) and
+[24](24-power-states.md) (open item 5) inherit a list rather than a question. Derived from
+[20](20-low-power-tier.md) §1's Tier-1 set, then reconciled against every Longhorn PVC that
+actually exists — `kubectl get pvc -A`, 2026-08-19. Sizes are provisioned request and
+`volumes.longhorn.io.status.actualSize`.
+
+### Today's exposure, measured
+
+Replica placement is arbitrary today, and the arithmetic that used to protect it is gone.
+Count of replicas landing on a control plane, per Tier-1 volume, live 2026-08-19:
+
+| PVC | Replica nodes | On a control plane |
+|---|---|---|
+| `tailscale-system/golink` | `fluttershy`, `hard-hat`, `shining-armor` | **0 of 3** |
+| `network/technitium` | `fluttershy`, `pegasus`, `hard-hat` | 1 of 3 |
+| `stargate-command/matter` | `shining-armor`, `fluttershy`, `pegasus` | 1 of 3 |
+| `tailscale-system/tsiam` | `fluttershy`, `othalla`, `shining-armor` | 1 of 3 |
+| `network/crowdsec-db-pvc` | `milky-way`, `fluttershy`, `hard-hat` | 1 of 3 |
+| `stargate-command/data-mosquitto-0` | `pegasus`, `milky-way`, `shining-armor` | 2 of 3 |
+| `stargate-command/data-mosquitto-1` | `hard-hat`, `milky-way`, `othalla` | 2 of 3 |
+| `stargate-command/home-assistant` | `hard-hat`, `othalla`, `milky-way` | 2 of 3 |
+| `tailscale-system/tsidp` | `hard-hat`, `pegasus`, `milky-way` | 2 of 3 |
+
+**Not one Tier-1 volume has 3 of 3.** Every one of them is degraded the instant the workers
+go dark, and DNS (`technitium`), the Matter bridge and `tsiam` would each be running on a
+single replica, on a Transcend SATA, for the length of the window. `golink` — Tier 2, so
+nobody loses sleep, but it is the proof — has **no** control-plane replica at all and would
+simply be gone. This is exactly the "pigeonhole luck has evaporated" prediction in §4
+above, now measured rather than predicted.
+
+### The list
+
+**Group A — `longhorn-critical`, unconditionally.** Estate services whose consumer belongs
+on a control plane in every proposed power model, so there is no pod-placement question to
+resolve first:
+
+| PVC | Namespace | Provisioned | Actual | Why |
+|---|---|---|---|---|
+| `technitium` | `network` | 5 Gi | 443 MiB | DNS for the whole estate. Tier 1 in [20](20-low-power-tier.md) §1 and the single most load-bearing volume in this list |
+| `tsidp` | `tailscale-system` | 5 Gi | 147 MiB | Tailscale OIDC provider state, including its signing keys. Losing the PVC does not degrade it — it mints **new** keys and every relying party breaks |
+| `tsiam` | `tailscale-system` | 1 Gi | 49 MiB | Same, for the successor instance. Both deployments are live at 1/1 |
+
+**Group B — `longhorn-critical` recommended, but coupled to an unresolved decision.**
+[20](20-low-power-tier.md) §4 pins every Tier-1 application to a control plane permanently;
+[24](24-power-states.md) §2 supersedes that with float-on-worker + relocate-on-Battery and
+proposes a `longhorn-controlplane` class for exactly these volumes. That disagreement is
+not this piece's to settle, so both the recommendation and the condition are stated:
+
+| PVC | Namespace | Provisioned | Actual |
+|---|---|---|---|
+| `home-assistant` | `stargate-command` | 40 Gi | 3.8 GiB |
+| `data-mosquitto-0` | `stargate-command` | 4 Gi | 162 MiB |
+| `data-mosquitto-1` | `stargate-command` | 4 Gi | 159 MiB |
+| `matter` | `stargate-command` | 4 Gi | 133 MiB |
+
+Recommend `longhorn-critical` for all four unless and until 24's float model is actually
+built, on three grounds. First, `longhorn-controlplane` as specced is **2** replicas
+zone-split, which means exactly one control-plane replica — no redundancy at all during
+Battery, which is the one window it exists for. Second, it depends on
+`replica-zone-soft-anti-affinity`, which [24](24-power-states.md) open item 3 flags as
+unverified against source; `longhorn-critical`'s mechanism is verified. Third, the capacity
+argument that motivates floating does not survive measurement — see the footprint below.
+
+The one real cost of choosing `longhorn-critical` here: with all three replicas confined to
+`critical` nodes, a pod that floats on a worker does every read and write across the
+network to a Transcend SATA, and `dataLocality: best-effort` cannot fix it because the
+worker has no `critical` tag. If 24's float model wins, that is the reason to revisit —
+**not** capacity.
+
+**Footprint if Groups A and B both move:** seven volumes, **63 GiB provisioned and ≈4.9 GiB
+actual**. With 3 replicas that is 63 GiB provisioned and ≈4.9 GiB actual *per control-plane
+disk*, against 930 GiB disks with 697–783 GiB free. It is nothing.
+
+> **This corrects this file's own figure.** The *Answering "which three"* section above
+> says Tier-1 is "about 68 GB of real data (162 GB counting volsync caches/dests)". Those
+> were **provisioned request sizes**, and the total also counted crowdsec, which the audit
+> below removes from the tier. Measured actual is ≈4.9 GiB. The conclusion the number was
+> supporting — keep `critical` on the control planes, prioritise Phase 4 — gets stronger,
+> not weaker.
+
+### Explicitly not `longhorn-critical`
+
+Audited rather than assumed, because [24](24-power-states.md) §1 flags the observability
+storage question as open and this closes it.
+
+- **`network/crowdsec-config-pvc`, `crowdsec-db-pvc`, `crowdsec-ui`.** The Traefik bouncer
+  is not in the request path: `traefik/middleware/crowdsec.yaml` ships `enabled: false`
+  (the standing kill switch), and even enabled it runs `crowdsecMode: stream` with
+  `streamStartupBlock: false`, i.e. deliberately fail-open, so a LAPI outage degrades to a
+  stale decision list rather than an ingress failure. Tier 2 for storage purposes.
+- **All nine `observability/*` volumes** — `data-thanos-receive-0` (77 GiB actual),
+  `storage-loki-0` (58 GiB), `thanos-compactor` (20 GiB),
+  `prometheus-prometheus-db-prometheus-prometheus-0` (19 GiB),
+  `data-thanos-storegateway-0` (6.3 GiB), `grafana`, `storage-tempo-0`,
+  `data-thanos-ruler-0`, `alertmanager-alertmanager-db-alertmanager-alertmanager-0`. That
+  is ≈178 GiB of real data with the highest write rate in the cluster. [24](24-power-states.md)
+  §1 moves observability's *pods* to Tier 1 and explicitly leaves its storage unaudited;
+  audited, the answer is that putting it on three Transcend SATAs is a non-starter, on IOPS
+  rather than capacity. It stays on the default class, which after Phase 4 means it stays on
+  the NVMe workers.
+- **`tailscale-system/golink`, `tailscale-system/taildrive`, `kube-system/registry`,
+  everything in `equestria` and `database`.** Tier 2.
+- **`chrony`.** Tier 1 but stateless — confirmed live, its Deployment mounts no volumes at
+  all. It needs nothing from this piece.
+- **`k8s-gateway`, `traefik`, `cloudflare-dns`, `cloudflare-tunnel`, `unifi-dns`,
+  `error-pages`, `technitium-dns`.** Tier 1 and all stateless — the only PVCs in the
+  `network` namespace are `technitium` and the three crowdsec ones.
+- **`database/postgres-{1,2,3}`** on `longhorn-local`. Outside this scheme entirely; see
+  *Out of scope*.
+
+### Moving a volume onto the class is not this piece's job
+
+Changing a bound PVC's `storageClassName` requires recreating the PVC and copying the data
+— [13](13-stage-sgc-apps.md)/[15](15-migrate-apps.md) own that, per *Out of scope*. What
+this piece owes them is the list above and a class that exists.
+
+There is a cheaper partial measure that is **not** a substitute: `Volume.Spec.NodeSelector`
+is live and mutable, so patching an existing volume to `["critical"]` makes Longhorn
+replenish onto control planes without recreating the PVC. It does not move the replicas
+that are already placed, and it leaves the PVC pointing at the wrong class so a VolSync
+restore or a resize silently reverts it. Useful as an emergency stopgap before a planned
+Battery window; not a migration.
+
+## What still blocks piece 20
+
+Neither item blocks *this* piece — tags and StorageClasses are unaffected by both — but
+both are live, both are invisible unless you look, and both gate
+[20](20-low-power-tier.md). They are recorded here because 20's dependency edge runs
+through this file.
+
+### 1. `taint-toleration` is set but has not applied
+
+```console
+$ kubectl -n longhorn-system get settings.longhorn.io taint-toleration \
+    -o custom-columns=VALUE:.value,APPLIED:.status.applied
+VALUE                                             APPLIED
+node-role.kubernetes.io/control-plane:NoSchedule   false
+
+$ kubectl -n longhorn-system get ds longhorn-csi-plugin \
+    -o jsonpath='{.metadata.annotations.longhorn\.io/last-applied-tolerations}'
+[]
+```
+
+That second command is the check `values.yaml` itself prescribes, and it agrees: the
+system-managed components are carrying no toleration at all.
+
+PR #912 landed **the Helm half only**. `global.tolerations` reaches the user-deployed pods
+(`longhorn-manager`, `longhorn-ui`, `longhorn-driver-deployer`) through an ordinary pod
+spec, and that part is live. The system-managed half — `instance-manager`, `engine-image`,
+`longhorn-csi-plugin`, `backing-image-manager`, `share-manager`, all created by
+`longhorn-manager` at runtime rather than by Helm — is reachable only through the
+`taint-toleration` **setting**, and since longhorn/longhorn#7173 that setting is *accepted
+and deferred* rather than rejected: `updateTaintToleration()` gates on
+`AreAllVolumesDetachedState()`, logs `ErrorInvalidState`, and requeues on the one-hour
+resync. **Live count 2026-08-19: 78 of 203 volumes attached.** Nothing surfaces the
+failure — `helm upgrade` succeeded, the HelmRelease is `Ready`, and only
+`longhorn-manager`'s log disagrees.
+
+Why 20 cannot proceed on this: 20 adds a `critical` taint to the control planes and flips
+`allowSchedulingOnControlPlanes: false`. `NoSchedule` does not evict, so the existing
+system-managed pods keep running and it looks fine — until the next pod recreate on a
+control plane (reboot, Talos upgrade, DaemonSet rollout), after which they cannot come back
+and every volume attached through that node breaks. Landing the taint before the setting
+applies converts a routine reboot into a storage outage.
+
+**What it needs:** a maintenance window with **every** Longhorn volume detached, then
+re-verify `last-applied-tolerations` actually contains the key. That is
+[10-drain-safety.md](10-drain-safety.md)'s territory and it is not scheduled. Do not
+discover it on the day.
+
+### 2. `node-down-pod-deletion-policy` is `do-nothing`, not what `values.yaml` asks for
+
+Per the silently-dropped-keys finding above, the live setting is Longhorn's default
+`do-nothing` rather than the requested
+`Delete-both-statefulset-and-deployment-pod`. Under [20](20-low-power-tier.md) §4's
+always-resident model nothing needs to move when the workers go dark, so this is harmless.
+Under [24](24-power-states.md) §2's float-and-relocate model it is not: with `do-nothing`,
+StatefulSet pods stranded on a powered-off worker are never deleted and therefore never
+reschedule onto a control plane. 24's open item 2 ("the imperative step that actually moves
+float+relocate workloads") has to account for this, or fix the key first.
 
 ## Resolving the open question (v2.1 §10 item 12)
 
@@ -513,33 +1052,35 @@ CP placement at replenishment until someone backfills their
 `nodeSelector`, or until they naturally get recreated (e.g. a VolSync
 restore, a PVC resize that forces recreation) after step 3 has landed.**
 
-### A sequencing nuance step 3 surfaces, not a blocker
+### A sequencing nuance Phase 4 used to surface — now retired
 
-`allow-volume-creation-with-degraded-availability: true` (verified live) is
-the safety valve that keeps step 3 from being harmful today, but it's worth
-understanding precisely: `controller/volume_controller.go` only marks a new
-volume `Scheduled: true` despite an unsatisfied replica count if **at least
-one** replica placed successfully. Today there is exactly **one**
-`bulk`-tagged node (`shining-armor`), so any *new* Tier-2 PVC created after
-step 3 lands will provision, bind, and run — just with 1 replica instead of
-3, i.e. no redundancy — until [19-rotate-equestria-control-planes.md](19-rotate-equestria-control-planes.md)
-grows the worker pool to 4. At that point Longhorn's normal replenishment
-cycle (`replica-replenishment-wait-interval`) tops these volumes up to 3
-replicas automatically — no manual step needed later. This is a real,
-bounded, self-healing trade during the interim window between this piece
-landing and 19 completing, not a reason to defer step 3: existing volumes
-are entirely unaffected (per the analysis above), and new-volume durability
-recovers on its own once 19 lands.
+`allow-volume-creation-with-degraded-availability: true` (verified live) is the safety valve
+that kept Step 3 from being harmful when this file was written: `controller/volume_controller.go`
+only marks a new volume `Scheduled: true` despite an unsatisfied replica count if **at least
+one** replica placed successfully. At the time there was exactly one `bulk`-tagged node
+(`shining-armor`), so a new Tier-2 PVC would provision, bind and run with 1 replica instead
+of 3 until [19](19-rotate-equestria-control-planes.md) grew the worker pool.
+
+**19 is done, so this interim no longer exists.** There are four `bulk` nodes, hard
+anti-affinity has three to choose from, and a new default-class volume gets its full 3
+replicas immediately — which is why *Rehearsed placement proof* below now expects 3 of 3
+rather than 1 of 3. The valve still matters as a failure mode, though, and in a direction
+worth naming: it needs **one** successful placement, not zero. That is precisely why Phase 1
+must precede Phase 4 — with a `bulk` selector and no `bulk`-tagged node, there is no
+degraded binding to fall back to, only a `Pending` PVC.
 
 ## Rehearsed placement proof
 
-Prove the mechanism on a scratch volume before trusting it for real
-workloads. Run after steps 1–3 are applied and reconciled.
+Prove the mechanism on a scratch volume before trusting it for real workloads. Run after
+Phases 1–4 are applied and reconciled. Both proofs are cheap and self-cleaning; run them
+even if everything looks right, because the failure mode they catch — a tag typo, a
+selector that landed in git but not in the cluster — is otherwise invisible until a Battery
+window.
 
-**Prove `longhorn-critical` places one replica per control plane:**
+**Proof 1 — `longhorn-critical` places one replica per control plane:**
 
 ```bash
-kubectl --context admin@equestria apply -f - <<'EOF'
+$KC apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -552,23 +1093,30 @@ spec:
     requests:
       storage: 1Gi
 EOF
-kubectl --context admin@equestria run scratch-critical-pod --image=busybox --restart=Never \
+
+# WaitForFirstConsumer, so it needs a pod before it binds.
+$KC run scratch-critical-pod --image=busybox --restart=Never \
   --overrides='{"spec":{"containers":[{"name":"c","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"v","mountPath":"/data"}]}],"volumes":[{"name":"v","persistentVolumeClaim":{"claimName":"scratch-critical-proof"}}]}}'
+$KC wait --for=condition=Ready pod/scratch-critical-pod --timeout=180s
 
-# once bound:
-kubectl --context admin@equestria -n longhorn-system get replicas.longhorn.io \
-  -l longhornvolume=$(kubectl --context admin@equestria get pvc scratch-critical-proof -o jsonpath='{.spec.volumeName}') \
+$KC -n longhorn-system get replicas.longhorn.io \
+  -l longhornvolume=$($KC get pvc scratch-critical-proof -o jsonpath='{.spec.volumeName}') \
   -o custom-columns='NAME:.metadata.name,NODE:.spec.nodeID'
-# expect exactly 3 rows: hard-hat, fluttershy, kerfuffle. Zero on shining-armor.
+# expect exactly 3 rows: milky-way, othalla, pegasus. Zero on any worker.
 
-kubectl --context admin@equestria delete pod scratch-critical-pod
-kubectl --context admin@equestria delete pvc scratch-critical-proof
+$KC -n longhorn-system get volumes.longhorn.io \
+  $($KC get pvc scratch-critical-proof -o jsonpath='{.spec.volumeName}') \
+  -o jsonpath='{.spec.nodeSelector}{" "}{.status.robustness}{"\n"}'
+# expect: ["critical"] healthy
+
+$KC delete pod scratch-critical-pod
+$KC delete pvc scratch-critical-proof
 ```
 
-**Prove the default class can no longer place onto a control plane:**
+**Proof 2 — the default class can no longer place onto a control plane:**
 
 ```bash
-kubectl --context admin@equestria apply -f - <<'EOF'
+$KC apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -580,21 +1128,27 @@ spec:
     requests:
       storage: 1Gi
 EOF
-# (omit storageClassName — this must hit the default `longhorn` class)
+# storageClassName deliberately omitted - this must hit the default `longhorn` class,
+# which is `Immediate` binding, so it provisions without a pod.
 
-kubectl --context admin@equestria -n longhorn-system get replicas.longhorn.io \
-  -l longhornvolume=$(kubectl --context admin@equestria get pvc scratch-bulk-proof -o jsonpath='{.spec.volumeName}') \
+$KC -n longhorn-system get replicas.longhorn.io \
+  -l longhornvolume=$($KC get pvc scratch-bulk-proof -o jsonpath='{.spec.volumeName}') \
   -o custom-columns='NAME:.metadata.name,NODE:.spec.nodeID'
-# expect exactly 1 row, on shining-armor (see the degraded-availability note above
-# for why 1-of-3 is expected today, not a failure).
+# expect exactly 3 rows, all on workers (hard-hat / fluttershy / kerfuffle /
+# shining-armor). Zero on milky-way, othalla or pegasus.
 
-kubectl --context admin@equestria delete pvc scratch-bulk-proof
+$KC delete pvc scratch-bulk-proof
 ```
 
-If either proof shows a replica landing somewhere it shouldn't, stop —
-something in steps 1–3 didn't apply the way this document assumes, and it
-needs to be understood before [13](13-stage-sgc-apps.md) or
-[20](20-low-power-tier.md) build on top of it.
+> Proof 2 now expects a full **3 of 3**. An earlier revision of this file expected 1 of 3,
+> because at the time there was exactly one worker and the degraded-availability valve was
+> carrying the difference. Piece 19 gave the cluster four `bulk` nodes, so that interim
+> caveat is retired — if you see fewer than 3 replicas here, it is a real problem, not the
+> documented trade.
+
+If either proof shows a replica landing somewhere it shouldn't, stop — something in Phases
+1–4 didn't apply the way this document assumes, and it needs to be understood before
+[13](13-stage-sgc-apps.md) or [20](20-low-power-tier.md) build on top of it.
 
 ## The trade, stated plainly
 
@@ -634,8 +1188,12 @@ tolerance to the control plane's.
   across a `critical`/`bulk` zone split — a different mechanism from this
   piece's tag-based `nodeSelector`), which 24 specs. Out of scope here, same
   as the taint/affinity work.
-- **Longhorn's `taint-toleration` setting.** Still empty today and doesn't
-  need to change until [20](20-low-power-tier.md) adds the `critical` taint
+- **Longhorn's `taint-toleration` setting.** No longer empty and no longer
+  merely theoretical — it is set to `node-role.kubernetes.io/control-plane:NoSchedule`
+  and stuck at `status.applied: false`. Still out of scope for this piece, but it is
+  now a live gate on [20](20-low-power-tier.md); see *What still blocks piece 20*
+  above for the evidence and the window it needs. The original note follows.
+  It doesn't need to change until [20](20-low-power-tier.md) adds the `critical` taint
   — but note it then, since applying a taint without updating
   `taint-toleration` first costs the control planes their entire Longhorn
   instance-manager contribution. v2.1 §3.3 recommends doing that setting
@@ -658,25 +1216,36 @@ tolerance to the control plane's.
 
 ## Verification checklist
 
-- [ ] `kubectl get sc` shows exactly one `(default)` class (`longhorn`) —
-      re-confirms vault#113 is still fixed before building on top of it.
-- [ ] All 4 nodes' `nodes.longhorn.io` show the expected tag: 3×`critical`,
-      1×`bulk`.
-- [ ] `longhorn-critical` StorageClass exists, `numberOfReplicas: "3"`,
+- [ ] `kubectl get sc` shows exactly one `(default)` class (`longhorn`) — re-confirms
+      vault#113 is still fixed before building on top of it.
+- [ ] All **7** nodes' `nodes.longhorn.io` show the expected tag: 3×`critical`
+      (`milky-way`/`othalla`/`pegasus`), 4×`bulk`
+      (`hard-hat`/`fluttershy`/`kerfuffle`/`shining-armor`). No node carries both.
+- [ ] `longhorn-critical` StorageClass exists with `numberOfReplicas: "3"` and
       `nodeSelector: "critical"`.
-- [ ] Default `longhorn` class's live effect shows `nodeSelector: bulk` in
-      its `parameters` (`kubectl get sc longhorn -o yaml`) — confirms the
-      Helm values change actually reconciled, not just landed in git.
-- [ ] Scratch-volume proof 1: `longhorn-critical` PVC gets exactly 3
-      replicas, one on each of `hard-hat`/`fluttershy`/`kerfuffle`, none on
-      `shining-armor`.
-- [ ] Scratch-volume proof 2: default-class PVC gets exactly 1 replica, on
-      `shining-armor`, none on any control plane.
-- [ ] `talos/talconfig.yaml` in `equestria-cluster` carries
-      `node.longhorn.io/default-node-tags` for all 4 nodes (durable/self-healing
-      form), even though the live tags were already set imperatively.
-- [ ] The urgency finding (4 live, unprotected Tier-1 PVCs) has been handed
-      off to whoever is picking up [13](13-stage-sgc-apps.md)/[15](15-migrate-apps.md).
+- [ ] `kubectl -n longhorn-system get cm longhorn-storageclass -o jsonpath='{.data.storageclass\.yaml}'`
+      contains `nodeSelector: "bulk"` — the Helm half of Phase 4 reconciled.
+- [ ] `kubectl get sc longhorn -o jsonpath='{.parameters.nodeSelector}'` returns `bulk` —
+      `longhorn-manager` actually recreated the class. **This is the check that catches a
+      Phase 4 that landed in git and stalled in the cluster**; the previous one is not
+      sufficient.
+- [ ] `kubectl get pvc -A --field-selector status.phase=Pending` is empty after Phase 4 —
+      nothing was stranded in the delete/create gap.
+- [ ] Scratch-volume proof 1: `longhorn-critical` PVC gets exactly 3 replicas, one on each
+      control plane, none on any worker.
+- [ ] Scratch-volume proof 2: default-class PVC gets exactly 3 replicas, all on workers,
+      none on any control plane.
+- [ ] `talos/talconfig.yaml` (**this repo**, not `equestria-cluster`) carries
+      `node.longhorn.io/default-node-tags` on all four annotation blocks, covering all 7
+      nodes — the durable form, even though the live tags were set imperatively.
+- [ ] The Group A/B volume list under *Which volumes get `longhorn-critical`* has been
+      handed to whoever owns [13](13-stage-sgc-apps.md)/[15](15-migrate-apps.md), and the
+      Group B condition (20 vs 24 pod placement) is on
+      [24](24-power-states.md)'s open-item list as answered-with-a-caveat rather than open.
+- [ ] *(Does not gate this piece; gates [20](20-low-power-tier.md).)*
+      `kubectl -n longhorn-system get settings.longhorn.io taint-toleration -o custom-columns=VALUE:.value,APPLIED:.status.applied`
+      still reads `false`, and the volumes-detached window it needs is on someone's
+      calendar.
 
 ## See also
 
