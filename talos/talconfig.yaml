@@ -236,7 +236,10 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    controlPlane: true
+    # Rotated out of the control plane 2026-08-19, piece 19 (3 of 3 -- the last
+    # one). Talos cannot demote in place, so this was drain -> etcd leave ->
+    # wipe -> rejoin-as-worker. etcd is now the ex-SGC trio alone.
+    controlPlane: false
     userVolumes: *intel_un1290_user_volumes
     nodeLabels: *nodeLabels
     nodeAnnotations: *intel_un1290_annotations
