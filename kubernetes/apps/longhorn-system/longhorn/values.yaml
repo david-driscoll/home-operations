@@ -42,6 +42,20 @@ global:
 
 persistence:
   defaultDataLocality: best-effort
+  # Restrict the default `longhorn` class to `bulk`-tagged workers so Tier-2
+  # volumes can never place — or replenish — a replica onto a control-plane
+  # disk (docs/cluster-consolidation/12-longhorn-critical-tier.md, Phase 4).
+  #
+  # The chart renders this into the `longhorn-storageclass` ConfigMap, not a
+  # StorageClass object; longhorn-manager handles the immutable-parameters
+  # recreate itself (sub-second delete+create gap). Nodes MUST carry the `bulk`
+  # tag before this reconciles — a selector with zero matching nodes leaves
+  # every new default-class PVC Pending forever, VolSync's included. Keep any
+  # change here scoped to the `persistence:` block: `defaultSettings`/`global`
+  # edits roll all seven longhorn-managers at once (maxUnavailable: 100%).
+  defaultNodeSelector:
+    enable: true
+    selector: "bulk"
 defaultSettings:
   createDefaultDiskLabeledNodes: false
   defaultDataLocality: best-effort
