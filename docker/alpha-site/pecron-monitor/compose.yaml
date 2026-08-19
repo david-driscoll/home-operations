@@ -1,0 +1,30 @@
+services:
+  pecron-monitor:
+    container_name: pecron-monitor
+    # Upstream publishes no container image, so this builds on the host from a
+    # pinned git ref (the deploy command already runs `docker compose build`).
+    # Bump the ref AND the image tag together when upgrading.
+    build:
+      context: https://github.com/attractify-logan/pecron-monitor.git#v0.8.0
+    image: pecron-monitor:v0.8.0
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PECRON_STATE_PATH: /data/pecron-state.json
+      TZ: ${TIMEZONE}
+    volumes:
+      # config.yaml carries the Pecron cloud credentials and per-device auth
+      # keys, so it is hand-copied to /opt/stacks-data/${APP}/config.yaml on the
+      # host (backed up by backrest), never checked into this repo. Mounting the
+      # directory rather than the file means a deploy that lands before the copy
+      # just crash-loops until the file appears, instead of Docker manufacturing
+      # a directory at the file's path and wedging the later copy.
+      - /opt/stacks-data/${APP}:/config:ro
+      - /opt/stacks-data/${APP}/data:/data
+    networks:
+      - dockge_default
+networks:
+  dockge_default:
+    external: true
