@@ -521,7 +521,69 @@ other nodes to satisfy `replica-soft-anti-affinity: false`, i.e. one replica per
 first; an eviction that cannot place replicas stalls rather than failing loudly.
 
 **Do not confuse this with `allowScheduling: false`.** That only stops *new* replicas landing;
-it does not move the existing ones.
+it does not move the existing ones. You need **both** on the node being drained — Longhorn's own
+docs are explicit that eviction requires scheduling disabled, and with only `evictionRequested`
+set, replicas can be re-placed onto the very node you are emptying.
+
+### Step 1b-bis — steering where the evicted replicas LAND (added 2026-08-18)
+
+Eviction picks targets by **free space alone**. There are no Longhorn node tags, no disk tags and
+no `nodeSelector`/`diskSelector` on any StorageClass in this estate (verified live), so nothing
+tells it that some disks are fast and some are slow, hot and half-worn.
+
+On fluttershy's turn that meant **every** rebuild targeted `milky-way` and `pegasus` — because
+they were emptiest after their own wipes — while the three NVMe nodes sat idle. Measured mid-drain:
+
+| node | Longhorn disk | utilisation | avg write latency | temp |
+|---|---|---|---|---|
+| milky-way | `sda` Transcend SATA | 93.5 % | 126 ms | 75 °C |
+| pegasus | `sda` Transcend SATA | 89.7 % | 470 ms | 73 °C |
+| fluttershy (source) | `nvme0n1` Samsung | 6.3 % | — | 49 °C |
+
+Throughput collapsed to 1–2 % per five minutes, rebuilds began **failing and restarting from 0 %**
+(failed-replica count went 0 → 3 → 6 in ~15 minutes, all on those two nodes), and the drives
+climbed toward the 85 °C at which `pegasus` previously shut its XFS filesystem down mid-rebuild.
+
+**Mitigation, applied 2026-08-18 and effective:** disable scheduling on the slow nodes for the
+duration of the drain, so replacements land on NVMe instead:
+
+```bash
+kubectl -n longhorn-system patch nodes.longhorn.io milky-way --type merge -p '{"spec":{"allowScheduling":false}}'
+kubectl -n longhorn-system patch nodes.longhorn.io pegasus  --type merge -p '{"spec":{"allowScheduling":false}}'
+```
+
+It is not retroactive: replicas already scheduled onto those nodes keep rebuilding there, so the
+effect phases in as the in-flight queue drains. Non-destructive — it moves no existing data.
+
+The durable fix is [12](12-longhorn-critical-tier.md)'s `critical`/`bulk` tagging, specifically
+its step 3 (restricting the **default** StorageClass to `bulk`). The chart exposes it as
+`persistence.defaultNodeSelector.{enable,selector}`. Note that StorageClass `parameters` are
+immutable, so changing it requires deleting the `longhorn` StorageClass and letting Helm recreate
+it — `helm upgrade` alone will fail.
+
+### Step 1d — UNDO the scheduling changes when the node is back
+
+Easy to forget, and nothing surfaces it: a node left with `allowScheduling: false` silently stops
+receiving replicas forever, and a node left with `evictionRequested: true` will keep pushing them
+away after it rejoins. After **each** node completes Step 6:
+
+```bash
+# the node that was drained: clear BOTH flags once it has rejoined as a worker
+kubectl -n longhorn-system patch nodes.longhorn.io <node> --type merge \
+  -p '{"spec":{"allowScheduling":true,"evictionRequested":false}}'
+
+# and restore any node that was temporarily de-scheduled per Step 1b-bis
+kubectl -n longhorn-system patch nodes.longhorn.io milky-way --type merge -p '{"spec":{"allowScheduling":true}}'
+kubectl -n longhorn-system patch nodes.longhorn.io pegasus  --type merge -p '{"spec":{"allowScheduling":true}}'
+
+# verify: every node should read allowScheduling=true, evictionRequested=false
+kubectl get nodes.longhorn.io -n longhorn-system \
+  -o custom-columns=NAME:.metadata.name,SCHED:.spec.allowScheduling,EVICT:.spec.evictionRequested
+```
+
+Leaving `milky-way`/`pegasus` de-scheduled would also quietly defeat
+[20](20-low-power-tier.md): the Tier-1 volumes that must live on the control planes could never
+place a replica there.
 
 ### Step 1c — the stuck-detach chain after `cnpg destroy`
 
