@@ -257,7 +257,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
           "tailscale.com/cap/drive": [
             { access: "ro", shares: ["*"] },
             { access: "rw", shares: ["family"] },
-            { access: "rw", shares: ["opencloud"] },
+            { access: "rw", shares: ["documents"] },
             { access: "ro", shares: ["media"] },
           ],
         },

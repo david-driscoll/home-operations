@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@pulumi/pulumi": "^3.238.0",
-        "@types/node": "^24.0.0",
+        "@types/node": "^20",
         "typescript": "^4.7.0"
     },
     "pulumi": {
@@ -20,7 +20,7 @@
         "parameterization": {
             "name": "technitium",
             "version": "1.2.1",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2Rhcmtob25vci90ZWNobml0aXVtIiwidmVyc2lvbiI6IjEuMi4xIn19"
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL2Rhcmtob25vci90ZWNobml0aXVtIiwidmVyc2lvbiI6IjEuMi4xIn19"
         }
     }
 }
