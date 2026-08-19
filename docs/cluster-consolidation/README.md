@@ -103,6 +103,32 @@ completed and eleven days have passed:
   [19](19-rotate-equestria-control-planes.md) flags this and gives an alternative node
   ordering; confirm against the Proxmox host inventory before relying on either.
 
+## Where the plan actually stands — 2026-08-18
+
+| Piece | State |
+|---|---|
+| 07 authentik → alpha-site | **done.** Cut over 2026-08-16; all three public names plus the tailnet name serve from alpha-site |
+| 15 migrate apps | **done.** tsidp/tsiam live on equestria; SGC's `sgc` namespace held only superseded authentik |
+| 18 SGC → control planes | **done.** All three SGC nodes wiped and rejoined to equestria. **SGC no longer exists as a cluster** |
+| 19 rotate equestria CPs | **1 of 3, parked.** `hard-hat` is a worker; `fluttershy`/`kerfuffle` untouched — see 19's status block for why |
+| 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
+
+Current cluster: 7 nodes, 5 etcd members, all Ready.
+
+**Two things the plan never accounted for, both now load-bearing on decisions:**
+
+- **The ex-SGC nodes are a quarter the size of what they replace** — 4 cores / 16 GiB against
+  16–20 cores / 48–64 GiB. Piece 19's end state puts the whole control plane on them. Unresolved.
+- **Their disks run hot and are the weakest hardware in the estate.** `pegasus` hit 85 °C and its
+  XFS filesystem shut down mid-rebuild; relocating it dropped it to 53 °C. `milky-way` carries 6
+  reallocated and 6 pending sectors. Piece 12's `critical` tier assumed the control planes would
+  be the fast, healthy disks — after piece 19 they are the opposite.
+
+**Sequencing correction:** several pieces were executed out of the documented order and it mostly
+worked, but two ordering rules turned out to be real and are now written into the pieces that own
+them — release-before-claim for any DNS name (07 §4, 22 rule 1), and evict-before-wipe for
+Longhorn replicas (19 Step 1b).
+
 ## Decision ledger
 
 Decisions David has made on the issue. Plans must not relitigate these.

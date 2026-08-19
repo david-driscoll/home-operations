@@ -8,6 +8,72 @@ provably drainable). Feeds [20 — low-power tier](20-low-power-tier.md), which 
 surviving 3 control planes — this phase deliberately does **not** touch
 `allowSchedulingOnControlPlanes`.
 
+> **Status 2026-08-18 — one node of three done, then deliberately parked.**
+>
+> | node | state |
+> |---|---|
+> | `hard-hat` | **worker.** Drained, out of etcd, wiped, rejoined. `machinetype: worker`, no control-plane statics, uncordoned, stale role label removed |
+> | `fluttershy` | control plane, untouched |
+> | `kerfuffle` | control plane, untouched. Holds `postgres-1` (**primary**) and the most Longhorn replicas of any node |
+>
+> etcd is at 5 members (the 3 ex-SGC nodes plus fluttershy and kerfuffle), healthy, no alarms.
+>
+> **Why it is parked, and it is not the Step 6 gate.** The end state this phase produces —
+> control plane entirely on `milky-way`/`othalla`/`pegasus` — puts etcd, the apiserver, the
+> scheduler and the controller-manager on **4-core / 16 GiB** machines, replacing **16–20 core /
+> 48–64 GiB** ones:
+>
+> | | cores | memory |
+> |---|---|---|
+> | fluttershy, kerfuffle | 20 | 64 GiB |
+> | shining-armor | 20 | 48 GiB |
+> | hard-hat | 16 | 48 GiB |
+> | milky-way, othalla, pegasus | **4** | **16 GiB** |
+>
+> That is a 4× reduction in control-plane CPU, and it was never stated as a consequence anywhere
+> in this plan. It needs an explicit decision before `fluttershy` and `kerfuffle` are rotated,
+> because each rotation is a wipe-and-rejoin and is therefore expensive to undo. Three options,
+> none yet chosen: continue as written and move Longhorn storage off the control planes; keep six
+> control planes and rotate nobody; or invert the plan — rejoin `hard-hat` as a control plane and
+> make the ex-SGC nodes workers.
+>
+> **Do not read the 2026-08-17 instability as evidence for that decision.** See the incident note
+> below: it was a bad ethernet cable, not node sizing. The sizing question stands on its own
+> arithmetic, and is now the *only* argument in play.
+
+## The 2026-08-17 milky-way incident — a hardware fault that reads exactly like resource exhaustion
+
+Recorded because the misdiagnosis cost several hours and the symptom profile is genuinely
+deceptive.
+
+`milky-way` presented as a node buckling under load: its etcd health check failed every ~5
+minutes (`context deadline exceeded`), it flapped `NotReady` nine times, its `longhorn-manager`
+logged `i/o timeout` reaching the API service VIP, Longhorn drained it from 22 replicas to 2,
+and rebuilds targeting it errored while identical rebuilds targeting `pegasus` succeeded. On a
+4-core control plane also running etcd, apiserver, scheduler and Cilium, "it is out of CPU" is
+the obvious reading. It was wrong.
+
+The actual fault was **66% packet loss on one ethernet cable.** What ruled software out:
+
+1. A reboot did not fix it.
+2. A full wipe (STATE + EPHEMERAL) did not fix it — the loss persisted into maintenance mode,
+   with no cluster software running at all.
+3. `pegasus` and `othalla` — identical hardware, same switch — sat at 0% loss throughout.
+
+After the cable was replaced: 0.0% loss over 30 packets, 5/5 clean Talos API probes, and etcd
+`HEALTH: OK` stable across the rejoin where it had previously failed every 5 minutes.
+
+**The lesson for the remaining nodes:** on a partially-connected node, every layer reports the
+symptom in its own vocabulary — etcd says deadline exceeded, kubelet says NotReady, Longhorn says
+i/o timeout, the scheduler says the node is unhealthy. None of them says "packet loss". Before
+attributing that pattern to load, run `ping -c 30` against the node and against a sibling. It
+takes ten seconds and would have saved this one.
+
+A second, smaller trap from the same incident: `talosctl version --insecure` and
+`talosctl shutdown --insecure` **print help text and exit 0** rather than erroring on the
+unrecognised flag. Both were briefly read as success. `--insecure` is valid on `apply-config` and
+`reset` only; a node in maintenance mode therefore cannot be shut down remotely at all.
+
 ## What this phase delivers
 
 Equestria's three original control planes — **hard-hat**, **fluttershy**, **kerfuffle** — leave
