@@ -2,9 +2,13 @@
 #
 # This is the SOURCE OF TRUTH for the pecron-monitor config, rules included.
 # DockgeLxc renders it on deploy: ${CLUSTER_KEY}/${APP} substitution first,
-# then vals resolves every ref+openbao:// reference, and the resolved file
-# lands at /opt/stacks/pecron-monitor/config/config.yaml on the host, which
-# compose.yaml mounts read-only into the container.
+# then vals resolves every <ref+openbao scheme>:// reference below, and the
+# resolved file lands at /opt/stacks/pecron-monitor/config/config.yaml on the
+# host, which compose.yaml mounts read-only into the container.
+#
+# That scheme is deliberately broken apart in this comment: vals does not know
+# what a comment is, so a well-formed reference written in prose either bakes a
+# secret into the rendered file or fails the run outright.
 #
 # The repo is public, so anything that authenticates — cloud email/password,
 # per-device auth_key AND device_key — plus the devices' lan_ips lives in
