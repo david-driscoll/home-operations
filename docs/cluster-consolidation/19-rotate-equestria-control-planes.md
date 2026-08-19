@@ -8,15 +8,22 @@ provably drainable). Feeds [20 — low-power tier](20-low-power-tier.md), which 
 surviving 3 control planes — this phase deliberately does **not** touch
 `allowSchedulingOnControlPlanes`.
 
-> **Status 2026-08-18 — one node of three done, then deliberately parked.**
+> **Status 2026-08-19 — COMPLETE. All three rotated.**
 >
 > | node | state |
 > |---|---|
-> | `hard-hat` | **worker.** Drained, out of etcd, wiped, rejoined. `machinetype: worker`, no control-plane statics, uncordoned, stale role label removed |
-> | `fluttershy` | control plane, untouched |
-> | `kerfuffle` | control plane, untouched. Holds `postgres-1` (**primary**) and the most Longhorn replicas of any node |
+> | `hard-hat` | **worker**, rotated 2026-08-17 |
+> | `fluttershy` | **worker**, rotated 2026-08-18. Held no singletons — the easy one |
+> | `kerfuffle` | **worker**, rotated 2026-08-19. Held the CNPG **primary**, OpenBao's **active** instance and 105 Longhorn replicas |
 >
-> etcd is at 5 members (the 3 ex-SGC nodes plus fluttershy and kerfuffle), healthy, no alarms.
+> End state reached: **3 control planes** (`milky-way`, `othalla`, `pegasus` — the ex-SGC
+> trio) and **4 workers** (`hard-hat`, `fluttershy`, `kerfuffle`, `shining-armor`). etcd is at
+> **3 members, quorum 2**. [vault#127](https://github.com/david-driscoll/vault/issues/127) is
+> closed by construction: neither PNY SATA node runs etcd any more.
+>
+> The sections below are kept as written during execution — including the parked-decision
+> record, which is why the phase paused and what was measured to resume it. What the runbook
+> got wrong is captured in "What execution changed" immediately after the disk measurements.
 >
 > **Why it is parked, and it is not the Step 6 gate.** The end state this phase produces —
 > control plane entirely on `milky-way`/`othalla`/`pegasus` — puts etcd, the apiserver, the
@@ -133,6 +140,145 @@ request handling, not cache. Tight, not fatal. The disks are the problem, and th
   for its whole outage window, then recovered on its own during the 2026-08-18 verification.
   It is the one node whose disk health the README singles out, and it was the one node not being
   watched — worth an alert on exporter readiness.
+
+## What execution changed — four things the runbook got wrong
+
+All four were found running `fluttershy` (2026-08-18) and `kerfuffle` (2026-08-19). The first
+is the one most likely to bite someone repeating this.
+
+### 1. `etcd leave` releases the API VIP — drain FIRST
+
+The runbook orders Step 2 (`etcd leave`) before Step 3 (drain). **That order is wrong for the
+last control plane in a subnet.**
+
+`10.10.206.201` is served by whichever control plane currently holds it. `hard-hat`,
+`fluttershy` and `kerfuffle` are all on `10.10.206.x`; the ex-SGC trio is on `10.10.209.x`
+(same `10.10.0.0/16` broadcast domain, so the shared VIP is valid — see the comment in
+`talos/talconfig.yaml`). When `kerfuffle` left etcd it released the VIP, and the seconds-long
+gap before `pegasus` claimed it **killed the in-flight drain**:
+
+```
+Unable to connect to the server: dial tcp 10.10.206.201:6443: i/o timeout
+```
+
+`kubectl drain` then exits **0** having done nothing, which reads as success. Worse, any
+`kubectl` check run during that window returns an empty list, so a naive "how many pods are
+left?" script reports **zero** and confirms the false success.
+
+**Do Step 3 before Step 2.** Draining needs the API; removing an etcd member does not. The
+documented order only worked on `fluttershy` because `kerfuffle` was still there to hold the
+VIP. Guard any post-drain assertion with an explicit API check:
+
+```bash
+kubectl get --raw /readyz >/dev/null 2>&1 || { echo "API down - counts are meaningless"; exit 1; }
+```
+
+### 2. A stale bare pod blocks the drain outright
+
+`kerfuffle`'s drain refused before evicting anything:
+
+```
+cannot delete Pods that declare no controller (use --force to override):
+kube-system/spegel-cleanup-wait
+```
+
+It was a Helm `post-delete` hook pod (`helm.sh/hook-delete-policy: hook-succeeded`) that never
+completed, left `Running` with no controller since 2026-08-13 — six days. spegel's actual
+DaemonSet was healthy at 7/7 throughout; this was pure debris.
+
+It would have blocked **any** drain of that node, including an automated `tuppr` Talos upgrade.
+Check for uncontrolled pods as part of Step 0 rather than discovering them at drain time:
+
+```bash
+kubectl get pods -A --field-selector spec.nodeName=<node> -o json \
+  | jq -r '.items[] | select(.metadata.ownerReferences == null)
+           | select(.status.phase == "Running")
+           | "\(.metadata.namespace)/\(.metadata.name)"'
+```
+
+Delete the specific pod once identified. Prefer that to `kubectl drain --force`, which
+force-deletes *every* uncontrolled pod on the node without naming them — a blunt instrument on
+a node holding OpenBao's active instance and share-managers.
+
+### 3. Step 1c is incomplete — the attachment ticket has to go too
+
+Step 1c correctly predicts that the Longhorn attachment ticket "re-asserts `nodeID` if you
+clear it", but does not say what to do about it. Clearing `spec.nodeID` alone **does not
+work** — the patch is accepted and the ticket immediately restores it.
+
+The step that actually breaks the deadlock is removing the ticket:
+
+```bash
+kubectl -n longhorn-system patch volumeattachments.longhorn.io <pv> --type json \
+  -p '[{"op":"remove","path":"/spec/attachmentTickets/<csi-volumeattachment-name>"}]'
+```
+
+The volume then reports `detached`, the CSI attacher confirms, the
+`external-attacher/driver-longhorn-io` finalizer clears, and the PV reclaims.
+
+**The stale-check in Step 1c matters more than it looks.** `cnpg destroy` gives the replacement
+instance a *new* PV under the *same* claim name. On kerfuffle:
+
+| | PV | state | created |
+|---|---|---|---|
+| stale | `pvc-d8bdd2f3-…` | `Released` | 2026-08-13 |
+| live | `pvc-e1d4927e-…` | `Bound` to the new `postgres-1` | 2026-08-19 04:27 |
+
+Both claim `database/postgres-1`. Deleting "the postgres-1 PV" without checking
+`creationTimestamp` destroys the live database volume.
+
+**A red herring to expect:** the detach can be rejected by Longhorn's own webhook with
+
+```
+admission webhook "validator.longhorn.io" denied the request:
+BUG: replica should be 1 for strict-local volume
+```
+
+That is **transient** — the window in which the replacement replica briefly makes the count 2 —
+and clears itself once the count settles; the CSI attacher's retry then succeeds. Forcing the
+PV finalizer at the first 500 orphans the Longhorn volume for nothing.
+
+### 4. `Ready` is the wrong gate after a wipe — use Longhorn's own condition
+
+A wiped node rejoins with an **empty image cache**, and kubelet serializes image pulls
+(`imagePullSessionsCount: 1`). Measured on `fluttershy`: cilium 5m34s pulling / 14m02s to
+start, nfd-worker 7m45s, intel-gpu-plugin 9m09s — and Longhorn's images are the largest.
+
+The node reports `Ready` **~40 minutes before Longhorn is usable on it**. Step 6 checks
+`kubectl get nodes` and would wave that through. The honest gate is Longhorn's own view:
+
+```bash
+kubectl get nodes.longhorn.io -n longhorn-system <node> \
+  -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'   # ManagerPodDown until images land
+kubectl -n longhorn-system get ds longhorn-manager longhorn-csi-plugin \
+  -o custom-columns=NAME:.metadata.name,DESIRED:.status.desiredNumberScheduled,READY:.status.numberReady
+```
+
+Do not run Step 1d's undo until `longhorn-manager` and `longhorn-csi-plugin` are both `N/N` and
+the node's Longhorn `Ready` is `True` — restoring `allowScheduling` earlier invites replicas
+onto a node whose manager cannot serve them. Note also that `registry` may relocate off the
+node being wiped, in which case its own pulls come from upstream and take longer still.
+
+### What went right, and why #939 mattered
+
+| | fluttershy | kerfuffle |
+|---|---|---|
+| replicas evicted | 77 | **105** (+38 %) |
+| wall clock | ~2.5 h | ~2 h |
+| peak failed replicas | **61** | 4 |
+| failed at completion | several | **0** |
+| collateral | ext4 abort on an attached volume | none |
+
+The difference is [#939](https://github.com/david-driscoll/home-operations/pull/939) —
+`concurrentReplicaRebuildPerNodeLimit` 5 → 2 — merged between the two. Land it before any
+future rotation.
+
+**Diagnostic lesson worth keeping:** disk latency on the Transcend SATA drives spikes to
+~1 second under load and recovers within a single 5-minute sample, routinely. Three separate
+mitigations were proposed off such a spike during execution and all three would have been
+wasted; one would have discarded 54 % of a completed rebuild. The signal that actually
+distinguished the fluttershy livelock was the **failed-replica count compounding**
+(0 → 3 → 6 → 9 → 61), not latency. Trigger on that.
 
 ## The 2026-08-17 milky-way incident — a hardware fault that reads exactly like resource exhaustion
 
@@ -521,7 +667,69 @@ other nodes to satisfy `replica-soft-anti-affinity: false`, i.e. one replica per
 first; an eviction that cannot place replicas stalls rather than failing loudly.
 
 **Do not confuse this with `allowScheduling: false`.** That only stops *new* replicas landing;
-it does not move the existing ones.
+it does not move the existing ones. You need **both** on the node being drained — Longhorn's own
+docs are explicit that eviction requires scheduling disabled, and with only `evictionRequested`
+set, replicas can be re-placed onto the very node you are emptying.
+
+### Step 1b-bis — steering where the evicted replicas LAND (added 2026-08-18)
+
+Eviction picks targets by **free space alone**. There are no Longhorn node tags, no disk tags and
+no `nodeSelector`/`diskSelector` on any StorageClass in this estate (verified live), so nothing
+tells it that some disks are fast and some are slow, hot and half-worn.
+
+On fluttershy's turn that meant **every** rebuild targeted `milky-way` and `pegasus` — because
+they were emptiest after their own wipes — while the three NVMe nodes sat idle. Measured mid-drain:
+
+| node | Longhorn disk | utilisation | avg write latency | temp |
+|---|---|---|---|---|
+| milky-way | `sda` Transcend SATA | 93.5 % | 126 ms | 75 °C |
+| pegasus | `sda` Transcend SATA | 89.7 % | 470 ms | 73 °C |
+| fluttershy (source) | `nvme0n1` Samsung | 6.3 % | — | 49 °C |
+
+Throughput collapsed to 1–2 % per five minutes, rebuilds began **failing and restarting from 0 %**
+(failed-replica count went 0 → 3 → 6 in ~15 minutes, all on those two nodes), and the drives
+climbed toward the 85 °C at which `pegasus` previously shut its XFS filesystem down mid-rebuild.
+
+**Mitigation, applied 2026-08-18 and effective:** disable scheduling on the slow nodes for the
+duration of the drain, so replacements land on NVMe instead:
+
+```bash
+kubectl -n longhorn-system patch nodes.longhorn.io milky-way --type merge -p '{"spec":{"allowScheduling":false}}'
+kubectl -n longhorn-system patch nodes.longhorn.io pegasus  --type merge -p '{"spec":{"allowScheduling":false}}'
+```
+
+It is not retroactive: replicas already scheduled onto those nodes keep rebuilding there, so the
+effect phases in as the in-flight queue drains. Non-destructive — it moves no existing data.
+
+The durable fix is [12](12-longhorn-critical-tier.md)'s `critical`/`bulk` tagging, specifically
+its step 3 (restricting the **default** StorageClass to `bulk`). The chart exposes it as
+`persistence.defaultNodeSelector.{enable,selector}`. Note that StorageClass `parameters` are
+immutable, so changing it requires deleting the `longhorn` StorageClass and letting Helm recreate
+it — `helm upgrade` alone will fail.
+
+### Step 1d — UNDO the scheduling changes when the node is back
+
+Easy to forget, and nothing surfaces it: a node left with `allowScheduling: false` silently stops
+receiving replicas forever, and a node left with `evictionRequested: true` will keep pushing them
+away after it rejoins. After **each** node completes Step 6:
+
+```bash
+# the node that was drained: clear BOTH flags once it has rejoined as a worker
+kubectl -n longhorn-system patch nodes.longhorn.io <node> --type merge \
+  -p '{"spec":{"allowScheduling":true,"evictionRequested":false}}'
+
+# and restore any node that was temporarily de-scheduled per Step 1b-bis
+kubectl -n longhorn-system patch nodes.longhorn.io milky-way --type merge -p '{"spec":{"allowScheduling":true}}'
+kubectl -n longhorn-system patch nodes.longhorn.io pegasus  --type merge -p '{"spec":{"allowScheduling":true}}'
+
+# verify: every node should read allowScheduling=true, evictionRequested=false
+kubectl get nodes.longhorn.io -n longhorn-system \
+  -o custom-columns=NAME:.metadata.name,SCHED:.spec.allowScheduling,EVICT:.spec.evictionRequested
+```
+
+Leaving `milky-way`/`pegasus` de-scheduled would also quietly defeat
+[20](20-low-power-tier.md): the Tier-1 volumes that must live on the control planes could never
+place a replica there.
 
 ### Step 1c — the stuck-detach chain after `cnpg destroy`
 
