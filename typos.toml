@@ -84,3 +84,7 @@ HASS = "HASS"
 # The first half of "HashiCorp" -- typos splits identifiers on the case
 # boundary, so it never sees the whole word.
 Hashi = "Hashi"
+# Pecron's TSL property key `device_standy_times_as` (device timeout), spelled
+# this way by the vendor. It is a lookup key in pecron-monitor's tsl_cache --
+# "correcting" it makes the entry match nothing on the device.
+standy = "standy"
