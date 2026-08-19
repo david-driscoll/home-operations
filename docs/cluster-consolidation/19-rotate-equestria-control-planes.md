@@ -38,8 +38,101 @@ surviving 3 control planes — this phase deliberately does **not** touch
 > make the ex-SGC nodes workers.
 >
 > **Do not read the 2026-08-17 instability as evidence for that decision.** See the incident note
-> below: it was a bad ethernet cable, not node sizing. The sizing question stands on its own
-> arithmetic, and is now the *only* argument in play.
+> below: it was a bad ethernet cable, not node sizing. Re-verified 2026-08-18: `ping -c 30`
+> returns 0.0% loss to all three ex-SGC nodes, and the 50 `Ready` flaps still visible in a 24 h
+> window are entirely inside the 08-17 incident — milky-way was then simply *out of the cluster*
+> for ~22 h and rejoined etcd as a learner at 00:11 UTC on 08-19. There is no post-fix
+> instability.
+>
+> **Resolved 2026-08-18 — David chose to continue, and to take the remaining two in the order
+> `kerfuffle` then `fluttershy`** (the reverse of the order documented below; see "Why hard-hat,
+> then fluttershy, then kerfuffle", which already flags either order as legitimate). The sizing
+> arithmetic above is *not* the strongest argument against continuing, and it turned out not to
+> be the operative one either — see the next section, which measures the thing that actually
+> matters and records the recommendation that was not taken.
+
+## The 2026-08-18 disk measurements — the real argument, and the road not taken
+
+**Measured live 2026-08-18/19 against `admin@equestria`: 19 h of steady state, hourly samples,
+deliberately excluding milky-way's rejoin window** (it was out of the cluster ~22 h and rejoined
+etcd as a learner at 00:11 UTC, so its figures are not comparable and are omitted):
+
+| node | etcd install disk | p50 fsync | p99 fsync (median) | p99 max |
+|---|---|---|---|---|
+| fluttershy | `PNY 500GB SATA` | **0.74 ms** | **3.86 ms** | 4.71 ms |
+| kerfuffle | `PNY 500GB SATA` | **0.74 ms** | **3.97 ms** | 5.06 ms |
+| othalla | `ShiJi 256GB M.2-NVMe` | 3.73 ms | 13.62 ms | 29.17 ms |
+| pegasus | `ShiJi 256GB M.2-NVMe` | 3.74 ms | 13.77 ms | 26.73 ms |
+
+etcd's own guidance is p99 WAL fsync **< 10 ms**. The two PNY SATA nodes pass it with better
+than 2× margin; both ShiJi nodes fail it persistently. Variance across the 19 h is tiny, so this
+is the hardware floor, not load noise — the ex-SGC drives are ~5× slower at the median than the
+disks this phase replaces.
+
+**This falsifies the "fixes vault#127 by construction" claim in the next section.** vault#127 was
+a *contention* incident — an unconstrained `pulumi` workspace pod putting 71 % of its writes on
+kerfuffle's `/var` — not the disk's floor. The floor is 0.74 ms. What removes that contention is
+[20](20-low-power-tier.md)'s taint (dedicated control planes carrying no general workload), and
+that works on **any** node set. This phase is claiming credit for 20's fix.
+
+It also supersedes [17](17-nvme-replacement.md)'s counterweight ("fluttershy is worse than
+milky-way right now — 18.3 ms fsync p99"), which came from a single 1 h window on 2026-08-13.
+Over 19 h on 2026-08-18, fluttershy's p99 never exceeded 4.71 ms.
+
+### Endurance — the part no piece had measured
+
+| drive | host | written | % used | implied endurance | remaining at current rate |
+|---|---|---|---|---|---|
+| Samsung 990 EVO Plus | fluttershy | 113.9 TB | 12 % | ~950 TB | ~8.7 yr @ 262 GB/day |
+| Samsung 990 EVO Plus | kerfuffle | 81.4 TB | 9 % | ~900 TB | — |
+| ShiJi 256GB | milky-way | 32.1 TB | **51 %** | ~63 TB | — |
+| ShiJi 256GB | othalla | 25.2 TB | **48 %** | ~53 TB | **~1.5 yr** @ 50 GB/day |
+| ShiJi 256GB | pegasus | 36.7 TB | **53 %** | ~69 TB | **~1.8 yr** @ 50 GB/day |
+
+The ShiJi drives carry roughly **1/18th** the write endurance of the estate's standard Samsung
+and are already half consumed. Three identical drives, same batch, same age, wear within five
+points of each other — and this phase's end state puts the **entire etcd quorum** on them. That
+is one correlated wear-out, not three independent risks.
+
+### The recommendation that was not taken
+
+Recorded so the decision is legible later, not to relitigate it: the analysis recommended
+**gating this phase on [17](17-nvme-replacement.md)** — swap the three ShiJi drives, then
+continue. D6 (low-power on battery) is the real reason the small nodes must hold the control
+plane, and it is untouched by the drive question; three cheap NVMes remove the only substantive
+objection and preserve the design intact. The fallback was to hold at 5 control planes, which
+costs nothing and keeps etcd spanning both disk classes so a ShiJi wear-out cannot take quorum.
+
+**David chose to continue on the current drives.** The operative consequence to carry forward:
+after this phase, [17](17-nvme-replacement.md) stops being an opportunistic nice-to-have and
+becomes the single highest-value hardware item in the estate, because the whole quorum then sits
+on drives with ~1.5–1.8 years of projected life that will expire together. It should be
+re-scoped accordingly and the hardware issue actually opened (17's Action item 1, still not
+done).
+
+### On sizing — it is the weaker argument
+
+`kube-apiserver` working set peaks at **3.2–4.2 GiB on every control plane regardless of node
+size** (24 h max: fluttershy 4.07, kerfuffle 4.24, milky-way 3.91, othalla 3.84, pegasus 3.22 GiB)
+— it is dominated by the watch cache, which does not scale with request share. The ex-SGC nodes
+held ~9 GB available across the whole window at 33–43 % CPU. Going 5 apiservers → 3 raises
+request handling, not cache. Tight, not fatal. The disks are the problem, and the 4-core /
+16 GiB arithmetic in the status block above is not what should have driven the decision.
+
+### Corrections to the README's hardware claims
+
+- The **70–85 °C** figure attaches to the *Transcend `TS1TMTS425S` SATA data disks* (live:
+  othalla 69 °C, pegasus 61 °C, kerfuffle 59 °C), **not** the etcd drives — the ShiJi NVMes run
+  45–47 °C. The thermal concern belongs to Longhorn's disks, and therefore to
+  [12](12-longhorn-critical-tier.md), not to etcd.
+- The reallocated/pending sectors are on **`pegasus`** `sda` (1 reallocated + 1 pending) and
+  **`milky-way`** `sda` (`Available_Reservd_Space` down to 88 %) — again the SATA data disks.
+  othalla's `nvme0` still reads a flat **18 media errors**
+  ([vault#95](https://github.com/david-driscoll/vault/issues/95)), unchanged since 2026-07-29.
+- milky-way's `smartctl-exporter` pod sat in `ContainerCreating` with **no disk metrics at all**
+  for its whole outage window, then recovered on its own during the 2026-08-18 verification.
+  It is the one node whose disk health the README singles out, and it was the one node not being
+  watched — worth an alert on exporter readiness.
 
 ## The 2026-08-17 milky-way incident — a hardware fault that reads exactly like resource exhaustion
 
@@ -93,6 +186,14 @@ and the repos, not copied from the July discovery text.
 
 ## Why now — this phase fixes vault#127 by construction
 
+> **Superseded 2026-08-18 — this section's premise is false.** Measured over 19 h of steady
+> state, the PNY SATA disks do 0.74 ms p50 / 3.9 ms p99 WAL fsync and the ShiJi NVMe that
+> replaces them does 3.7 ms / 13.7 ms. vault#127's 5038 ms was write *contention*, not the
+> disk's floor, and the thing that removes contention is [20](20-low-power-tier.md)'s taint,
+> not this phase. Kept below as written because the rest of the section (which disk is where,
+> why the Pulumi workspace pod landed on kerfuffle) is still accurate and still useful. See
+> "The 2026-08-18 disk measurements" above.
+
 [vault#127](https://github.com/david-driscoll/vault/issues/127) (opened 2026-08-02, open) found
 that **fluttershy and kerfuffle's `/var/lib/etcd` lives on a slow PNY 500GB SATA SSD**, while
 Longhorn gets the fast Samsung 990 EVO Plus NVMe on those same nodes. Under write pressure —
@@ -101,7 +202,7 @@ measured dominant cause: `pulumi/sgc-workspace-0`, unconstrained by any `nodeSel
 `coordination.k8s.io/leases` calls degrade to 10–26s, and every leader-electing controller in
 the cluster (`postgres-operator`, `cilium-operator`, `kube-scheduler`, `kube-controller-manager`,
 Longhorn/NFS CSI sidecars) starts losing its lease and crash-looping. Verified in
-`equestria-cluster/talos/talconfig.yaml`:
+`talos/talconfig.yaml`:
 
 ```yaml
 # hard-hat (line 125-126)
@@ -121,7 +222,7 @@ still worth landing independently and sooner, since it helps until this phase ru
 phase is the durable one, and it's already on the critical path.
 
 The other reason this phase matters: today `allowSchedulingOnControlPlanes: true` is set
-cluster-wide (verified in `equestria-cluster/talos/patches/controller/cluster.yaml:2`), so the
+cluster-wide (verified in `talos/patches/controller/cluster.yaml:2`), so the
 three control planes ALSO carry general workload — that's exactly how an unconstrained Pulumi
 workspace pod ended up on kerfuffle's etcd disk in the first place. After this phase, the three
 surviving control planes (ex-SGC) don't need to double as workers — equestria will have 4
@@ -143,7 +244,7 @@ scoped entirely to 20, once only 3 CPs remain and 4 real workers exist to absorb
       untrue everywhere before this phase touches a node.
 - [ ] A fresh `talosctl etcd snapshot` and a `talhelper genconfig` / `clusterconfig/` export,
       taken and stored off-box, immediately before the first node in this phase is touched.
-- [ ] `task talos:validate-config` passes clean in `equestria-cluster/talos/` (validates every
+- [ ] `mise run talos:validate-config` passes clean (validates every
       generated machine config against the pinned `talosVersion` before anything is applied).
 - [ ] CNPG cluster `database/postgres` reports `Cluster in healthy state`, `readyInstances: 3`,
       and the `postgres` / `postgres-primary` PodDisruptionBudgets both exist (see below —
@@ -301,6 +402,12 @@ rescheduled elsewhere by the StatefulSet controller — the only care needed is 
 health and the PDB's headroom *before* cordoning, not relocating anything by hand.
 
 ## The runbook — repeat once per node, in order
+
+> **Command-runner note, 2026-08-18.** The tree consolidated into `home-operations`
+> ([21](21-repo-consolidation-flux-repoint.md)) and go-task was replaced by mise. Every task
+> below is now `mise run talos:<task> <ip>` from the **repo root** — not `task talos:… IP=…`
+> from `equestria-cluster/talos/`. `generate-config` was renamed `genconfig`. Definitions
+> live in `.config/mise/tasks/talos/`. `talos:reset-node` carries a `#MISE confirm` prompt.
 
 Run this block for hard-hat, then fluttershy, then kerfuffle. Do not start the next node until
 the current node's Step 6 gate passes.
@@ -482,11 +589,10 @@ it produced exactly that false alarm on pegasus. The correct test is replicas wi
 ### Step 4 — wipe
 
 ```bash
-cd equestria-cluster/talos
-task talos:reset-node IP=<node-ip>
+mise run talos:reset-node <node-ip>
 ```
 
-This runs `talhelper gencommand reset --node <ip> --extra-flags="--reboot
+This runs, from `talos/`, `talhelper gencommand reset --node <ip> --extra-flags="--reboot
 --system-labels-to-wipe STATE --system-labels-to-wipe EPHEMERAL --graceful=false --wait=false"`
 — wipes the STATE and EPHEMERAL partitions and reboots into maintenance mode. Note
 `--graceful=false` here: this step does **not** remove the node from etcd on its own, which is
@@ -494,7 +600,7 @@ exactly why Step 2 has to happen first and separately.
 
 ### Step 5 — flip the role and rejoin as a worker
 
-In `equestria-cluster/talos/talconfig.yaml`, change this node's entry:
+In `talos/talconfig.yaml`, change this node's entry:
 
 ```yaml
 controlPlane: false   # was: true
@@ -503,13 +609,13 @@ controlPlane: false   # was: true
 Then regenerate, validate, and apply:
 
 ```bash
-task talos:generate-config
-task talos:validate-config
-task talos:add-node IP=<node-ip>
+mise run talos:genconfig
+mise run talos:validate-config
+mise run talos:add-node <node-ip>
 ```
 
 `talos:add-node` runs `talhelper gencommand apply --node <ip> --extra-flags '--insecure
---mode=auto'` — the same task used to bring a genuinely new node into the cluster, appropriate
+--mode=auto'` (mise prompts for confirmation on `reset-node`; `--mode` defaults to `auto`) — the same task used to bring a genuinely new node into the cluster, appropriate
 here because the node is in maintenance mode with no existing certs after Step 4. Talos cannot
 demote a control-plane node in place; this wipe-and-rejoin is the only path, mirroring exactly
 how [18](18-sgc-nodes-join-control-plane.md) promoted the SGC nodes in the other direction.
@@ -542,9 +648,9 @@ If Step 5's worker join fails — the node won't come up, kubelet won't register
 recovery is symmetric and does not touch the other nodes or quorum:
 
 1. Flip `controlPlane` back to `true` for this node in `talconfig.yaml`.
-2. `task talos:generate-config && task talos:validate-config`
-3. `task talos:reset-node IP=<node-ip>` (wipe again)
-4. `task talos:add-node IP=<node-ip>` (rejoins as a control plane, same as it was)
+2. `mise run talos:genconfig && mise run talos:validate-config`
+3. `mise run talos:reset-node <node-ip>` (wipe again)
+4. `mise run talos:add-node <node-ip>` (rejoins as a control plane, same as it was)
 5. Confirm it re-enters etcd and Longhorn rebuilds cleanly, then decide whether to retry the
    worker rotation or pause and investigate.
 
@@ -616,13 +722,13 @@ fine."
 - [18-sgc-nodes-join-control-plane.md](18-sgc-nodes-join-control-plane.md) — the mirror-image
   phase this one reverses; the 6-member starting state
 - [20-low-power-tier.md](20-low-power-tier.md) — tints the surviving 3 CPs; out of scope here
-- `equestria-cluster/talos/talconfig.yaml` — node definitions, install disks, `controlPlane`
+- `talos/talconfig.yaml` — node definitions, install disks, `controlPlane`
   flags
-- `equestria-cluster/talos/patches/controller/cluster.yaml` — `allowSchedulingOnControlPlanes`
-- `equestria-cluster/.taskfiles/talos/Taskfile.yaml` — `reset-node` / `add-node` / `generate-config` / `validate-config` tasks used throughout the runbook
-- `equestria-cluster/kubernetes/apps/database/postgres/app/resources/values.yaml` — CNPG
+- `talos/patches/controller/cluster.yaml` — `allowSchedulingOnControlPlanes`
+- `.config/mise/tasks/talos/` — `reset-node` / `add-node` / `generate-config` / `validate-config` tasks used throughout the runbook
+- `kubernetes/apps/database/postgres/app/resources/values.yaml` — CNPG
   `storageClass: longhorn-local`, `podAntiAffinityType: required`, instance count
-- `equestria-cluster/kubernetes/apps/kube-system/openbao/helmrelease.yaml` — OpenBao HA
+- `kubernetes/apps/kube-system/openbao/helmrelease.yaml` — OpenBao HA
   replicas, Postgres storage backend, disruption budget
 - [vault#127](https://github.com/david-driscoll/vault/issues/127) — the etcd/PNY-SATA issue this phase fixes
 - [vault#139](https://github.com/david-driscoll/vault/issues/139) — shining-armor taint history, checked clear as of 2026-08-13

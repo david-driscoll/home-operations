@@ -110,7 +110,7 @@ completed and eleven days have passed:
 | 07 authentik → alpha-site | **done.** Cut over 2026-08-16; all three public names plus the tailnet name serve from alpha-site |
 | 15 migrate apps | **done.** tsidp/tsiam live on equestria; SGC's `sgc` namespace held only superseded authentik |
 | 18 SGC → control planes | **done.** All three SGC nodes wiped and rejoined to equestria. **SGC no longer exists as a cluster** |
-| 19 rotate equestria CPs | **1 of 3, parked.** `hard-hat` is a worker; `fluttershy`/`kerfuffle` untouched — see 19's status block for why |
+| 19 rotate equestria CPs | **1 of 3, resumed 2026-08-18.** `hard-hat` is a worker; David decided to continue on the current drives, taking `kerfuffle` then `fluttershy` — see 19's status block and its 2026-08-18 disk measurements |
 | 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
 
 Current cluster: 7 nodes, 5 etcd members, all Ready.
@@ -120,9 +120,18 @@ Current cluster: 7 nodes, 5 etcd members, all Ready.
 - **The ex-SGC nodes are a quarter the size of what they replace** — 4 cores / 16 GiB against
   16–20 cores / 48–64 GiB. Piece 19's end state puts the whole control plane on them. Unresolved.
 - **Their disks run hot and are the weakest hardware in the estate.** `pegasus` hit 85 °C and its
-  XFS filesystem shut down mid-rebuild; relocating it dropped it to 53 °C. `milky-way` carries 6
-  reallocated and 6 pending sectors. Piece 12's `critical` tier assumed the control planes would
-  be the fast, healthy disks — after piece 19 they are the opposite.
+  XFS filesystem shut down mid-rebuild; relocating it dropped it to 53 °C. Piece 12's `critical`
+  tier assumed the control planes would be the fast, healthy disks — after piece 19 they are the
+  opposite.
+  **Corrected 2026-08-18:** the heat and the bad sectors are on the *Transcend SATA data* disks
+  (othalla 69 °C, pegasus 61 °C; reallocated/pending sectors on `pegasus` sda and reserve
+  depletion on `milky-way` sda), not the etcd drives, which run 45–47 °C. The etcd problem on
+  those nodes is different and worse: the `ShiJi 256GB` NVMe does **3.7 ms p50 / 13.7 ms p99**
+  WAL fsync against the PNY SATA's **0.74 ms / 3.9 ms** — permanently outside etcd's < 10 ms
+  guidance — and sits at **48–53 % write endurance consumed** with ~1.5–1.8 years projected life,
+  on three identical same-batch drives that will expire together. See
+  [19](19-rotate-equestria-control-planes.md) and [17](17-nvme-replacement.md). This makes
+  [17](17-nvme-replacement.md) the estate's highest-value hardware item, not an optional one.
 
 **Sequencing correction:** several pieces were executed out of the documented order and it mostly
 worked, but two ordering rules turned out to be real and are now written into the pieces that own
