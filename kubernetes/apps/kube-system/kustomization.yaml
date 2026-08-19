@@ -28,6 +28,8 @@ resources:
   - ./etcd/ks.yaml
   - ./headlamp/ks.yaml
   - ./multus/ks.yaml
+  - ./priority-class/ks.yaml
+  - ./kube-downscaler/ks.yaml
   - ./openbao/ks.yaml
   - ./openbao-replica/ks.yaml
   - ./vsc-retention/ks.yaml

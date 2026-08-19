@@ -75,7 +75,11 @@ spec:
                   - ALL
               readOnlyRootFilesystem: true
         pod:
-          priorityClassName: system-cluster-critical
+          # critical-tier, not system-cluster-critical: this is an application pod,
+          # and the Kubernetes system-reserved class let it preempt genuine
+          # control-plane components on a 4-core node. See
+          # docs/cluster-consolidation/20-low-power-tier.md §4.
+          priorityClassName: critical-tier
           affinity:
             podAntiAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:

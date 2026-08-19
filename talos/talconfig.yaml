@@ -145,10 +145,7 @@ nodes:
           grow: false
           minSize: 1TB
           maxSize: 1TB
-    nodeLabels:
-      <<: *nodeLabels
-      # Pin Technitium DNS to this node — it has enp2s0, required for ipvlan L2 NAD
-      technitium-dns: "true"
+    nodeLabels: *nodeLabels
     nodeAnnotations: &amd_minifm_annotations
       node.longhorn.io/default-node-tags: '["bulk"]'
       node.longhorn.io/default-disks-config: |
@@ -280,7 +277,13 @@ nodes:
           grow: false
           minSize: 1TB
           maxSize: 1TB
-    nodeLabels: *nodeLabels
+    nodeLabels:
+      <<: *nodeLabels
+      # Technitium DNS runs on the control planes (they carry enp3s0, which the
+      # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
+      # resolver survives a low-power window with every worker powered off —
+      # docs/cluster-consolidation/20-low-power-tier.md §0.3.
+      technitium-dns: "true"
     nodeAnnotations: &nodeAnnotations
       # `critical` = D6's low-power survivors: Tier-1 data must live on the
       # control planes. See docs/cluster-consolidation/12-longhorn-critical-tier.md.
@@ -340,7 +343,13 @@ nodes:
       secureboot: false
     controlPlane: true
     userVolumes: *userVolumes
-    nodeLabels: *nodeLabels
+    nodeLabels:
+      <<: *nodeLabels
+      # Technitium DNS runs on the control planes (they carry enp3s0, which the
+      # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
+      # resolver survives a low-power window with every worker powered off —
+      # docs/cluster-consolidation/20-low-power-tier.md §0.3.
+      technitium-dns: "true"
     nodeAnnotations: *nodeAnnotations
     schematic: *schematic
     networkInterfaces:
@@ -369,7 +378,13 @@ nodes:
       secureboot: false
     controlPlane: true
     userVolumes: *userVolumes
-    nodeLabels: *nodeLabels
+    nodeLabels:
+      <<: *nodeLabels
+      # Technitium DNS runs on the control planes (they carry enp3s0, which the
+      # ipvlan L2 NAD now binds). Moved here from hard-hat 2026-08-19 so the LAN
+      # resolver survives a low-power window with every worker powered off —
+      # docs/cluster-consolidation/20-low-power-tier.md §0.3.
+      technitium-dns: "true"
     nodeAnnotations: *nodeAnnotations
     schematic: *schematic
     networkInterfaces:

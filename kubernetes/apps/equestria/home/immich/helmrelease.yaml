@@ -34,6 +34,10 @@ spec:
       *app :
         annotations:
           reloader.stakater.com/auto: "true"
+          # Low Power keep-list: survives `downscaler/force-downtime` on the
+          # equestria namespace. Per-workload exclude beats the namespace toggle
+          # (scaler.py define_scope). docs/cluster-consolidation/24-power-states.md
+          downscaler/exclude: "true"
         replicas: 1
         pod:
           securityContext:

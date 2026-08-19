@@ -1,0 +1,23 @@
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-tier
+description: >-
+  Tier 0/1 low-power survivors — DNS, NTP, MQTT, Home Assistant, ingress and cluster
+  platform. See docs/cluster-consolidation/20-low-power-tier.md §4.
+# Deliberately BELOW Kubernetes' system-cluster-critical (2000000000) and the Longhorn
+# chart's longhorn-critical (1000000000), and above observability-critical (1000) and
+# every unset (0) pod. Priority governs preemption under contention, not placement: with
+# the workers powered off, Tier-2 pods simply go Pending. The value of this class is the
+# case where a control plane is LOST mid-window and the two survivors must evict the
+# right things.
+#
+# Three same-named-looking objects, three different kinds — do not assume a `kubectl get`
+# of one says anything about the others:
+#   * this PriorityClass                 `critical-tier`
+#   * the Longhorn chart's PriorityClass `longhorn-critical`
+#   * piece 12's StorageClass            `longhorn-critical`
+value: 100000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority

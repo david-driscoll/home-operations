@@ -16,8 +16,16 @@ metadata:
     # bridge, while ipvlan L2 shares the parent MAC so it works without any
     # Proxmox reconfiguration.
     #
-    # Nodes with NIC enp2s0 must be labeled: kubectl label node <name> technitium-dns=true
-    # The pod's nodeSelector ensures it only lands on a labeled worker node.
+    # master is enp3s0 — the CONTROL PLANE LAN NIC. Changed from enp2s0 (the
+    # worker NIC) on 2026-08-19 to move Technitium onto the control planes for
+    # low-power / battery mode: see docs/cluster-consolidation/20-low-power-tier.md
+    # §0.3. The address below does not change, because every node is a /16 inside
+    # 10.10.0.0/16 behind gateway 10.10.0.1 — one broadcast domain — so the same
+    # static LAN address is equally valid on either parent interface.
+    #
+    # Nodes with NIC enp3s0 must be labeled: kubectl label node <name> technitium-dns=true
+    # The label is set from talos/talconfig.yaml on milky-way/othalla/pegasus; the pod's
+    # nodeSelector ensures it only lands on one of them.
     #
     # Tailscale DNS access: the Connector subnet router already advertises
     # the LAN subnet to the tailnet, so Tailscale clients with --accept-routes
@@ -28,7 +36,7 @@ spec:
       "cniVersion": "0.3.1",
       "name": "technitium-dns-net",
       "type": "ipvlan",
-      "master": "enp2s0",
+      "master": "enp3s0",
       "mode": "l2",
       "ipam": {
         "type": "static",
