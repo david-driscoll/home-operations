@@ -63,6 +63,22 @@ spec:
           hostPID: true
           nodeSelector:
             node-role.kubernetes.io/control-plane: ""
+          # The nodeSelector above PINS this job to the control planes, so once
+          # `allowSchedulingOnControlPlanes: false` lands in
+          # talos/patches/controller/cluster.yaml it becomes a contradiction:
+          # a pod that selects the tainted nodes and does not tolerate the taint
+          # is permanently unschedulable. It fails quietly -- the Job is created,
+          # its pod sits Pending with "had untolerated taint", and nothing alerts.
+          # See docs/cluster-consolidation/29-taint-readiness-audit.md.
+          #
+          # Verified with `helm template` against app-template 5.1.0 (the pinned
+          # version in kubernetes/components/repos/app-template/ocirepository.yaml)
+          # that controllers.<name>.pod.tolerations reaches the CronJob's
+          # jobTemplate pod spec -- several charts ignore the obvious key.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
       defrag:
         type: cronjob
         cronjob:
@@ -108,6 +124,12 @@ spec:
           hostPID: true
           nodeSelector:
             node-role.kubernetes.io/control-plane: ""
+          # Same nodeSelector-pins-to-tainted-nodes contradiction as `backup`
+          # above -- read the comment there.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
       prune:
         type: cronjob
         cronjob:
