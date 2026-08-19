@@ -1,0 +1,106 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: py-kube-downscaler
+  namespace: kube-system
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 0.3.12
+    digest: sha256:261d8213ae8f9c4fb65d565589f85b5e365eb1af738c57356df52d329f2015bf
+  url: oci://ghcr.io/caas-team/charts/py-kube-downscaler
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-downscaler
+  namespace: kube-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: py-kube-downscaler
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # Low Power mode's shed mechanism. See
+    # docs/cluster-consolidation/24-power-states.md — "Mechanism".
+    #
+    # POLARITY, and it is two separate things:
+    #   * SCOPE is opt-out — every workload is in scope unless it carries
+    #     `downscaler/exclude: "true"` or lives in an excluded namespace. That is what
+    #     makes a NEW app shed by default in Low Power without anyone remembering to
+    #     opt it in.
+    #   * ACTION is inert — with no DEFAULT_UPTIME/DEFAULT_DOWNTIME set, the upstream
+    #     defaults are `always`/`never`, so this controller scales NOTHING until a
+    #     namespace is annotated. Installing it changes no behaviour.
+    #
+    # The Full <-> Low Power toggle is therefore a live annotation, no Git commit:
+    #   kubectl annotate namespace equestria downscaler/force-downtime=true  --overwrite
+    #   kubectl annotate namespace equestria downscaler/force-downtime=false --overwrite
+    #
+    # `downscaler/force-downtime` is read from the NAMESPACE only — there is no
+    # workload-level equivalent — and a per-workload `downscaler/exclude: "true"` beats
+    # it (scaler.py `define_scope`, :97). That precedence is what lets the Low Power
+    # keep-list (plex, jellyfin, immich, …) share the `equestria` namespace with the
+    # shed-list. Original replica counts are stored per workload as
+    # `downscaler/original-replicas` and restored on the way back up.
+    arguments:
+      - --interval=60
+      - --include-resources=deployments,statefulsets,cronjobs,scaledobjects
+      # SAFETY: remove this line only after reading a full scan in the logs and
+      # confirming the would-be actions match the intended shed-list. Until then this
+      # controller reports and does not act. Leaving it here permanently is the other
+      # failure mode: the toggle would be flipped and nothing would happen.
+      - --dry-run
+
+    # Tier 0 and Tier 1 (docs/cluster-consolidation/20-low-power-tier.md §1) can never be
+    # shed. They are never annotated with force-downtime either, so this list is
+    # belt-and-braces — its job is to make a mistyped `kubectl annotate` inert.
+    excludedNamespaces:
+      - py-kube-downscaler
+      - kube-downscaler
+      - kube-system
+      - longhorn-system
+      - cert-manager
+      - nfs-system
+      - flux-system
+      - cloudnative-pg
+      - volsync-system
+      - openebs-system
+      - network
+      - stargate-command
+      - tailscale-system
+      # Tier 1 by 24 §1's amendment — these stay up during Battery.
+      - observability
+      - pulumi
+
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

@@ -149,8 +149,13 @@ spec:
         runAsGroup: 0
         seccompProfile:
           type: RuntimeDefault
-      # Pin to hard-hat (10.10.206.14) via talconfig nodeLabel technitium-dns=true.
-      # That node is a control plane node, so tolerate the NoSchedule taint.
+      # Pin to the control planes via talconfig nodeLabel technitium-dns=true.
+      # Moved off hard-hat 2026-08-19: the label now sits on milky-way/othalla/pegasus
+      # and the ipvlan NAD binds their enp3s0, so the LAN resolver survives a
+      # low-power window with every worker off — see
+      # docs/cluster-consolidation/20-low-power-tier.md §0.3.
+      # The toleration below is what makes that survive the §4 control-plane taint;
+      # a nodeSelector matching only tainted nodes without it is an unschedulable pod.
       nodeSelector:
         technitium-dns: "true"
       tolerations:

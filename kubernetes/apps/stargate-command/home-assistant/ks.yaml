@@ -27,6 +27,8 @@ spec:
   retryInterval: 2m
   timeout: 10m
   dependsOn:
+    - name: kube-system-priority-class
+      namespace: kube-system
     - name: volsync
       namespace: volsync-system
     - name: sgc-secrets
