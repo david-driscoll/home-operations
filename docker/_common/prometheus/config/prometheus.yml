@@ -13,6 +13,20 @@ rule_files:
   - /etc/prometheus/rules/*.yml
   - /etc/prometheus/rules/*.yaml
 
+# Per-host scrape jobs, as `docker/<host>/prometheus/config/scrape/*.yml`.
+# DockgeLxc merges a host's stack directory over _common, adding any file at a
+# relative path _common does not define, so a host can contribute scrape jobs
+# without forking this file.
+#
+# This directive is why `docker/alpha-site/prometheus/config/scrape/` works at
+# all. Without it there is NO mechanism for a host-specific target: the earlier
+# `prometheus-remote-write.yml` sat next to this file for months being copied
+# into the container and never read, so its adguard and gatus jobs silently
+# never scraped. An empty glob is not an error, so hosts with no drop-ins are
+# unaffected.
+scrape_config_files:
+  - /etc/prometheus/scrape/*.yml
+
 remote_write:
   - url: http://thanos-receive.${tailscaleDomain}:19291/api/v1/receive
     queue_config:

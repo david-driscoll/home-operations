@@ -1,0 +1,31 @@
+---
+# Host-specific scrape jobs for alpha-site, loaded via the `scrape_config_files`
+# glob in docker/_common/prometheus/config/prometheus.yml.
+#
+# These were previously in `config/prometheus-remote-write.yml`, which nothing
+# ever loaded — prometheus.yml has no `scrape_config_files` directive until this
+# change, and `--config.file` names only prometheus.yml. The file was faithfully
+# copied into the container and ignored for months, so the adguard job below has
+# never actually scraped.
+#
+# The gatus job that sat alongside it was dropped rather than moved: it targeted
+# `gatus:8080`, but the container is named `uptime` and listens on 9595, and
+# Gatus only serves /metrics when `metrics: true` is set in its config, which it
+# is not. Reviving it would have added a permanently-down target. Enabling Gatus
+# metrics is worth doing on its own, separately from this.
+scrape_configs:
+  # AdGuard Home DNS metrics. Verified live: adguard-exporter:9617/metrics
+  # answers from the prometheus container on dockge_default.
+  - job_name: 'adguard'
+    static_configs:
+      - targets: ['adguard-exporter:9617']
+        labels:
+          host: '${host}'
+          service: 'dns'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'
+        regex: '([^:]+).*'

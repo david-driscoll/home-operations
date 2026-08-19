@@ -25,6 +25,35 @@ services:
       - /opt/stacks-data/${APP}/data:/data
     networks:
       - dockge_default
+
+  # Bridges the monitor's MQTT telemetry to Prometheus. Upstream ships no HTTP
+  # surface at all, so MQTT is the only way out of pecron-monitor — see the
+  # module docstring in exporter/pecron_exporter.py for why this is a purpose-
+  # built exporter rather than a generic mqtt2prometheus.
+  #
+  # No published port: the alpha-site Prometheus is on dockge_default and
+  # scrapes it by container name, so nothing needs to reach it from the host.
+  pecron-exporter:
+    container_name: pecron-exporter
+    build:
+      context: ./exporter
+    image: pecron-exporter:local
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      TZ: ${TIMEZONE}
+      PECRON_MQTT_HOST: replicator.${searchDomain}
+      PECRON_MQTT_PORT: "1883"
+      PECRON_LISTEN_PORT: "9836"
+      # Translates device key -> friendly name at the edge so the MAC-address
+      # device keys stay out of Thanos and Grafana. Each key is resolved by
+      # vals from the same OpenBao secret the monitor's own config reads.
+      PECRON_DEVICE_MAP: "ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key=Primary,ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key=Backup,ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key=Spare"
+    depends_on:
+      - pecron-monitor
+    networks:
+      - dockge_default
 networks:
   dockge_default:
     external: true

@@ -11,6 +11,7 @@ resources:
   - ./media.yaml
   - ./network.yaml
   - ./node-monitoring.yaml
+  - ./pecron.yaml
   - ./services.yaml
   - ./thanos.yaml
 generatorOptions:
