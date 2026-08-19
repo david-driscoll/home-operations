@@ -110,10 +110,10 @@ completed and eleven days have passed:
 | 07 authentik → alpha-site | **done.** Cut over 2026-08-16; all three public names plus the tailnet name serve from alpha-site |
 | 15 migrate apps | **done.** tsidp/tsiam live on equestria; SGC's `sgc` namespace held only superseded authentik |
 | 18 SGC → control planes | **done.** All three SGC nodes wiped and rejoined to equestria. **SGC no longer exists as a cluster** |
-| 19 rotate equestria CPs | **1 of 3, resumed 2026-08-18.** `hard-hat` is a worker; David decided to continue on the current drives, taking `kerfuffle` then `fluttershy` — see 19's status block and its 2026-08-18 disk measurements |
+| 19 rotate equestria CPs | **DONE 2026-08-19.** All three rotated. 3 CPs (`milky-way`/`othalla`/`pegasus`) + 4 workers; etcd at 3 members, quorum 2. vault#127 closed by construction. Executed on the current drives — see 19's disk measurements and "What execution changed" |
 | 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
 
-Current cluster: 7 nodes, 5 etcd members, all Ready.
+Current cluster: 7 nodes, **3 etcd members** (`milky-way`, `othalla`, `pegasus`), all Ready.
 
 **Two things the plan never accounted for, both now load-bearing on decisions:**
 
