@@ -1,0 +1,609 @@
+# Pecron battery monitor configuration — the deploy-time template.
+#
+# This is the SOURCE OF TRUTH for the pecron-monitor config, rules included.
+# DockgeLxc renders it on deploy: ${CLUSTER_KEY}/${APP} substitution first,
+# then vals resolves every ref+openbao:// reference, and the resolved file
+# lands at /opt/stacks/pecron-monitor/config/config.yaml on the host, which
+# compose.yaml mounts read-only into the container.
+#
+# The repo is public, so anything that authenticates — cloud email/password,
+# per-device auth_key AND device_key — plus the devices' lan_ips lives in
+# OpenBao under secrets/clusters/alpha-site/apps/pecron-monitor/{cloud,devices},
+# never here.
+# The tsl_cache blocks are just the devices' TSL schema (identical for every
+# unit of this model), not secrets.
+email: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/cloud#/email
+password: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/cloud#/password
+region: na
+devices:
+- product_key: p11wPr
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key
+  name: Spare
+  tsl_cache:
+    FAULT_ALARM_ENUM:
+      id: 67
+      type: ENUM
+      desc: Fault alarm enumeration
+      access: RW
+    battery_percentage:
+      id: 1
+      type: INT
+      desc: Battery charge
+      access: R
+    remain_time:
+      id: 2
+      type: INT
+      desc: Remaining usable time
+      access: R
+    remain_charging_time:
+      id: 3
+      type: INT
+      desc: Remaining charging time
+      access: R
+    total_input_power:
+      id: 4
+      type: INT
+      desc: Total input
+      access: R
+    total_output_power:
+      id: 5
+      type: INT
+      desc: Total output
+      access: R
+    ups_status_hm:
+      id: 27
+      type: BOOL
+      desc: Ups status
+      access: R
+    add_bat_status_hm:
+      id: 39
+      type: BOOL
+      desc: Power pack status
+      access: R
+    auto_light_flag_as:
+      id: 43
+      type: BOOL
+      desc: Automatically dim when idle
+      access: RW
+    device_manual:
+      id: 52
+      type: TEXT
+      desc: Device user manual
+      access: R
+    device_status_hm:
+      id: 37
+      type: ENUM
+      desc: Device status
+      access: R
+    dc_data_output_hm:
+      id: 30
+      type: STRUCT
+      desc: DC
+      access: R
+    ac_data_output_hm:
+      id: 31
+      type: STRUCT
+      desc: AC
+      access: R
+    host_packet_data_jdb:
+      id: 35
+      type: STRUCT
+      desc: Host power pack details
+      access: R
+    charging_pack_data_jdb:
+      id: 36
+      type: ARRAY
+      desc: Power pack information
+      access: R
+    dc_data_input_hm:
+      id: 28
+      type: STRUCT
+      desc: DC/PV
+      access: R
+    ac_data_input_hm:
+      id: 29
+      type: STRUCT
+      desc: 'AC '
+      access: R
+    dc_switch_hm:
+      id: 38
+      type: BOOL
+      desc: Dc output
+      access: RW
+    ac_switch_hm:
+      id: 40
+      type: BOOL
+      desc: Ac output
+      access: RW
+    high_frequency_reporting:
+      id: 100
+      type: ENUM
+      desc: High-frequency reporting
+      access: RW
+    device_standy_times_as:
+      id: 90
+      type: ENUM
+      desc: Device timeout
+      access: RW
+    ac_charging_power_ios:
+      id: 89
+      type: ENUM
+      desc: Ac charging  speed
+      access: RW
+    key_light_us:
+      id: 88
+      type: ENUM
+      desc: Key brightness
+      access: RW
+    beep_voice_us:
+      id: 87
+      type: BOOL
+      desc: Buzzer volume
+      access: RW
+    false_touch_us:
+      id: 86
+      type: BOOL
+      desc: Anti-misoperation mode
+      access: RW
+    screen_power_statistics_mode_us:
+      id: 85
+      type: ENUM
+      desc: Power statistics display
+      access: RW
+    eco_onoff_us:
+      id: 84
+      type: BOOL
+      desc: Eco
+      access: RW
+    solar_panel_power_generation:
+      id: 70
+      type: FLOAT
+      desc: Pv generation this time
+      access: R
+    total_energy:
+      id: 71
+      type: FLOAT
+      desc: Pv cumulative generation
+      access: R
+    ac_charge_energy:
+      id: 72
+      type: FLOAT
+      desc: Ac charge this time
+      access: R
+    total_ac_charge_energy:
+      id: 73
+      type: FLOAT
+      desc: Ac cumulative charge
+      access: R
+    dc_output_energy:
+      id: 74
+      type: FLOAT
+      desc: Dc output this time
+      access: R
+    total_dc_output_energy:
+      id: 75
+      type: FLOAT
+      desc: Dc cumulative output
+      access: R
+    ac_output_energy:
+      id: 76
+      type: FLOAT
+      desc: Ac output this time
+      access: R
+    total_ac_output_energy:
+      id: 77
+      type: FLOAT
+      desc: Ac cumulative output
+      access: R
+  auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_auth_key
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_lan_ip
+- product_key: p11wPr
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
+  name: Primary
+  tsl_cache:
+    FAULT_ALARM_ENUM:
+      id: 67
+      type: ENUM
+      desc: Fault alarm enumeration
+      access: RW
+    battery_percentage:
+      id: 1
+      type: INT
+      desc: Battery charge
+      access: R
+    remain_time:
+      id: 2
+      type: INT
+      desc: Remaining usable time
+      access: R
+    remain_charging_time:
+      id: 3
+      type: INT
+      desc: Remaining charging time
+      access: R
+    total_input_power:
+      id: 4
+      type: INT
+      desc: Total input
+      access: R
+    total_output_power:
+      id: 5
+      type: INT
+      desc: Total output
+      access: R
+    ups_status_hm:
+      id: 27
+      type: BOOL
+      desc: Ups status
+      access: R
+    add_bat_status_hm:
+      id: 39
+      type: BOOL
+      desc: Power pack status
+      access: R
+    auto_light_flag_as:
+      id: 43
+      type: BOOL
+      desc: Automatically dim when idle
+      access: RW
+    device_manual:
+      id: 52
+      type: TEXT
+      desc: Device user manual
+      access: R
+    device_status_hm:
+      id: 37
+      type: ENUM
+      desc: Device status
+      access: R
+    dc_data_output_hm:
+      id: 30
+      type: STRUCT
+      desc: DC
+      access: R
+    ac_data_output_hm:
+      id: 31
+      type: STRUCT
+      desc: AC
+      access: R
+    host_packet_data_jdb:
+      id: 35
+      type: STRUCT
+      desc: Host power pack details
+      access: R
+    charging_pack_data_jdb:
+      id: 36
+      type: ARRAY
+      desc: Power pack information
+      access: R
+    dc_data_input_hm:
+      id: 28
+      type: STRUCT
+      desc: DC/PV
+      access: R
+    ac_data_input_hm:
+      id: 29
+      type: STRUCT
+      desc: 'AC '
+      access: R
+    dc_switch_hm:
+      id: 38
+      type: BOOL
+      desc: Dc output
+      access: RW
+    ac_switch_hm:
+      id: 40
+      type: BOOL
+      desc: Ac output
+      access: RW
+    high_frequency_reporting:
+      id: 100
+      type: ENUM
+      desc: High-frequency reporting
+      access: RW
+    device_standy_times_as:
+      id: 90
+      type: ENUM
+      desc: Device timeout
+      access: RW
+    ac_charging_power_ios:
+      id: 89
+      type: ENUM
+      desc: Ac charging  speed
+      access: RW
+    key_light_us:
+      id: 88
+      type: ENUM
+      desc: Key brightness
+      access: RW
+    beep_voice_us:
+      id: 87
+      type: BOOL
+      desc: Buzzer volume
+      access: RW
+    false_touch_us:
+      id: 86
+      type: BOOL
+      desc: Anti-misoperation mode
+      access: RW
+    screen_power_statistics_mode_us:
+      id: 85
+      type: ENUM
+      desc: Power statistics display
+      access: RW
+    eco_onoff_us:
+      id: 84
+      type: BOOL
+      desc: Eco
+      access: RW
+    solar_panel_power_generation:
+      id: 70
+      type: FLOAT
+      desc: Pv generation this time
+      access: R
+    total_energy:
+      id: 71
+      type: FLOAT
+      desc: Pv cumulative generation
+      access: R
+    ac_charge_energy:
+      id: 72
+      type: FLOAT
+      desc: Ac charge this time
+      access: R
+    total_ac_charge_energy:
+      id: 73
+      type: FLOAT
+      desc: Ac cumulative charge
+      access: R
+    dc_output_energy:
+      id: 74
+      type: FLOAT
+      desc: Dc output this time
+      access: R
+    total_dc_output_energy:
+      id: 75
+      type: FLOAT
+      desc: Dc cumulative output
+      access: R
+    ac_output_energy:
+      id: 76
+      type: FLOAT
+      desc: Ac output this time
+      access: R
+    total_ac_output_energy:
+      id: 77
+      type: FLOAT
+      desc: Ac cumulative output
+      access: R
+  auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_auth_key
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_lan_ip
+- product_key: p11wPr
+  device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
+  name: Backup
+  tsl_cache:
+    FAULT_ALARM_ENUM:
+      id: 67
+      type: ENUM
+      desc: Fault alarm enumeration
+      access: RW
+    battery_percentage:
+      id: 1
+      type: INT
+      desc: Battery charge
+      access: R
+    remain_time:
+      id: 2
+      type: INT
+      desc: Remaining usable time
+      access: R
+    remain_charging_time:
+      id: 3
+      type: INT
+      desc: Remaining charging time
+      access: R
+    total_input_power:
+      id: 4
+      type: INT
+      desc: Total input
+      access: R
+    total_output_power:
+      id: 5
+      type: INT
+      desc: Total output
+      access: R
+    ups_status_hm:
+      id: 27
+      type: BOOL
+      desc: Ups status
+      access: R
+    add_bat_status_hm:
+      id: 39
+      type: BOOL
+      desc: Power pack status
+      access: R
+    auto_light_flag_as:
+      id: 43
+      type: BOOL
+      desc: Automatically dim when idle
+      access: RW
+    device_manual:
+      id: 52
+      type: TEXT
+      desc: Device user manual
+      access: R
+    device_status_hm:
+      id: 37
+      type: ENUM
+      desc: Device status
+      access: R
+    dc_data_output_hm:
+      id: 30
+      type: STRUCT
+      desc: DC
+      access: R
+    ac_data_output_hm:
+      id: 31
+      type: STRUCT
+      desc: AC
+      access: R
+    host_packet_data_jdb:
+      id: 35
+      type: STRUCT
+      desc: Host power pack details
+      access: R
+    charging_pack_data_jdb:
+      id: 36
+      type: ARRAY
+      desc: Power pack information
+      access: R
+    dc_data_input_hm:
+      id: 28
+      type: STRUCT
+      desc: DC/PV
+      access: R
+    ac_data_input_hm:
+      id: 29
+      type: STRUCT
+      desc: 'AC '
+      access: R
+    dc_switch_hm:
+      id: 38
+      type: BOOL
+      desc: Dc output
+      access: RW
+    ac_switch_hm:
+      id: 40
+      type: BOOL
+      desc: Ac output
+      access: RW
+    high_frequency_reporting:
+      id: 100
+      type: ENUM
+      desc: High-frequency reporting
+      access: RW
+    device_standy_times_as:
+      id: 90
+      type: ENUM
+      desc: Device timeout
+      access: RW
+    ac_charging_power_ios:
+      id: 89
+      type: ENUM
+      desc: Ac charging  speed
+      access: RW
+    key_light_us:
+      id: 88
+      type: ENUM
+      desc: Key brightness
+      access: RW
+    beep_voice_us:
+      id: 87
+      type: BOOL
+      desc: Buzzer volume
+      access: RW
+    false_touch_us:
+      id: 86
+      type: BOOL
+      desc: Anti-misoperation mode
+      access: RW
+    screen_power_statistics_mode_us:
+      id: 85
+      type: ENUM
+      desc: Power statistics display
+      access: RW
+    eco_onoff_us:
+      id: 84
+      type: BOOL
+      desc: Eco
+      access: RW
+    solar_panel_power_generation:
+      id: 70
+      type: FLOAT
+      desc: Pv generation this time
+      access: R
+    total_energy:
+      id: 71
+      type: FLOAT
+      desc: Pv cumulative generation
+      access: R
+    ac_charge_energy:
+      id: 72
+      type: FLOAT
+      desc: Ac charge this time
+      access: R
+    total_ac_charge_energy:
+      id: 73
+      type: FLOAT
+      desc: Ac cumulative charge
+      access: R
+    dc_output_energy:
+      id: 74
+      type: FLOAT
+      desc: Dc output this time
+      access: R
+    total_dc_output_energy:
+      id: 75
+      type: FLOAT
+      desc: Dc cumulative output
+      access: R
+    ac_output_energy:
+      id: 76
+      type: FLOAT
+      desc: Ac output this time
+      access: R
+    total_ac_output_energy:
+      id: 77
+      type: FLOAT
+      desc: Ac cumulative output
+      access: R
+  auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_auth_key
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_lan_ip
+poll_interval: 70
+alerts:
+  low_battery_percent: 20
+  cooldown_minutes: 30
+  telegram:
+    enabled: false
+    bot_token: ''
+    chat_id: ''
+  ntfy:
+    enabled: false
+    url: ''
+  webhook:
+    enabled: false
+    url: ''
+homeassistant:
+  enabled: true
+  mqtt_host: replicator.driscoll.tech
+  mqtt_port: 1883
+  mqtt_user: ''
+  mqtt_password: ''
+  discovery_prefix: homeassistant
+  clear_discovery_on_startup: true
+  energy_sensors: true
+  energy_max_gap_seconds: 1800
+rule_state:
+  initial_state: default
+  path: /data/pecron-monitor-rules.json
+  _comment: Persisted rules-engine state. Add path to override ~/.pecron-monitor-rules.json.
+rules:
+- name: Low battery — turn off AC
+  condition:
+    battery_below: 10
+  action:
+    set_ac: false
+  cooldown_minutes: 30
+  _comment: Example rule. Edit or remove as needed.
+restore_outputs_after_shutdown:
+  enabled: true
+  shutdown_threshold_pct: 10
+  shutdown_threshold_voltage: null
+  minimum_offline_seconds: 120
+  retry_interval_seconds: 30
+  retry_timeout_seconds: 600
+  snapshot_max_age_seconds: 86400
+  _comment: 'When a device transitions offline at low SoC or low voltage, snapshot AC/DC switch state.
+    When it later comes back online (e.g. mains restored after a low-battery shutdown), restore the previous
+    switches. Set shutdown_threshold_voltage to a pack voltage such as 48.0 if SoC drift makes percentage
+    unreliable near empty. See issue #59/#57. Set enabled: true to opt in; defaults are conservative.'
