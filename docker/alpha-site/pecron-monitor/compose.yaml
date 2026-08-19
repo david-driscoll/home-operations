@@ -16,9 +16,11 @@ services:
       TZ: ${TIMEZONE}
     volumes:
       # config/config.yaml is the in-repo template: Pulumi renders it (variable
-      # substitution + vals resolving the ref+openbao:// references) and copies
-      # the result here before this compose command ever runs, so the file is
-      # guaranteed to exist — a direct file mount is safe.
+      # substitution + vals resolving the <ref+openbao scheme>:// references)
+      # and copies the result here before this compose command ever runs, so
+      # the file is guaranteed to exist — a direct file mount is safe.
+      # The scheme is broken apart above on purpose: vals does not know what a
+      # comment is, so a well-formed reference in one resolves or fails the run.
       - ./config/config.yaml:/config/config.yaml:ro
       - /opt/stacks-data/${APP}/data:/data
     networks:
