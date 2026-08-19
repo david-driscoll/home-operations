@@ -72,7 +72,7 @@ backups:
     # fresh archive path (recovery keeps reading the old one, which stays
     # immutable):
     #
-    #   backups.s3.path: "/barman/${CLUSTER_CNAME}-<stamp>"
+    #   backups.s3.path: "/barman/$${CLUSTER_CNAME}-<stamp>"
     #
     # This is almost certainly why the recovery block used to point at a
     # separate "-restore" bucket: the same collision, worked around by

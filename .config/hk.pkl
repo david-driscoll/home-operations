@@ -108,6 +108,27 @@ local linters = new Mapping<String, Step> {
       "flate test all --path ./kubernetes/flux/cluster --allow-missing-secrets --source-retry-attempts 10 --no-progress"
   }
 
+  // Closes the blind spot named in the `flate` comment directly above: this is
+  // the step that DOES run Flux postBuild envsubst and the external-secrets
+  // `templateAs: Values` template engine, over the files a kustomize
+  // `configMapGenerator` slurps whole. Ported from equestria-cluster with the
+  // flux-local workflow (piece 21); the same binary runs as the
+  // `eso-values-lint` job in .github/workflows/flux-local.yaml.
+  //
+  // Both renderers treat a *comment* as live text, so a `${VAR}` or `{{ ... }}`
+  // inside one is executed -- twice the cause of a CrowdSec outage
+  // (equestria-cluster#2977, #2980 / vault#111). It caught one live instance in
+  // this repo on import, in the postgres values.yaml.
+  //
+  // `go -C` is required: the module is nested and there is no go.mod at the
+  // repo root, so `go run ./scripts/...` cannot resolve it. Because `-C` also
+  // changes the run'd program's working directory, the target path has to be
+  // absolute.
+  ["eso-values-lint"] = new Step {
+    glob = List("kubernetes/**/*.yaml", "kubernetes/**/*.yml")
+    check = "go -C scripts/eso-values-lint run . \"$(git rev-parse --show-toplevel)/kubernetes\""
+  }
+
   // Configured by `.yamllint`, which disables the purely cosmetic rules and
   // keeps the ones that catch manifests Flux would silently mis-apply — above
   // all `key-duplicates`, where a repeated key in a HelmRelease drops the
