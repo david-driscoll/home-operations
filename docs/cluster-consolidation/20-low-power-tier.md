@@ -21,285 +21,291 @@ runbook-driven.
 
 ---
 
-## Status — 2026-08-19, re-verified live against `admin@equestria`
+## Status — 2026-08-19, second revision (evening), re-verified live against `admin@equestria`
 
-[19](19-rotate-equestria-control-planes.md) **completed 2026-08-19**, which is what unblocks
-this piece: the end-state topology this file was written against is now the real topology.
-Everything below marked "verified" was re-checked live on 2026-08-19 with read-only
-`kubectl`/`talosctl`. Nothing in the cluster was mutated to write this file.
+**Two of this file's three blockers cleared during the day**, and the third has a decision
+rather than three candidate answers. The earlier revision of this section — written the same
+morning — is superseded, not amended; where it said "not ready to enter," the honest reading
+now is **"the remaining work is a build, not a wait."**
 
-**This mode is NOT ready to enter.** Three preconditions are unmet, §0 has each one with its
-verification command. The one that matters most is new and was not visible when this file was
-first written: **the Longhorn `taint-toleration` setting from PR #912 is accepted but not
-applied**, so flipping `allowSchedulingOnControlPlanes: false` today plants a landmine that
-does not detonate until the next control-plane reboot.
+Everything below marked "verified" was re-checked live on 2026-08-19 (evening) with read-only
+`kubectl`/`talosctl`. Nothing in the cluster was mutated to write this revision.
 
-### What piece 19 completing changed in this file
+### What changed between this morning's revision and this one
 
-| Claim in the pre-19 text | Status now |
+| Claim in the morning revision | Status now |
 |---|---|
-| CPs are `milky-way`/`othalla`/`pegasus`, workers are the other four | **Confirmed live.** 3 CP + 4 worker, all `Ready`, no taints on any node |
-| `allowSchedulingOnControlPlanes: true`, no custom `nodeTaints` anywhere | **Still true** (`talos/patches/controller/cluster.yaml:2`). This piece owns the flip; §0.1 is why it cannot happen yet |
-| §3 capacity: "11.85 cores / 44.55 GiB" allocatable across the trio | **Still exactly right** — same three machines. Re-measured demand in §3 |
-| §2: "none of OpenBao's replicas run on a node that will end up in the critical tier" | **Now false.** `openbao-2` runs on `milky-way`. §2 |
-| §2: a CNPG instance can never be on a control plane | **Now false.** `postgres-3` runs on `othalla`, `longhorn-local` strict-local, PV `nodeAffinity: othalla`. §2 |
-| §1: "`tsidp` is a one-line `ExternalName` Service … costs nothing" | **Now false.** `tsidp` is a real Deployment in `tailscale-system` with a 5 Gi Longhorn PVC (`kubernetes/apps/tailscale-system/idp/`). §1 |
-| §6: `hard-hat` is Proxmox-VM-backed by MAC OUI, so exit is `qm start` | **Now false.** §0.3 / §6 — `hard-hat` has exactly one NIC, `enp2s0`, MAC `58:47:ca:79:ed:0d`. Only `shining-armor` is a VM |
-| §5: piece 12's tags/StorageClass are a precondition | **Still unmet.** Zero Longhorn node tags, zero disk tags, no `longhorn-critical` class. §0.2 |
-| §4: "Longhorn's `taintToleration` … hasn't been touched yet" | **Half-landed and silently stuck.** §0.1 — this is the blocker |
+| §0.1 `taint-toleration` accepted but `applied: false`; needs an all-volumes-detached window | **CLEARED.** `applied: true`, all three managed DaemonSets and every instance-manager carry the annotation. It did **not** take a quiesce window — §0.1 |
+| §0.2 zero Longhorn node tags, no `longhorn-critical`, default class unconstrained | **CLEARED.** [12](12-longhorn-critical-tier.md) landed (PR #960). Tags live, `longhorn-critical` exists, default `longhorn` is `nodeSelector: bulk` — §0.2 |
+| §0.3 Tier-1 DNS cannot run on a control plane; three candidate fixes, needs David | **DECIDED.** Technitium **moves to the control planes**; the ipvlan NAD rebinds from `enp2s0` to `enp3s0`. §0.3 is now a design, not a question |
+| §2 `postgres-3` is stranded on `othalla` with a `longhorn-local` PV that cannot move | **No longer true.** `postgres-3` is on **`kerfuffle`** (worker), PV `nodeAffinity: kerfuffle`, cluster healthy 3/3. [29](29-taint-readiness-audit.md)'s blocker 2 is resolved |
+| [29](29-taint-readiness-audit.md): "**NOT SAFE TO FLIP** `allowSchedulingOnControlPlanes`" | **All four of 29 §7's gate commands now pass** — §0.1. The flip is safe *for the flip*; it still does not by itself deliver low-power mode |
+| §5: Tier-1 volumes are degraded but mostly hold 2 control-plane replicas | **Resolved, via a detour.** It first got *worse* (every Tier-1 volume down to at most one control-plane replica), then PRs #963/#966 moved all seven onto `longhorn-critical` — three-of-three on the trio, all `healthy` — §5 |
+
+### What is actually left
+
+The gate has moved from "three things are broken" to "three things are unbuilt":
+
+1. **Technitium has not moved yet.** §0.3 has the design and it is small — a talconfig label
+   move, a one-word NAD change, and a cutover. Its *storage* half is already done.
+2. **Tier 0/1 tolerations and the `critical-tier` PriorityClass are unbuilt.** §4.
+3. **`kube-system/registry` is Tier 0 with zero control-plane replicas.** §5. This replaced
+   the Tier-1 storage gap as the sharpest storage item, and it is a worse tier than the
+   problem it replaced.
+
+Neither of the first two is blocked on anything external. Two questions still need David
+(alpha-site's PoE circuit — §7; WoL on the three bare-metal workers — §6.2), and neither
+blocks building any of the above.
+
+**Closed the same day, by work landing in parallel:** the Tier-1 PVCs moved to
+`longhorn-critical` (PRs #963, #966), so every Tier-1 volume now holds three
+control-plane replicas instead of at most one — §5. That was this file's item 1 for most of
+the day.
 
 ---
 
-## 0. Preconditions — do not enter low-power until all three are green
+## 0. Preconditions — where each one now stands
 
-Each precondition has an exact verification command. Run all three. If any is red, low-power
-mode is not safe to enter, and §0.1 in particular is not safe to *work around*.
+### 0.1 — CLEARED: Longhorn's `taint-toleration` is applied
 
-### 0.1 — BLOCKER: Longhorn's `taint-toleration` setting is accepted but NOT applied
+Live, 2026-08-19 evening:
 
-[PR #912](https://github.com/david-driscoll/home-operations/pull/912) ("tolerate the
-control-plane taint before it exists") is merged. It added the toleration in **two** places,
-because Longhorn needs both and they are not interchangeable:
-
-| Half | Mechanism | Covers | State |
-|---|---|---|---|
-| `global.tolerations` | ordinary Helm pod-spec toleration | `longhorn-manager`, `longhorn-ui`, `longhorn-driver-deployer` | **APPLIED** |
-| `defaultSettings.taintToleration` | a Longhorn **Setting** CR, consumed by `longhorn-manager` at runtime | `longhorn-csi-plugin`, `engine-image` (×2), `instance-manager`, `backing-image-manager`, `share-manager` | **NOT APPLIED** |
-
-The second half is exactly the set of components that must tolerate the taint, because they
-are the storage data path on every node.
-
-**Verify — this is the command to run before any talconfig change:**
-
-```bash
-kubectl get settings.longhorn.io -n longhorn-system taint-toleration \
-  -o custom-columns=VALUE:.value,APPLIED:.status.applied
-```
-
-Live, 2026-08-19:
-
-```text
+```console
+$ kubectl get settings.longhorn.io -n longhorn-system taint-toleration \
+    -o custom-columns=VALUE:.value,APPLIED:.status.applied
 VALUE                                              APPLIED
-node-role.kubernetes.io/control-plane:NoSchedule   false
+node-role.kubernetes.io/control-plane:NoSchedule   true
+
+$ kubectl -n longhorn-system get ds -l longhorn.io/managed-by=longhorn-manager \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.annotations.longhorn\.io/last-applied-tolerations}{"\n"}{end}'
+engine-image-ei-493e04e7  [{"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}]
+engine-image-ei-a4d05f02  [{"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}]
+longhorn-csi-plugin       [{"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}]
 ```
 
-Second, independent check — the DaemonSet annotation Longhorn writes when it *does* apply it:
+Every instance-manager — all seven, including the three on `milky-way`/`othalla`/`pegasus`
+that this file specifically called out as missing it — carries the same annotation.
 
-```bash
-kubectl -n longhorn-system get ds longhorn-csi-plugin \
-  -o jsonpath='{.metadata.annotations.longhorn\.io/last-applied-tolerations}'
+**It did not take the maintenance window this file specified.** The earlier text (and
+[29](29-taint-readiness-audit.md) §7 step 3, and `values.yaml`'s "DETACH CAVEAT" comment)
+said the only supported path was a full estate quiesce with every Longhorn volume detached.
+That is not what happened, and the reason is worth recording because it changes the cost of
+every future danger-zone setting:
+
+`getNotUpdatedTolerationList` (`controller/setting_controller.go:571`) compares **only the
+`longhorn.io/last-applied-tolerations` annotation** against the setting — never the live pod
+spec. If every collected object's annotation already matches, `updateTaintToleration()`
+returns `nil` **before** `AreAllVolumesDetachedState()` is ever consulted, and
+`Setting.Status.Applied` flips `true`. Hand-writing the annotation onto the 17
+`longhorn.io/managed-by=longhorn-manager` objects (plus the instance-manager, share-manager
+and backing-image-manager pods) therefore lands the setting with **zero** detach window.
+Verified against `longhorn-manager` **v1.12.1** and executed live with `restartCount: 0` on
+every patched pod and no workload scaled down.
+
+Three properties make it safe rather than a hack, and all three were checked in source:
+
+- `updateTolerationForDaemonset` is an in-place `UpdateDaemonSet`
+  (`setting_controller.go:606`), **not** a delete/recreate — so the hand-patched end state is
+  byte-for-byte what the controller would have written.
+- Kubernetes permits **adding** tolerations to a running pod, which is why the disruptive
+  objects (instance-manager, share-manager) took the patch live. The injected `NoExecute`
+  not-ready/unreachable pair must be included in the patch, since only additions are legal.
+- Nothing reverts it: the engine-image controller only builds a DaemonSet when one is
+  **absent** (`controller/engine_image_controller.go:257`), and `csi/deployment_util.go:200`
+  short-circuits on CSI version match. Neither reconciles tolerations on an existing object.
+
+> **Do not generalise this.** `priority-class`,
+> `system-managed-components-node-selector` and `storage-network` sit behind the same gate
+> for materially different reasons. A toleration is uniquely safe because it only *widens*
+> where a pod may schedule and cannot evict anything. The other three change where data
+> lives or how it is reached.
+
+**Consequence: [29](29-taint-readiness-audit.md)'s flip gate is now fully green.** All four
+of its §7 step 5 commands pass, and its blocker 2 (`postgres-3`) resolved independently —
+the instance is on `kerfuffle` with its `longhorn-local` PV pinned there, cluster healthy
+3/3. Flipping `allowSchedulingOnControlPlanes: false` is safe *for the flip*. It is still
+not sufficient for low-power mode on its own — see §4 and the caveat in 29 §7 item 6.
+
+### 0.2 — CLEARED: piece 12 landed, with one caveat that matters more than it looks
+
+Live, 2026-08-19 evening:
+
+```console
+$ kubectl get nodes.longhorn.io -n longhorn-system \
+    -o custom-columns=NAME:.metadata.name,TAGS:.spec.tags
+NAME            TAGS
+fluttershy      [bulk]
+hard-hat        [bulk]
+kerfuffle       [bulk]
+milky-way       [critical]
+othalla         [critical]
+pegasus         [critical]
+shining-armor   [bulk]
+
+$ kubectl get sc longhorn -o jsonpath='{.parameters.nodeSelector}'
+bulk
+$ kubectl get sc longhorn-critical -o name
+storageclass.storage.k8s.io/longhorn-critical
 ```
 
-Live: `[]`. It must contain `node-role.kubernetes.io/control-plane` before the flip.
+The §0.2 failure mode this file was most worried about — Longhorn replenishing Tier-2
+volumes onto the control-plane SATA disks ten minutes into a window — **is fixed for new
+replicas**. `replica-replenishment-wait-interval` is still `600`, but the default class now
+carries `nodeSelector: bulk`, so what it replenishes onto is worker disks.
 
-**Why it is stuck.** `updateTaintToleration()` in Longhorn's `controller/setting_controller.go`
-gates on `AreAllVolumesDetachedState()`. Since #7173 (Longhorn 1.6) the Setting write is
-*accepted* rather than rejected, and the controller then requeues on the one-hour
-`settingControllerResyncPeriod` forever while any volume is attached. `helm upgrade` succeeds,
-the HelmRelease reports `Ready`, and the only place the failure surfaces is
-`longhorn-manager`'s log:
+**The caveat: adding the selector to the StorageClass stamped it onto volumes, but did not
+relocate a single existing replica.** Live:
 
-```bash
-kubectl -n longhorn-system logs -l app=longhorn-manager --since=2h | grep -i toleration
-```
-
-Live, 2026-08-19:
-
-```text
-E0819 14:10:09.578701 1 setting_controller.go:202] "Unhandled Error"
-  err="failed to sync setting for longhorn-system/taint-toleration: current state prevents
-  this: failed to apply taint-toleration setting to Longhorn components when there are
-  attached volumes. It will be eventually applied"
-```
-
-Live volume state at that moment: **78 attached, 125 detached, 1 detaching, of 204 total.**
-
-**What happens if you flip the taint anyway.** `NoSchedule` does not evict running pods, so
-nothing breaks the instant the taint lands — the existing `longhorn-csi-plugin` and
-`engine-image` pods keep running on the control planes. It bites on the next pod **recreate**
-on a control plane: a reboot, a Talos or Longhorn upgrade, a DaemonSet rollout, an OOM kill.
-After that the pod cannot be scheduled back, and **every volume attached through that node
-breaks** — including, by design, the Tier-1 volumes this whole mode exists to keep alive. The
-failure is delayed, silent at flip time, and lands during exactly the kind of event (a reboot)
-that a low-power exit involves.
-
-**The DaemonSet audit, re-run live 2026-08-19.** 21 DaemonSets; 18 already tolerate the
-control-plane taint, 3 do not — and all 3 are in the deferred-setting group:
-
-| DaemonSet | Tolerates CP taint | How |
+| Volume | `spec.nodeSelector` | Replicas |
 |---|---|---|
-| `kube-system/cilium` | yes | blanket `operator: Exists` |
-| `kube-system/spegel` | yes | blanket `operator: Exists` (`NoSchedule` + `NoExecute`) |
-| `nfs-system/csi-nfs-node` | yes | blanket `operator: Exists` |
-| `observability/node-exporter` | yes | blanket `operator: Exists`, `NoSchedule` |
-| `observability/smartctl-exporter-0` | yes | blanket `operator: Exists`, `NoSchedule` |
-| `kube-system/multus`, `node-feature-discovery-worker`, `amd-gpu-device-plugin`, `amd-gpu-labeller-daemonset`, `intel-gpu-plugin`, `nvidia-device-plugin` (×3), `network/crowdsec-agent`, `observability/alloy`, `observability/intel-gpu-exporter`, `longhorn-system/longhorn-manager` | yes | explicit key, landed by #912 |
-| **`longhorn-system/longhorn-csi-plugin`** | **NO** | `tolerations: []` — waiting on the setting |
-| **`longhorn-system/engine-image-ei-493e04e7`** | **NO** | `tolerations: []` — waiting on the setting |
-| **`longhorn-system/engine-image-ei-a4d05f02`** | **NO** | `tolerations: []` — waiting on the setting |
+| `kube-system/registry` | `["bulk"]` | `hard-hat`, **`othalla`**, **`milky-way`** |
+| `network/crowdsec-config-pvc` | `["bulk"]` | **`othalla`**, **`pegasus`**, `hard-hat` |
+| `network/crowdsec-ui` | `["bulk"]` | **`pegasus`**, `fluttershy`, **`othalla`** |
+| `tailscale-system/volsync-tsiam-dst-dest` | `["bulk"]` | `hard-hat`, **`pegasus`**, **`milky-way`** |
 
-`instance-manager` is not a DaemonSet (longhorn-manager creates the pods directly) and shows
-the problem in its sharpest form:
+A `bulk`-selected volume with two replicas on the `critical` trio is not a contradiction
+Longhorn will resolve on its own — the selector governs *where a new replica may be
+scheduled*, not where existing ones sit. Piece 12's proof passed because it was run against
+a **freshly provisioned** PVC. This is the "Tier-2 backfill" item 12 leaves open, and it is
+the reason §0.2 is marked cleared-with-caveat rather than simply cleared: the control-plane
+disks are still carrying Tier-2 data, so the thermal argument that motivated §0.2 is only
+half-retired. Draining them is a rebuild-per-volume and belongs to 12, not here.
 
-```bash
-kubectl -n longhorn-system get pods -l longhorn.io/component=instance-manager \
-  -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName,TOL:.spec.tolerations
-```
+### 0.3 — DECIDED: Technitium moves to the control planes
 
-Live: the instance-managers on `kerfuffle` and `fluttershy` **do** carry
-`node-role.kubernetes.io/control-plane:NoSchedule` — they were created while those nodes were
-still control planes, before piece 19 rotated them out. The instance-managers on
-`milky-way`, `othalla` and `pegasus` — the three nodes that will actually be tainted — do
-**not**. The toleration is present on exactly the nodes that no longer need it and absent on
-exactly the nodes that will.
+**David's call, 2026-08-19:** *"I would like technitium to move to the control plane if
+possible, if that means we change the adapters it's allowed to connect to, lets do that."*
 
-**How to get it applied.** There is one supported path and it is expensive:
+That selects a variant of the earlier option (a) — but a simpler one than (a) as written.
+(a) proposed a *second* CP-resident Technitium member alongside the worker-resident one.
+The decision is to **move the existing one**, which means there is no second cluster member
+to keep in sync and no second LAN address to reserve.
 
-1. **A full-quiesce maintenance window in which every Longhorn volume detaches.** Not a
-   low-power window — the two are different postures and must not be conflated. Low-power
-   *keeps* the Tier-1 volumes attached; this needs them detached too. In practice that means
-   suspending Flux estate-wide, scaling every Deployment/StatefulSet with a Longhorn PVC to
-   0 (including Tier 1), suspending the VolSync `ReplicationSource`/`Destination` movers and
-   the CNPG backup CronJobs — anything that attaches a volume — and waiting for:
+**Why the move is mechanically safe: it is one broadcast domain.** The two NIC names differ
+(`enp2s0` on the workers, `enp3s0` on the control planes) but the L2 segment does not:
 
-   ```bash
-   kubectl get volumes.longhorn.io -n longhorn-system \
-     -o custom-columns=NAME:.metadata.name,STATE:.status.state | grep -vc detached
-   ```
+| Node | Role | LAN NIC | Address |
+|---|---|---|---|
+| `milky-way` | control plane | `enp3s0` | `10.10.209.10/16` |
+| `othalla` | control plane | `enp3s0` | `10.10.209.11/16` |
+| `pegasus` | control plane | `enp3s0` | `10.10.209.12/16` |
+| `hard-hat` | worker (today's Technitium node) | `enp2s0` | `10.10.206.14/16` |
 
-   to reach `1` (the header line only).
+Every node is a `/16` inside `10.10.0.0/16` behind gateway `10.10.0.1`, which
+`talos/talconfig.yaml` already relies on for the shared API VIP and states in its own
+comment: *"one broadcast domain."* So the NAD's static `10.10.206.202/16` is equally valid
+bound to `enp3s0` on a control plane as to `enp2s0` on a worker — same segment, different
+parent interface, no renumbering, no change to `TECHNITIUM_VIP`, and no change to anything
+that dials it.
 
-2. Then either wait out the remaining hour of the resync, or shorten it by restarting the
-   controller that owns the setting:
+**The change is three edits and a toleration:**
 
-   ```bash
-   kubectl -n longhorn-system rollout restart daemonset/longhorn-manager
-   ```
+1. **`talos/talconfig.yaml`** — move `technitium-dns: "true"` off `hard-hat`'s `nodeLabels`
+   (line 151, whose comment *"it has enp2s0, required for ipvlan L2 NAD"* is exactly the
+   constraint being retired) and onto all three control planes. The CP blocks currently use
+   the bare `nodeLabels: *nodeLabels` anchor and need the `<<: *nodeLabels` merge form that
+   `hard-hat` already demonstrates.
+2. **`kubernetes/apps/equestria/dns/technitium/macvlan-nad.yaml`** — `"master": "enp2s0"` →
+   `"enp3s0"`. One word. The file name says macvlan; the `type` is `ipvlan`.
+3. **A control-plane toleration on the Technitium Deployment**, required before the §4 taint,
+   not after — a `nodeSelector` that only matches tainted nodes and no toleration is an
+   unschedulable pod.
 
-   **Trap, carried from [12](12-longhorn-critical-tier.md):** `longhorn-manager`'s DaemonSet
-   ships `updateStrategy.rollingUpdate.maxUnavailable: 100%`, so this rolls all seven managers
-   at once and leaves the cluster with no Longhorn control plane for ~90 s. That is acceptable
-   in a fully-quiesced window and is *not* acceptable at any other time.
+**Cutover order matters, and both obvious orders are wrong.** A `NetworkAttachmentDefinition`
+is read at *pod creation*, and a `nodeSelector` is evaluated at *scheduling* — neither
+disturbs a running pod. But each change on its own leaves a latent break:
 
-3. Re-run both verification commands at the top of this section. Both must be green — the
-   Setting's `status.applied: true` **and** the `last-applied-tolerations` annotation
-   containing the key — before the talconfig flip.
+- NAD first: the pod still runs on `hard-hat`, and the next recreate — a node reboot, an
+  eviction, a Renovate-driven image bump — schedules it there with a NAD binding `enp3s0`,
+  which `hard-hat` does not have. CNI fails, `ContainerCreating`, DNS gone, and the cause is
+  hours or days removed from the change.
+- Label first: `hard-hat` loses `technitium-dns=true`, the control planes gain it, and the
+  next recreate lands on a control plane with a NAD still binding `enp2s0`. Same failure,
+  other end.
 
-4. Only then flip `allowSchedulingOnControlPlanes` and un-quiesce.
-
-**Or: don't take the taint path at all.** §6 gives two runbooks. **Path B needs no taint and
-no talconfig change**, so it is not blocked by any of this and is what the first rehearsal
-should use. Path A (the taint) is a permanent structural improvement and is what §4 designs,
-but it is gated on this section and should not be rushed to get a rehearsal done.
-
-### 0.2 — BLOCKER: piece 12 has not landed; storage placement is unconstrained
-
-```bash
-kubectl get nodes.longhorn.io -n longhorn-system \
-  -o custom-columns=NAME:.metadata.name,TAGS:.spec.tags,ZONE:.spec.zone
-kubectl get sc
-kubectl get settings.longhorn.io -n longhorn-system replica-replenishment-wait-interval \
-  -o custom-columns=VALUE:.value,APPLIED:.status.applied
-```
-
-Live, 2026-08-19: **every node's `tags` is `[]` and every `zone` is unset**; every disk's
-`tags` is `[]`; the StorageClasses are `longhorn` (default), `longhorn-cache`,
-`longhorn-local`, `longhorn-snapshot`, `nfs-csi`, `openebs-hostpath` — **there is no
-`longhorn-critical`**, and the default `longhorn` class carries no `nodeSelector` parameter.
-`replica-replenishment-wait-interval` is `600` and *is* applied.
-
-Two consequences, both fatal to a low-power window:
-
-- **Tier-1 data is not on the control planes.** §5 has the live replica map. Not one Tier-1
-  volume has three control-plane replicas, and one Tier-1-adjacent volume (`golink`) has
-  **zero**.
-- **Ten minutes into the window, Longhorn starts rebuilding Tier-2 volumes onto the control
-  planes.** `replica-replenishment-wait-interval: 600` means that 600 s after the workers go
-  dark, Longhorn treats every Tier-2 volume as short a replica and replenishes it onto
-  whichever node has room — which, with the workers off, is only the three control planes.
-  Their Longhorn disk is a Transcend TS1TMTS425S SATA; piece 12 measured 126 ms and 470 ms
-  average write latency and 73–75 °C on those drives under exactly this kind of rebuild load,
-  and `pegasus` has previously shut its XFS filesystem down at 85 °C mid-rebuild. A planned
-  low-power event would become an unplanned outage, silently, ten minutes in.
-
-Piece 12 Step 3 (a `nodeSelector: "bulk"` on the default class) is the fix, and it is the step
-[12](12-longhorn-critical-tier.md) itself flags as "the one that matters most and is easiest to
-skip." **Do not build a runbook workaround for this** — §6 Path B's Tier-2 scale-to-0 reduces
-the exposure but does not remove it, because a scaled-down volume is still a volume Longhorn
-will replenish.
-
-### 0.3 — BLOCKER: Tier-1 DNS cannot run on a control plane at all
-
-This one is new to this revision and is not a Longhorn problem. `technitium` — the estate's
-LAN resolver, the most Tier-1 thing in the tier — is **hard-pinned to a node set that contains
-no control plane**, by two independent mechanisms:
+Because neither change touches the running pod, the safe sequence is to land **both** and
+then cut over deliberately, exactly once:
 
 ```bash
-kubectl -n network get deploy technitium \
-  -o jsonpath='{.spec.template.spec.nodeSelector}'          # {"technitium-dns":"true"}
-kubectl get nodes -L technitium-dns                          # only hard-hat carries it
+# 1. Land the NAD change (Flux) and the talconfig labels (Talos). Order between these two
+#    does not matter; the running pod is unaffected by both.
+talosctl --talosconfig talos/clusterconfig/talosconfig \
+  -n 10.10.209.10,10.10.209.11,10.10.209.12 apply-config --mode=no-reboot -f <rendered>
+
+# 2. Confirm the label landed on the trio and left hard-hat
+kubectl get nodes -L technitium-dns
+
+# 3. Confirm the NAD is live with the new parent
 kubectl -n network get network-attachment-definitions technitium-dns-net \
-  -o jsonpath='{.spec.config}'                               # "master": "enp2s0"
+  -o jsonpath='{.spec.config}' | grep master
+
+# 4. Cut over — one deliberate recreate, Recreate strategy, replicas: 1, so the static
+#    ipvlan address is never claimed twice
+kubectl -n network rollout restart deployment technitium
+
+# 5. Verify from off-cluster, not from inside it
+kubectl -n network get pods -o wide -l app.kubernetes.io/name=technitium
+dig @${TECHNITIUM_VIP} +short home-assistant.driscoll.tech
 ```
 
-1. **`nodeSelector: technitium-dns=true`.** Exactly one node carries that label — `hard-hat`,
-   which piece 19 turned into a **worker** on 2026-08-17. The label is set in
-   `talos/talconfig.yaml` and the comment beside it still reads *"That node is a control plane
-   node, so tolerate the NoSchedule taint"* — stale since the rotation.
-2. **The ipvlan L2 NetworkAttachmentDefinition hardcodes `"master": "enp2s0"`.** Relabelling a
-   control plane would place the pod there and then fail at CNI time, because the control
-   planes' LAN NIC is **`enp3s0`**, not `enp2s0`.
+The DNS gap is one pod start. The three off-cluster members answer throughout, and nothing on
+the LAN or in Talos points at this copy anyway — which is what makes a deliberate cutover the
+right shape here rather than a maintenance window.
 
-Verified per node with `talosctl … get links` / `get addresses`, 2026-08-19:
+**The toleration is already present.** `defaultPodOptions.tolerations` on the HelmRelease
+already carries `node-role.kubernetes.io/control-plane: Exists / NoSchedule` — left over from
+when `hard-hat` *was* a control plane, with a comment that said so. Retained deliberately: it
+is exactly what the §4 taint will require, and its comment is corrected in the same change.
 
-| Node | Role | LAN NIC | MAC | Can host `technitium-dns-net`? |
-|---|---|---|---|---|
-| `milky-way` | control plane | `enp3s0` | `e0:51:d8:19:93:18` | **no** |
-| `othalla` | control plane | `enp3s0` | `e0:51:d8:19:d4:98` | **no** |
-| `pegasus` | control plane | `enp3s0` | `e0:51:d8:19:d2:b2` | **no** |
-| `hard-hat` | worker | `enp2s0` | `58:47:ca:79:ed:0d` | yes (and is the labelled node today) |
-| `fluttershy` | worker | `enp2s0` | `58:47:ca:7a:09:3d` | yes |
-| `kerfuffle` | worker | `enp2s0` | `58:47:ca:7a:07:b4` | yes |
-| `shining-armor` | worker | `ens18` | `bc:24:11:4c:62:fc` | **no** — Proxmox VM, different NIC name |
+**Storage was the part that was not one word, and it is already done.** When this decision
+was taken, Technitium's PVC sat on the default `longhorn` class — which piece 12 had just
+confined to `bulk`, the exact opposite of where the pod was going. Moving the pod without
+the volume would have produced a DNS server pinned to the control planes whose storage was
+pinned to the workers: strictly worse than not moving it. **PR #963 moved it**, and live
+2026-08-19 `network/technitium` is on `longhorn-critical` with all three replicas on
+`milky-way`/`othalla`/`pegasus`, `healthy` (§5). The pod move is now purely a scheduling
+change, which is what makes it small.
 
-So powering off the four workers takes the estate's in-cluster LAN resolver with it, no matter
-what piece 12 does to its storage. **This is a design gap, not a runbook step**, and it needs a
-decision before the first rehearsal. Three candidate fixes, none of them free:
+**What this decision does *not* rest on, but is worth recording as defence in depth:** the
+estate already has three Technitium cluster members outside equestria, and the in-cluster
+copy is not what LAN clients or cluster nodes actually resolve against.
 
-- **(a) A second NAD + a second label for the control planes.** Add
-  `technitium-dns-net-cp` with `"master": "enp3s0"` and a `technitium-dns-cp=true` label on
-  the trio, then run a second, CP-resident Technitium replica joined to the same Technitium
-  cluster. Costs a second static LAN address out of the Cilium pool's reserved range and a
-  second cluster member to keep in sync. Most faithful to D6.
-- **(b) Serve DNS through the Cilium LoadBalancer VIP instead of ipvlan on the CP copy.**
-  Verified viable on the network side: the `CiliumL2AnnouncementPolicy` matches interfaces
-  `^ens[0-9]+`, `^enp[0-9]+s[0-9]+`, `^eth[0-9]+` with `nodeSelector: kubernetes.io/os=linux`,
-  so `enp3s0` announces LB IPs fine — this is also why `chrony`/`mosquitto`/`matter`'s VIPs are
-  *not* blocked (see §1). The cost is that DNS then traverses the LB path the NAD exists
-  specifically to bypass.
-- **(c) Accept an off-cluster resolver as the low-power DNS answer.** The repo carries a
-  reusable `docker/_common/technitium/` stack (Tailscale sidecar, `hostname: dns-${CLUSTER_KEY}`,
-  ports 53/udp) intended to run a Technitium cluster member per Dockge host — but **no Dockge
-  host deploys it today**: `docker/{celestia,luna,skystar,alpha-site}/` contain no `technitium`
-  stack. If a second resolver exists outside this repo, this option is nearly free and (c) is
-  the answer; if it does not, (c) is not an option at all. **Needs David's confirmation** —
-  §9 item 1.
+- `dns-celestia`, `dns-luna` and `dns-skystar` (`100.111.{30,40,50}.101`) each answer for
+  `driscoll.tech` live. They share config sync with the in-cluster member, which the
+  HelmRelease comments already note (*"After the node joins the Technitium cluster, cluster
+  sync owns most of these settings"*).
+- LAN clients are handed the **Dockge** hosts, not `TECHNITIUM_VIP`:
+  `stacks/unifi-network/local-dns.ts:66` derives the four DHCP DNS slots from
+  `nodeType === "dockge"` hosts on the Home subnet.
+- Cluster nodes never point at it either: `talos/patches/global/machine-network.yaml` lists
+  `9.9.9.9`, `149.112.112.112`, `10.10.10.9`, `10.10.0.1`. CoreDNS forwards `.` to
+  `/etc/resolv.conf`, so in-cluster resolution during a window depends on those four, not on
+  the in-cluster Technitium.
 
-Until one of these lands, a low-power window means the estate has no in-cluster resolver, and
-"the wife's lights" depend on whatever Home Assistant can reach without one.
+The morning revision's framing — *"a low-power window means the estate has no in-cluster
+resolver, and the wife's lights depend on whatever Home Assistant can reach without one"* —
+was therefore overstated on the second half. Losing the in-cluster copy is a **degradation
+of redundancy**, not a DNS outage. That does not argue against the move; it argues that the
+move is an improvement to make calmly rather than a fire to put out. It does add one
+question to §7's list: **the three Dockge resolvers only help during a battery window if
+celestia, luna and skystar are themselves powered** — the same unanswered question as
+alpha-site's PoE switch.
 
-### 0.4 — Not a blocker, but confirm before entry
+### 0.4 — Confirm before entry (unchanged in kind, refreshed live)
 
-- `allowSchedulingOnControlPlanes: true` is still set (`talos/patches/controller/cluster.yaml:2`).
-  That is *correct* for now: nothing should flip it until §0.1 is green. Path B in §6 works
-  with it left as-is.
-- [07-authentik-to-alpha-site.md](07-authentik-to-alpha-site.md) has landed (README's status
-  table: cut over 2026-08-16). This is what lets CNPG drop to Tier 2 at all — see §2. If it
-  had not landed, entering low-power would take SSO down with the database.
-- Every Flux Kustomization is `Ready`. Live 2026-08-19: **160 of 160**, none suspended except
-  the deliberately-suspended `database/{postgres,pg-backups}`, `kube-system/{openbao,openbao-replica}`
-  and `equestria/xcproxy`. Entering low-power on top of an already-failing reconcile makes the
-  post-window diff unreadable.
+- `allowSchedulingOnControlPlanes: true` is still set
+  (`talos/patches/controller/cluster.yaml:2`). Unlike the morning revision, this is now a
+  *choice* rather than a constraint — §0.1 cleared the reason it had to stay. §4 owns the flip.
+- [07-authentik-to-alpha-site.md](07-authentik-to-alpha-site.md) has landed (cut over
+  2026-08-16). This is what lets CNPG drop to Tier 2 at all — §2.
+- **Flux is fully reconciled and nothing is suspended.** Live: `flux get kustomizations -A
+  --status-selector ready=false` prints nothing, and the `database/{postgres,pg-backups}`,
+  `kube-system/{openbao,openbao-replica}` and `equestria/xcproxy` suspensions the morning
+  revision recorded have all been resumed. Entering low-power on top of an already-failing
+  reconcile makes the post-window diff unreadable.
+- **Four volumes are `degraded`**, all Tier 2: `observability/storage-loki-0`,
+  `equestria/tududi`, `equestria/jellyfin`, `equestria/immich`. §6.0's pre-flight requires
+  zero, so these are a burndown item, not a blocker on building anything.
 
 ---
 
@@ -326,11 +332,12 @@ controllers · `volsync` · `openebs` localpv.
 
 **Tier 1 — estate services.** Namespaces `network`, `stargate-command`, `tailscale-system`.
 
-Per-app, with its storage and where it actually runs today:
+Per-app, with its storage and where it actually runs today (re-read live, 2026-08-19
+evening — replica placement now lives in §5, which is where the decisions hang off it):
 
-| App | Namespace | Pod node (live) | PVC | StorageClass | Longhorn replicas (live) |
+| App | Namespace | Pod node (live) | PVC | StorageClass | CP replicas |
 |---|---|---|---|---|---|
-| `technitium` (DNS) | `network` | `hard-hat` | `technitium` 5 Gi | `longhorn` | `fluttershy`, `hard-hat`, `pegasus` — **degraded** |
+| `technitium` (DNS) | `network` | `hard-hat` | `technitium` 5 Gi | `longhorn-critical` | **3** |
 | `technitium-dns` (external-dns provider) | `network` | `hard-hat` | — | — | — |
 | `k8s-gateway` | `network` | `hard-hat`, `shining-armor` | — | — | — |
 | `traefik` | `network` | `hard-hat`, `shining-armor` | — | — | — |
@@ -338,13 +345,27 @@ Per-app, with its storage and where it actually runs today:
 | `cloudflare-tunnel` | `network` | `hard-hat`, `shining-armor` | — | — | — |
 | `unifi-dns` | `network` | `hard-hat` | — | — | — |
 | `error-pages` | `network` | `hard-hat`, `shining-armor` | — | — | — |
+| `crowdsec` (agent DaemonSet + `lapi` + `ui`) | `network` | agent on all 7; `lapi` `hard-hat`; `ui` `fluttershy` | `crowdsec-{config,db,ui}` | `longhorn` | **0** — see §5 |
 | `chrony` (NTP) | `stargate-command` | `fluttershy` | — | — | — |
-| `mosquitto` (MQTT) | `stargate-command` | `shining-armor`, `hard-hat` | `data-mosquitto-{0,1}` 4 Gi | `longhorn` | `-0`: `milky-way`,`pegasus`,`shining-armor` · `-1`: `hard-hat`,`milky-way`,`othalla` — both **degraded** |
-| `home-assistant` | `stargate-command` | `hard-hat` | `home-assistant` 40 Gi | `longhorn` | `hard-hat`, `milky-way`, `othalla` — **degraded** |
-| `matter` | `stargate-command` | `shining-armor` | `matter` 4 Gi | `longhorn` | `fluttershy`, `pegasus`, `shining-armor` — healthy |
+| `mosquitto` (MQTT) | `stargate-command` | `shining-armor`, `hard-hat` | `data-mosquitto-{0,1}` 4 Gi | `longhorn-critical` | **3** each |
+| `home-assistant` | `stargate-command` | `hard-hat` | `home-assistant` 40 Gi | `longhorn-critical` | **3** |
+| `matter` | `stargate-command` | `shining-armor` | `matter` 4 Gi | `longhorn-critical` | **3** |
 | `tailscale-operator` + connectors | `tailscale-system` | `shining-armor`, `hard-hat` | — | — | — |
-| `tsidp` | `tailscale-system` | `hard-hat` | `tsidp` 5 Gi | `longhorn` | `hard-hat`, `milky-way`, `pegasus` — **degraded** |
-| `tsiam` | `tailscale-system` | `fluttershy` | `tsiam` 1 Gi | `longhorn` | `fluttershy`, `othalla`, `shining-armor` — healthy |
+| `tsidp` | `tailscale-system` | `hard-hat` | `tsidp` 5 Gi | `longhorn-critical` | **3** |
+| `tsiam` | `tailscale-system` | `fluttershy` | `tsiam` 1 Gi | `longhorn-critical` | **3** |
+| `golink` | `tailscale-system` | `hard-hat` | `golink` | `longhorn` | **0** |
+| `taildrive` | `tailscale-system` | `hard-hat` | `taildrive` | `longhorn` | **0** |
+
+**Every Tier-1 volume is `healthy`, and the seven that matter now hold three control-plane
+replicas each** — PRs #963 and #966 moved them onto `longhorn-critical` on 2026-08-19. What
+is left on the default `bulk` class is `crowdsec-*`, `golink`, `taildrive` and — the one that
+is a genuine gap rather than a settled Tier-2 call — Tier-0 `kube-system/registry`. §5.
+
+**And not one Tier-1 *pod* runs on a control plane today.** Every row above lands on
+`hard-hat`, `shining-armor`, `fluttershy` or `kerfuffle`. Under Path B that means the whole
+Tier-1 set reschedules at entry; under Path A (§4) it means the required affinity has real
+work to do rather than merely ratifying where things already are. Either way, §3's capacity
+projection is a projection, not an observation — nothing has ever actually run there.
 
 Three corrections this table forces:
 
@@ -437,13 +458,14 @@ risk rather than impossibility:
   the moment §6's exit is trying to stay calm.
 - It buys nothing Tier 1 needs. Nothing in Tier 0 or Tier 1 reads Postgres during the window.
 
-**Consequence for the §0.1 taint that is worth stating explicitly:** `postgres-3` has no
-control-plane toleration. Once the taint lands, it keeps running (NoSchedule) but **cannot be
-recreated on `othalla`** — and its PV can go nowhere else. Any CNPG rolling restart, node
-reboot or `primaryUpdateStrategy: unsupervised` upgrade after the flip strands it. Either give
-the CNPG cluster the toleration in the same change as the taint, or `kubectl cnpg destroy
-postgres-3` and let it re-provision onto a worker first. **This must be decided in the same
-change as the talconfig flip, not after it.**
+**Update, 2026-08-19 evening: this stranding risk is gone.** `postgres-3` is now on
+**`kerfuffle`**, a worker, with its `longhorn-local` PV `nodeAffinity` pinned to `kerfuffle`;
+the CNPG cluster reports healthy with 3/3 instances ready. No toleration and no
+`kubectl cnpg destroy` is needed before the §4 flip, and
+[29](29-taint-readiness-audit.md)'s blocker 2 is closed. The reasoning above is preserved
+because it is the general rule — *a strict-local PV on a node about to be tainted is a
+landmine* — and §9 item 7 records the next instance of it (`observability`'s three
+untolerated control-plane pods).
 
 **What quietly pauses, and why that is fine.** `openbao-replica`'s nightly `pg_dump` (03:00)
 and monthly restore-test CronJobs depend on `openbao` and therefore on CNPG; both go idle.
@@ -503,8 +525,11 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 
 ## 4. Placement mechanism — taint, required affinity, PriorityClass (Path A)
 
-> This section designs the **permanent** structural version of low-power. It is gated on §0.1
-> and should not be rushed. §6 Path B rehearses the mode without any of it.
+> This section designs the **permanent** structural version of low-power. **It is no longer
+> gated** — §0.1 cleared, and [29](29-taint-readiness-audit.md)'s four-command flip gate now
+> passes in full, so the taint itself is safe to apply. What remains here is a build: the
+> tolerations and the PriorityClass that make the taint *useful* rather than merely safe.
+> §6 Path B still rehearses the mode without any of it.
 
 > **Superseded in part by [24-power-states.md](24-power-states.md), 2026-08-13.** Everything
 > here still applies to Tier 0 (DaemonSets — toleration only) and to Tier-1 workloads that
@@ -613,58 +638,86 @@ control-plane components on a 4-core node. Move all three to `critical-tier`.
 
 ## 5. Storage placement — the live picture
 
-Owned by [12-longhorn-critical-tier.md](12-longhorn-critical-tier.md): tag the trio `critical`
-and the four workers `bulk`, add a `longhorn-critical` StorageClass (`numberOfReplicas: "3"`,
-`nodeSelector: "critical"`), and — the step that makes this safe by construction — add
-`nodeSelector: "bulk"` to the **default** `longhorn` class so no Tier-2 volume can place or
-replenish onto a control-plane disk. 12 also settles "which three": `critical` stays on the
-control planes despite their being the slower disks, because Tier 1 is only ~68 GB of low-IOPS
-data, and because the real problem was never that `critical` points at slow disks but that
-nothing points Tier 2 *away* from them.
+[12-longhorn-critical-tier.md](12-longhorn-critical-tier.md) **landed 2026-08-19** (PR #960):
+the trio is tagged `critical`, the four workers `bulk`, `longhorn-critical` exists
+(`numberOfReplicas: "3"`, `nodeSelector: "critical"`), and the default `longhorn` class
+carries `nodeSelector: "bulk"`. 12 also settled "which three": `critical` stays on the
+control planes despite their being the slower disks, because Tier 1 is only ~68 GB of
+low-IOPS data, and because the real problem was never that `critical` points at slow disks
+but that nothing pointed Tier 2 *away* from them.
 
-**This file's job is what depends on it.** Here is the state a low-power window would meet
-today, reproduced with:
+**And the Tier-1 volumes have now moved onto it** — PRs #963 (`technitium`, `tsidp`,
+`tsiam`) and #966 (`home-assistant`, `matter`, `mosquitto`), both merged 2026-08-19. This
+section spent two revisions as the blocker; it is no longer one.
+
+Live, 2026-08-19 evening:
 
 ```bash
-kubectl get replicas.longhorn.io -n longhorn-system \
+kubectl get pvc -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,SC:.spec.storageClassName
+kubectl -n longhorn-system get volumes.longhorn.io -o custom-columns=NAME:.metadata.name,SEL:.spec.nodeSelector,ROBUST:.status.robustness
+kubectl -n longhorn-system get replicas.longhorn.io \
   -o custom-columns=VOL:.spec.volumeName,NODE:.spec.nodeID,STATE:.status.currentState
 ```
 
-| Volume | Replica nodes | Replicas on the CP trio | Survives all four workers off? |
-|---|---|---|---|
-| `stargate-command/home-assistant` | `hard-hat`, `milky-way`, `othalla` | 2 | yes, degraded |
-| `stargate-command/data-mosquitto-0` | `milky-way`, `pegasus`, `shining-armor` | 2 | yes, degraded |
-| `stargate-command/data-mosquitto-1` | `hard-hat`, `milky-way`, `othalla` | 2 | yes, degraded |
-| `tailscale-system/tsidp` | `hard-hat`, `milky-way`, `pegasus` | 2 | yes, degraded |
-| `kube-system/registry` (Tier 0) | `hard-hat`, `milky-way`, `othalla` | 2 | yes, degraded |
-| `database/valkey` (Tier 2) | `hard-hat`, `othalla`, `pegasus` | 2 | n/a |
-| `network/crowdsec-config-pvc` | `hard-hat`, `othalla`, `pegasus` | 2 | yes, degraded |
-| `network/technitium` | `fluttershy`, `hard-hat`, `pegasus` | **1** | **single replica, and the pod cannot run there anyway (§0.3)** |
-| `stargate-command/matter` | `fluttershy`, `pegasus`, `shining-armor` | **1** | **single replica** |
-| `network/crowdsec-db-pvc` | `fluttershy`, `hard-hat`, `milky-way` | **1** | **single replica** |
-| `tailscale-system/tsiam` | `fluttershy`, `othalla`, `shining-armor` | **1** | **single replica** |
-| `tailscale-system/taildrive` | `hard-hat`, `othalla`, `shining-armor` | **1** | **single replica** |
-| `tailscale-system/golink` | `fluttershy`, `hard-hat`, `shining-armor` | **0** | **NO — volume unavailable for the whole window** |
+| Volume | Class | Volume `nodeSelector` | Replica nodes | CP replicas | Survives all four workers off? |
+|---|---|---|---|---|---|
+| `network/technitium` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `stargate-command/home-assistant` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `stargate-command/data-mosquitto-0` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `stargate-command/data-mosquitto-1` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `stargate-command/matter` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `tailscale-system/tsidp` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `tailscale-system/tsiam` | `longhorn-critical` | `["critical"]` | `milky-way`, `othalla`, `pegasus` | **3** | **yes, undegraded** |
+| `kube-system/registry` (Tier 0) | `longhorn` | `["bulk"]` | `hard-hat`, `kerfuffle`, `shining-armor` | 0 | **no** |
+| `network/crowdsec-config-pvc` | `longhorn` | `["bulk"]` | `hard-hat`, `kerfuffle`, `shining-armor` | 0 | **no** |
+| `network/crowdsec-db-pvc` | `longhorn` | `["bulk"]` | `hard-hat`, `kerfuffle`, `fluttershy` | 0 | **no** |
+| `network/crowdsec-ui` | `longhorn` | `["bulk"]` | `hard-hat`, `kerfuffle`, `fluttershy` | 0 | **no** |
+| `tailscale-system/golink` | `longhorn` | `["bulk"]` | `fluttershy`, `kerfuffle`, `shining-armor` | 0 | **no** |
+| `tailscale-system/taildrive` | `longhorn` | `["bulk"]` | `hard-hat`, `kerfuffle`, `shining-armor` | 0 | **no** |
 
-**Not one Tier-1 volume has three control-plane replicas.** Five have exactly one — meaning a
-single control-plane disk failure during the window loses the volume outright — and `golink`
-has none at all. This is precisely the "silently takes Tier-1 volumes with them" failure the
-pre-19 text warned about, now measured rather than predicted. `golink` was already flagged as
-a marginal Tier call (§9 item 4); this measurement argues for resolving it as **Tier 2**
-rather than trying to fix its placement.
+**Every migrated Tier-1 volume now holds all three replicas on the trio, and every one is
+`healthy`.** Two revisions ago this table said "not one Tier-1 volume has three
+control-plane replicas"; it now says the opposite for the seven that matter. The class
+change did what the earlier `bulk` StorageClass edit did not — because a class change on a
+PVC forces a re-provision, whereas adding a `nodeSelector` to an existing class only
+constrains *future* replica scheduling (§0.2).
 
-**31 of 204 volumes are `degraded` right now**, a tail of piece 19's rebuilds still settling.
-That is a *pre-flight gate*, not a low-power condition: §6's pre-check requires zero.
+**The six volumes left on `bulk` are a tier decision, not an oversight.** All six are now
+cleanly all-worker, which is the correct shape for anything Tier 2:
 
-**Longhorn policy settings that shape the window** (live values, `values.yaml` re-verified
-2026-08-19):
+- `golink` (link shortener) and `taildrive` (file share) — §9 recommended resolving both as
+  **Tier 2**, and their placement now matches that. Nothing further to do beyond writing the
+  call down.
+- The three `crowdsec-*` volumes — CrowdSec is Tier 1 only by living in the `network`
+  namespace, not because anyone decided the estate needs intrusion detection during a
+  battery window. The honest answer is almost certainly Tier 2; it needs saying explicitly.
+- `kube-system/registry` is the one that is genuinely uncomfortable. It is **Tier 0** in §1
+  and it has **zero** control-plane replicas, so a battery window has no in-cluster registry
+  mirror. That is survivable — `spegel` serves from node-local image stores and nothing
+  pulls a new image during a window unless something crash-loops — but "unless something
+  crash-loops" is exactly the case a low-power window creates. **This is now the sharpest
+  remaining storage item**, and it is a Tier-0 one, which is worse than the Tier-1 problem
+  this section used to describe.
 
-| Setting | Value | What it does during the window |
+**A cosmetic artefact worth not misreading:** several of the migrated volumes list a
+replica with an empty `nodeID` alongside their three placed ones — a leftover from the
+migration's rebuild, not a fourth replica and not a fault. `robustness` is `healthy` on all
+seven; judge from that, not from the replica count in a raw listing.
+
+**Four volumes are `degraded` right now**, all Tier 2 — `observability/storage-loki-0`,
+`equestria/{tududi,jellyfin,immich}`. §6.0's pre-flight requires zero.
+
+**Longhorn policy settings that shape the window.** All four re-verified live 2026-08-19 as
+`applied: true` — which is itself new: PR #959 fixed three `defaultSettings` keys the chart
+had been silently dropping, and `nodeDownPoddeletionPolicy` was one of them, so this row was
+describing behaviour that was **not actually live** when this file was first written.
+
+| Setting (live CR name) | Value | What it does during the window |
 |---|---|---|
-| `nodeDrainPolicy` | `allow-if-replica-is-stopped` | Never engages — this runbook does not `kubectl drain` |
-| `nodeDownPoddeletionPolicy` | `Delete-both-statefulset-and-deployment-pod` | **Does** engage: once node-down detection fires on a powered-off worker, Longhorn actively deletes its Tier-2 pods. Controllers recreate them, they find nowhere to go, they sit `Pending` |
-| `replica-replenishment-wait-interval` | `600` | 10 minutes in, Tier-2 rebuilds start targeting the trio — §0.2 |
-| `concurrentReplicaRebuildPerNodeLimit` | `2` | Lowered from 5 for these SATA disks ([12](12-longhorn-critical-tier.md), PR #939). Governs the exit storm |
+| `node-drain-policy` | `allow-if-replica-is-stopped` | Never engages — this runbook does not `kubectl drain` |
+| `node-down-pod-deletion-policy` | `delete-both-statefulset-and-deployment-pod` | **Does** engage, and now genuinely: once node-down detection fires on a powered-off worker, Longhorn deletes its Tier-2 pods. Controllers recreate them, they find nowhere to go, they sit `Pending` |
+| `replica-replenishment-wait-interval` | `600` | 10 minutes in, replenishment starts — but §0.2's `bulk` selector now aims it at worker disks, which are off. Tier-2 volumes stay degraded instead of rebuilding onto the trio. That is the intended outcome |
+| `concurrent-replica-rebuild-per-node-limit` | `2` | Lowered from 5 for these SATA disks ([12](12-longhorn-critical-tier.md), PR #939). Governs the exit storm |
 
 Expect a wall of `Pending` Tier-2 pods during the window. That is this policy doing what it
 now does, not a problem — and it is strictly better than the `Terminating` limbo the older
@@ -688,6 +741,26 @@ Two runbooks. **Path B is what the first rehearsal uses**, because Path A is gat
 | Available today | no | yes |
 
 ### 6.0 Pre-flight — all must pass, in this order
+
+**Burndown as of 2026-08-19 evening** — the morning revision recorded five of nine failing:
+
+| # | Check | State |
+|---|---|---|
+| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **pass** |
+| 2 | etcd: 3 members healthy, no alarms | not re-run this revision |
+| 3 | Zero degraded volumes | **fail** — 4 degraded, all Tier 2 (§5) |
+| 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). Tier-0 `kube-system/registry` has 0 — §5 |
+| 5 | Piece 12 landed: default class `bulk`-confined, `longhorn-critical` exists, nodes tagged | **pass** (§0.2) |
+| 6 | Longhorn `taint-toleration` applied + annotation present — Path A only | **pass** (§0.1) |
+| 7 | Flux fully reconciled | **pass** — 0 not-ready, 0 suspended |
+| 8 | DNS answer decided and reachable from a control plane | **decided, not built** (§0.3) |
+| 9 | alpha-site up and on the battery circuit | **unanswered** (§7) — the check below only proves it is *up* |
+
+So the honest count is now **five pass, one fail, one decided-but-unbuilt, one unanswered,
+one not re-run**. The remaining failure is check 3 (four degraded Tier-2 volumes), which is a
+burndown rather than a design gap. Check 4's caveat — Tier-0 `registry` at zero
+control-plane replicas — is not counted as a failure of check 4 as written, but it is §9's
+sharpest storage item and should not be lost in the arithmetic.
 
 ```bash
 # 1. Topology: 3 control-plane + 4 <none>, all Ready, no taints, none cordoned
@@ -947,8 +1020,26 @@ This concentration is deliberate and already flagged in 07's design. Low-power i
 that makes it matter: if alpha-site goes dark at the same moment as the cluster, this design
 has produced **zero critical services**, not a minimum-critical tier.
 
+**alpha-site now measures the batteries.** The `pecron-monitor` stack landed on alpha-site
+2026-08-19 (PRs #962, #964, #967, #968): an MQTT-fed exporter publishing
+`pecron_battery_percent`, `pecron_ac_input_power_watts`, `pecron_runtime_remaining_seconds`
+and `pecron_device_status` per unit, scraped by alpha-site's own Prometheus, with alert
+rules evaluated **there** rather than as an equestria `PrometheusRule` — deliberately, so
+that a mains-loss alert does not depend on the cluster it is warning about.
+
+That is directly load-bearing for this file in two ways. It gives §9 item 11 (the low-power
+*trigger*) an actual signal to trigger on — `pecron_ac_input_power_watts` falling to zero is
+mains loss, and `pecron_runtime_remaining_seconds` is how long the window can last, which is
+the number D6's "3–4 h+" was estimated rather than measured. And it means a rehearsal can now
+record battery draw against the tier list instead of asserting it. Note the AC-cut *control*
+rule was deliberately removed in #967 — this is telemetry and alerting, not automation, which
+keeps entry a human decision exactly as this file assumes.
+
 **alpha-site is PoE-powered and whether its PoE switch is on the Pecron circuit is still
-unverified.** This remains the single most important open item.
+unverified.** This remains the single most important open item — and it is now sharper, not
+softer, because alpha-site is also where the battery telemetry lives. If its switch is not on
+the battery, the estate loses identity, break-glass observability, netboot **and** the only
+instrument that says how much runtime is left, at the same moment.
 
 > *"Alpha site is a raspberry pi 4 that is poe powered, so it's downtime is dependent on the
 > PoE switch it is getting powered by."* — [comment-6](https://github.com/david-driscoll/vault/issues/84#issuecomment-5149201734)
@@ -1064,47 +1155,89 @@ Resolved, and left resolved:
 - ~~Re-verify §3's capacity numbers live.~~ **Done 2026-08-19** — §3. Result: it fits, but CPU
   is the tight axis, not the 2×-on-both-axes the old figure implied.
 - ~~Is `hard-hat` a Proxmox VM?~~ **No, it is bare metal** — §6.2. Only `shining-armor` is a VM.
+- ~~§0.1 — schedule the all-volumes-detached quiesce window for `taint-toleration`.~~
+  **Not needed.** The setting was landed by hand-writing the `last-applied-tolerations`
+  annotation, with zero detach window and zero pod restarts — §0.1 has the mechanism and the
+  three source-verified reasons it is safe.
+- ~~§0.2 — piece 12's tags and StorageClasses.~~ **Landed 2026-08-19** (PR #960). One caveat
+  survives: the `bulk` selector did not relocate existing replicas — §0.2.
+- ~~§0.3 — how does DNS survive a low-power window?~~ **Decided by David 2026-08-19:**
+  Technitium moves to the control planes, NAD rebinds `enp2s0` → `enp3s0`. §0.3 has the
+  design; the storage half of it is §5's work.
+- ~~Move the Tier-1 PVCs onto `longhorn-critical`.~~ **Done 2026-08-19**, PRs #963
+  (`technitium`, `tsidp`, `tsiam`) and #966 (`home-assistant`, `matter`, `mosquitto`). All
+  seven now hold three control-plane replicas and are `healthy` — §5. This was item 1 for
+  most of the day and is the reason the pre-flight in §6.0 went from two failures to one.
+- ~~`postgres-3` and the taint.~~ **Moot.** It is on `kerfuffle` with its `longhorn-local`
+  PV pinned there; CNPG healthy 3/3. [29](29-taint-readiness-audit.md)'s blocker 2 is closed
+  and no toleration/destroy decision is needed.
 
 Still open, in priority order:
 
-1. **§0.3 — how does DNS survive a low-power window?** Blocker. Pick (a) a CP-capable NAD +
-   second Technitium member, (b) LB-VIP-served DNS on the CP copy, or (c) an off-cluster
-   resolver — and for (c), confirm whether a Technitium node exists outside this repo, because
-   no Dockge host in `docker/` deploys one today. Needs David.
-2. **§0.1 — schedule the all-volumes-detached quiesce window** that lets Longhorn's
-   `taint-toleration` apply. Until then, `allowSchedulingOnControlPlanes` must stay `true` and
-   only §6 Path B is available.
-3. **Is alpha-site's PoE switch on the battery circuit?** §7. Needs David. Unchanged in
-   priority — it is only below the two above because they are blockers on *entering*, and this
-   one determines whether entering is *worth* it.
-4. **WoL on `hard-hat`, `fluttershy` and `kerfuffle`** — three bare-metal workers, not the two
-   the pre-19 text assumed (§6.2). Unverified whether WoL is enabled in BIOS or reachable.
-   Stage 3 of §8 answers it one node at a time.
-5. **Tier calls at the margins.** `golink` — §5 shows it has **zero** control-plane replicas
-   and it is a link shortener; recommend resolving it as **Tier 2**. `matter` — `hostNetwork`,
-   shares `${AUTOMATION_VIP}` with mosquitto, one CP replica; needs an explicit call before
-   piece 12 tags its volume. `taildrive` and `tsiam` are in a Tier-1 namespace with one CP
-   replica each and have never been tier-assigned at all.
-6. **`postgres-3` and the taint (§2).** Decide *in the same change as the flip*: give the CNPG
-   cluster the toleration, or destroy and re-provision the instance onto a worker first.
-   Leaving it undecided strands a database instance on the next reboot.
-7. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded from
-   a control plane. Copied verbatim during piece 21; confirm whether the reason still applies.
-8. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not exist on
-   the node. Not this piece's to fix; raise against
-   [19](19-rotate-equestria-control-planes.md) / talconfig.
-9. **Low-power trigger.** D6 settled duration (3–4 h+) but not trigger: purely a manual runbook
-   posture, or should grid-loss on a UPS/NUT signal auto-trigger entry? A NUT-driven automatic
-   entry is materially different engineering and is explicitly **not** built here.
-   [24](24-power-states.md) makes this sharper by adding a third state that needs a live toggle.
-10. **etcd's memory footprint on Talos** is invisible to `kubectl top` (a host service), so §3
-    excludes it. §8 Stage 1 measures it.
+1. **`kube-system/registry` is Tier 0 and has zero control-plane replicas.** §5. It is the
+   sharpest storage item now that Tier 1 has moved, and it is a worse tier than the problem
+   it replaced. A battery window has no in-cluster registry mirror; `spegel` covers this
+   from node-local image stores right up until something crash-loops, which is exactly the
+   case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
+   down explicitly that the window accepts no registry.
+2. **Build the Technitium move** (§0.3) — talconfig label, NAD `master`, toleration, and its
+   PVC as part of item 1. Small, and it retires the last thing that was a *blocker* rather
+   than a *build*.
+3. **Build §4: `critical-tier` PriorityClass, Tier-0/1 tolerations, and the taint flip.**
+   [29](29-taint-readiness-audit.md)'s gate is green, so the flip itself is now safe; the
+   remaining §4 work is the tolerations that make it *useful*. Includes the correction that
+   `home-assistant`, `mosquitto` and `chrony` currently hold `system-cluster-critical`.
+4. **Is alpha-site's PoE switch on the battery circuit?** §7. Needs David. Unchanged in
+   priority — it determines whether entering the window is *worth* it, not whether it is
+   possible. **Now joined by a second, identical question:** are `celestia`, `luna` and
+   `skystar` on battery? §0.3's off-cluster DNS redundancy is only real if they are.
+5. **WoL on `hard-hat`, `fluttershy` and `kerfuffle`** — three bare-metal workers (§6.2).
+   Unverified whether WoL is enabled in BIOS or reachable. §8 Stage 3 answers it one node at
+   a time.
+6. **Tier calls at the margins, now with measurements.** `golink` (link shortener, **0** CP
+   replicas) and `taildrive` (file share, **0**) — recommend resolving both as **Tier 2**.
+   `crowdsec-db-pvc` has **0** CP replicas and is Tier 1 only by living in `network`; needs
+   an explicit call. `matter` — `hostNetwork`, shares `${AUTOMATION_VIP}` with mosquitto, one
+   CP replica; needs a call before its volume is migrated. `tsiam` has never been
+   tier-assigned at all.
+7. **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
+   keeps `observability` up during Battery, but live today `kube-state-metrics`,
+   `prometheus-operator` and `unpoller` run on the trio with **no** control-plane toleration.
+   After the §4 flip they keep running and then cannot come back on recreate. If 24's
+   amendment stands, they need the toleration in the same change as the flip — the same trap
+   `postgres-3` used to be.
+8. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
+   from a control plane. Copied verbatim during piece 21; confirm whether the reason still
+   applies before §4's required affinity is written.
+9. **Tier-2 backfill of `spec.nodeSelector: ["bulk"]`** onto existing volumes, and the
+   rebuilds that actually move them off the control-plane disks (§0.2). Owned by
+   [12](12-longhorn-critical-tier.md); listed here because until it runs, the trio's SATA
+   disks still carry Tier-2 data and §0.2's thermal argument is only half-retired. Note the
+   Tier-1 migration (#963/#966) has now *added* ~68 GB of Tier-1 data to those same disks,
+   which is by design but raises the stakes on evicting the Tier-2 tenants.
+10. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
+    exist on the node. Not this piece's to fix; raise against
+    [19](19-rotate-equestria-control-planes.md) / talconfig.
+11. **Low-power trigger.** D6 settled duration (3–4 h+) but not trigger: purely a manual
+    runbook posture, or should grid-loss auto-trigger entry? **The signal now exists** —
+    alpha-site's `pecron-monitor` publishes `pecron_ac_input_power_watts` (mains loss) and
+    `pecron_runtime_remaining_seconds` (how long the window can last), off-cluster by design
+    (§7). What is still not built is anything that *acts* on it, and #967 deliberately
+    removed the one control rule that did act. So the question narrows: this is now a choice
+    between "alert David, David runs §6" and "automate entry," rather than an unanswered
+    engineering question. [24](24-power-states.md)'s live-toggle half is answered; this is
+    the remaining half, and it is a policy call rather than a build.
+12. **etcd's memory footprint on Talos** is invisible to `kubectl top` (a host service), so
+    §3 excludes it. §8 Stage 1 measures it.
 
 ---
 
 ## Cross-references
 
 - [00-README](README.md) — decision ledger, full sequencing, cross-cutting rules
+- [29-taint-readiness-audit.md](29-taint-readiness-audit.md) — the four-command gate on
+  `allowSchedulingOnControlPlanes: false`, now green; owns the estate-wide audit of what the
+  taint would strand, which §4 depends on and §9 item 7 extends
 - [12-longhorn-critical-tier.md](12-longhorn-critical-tier.md) — the storage tagging this piece
   depends on; owns the `critical`/`bulk` tags, the `longhorn-critical` StorageClass, the
   default-class `nodeSelector` that §0.2 turns on, and the disk measurements that justify
