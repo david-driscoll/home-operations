@@ -59,6 +59,13 @@ spec:
     controller:
       podAnnotations:
         reloader.stakater.com/auto: "true"
+      # alloy runs as a DaemonSet and scrapes/collects from the node it is on,
+      # so a control plane without it is an observability blind spot. Chart
+      # default is [], so nothing is being replaced.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     serviceMonitor:
       enabled: true
     ingress:

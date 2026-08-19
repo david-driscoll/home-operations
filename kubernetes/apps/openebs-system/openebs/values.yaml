@@ -2,6 +2,18 @@
 localpv-provisioner:
   localpv:
     basePath: &basePath /var/mnt/extra/openebs/local
+    # The provisioner is a Deployment, but the hostpath volumes it hands out
+    # are node-local: if it cannot run on a control plane it cannot provision
+    # openebs-hostpath PVCs for pods there. Key is
+    # `localpv-provisioner.localpv.tolerations`, default [].
+    #
+    # Every other engine in this chart (zfs, lvm, mayastor, rawfile) is
+    # disabled below, so this is the only openebs-system workload that needs
+    # one.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
   hostpathClass:
     enabled: true
     name: openebs-hostpath

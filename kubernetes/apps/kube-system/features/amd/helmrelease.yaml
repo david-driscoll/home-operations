@@ -59,3 +59,17 @@ spec:
     securityContext:
       allowPrivilegeEscalation: true
     node_selector_enabled: true
+    # Covers BOTH DaemonSets: deviceplugin-daemonset.yaml and labeller.yaml
+    # each render `.Values.tolerations`, so this reaches
+    # amd-gpu-device-plugin-daemonset and amd-gpu-labeller-daemonset.
+    #
+    # Helm REPLACES lists, so the chart's own CriticalAddonsOnly entry is
+    # repeated here verbatim -- omitting it would silently drop it.
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      # Added: keeps the plugin schedulable once the control planes are
+      # tainted by allowSchedulingOnControlPlanes: false.
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

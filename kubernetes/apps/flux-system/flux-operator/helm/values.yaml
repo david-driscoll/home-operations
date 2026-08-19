@@ -1,4 +1,12 @@
 ---
+# Placement flexibility once allowSchedulingOnControlPlanes goes false. The
+# operator is what reconciles the FluxInstance (and therefore the four Flux
+# controllers), so it is the one flux-system pod that should not be boxed into
+# the smallest possible node set. Plain chart value, default [].
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
 serviceMonitor:
   create: true
 web:

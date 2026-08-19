@@ -91,6 +91,13 @@ spec:
     singleBinary:
       replicas: 1
       priorityClassName: observability-critical
+      # Placement flexibility only. This is a StatefulSet with a 60Gi Longhorn
+      # PVC (persistence below); the toleration widens where it MAY schedule
+      # but does not move the volume, so the pod still follows its data.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       persistence:
         enabled: true
         storageClass: longhorn

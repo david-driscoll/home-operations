@@ -54,3 +54,10 @@ spec:
       size: 10Gi
     serviceMonitor:
       enabled: true
+    # Top-level key in this chart (there is only one workload). Placement
+    # flexibility only -- Tempo is a StatefulSet with a 10Gi PVC, so the
+    # toleration widens where it MAY schedule without moving its data.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

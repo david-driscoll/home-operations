@@ -35,3 +35,9 @@ spec:
       tag: 0.18.0
     networkPolicy:
       enabled: false
+    # Stateless Deployment; placement flexibility only. Top-level key in this
+    # chart, default [].
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

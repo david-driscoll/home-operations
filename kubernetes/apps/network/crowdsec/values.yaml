@@ -232,6 +232,17 @@ lapi:
   deployAnnotations:
     reloader.stakater.com/auto: "true"
 agent:
+  # The agent is a DaemonSet that tails pod logs on the node it runs on, so a
+  # control plane without one is a blind spot rather than a broken pod. Chart
+  # default is [], so nothing is being replaced.
+  #
+  # `lapi` is deliberately NOT given the same toleration: it is a single-replica
+  # Deployment with two Longhorn PVCs, and widening where it may schedule does
+  # not move its data. Leave it on the workers.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
   # `agent.acquisition` lives inline in helmrelease.yaml, not here -- see the
   # comment there. D6 (vault#111 Q4): the `namespace: '*', podName: postgres-*`
   # entry is gone. Parsing every Postgres pod's logs cluster-wide is noise in
