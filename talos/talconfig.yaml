@@ -184,7 +184,10 @@ nodes:
     installDisk: "/dev/sda"
     machineSpec:
       secureboot: false
-    controlPlane: true
+    # Rotated out of the control plane 2026-08-18, piece 19 (2 of 3). Talos
+    # cannot demote in place, so this was a drain -> etcd leave -> wipe ->
+    # rejoin-as-worker cycle, not a flag flip on a live node.
+    controlPlane: false
     userVolumes: &intel_un1290_user_volumes
       - name: longhorn
         filesystem:
