@@ -7,8 +7,9 @@
 # compose.yaml mounts read-only into the container.
 #
 # The repo is public, so anything that authenticates — cloud email/password,
-# per-device auth_key AND device_key — lives in OpenBao under
-# secrets/clusters/alpha-site/apps/pecron-monitor/{cloud,devices}, never here.
+# per-device auth_key AND device_key — plus the devices' lan_ips lives in
+# OpenBao under secrets/clusters/alpha-site/apps/pecron-monitor/{cloud,devices},
+# never here.
 # The tsl_cache blocks are just the devices' TSL schema (identical for every
 # unit of this model), not secrets.
 email: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/cloud#/email
@@ -195,7 +196,7 @@ devices:
       desc: Ac cumulative output
       access: R
   auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_auth_key
-  lan_ip: 192.168.100.222
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_lan_ip
 - product_key: p11wPr
   device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key
   name: Primary
@@ -376,7 +377,7 @@ devices:
       desc: Ac cumulative output
       access: R
   auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_auth_key
-  lan_ip: 192.168.100.28
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_lan_ip
 - product_key: p11wPr
   device_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key
   name: Backup
@@ -557,7 +558,7 @@ devices:
       desc: Ac cumulative output
       access: R
   auth_key: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_auth_key
-  lan_ip: 192.168.100.249
+  lan_ip: ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_lan_ip
 poll_interval: 70
 alerts:
   low_battery_percent: 20
