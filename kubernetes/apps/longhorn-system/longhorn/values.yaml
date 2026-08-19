@@ -65,6 +65,25 @@ defaultSettings:
   orphanResourceAutoDeletion: instance
   orphanResourceAutoDeletionGracePeriod: 300
   replicaAutoBalance: best-effort
+
+  # Chart default is 5. That is tuned for NVMe and is actively harmful on the
+  # ex-SGC nodes, whose Longhorn disk is a Transcend TS1TMTS425S SATA
+  # (milky-way/othalla/pegasus, /dev/sda). Five concurrent rebuilds onto one of
+  # those drives saturates it -- measured 93.5% utilisation and 470 ms average
+  # write latency during fluttershy's eviction on 2026-08-18 -- so the rebuild
+  # data connections time out and drop (`Data server connection closed by
+  # remote  error=EOF`), Longhorn marks the replicas failed, and retries all
+  # five again. Each retry DISCARDS the progress: one 64 GiB volume fell from
+  # 93% back to 3%, and the failed-replica count went 0 -> 3 -> 6 -> 9 in about
+  # twenty minutes. It is a livelock, not a failing disk -- there were no
+  # kernel I/O errors and no SMART errors on any of those drives.
+  #
+  # Two rebuilds that finish beat five that time out and restart. This matters
+  # most on the remaining piece-19 rotations: kerfuffle holds ~80 replicas.
+  # See docs/cluster-consolidation/19-rotate-equestria-control-planes.md
+  # (Step 1b-bis) and 12-longhorn-critical-tier.md.
+  concurrentReplicaRebuildPerNodeLimit: 2
+
   storageMinimalAvailablePercentage: 5
   storageReservedPercentageForDefaultDisk: 10
   autoCleanupSnapshotAfterOnDemandBackupCompleted: true

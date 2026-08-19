@@ -235,6 +235,99 @@ with only 3 nodes ever carrying the `critical` tag, that's what forces
 exactly one `longhorn-critical` replica per control plane — there's no
 fourth `critical` node for a spillover replica to land on.
 
+### Answering "which three" with measurements (2026-08-18)
+
+The section above leaves the choice open — follow the control plane, or follow the faster
+disk. Running [19](19-rotate-equestria-control-planes.md)'s eviction on `fluttershy`
+produced the numbers that settle it, measured mid-drain while ~340 GB of replicas moved:
+
+| node | Longhorn disk | utilisation | avg write latency | temp |
+|---|---|---|---|---|
+| `milky-way` | Transcend SATA `/dev/sda` | **93.5 %** | **126 ms** | 75 °C |
+| `pegasus` | Transcend SATA `/dev/sda` | **89.7 %** | **470 ms** | 73 °C |
+| `othalla` | Transcend SATA `/dev/sda` | 3.7 % (idle) | — | 64 °C |
+| `fluttershy` (source) | Samsung 990 EVO Plus | 6.3 % | — | 49 °C |
+
+**The answer is: keep `critical` on the control planes anyway, and prioritise step 3.**
+
+The disks are the worse ones, but that is not what `critical` is *for*. Tier-1 is small and
+low-IOPS — home-assistant 43 GB, technitium 5.4 GB, mosquitto 8.6 GB, matter 4.3 GB,
+crowdsec ~6.5 GB, about **68 GB of real data** (162 GB counting volsync caches/dests). That
+load is negligible on any of these drives. What is *not* negligible is what is on them
+today:
+
+| node | in use | scheduled |
+|---|---|---|
+| `milky-way` | 172.7 GB | 534.7 GB |
+| `othalla` | 159.0 GB | 735.5 GB |
+| `pegasus` | 220.1 GB | 562.7 GB |
+
+Roughly **70 % of that is Tier-2 bulk** — loki, thanos, jellyfin, immich, the *arr stack —
+which has no reason to be on a control-plane disk at all. So the problem was never that
+`critical` points at slow disks; it is that **nothing points anything away from them**.
+Step 3 is the fix, and it is the step this piece already warns is "the one that matters
+most and is easiest to skip."
+
+Tag assignment for the post-[19](19-rotate-equestria-control-planes.md) topology, replacing
+Step 1's original list:
+
+```bash
+# critical - the three control planes (D6 needs Tier-1 data to survive here)
+for n in milky-way othalla pegasus; do
+  kubectl -n longhorn-system patch nodes.longhorn.io $n --type merge -p '{"spec":{"tags":["critical"]}}'
+done
+# bulk - the four workers, all NVMe-backed
+for n in hard-hat fluttershy kerfuffle shining-armor; do
+  kubectl -n longhorn-system patch nodes.longhorn.io $n --type merge -p '{"spec":{"tags":["bulk"]}}'
+done
+```
+
+### What step 3 would have prevented, concretely
+
+With no tags and no selector, eviction picks targets by **free space alone**. `milky-way` and
+`pegasus` were emptiest after their own wipes, so every rebuild went there while three NVMe
+nodes sat idle. Consequences, all observed:
+
+- throughput collapsed to 1–2 % per five minutes;
+- rebuilds began failing and restarting from 0 % — one 64 GiB volume fell from 93 % to 3 %,
+  and the failed-replica count went 0 → 3 → 6 → 9 in about twenty minutes;
+- both drives climbed toward the 85 °C at which `pegasus` previously shut its XFS filesystem
+  down mid-rebuild.
+
+The stopgap was `allowScheduling: false` on both nodes, which is documented in
+[19](19-rotate-equestria-control-planes.md) Step 1b-bis along with the matching undo. Step 3
+is what makes the stopgap unnecessary.
+
+**Root cause of the failures was a livelock, not a failing disk.** No kernel I/O errors and
+no SMART errors on any drive. `concurrent-replica-rebuild-per-node-limit` defaults to **5**,
+which is tuned for NVMe: five simultaneous rebuilds onto one Transcend SATA saturate it, the
+rebuild data connections time out and drop (`Data server connection closed by remote
+error=EOF`), Longhorn marks the replicas failed and retries all five — discarding the
+progress each time. Lowered to **2** in
+`kubernetes/apps/longhorn-system/longhorn/values.yaml`; two rebuilds that finish beat five
+that restart. This matters most on the remaining rotations — `kerfuffle` holds ~80 replicas.
+
+### Implementation constraint step 3 has to route around
+
+**StorageClass `parameters` are immutable.** Turning on `persistence.defaultNodeSelector`
+changes the auto-created `longhorn` class's parameters, so `helm upgrade` **fails** rather
+than updating it — the class has to be deleted and recreated. Existing PVs are unaffected
+(they are already bound), but any PVC created in that window fails, so it wants a quiet
+moment rather than a routine reconcile.
+
+The same applies to adding a selector to the hand-written classes in
+`kubernetes/apps/longhorn-system/storageclass/snapshot.yaml` (`longhorn-cache`,
+`longhorn-snapshot`, `longhorn-local`) — and note that Kustomization is configured
+`force: false` (`storageclass/ks.yaml:20`), so Flux will surface an immutable-field error
+rather than recreating them. Either flip `force: true` for that Kustomization or delete the
+classes by hand as part of the change.
+
+**A third trap, from landing PR #912:** `longhorn-manager`'s DaemonSet ships
+`updateStrategy.rollingUpdate.maxUnavailable: 100%`. Any change to these values rolls **all
+seven managers at once**, leaving the cluster with no Longhorn control plane for ~90 s. It
+recovers on its own and eviction state survives in the CRs, but it stalls any rebuild in
+flight — so do not land a Longhorn values change while a node is draining.
+
 ### Longhorn settings that matter to this piece (v1.12.0, live)
 
 | Setting | Value | Relevance |
