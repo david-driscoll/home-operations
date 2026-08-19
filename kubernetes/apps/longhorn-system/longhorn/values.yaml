@@ -47,9 +47,60 @@ defaultSettings:
   defaultDataLocality: best-effort
   defaultLonghornStaticStorageClass: longhorn
   defaultReplicaCount: 2
-  guaranteedInstanceManagerCpu: 5
-  nodeDownPoddeletionPolicy: Delete-both-statefulset-and-deployment-pod
-  volumeAttachmentRecoveryPolicy: never
+  # Chart key is nodeDownPodDeletionPolicy -- capital D in "Deletion". This asked
+  # for `nodeDownPoddeletionPolicy` and got nothing, because
+  # templates/default-setting.yaml wraps every key in
+  # `{{- if not (kindIs "invalid" .Values.defaultSettings.<key>) }}`: a misspelled
+  # key is indistinguishable from an unset one, so it raises no error and simply
+  # never reaches the longhorn-default-setting ConfigMap. Live
+  # `node-down-pod-deletion-policy` read `do-nothing`, Longhorn's default.
+  #
+  # The VALUE was wrong too, and would have failed just as quietly on its own. The
+  # choices are exact lowercase strings and isValidChoice() in types/setting.go is
+  # a plain slices.Contains, so the old capital `Delete-both-...` would have been
+  # dropped by filterCustomizedDefaultSettings() with one log line ("will continue
+  # applying other customized settings") and no other signal. Two silent failures
+  # stacked; fixing only the key would have looked like a fix and changed nothing.
+  #
+  # Load-bearing for docs/cluster-consolidation/24-power-states.md: under
+  # `do-nothing`, StatefulSet pods stranded on a powered-off worker are never
+  # deleted and therefore never reschedule onto a control plane. 20-low-power-tier.md
+  # section 5 already describes the float-and-relocate behaviour this enables --
+  # it was describing something that was not switched on.
+  nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+
+  # REMOVED, not corrected: `guaranteedInstanceManagerCpu: 5` (chart key is
+  # guaranteedInstanceManagerCPU, capital CPU) and `volumeAttachmentRecoveryPolicy:
+  # never`. Both were swallowed by the same kindIs "invalid" guard and neither has
+  # ever been in effect here.
+  #
+  #   * guaranteedInstanceManagerCPU is a PERCENTAGE of each node's allocatable
+  #     CPU, not millicores, and the chart default is 12 -- so `5` was a
+  #     REDUCTION, not the increase its 4-core-control-plane framing suggests. At
+  #     the live 12% that is 474m on milky-way/othalla/pegasus (3950m allocatable),
+  #     1914m on hard-hat, 2394m on the 20-core workers. Upstream's own sizing
+  #     formula (running instances * 0.1 / allocatable * 100) wants far MORE than
+  #     12% on every node in this cluster: hard-hat carries ~67 running
+  #     engines+replicas, i.e. ~42%, which is already above the setting's own 0-40
+  #     ceiling. Dropping the guarantee to 5% would weaken exactly the nodes that
+  #     livelocked during the piece-19 rebuilds (see
+  #     concurrentReplicaRebuildPerNodeLimit below) and exactly the control planes
+  #     12-longhorn-critical-tier.md is about to promote to the critical tier. The
+  #     5 arrived unexplained with the repo migration (5fa1a7f2) and no rationale
+  #     was ever recorded, so the chart default stands -- which is also what is
+  #     already live, making this half of the change a no-op. If the small control
+  #     planes ever need their own number, the per-node override is
+  #     `node.spec.instanceManagerCPURequest`, which takes precedence over this
+  #     global setting.
+  #
+  #   * volumeAttachmentRecoveryPolicy is absent from chart 1.12.1 because the
+  #     setting itself is gone: `volume-attachment-recovery-policy` was marked
+  #     SettingTypeDeprecated in longhorn-manager 1.2.x and deleted outright in
+  #     1.3.0, superseded by nodeDownPodDeletionPolicy above. Its `never` choice
+  #     meant "the default Kubernetes behavior of never deleting volume
+  #     attachments" -- the do-nothing option -- so even had it worked, it would
+  #     have been arguing against the line it sat next to.
+
   # Chart key is orphanResourceAutoDeletion (chart 1.12.0) and the value is a
   # SEMICOLON-separated list of resource types, not a boolean. The old
   # `orphanAutoDeletion: true` matched no key in the chart, so it was dropped
