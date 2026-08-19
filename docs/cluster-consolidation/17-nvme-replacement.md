@@ -34,6 +34,12 @@ discovery.
 
 ## The counterweight — equestria's own etcd isn't clean either
 
+> **Substantially superseded 2026-08-18 — see "The 19-hour re-measurement" below.** The
+> reading in this section rests on a single 1 h window, and a longer sample does not
+> reproduce it. The PNY SATA disks are *excellent* at baseline and only catastrophic under
+> contention; the ShiJi is *persistently* out of spec. That is a materially different shape
+> from "two already-imperfect substrates", and it changes the priority of this file.
+
 This is not "trade a bad disk for a good one." **Two of equestria's three current control
 planes have a worse-measured etcd substrate than SGC's, right now**, per
 [vault#127](https://github.com/david-driscoll/vault/issues/127) (filed 2026-08-02, open,
@@ -73,6 +79,60 @@ cluster they end up serving.** This file is scoped to SGC's copy of the problem 
 are the disks that keep the etcd role after 18; vault#127's own fix (reinstall
 fluttershy/kerfuffle onto their Samsung NVMe, shrinking the Longhorn `userVolume` to make
 room) is tracked separately and neither blocks nor is blocked by this migration.
+
+## The 19-hour re-measurement, 2026-08-18 — the ShiJi is the worse disk, not a wash
+
+The 1 h windows above (both 2026-07-30 and 2026-08-13) are too short to separate a disk's floor
+from whatever happened to be writing during the sample. Re-measured across **19 h of steady
+state, hourly samples**, against `admin@equestria`, with milky-way excluded (it was out of the
+cluster ~22 h and rejoined etcd as a learner at 00:11 UTC, so its figures are not comparable):
+
+| Node | etcd install disk | p50 fsync | p99 fsync (median) | p99 max |
+|---|---|---|---|---|
+| fluttershy | `PNY 500GB SATA` | **0.74 ms** | **3.86 ms** | 4.71 ms |
+| kerfuffle | `PNY 500GB SATA` | **0.74 ms** | **3.97 ms** | 5.06 ms |
+| othalla | `ShiJi 256GB M.2-NVMe` | 3.73 ms | 13.62 ms | 29.17 ms |
+| pegasus | `ShiJi 256GB M.2-NVMe` | 3.74 ms | 13.77 ms | 26.73 ms |
+
+**fluttershy's p99 never exceeded 4.71 ms across the whole window**, against the 18.3 ms this
+file reports from 2026-08-13. That single figure is what the counterweight argument above rests
+on, and it does not survive a longer sample. Both PNY nodes clear etcd's < 10 ms p99 guidance
+with better than 2× margin; both ShiJi nodes fail it persistently, at ~5× the PNY median.
+
+The correct shape of the problem is therefore:
+
+- **PNY SATA** — excellent floor (0.74 ms), catastrophic *under contention* (vault#127's 5038 ms
+  came from an unconstrained `pulumi` workspace pod on kerfuffle's `/var`). The fix is workload
+  isolation, which [20](20-low-power-tier.md)'s control-plane taint delivers for free.
+- **ShiJi NVMe** — mediocre floor, permanently out of spec, no workload change can fix it. The
+  fix is a new drive, i.e. this file.
+
+## Endurance — the number that should have been driving this file
+
+Not previously measured anywhere in the plan set. Live 2026-08-18, `smartctl_device_percentage_used`
+and `smartctl_device_bytes_written`, with the burn rate taken from a 12 h trend:
+
+| drive | host | written | % used | implied endurance | remaining at current rate |
+|---|---|---|---|---|---|
+| Samsung 990 EVO Plus | fluttershy | 113.9 TB | 12 % | ~950 TB | ~8.7 yr @ 262 GB/day |
+| Samsung 990 EVO Plus | kerfuffle | 81.4 TB | 9 % | ~900 TB | — |
+| ShiJi 256GB | milky-way | 32.1 TB | **51 %** | ~63 TB | — |
+| ShiJi 256GB | othalla | 25.2 TB | **48 %** | ~53 TB | **~1.5 yr** @ 50 GB/day |
+| ShiJi 256GB | pegasus | 36.7 TB | **53 %** | ~69 TB | **~1.8 yr** @ 50 GB/day |
+
+The ShiJi drives carry roughly **1/18th** the write endurance of the estate's standard Samsung,
+and are already half consumed. Three identical drives, same batch, same age, wear within five
+points of each other. This is a **correlated** wear-out: they will reach end of life within
+months of each other, and after [19](19-rotate-equestria-control-planes.md) completes they hold
+the entire etcd quorum.
+
+**Consequence for this file's deferral.** [19](19-rotate-equestria-control-planes.md) was
+executed on the current drives by David's decision on 2026-08-18. That converts this file from
+an opportunistic maintenance item into the highest-value hardware item in the estate: the
+deferral was defensible while etcd still spanned both disk classes, and it is much less
+defensible once it does not. The "buy whatever is cheapest when the budget allows" framing below
+should be read against a **~1.5-year** clock that started before the drives were bought, not an
+open-ended one. Action item 1 (open the hardware issue) is still not done.
 
 ## David's decision
 
