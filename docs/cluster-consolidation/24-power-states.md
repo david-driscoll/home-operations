@@ -325,6 +325,51 @@ Three ways out, and the choice should be deliberate:
 py-kube-downscaler is not the mechanism for this cluster, it is a second opinion Flux
 overrules.
 
+**Built 2026-08-19.** Option (1), applied **namespace-wide** rather than per-HelmRelease, in
+`kubernetes/apps/equestria/kustomization.yaml`:
+
+```yaml
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+    patch: |-
+      # …injects spec.patches into every equestria child Kustomization, which then
+      # patches the HelmRelease it builds:
+      spec:
+        driftDetection:
+          ignore:
+            - paths: ["/spec/replicas"]
+            - paths: ["/spec/suspend"]
+              target:
+                kind: CronJob
+```
+
+Three things about that shape are deliberate:
+
+- **Two rules, not one.** The downscaler scales Deployments and StatefulSets but *suspends*
+  CronJobs, so `/spec/suspend` needs ignoring too or every suspended CronJob un-suspends on
+  the next reconcile. `/spec/replicas` is left untargeted (it only exists on workload kinds
+  in a rendered app chart); `/spec/suspend` is targeted at `CronJob` specifically, because
+  the same path exists on Flux's own `Kustomization` and `HelmRelease` kinds and must not be
+  ignored there.
+- **Namespace-wide, not per-app.** The design's premise is that a *new* app in `equestria`
+  sheds correctly without anyone opting it in. A per-HelmRelease ignore would have to be
+  remembered 60+ times, and forgetting it fails silently and only during a window — the same
+  inverted-default failure this mechanism exists to avoid.
+- **It reaches HelmReleases in two hops**, because `equestria/kustomization.yaml` renders
+  `ks.yaml` files (Flux `Kustomization` CRs), not HelmReleases. The patch injects
+  `spec.patches` into each child, and each child patches the HelmRelease it builds. Verified
+  with `kustomize build` at both hops: 47 of 47 equestria Kustomizations carry the injected
+  patch, and a rendered `plex` HelmRelease comes out with `mode: enabled` intact plus the two
+  ignore rules.
+
+**The cost, stated plainly:** replica drift is no longer corrected for the keep-list apps
+either, since they live in the same namespace and are never downscaled. Nothing but the
+downscaler writes replicas on these workloads, so this is accepted rather than solved. **No
+equestria child sets `spec.patches` of its own today** — if one ever needs to, this patch
+stops being additive and has to move to the app level.
+
 **Untested here:** whether `downscaler/exclude` on a workload also survives a `helm upgrade`
 that re-renders `spec.replicas` — drift detection and chart upgrade are different paths.
 A chart upgrade during a window is unlikely but not impossible (Renovate merges land
