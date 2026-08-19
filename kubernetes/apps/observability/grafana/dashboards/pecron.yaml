@@ -1,0 +1,973 @@
+---
+# Pecron battery/UPS dashboard.
+#
+# Fed by the exporter in docker/alpha-site/pecron-monitor/, scraped by the
+# alpha-site Prometheus and remote-written into Thanos. Grafana's default
+# datasource IS Thanos Query, so nothing extra is needed to see it here.
+# Filter to this fleet with `{cluster="alpha-site", job="pecron"}`.
+#
+# Datasource placeholders are written `$${DS_PROMETHEUS}` with a doubled `$`,
+# matching gpu.yaml and flux.yaml. Inlined JSON is visible to Flux's post-build
+# substitution, which runs in strict mode and aborts the whole
+# observability/grafana Kustomization on any `${...}` it cannot resolve. The
+# `$$` collapses to a single `$` during substitution, so grafana-operator still
+# receives the `$${DS_PROMETHEUS}` it maps via the `datasources:` input below.
+# Grafana's own template variable (`$device`) uses the bare-`$` form, which Flux
+# leaves alone.
+#
+# NOT the `"uid": "prometheus"` form used by cadvisor.yaml: the Prometheus
+# GrafanaDatasource sets no explicit uid, so the operator generates one and a
+# hardcoded "prometheus" resolves to nothing.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: power
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  title: "Power"
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: pecron-batteries
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "power"
+  resyncPeriod: 10m
+  datasources:
+    - datasourceName: Prometheus
+      inputName: DS_PROMETHEUS
+  json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "-- Grafana --"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "id": 1,
+          "type": "row",
+          "title": "At a glance",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "State of charge per unit. Colours follow the rules-engine staging thresholds: 45%+ normal, under 25% low, under 12% critical.",
+          "id": 2,
+          "type": "stat",
+          "title": "Charge",
+          "gridPos": {
+            "h": 5,
+            "w": 7,
+            "x": 0,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_battery_percent{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 12
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 25
+                  },
+                  {
+                    "color": "green",
+                    "value": 45
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Load each unit is currently supplying.",
+          "id": 3,
+          "type": "stat",
+          "title": "Output power",
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 7,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_output_power_watts{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Device's own estimate of time left on battery. Sentinel values (65535) are filtered out by the exporter, so a missing value means unknown rather than infinite.",
+          "id": 4,
+          "type": "stat",
+          "title": "Runtime remaining",
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 13,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_runtime_remaining_seconds{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Seconds since the last LIVE MQTT message. The state topic is retained, so readings alone cannot tell you a unit is alive \u2014 this can. Red means the dashboard above may be showing a stale retained value.",
+          "id": 5,
+          "type": "stat",
+          "title": "Telemetry age",
+          "gridPos": {
+            "h": 5,
+            "w": 5,
+            "x": 19,
+            "y": 1
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "time() - pecron_last_message_timestamp_seconds{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 300
+                  },
+                  {
+                    "color": "red",
+                    "value": 900
+                  }
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "collapsed": false,
+          "id": 6,
+          "type": "row",
+          "title": "Battery",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 6
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Charge over time. The 25% and 12% staging thresholds are where the monitor's rules engine latches 'low' and 'critical'.",
+          "id": 7,
+          "type": "timeseries",
+          "title": "State of charge",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 7
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_battery_percent{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "16S LiFePO4. 46V is roughly 2.88V/cell and means near-empty regardless of what the percentage claims \u2014 SoC estimates drift badly on these packs near the bottom.",
+          "id": 8,
+          "type": "timeseries",
+          "title": "Pack voltage",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 7
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_pack_voltage_volts{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "volt",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Negative is discharge, positive is charge.",
+          "id": 9,
+          "type": "timeseries",
+          "title": "Pack current",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 15
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_pack_current_amperes{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "amp",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Normal observed range is 27-33\u00b0C. Alerts fire at 45\u00b0C (advisory) and 55\u00b0C (critical). Charging below 2\u00b0C plates lithium and is alerted separately.",
+          "id": 10,
+          "type": "timeseries",
+          "title": "Temperature",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 15
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_temperature_celsius{device=~\"$device\"}",
+              "legendFormat": "{{device}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "celsius",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "collapsed": false,
+          "id": 11,
+          "type": "row",
+          "title": "Power flow",
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 23
+          },
+          "panels": []
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "AC input is the mains feed. Input at zero while output is non-trivial is the mains-loss signal the PecronOnBattery alert uses.",
+          "id": 12,
+          "type": "timeseries",
+          "title": "Input vs output",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_ac_input_power_watts{device=~\"$device\"}",
+              "legendFormat": "AC in \u2014 {{device}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_dc_input_power_watts{device=~\"$device\"}",
+              "legendFormat": "DC in \u2014 {{device}}",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_output_power_watts{device=~\"$device\"}",
+              "legendFormat": "Out \u2014 {{device}}",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Inverter output voltage and frequency. Sustained deviation points at inverter trouble or an overload.",
+          "id": 13,
+          "type": "timeseries",
+          "title": "AC output quality",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 24
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_ac_output_voltage_volts{device=~\"$device\"}",
+              "legendFormat": "V \u2014 {{device}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_ac_output_hertz{device=~\"$device\"}",
+              "legendFormat": "Hz \u2014 {{device}}",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "Hourly rate derived from the cumulative kWh counters. Three of the four are integrated by pecron-monitor itself and persisted to disk, so losing that state file reads as a counter reset \u2014 rate() absorbs it, increase() across the gap under-reports.",
+          "id": 14,
+          "type": "timeseries",
+          "title": "Energy throughput",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "rate(pecron_ac_input_energy_kwh_total{device=~\"$device\"}[1h]) * 3600",
+              "legendFormat": "AC in \u2014 {{device}}",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "rate(pecron_ac_output_energy_kwh_total{device=~\"$device\"}[1h]) * 3600",
+              "legendFormat": "AC out \u2014 {{device}}",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "rate(pecron_dc_output_energy_kwh_total{device=~\"$device\"}[1h]) * 3600",
+              "legendFormat": "DC out \u2014 {{device}}",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "kwatth",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "decimals": 3
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$${DS_PROMETHEUS}"
+          },
+          "description": "1 is on. These are driven by the device and by restore_outputs_after_shutdown \u2014 the rules engine deliberately takes no switch actions.",
+          "id": 15,
+          "type": "timeseries",
+          "title": "Output switches",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 32
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$${DS_PROMETHEUS}"
+              },
+              "editorMode": "code",
+              "expr": "pecron_switch_on{device=~\"$device\"}",
+              "legendFormat": "{{device}} {{switch}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              },
+              "min": 0,
+              "decimals": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull",
+                "min",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        }
+      ],
+      "refresh": "1m",
+      "schemaVersion": 39,
+      "tags": [
+        "power",
+        "battery",
+        "alpha-site"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "datasource": {
+              "type": "prometheus",
+              "uid": "$${DS_PROMETHEUS}"
+            },
+            "definition": "label_values(pecron_battery_percent, device)",
+            "includeAll": true,
+            "multi": true,
+            "name": "device",
+            "label": "Battery",
+            "options": [],
+            "query": {
+              "query": "label_values(pecron_battery_percent, device)",
+              "refId": "A"
+            },
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Pecron Batteries",
+      "uid": "pecron-batteries",
+      "weekStart": ""
+    }

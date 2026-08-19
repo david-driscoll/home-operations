@@ -1,0 +1,153 @@
+---
+# Pecron battery/UPS alerts.
+#
+# These live on the ALPHA-SITE Prometheus, not as an equestria PrometheusRule,
+# for two reasons. First, correctness: equestria's Prometheus evaluates rules
+# against its own TSDB, which only holds what it scraped in-cluster — alpha-site
+# samples reach equestria via remote_write into Thanos, so a PrometheusRule
+# there would match nothing and silently never fire. Second, and more important:
+# a mains-loss alert must not depend on the cluster it is warning about. When
+# the batteries are discharging, equestria is exactly the thing that may be
+# shedding load. Alerts go straight from here to alertmanager over the tailnet.
+#
+# Thanos Ruler (kubernetes/apps/observability/thanos/resources/ruler.yml) is the
+# right home only for rules that genuinely need to correlate across clusters.
+#
+# `for:` is at least 2m everywhere because the underlying data only refreshes
+# every ~70s; a shorter window can fire on a single missed sample.
+groups:
+  - name: pecron-battery
+    interval: 60s
+    rules:
+      # Staleness, not liveness. The MQTT state topic is retained, so the
+      # exporter would happily keep serving the last-known reading forever
+      # after a battery goes away. pecron_last_message_timestamp_seconds is
+      # stamped only from non-retained messages, which is what makes this
+      # detect a wedged or unplugged unit at all.
+      - alert: PecronDeviceStale
+        expr: |
+          time() - pecron_last_message_timestamp_seconds > 900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pecron {{ $labels.device }} has stopped reporting"
+          description: "No live MQTT telemetry from {{ $labels.device }} for over 15 minutes. The exporter may still be serving a retained value, so readings on the dashboard could be stale."
+
+      # The companion to the above: a device that never reports at all after a
+      # restart never gets a timestamp series, so PecronDeviceStale cannot fire
+      # for it. Absence is the only signal.
+      - alert: PecronDeviceMissing
+        expr: |
+          absent(pecron_battery_percent) or count(pecron_battery_percent) < 3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "One or more Pecron batteries are not being reported"
+          description: "Expected 3 Pecron units; the exporter is publishing {{ $value }}. Check pecron-monitor and pecron-exporter on alpha-site."
+
+      - alert: PecronExporterMqttDown
+        expr: |
+          pecron_exporter_mqtt_connected == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pecron exporter has lost its MQTT session"
+          description: "The exporter cannot reach the mosquitto broker, so all battery readings are frozen at their last value."
+
+      # Discharging under load with mains absent. This is the real
+      # mains-loss signal: input at zero while the inverter is actually
+      # supplying something. Requiring output > 25W keeps an idle unit on a
+      # bench from paging anyone.
+      - alert: PecronOnBattery
+        expr: |
+          pecron_ac_input_power_watts == 0
+            and pecron_output_power_watts > 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pecron {{ $labels.device }} is running on battery"
+          description: "{{ $labels.device }} has had no AC input for 5 minutes while still supplying load. Mains may be out."
+
+      - alert: PecronBatteryLow
+        expr: |
+          pecron_battery_percent < 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pecron {{ $labels.device }} battery is low"
+          description: "{{ $labels.device }} is at {{ $value | printf \"%.0f\" }}%. This matches the 'low' staging threshold in the monitor's rules engine."
+
+      - alert: PecronBatteryCritical
+        expr: |
+          pecron_battery_percent < 12
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pecron {{ $labels.device }} battery is critically low"
+          description: "{{ $labels.device }} is at {{ $value | printf \"%.0f\" }}%, below the 12% critical stage. The unit's own BMS cutoff is approaching — shut down anything it feeds."
+
+      # SoC estimates drift badly on LiFePO4 near empty, which is exactly why
+      # upstream offers a voltage-based shutdown threshold. 46.0V on a 16S pack
+      # is ~2.88V/cell: genuinely near empty whatever the percentage claims.
+      - alert: PecronPackVoltageLow
+        expr: |
+          pecron_pack_voltage_volts < 46.0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pecron {{ $labels.device }} pack voltage is low"
+          description: "Pack is at {{ $value | printf \"%.1f\" }}V (~2.88V/cell at 16S). Treat as near-empty even if the reported percentage looks healthy."
+
+      # Temperature cannot be expressed in the monitor's own rules engine — it
+      # has no temperature condition — so Prometheus is the only place this can
+      # be caught outside Home Assistant.
+      - alert: PecronTemperatureHigh
+        expr: |
+          pecron_temperature_celsius > 45
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pecron {{ $labels.device }} is running warm"
+          description: "Pack temperature {{ $value | printf \"%.0f\" }}°C, above the 45°C advisory. Normal observed range is 27-33°C — check airflow and ambient."
+
+      - alert: PecronTemperatureCritical
+        expr: |
+          pecron_temperature_celsius > 55
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pecron {{ $labels.device }} is overheating"
+          description: "Pack temperature {{ $value | printf \"%.0f\" }}°C, approaching the typical 60°C discharge derate. The BMS will protect the pack, but investigate now."
+
+      # Charging a LiFePO4 pack below freezing plates lithium and permanently
+      # damages it. For these packs that is a more realistic hazard than heat,
+      # and it only matters while current is actually going in.
+      - alert: PecronChargingWhileCold
+        expr: |
+          pecron_temperature_celsius < 2
+            and pecron_ac_input_power_watts > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pecron {{ $labels.device }} is charging below 2°C"
+          description: "Charging LiFePO4 near or below freezing plates lithium and causes permanent capacity loss. Stop the charge and warm the unit."
+
+      - alert: PecronFaultReported
+        expr: |
+          pecron_fault_active == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pecron {{ $labels.device }} reports fault: {{ $labels.fault }}"
+          description: "The device is reporting the fault condition {{ $labels.fault }}."
