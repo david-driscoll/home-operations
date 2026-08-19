@@ -112,6 +112,7 @@ completed and eleven days have passed:
 | 18 SGC → control planes | **done.** All three SGC nodes wiped and rejoined to equestria. **SGC no longer exists as a cluster** |
 | 19 rotate equestria CPs | **DONE 2026-08-19.** All three rotated. 3 CPs (`milky-way`/`othalla`/`pegasus`) + 4 workers; etcd at 3 members, quorum 2. vault#127 closed by construction. Executed on the current drives — see 19's disk measurements and "What execution changed" |
 | 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
+| 12 Longhorn critical tier | **planned, not executed.** 19 unblocked it; 12 now carries an ordered executable procedure, a rollback, and the Tier-1 volume list. Zero node tags and zero StorageClass selectors live — placement is still free-space-only |
 
 Current cluster: 7 nodes, **3 etcd members** (`milky-way`, `othalla`, `pegasus`), all Ready.
 
