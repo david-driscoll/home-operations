@@ -1,0 +1,19 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-critical
+reclaimPolicy: Delete
+provisioner: driver.longhorn.io
+parameters:
+  # Tier-1 data that must survive low-power mode (D6): 3 replicas restricted
+  # to the `critical`-tagged control planes. With replica-soft-anti-affinity
+  # false this places exactly one replica per control plane.
+  # See docs/cluster-consolidation/12-longhorn-critical-tier.md.
+  numberOfReplicas: "3"
+  nodeSelector: "critical"
+  dataLocality: best-effort
+  replicaAutoBalance: best-effort
+  staleReplicaTimeout: "30"
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
