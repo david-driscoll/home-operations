@@ -53,10 +53,13 @@ spec:
       # restic mover restores the signing key with ownership tsiam can read.
       VOLSYNC_PUID: "65532"
       VOLSYNC_PGID: "65532"
-      # Named explicitly: this cluster has TWO default StorageClasses (longhorn and
-      # openebs-hostpath), so an unqualified PVC can silently land on non-replicated
-      # node-local storage. See david-driscoll/vault#113.
-      VOLSYNC_STORAGECLASS: longhorn
+      # Tier-1 (piece 12 Group A): the signing key must survive low-power mode,
+      # so the PVC lives on the critical tier — 3 replicas, one per control
+      # plane. Migrated from plain `longhorn` 2026-08-19 via the scale-to-0 +
+      # final-sync + RD-restore + PVC-recreate choreography (piece 13 §Storage
+      # tier); remember components/volsync stamps force: enabled, so changing
+      # this on a Bound PVC makes Flux delete-and-recreate it.
+      VOLSYNC_STORAGECLASS: longhorn-critical
       # A JWK and a tsnet state dir. Kilobytes, not gigabytes.
       VOLSYNC_CAPACITY: 1Gi
       # Both movers read this. It defaults to 2Gi in the ReplicationSource but
