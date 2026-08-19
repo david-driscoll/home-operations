@@ -36,8 +36,8 @@ spec:
       NAMESPACE: *namespace
       VOLSYNC_PUID: "1000"
       VOLSYNC_PGID: "1000"
-      # VOLSYNC_STORAGECLASS: longhorn-critical intentionally omitted — that
-      # StorageClass isn't live yet (piece 12 hasn't landed as of 2026-08-13).
-      # Falls back to the component's `longhorn` default; retag once 12 ships
-      # (see piece 13's "Storage tier" section for why retagging in place
-      # isn't a one-line edit once the PVC is Bound).
+      # Tier-1 (piece 12 Group A): OIDC signing keys must survive low-power
+      # mode — losing this PVC mints new keys and breaks every relying party.
+      # Piece 12 landed 2026-08-19 (PR #960); migrated from the component's
+      # `longhorn` default the same day via the piece-13 choreography.
+      VOLSYNC_STORAGECLASS: longhorn-critical
