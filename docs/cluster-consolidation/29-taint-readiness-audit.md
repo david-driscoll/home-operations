@@ -14,6 +14,14 @@ That flip taints `milky-way`, `othalla` and `pegasus` with
 > `etcd-tasks-backup`/`etcd-tasks-defrag` — is fixed by this change; the other two are
 > operational and cannot be fixed in Git.
 
+> **Update, 2026-08-19 (later the same day).** **All three blockers are now cleared** and
+> all four gate commands in [§7](#7-verdict-and-ordered-prerequisites) pass. Blocker C was
+> resolved with `kubectl cnpg destroy`. Blocker B was resolved **without** the
+> volumes-detached maintenance window this document prescribes — that prescription was
+> stricter than necessary; see
+> [§4.4](#44-how-blocker-b-was-actually-resolved-without-a-detach-window). Nothing in
+> §§1–6 below was rewritten; it stands as the audit read on the morning of 2026-08-19.
+
 Everything marked **verified live** below was read from `admin@equestria` on 2026-08-19
 with read-only commands. Nothing was patched, drained or cordoned. Claims marked
 **inferred** are reasoning from Kubernetes/Longhorn semantics, flagged as such.
@@ -307,6 +315,98 @@ next reboot of `othalla`.
 Note that the anti-affinity arithmetic still works afterwards: 3 instances, `required`
 anti-affinity on hostname, 4 workers.
 
+### 4.4 How Blocker B was actually resolved, without a detach window
+
+**Executed live on 2026-08-19, after the audit above.** §4.2 is right that the setting
+controller gates on `AreAllVolumesDetachedState()`, and right that this is still true in
+the deployed `longhorn-manager` **v1.12.1** — every volume must be in state `detached`,
+not merely idle (`datastore/longhorn.go:995`). What §4.2 got wrong is the conclusion that
+the gate is the *only* way in, and that the system-managed set "cannot be fixed from Git"
+implies it cannot be fixed at all without stopping the cluster.
+
+Three facts from the v1.12.1 source change the answer:
+
+1. **`updateTolerationForDaemonset` is an in-place `UpdateDaemonSet`**, not a
+   delete-and-recreate (`controller/setting_controller.go:606`). It sets
+   `.spec.template.spec.tolerations` to `existing − lastApplied + new` and writes the
+   `longhorn.io/last-applied-tolerations` annotation. The detach gate is checked *before*
+   this update; the update itself is ordinary and safe.
+2. **`getNotUpdatedTolerationList` compares only the annotation** against the setting
+   (`setting_controller.go:571`), never the live pod spec. When every collected object's
+   annotation already matches, `updateTaintToleration()` returns `nil` **before** reaching
+   the detach check, and `Setting.Status.Applied` flips to `true` (`setting_controller.go:224`).
+3. **Kubernetes permits *adding* tolerations to a running pod.** The instance-manager and
+   share-manager pods — the objects whose recreation is genuinely disruptive — can be
+   patched in place with no restart at all.
+
+So the fix was to write, by hand, exactly the state the controller would have written:
+
+```console
+# 4 CSI sidecar Deployments + 3 system-managed DaemonSets: template tolerations + annotation
+kubectl -n longhorn-system patch deploy|ds <name> --type merge -p '{
+  "metadata":{"annotations":{"longhorn.io/last-applied-tolerations":
+    "[{\"key\":\"node-role.kubernetes.io/control-plane\",\"operator\":\"Exists\",\"effect\":\"NoSchedule\"}]"}},
+  "spec":{"template":{"spec":{"tolerations":[
+    {"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"}]}}}}'
+
+# instance-manager and share-manager pods: prepend the toleration to the EXISTING list
+#   (K8s allows additions only, so the patch must carry the injected NoExecute pair too)
+```
+
+Then one no-op label write on the `Setting` to trigger a resync, because the setting
+controller only re-evaluates on an update event and its periodic resync is an hour:
+
+```console
+kubectl -n longhorn-system label settings.longhorn.io taint-toleration resync-nudge=1 --overwrite
+kubectl -n longhorn-system label settings.longhorn.io taint-toleration resync-nudge-
+```
+
+**Result:** 17 objects updated, `taint-toleration` `APPLIED: true`, and
+
+- `longhorn-csi-plugin`, both `engine-image-*` DaemonSets: `7/7` ready throughout,
+- **all eight instance-manager pods kept their original creation timestamps and
+  `restartCount: 0`** — nothing was recreated, so no engine or replica was interrupted,
+- `0` faulted volumes before, during and after,
+- not one workload was scaled down.
+
+The nodes that mattered were also far emptier than §5's snapshot suggests: at execution
+time only **three** volumes were attached on a control plane (`volsync-jellyfin-src` and
+`postgres-3` on `othalla`, `storage-tempo-0` on `pegasus`).
+
+**Why this is not fighting upstream.** The end state is byte-for-byte what
+`updateTaintToleration()` produces; the annotation is upstream's own idempotency marker.
+Once it matches, the controller's own comparison finds nothing to do and takes no further
+action. Nothing here has to be re-applied, and nothing reverts it: the engine-image
+controller only builds a DaemonSet when one is **absent**
+(`controller/engine_image_controller.go:257`), and `csi/deployment_util.go:200`
+short-circuits on a CSI version match, so neither reconciles tolerations on an existing
+object.
+
+**The caveat worth keeping.** Skipping the gate is safe *for this particular setting*
+because the toleration only ever widens where a pod may schedule — it cannot evict
+anything, and `NoSchedule` does not act on running pods. Do **not** generalise the trick to
+`priority-class`, `system-managed-components-node-selector` or `storage-network`, which sit
+behind the same gate for materially different reasons.
+
+### 4.5 Blocker C, resolved
+
+`kubectl cnpg destroy postgres 3 -n database` (note: the plugin takes `CLUSTER INSTANCE`,
+not the `namespace/cluster` form §7 originally showed). CNPG dropped instance 3 and its
+PVC, then re-bootstrapped from the primary. The rebuild took roughly seven minutes at
+`readyInstances: 2`, and `postgres-3` came back on **`kerfuffle`**, a worker. All three
+`strict-local` volumes are now on workers:
+
+```console
+# database/postgres-1  fluttershy
+# database/postgres-2  shining-armor   (primary)
+# database/postgres-3  kerfuffle
+```
+
+Because CNPG's pods carry no control-plane toleration, once the taint exists this cannot
+recur on its own — the scheduler will refuse to place an instance there in the first place.
+The exposure returns only if [20](20-low-power-tier.md)/[24](24-power-states.md) later give
+the database a toleration for low-power mode, which is where that decision belongs.
+
 ---
 
 ## 5. Longhorn blast radius, quantified
@@ -407,7 +507,20 @@ flexibility only* and does not move the volume.
 
 ## 7. Verdict and ordered prerequisites
 
-### **NOT SAFE TO FLIP** as of 2026-08-19.
+### ~~**NOT SAFE TO FLIP** as of 2026-08-19.~~ → **Prerequisites cleared, 2026-08-19.**
+
+The ordered list below is kept as written. Status after the live work described in
+[§4.4](#44-how-blocker-b-was-actually-resolved-without-a-detach-window) and
+[§4.5](#45-blocker-c-resolved):
+
+| # | Prerequisite | Status |
+| --- | --- | --- |
+| 1 | `etcd-tasks` tolerations | **Done** — merged in [#956](https://github.com/david-driscoll/home-operations/pull/956), live on both CronJobs |
+| 2 | `postgres-3` off `othalla` | **Done** — `cnpg destroy`, rebuilt on `kerfuffle` |
+| 3 | Longhorn `taint-toleration` applied | **Done** — `APPLIED: true`, *without* the detach window step 3 prescribes |
+| 4 | Rebuild-storm exposure | **Moot** — step 3 is complete, so this disappears exactly as the step itself says |
+| 5 | The four gate commands | **All four pass** |
+| 6 | Tier-1 tolerations | **Still open** — [12](12-longhorn-critical-tier.md)/[20](20-low-power-tier.md)/[24](24-power-states.md); never a prerequisite for the flip |
 
 Ordered. 1 is in this PR; 2-4 must be done live; 5 is the gate.
 
