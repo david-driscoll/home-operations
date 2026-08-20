@@ -67,10 +67,30 @@ exists to keep off them.
 
 The rule: **pin the data, not the churn.** An app whose data must live on a restricted
 tier sets `VOLSYNC_STORAGECLASS` only, and lets its staging default to
-`longhorn-snapshot`. Override `VOLSYNC_STAGING_STORAGECLASS` only when the staging
-volume genuinely needs to be somewhere specific — for example, if Tier-1 backups must
-keep running while the workers are powered down, since a `bulk`-restricted staging or
-cache class has zero schedulable nodes in that window.
+`longhorn-snapshot`.
+
+**The exception is Tier 1**, and it is the reason the critical tier has its own scratch
+classes. Piece 12 Phase 5 restricts `longhorn-snapshot` and `longhorn-cache` to `bulk`,
+so with the default a Tier-1 app's backup *and* restore have zero schedulable nodes
+while the workers are powered down — a tier defined by "survives low power" would stop
+backing up in exactly the mode it exists for. Those apps therefore point at
+`longhorn-critical-snapshot` / `longhorn-critical-cache` (1 replica each, `nodeSelector:
+critical`; see `kubernetes/apps/longhorn-system/storageclass/critical.yaml`):
+
+```yaml
+      VOLSYNC_STORAGECLASS: longhorn-critical              # the data
+      VOLSYNC_STAGING_STORAGECLASS: longhorn-critical-snapshot   # the churn
+      VOLSYNC_CACHE_SNAPSHOTCLASS: longhorn-critical-cache
+```
+
+Both scratch variables have to move together — pinning staging to the critical tier and
+leaving the cache on `longhorn-cache` still strands the mover once Phase 5 lands.
+
+Longhorn tag selectors are a hard filter with no preference order, so this is binary:
+scratch volumes live on the control planes always, or on workers always. There is no
+"prefer bulk, fall back to critical". Tier 1 takes the always-critical side and pays
+roughly 4.7 GB of nightly writes across the three control-plane SATA disks; everything
+else takes the default and keeps that churn on the NVMe workers.
 
 Changing either staging variable is safe on a live app: it only affects the next
 throwaway volume the mover creates. Changing `VOLSYNC_STORAGECLASS` on a bound PVC is

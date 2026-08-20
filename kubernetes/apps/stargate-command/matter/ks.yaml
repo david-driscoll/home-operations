@@ -46,3 +46,8 @@ spec:
       # low-power mode. Migrated 2026-08-19, same choreography as
       # home-assistant.
       VOLSYNC_STORAGECLASS: longhorn-critical
+      # Tier-1 scratch volumes stay on the control planes so backup and
+      # restore still work with the workers powered down (D6). 1 replica
+      # each; see storageclass/critical.yaml for why.
+      VOLSYNC_STAGING_STORAGECLASS: longhorn-critical-snapshot
+      VOLSYNC_CACHE_SNAPSHOTCLASS: longhorn-critical-cache

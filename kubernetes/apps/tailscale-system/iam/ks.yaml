@@ -60,6 +60,11 @@ spec:
       # tier); remember components/volsync stamps force: enabled, so changing
       # this on a Bound PVC makes Flux delete-and-recreate it.
       VOLSYNC_STORAGECLASS: longhorn-critical
+      # Tier-1 scratch volumes stay on the control planes so backup and
+      # restore still work with the workers powered down (D6). 1 replica
+      # each; see storageclass/critical.yaml for why.
+      VOLSYNC_STAGING_STORAGECLASS: longhorn-critical-snapshot
+      VOLSYNC_CACHE_SNAPSHOTCLASS: longhorn-critical-cache
       # A JWK and a tsnet state dir. Kilobytes, not gigabytes.
       VOLSYNC_CAPACITY: 1Gi
       # Both movers read this. It defaults to 2Gi in the ReplicationSource but

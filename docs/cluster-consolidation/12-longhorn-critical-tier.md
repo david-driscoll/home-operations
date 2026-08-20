@@ -483,6 +483,13 @@ VolSync cache), `longhorn-snapshot` (2 replicas, VolSync restore staging), `long
 `nodeSelector` or `diskSelector`. Placement across all 203 Longhorn volumes is decided by
 free space alone.
 
+> **Superseded by execution, same day.** Phases 1–4 landed (PR #960), so `longhorn` now
+> carries `nodeSelector: bulk` and `longhorn-critical` (3 replicas, `nodeSelector:
+> critical`) exists and holds all seven Tier-1 volumes. Two more classes were added when
+> the VolSync staging split landed: `longhorn-critical-snapshot` and
+> `longhorn-critical-cache`, both 1 replica on `nodeSelector: critical`, so Tier-1 mover
+> volumes survive Phase 5 restricting the `bulk` pair — see Phase 5 below.
+
 > **Naming collision worth knowing about before you type it.** The chart's default
 > `priorityClass` is itself named `longhorn-critical` (this repo overrides it to
 > `system-node-critical`). It is a PriorityClass, not a StorageClass, so there is no actual
@@ -751,12 +758,22 @@ these directly and `storageclass/ks.yaml:20` is `force: false`. Two ways:
 Prefer flipping `force: true`. Either way, do it as a separate commit from Phase 4 so the
 two recreate windows do not overlap.
 
-**One consequence to accept before doing this:** a Tier-1 VolSync *restore* — and, equally,
-a scheduled *backup*, since the restic cache volume is `longhorn-cache` on both movers —
-would then have zero schedulable nodes while the workers are dark. Neither is a low-power
-activity, so this is acceptable; but it should be a decision, not a discovery. If Tier-1
-backups must survive a low-power window, the lever is `VOLSYNC_STAGING_STORAGECLASS` plus
-`VOLSYNC_CACHE_SNAPSHOTCLASS` on those apps, not a weaker class restriction here.
+**The consequence for Tier 1, and how it is already handled.** Restricting these two
+classes gives a Tier-1 VolSync *restore* — and, equally, a scheduled *backup*, since the
+restic cache is `longhorn-cache` on both movers — zero schedulable nodes while the workers
+are dark. A tier whose defining property is surviving low power cannot stop backing up in
+the mode it exists for, so the critical tier has its own scratch classes,
+`longhorn-critical-snapshot` and `longhorn-critical-cache` (1 replica each,
+`nodeSelector: critical`, in `storageclass/critical.yaml`). The five VolSync-backed Tier-1
+apps already point at them via `VOLSYNC_STAGING_STORAGECLASS` and
+`VOLSYNC_CACHE_SNAPSHOTCLASS`, so Phase 5 does not strand them. **Both variables must move
+together** — pinning staging and leaving the cache behind strands the mover just the same.
+
+Longhorn's tag selector is a hard filter with no preference order, so this is binary:
+Tier-1 scratch volumes are on the control planes always, not "workers normally, control
+planes when dark". The price is about 4.7 GB of writes a night across the three SATA
+disks (home-assistant is ~3.9 GB of it), which is noise against those drives' endurance
+budget and buys backup coverage that does not depend on a worker being awake.
 
 > **Phase 5 depends on a component fix that landed 2026-08-19.** `VOLSYNC_STORAGECLASS` used
 > to drive three volumes at once — the app's PVC *and* both mover staging volumes — so the
