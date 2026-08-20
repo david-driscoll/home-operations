@@ -171,7 +171,28 @@ the reason §0.2 is marked cleared-with-caveat rather than simply cleared: the c
 disks are still carrying Tier-2 data, so the thermal argument that motivated §0.2 is only
 half-retired. Draining them is a rebuild-per-volume and belongs to 12, not here.
 
-### 0.3 — DECIDED: Technitium moves to the control planes
+### 0.3 — DONE: Technitium runs on the control planes
+
+> **Executed 2026-08-20.** The label move applied to all four affected nodes with
+> `--mode=no-reboot` (one line of diff each, no reboot required), and one
+> `rollout restart` cut the pod over. Live now: `technitium-57c594c6b4-jlm24`
+> **Running 2/2 on `milky-way`**, its ipvlan `net1` holding `10.10.206.202` with
+> MAC `e0:51:d8:19:93:18` — milky-way's own `enp3s0`, which is what ipvlan L2
+> sharing the parent MAC looks like when it has bound the right interface. Its
+> Longhorn volume is `attached` on `milky-way`, `healthy`. `dig @10.10.206.202`
+> answers both an internal name (`home-assistant.driscoll.tech` →
+> `ponyville.driscoll.tech` → `10.10.206.101`) and an external one
+> (`github.com` → `140.82.113.3`), and the three off-cluster members still agree.
+>
+> The half-applied window this section warned about was real and did occur: PR
+> #970 merged the NAD change, Flux applied it, and for several hours the cluster
+> ran with a NAD bound to `enp3s0` while the only labelled node was `hard-hat`,
+> which has `enp2s0`. Nothing broke, because a NAD is only read at pod creation
+> and the pod was not recreated in that window — which is exactly the shape of
+> the trap: it is invisible until something unrelated restarts the pod. **If a
+> future change splits these two files again, land them in the same window.**
+
+### 0.3 (design, as decided) — Technitium moves to the control planes
 
 **David's call, 2026-08-19:** *"I would like technitium to move to the control plane if
 possible, if that means we change the adapters it's allowed to connect to, lets do that."*
@@ -746,18 +767,19 @@ Two runbooks. **Path B is what the first rehearsal uses**, because Path A is gat
 
 | # | Check | State |
 |---|---|---|
-| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **pass** |
+| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **fail as of 2026-08-20** — `shining-armor` is cordoned and stuck at Talos v1.13.8 after a failed `tuppr` batch upgrade (§9 item 3) |
 | 2 | etcd: 3 members healthy, no alarms | not re-run this revision |
 | 3 | Zero degraded volumes | **fail** — 4 degraded, all Tier 2 (§5) |
 | 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). Tier-0 `kube-system/registry` has 0 — §5 |
 | 5 | Piece 12 landed: default class `bulk`-confined, `longhorn-critical` exists, nodes tagged | **pass** (§0.2) |
 | 6 | Longhorn `taint-toleration` applied + annotation present — Path A only | **pass** (§0.1) |
 | 7 | Flux fully reconciled | **pass** — 0 not-ready, 0 suspended |
-| 8 | DNS answer decided and reachable from a control plane | **decided, not built** (§0.3) |
+| 8 | DNS answer decided and reachable from a control plane | **pass** — Technitium runs on `milky-way`, verified with `dig` (§0.3) |
 | 9 | alpha-site up and on the battery circuit | **unanswered** (§7) — the check below only proves it is *up* |
 
-So the honest count is now **five pass, one fail, one decided-but-unbuilt, one unanswered,
-one not re-run**. The remaining failure is check 3 (four degraded Tier-2 volumes), which is a
+So the honest count is now **four pass, two fail, one unanswered, one not re-run** — check 8
+(DNS) went green on 2026-08-20 when Technitium cut over, and check 1 went red the same week
+when `shining-armor`'s upgrade failed. The remaining failure is check 3 (four degraded Tier-2 volumes), which is a
 burndown rather than a design gap. Check 4's caveat — Tier-0 `registry` at zero
 control-plane replicas — is not counted as a failure of check 4 as written, but it is §9's
 sharpest storage item and should not be lost in the arithmetic.
@@ -1161,9 +1183,9 @@ Resolved, and left resolved:
   three source-verified reasons it is safe.
 - ~~§0.2 — piece 12's tags and StorageClasses.~~ **Landed 2026-08-19** (PR #960). One caveat
   survives: the `bulk` selector did not relocate existing replicas — §0.2.
-- ~~§0.3 — how does DNS survive a low-power window?~~ **Decided by David 2026-08-19:**
-  Technitium moves to the control planes, NAD rebinds `enp2s0` → `enp3s0`. §0.3 has the
-  design; the storage half of it is §5's work.
+- ~~§0.3 — how does DNS survive a low-power window?~~ **Decided 2026-08-19 and executed
+  2026-08-20.** Technitium runs on the control planes; the NAD binds `enp3s0`; the PVC moved
+  to `longhorn-critical` in #963. Verified live end to end — §0.3.
 - ~~Move the Tier-1 PVCs onto `longhorn-critical`.~~ **Done 2026-08-19**, PRs #963
   (`technitium`, `tsidp`, `tsiam`) and #966 (`home-assistant`, `matter`, `mosquitto`). All
   seven now hold three control-plane replicas and are `healthy` — §5. This was item 1 for
@@ -1180,13 +1202,20 @@ Still open, in priority order:
    from node-local image stores right up until something crash-loops, which is exactly the
    case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
    down explicitly that the window accepts no registry.
-2. **Build the Technitium move** (§0.3) — talconfig label, NAD `master`, toleration, and its
-   PVC as part of item 1. Small, and it retires the last thing that was a *blocker* rather
-   than a *build*.
-3. **Build §4: `critical-tier` PriorityClass, Tier-0/1 tolerations, and the taint flip.**
-   [29](29-taint-readiness-audit.md)'s gate is green, so the flip itself is now safe; the
-   remaining §4 work is the tolerations that make it *useful*. Includes the correction that
-   `home-assistant`, `mosquitto` and `chrony` currently hold `system-cluster-critical`.
+2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**
+   [29](29-taint-readiness-audit.md)'s gate is green, so the flip itself is safe; the
+   `critical-tier` PriorityClass and the three `system-cluster-critical` corrections landed
+   in PR #970. What is left is the tolerations that make the taint *useful* rather than
+   merely safe — including `observability`'s three untolerated control-plane pods (item 7).
+3. **`shining-armor` is stuck at Talos v1.13.8 and cordoned**, and it is entangled with this
+   piece. `tuppr`'s batch upgrade took the other six nodes to v1.13.9 on 2026-08-19 and
+   failed on this one; the node is cordoned, so `database/postgres-2` — whose
+   `longhorn-local` PV is pinned there — cannot schedule, and CNPG has been running 2/3 with
+   the primary failed over to `postgres-3` since. The mechanical blocker is the per-node
+   Longhorn `instance-manager` PDBs at zero allowed disruptions, the same drain block that
+   has bitten Talos upgrades before. Not this piece's to fix, but it is a live degradation
+   of the database this piece drops to Tier 2, and §6.0's pre-flight cannot honestly go green
+   while a node is cordoned and an upgrade is failed.
 4. **Is alpha-site's PoE switch on the battery circuit?** §7. Needs David. Unchanged in
    priority — it determines whether entering the window is *worth* it, not whether it is
    possible. **Now joined by a second, identical question:** are `celestia`, `luna` and
