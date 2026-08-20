@@ -14,7 +14,10 @@ spec:
     cacheStorageClassName: "${VOLSYNC_CACHE_SNAPSHOTCLASS:=longhorn-cache}"
     cacheAccessModes: ["${VOLSYNC_CACHE_ACCESSMODES:=ReadWriteOnce}"]
     cacheCapacity: "${VOLSYNC_CACHE_CAPACITY:=8Gi}"
-    storageClassName: "${VOLSYNC_STORAGECLASS:=longhorn-snapshot}"
+    # The restore staging volume (${APP}-dst-dest), NOT the app's PVC -- the
+    # app PVC clones FROM this. Own variable so restore churn can stay off a
+    # pinned tier; see AGENTS.md "Two storage classes, not one".
+    storageClassName: "${VOLSYNC_STAGING_STORAGECLASS:=longhorn-snapshot}"
     accessModes: ["${VOLSYNC_ACCESSMODES:=ReadWriteOnce}"]
     capacity: "${VOLSYNC_CAPACITY:=5Gi}"
     moverSecurityContext:

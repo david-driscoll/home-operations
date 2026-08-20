@@ -751,9 +751,29 @@ these directly and `storageclass/ks.yaml:20` is `force: false`. Two ways:
 Prefer flipping `force: true`. Either way, do it as a separate commit from Phase 4 so the
 two recreate windows do not overlap.
 
-**One consequence to accept before doing this:** a Tier-1 VolSync *restore* would then
-stage on `bulk` nodes only, so it cannot run while the workers are dark. Restores are not a
-low-power activity, so this is acceptable — but it should be a decision, not a discovery.
+**One consequence to accept before doing this:** a Tier-1 VolSync *restore* — and, equally,
+a scheduled *backup*, since the restic cache volume is `longhorn-cache` on both movers —
+would then have zero schedulable nodes while the workers are dark. Neither is a low-power
+activity, so this is acceptable; but it should be a decision, not a discovery. If Tier-1
+backups must survive a low-power window, the lever is `VOLSYNC_STAGING_STORAGECLASS` plus
+`VOLSYNC_CACHE_SNAPSHOTCLASS` on those apps, not a weaker class restriction here.
+
+> **Phase 5 depends on a component fix that landed 2026-08-19.** `VOLSYNC_STORAGECLASS` used
+> to drive three volumes at once — the app's PVC *and* both mover staging volumes — so the
+> five Tier-1 apps migrated above had their backup staging silently moved onto
+> `longhorn-critical` too. Two things follow, and both defeat Phase 5 if the fix is not in:
+> restricting `longhorn-snapshot` would not touch those apps at all (they no longer use it),
+> and every nightly backup would clone the full dataset onto the three control-plane SATA
+> disks at 3 replicas — ~12 GB of writes per night for home-assistant alone, precisely the
+> churn Phase 4 exists to prevent. The fix splits out `VOLSYNC_STAGING_STORAGECLASS`
+> (default `longhorn-snapshot`, i.e. no behaviour change for any app that never set the old
+> variable); see `kubernetes/components/volsync/AGENTS.md` §"Two storage classes, not one".
+> **Verify before running Phase 5:**
+>
+> ```bash
+> kubectl -n network get replicationsources technitium \
+>   -o jsonpath='{.spec.restic.storageClassName}{"\n"}'   # expect: longhorn-snapshot
+> ```
 
 ## Rollback
 

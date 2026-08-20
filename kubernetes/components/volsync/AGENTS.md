@@ -46,6 +46,36 @@ replicated `${APP}-dst-dest`/`${APP}-dst-cache` PVC pair on disk indefinitely, a
 next reconcile — re-running a real restic restore every day. The cluster repos split the
 component in 2026-07; this repo carried the bundled shape until vault#120.
 
+## Two storage classes, not one
+
+This component provisions volumes for **two different purposes**, and they deserve
+different tiers:
+
+| Variable | Default | Volumes it controls |
+|---|---|---|
+| `VOLSYNC_STORAGECLASS` | `longhorn` | the app's real data PVC (`pvc.yaml`) — the thing being backed up |
+| `VOLSYNC_STAGING_STORAGECLASS` | `longhorn-snapshot` | the mover's throwaway volumes: the `ReplicationSource` staging clone (rebuilt on **every** backup run under `copyMethod: Snapshot`) and the `ReplicationDestination`'s `${APP}-dst-dest` |
+| `VOLSYNC_CACHE_SNAPSHOTCLASS` | `longhorn-cache` | the restic metadata cache on both movers (misnamed — it is a storage class, not a snapshot class) |
+
+**These were one variable until 2026-08-19**, so setting `VOLSYNC_STORAGECLASS` used to
+silently move the mover's volumes too. That is how the piece-12 Tier-1 migration put
+`longhorn-critical` on home-assistant's *backup staging* volume as well as its data
+volume — meaning every nightly run cloned the full dataset onto the three control-plane
+SATA disks at 3 replicas, which is exactly the bulk churn
+[12-longhorn-critical-tier.md](../../../docs/cluster-consolidation/12-longhorn-critical-tier.md)
+exists to keep off them.
+
+The rule: **pin the data, not the churn.** An app whose data must live on a restricted
+tier sets `VOLSYNC_STORAGECLASS` only, and lets its staging default to
+`longhorn-snapshot`. Override `VOLSYNC_STAGING_STORAGECLASS` only when the staging
+volume genuinely needs to be somewhere specific — for example, if Tier-1 backups must
+keep running while the workers are powered down, since a `bulk`-restricted staging or
+cache class has zero schedulable nodes in that window.
+
+Changing either staging variable is safe on a live app: it only affects the next
+throwaway volume the mover creates. Changing `VOLSYNC_STORAGECLASS` on a bound PVC is
+**not** — see the `force: enabled` warning above.
+
 ## Substitutions worth pinning in the app's `ks.yaml`
 
 - `VOLSYNC_CAPACITY` — the app PVC size. Always set it.
