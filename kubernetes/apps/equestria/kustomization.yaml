@@ -7,6 +7,61 @@ components:
   - ../../components/alerts
   - ../../components/common
   - ../../components/repos/app-template
+# Low Power mode: py-kube-downscaler owns replica counts in this namespace.
+#
+# `equestria` is the shed-list namespace — entering Low Power is
+# `kubectl annotate namespace equestria downscaler/force-downtime=true`, which
+# scales every non-excluded Deployment/StatefulSet to 0 and suspends CronJobs.
+# 48 HelmReleases in this repo run `driftDetection: mode: enabled`, and Flux
+# would see `replicas: 0` as drift and correct it inside the 15m interval — so
+# the shed would partially undo itself several times an hour and the mode would
+# not work at all. See docs/cluster-consolidation/24-power-states.md.
+#
+# This is applied namespace-wide rather than per-HelmRelease deliberately. The
+# design's whole premise is that a NEW app in this namespace sheds correctly
+# without anyone remembering to opt it in; a per-app ignore rule would have to be
+# remembered 60+ times, and forgetting it fails silently and only during a
+# window. The cost is that replica drift is no longer corrected for the handful
+# of keep-list apps that are never downscaled either — accepted, because nothing
+# but the downscaler writes replicas on these workloads.
+#
+# It reaches the HelmReleases indirectly: this kustomization renders each app's
+# ks.yaml (a Flux Kustomization), so the patch below injects `spec.patches` into
+# every child, and each child then patches the HelmRelease it builds. No
+# equestria child sets `spec.patches` of its own today; if one ever needs to,
+# this stops being additive and has to move.
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+    patch: |-
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: not-used
+      spec:
+        patches:
+          - target:
+              group: helm.toolkit.fluxcd.io
+              kind: HelmRelease
+            patch: |-
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: not-used
+              spec:
+                driftDetection:
+                  ignore:
+                    # Untargeted on purpose: /spec/replicas only exists on
+                    # Deployment/StatefulSet/ReplicaSet in a rendered app chart, so
+                    # one rule covers every workload kind the downscaler touches.
+                    - paths: ["/spec/replicas"]
+                    # CronJobs are suspended, not scaled. Targeted, because
+                    # /spec/suspend also exists on Flux's own Kustomization and
+                    # HelmRelease kinds and must not be ignored there.
+                    - paths: ["/spec/suspend"]
+                      target:
+                        kind: CronJob
 resources:
   # - ./books   # deliberately disabled upstream; carried for parity only
   - ./dns
