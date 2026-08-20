@@ -13,4 +13,6 @@ spec:
   resources:
     requests:
       storage: "${VOLSYNC_CAPACITY:=5Gi}"
+  # The app's real data volume. VOLSYNC_STAGING_STORAGECLASS covers the
+  # mover's throwaway volumes; these two were one variable until 2026-08-19.
   storageClassName: "${VOLSYNC_STORAGECLASS:=longhorn}"

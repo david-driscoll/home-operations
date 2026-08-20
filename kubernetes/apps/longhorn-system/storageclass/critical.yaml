@@ -17,3 +17,53 @@ parameters:
   staleReplicaTimeout: "30"
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
+---
+# The critical-tier counterparts of `longhorn-snapshot` and `longhorn-cache`,
+# for VolSync's throwaway mover volumes on Tier-1 apps.
+#
+# WHY THESE EXIST. Phase 5 restricts `longhorn-snapshot` and `longhorn-cache`
+# to `bulk`, which means a Tier-1 app's backup and restore both need a worker
+# to be awake — during low-power mode (D6) they have zero schedulable nodes
+# and simply fail. A tier whose defining property is "survives low power"
+# cannot have its backups stop in the mode it exists for, so its scratch
+# volumes need somewhere on the control planes to live. Point an app at these
+# with VOLSYNC_STAGING_STORAGECLASS / VOLSYNC_CACHE_SNAPSHOTCLASS.
+#
+# WHY ONE REPLICA, unlike the 2 on the bulk pair. These volumes are rebuilt
+# from scratch on every run (`copyMethod: Snapshot` clones the source each
+# time) and discarded, so a lost replica costs a retry, not data. One replica
+# is a third of the writes the accidental `longhorn-critical` staging did
+# before the VOLSYNC_STAGING_STORAGECLASS split — roughly 4.7 GB a night
+# across the three control-plane SATA disks for all of Tier 1, against a
+# drive endurance budget where that is noise. Raise to "2" if a control-plane
+# reboot killing an in-flight backup ever proves more annoying than the extra
+# writes.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-critical-snapshot
+reclaimPolicy: Delete
+provisioner: driver.longhorn.io
+parameters:
+  numberOfReplicas: "1"
+  nodeSelector: "critical"
+  dataLocality: disabled
+  replicaAutoBalance: best-effort
+  staleReplicaTimeout: "30"
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-critical-cache
+reclaimPolicy: Delete
+provisioner: driver.longhorn.io
+parameters:
+  numberOfReplicas: "1"
+  nodeSelector: "critical"
+  dataLocality: disabled
+  replicaAutoBalance: best-effort
+  staleReplicaTimeout: "30"
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
