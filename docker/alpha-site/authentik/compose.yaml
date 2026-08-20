@@ -30,7 +30,7 @@ services:
   # would be infrastructure built on spec. Bundled here, and therefore DB 0.
   # ---------------------------------------------------------------------------
   authentik-redis:
-    image: valkey/valkey:9-alpine@sha256:ee91f7a174ac4d6a6b0685b3a60e321f0a9dbbb691f9b0e285be2ba1d1be8328
+    image: valkey/valkey:9-alpine@sha256:de31910896150d5e754a07d57d227cfdde4e258ddd0d1aa4607f2d2f95843715
     container_name: authentik-redis
     hostname: authentik-redis
     command: --save 60 1 --loglevel warning
