@@ -10,6 +10,24 @@ machine:
       # endpoint URL exactly as written and appends only the repository path;
       # without it, it appends `/v2` itself.
       #
+      # ENDPOINT 1 IS AN INGRESS HOSTNAME, NOT THE CLUSTER SERVICE, and that is
+      # not a style choice. containerd runs on the HOST, whose resolvers are
+      # `9.9.9.9, 149.112.112.112, 10.10.10.9, 10.10.0.1` — no cluster DNS. So
+      # `registry.kube-system.svc.cluster.local` never resolved and this endpoint
+      # was dead. It went unnoticed because spegel had replaced the whole file
+      # (see the spegel values) so nothing ever tried it. Measured once it was
+      # live: a 2.8 MB `alpine:3.16.9` pull took 2m32s walking dead endpoints
+      # before reaching upstream, and zot logged nothing.
+      #
+      # `registry.equestria.driscoll.tech` resolves through Technitium (10.10.10.9,
+      # in the host's list) to the traefik LB on the LAN. Both survive a low-power
+      # window — Technitium runs on the control planes and traefik is Tier 1.
+      #
+      # Endpoint 2, `registry.driscoll.tech`, is CELESTIA's zot, not a second name
+      # for this one. Verified: it serves the same `/v2/<registry>/<repo>` layout
+      # and returns 200 for the same manifest. Kept deliberately as a cross-cluster
+      # fallback — a second cache on a battery-backed host.
+      #
       # zot proxies each upstream under its own prefix (`/v2/<registry>/<repo>`),
       # which only resolves with `overridePath: true`. That same flag then means
       # a bare `https://index.docker.io` fallback is requested WITHOUT `/v2` —
@@ -26,44 +44,44 @@ machine:
       docker.io:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/docker.io
+          - https://registry.equestria.driscoll.tech/v2/docker.io
           - https://registry.driscoll.tech/v2/docker.io
           - https://index.docker.io/v2
           - https://registry-1.docker.io/v2
       gcr.io:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/gcr.io
+          - https://registry.equestria.driscoll.tech/v2/gcr.io
           - https://registry.driscoll.tech/v2/gcr.io
           - https://gcr.io/v2
       quay.io:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/quay.io
+          - https://registry.equestria.driscoll.tech/v2/quay.io
           - https://registry.driscoll.tech/v2/quay.io
           - https://quay.io/v2
       ghcr.io:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/ghcr.io
+          - https://registry.equestria.driscoll.tech/v2/ghcr.io
           - https://registry.driscoll.tech/v2/ghcr.io
           - https://ghcr.io/v2
       registry.k8s.io:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/registry.k8s.io
+          - https://registry.equestria.driscoll.tech/v2/registry.k8s.io
           - https://registry.driscoll.tech/v2/registry.k8s.io
           # 307s to a regional mirror, which containerd follows.
           - https://registry.k8s.io/v2
       public.ecr.aws:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/public.ecr.aws
+          - https://registry.equestria.driscoll.tech/v2/public.ecr.aws
           - https://registry.driscoll.tech/v2/public.ecr.aws
           - https://public.ecr.aws/v2
       cgr.dev:
         overridePath: true
         endpoints:
-          - http://registry.kube-system.svc.cluster.local:8080/v2/cgr.dev
+          - https://registry.equestria.driscoll.tech/v2/cgr.dev
           - https://registry.driscoll.tech/v2/cgr.dev
           - https://cgr.dev/v2
