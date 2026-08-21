@@ -23,20 +23,27 @@ runbook-driven.
 
 ## Status — 2026-08-20, third revision, re-verified live against `admin@equestria`
 
-**Both hardware questions that gated a rehearsal are answered, and §4 — this file's core
-mechanism — is half applied.**
-[#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations)
-**merged and reconciled 2026-08-21**: all six workloads carry
-`node-role.kubernetes.io/control-plane`, verified live, and the §4 audit now returns only the
-Tier-2 set. [#1002](https://github.com/david-driscoll/home-operations/pull/1002) (the taint flip)
-is **open as a draft and not yet applied** — the trio still carries no taints. David answered both questions on 2026-08-20: **the battery powers
+**§4 IS DONE AND LIVE.** Both halves landed on 2026-08-21:
+[#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations) and
+[#1002](https://github.com/david-driscoll/home-operations/pull/1002) (the taint). All three
+control planes now carry `node-role.kubernetes.io/control-plane:NoSchedule`; all six Tier-0/1
+workloads carry the toleration; the §4 audit returns exactly the Tier-2 set and nothing else.
+
+Post-flip verification (29 §7) passed clean: no `FailedScheduling` events, nothing newly
+`Pending`, every DaemonSet that covered 7 nodes still covers 7, 0 degraded and 0 faulted volumes,
+Flux 0 not-ready. `mosquitto-0` is running on `othalla` — a tainted control plane — which is the
+positive proof that the tolerations work rather than merely being present. David answered both questions on 2026-08-20: **the battery powers
 alpha-site** (§7) and **all three bare-metal workers can be started by WoL** (§6.2). One narrower
 question replaced them — whether `celestia`, `luna` and `skystar` are on battery, which sizes
 §0.3's off-cluster DNS redundancy rather than deciding whether the window works (§9 item 4).
 
 The 2026-08-19 revision said "the remaining work is a build, not a wait." That build is done and
-half of it is live. The honest reading now is **"one `talos:apply` and a storage burndown"** —
-that apply, plus §9 items 1 and 8, are the only things standing between this and a rehearsal.
+applied. The honest reading now is **"a storage burndown, then rehearse"** — §9 items 1 and 8 are
+the only things left between here and §8 Stage 1.
+
+**The taint was not applied with `mise run talos:apply`, and that matters** — see §4's
+"How it was actually applied". A blanket apply would have carried an in-flight Kubernetes
+upgrade with it.
 
 Everything below marked "verified" was re-checked live with read-only `kubectl`/`talosctl` —
 2026-08-19 (evening) for the storage and tier tables, 2026-08-20 (evening) for §6.0's pre-flight,
@@ -337,9 +344,11 @@ resolver redundancy a window has, not whether identity survives one. §9 item 4.
 
 ### 0.4 — Confirm before entry (unchanged in kind, refreshed live)
 
-- `allowSchedulingOnControlPlanes: true` is still set
-  (`talos/patches/controller/cluster.yaml:2`). Unlike the morning revision, this is now a
-  *choice* rather than a constraint — §0.1 cleared the reason it had to stay. §4 owns the flip.
+- ~~`allowSchedulingOnControlPlanes: true` is still set.~~ **Flipped to `false` and applied
+  2026-08-21** (`talos/patches/controller/cluster.yaml:2`, PR #1002). The trio carries
+  `node-role.kubernetes.io/control-plane:NoSchedule` and the Tier-0/1 tolerations that make it
+  useful are live — §4. Nothing here is left to confirm; it is a property to verify still holds,
+  which check 1 in §6.0 now does.
 - [07-authentik-to-alpha-site.md](07-authentik-to-alpha-site.md) has landed (cut over
   2026-08-16). This is what lets CNPG drop to Tier 2 at all — §2.
 - **Flux is fully reconciled and nothing is suspended.** Live: `flux get kustomizations -A
@@ -569,13 +578,12 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 
 ## 4. Placement mechanism — taint, required affinity, PriorityClass (Path A)
 
-> This section designs the **permanent** structural version of low-power. **Half applied.**
-> §0.1 is cleared, [29](29-taint-readiness-audit.md)'s four-command flip gate passes in full, the
-> `critical-tier` PriorityClass landed in PR #970, and the Tier-0/1 tolerations
-> ([#1001](https://github.com/david-driscoll/home-operations/pull/1001)) **merged and reconciled
-> 2026-08-21**. The taint itself
-> ([#1002](https://github.com/david-driscoll/home-operations/pull/1002)) is **not applied** — the
-> trio carries no taints, so nothing yet stops Tier 2 landing there.
+> This section designs the **permanent** structural version of low-power. **DONE and LIVE,
+> 2026-08-21.** §0.1 cleared, [29](29-taint-readiness-audit.md)'s four-command gate passed, the
+> `critical-tier` PriorityClass landed in PR #970, the Tier-0/1 tolerations in
+> [#1001](https://github.com/david-driscoll/home-operations/pull/1001), and the taint in
+> [#1002](https://github.com/david-driscoll/home-operations/pull/1002). All three control planes
+> carry `node-role.kubernetes.io/control-plane:NoSchedule`.
 > §6 Path B still rehearses the mode without any of it.
 
 > ### ⚠ The taint key below is NOT what was built
@@ -705,8 +713,8 @@ control-plane components on a 4-core node. Move all three to `critical-tier`.
 
 ### What was actually built
 
-Tolerations shipped and live 2026-08-21; the taint designed and staged but **not applied**. This
-is the authoritative version; everything above it in §4 is design history.
+Shipped and live 2026-08-21 — tolerations and taint both. This is the authoritative version;
+everything above it in §4 is design history.
 
 **The taint** is the stock Kubernetes one, from one line of Talos machine config:
 
@@ -788,10 +796,51 @@ kubectl get pods -A -o json | jq -r '
  | "\(.metadata.namespace)/\(.metadata.name)"' | sort
 ```
 
-Re-run it before acting — placement drifts. **Verified 2026-08-21, after #1001 reconciled:** it
-returns exactly the Tier-2 set (`equestria/{pinepods,teamarr,windmill-*}`,
-`kube-system/openbao-0`, `database/postgres-backup`) and nothing else, whose migration off the
-trio is the point of the taint. That is the go-signal for #1002.
+Re-run it before acting — placement drifts. **Verified 2026-08-21, both before and after the
+taint:** it returns exactly the Tier-2 set (`equestria/{pinepods,teamarr,windmill-*}`,
+`kube-system/openbao-0`, `database/postgres-backup`) and nothing else. Those pods keep running —
+`NoSchedule` does not evict — and migrate off the trio on their next recreate, which is the point
+of the taint.
+
+### How it was actually applied — do NOT use `mise run talos:apply` for this
+
+**`mise run talos:apply` would have applied far more than the taint.** It runs
+`talhelper gencommand apply` across every node with the *whole* rendered config, and
+`talos/talenv.yaml` had already been bumped by Renovate to `kubernetesVersion: v1.36.4` while the
+live cluster ran v1.36.3. The `--dry-run` diff on `milky-way` showed the taint **plus** new
+`v1.36.4` images for `kube-apiserver`, `kube-controller-manager`, `kube-scheduler` and
+`kube-proxy`.
+
+That is not a stray detail. **`tuppr` owns Kubernetes upgrades in this estate**, and it had a
+`KubernetesUpgrade` CR in `Upgrading` phase, `v1.36.3 → v1.36.4`, at the time. A blanket apply
+would have shoved v1.36.4 static pods onto all three control planes at once, outside tuppr's
+one-node-at-a-time orchestration, while tuppr believed it was still driving that transition —
+and it would have done so as an invisible side effect of a change whose diff in Git is one line.
+
+The taint was applied surgically instead, one node at a time, `--dry-run` first each time:
+
+```bash
+# taint-patch.yaml
+#   cluster:
+#     allowSchedulingOnControlPlanes: false
+for ip in 10.10.209.10 10.10.209.11 10.10.209.12; do
+  mise exec -- talosctl patch machineconfig --nodes "$ip" \
+    --mode=no-reboot --patch-file taint-patch.yaml --dry-run    # inspect, then drop --dry-run
+done
+```
+
+`--dry-run` prints the config diff against the **live** node, which is the only reliable way to
+see what an apply will really do: `talos/clusterconfig/*.yaml` is gitignored and goes stale, so
+diffing against it proves nothing. The patch is written to the STATE partition, so it survives
+reboots, and the live value now matches the repo.
+
+Note JSON6902 patches (`-p '[{"op":"replace",...}]'`) are rejected — "JSON6902 patches are not
+supported for multi-document machine configuration". Use a strategic-merge YAML patch file.
+
+**The general rule this establishes:** before any `talos:apply`, diff `talos/talenv.yaml` against
+the live cluster. Renovate keeps that file current, the cluster is updated by `tuppr` on its own
+schedule, and the two drift by design. A one-line change to `talos/patches/` is never a one-line
+apply.
 
 ---
 
@@ -905,7 +954,7 @@ Two runbooks. **Path B is what the first rehearsal uses**, because Path A is gat
 
 | # | Check | State |
 |---|---|---|
-| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **pass** — re-verified live 2026-08-20 evening: 7 nodes on Talos v1.13.9, all Ready, none cordoned, no taints. `shining-armor` was fixed the same day (see the resolved list in §9) |
+| 1 | Topology: 3 CP + 4 workers, Ready, uncordoned; **the trio tainted and the workers not** | **pass** — re-verified live 2026-08-21: 7 nodes on Talos v1.13.9, all Ready, none cordoned; `milky-way`/`othalla`/`pegasus` carry `node-role.kubernetes.io/control-plane:NoSchedule`, the four workers carry nothing. **The sense of this check inverted on 2026-08-21** — it used to require *no* taints anywhere; since §4 landed, control-plane taints are the desired state and their *absence* is the failure |
 | 2 | etcd: 3 members healthy, no alarms | not re-run this revision |
 | 3 | Zero degraded volumes | **pass** — re-verified live 2026-08-20 evening: 0 degraded, 0 faulted, 62 healthy attached. The four Tier-2 degradations recorded in the previous revision have cleared |
 | 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). Tier-0 `kube-system/registry` has 0 — §5 |
@@ -929,7 +978,10 @@ failure of check 4 as written, but it is §9's sharpest storage item and should 
 the arithmetic.
 
 ```bash
-# 1. Topology: 3 control-plane + 4 <none>, all Ready, no taints, none cordoned
+# 1. Topology: 3 control-plane + 4 <none>, all Ready, none cordoned.
+#    Since 2026-08-21 the trio MUST show node-role.kubernetes.io/control-plane:NoSchedule
+#    and the four workers MUST show none. Missing CP taints = §4 was reverted or a node
+#    was re-provisioned without the patch.
 kubectl get nodes -o wide
 kubectl get nodes -o custom-columns='NAME:.metadata.name,TAINTS:.spec.taints,UNSCHED:.spec.unschedulable'
 
@@ -1377,9 +1429,9 @@ through in place rather than moved to the resolved list above — several sectio
    from node-local image stores right up until something crash-loops, which is exactly the
    case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
    down explicitly that the window accepts no registry.
-2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.** **Built 2026-08-20;
-   in review, not yet applied.** Split into two PRs deliberately, because the halves apply by
-   different mechanisms and must be sequenced:
+2. ~~**Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**~~ **DONE and LIVE
+   2026-08-21.** Split into two PRs deliberately, because the halves apply by different
+   mechanisms and had to be sequenced:
 
    * **[#1001](https://github.com/david-driscoll/home-operations/pull/1001) — tolerations.**
      **Merged and reconciled 2026-08-21**; all six verified live carrying the key, and the audit
@@ -1387,15 +1439,16 @@ through in place rather than moved to the resolved list above — several sectio
      new `control-plane-tolerant` ProxyClass: a Tailscale `ProxyGroup` exposes no pod-spec
      fields of its own, so `spec.proxyClass` is the only route to its StatefulSet's pod
      template.
-   * **[#1002](https://github.com/david-driscoll/home-operations/pull/1002) — the flip.** Draft
-     on purpose. `talos/patches/` is **not** GitOps — Flux never reads it, so it needs
-     `mise run talos:genconfig && mise run talos:apply` by hand. Merging it before applying
-     would leave the repo claiming a taint the cluster does not have.
+   * **[#1002](https://github.com/david-driscoll/home-operations/pull/1002) — the taint.**
+     Merged and **applied 2026-08-21**, one node at a time. `talos/patches/` is **not** GitOps —
+     Flux never reads it — but it was applied with `talosctl patch machineconfig`, **not**
+     `mise run talos:apply`: a blanket apply would have carried an in-flight, tuppr-owned
+     Kubernetes upgrade with it. §4's "How it was actually applied" has the detail, and it
+     generalises to every future `talos/patches/` change.
 
    [29](29-taint-readiness-audit.md)'s four-command gate re-verified live 2026-08-20 — all four
-   pass. The `critical-tier` PriorityClass and the three `system-cluster-critical` corrections
-   landed earlier in PR #970. Until #1002 is applied, `allowSchedulingOnControlPlanes` is still
-   `true` (`talos/patches/controller/cluster.yaml:2`) and the trio carries no taints.
+   pass; §7's post-flip block re-verified 2026-08-21 and passed clean. The `critical-tier`
+   PriorityClass and the three `system-cluster-critical` corrections landed earlier in PR #970.
 
    PR #764 (`taintToleration` set to the custom `node-role.driscoll.tech/critical` key) was
    **closed** the same day: the estate went with the standard `node-role.kubernetes.io/control-plane`
