@@ -41,7 +41,19 @@ spec:
     # status.restic.lastUnlocked when it completes and skips the unlock while the
     # two match. To force another pass estate-wide, change the date below; to do
     # one app only, set VOLSYNC_UNLOCK in that app's ks.yaml.
-    unlock: "${VOLSYNC_UNLOCK:=2026-08-20-stale-destination-locks}"
+    #
+    # 2026-08-21: it recurred, and the cause is worth recording because it will
+    # recur again on the same trigger. tuppr rolled all seven nodes for the
+    # v1.36.3 -> v1.36.4 Kubernetes upgrade, which killed in-flight movers
+    # mid-`forget` and left their locks behind. Two repositories were stuck
+    # (`kube-system/registry`, `equestria/radarr`, 10 mover pods in Error), each
+    # holding a lock from a SOURCE mover this time rather than a destination one
+    # — same failure, either side can strand a lock.
+    #
+    # Bumped estate-wide rather than per-app on purpose: a node roll is not
+    # selective, and a repository whose next sync has not run yet looks healthy
+    # until it does. The pass is a no-op wherever there is no stale lock.
+    unlock: "${VOLSYNC_UNLOCK:=2026-08-21-locks-stranded-by-k8s-node-roll}"
     volumeSnapshotClassName: "${VOLSYNC_SNAPSHOTCLASS:=longhorn-snapclass}"
     cacheCapacity: "${VOLSYNC_CACHE_CAPACITY:=2Gi}"
     cacheStorageClassName: "${VOLSYNC_CACHE_SNAPSHOTCLASS:=longhorn-cache}"
