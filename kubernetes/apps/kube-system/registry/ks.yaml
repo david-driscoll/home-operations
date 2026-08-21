@@ -35,3 +35,14 @@ spec:
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 60Gi
       VOLSYNC_ACCESSMODES: ReadWriteMany
+      # Tier 1: one replica on each control plane, so the cache survives a
+      # low-power window with every worker off. `longhorn` (the default) is
+      # confined to `bulk`-tagged workers by piece 12, which is why all three
+      # replicas sat on workers and none on the trio.
+      #
+      # storageClassName is IMMUTABLE on a bound PVC, so this does not migrate
+      # the existing volume on its own — see the PR for the recreate. It is free
+      # to do here because the cache is EMPTY (zot has never been in the pull
+      # path; its catalog returns zero repositories), so there is nothing to
+      # preserve and it refills on demand.
+      VOLSYNC_STORAGECLASS: longhorn-critical

@@ -38,6 +38,16 @@ spec:
           reloader.stakater.com/auto: "true"
         replicas: 1
         pod:
+          # Tier 1 (docs/cluster-consolidation/20-low-power-tier.md §1). The pull
+          # path is spegel -> zot -> zot-via-ingress -> upstream, and during a
+          # low-power window the workers are off, so a cache that cannot run on a
+          # control plane is a cache that is not there when image pulls matter
+          # most — a crash-looping pod mid-window is exactly the case it covers.
+          priorityClassName: critical-tier
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
           securityContext:
             runAsNonRoot: false
             runAsUser: 568
