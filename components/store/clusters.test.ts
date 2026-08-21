@@ -17,7 +17,7 @@ describe("the checked-in cluster definitions", () => {
   it("loads every YAML file in /clusters", () => {
     assert.deepEqual(
       CLUSTERS.map(c => c.key),
-      ["alpha-site", "celestia", "equestria", "luna", "sgc", "skystar"],
+      ["alpha-site", "celestia", "equestria", "luna", "skystar"],
     );
   });
 
@@ -32,13 +32,16 @@ describe("the checked-in cluster definitions", () => {
   it("keeps sourceTitle distinct from title", () => {
     // `sourceTitle` names a Gatus group and is written into PBS items;
     // `title` is the display name. Collapsing them is a user-visible rename.
-    const sgc = clusterBySourceTitle("Cluster: Stargate Command");
-    assert.equal(sgc?.title, "Stargate Command");
-    assert.equal(sgc?.key, "sgc");
+    // Was `sgc` until its definition was removed (22 phase 2 step 3);
+    // `alpha-site` carries the same property — key, title and sourceTitle are
+    // three different strings — which is the whole point of this assertion.
+    const alphaSite = clusterBySourceTitle("Cluster: Alpha Site");
+    assert.equal(alphaSite?.title, "Alpha Site");
+    assert.equal(alphaSite?.key, "alpha-site");
   });
 
   it("resolves every title the stacks pass to getCluster", () => {
-    for (const title of ["Cluster: Alpha Site", "Cluster: Celestia", "Cluster: Equestria", "Cluster: Luna", "Cluster: Skystar", "Cluster: Stargate Command"]) {
+    for (const title of ["Cluster: Alpha Site", "Cluster: Celestia", "Cluster: Equestria", "Cluster: Luna", "Cluster: Skystar"]) {
       assert.ok(clusterBySourceTitle(title), `${title} has no definition`);
     }
   });
@@ -48,7 +51,6 @@ describe("the checked-in cluster definitions", () => {
       "alpha-site": "arcane_token",
       equestria: "secret",
       luna: "arcane_token",
-      sgc: "secret",
       skystar: "arcane_token",
     });
     assert.equal(CLUSTERS.find(c => c.key === "celestia")?.secretField, null);
@@ -201,6 +203,5 @@ describe("domainPrefix", () => {
   it("still produces the real clusters' domains", () => {
     assert.equal(CLUSTERS.find(c => c.key === "alpha-site")?.rootDomain, "as.driscoll.tech");
     assert.equal(CLUSTERS.find(c => c.key === "skystar")?.rootDomain, "skystar.driscoll.tech");
-    assert.equal(CLUSTERS.find(c => c.key === "sgc")?.rootDomain, "sgc.driscoll.tech");
   });
 });
