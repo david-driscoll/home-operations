@@ -337,10 +337,11 @@ was therefore overstated on the second half. Losing the in-cluster copy is a **d
 of redundancy**, not a DNS outage. That does not argue against the move; it argues that the
 move is an improvement to make calmly rather than a fire to put out. It does add one
 question to §7's list: **the three Dockge resolvers only help during a battery window if
-celestia, luna and skystar are themselves powered.** This was posed as "the same unanswered
-question as alpha-site's PoE switch"; alpha-site's half was answered on 2026-08-20 (the battery
-powers it — §7), and this half was not. It is the smaller of the two: it decides how much
-resolver redundancy a window has, not whether identity survives one. §9 item 4.
+celestia, luna and skystar are themselves powered.** **Answered by David 2026-08-21:
+`celestia` and `luna` are on battery; `skystar` is not, and is remote.** §7 has what that
+actually buys — the short version is that resolver redundancy during a local outage is **four
+members, not one**, and the failure mode it does not cover is a loss of local network egress
+rather than a loss of power.
 
 ### 0.4 — Confirm before entry (unchanged in kind, refreshed live)
 
@@ -1275,12 +1276,37 @@ The reasoning is kept because it still sets the standard: **the cluster staying 
 identity is dark would be a failure of this design, not a success of it.** That is now a
 property the estate has, not a risk it carries.
 
-**One half of the question remains open, and it is a different half.** §0.3's off-cluster DNS
-redundancy rests on the three Dockge Technitium members hosted on **celestia, luna and skystar**.
-Whether *those three* are on battery has not been answered. It is a materially smaller item than
-the alpha-site one was — losing them degrades resolver redundancy rather than taking out
-identity — but it is the difference between "DNS survives on four members" and "DNS survives on
-the one in-cluster copy." §9 item 4.
+**The other half of the question is answered too, 2026-08-21, and it answers well.** §0.3's
+off-cluster DNS redundancy rests on the three Dockge Technitium members on **celestia**, **luna**
+and **skystar**. David: **celestia and luna are on battery; skystar is not, and is remote.**
+
+That is a better answer than "all three on battery" would have been, and it is worth being
+precise about why:
+
+| Resolver | Survives a local grid outage | Why |
+|---|---|---|
+| in-cluster (control planes) | ✅ | trio is on the Pecron circuit |
+| `celestia` | ✅ | on battery |
+| `luna` | ✅ | on battery |
+| `skystar` | ✅ *for its own uptime* | **remote — a different site and a different grid entirely** |
+
+So a local outage leaves **four** resolvers standing, not one, and `skystar` is the only one whose
+survival is not a function of how long the Pecron lasts. A battery that runs flat takes the other
+three with it; `skystar` is unaffected by that failure mode, which makes it the most valuable of
+the three off-cluster members rather than the weakest.
+
+**The caveat is reachability, not power.** `skystar` is only useful during a local outage if the
+local network path to it survives — router, modem/ONT and the tailnet egress. Those are not
+on the Pecron circuit as far as this file knows, and nothing here has verified them. So the honest
+statement is: three resolvers survive on battery, and a fourth survives the outage entirely but is
+reachable only while local egress does.
+
+**That reframes the next question rather than closing the topic.** The open item is no longer
+"are the DNS hosts powered" — they are — it is **"is the local network gear on the Pecron
+circuit?"** If it is not, a grid outage takes the tailnet, `skystar`, and every remote name with
+it, while the cluster and its three local resolvers keep running perfectly. That is a bigger
+question than DNS: it also decides whether alpha-site's off-site telemetry and any remote access
+to the estate survive the window. §9 item 4.
 
 **The original Tier-2 reasoning for `observability`, kept for the record.** This file
 originally dropped `observability` to Tier 2 on the grounds that alpha-site's external
@@ -1489,10 +1515,18 @@ through in place rather than moved to the resolved list above — several sectio
    was the item that determined whether entering a window is *worth* it, and it resolves the
    good way.
 
-   **The second half of this item is still open and is a different question:** are `celestia`,
-   `luna` and `skystar` on battery? §0.3's off-cluster DNS redundancy — the three Dockge
-   Technitium members — is only real if they are. Materially smaller than the alpha-site half
-   was: losing them degrades resolver redundancy rather than taking out identity.
+   ~~**The second half of this item:** are `celestia`, `luna` and `skystar` on battery?~~
+   **ANSWERED by David 2026-08-21: celestia and luna are on battery; skystar is not, and is
+   remote.** Four resolvers survive a local outage — the in-cluster copy, celestia, luna (all on
+   the battery) and skystar (a different site and grid, so unaffected by the battery running
+   flat). §7 has the table.
+
+   **Replaced by a sharper question this file cannot answer either: is the local network gear —
+   router, modem/ONT, the tailnet egress path — on the Pecron circuit?** `skystar` is only
+   reachable during a window if it is, and so is alpha-site's off-site telemetry and any remote
+   access to the estate. If the answer is no, a grid outage takes the tailnet and every remote
+   name with it while the cluster and its three local resolvers run perfectly. This is now the
+   last hardware unknown in the file, and it is broader than DNS.
 5. ~~**WoL on `hard-hat`, `fluttershy` and `kerfuffle`**~~ — three bare-metal workers (§6.2).
    **ANSWERED by David 2026-08-20: all three can be started via WoL.** That retires the exit
    scenario this was priced against — someone physically at three machines — and demotes
