@@ -19,7 +19,7 @@ powershell-core = "7.6.5"
 # line has to move with it.
 talosctl = "1.13.9"
 talhelper = "3.1.16"
-yq = "4.53.4"
+yq = "4.53.6"
 jq = "1.8.2"
 sops = "3.13.3"
 flux2 = "2.9.4"
