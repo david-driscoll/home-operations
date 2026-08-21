@@ -179,6 +179,43 @@ describe("SecretRefResolver", () => {
     assert.equal(fake.calls.length, 1);
   });
 
+  it("rejects chained references, which vals mis-parses in BOTH directions", async () => {
+    // The motivating incident: pecron-monitor's PECRON_DEVICE_MAP chained three
+    // refs as `…#/primary_device_key=Primary,ref+openbao://…`. vals ends a
+    // reference at whitespace, not punctuation, so it read the key as
+    // `primary_device_key=Primary,ref` AND mangled the next reference into a
+    // literal `refopenbao://` — with the `+` eaten, so the residue guard could
+    // never see it. Every `home-operations` stack update failed for 32h.
+    const fake = fakeVals({});
+    const doc = 'MAP: "ref+openbao://secrets/a/devices#/k1=Primary,ref+openbao://secrets/a/devices#/k2=Backup"';
+    await assert.rejects(
+      () => resolver(fake).resolveText(doc, "compose.yaml"),
+      (error: Error) => {
+        assert.match(error.message, /chained secret reference/);
+        assert.match(error.message, /compose\.yaml/);
+        assert.match(error.message, /ref\+openbao:\/\//);
+        // Schemes and reasons only — never the key names or the surrounding span.
+        assert.doesNotMatch(error.message, /k1|Primary/);
+        return true;
+      },
+    );
+    // Caught BEFORE vals runs: the failure belongs to the document, not the backend.
+    assert.equal(fake.calls.length, 0);
+  });
+
+  it("allows references separated by whitespace, which is what vals actually needs", async () => {
+    // The fix for the above: a space terminates each reference cleanly. Callers
+    // that parse the result (`split(",")` then `partition("=")` then `.strip()`)
+    // get the same value they always intended.
+    const fake = fakeVals({
+      "ref+openbao://secrets/a/devices#/k1": "aa:bb",
+      "ref+openbao://secrets/a/devices#/k2": "cc:dd",
+    });
+    const doc = 'MAP: "ref+openbao://secrets/a/devices#/k1 =Primary, ref+openbao://secrets/a/devices#/k2 =Backup"';
+    const { value } = await settle(resolver(fake).resolve(doc));
+    assert.equal(value, 'MAP: "aa:bb =Primary, cc:dd =Backup"');
+  });
+
   it("does not trip the residue guard on ref+ prose or shell globs", async () => {
     // provision.sh carries `ref+*)` and comments saying "ref+..." — scheme
     // shapes only (`ref+x://`) count as residue.

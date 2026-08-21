@@ -81,6 +81,30 @@ export type ValsExec = (doc: string, env: Record<string, string>) => Promise<str
  */
 const REF_SCHEME = /ref\+[a-z0-9]+:\/\//g;
 
+/**
+ * A CHAINED reference: a `ref+x://` expression that runs straight into another
+ * `ref+` with no whitespace between them.
+ *
+ * vals ends a reference at WHITESPACE, not at punctuation. So
+ * `ref+a://p#/k=One,ref+b://p#/k=Two` does two wrong things at once: the first
+ * reference's key is read as `k=One,ref`, and the second is mangled into a
+ * literal `refb://` with its `+` eaten.
+ *
+ * That second half is why this needs its own check rather than trusting the
+ * residue guard: `REF_SCHEME` requires the `+`, so a mangled `refb://` sails
+ * straight past it. The loud failure (a bad key lookup) is the lucky case —
+ * if the first key happens to exist, the run SUCCEEDS and ships a literal
+ * `refb://…` into a container as though it were a resolved value.
+ *
+ * Checked against the ORIGINAL document, before vals runs, so the line number
+ * points at the file a human edits and no resolved content can be in scope.
+ * Non-global on purpose: `exec` on a /g pattern advances `lastIndex`.
+ *
+ * Prose and shell globs stay clear of this: `ref+*)` and `"ref+..."` have no
+ * `://`, so the leading `ref+[a-z0-9]+://` never matches them.
+ */
+const CHAINED_REF = /ref\+[a-z0-9]+:\/\/\S*?ref\+/;
+
 export class SecretRefResolver {
   /**
    * Constructed lazily on the first reference actually seen, so building a
@@ -131,6 +155,16 @@ export class SecretRefResolver {
   }
 
   private async evaluate(v: string, label?: string): Promise<string> {
+    // Before vals, not after: a chained reference produces a mangled literal
+    // with its `+` eaten, which the residue guard below cannot see. See
+    // CHAINED_REF.
+    const chained = CHAINED_REF.exec(v);
+    if (chained) {
+      const scheme = /ref\+[a-z0-9]+:\/\//.exec(chained[0])?.[0] ?? "ref+";
+      throw new Error(
+        `${where(label)}chained secret reference${lineOf(v, scheme)}: a \`${scheme}\` expression runs into another \`ref+\` with no whitespace between them. vals ends a reference at whitespace, not at punctuation — it would read the separator as part of the key and mangle the next reference into a literal with its \`+\` eaten, which the residue guard cannot catch. Separate them with a space.`,
+      );
+    }
     this.client ??= this.makeClient();
     const doc = yaml.stringify({ content: v });
     let resolvedDoc: string;

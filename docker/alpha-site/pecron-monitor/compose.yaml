@@ -49,7 +49,23 @@ services:
       # Translates device key -> friendly name at the edge so the MAC-address
       # device keys stay out of Thanos and Grafana. Each key is resolved by
       # vals from the same OpenBao secret the monitor's own config reads.
-      PECRON_DEVICE_MAP: "ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key=Primary,ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key=Backup,ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key=Spare"
+      #
+      # THE SPACES BEFORE EACH `=` ARE LOAD-BEARING. Do not tidy them away.
+      # vals terminates a `ref+` expression on WHITESPACE, not on punctuation,
+      # so writing `...#/primary_device_key=Primary,ref+openbao://...` makes vals
+      # read the key as `primary_device_key=Primary,ref` -- it swallows the
+      # separator and the start of the next reference. That is not hypothetical:
+      # it failed every `home-operations` stack update with
+      #   no value found for key primary_device_key=Primary,ref
+      # and it also mangles the second reference into a literal `refopenbao://`,
+      # which would have shipped a MAC-shaped string straight into the metric
+      # labels this mapping exists to prevent.
+      #
+      # A space terminates the reference cleanly, and `_parse_device_map` in
+      # exporter/pecron_exporter.py splits on `,` then `partition("=")` and
+      # `.strip()`s both halves -- so the rendered value parses to exactly the
+      # same map it always intended. Verified against vals 0.46.0.
+      PECRON_DEVICE_MAP: "ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/primary_device_key =Primary, ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/backup_device_key =Backup, ref+openbao://secrets/clusters/${CLUSTER_KEY}/apps/${APP}/devices#/spare_device_key =Spare"
     depends_on:
       - pecron-monitor
     networks:
