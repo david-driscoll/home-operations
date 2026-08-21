@@ -97,6 +97,22 @@ spec:
       # Tier 1 by 24 §1's amendment — these stay up during Battery.
       - observability
       - pulumi
+      # Low Power keep-list namespace (24 "Keep-list"). Same belt-and-braces
+      # reasoning as the Tier-0/1 entries above: it is never annotated with
+      # `force-downtime`, so listing it only makes a mistyped `kubectl annotate`
+      # inert.
+      - coder
+      # `database` is not on the written keep-list but every keep-list app
+      # depends on it. CNPG's Postgres is operator-managed and invisible to the
+      # downscaler, but `valkey` is a plain Deployment and `postgres-backup` a
+      # CronJob — shedding `database` would take the cache and the nightly
+      # backup out from under Plex/Immich/n8n/FreshRSS while they keep running.
+      - database
+      #
+      # NOT excluded, deliberately: `github-actions`. 24's keep-list carried it,
+      # but David confirmed 2026-08-21 that it is safe to scale down — CI can
+      # wait out a window. It is a *shed* namespace, so Low Power entry annotates
+      # it alongside `equestria`.
 
     # This controller IS the Low Power shed mechanism, and Battery is entered
     # *from* Low Power -- so it has to be placeable on a control plane, or the
