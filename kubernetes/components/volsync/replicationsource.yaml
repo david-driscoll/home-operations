@@ -12,6 +12,36 @@ spec:
     copyMethod: "${VOLSYNC_COPYMETHOD:=Snapshot}"
     pruneIntervalDays: 14
     repository: "${APP}-volsync-secret"
+    # Schedules `restic unlock` on the next sync, once per repository.
+    #
+    # A destination mover that dies mid-prune leaves its restic lock behind, and
+    # the lock outlives the pod. Every later SOURCE run then backs up fine and
+    # fails on the forget/prune step:
+    #
+    #   === Starting forget ===
+    #   unable to create lock in backend: repository is already locked by PID 186
+    #     on volsync-dst-jellyfin-dst-ptpfd
+    #
+    # So the failure is RETENTION, not backup — the snapshot is already saved by
+    # the time this happens, which is why it can run for days looking like broken
+    # backups while the data is fine. On 2026-08-20 this was live on eight
+    # repositories, Tier-1 ones included (home-assistant, crowdsec-ui, registry).
+    #
+    # It is not only a backup problem: tuppr's TalosUpgrade healthChecks gate on
+    # ReplicationSource `Synchronizing == False`, so stuck movers freeze node
+    # upgrades. That is the 2026-07 incident which left fluttershy and othalla
+    # cordoned for a week, and why talos.yaml carries a 15m timeout on that check.
+    #
+    # Safe to apply fleet-wide: the mover runs plain `restic unlock`, which removes
+    # only STALE locks — `unlock --remove-all` is commented out in VolSync's
+    # mover-restic/entry.sh — so this cannot disturb a live mover, and it is a
+    # no-op on a repository that is not locked.
+    #
+    # Runs once per repository, not every sync: the operator copies this value to
+    # status.restic.lastUnlocked when it completes and skips the unlock while the
+    # two match. To force another pass estate-wide, change the date below; to do
+    # one app only, set VOLSYNC_UNLOCK in that app's ks.yaml.
+    unlock: "${VOLSYNC_UNLOCK:=2026-08-20-stale-destination-locks}"
     volumeSnapshotClassName: "${VOLSYNC_SNAPSHOTCLASS:=longhorn-snapclass}"
     cacheCapacity: "${VOLSYNC_CACHE_CAPACITY:=2Gi}"
     cacheStorageClassName: "${VOLSYNC_CACHE_SNAPSHOTCLASS:=longhorn-cache}"
