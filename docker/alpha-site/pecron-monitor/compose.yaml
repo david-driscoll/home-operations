@@ -51,15 +51,21 @@ services:
       # vals from the same OpenBao secret the monitor's own config reads.
       #
       # THE SPACES BEFORE EACH `=` ARE LOAD-BEARING. Do not tidy them away.
-      # vals terminates a `ref+` expression on WHITESPACE, not on punctuation,
-      # so writing `...#/primary_device_key=Primary,ref+openbao://...` makes vals
-      # read the key as `primary_device_key=Primary,ref` -- it swallows the
-      # separator and the start of the next reference. That is not hypothetical:
-      # it failed every `home-operations` stack update with
+      # vals terminates a reference at WHITESPACE, not at punctuation. Chaining
+      # them with a bare `,` -- `…#/primary_device_key=Primary,` immediately
+      # followed by the next <ref+openbao scheme>:// -- makes vals read the key
+      # as `primary_device_key=Primary,ref`: it swallows the separator and the
+      # start of the next reference. Not hypothetical, it failed every
+      # `home-operations` stack update with
       #   no value found for key primary_device_key=Primary,ref
-      # and it also mangles the second reference into a literal `refopenbao://`,
-      # which would have shipped a MAC-shaped string straight into the metric
-      # labels this mapping exists to prevent.
+      # and it also mangles the second reference into a literal with its `+`
+      # eaten, which would have shipped a MAC-shaped string straight into the
+      # metric labels this mapping exists to prevent.
+      #
+      # Note this comment writes the scheme broken apart, exactly like the one
+      # above the volume mount: vals does not know what a comment is, and a
+      # well-formed reference written here is expanded like any other. Writing
+      # one whole is how THIS fix broke the stack a second time.
       #
       # A space terminates the reference cleanly, and `_parse_device_map` in
       # exporter/pecron_exporter.py splits on `,` then `partition("=")` and
