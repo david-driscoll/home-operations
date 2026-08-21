@@ -24,6 +24,32 @@ spegel:
   # its ingress -> upstream. Each hop is a fallback for the one before it, so a
   # pull still succeeds with any of them down.
   prependExisting: true
+  # `prependExisting` only has somewhere to prepend INTO if spegel writes
+  # per-registry files, and that is what this list controls. Left empty, spegel
+  # writes a single catch-all `_default/hosts.toml` naming only itself and moves
+  # every per-registry config into `_backup/` — a catch-all and per-registry
+  # files are contradictory, so it cannot keep both. `prependExisting: true`
+  # alone therefore changed nothing, verified live on 2026-08-21:
+  #
+  #   msg="backing up containerd host configuration" path=/etc/cri/conf.d/hosts/docker.io
+  #   msg="added containerd mirror configuration" registry=//_default
+  #
+  # With the registries named, spegel writes `<registry>/hosts.toml` per entry
+  # and appends the backed-up config to its own — giving the intended order:
+  # spegel, then zot, then zot via its ingress, then upstream.
+  #
+  # Keep this in step with the mirrors in
+  # `talos/patches/global/machine-registries.yaml`: a registry listed there but
+  # not here gets no spegel peering, and one listed here but not there gets
+  # spegel with no fallback behind it.
+  mirroredRegistries:
+    - https://docker.io
+    - https://gcr.io
+    - https://quay.io
+    - https://ghcr.io
+    - https://registry.k8s.io
+    - https://public.ecr.aws
+    - https://cgr.dev
   logLevel: "DEBUG"
   debugWebEnabled: true
   containerdSock: /run/containerd/containerd.sock
