@@ -13,11 +13,23 @@ tagging) and amends [20-low-power-tier.md](20-low-power-tier.md) (§1 Tier-1
 namespace list, §4 placement model) — read this file *and* 20 together; 20 is
 not being rewritten, this file records what changed and why.
 
-## Revision, 2026-08-19 — two of the three unknowns are now known
+## Revision, 2026-08-21 — Low Power has been run, in dry-run, for the first time
 
-Still a design proposal, still unrehearsed. What changed is that the two things this file
-said had to be checked before anything was buildable have been checked, both against source
-rather than documentation:
+**No longer only a design proposal.** The Low Power mechanism was exercised against the live
+cluster on 2026-08-21 with the controller still `--dry-run`: one 60 s scan under
+`downscaler/force-downtime`, nothing moved, 40 workloads correctly named, and **two real defects
+in the keep-list found that no amount of reading the manifests would have surfaced** (PR #1005).
+See "Exercised 2026-08-21". Battery's half is further along still — [20](20-low-power-tier.md) §4
+is applied, so the control planes are tainted and the Tier-0/1 tolerations are live.
+
+What is left before Low Power is rehearsable rather than merely runnable: take `--dry-run` off
+(after #1005, so the re-run shows eleven survivors rather than nine), decide open item 1, and
+measure the Low-Power-specific capacity in open item 4.
+
+### Revision, 2026-08-19 — two of the three unknowns are now known
+
+What changed then is that the two things this file said had to be checked before anything was
+buildable have been checked, both against source rather than documentation:
 
 | Open item | Then | Now |
 |---|---|---|
@@ -192,21 +204,30 @@ eleven are keep — so the mechanism below cannot be namespace-granular alone.
 | dispatcharr | `Deployment/dispatcharr` | `equestria` |
 | xcproxy | `Deployment/xcproxy` | `equestria` |
 | namespace `coder` | whole namespace | `coder` |
-| namespace `github-actions` | whole namespace | `github-actions` |
+| ~~namespace `github-actions`~~ | **removed from the keep-list 2026-08-21** — David: CI is safe to scale down and can wait out a window. It is a **shed** namespace; Low Power entry annotates it alongside `equestria` | `github-actions` |
 | watch-state | **not deployed** — no matching workload live | — |
 | strmgen | **not deployed** — no matching workload live | — |
 
 `watch-state` and `strmgen` are named in the original keep-list but have no workload in the
-cluster today. Either they are gone, or they live somewhere this search did not reach; the
-list should not carry entries that cannot be annotated. Flagged rather than deleted.
+cluster today. **Re-confirmed live 2026-08-21** — no Deployment, StatefulSet or CronJob under
+either name, and no near-miss (`watchstate` searched too). They are gone, not hiding. The list
+should not carry entries that cannot be annotated; treat the keep-list as **eleven entries**,
+not thirteen. Open item 6 closed.
 
-**`dynacat` cannot be annotated from this repo.** Its Kustomization
-(`kubernetes/apps/equestria/home/dynacat/ks.yaml`) has `path: ./dashboard` against a
-different source, so the Deployment is rendered elsewhere and there is no HelmRelease here to
-carry `downscaler/exclude`. Either annotate it at its own source, or accept it as the one
-keep-list entry held by a live `kubectl annotate` — which is exactly the "placement that
-exists only in cluster state" this plan set tries to avoid. Needs a call before Low Power is
-switched out of dry-run.
+**~~`dynacat` cannot be annotated from this repo.~~ It can, and now is — corrected 2026-08-21.**
+The claim rested on `kubernetes/apps/equestria/home/dynacat/ks.yaml` having `path: ./dashboard`
+"against a different source". It is not a different source: `dashboard/` is **tracked in
+home-operations** (`git ls-files dashboard/` returns `dashboard/helmrelease.yaml`), and its
+`sourceRef` is the same `GitRepository/flux-system` every other app uses. The path simply points
+at a top-level directory rather than one under `kubernetes/apps/`.
+
+So the annotation goes in Git like every other keep-list app. Both controllers in
+`dashboard/helmrelease.yaml` — `dynacat` and `equestria-glance` — now carry
+`downscaler/exclude: "true"` (PR #1005), verified with `helm template` against app-template
+5.1.0. **No keep-list entry is held by a live `kubectl annotate`**, and the "placement that
+exists only in cluster state" this plan set warns about does not occur here.
+
+This mattered: the 2026-08-21 dry-run below shed **both** dynacat Deployments.
 
 Plus, implicitly, everything already in Tier 0 (cluster platform — Cilium, CoreDNS, Longhorn,
 Flux, etc.) and Tier 1 per 20/above — Low Power sheds Tier 2 load, it isn't a *harder*
@@ -244,10 +265,27 @@ silently doesn't survive Low Power") is the default.
 
 ```bash
 # enter Low Power
-kubectl annotate namespace equestria downscaler/force-downtime=true --overwrite
+for ns in equestria github-actions; do
+  kubectl annotate namespace "$ns" downscaler/force-downtime=true --overwrite
+done
 # leave Low Power
-kubectl annotate namespace equestria downscaler/force-downtime=false --overwrite
+for ns in equestria github-actions; do
+  kubectl annotate namespace "$ns" downscaler/force-downtime=false --overwrite
+done
 ```
+
+`github-actions` joined the shed list on 2026-08-21 (David: CI is safe to scale down). **Shedding
+it is partial, and worth knowing before relying on it** — a dry-run scan named exactly two
+workloads, `gha-arc-controller` and `onepassword-syndicates`. The four `AutoscalingRunnerSet` CRs
+are untouched: `actions.github.com` is not a kind py-kube-downscaler handles
+(`--include-resources` is deployments, statefulsets, cronjobs, scaledobjects), and the ARC
+listener runs as a bare Pod owned by an `AutoscalingListener` CR rather than a Deployment.
+
+So stopping the controller means **no new runners are created**, but `littles-tech-runners` and
+`littles-tech-release-runners` both carry `minRunners: 1` and any in-flight `EphemeralRunner` pods
+run to completion. If a window needs the runners genuinely gone rather than merely not
+replenished, that needs `minRunners: 0` on those two sets — a separate change, and a decision
+about whether CI should be able to start at all mid-window.
 
 No Git commit, no Flux reconcile cycle, one command per shed namespace. The original replica
 count is stored on each workload as `downscaler/original-replicas`
@@ -376,6 +414,51 @@ A chart upgrade during a window is unlikely but not impossible (Renovate merges 
 continuously), and the honest answer is that this needs a dry-run check rather than a
 confident claim.
 
+### Exercised 2026-08-21 — the first time the mechanism actually ran
+
+Everything above this point was derived from `scaler.py`. This is what happened when it was
+run. Method: `kubectl annotate namespace equestria downscaler/force-downtime=true --overwrite`
+with the controller still `--dry-run`, one 60 s interval, then
+`kubectl annotate namespace equestria downscaler/force-downtime-`. Replica counts and CronJob
+suspend flags were snapshotted before and after.
+
+**Nothing moved.** Both snapshots were byte-identical — 45 equestria Deployments and every
+CronJob in the cluster. `--dry-run` holds exactly as documented; the log line is
+`**DRY-RUN**: would update <kind> <ns>/<name>` paired with a `Scaling down …` or `Suspending …`
+line carrying the reason `(uptime: ignored, downtime: forced)`.
+
+**Scope was correct.** 40 distinct workloads named, **all of them in `equestria`** — 36
+Deployments, the `meilisearch` and `rustdesk` StatefulSets, and the `kometa` /
+`kometa-imagemaid` CronJobs. No Tier-0/Tier-1 namespace was touched, which is what
+`excludedNamespaces` is there to guarantee.
+
+**The precedence claim is confirmed, not merely argued.** Nine of the eleven keep-list entries
+survived the namespace `force-downtime` because they carry `downscaler/exclude: "true"` — the
+`define_scope` short-circuit above, observed rather than read.
+
+**Two found the hard way, both now fixed in PR #1005:**
+
+- `dynacat` and `dynacat-equestria-glance` were **shed**. Keep-list, unannotated — see the
+  keep-list section for why the "cannot be annotated from this repo" premise was wrong.
+- `coder` and `database` were **not** in `excludedNamespaces`. `coder` is a keep-list namespace;
+  `database` is not on the written keep-list but every keep-list app depends on it — CNPG's
+  Postgres is operator-managed and invisible to the downscaler, but `valkey` is a plain Deployment
+  and `postgres-backup` a CronJob, so shedding `database` would pull the cache and the nightly
+  backup out from under Plex/Immich/n8n/FreshRSS while those keep running.
+
+  `github-actions` was in the same first cut of that fix and was **taken back out** the same day:
+  David confirmed CI is safe to scale down, so it is a shed namespace rather than a keep-list one.
+  A second dry-run scan against it named exactly `gha-arc-controller` and `onepassword-syndicates`
+  — see "Mechanism" for why that is a partial shed.
+
+Neither would have been caught by reading the manifests, and neither is visible until the toggle
+is thrown. **That is the argument for running the dry-run as its own step rather than as the
+first minute of a real window.**
+
+**Still `--dry-run`.** The scan is now clean and reviewable; removing the flag is the next
+decision, and it should be taken after #1005 lands so the re-run shows eleven survivors rather
+than nine.
+
 ### Node shutdown
 
 Low Power additionally powers off specific power-hungry hosts — `fluttershy`
@@ -454,9 +537,15 @@ Still open, in priority order:
    *acted* on it (an upstream example that cut AC below 10 %), so this is telemetry and
    alerting, not automation. That is the right split for a runbook-driven posture: the
    signal is now measurable, and entering remains a human decision.
-3. **`observability`'s control-plane pods carry no control-plane toleration.** §1 of this
-   file is what creates the problem: keeping `observability` up during Battery means its
-   workloads must survive on a tainted control plane, and today they would not be
+3. ~~**`observability`'s control-plane pods carry no control-plane toleration.**~~ **CLOSED
+   2026-08-21.** [20](20-low-power-tier.md) §4 landed: PR #1001 gave the toleration to all six
+   affected workloads — including `unpoller`, which this file's §1 amendment is what put on the
+   list, and `kube-downscaler`, which is the new entry raised at the end of this item. PR #1002
+   then applied the taint, and the post-flip verification was clean. The original text is kept
+   below because the reasoning is still the reasoning.
+
+   §1 of this file is what created the problem: keeping `observability` up during Battery means
+   its workloads must survive on a tainted control plane, and at the time they would not be
    rescheduled there.
 
    **Re-audited live 2026-08-20**, and the finding is narrower but not smaller than it was.
@@ -481,6 +570,17 @@ Still open, in priority order:
    on the grounds that Battery is entered *from* Low Power and a controller that dies on the
    transition cannot restore replica counts on the way back out.
 
+   **Decided as recommended, 2026-08-21** — `kube-downscaler` has the toleration (PR #1001).
+   The deciding argument is the one above: Battery is entered *from* Low Power, and a controller
+   that dies on the transition cannot restore replica counts on the way back out.
+
+   **`kube-state-metrics` and `prometheus-operator` are the one loose end.** Both run on workers
+   today, so the taint does not strand them — it only stops them *returning* to the trio, which
+   matters at Battery entry rather than now. `kubernetes/apps/observability/prometheus/values.yaml`
+   carries an explicit written decision to leave them untolerated, so reversing it means a
+   kube-prometheus-stack upgrade and its own change. Tracked as [20](20-low-power-tier.md) §9
+   item 6.
+
 4. **Fresh capacity measurement** including `observability` + `pulumi` staying up in Battery.
    [20](20-low-power-tier.md) §3 costed the amendment at **+1.23 cores / +5.49 GiB**, taking
    the trio to ~71 % of allocatable CPU in requests alone — confirming this file's "≈7.4 GiB"
@@ -491,9 +591,10 @@ Still open, in priority order:
    Note this now interacts with [20](20-low-power-tier.md) §0.3: with Technitium moving to
    the control planes, shutting `hard-hat` no longer takes in-cluster DNS with it, which
    removes the main reason `hard-hat` was awkward to shed.
-6. **`watch-state` and `strmgen` are on the keep-list but not in the cluster** — see the
-   keep-list table. Confirm whether they are gone or elsewhere before the list is turned into
-   annotations.
+6. ~~**`watch-state` and `strmgen` are on the keep-list but not in the cluster**~~ **CLOSED
+   2026-08-21.** Re-confirmed live: no Deployment, StatefulSet or CronJob under either name, and
+   no near-miss (`watchstate` searched too). They are gone. The keep-list is **eleven** entries,
+   and all eleven now carry `downscaler/exclude` in Git (PR #1005) — see the keep-list table.
 7. **No vault#84 sub-issue exists for this piece yet** — file one before treating this as
    more than a local design doc, consistent with how every other numbered piece in this set
    traces to a lettered sub-issue.
