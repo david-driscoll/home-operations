@@ -1190,6 +1190,16 @@ Resolved, and left resolved:
   (`technitium`, `tsidp`, `tsiam`) and #966 (`home-assistant`, `matter`, `mosquitto`). All
   seven now hold three control-plane replicas and are `healthy` — §5. This was item 1 for
   most of the day and is the reason the pre-flight in §6.0 went from two failures to one.
+- ~~`shining-armor` stuck at Talos v1.13.8 and cordoned, CNPG at 2/3.~~ **Fixed 2026-08-20.**
+  Root cause was the **drain**, not the install: `tuppr` runs `talosctl upgrade` with drain
+  enabled, and the drain looped on Longhorn `instance-manager` evictions until the context
+  deadline, so the installer never started. `talosctl upgrade --drain=false` against the
+  already-cordoned node completed in one pass. All seven nodes are on v1.13.9, CNPG is 3/3,
+  and `tuppr` reports `Completed`. Three things that read as failures during recovery and
+  were not: `longhorn-manager` CrashLoopBackOffs on first boot and self-heals; the
+  instance-managers cannot return until the node is **uncordoned**; and `tuppr` never
+  self-clears a `Failed` TalosUpgrade — it needs a generation bump (delete the CR and let
+  Flux recreate it), because annotations do not bump `metadata.generation`.
 - ~~`postgres-3` and the taint.~~ **Moot.** It is on `kerfuffle` with its `longhorn-local`
   PV pinned there; CNPG healthy 3/3. [29](29-taint-readiness-audit.md)'s blocker 2 is closed
   and no toleration/destroy decision is needed.
@@ -1202,20 +1212,39 @@ Still open, in priority order:
    from node-local image stores right up until something crash-loops, which is exactly the
    case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
    down explicitly that the window accepts no registry.
-2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**
-   [29](29-taint-readiness-audit.md)'s gate is green, so the flip itself is safe; the
-   `critical-tier` PriorityClass and the three `system-cluster-critical` corrections landed
-   in PR #970. What is left is the tolerations that make the taint *useful* rather than
-   merely safe — including `observability`'s three untolerated control-plane pods (item 7).
-3. **`shining-armor` is stuck at Talos v1.13.8 and cordoned**, and it is entangled with this
-   piece. `tuppr`'s batch upgrade took the other six nodes to v1.13.9 on 2026-08-19 and
-   failed on this one; the node is cordoned, so `database/postgres-2` — whose
-   `longhorn-local` PV is pinned there — cannot schedule, and CNPG has been running 2/3 with
-   the primary failed over to `postgres-3` since. The mechanical blocker is the per-node
-   Longhorn `instance-manager` PDBs at zero allowed disruptions, the same drain block that
-   has bitten Talos upgrades before. Not this piece's to fix, but it is a live degradation
-   of the database this piece drops to Tier 2, and §6.0's pre-flight cannot honestly go green
-   while a node is cordoned and an upgrade is failed.
+2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.** The single
+   remaining piece of this design. [29](29-taint-readiness-audit.md)'s gate is green, so the
+   flip itself is safe; the `critical-tier` PriorityClass and the three
+   `system-cluster-critical` corrections landed in PR #970. `allowSchedulingOnControlPlanes`
+   is still `true` (`talos/patches/controller/cluster.yaml:2`) and the trio carries no taints.
+
+   What is left is the tolerations that make the taint *useful* rather than merely safe.
+   Audited live 2026-08-20 — pods on the trio that carry **neither** the explicit
+   control-plane toleration **nor** a blanket `operator: Exists` (which is what makes the
+   DaemonSet fleet a non-issue):
+
+   | Pod | Tier | What the flip does to it |
+   |---|---|---|
+   | `kube-system/metrics-server` | **0** | Must gain the toleration. Losing it on recreate degrades HPA and `kubectl top` estate-wide |
+   | `stargate-command/chrony-0` | **1** | Must gain it — NTP is a low-power survivor |
+   | `stargate-command/mosquitto-1` | **1** | Must gain it — one of two MQTT members |
+   | `tailscale-system/equestria-kubeproxy-1` | **1** | Must gain it |
+   | `observability/unpoller` | **1** per [24](24-power-states.md) §1 | Must gain it if 24's amendment stands |
+   | `kube-system/kube-downscaler` | special | Needs to run in **Low Power** (it *is* the shed mechanism) but not in Battery. Needs an explicit call, not a default |
+   | `equestria/{pinepods,teamarr,windmill-app,windmill-extra,windmill-workers-*}` | 2 | Correctly migrate off on recreate — no action |
+   | `kube-system/openbao-0` | 2 | Correctly migrates off — no action |
+   | `database/postgres-backup` (Job) | 2 | Correctly migrates off — no action |
+
+   Note `chrony` and `mosquitto` are the same two workloads PR #970 moved to `critical-tier`:
+   their priority is now right and their *placement* is still wrong, which is the sharpest
+   illustration of why the taint without the tolerations is only half a change.
+3. **Tier calls at the margins** — moved up from item 6 now that the storage measurements
+   exist. `golink` (link shortener, 0 CP replicas) and `taildrive` (file share, 0) should be
+   written down as **Tier 2**; their placement already matches. `crowdsec-*` is Tier 1 only
+   by living in `network` and is almost certainly Tier 2 — three volumes, 0 CP replicas.
+   `matter` (`hostNetwork`, shares `${AUTOMATION_VIP}`) and `tsiam` have never been
+   tier-assigned explicitly. None of these blocks anything; all of them make §6.0's check 4
+   ambiguous until written down.
 4. **Is alpha-site's PoE switch on the battery circuit?** §7. Needs David. Unchanged in
    priority — it determines whether entering the window is *worth* it, not whether it is
    possible. **Now joined by a second, identical question:** are `celestia`, `luna` and
@@ -1223,31 +1252,29 @@ Still open, in priority order:
 5. **WoL on `hard-hat`, `fluttershy` and `kerfuffle`** — three bare-metal workers (§6.2).
    Unverified whether WoL is enabled in BIOS or reachable. §8 Stage 3 answers it one node at
    a time.
-6. **Tier calls at the margins, now with measurements.** `golink` (link shortener, **0** CP
-   replicas) and `taildrive` (file share, **0**) — recommend resolving both as **Tier 2**.
-   `crowdsec-db-pvc` has **0** CP replicas and is Tier 1 only by living in `network`; needs
-   an explicit call. `matter` — `hostNetwork`, shares `${AUTOMATION_VIP}` with mosquitto, one
-   CP replica; needs a call before its volume is migrated. `tsiam` has never been
-   tier-assigned at all.
-7. **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
+6. **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
    keeps `observability` up during Battery, but live today `kube-state-metrics`,
    `prometheus-operator` and `unpoller` run on the trio with **no** control-plane toleration.
    After the §4 flip they keep running and then cannot come back on recreate. If 24's
    amendment stands, they need the toleration in the same change as the flip — the same trap
    `postgres-3` used to be.
-8. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
+7. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
    from a control plane. Copied verbatim during piece 21; confirm whether the reason still
    applies before §4's required affinity is written.
-9. **Tier-2 backfill of `spec.nodeSelector: ["bulk"]`** onto existing volumes, and the
+8. **Tier-2 backfill of `spec.nodeSelector: ["bulk"]`** onto existing volumes, and the
    rebuilds that actually move them off the control-plane disks (§0.2). Owned by
-   [12](12-longhorn-critical-tier.md); listed here because until it runs, the trio's SATA
-   disks still carry Tier-2 data and §0.2's thermal argument is only half-retired. Note the
-   Tier-1 migration (#963/#966) has now *added* ~68 GB of Tier-1 data to those same disks,
-   which is by design but raises the stakes on evicting the Tier-2 tenants.
-10. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
+   [12](12-longhorn-critical-tier.md). **Measured 2026-08-20: 100 volumes still hold at least
+   one replica on the trio.** The `bulk` selector governs where a *new* replica may be
+   scheduled and never evicts an existing one, so this does not improve on its own — and the
+   2026-08-20 reboot rebuilt 33 volumes without changing it, because a rebuild replaces a
+   replica in place rather than re-placing the volume. Until it runs, the trio's SATA disks
+   still carry Tier-2 data and §0.2's thermal argument is only half-retired. The Tier-1
+   migration (#963/#966) has now *added* ~68 GB of Tier-1 data to those same disks, which is
+   by design but raises the stakes on evicting the Tier-2 tenants.
+9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.
-11. **Low-power trigger.** D6 settled duration (3–4 h+) but not trigger: purely a manual
+10. **Low-power trigger.** D6 settled duration (3–4 h+) but not trigger: purely a manual
     runbook posture, or should grid-loss auto-trigger entry? **The signal now exists** —
     alpha-site's `pecron-monitor` publishes `pecron_ac_input_power_watts` (mains loss) and
     `pecron_runtime_remaining_seconds` (how long the window can last), off-cluster by design
@@ -1256,7 +1283,7 @@ Still open, in priority order:
     between "alert David, David runs §6" and "automate entry," rather than an unanswered
     engineering question. [24](24-power-states.md)'s live-toggle half is answered; this is
     the remaining half, and it is a policy call rather than a build.
-12. **etcd's memory footprint on Talos** is invisible to `kubectl top` (a host service), so
+11. **etcd's memory footprint on Talos** is invisible to `kubectl top` (a host service), so
     §3 excludes it. §8 Stage 1 measures it.
 
 ---
