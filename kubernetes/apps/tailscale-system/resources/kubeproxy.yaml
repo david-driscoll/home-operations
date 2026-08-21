@@ -9,6 +9,9 @@ spec:
   type: kube-apiserver
   kubeAPIServer:
     mode: auth
+  # Tier 1 -- this is how the tailnet reaches the Kubernetes API, so it has to be
+  # placeable on a control plane during a low-power window. See ./proxy.yaml.
+  proxyClass: control-plane-tolerant
   tags:
     - "tag:k8s"
     - "tag:${CLUSTER_CNAME}"

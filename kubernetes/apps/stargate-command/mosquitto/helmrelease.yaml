@@ -80,6 +80,14 @@ spec:
           # control-plane components on a 4-core node. See
           # docs/cluster-consolidation/20-low-power-tier.md §4.
           priorityClassName: critical-tier
+          # Tier 1: must survive a low-power window, when the workers are off and
+          # the control planes carry the taint. app-template renders
+          # controllers.<name>.pod.tolerations into the pod spec.
+          # See docs/cluster-consolidation/20-low-power-tier.md §4.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
           affinity:
             podAntiAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:

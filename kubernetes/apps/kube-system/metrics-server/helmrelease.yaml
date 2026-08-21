@@ -45,6 +45,18 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    # Tier 0. Once allowSchedulingOnControlPlanes goes false
+    # (talos/patches/controller/cluster.yaml) an untolerated Deployment can no
+    # longer be placed on milky-way/othalla/pegasus. metrics-server runs there
+    # today; without this it would silently fail to return on the next recreate,
+    # degrading HPA and `kubectl top` estate-wide.
+    # Chart 3.14.0 renders .Values.tolerations into the Deployment pod spec --
+    # verified with `helm template`.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     args:
       - --kubelet-insecure-tls
       - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname

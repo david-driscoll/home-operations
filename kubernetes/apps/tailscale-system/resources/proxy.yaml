@@ -13,3 +13,31 @@ spec:
       enable: true
   # tailscale:
   #   acceptRoutes: true
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: control-plane-tolerant
+spec:
+  # A ProxyGroup exposes no pod-spec fields of its own; `spec.proxyClass` is the
+  # only way to reach the generated StatefulSet's pod template.
+  #
+  # For Tier-1 proxies that must stay reachable once
+  # allowSchedulingOnControlPlanes goes false. A toleration only widens where a
+  # pod MAY schedule; it does not pin anything to the control planes.
+  # See docs/cluster-consolidation/20-low-power-tier.md §4.
+  #
+  # Kept separate from `default` rather than folded into it: `default` also
+  # carries a reloader annotation, and its members (tailnet-inbound/-outbound)
+  # are not Tier 1. Metrics match `default` deliberately -- a Tier-1 proxy that
+  # has to survive a low-power window is the last one that should go unscraped.
+  metrics:
+    enable: true
+    serviceMonitor:
+      enable: true
+  statefulSet:
+    pod:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule

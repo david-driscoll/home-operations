@@ -26,6 +26,14 @@ spec:
         annotations:
           reloader.stakater.com/auto: "true"
         pod:
+          # Tier 1 by 24 §1's amendment (`observability` stays up during Battery),
+          # and it runs on a control plane today. app-template renders
+          # controllers.<name>.pod.tolerations into the pod spec.
+          # See docs/cluster-consolidation/20-low-power-tier.md §4.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
