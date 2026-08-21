@@ -21,15 +21,27 @@ runbook-driven.
 
 ---
 
-## Status — 2026-08-19, second revision (evening), re-verified live against `admin@equestria`
+## Status — 2026-08-20, third revision, re-verified live against `admin@equestria`
 
-**Two of this file's three blockers cleared during the day**, and the third has a decision
-rather than three candidate answers. The earlier revision of this section — written the same
-morning — is superseded, not amended; where it said "not ready to enter," the honest reading
-now is **"the remaining work is a build, not a wait."**
+**Both hardware questions that gated a rehearsal are answered, and §4 — this file's core
+mechanism — is half applied.**
+[#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations)
+**merged and reconciled 2026-08-21**: all six workloads carry
+`node-role.kubernetes.io/control-plane`, verified live, and the §4 audit now returns only the
+Tier-2 set. [#1002](https://github.com/david-driscoll/home-operations/pull/1002) (the taint flip)
+is **open as a draft and not yet applied** — the trio still carries no taints. David answered both questions on 2026-08-20: **the battery powers
+alpha-site** (§7) and **all three bare-metal workers can be started by WoL** (§6.2). One narrower
+question replaced them — whether `celestia`, `luna` and `skystar` are on battery, which sizes
+§0.3's off-cluster DNS redundancy rather than deciding whether the window works (§9 item 4).
 
-Everything below marked "verified" was re-checked live on 2026-08-19 (evening) with read-only
-`kubectl`/`talosctl`. Nothing in the cluster was mutated to write this revision.
+The 2026-08-19 revision said "the remaining work is a build, not a wait." That build is done and
+half of it is live. The honest reading now is **"one `talos:apply` and a storage burndown"** —
+that apply, plus §9 items 1 and 8, are the only things standing between this and a rehearsal.
+
+Everything below marked "verified" was re-checked live with read-only `kubectl`/`talosctl` —
+2026-08-19 (evening) for the storage and tier tables, 2026-08-20 (evening) for §6.0's pre-flight,
+§9's toleration audit and 29's four-command gate. Nothing in the cluster was mutated to write
+this revision; the taint has **not** been applied.
 
 ### What changed between this morning's revision and this one
 
@@ -46,16 +58,25 @@ Everything below marked "verified" was re-checked live on 2026-08-19 (evening) w
 
 The gate has moved from "three things are broken" to "three things are unbuilt":
 
-1. **Technitium has not moved yet.** §0.3 has the design and it is small — a talconfig label
-   move, a one-word NAD change, and a cutover. Its *storage* half is already done.
-2. **Tier 0/1 tolerations and the `critical-tier` PriorityClass are unbuilt.** §4.
+1. ~~**Technitium has not moved yet.**~~ **Done 2026-08-20** — §0.3.
+2. ~~**Tier 0/1 tolerations and the `critical-tier` PriorityClass are unbuilt.**~~ **Built; the
+   toleration half is live.** The PriorityClass landed in PR #970; the tolerations in
+   [#1001](https://github.com/david-driscoll/home-operations/pull/1001), **merged and reconciled
+   2026-08-21**. The taint flip is
+   [#1002](https://github.com/david-driscoll/home-operations/pull/1002) — still draft, still
+   unapplied, because it is applied by `talos:apply` rather than by Flux. §4.
 3. **`kube-system/registry` is Tier 0 with zero control-plane replicas.** §5. This replaced
    the Tier-1 storage gap as the sharpest storage item, and it is a worse tier than the
-   problem it replaced.
+   problem it replaced. **With items 1 and 2 built, this is now the sharpest item in the
+   file.**
 
-Neither of the first two is blocked on anything external. Two questions still need David
-(alpha-site's PoE circuit — §7; WoL on the three bare-metal workers — §6.2), and neither
-blocks building any of the above.
+**Both questions that needed David are answered, 2026-08-20.** The battery powers alpha-site,
+so identity, the transit seal, netboot and the `pecron-monitor` telemetry all survive a grid
+outage (§7) — that was the item deciding whether a window is *worth* entering. And all three
+bare-metal workers can be started by WoL (§6.2), retiring the exit scenario that needed someone
+physically at three machines. One narrower question is left in their place: whether `celestia`,
+`luna` and `skystar` are on battery, which decides how much of §0.3's off-cluster DNS redundancy
+is real — §9 item 4.
 
 **Closed the same day, by work landing in parallel:** the Tier-1 PVCs moved to
 `longhorn-critical` (PRs #963, #966), so every Tier-1 volume now holds three
@@ -309,8 +330,10 @@ was therefore overstated on the second half. Losing the in-cluster copy is a **d
 of redundancy**, not a DNS outage. That does not argue against the move; it argues that the
 move is an improvement to make calmly rather than a fire to put out. It does add one
 question to §7's list: **the three Dockge resolvers only help during a battery window if
-celestia, luna and skystar are themselves powered** — the same unanswered question as
-alpha-site's PoE switch.
+celestia, luna and skystar are themselves powered.** This was posed as "the same unanswered
+question as alpha-site's PoE switch"; alpha-site's half was answered on 2026-08-20 (the battery
+powers it — §7), and this half was not. It is the smaller of the two: it decides how much
+resolver redundancy a window has, not whether identity survives one. §9 item 4.
 
 ### 0.4 — Confirm before entry (unchanged in kind, refreshed live)
 
@@ -404,7 +427,7 @@ Three corrections this table forces:
   `^enp[0-9]+s[0-9]+` on all Linux nodes, which the control planes' `enp3s0` satisfies. VIP
   announcement is **not** a low-power blocker. (Unlike Technitium's ipvlan NAD — §0.3.)
 - **`matter` sets `hostNetwork: true`.** It runs on whichever node it lands on and needs its
-  ports free there; it has no node pin today. Tier call still open — §9 item 4.
+  ports free there; it has no node pin today. Tier call still open — §9 item 3.
 
 **Tier 2 — dropped in low-power.** Namespaces `equestria` (56 pods: media stack, immich, n8n,
 windmill, romm, …), `github-actions`, `coder`, `database` (CNPG shared postgres + valkey),
@@ -485,7 +508,7 @@ the CNPG cluster reports healthy with 3/3 instances ready. No toleration and no
 `kubectl cnpg destroy` is needed before the §4 flip, and
 [29](29-taint-readiness-audit.md)'s blocker 2 is closed. The reasoning above is preserved
 because it is the general rule — *a strict-local PV on a node about to be tainted is a
-landmine* — and §9 item 7 records the next instance of it (`observability`'s three
+landmine* — and §9 item 6 records the next instance of it (`observability`'s three
 untolerated control-plane pods).
 
 **What quietly pauses, and why that is fine.** `openbao-replica`'s nightly `pg_dump` (03:00)
@@ -531,7 +554,7 @@ several cores:
 **Verdict: it fits, but CPU — not memory — is the tight axis**, which inverts the pre-19
 text's "roughly 2× headroom on both axes." With 24's amendment the trio runs at ~71 % of
 allocatable CPU in requests alone, before any burst, before etcd (a Talos host service,
-invisible to `kubectl top` — §9 item 5), and before the exit-storm write load §6 warns about.
+invisible to `kubectl top` — §9 item 11), and before the exit-storm write load §6 warns about.
 24's "≈7.4 GiB additional" estimate is confirmed as ≈5.5 GiB of requests here; it is the
 **1.23 cores** that deserve the attention.
 
@@ -546,11 +569,31 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 
 ## 4. Placement mechanism — taint, required affinity, PriorityClass (Path A)
 
-> This section designs the **permanent** structural version of low-power. **It is no longer
-> gated** — §0.1 cleared, and [29](29-taint-readiness-audit.md)'s four-command flip gate now
-> passes in full, so the taint itself is safe to apply. What remains here is a build: the
-> tolerations and the PriorityClass that make the taint *useful* rather than merely safe.
+> This section designs the **permanent** structural version of low-power. **Half applied.**
+> §0.1 is cleared, [29](29-taint-readiness-audit.md)'s four-command flip gate passes in full, the
+> `critical-tier` PriorityClass landed in PR #970, and the Tier-0/1 tolerations
+> ([#1001](https://github.com/david-driscoll/home-operations/pull/1001)) **merged and reconciled
+> 2026-08-21**. The taint itself
+> ([#1002](https://github.com/david-driscoll/home-operations/pull/1002)) is **not applied** — the
+> trio carries no taints, so nothing yet stops Tier 2 landing there.
 > §6 Path B still rehearses the mode without any of it.
+
+> ### ⚠ The taint key below is NOT what was built
+>
+> This section was written around a **custom** taint key, `node-role.driscoll.tech/critical`.
+> **The estate went the other way and uses the standard
+> `node-role.kubernetes.io/control-plane:NoSchedule`**, applied by flipping
+> `allowSchedulingOnControlPlanes` to `false` in `talos/patches/controller/cluster.yaml:2` —
+> no `nodeLabels`/`nodeTaints` entry in `talconfig.yaml` at all.
+>
+> The custom-key design below is kept for its reasoning, not as instructions. **Following it
+> verbatim now would be actively harmful**, and once was: PR #764 set Longhorn's
+> `taintToleration` to the custom key and had to be closed on 2026-08-20, because merging it
+> would have replaced the live, `APPLIED: true`
+> `taintToleration: node-role.kubernetes.io/control-plane:NoSchedule` with a key no node will
+> ever carry — stripping Longhorn's real toleration at the exact moment the taint landed.
+>
+> Read `## What was actually built` at the end of this section for the shipped design.
 
 > **Superseded in part by [24-power-states.md](24-power-states.md), 2026-08-13.** Everything
 > here still applies to Tier 0 (DaemonSets — toleration only) and to Tier-1 workloads that
@@ -577,6 +620,11 @@ toleration is the same `taint-toleration` Setting, behind the same all-volumes-d
 Whichever key is chosen, the quiesce window in §0.1 is required. The advantage of a custom key
 is only that it decouples the taint from `allowSchedulingOnControlPlanes`, letting the two land
 in separate changes.
+
+That advantage stopped mattering once §0.1's quiesce window turned out to be bypassable
+(29 §4.4): with the gate gone, there was nothing left to buy by decoupling, and the standard key
+costs nothing to adopt because Kubernetes, Longhorn and every upstream chart already understand
+it. Hence the reversal recorded above.
 
 Every Tier-0 and Tier-1 workload gets **both**:
 
@@ -654,6 +702,96 @@ anything about the others.
 verified 2026-08-19 — the pre-19 text named only Home Assistant). That is a Kubernetes
 system-reserved class handed to three application pods, letting them preempt genuine
 control-plane components on a 4-core node. Move all three to `critical-tier`.
+
+### What was actually built
+
+Tolerations shipped and live 2026-08-21; the taint designed and staged but **not applied**. This
+is the authoritative version; everything above it in §4 is design history.
+
+**The taint** is the stock Kubernetes one, from one line of Talos machine config:
+
+```yaml
+# talos/patches/controller/cluster.yaml
+cluster:
+  allowSchedulingOnControlPlanes: false   # -> node-role.kubernetes.io/control-plane:NoSchedule
+```
+
+`talhelper genconfig` changes exactly that line, and only in the three control-plane configs —
+the four worker configs come out byte-identical, because the field is not rendered for them.
+**This file is not GitOps.** Flux never reads `talos/patches/`; it takes
+`mise run talos:genconfig && mise run talos:apply`.
+
+**The toleration**, on every Tier-0/1 workload:
+
+```yaml
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+```
+
+No `nodeAffinity`. The required affinity designed earlier in this section was **not** built:
+24 §2 moved Tier-1 applications to a float-on-worker model, so pinning them to the trio would
+fight that. A toleration widens where a pod *may* schedule and pins nothing, which is the whole
+behaviour needed — and it is why landing these ahead of the taint changes no placement at all.
+
+**Where the toleration goes differs per chart, and the obvious key is not always right.**
+Verified with `helm template` rather than assumed:
+
+| Workload | Chart | Key |
+|---|---|---|
+| `metrics-server` | metrics-server 3.14.0 | top-level `tolerations` |
+| `kube-downscaler` | py-kube-downscaler 0.3.12 | top-level `tolerations` |
+| `chrony`, `mosquitto`, `unpoller` | app-template 5.1.0 | `controllers.<name>.pod.tolerations` |
+| `equestria-kubeproxy` | Tailscale operator | **a ProxyClass** — see below |
+| Longhorn's system-managed set | longhorn | `defaultSettings.taintToleration` **only** — a pod-spec toleration never reaches them (§0.1) |
+
+**The Tailscale case is the one that surprises.** A `ProxyGroup` has exactly seven spec fields
+(`hostnamePrefix`, `kubeAPIServer`, `proxyClass`, `replicas`, `tags`, `tailnet`, `type`) and
+**no pod-spec fields at all**, so there is no way to give a proxy a toleration by editing its
+manifest. The only route to the operator-generated StatefulSet's pod template is a
+`ProxyClass` referenced by `spec.proxyClass`:
+
+```yaml
+kind: ProxyClass
+metadata:
+  name: control-plane-tolerant
+spec:
+  statefulSet:
+    pod:
+      tolerations: [...]
+```
+
+Check before guessing:
+
+```bash
+kubectl get crd proxygroups.tailscale.com -o json \
+  | jq -r '.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties|keys[]'
+```
+
+`control-plane-tolerant` is deliberately separate from the existing `default` ProxyClass:
+`default` also carries a reloader annotation and its members (`tailnet-inbound`,
+`tailnet-outbound`) are not Tier 1. It does copy `default`'s metrics/serviceMonitor —
+`equestria-kubeproxy` referenced no class at all and therefore had no metrics, which is a poor
+property for the Tier-1 component carrying the tailnet's path to the API server.
+
+**The audit that decides who needs one.** A naive filter counts every DaemonSet as a false
+positive; the two conditions that matter are excluding node-owned pods and treating a blanket
+`operator: Exists` as already-tolerating:
+
+```bash
+kubectl get pods -A -o json | jq -r '
+ .items[]
+ | select(.spec.nodeName|test("milky-way|othalla|pegasus"))
+ | select(.metadata.ownerReferences[0].kind!="Node")
+ | select([.spec.tolerations[]?|select((.key=="node-role.kubernetes.io/control-plane") or (.key==null and .operator=="Exists"))]|length==0)
+ | "\(.metadata.namespace)/\(.metadata.name)"' | sort
+```
+
+Re-run it before acting — placement drifts. **Verified 2026-08-21, after #1001 reconciled:** it
+returns exactly the Tier-2 set (`equestria/{pinepods,teamarr,windmill-*}`,
+`kube-system/openbao-0`, `database/postgres-backup`) and nothing else, whose migration off the
+trio is the point of the taint. That is the go-signal for #1002.
 
 ---
 
@@ -767,22 +905,28 @@ Two runbooks. **Path B is what the first rehearsal uses**, because Path A is gat
 
 | # | Check | State |
 |---|---|---|
-| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **fail as of 2026-08-20** — `shining-armor` is cordoned and stuck at Talos v1.13.8 after a failed `tuppr` batch upgrade (§9 item 3) |
+| 1 | Topology: 3 CP + 4 workers, Ready, untainted, uncordoned | **pass** — re-verified live 2026-08-20 evening: 7 nodes on Talos v1.13.9, all Ready, none cordoned, no taints. `shining-armor` was fixed the same day (see the resolved list in §9) |
 | 2 | etcd: 3 members healthy, no alarms | not re-run this revision |
-| 3 | Zero degraded volumes | **fail** — 4 degraded, all Tier 2 (§5) |
+| 3 | Zero degraded volumes | **pass** — re-verified live 2026-08-20 evening: 0 degraded, 0 faulted, 62 healthy attached. The four Tier-2 degradations recorded in the previous revision have cleared |
 | 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). Tier-0 `kube-system/registry` has 0 — §5 |
 | 5 | Piece 12 landed: default class `bulk`-confined, `longhorn-critical` exists, nodes tagged | **pass** (§0.2) |
 | 6 | Longhorn `taint-toleration` applied + annotation present — Path A only | **pass** (§0.1) |
 | 7 | Flux fully reconciled | **pass** — 0 not-ready, 0 suspended |
 | 8 | DNS answer decided and reachable from a control plane | **pass** — Technitium runs on `milky-way`, verified with `dig` (§0.3) |
-| 9 | alpha-site up and on the battery circuit | **unanswered** (§7) — the check below only proves it is *up* |
+| 9 | alpha-site up and on the battery circuit | **pass** — David confirmed the battery powers alpha-site, 2026-08-20 (§7). The check below still only proves it is *up*; the circuit half is now answered rather than measured |
 
-So the honest count is now **four pass, two fail, one unanswered, one not re-run** — check 8
-(DNS) went green on 2026-08-20 when Technitium cut over, and check 1 went red the same week
-when `shining-armor`'s upgrade failed. The remaining failure is check 3 (four degraded Tier-2 volumes), which is a
-burndown rather than a design gap. Check 4's caveat — Tier-0 `registry` at zero
-control-plane replicas — is not counted as a failure of check 4 as written, but it is §9's
-sharpest storage item and should not be lost in the arithmetic.
+So the honest count is now **eight pass, zero fail, one not re-run** (check 2, etcd). Three
+checks flipped green on 2026-08-20: check 1 when `shining-armor`'s upgrade was fixed and all
+seven nodes reached v1.13.9, check 3 when the last Tier-2 degradations cleared, and check 9 when
+David confirmed alpha-site's power. Check 8 (DNS) went green the same day with the Technitium
+cutover.
+
+**Do not read that as "ready to enter."** The pre-flight measures whether the cluster is
+*healthy enough* to try; it does not measure whether the design is *built*. §4's taint is still
+unapplied, so a window entered today would still have Tier 2 competing for the trio's CPU. And
+check 4's caveat — Tier-0 `registry` at zero control-plane replicas — is not counted as a
+failure of check 4 as written, but it is §9's sharpest storage item and should not be lost in
+the arithmetic.
 
 ```bash
 # 1. Topology: 3 control-plane + 4 <none>, all Ready, no taints, none cordoned
@@ -947,8 +1091,12 @@ hard-hat's talconfig network block is stale and should be corrected by whoever o
 | `fluttershy` | bare metal — WoL or physical button |
 | `kerfuffle` | bare metal — WoL or physical button |
 
-So the WoL question is **three of four workers**, not two. Unverified whether WoL is enabled in
-BIOS on any of them — §9 item 2, and the rehearsal in §8 is where it gets answered.
+So WoL covers **three of four workers**, not two. ~~Unverified whether WoL is enabled in BIOS on
+any of them.~~ **Confirmed by David, 2026-08-20: all three can be started via WoL.** That removes
+the scenario this table existed to price — an exit that needs someone physically at three
+machines — and it means `shining-armor`'s `qm start` is a convenience rather than the only
+guaranteed path back. §8 Stage 3 still exercises WoL on one node before the full rehearsal
+depends on it; that is proof, not investigation.
 
 **Exit sequence:**
 
@@ -1024,7 +1172,7 @@ re-provision and a full base backup over the SATA disk. Decide it before entry, 
 
 ---
 
-## 7. alpha-site — load-bearing during low-power, and the open PoE question
+## 7. alpha-site — load-bearing during low-power, and its power circuit (answered)
 
 [07](07-authentik-to-alpha-site.md) landed 2026-08-16, so alpha-site is not a bystander during
 a low-power window — it is carrying identity for the entire estate. Its Dockge stacks,
@@ -1049,7 +1197,7 @@ and `pecron_device_status` per unit, scraped by alpha-site's own Prometheus, wit
 rules evaluated **there** rather than as an equestria `PrometheusRule` — deliberately, so
 that a mains-loss alert does not depend on the cluster it is warning about.
 
-That is directly load-bearing for this file in two ways. It gives §9 item 11 (the low-power
+That is directly load-bearing for this file in two ways. It gives §9 item 10 (the low-power
 *trigger*) an actual signal to trigger on — `pecron_ac_input_power_watts` falling to zero is
 mains loss, and `pecron_runtime_remaining_seconds` is how long the window can last, which is
 the number D6's "3–4 h+" was estimated rather than measured. And it means a rehearsal can now
@@ -1057,20 +1205,30 @@ record battery draw against the tier list instead of asserting it. Note the AC-c
 rule was deliberately removed in #967 — this is telemetry and alerting, not automation, which
 keeps entry a human decision exactly as this file assumes.
 
-**alpha-site is PoE-powered and whether its PoE switch is on the Pecron circuit is still
-unverified.** This remains the single most important open item — and it is now sharper, not
-softer, because alpha-site is also where the battery telemetry lives. If its switch is not on
-the battery, the estate loses identity, break-glass observability, netboot **and** the only
-instrument that says how much runtime is left, at the same moment.
+**~~alpha-site is PoE-powered and whether its PoE switch is on the Pecron circuit is still
+unverified.~~ ANSWERED by David, 2026-08-20: the battery powers alpha-site.** Since a PoE Pi
+has no other power path, that necessarily puts its PoE switch on the Pecron circuit — the two
+statements are the same statement. This was the single most important open item in this file,
+and it resolves the *good* way.
+
+What that buys: through a grid outage the estate keeps identity (`authentik`), the transit seal
+(`bao-transit`), break-glass Postgres (`bao-standby`), netboot, the independent Gatus/Prometheus
+observer **and** `pecron-monitor` — the only instrument that says how much runtime is left. The
+failure mode this section was written to warn about (cluster up, identity dark) does not apply.
 
 > *"Alpha site is a raspberry pi 4 that is poe powered, so it's downtime is dependent on the
 > PoE switch it is getting powered by."* — [comment-6](https://github.com/david-driscoll/vault/issues/84#issuecomment-5149201734)
 
-If the switch is not on battery, a grid outage takes down identity, break-glass observability
-and netboot at the exact moment the design assumes they are the things still standing. **The
-cluster staying up while identity is dark is a failure of this design, not a success of it.**
-Before the first rehearsal, confirm which UniFi PoE switch feeds `dockge-as` and whether that
-switch's upstream is on the Pecron circuit.
+The reasoning is kept because it still sets the standard: **the cluster staying up while
+identity is dark would be a failure of this design, not a success of it.** That is now a
+property the estate has, not a risk it carries.
+
+**One half of the question remains open, and it is a different half.** §0.3's off-cluster DNS
+redundancy rests on the three Dockge Technitium members hosted on **celestia, luna and skystar**.
+Whether *those three* are on battery has not been answered. It is a materially smaller item than
+the alpha-site one was — losing them degrades resolver redundancy rather than taking out
+identity — but it is the difference between "DNS survives on four members" and "DNS survives on
+the one in-cluster copy." §9 item 4.
 
 **The original Tier-2 reasoning for `observability`, kept for the record.** This file
 originally dropped `observability` to Tier 2 on the grounds that alpha-site's external
@@ -1084,9 +1242,10 @@ exactly why the PoE question above is not softened by 24's amendment.
 ## 8. Rehearsal — without cutting any power
 
 The exit gate is a **real** full-workers-down cycle for the full 3–4 h. But that should not be
-the first thing attempted, because three preconditions are red and two questions (WoL, PoE) are
-unanswered. Rehearse in four stages; each stage is independently useful and none of them
-requires touching mains power.
+the first thing attempted. Both questions that used to gate it — WoL on the bare-metal workers
+and alpha-site's PoE circuit — were answered by David on 2026-08-20 (§6.2, §7), so what is left
+is verification rather than investigation. Rehearse in four stages; each stage is independently
+useful and none of them requires touching mains power.
 
 ### Stage 1 — paper + live read-only (no cluster change at all)
 
@@ -1096,7 +1255,7 @@ after each precondition lands. This stage is what turns §0 from a list into a b
 Additionally, answer by measurement rather than inference:
 
 ```bash
-# etcd's own footprint, invisible to kubectl top (§9 item 5)
+# etcd's own footprint, invisible to kubectl top (§9 item 11)
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10,10.10.209.11,10.10.209.12 \
   service etcd status
 # and its fsync latency, which is the exit-storm risk in §6.2
@@ -1122,8 +1281,8 @@ settle it back.
 
 ### Stage 3 — one worker off, mains power untouched
 
-`talosctl shutdown` **one** worker (`shining-armor` — fewest Tier-1 pods, and the only one that
-can be restarted with `qm start` if WoL turns out not to work). Hold it down for one hour. This
+`talosctl shutdown` **one** worker (`shining-armor` — fewest Tier-1 pods, and restartable with
+`qm start` regardless of what WoL does). Hold it down for one hour. This
 answers, at 1/4 the blast radius:
 
 - Does §5's `nodeDownPoddeletionPolicy` behave as documented (Tier-2 pods `Pending`, not
@@ -1134,8 +1293,12 @@ answers, at 1/4 the blast radius:
 - Does the trio's SATA disk temperature move? `kubectl -n observability` → the
   `smartctl-exporter` series, or the piece-12 numbers as a baseline.
 
-Then power it back on and run §6.2's per-node gates. **That also rehearses the WoL question on
-one node without needing the whole estate down.**
+Then power it back on and run §6.2's per-node gates.
+
+**Run a WoL power-on against one bare-metal worker here too** — `hard-hat`, `fluttershy` or
+`kerfuffle`. David has confirmed all three support it (§6.2); this proves the magic packet
+actually reaches them on the current VLAN, which is the part a BIOS setting does not guarantee.
+Cheaper to find a broken WoL path on one node now than on three during an exit.
 
 ### Stage 4 — the real thing (the gate)
 
@@ -1204,7 +1367,9 @@ Resolved, and left resolved:
   PV pinned there; CNPG healthy 3/3. [29](29-taint-readiness-audit.md)'s blocker 2 is closed
   and no toleration/destroy decision is needed.
 
-Still open, in priority order:
+Still open, in priority order. **Items 4 and 5 are answered but keep their numbers**, struck
+through in place rather than moved to the resolved list above — several sections cross-reference
+"§9 item N", and renumbering has silently broken those references before.
 
 1. **`kube-system/registry` is Tier 0 and has zero control-plane replicas.** §5. It is the
    sharpest storage item now that Tier 1 has moved, and it is a worse tier than the problem
@@ -1212,11 +1377,30 @@ Still open, in priority order:
    from node-local image stores right up until something crash-loops, which is exactly the
    case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
    down explicitly that the window accepts no registry.
-2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.** The single
-   remaining piece of this design. [29](29-taint-readiness-audit.md)'s gate is green, so the
-   flip itself is safe; the `critical-tier` PriorityClass and the three
-   `system-cluster-critical` corrections landed in PR #970. `allowSchedulingOnControlPlanes`
-   is still `true` (`talos/patches/controller/cluster.yaml:2`) and the trio carries no taints.
+2. **Build §4's remaining half: Tier-0/1 tolerations and the taint flip.** **Built 2026-08-20;
+   in review, not yet applied.** Split into two PRs deliberately, because the halves apply by
+   different mechanisms and must be sequenced:
+
+   * **[#1001](https://github.com/david-driscoll/home-operations/pull/1001) — tolerations.**
+     **Merged and reconciled 2026-08-21**; all six verified live carrying the key, and the audit
+     filter now returns only the Tier-2 set. Covers the six workloads in the audit table below. `equestria-kubeproxy` needed a
+     new `control-plane-tolerant` ProxyClass: a Tailscale `ProxyGroup` exposes no pod-spec
+     fields of its own, so `spec.proxyClass` is the only route to its StatefulSet's pod
+     template.
+   * **[#1002](https://github.com/david-driscoll/home-operations/pull/1002) — the flip.** Draft
+     on purpose. `talos/patches/` is **not** GitOps — Flux never reads it, so it needs
+     `mise run talos:genconfig && mise run talos:apply` by hand. Merging it before applying
+     would leave the repo claiming a taint the cluster does not have.
+
+   [29](29-taint-readiness-audit.md)'s four-command gate re-verified live 2026-08-20 — all four
+   pass. The `critical-tier` PriorityClass and the three `system-cluster-critical` corrections
+   landed earlier in PR #970. Until #1002 is applied, `allowSchedulingOnControlPlanes` is still
+   `true` (`talos/patches/controller/cluster.yaml:2`) and the trio carries no taints.
+
+   PR #764 (`taintToleration` set to the custom `node-role.driscoll.tech/critical` key) was
+   **closed** the same day: the estate went with the standard `node-role.kubernetes.io/control-plane`
+   key instead, and that value is live and `APPLIED: true`, so merging #764 would have stripped
+   Longhorn's real toleration exactly as the taint landed.
 
    What is left is the tolerations that make the taint *useful* rather than merely safe.
    Audited live 2026-08-20 — pods on the trio that carry **neither** the explicit
@@ -1245,13 +1429,26 @@ Still open, in priority order:
    `matter` (`hostNetwork`, shares `${AUTOMATION_VIP}`) and `tsiam` have never been
    tier-assigned explicitly. None of these blocks anything; all of them make §6.0's check 4
    ambiguous until written down.
-4. **Is alpha-site's PoE switch on the battery circuit?** §7. Needs David. Unchanged in
-   priority — it determines whether entering the window is *worth* it, not whether it is
-   possible. **Now joined by a second, identical question:** are `celestia`, `luna` and
-   `skystar` on battery? §0.3's off-cluster DNS redundancy is only real if they are.
-5. **WoL on `hard-hat`, `fluttershy` and `kerfuffle`** — three bare-metal workers (§6.2).
-   Unverified whether WoL is enabled in BIOS or reachable. §8 Stage 3 answers it one node at
-   a time.
+4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
+   the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
+   too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
+   independent Gatus/Prometheus observer and `pecron-monitor` through a grid outage — §7. This
+   was the item that determined whether entering a window is *worth* it, and it resolves the
+   good way.
+
+   **The second half of this item is still open and is a different question:** are `celestia`,
+   `luna` and `skystar` on battery? §0.3's off-cluster DNS redundancy — the three Dockge
+   Technitium members — is only real if they are. Materially smaller than the alpha-site half
+   was: losing them degrades resolver redundancy rather than taking out identity.
+5. ~~**WoL on `hard-hat`, `fluttershy` and `kerfuffle`**~~ — three bare-metal workers (§6.2).
+   **ANSWERED by David 2026-08-20: all three can be started via WoL.** That retires the exit
+   scenario this was priced against — someone physically at three machines — and demotes
+   `shining-armor`'s `qm start` from "the only guaranteed path back" to a convenience.
+
+   What remains is proof rather than investigation: a BIOS setting does not guarantee the magic
+   packet reaches the node on the current VLAN. §8 Stage 3 now exercises one WoL power-on
+   alongside the single-worker shutdown, and §8 Stage 4's checklist still records the path each
+   worker actually came back by.
 6. **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
    keeps `observability` up during Battery, but live today `kube-state-metrics`,
    `prometheus-operator` and `unpoller` run on the trio with **no** control-plane toleration.
