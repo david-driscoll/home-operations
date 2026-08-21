@@ -98,6 +98,18 @@ spec:
       - observability
       - pulumi
 
+    # This controller IS the Low Power shed mechanism, and Battery is entered
+    # *from* Low Power -- so it has to be placeable on a control plane, or the
+    # one thing that sheds Tier 2 is itself the first casualty of the taint.
+    # Chart 0.3.12 renders .Values.tolerations into the Deployment pod spec --
+    # verified with `helm template`.
+    # See docs/cluster-consolidation/24-power-states.md and
+    # docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
     resources:
       requests:
         cpu: 25m
