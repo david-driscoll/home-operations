@@ -32,10 +32,14 @@ workloads carry the toleration; the §4 audit returns exactly the Tier-2 set and
 Post-flip verification (29 §7) passed clean: no `FailedScheduling` events, nothing newly
 `Pending`, every DaemonSet that covered 7 nodes still covers 7, 0 degraded and 0 faulted volumes,
 Flux 0 not-ready. `mosquitto-0` is running on `othalla` — a tainted control plane — which is the
-positive proof that the tolerations work rather than merely being present. David answered both questions on 2026-08-20: **the battery powers
-alpha-site** (§7) and **all three bare-metal workers can be started by WoL** (§6.2). One narrower
-question replaced them — whether `celestia`, `luna` and `skystar` are on battery, which sizes
-§0.3's off-cluster DNS redundancy rather than deciding whether the window works (§9 item 4).
+positive proof that the tolerations work rather than merely being present.
+
+**Every hardware question in this file is now closed**, all answered by David on 2026-08-20/21:
+the battery powers **alpha-site**; all three bare-metal workers can be started by **WoL** (§6.2);
+**celestia and luna are on battery** and **skystar is remote**; and **the network and the Internet
+uplink are on the battery too** (§7). What is left is measurement, not enquiry — the battery
+carries more than the three control planes D6's "3–4 h+" was reasoned about, and
+`pecron_runtime_remaining_seconds` reports the truth (§8).
 
 The 2026-08-19 revision said "the remaining work is a build, not a wait." That build is done and
 applied. The honest reading now is **"a storage burndown, then rehearse"** — §9 items 1 and 8 are
@@ -338,10 +342,9 @@ of redundancy**, not a DNS outage. That does not argue against the move; it argu
 move is an improvement to make calmly rather than a fire to put out. It does add one
 question to §7's list: **the three Dockge resolvers only help during a battery window if
 celestia, luna and skystar are themselves powered.** **Answered by David 2026-08-21:
-`celestia` and `luna` are on battery; `skystar` is not, and is remote.** §7 has what that
-actually buys — the short version is that resolver redundancy during a local outage is **four
-members, not one**, and the failure mode it does not cover is a loss of local network egress
-rather than a loss of power.
+`celestia` and `luna` are on battery; `skystar` is not, and is remote — and the network and
+Internet uplink are on the battery too, so the remote member is reachable.** Resolver redundancy
+during a local outage is therefore **four members, not one**, with no reachability caveat. §7.
 
 ### 0.4 — Confirm before entry (unchanged in kind, refreshed live)
 
@@ -1295,18 +1298,36 @@ survival is not a function of how long the Pecron lasts. A battery that runs fla
 three with it; `skystar` is unaffected by that failure mode, which makes it the most valuable of
 the three off-cluster members rather than the weakest.
 
-**The caveat is reachability, not power.** `skystar` is only useful during a local outage if the
-local network path to it survives — router, modem/ONT and the tailnet egress. Those are not
-on the Pecron circuit as far as this file knows, and nothing here has verified them. So the honest
-statement is: three resolvers survive on battery, and a fourth survives the outage entirely but is
-reachable only while local egress does.
+~~**The caveat is reachability, not power.**~~ **Answered by David the same day: the network is
+on the batteries as well, and the Internet uplink is itself PoE-powered from the battery.** The
+caveat does not apply — `skystar` is reachable, and all four resolvers are genuinely available for
+the duration of a window.
 
-**That reframes the next question rather than closing the topic.** The open item is no longer
-"are the DNS hosts powered" — they are — it is **"is the local network gear on the Pecron
-circuit?"** If it is not, a grid outage takes the tailnet, `skystar`, and every remote name with
-it, while the cluster and its three local resolvers keep running perfectly. That is a bigger
-question than DNS: it also decides whether alpha-site's off-site telemetry and any remote access
-to the estate survive the window. §9 item 4.
+**This is the last hardware unknown in this file, and it closes the good way.** What it buys is
+larger than DNS:
+
+| Capability during a window | Depends on | Status |
+|---|---|---|
+| four Technitium resolvers, including the remote one | local network path | ✅ on battery |
+| alpha-site's Gatus/Prometheus reaching the outside | Internet uplink | ✅ PoE from battery |
+| the mains-loss alert actually reaching David | Internet uplink | ✅ |
+| driving §6's runbook remotely rather than at the rack | tailnet egress | ✅ |
+| `pecron_runtime_remaining_seconds` readable off-site | Internet uplink | ✅ |
+
+The last two matter more than they look. A runbook-driven posture that can only be driven *from
+the house* is a different and worse product than one that can be driven from anywhere — and
+battery telemetry that goes dark exactly when the battery becomes interesting would have been
+self-defeating.
+
+**The cost, and it is real: the battery is carrying more than the cluster.** D6's "3–4 h+" figure
+was reasoned about the three control planes. The Pecron is also feeding alpha-site, the PoE
+switch, the network gear and the Internet uplink. None of those is large next to three servers,
+but the runtime budget is shared and the figure was never measured.
+
+That is now a **measurement rather than an unknown**, because `pecron-monitor` publishes
+`pecron_runtime_remaining_seconds` against the real draw. §8 Stage 1 should record it at idle and
+Stage 4 its slope across the window — the number to trust is the one the battery reports, not the
+one this file estimated. §9 item 4.
 
 **The original Tier-2 reasoning for `observability`, kept for the record.** This file
 originally dropped `observability` to Tier 2 on the grounds that alpha-site's external
@@ -1327,8 +1348,9 @@ useful and none of them requires touching mains power.
 
 ### Stage 1 — paper + live read-only (no cluster change at all)
 
-Run §6.0's nine pre-flight commands and record the output. Today five of nine fail. Re-run
-after each precondition lands. This stage is what turns §0 from a list into a burndown.
+Run §6.0's nine pre-flight commands and record the output. **As of 2026-08-21 eight of nine
+pass and none fail** (check 2, etcd, has not been re-run) — see §6.0. Re-run before entry
+regardless; this stage is what turns §0 from a list into a burndown.
 
 Additionally, answer by measurement rather than inference:
 
@@ -1340,6 +1362,24 @@ talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10,10.10.209
 kubectl -n observability exec deploy/grafana -- true   # then query:
 #   histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
 ```
+
+**And record the battery's own baseline, which is the number D6 never had.** Now that §7's power
+questions are answered, the Pecron is known to be carrying the three control planes, alpha-site,
+the PoE switch, the network gear *and* the Internet uplink — a larger load than the "3–4 h+"
+figure was reasoned about. `pecron-monitor` measures it, so this stops being an estimate:
+
+```promql
+# on alpha-site's Prometheus (deliberately not in-cluster -- §7)
+pecron_ac_input_power_watts        # > 0 = on mains; the mains-loss signal is this hitting 0
+pecron_runtime_remaining_seconds   # the real answer to "how long can a window last"
+pecron_battery_percent
+```
+
+Record `pecron_runtime_remaining_seconds` at idle here, on mains, with everything up. It is the
+ceiling: a window can never last longer than the figure reported while the workers are *still
+running*, so if that number is already near 3–4 h at full load, the design's headroom is thinner
+than D6 assumed. Stage 4 then records the slope with the workers actually off, which is the
+number that matters. §9 item 11.
 
 ### Stage 2 — scheduling dry-run (reversible in seconds, no node powered off)
 
@@ -1521,12 +1561,17 @@ through in place rather than moved to the resolved list above — several sectio
    the battery) and skystar (a different site and grid, so unaffected by the battery running
    flat). §7 has the table.
 
-   **Replaced by a sharper question this file cannot answer either: is the local network gear —
-   router, modem/ONT, the tailnet egress path — on the Pecron circuit?** `skystar` is only
-   reachable during a window if it is, and so is alpha-site's off-site telemetry and any remote
-   access to the estate. If the answer is no, a grid outage takes the tailnet and every remote
-   name with it while the cluster and its three local resolvers run perfectly. This is now the
-   last hardware unknown in the file, and it is broader than DNS.
+   ~~**Replaced by a sharper question: is the local network gear on the Pecron circuit?**~~
+   **ANSWERED by David 2026-08-21: the network is on the batteries as well, and the Internet
+   uplink is itself PoE-powered from the battery.** `skystar` is reachable, alpha-site's off-site
+   telemetry and mains-loss alerting work, and §6's runbook can be driven remotely rather than at
+   the rack. **Every hardware question in this file is now closed.** §7 has the table.
+
+   What replaces it is not a question but a **measurement**: the battery carries the cluster,
+   alpha-site, the PoE switch, the network and the uplink, so D6's "3–4 h+" — reasoned about three
+   control planes alone — is an estimate against a larger load than it assumed.
+   `pecron_runtime_remaining_seconds` measures the real thing. §8 Stage 1 records it at idle,
+   Stage 4 its slope. Folded into item 11's measurement work rather than kept as an open question.
 5. ~~**WoL on `hard-hat`, `fluttershy` and `kerfuffle`**~~ — three bare-metal workers (§6.2).
    **ANSWERED by David 2026-08-20: all three can be started via WoL.** That retires the exit
    scenario this was priced against — someone physically at three machines — and demotes
