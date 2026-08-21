@@ -204,7 +204,7 @@ eleven are keep — so the mechanism below cannot be namespace-granular alone.
 | dispatcharr | `Deployment/dispatcharr` | `equestria` |
 | xcproxy | `Deployment/xcproxy` | `equestria` |
 | namespace `coder` | whole namespace | `coder` |
-| namespace `github-actions` | whole namespace | `github-actions` |
+| ~~namespace `github-actions`~~ | **removed from the keep-list 2026-08-21** — David: CI is safe to scale down and can wait out a window. It is a **shed** namespace; Low Power entry annotates it alongside `equestria` | `github-actions` |
 | watch-state | **not deployed** — no matching workload live | — |
 | strmgen | **not deployed** — no matching workload live | — |
 
@@ -265,10 +265,27 @@ silently doesn't survive Low Power") is the default.
 
 ```bash
 # enter Low Power
-kubectl annotate namespace equestria downscaler/force-downtime=true --overwrite
+for ns in equestria github-actions; do
+  kubectl annotate namespace "$ns" downscaler/force-downtime=true --overwrite
+done
 # leave Low Power
-kubectl annotate namespace equestria downscaler/force-downtime=false --overwrite
+for ns in equestria github-actions; do
+  kubectl annotate namespace "$ns" downscaler/force-downtime=false --overwrite
+done
 ```
+
+`github-actions` joined the shed list on 2026-08-21 (David: CI is safe to scale down). **Shedding
+it is partial, and worth knowing before relying on it** — a dry-run scan named exactly two
+workloads, `gha-arc-controller` and `onepassword-syndicates`. The four `AutoscalingRunnerSet` CRs
+are untouched: `actions.github.com` is not a kind py-kube-downscaler handles
+(`--include-resources` is deployments, statefulsets, cronjobs, scaledobjects), and the ARC
+listener runs as a bare Pod owned by an `AutoscalingListener` CR rather than a Deployment.
+
+So stopping the controller means **no new runners are created**, but `littles-tech-runners` and
+`littles-tech-release-runners` both carry `minRunners: 1` and any in-flight `EphemeralRunner` pods
+run to completion. If a window needs the runners genuinely gone rather than merely not
+replenished, that needs `minRunners: 0` on those two sets — a separate change, and a decision
+about whether CI should be able to start at all mid-window.
 
 No Git commit, no Flux reconcile cycle, one command per shed namespace. The original replica
 count is stored on each workload as `downscaler/original-replicas`
@@ -423,12 +440,16 @@ survived the namespace `force-downtime` because they carry `downscaler/exclude: 
 
 - `dynacat` and `dynacat-equestria-glance` were **shed**. Keep-list, unannotated — see the
   keep-list section for why the "cannot be annotated from this repo" premise was wrong.
-- `coder`, `github-actions` and `database` were **not** in `excludedNamespaces`. The first two
-  are keep-list namespaces; `database` is not on the written keep-list but every keep-list app
-  depends on it — CNPG's Postgres is operator-managed and invisible to the downscaler, but
-  `valkey` is a plain Deployment and `postgres-backup` a CronJob, so shedding `database` would
-  pull the cache and the nightly backup out from under Plex/Immich/n8n/FreshRSS while those keep
-  running.
+- `coder` and `database` were **not** in `excludedNamespaces`. `coder` is a keep-list namespace;
+  `database` is not on the written keep-list but every keep-list app depends on it — CNPG's
+  Postgres is operator-managed and invisible to the downscaler, but `valkey` is a plain Deployment
+  and `postgres-backup` a CronJob, so shedding `database` would pull the cache and the nightly
+  backup out from under Plex/Immich/n8n/FreshRSS while those keep running.
+
+  `github-actions` was in the same first cut of that fix and was **taken back out** the same day:
+  David confirmed CI is safe to scale down, so it is a shed namespace rather than a keep-list one.
+  A second dry-run scan against it named exactly `gha-arc-controller` and `onepassword-syndicates`
+  — see "Mechanism" for why that is a partial shed.
 
 Neither would have been caught by reading the manifests, and neither is visible until the toggle
 is thrown. **That is the argument for running the dry-run as its own step rather than as the
