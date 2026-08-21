@@ -7,7 +7,23 @@ service:
 serviceMonitor:
   enabled: true
 spegel:
-  appendMirrors: true
+  # Keep Talos' own mirror config and PREPEND spegel to it, rather than replacing
+  # it. Without this, spegel moves every per-registry hosts.toml into
+  # `/etc/cri/conf.d/hosts/_backup/` and writes a `_default/hosts.toml` naming
+  # only itself — so `talos/patches/global/machine-registries.yaml` is not in the
+  # pull path at all, and the in-cluster zot cache is never consulted. That was
+  # live until 2026-08-21, and zot's catalog was empty as a result.
+  #
+  # This key WAS `appendMirrors: true`, which does not exist in this chart —
+  # `helm show values` and `helm template` both return zero occurrences at
+  # 0.7.4, so it was silently dropped and the rendered arg stayed
+  # `--prepend-existing=false`. The intent was right and the name was wrong;
+  # `prependExisting` is what the chart actually reads.
+  #
+  # Order that results: spegel (peer nodes, 200ms dial timeout) -> zot -> zot via
+  # its ingress -> upstream. Each hop is a fallback for the one before it, so a
+  # pull still succeeds with any of them down.
+  prependExisting: true
   logLevel: "DEBUG"
   debugWebEnabled: true
   containerdSock: /run/containerd/containerd.sock
