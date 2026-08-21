@@ -455,12 +455,32 @@ Still open, in priority order:
    alerting, not automation. That is the right split for a runbook-driven posture: the
    signal is now measurable, and entering remains a human decision.
 3. **`observability`'s control-plane pods carry no control-plane toleration.** §1 of this
-   file is what keeps `observability` up during Battery, and live 2026-08-19
-   `kube-state-metrics`, `prometheus-operator` and `unpoller` all run on the trio **without**
-   the toleration. Once [20](20-low-power-tier.md) §4's taint lands they keep running but
-   cannot be recreated there — the same delayed-landmine shape `postgres-3` used to have.
-   This file's amendment is what creates the obligation, so it is this file's item: they need
-   the toleration in the same change as the flip. Tracked as 20 §9 item 7.
+   file is what creates the problem: keeping `observability` up during Battery means its
+   workloads must survive on a tainted control plane, and today they would not be
+   rescheduled there.
+
+   **Re-audited live 2026-08-20**, and the finding is narrower but not smaller than it was.
+   Filtering correctly for a blanket `operator: Exists` — which is what makes the whole
+   DaemonSet fleet (`node-exporter`, `smartctl-exporter`, `cilium`, `spegel`, `csi-nfs-node`)
+   a non-issue — `observability` is down to **one** genuinely untolerated control-plane pod,
+   `unpoller`. `kube-state-metrics` and `prometheus-operator` no longer run on the trio.
+
+   But the same audit found the problem is **not** confined to `observability`, which is how
+   this item was framed: `kube-system/metrics-server` (Tier 0), `stargate-command/chrony-0`,
+   `stargate-command/mosquitto-1` and `tailscale-system/equestria-kubeproxy-1` (all Tier 1)
+   are in exactly the same position. The full table now lives in
+   [20](20-low-power-tier.md) §9 item 2, which owns the toleration work; this item is
+   folded into it and kept here only because 24 §1's amendment is what puts `unpoller` on
+   the list at all.
+
+   One new entry that belongs to *this* file rather than 20: **`kube-downscaler` itself has
+   no control-plane toleration.** It is the Low Power shed mechanism, so it must run in Low
+   Power — but it is useless in Battery, where everything it would shed is already gone.
+   That is a deliberate call this file has not made: give it the toleration and let it ride
+   through both states, or accept that it stops at Battery entry. Recommend the toleration,
+   on the grounds that Battery is entered *from* Low Power and a controller that dies on the
+   transition cannot restore replica counts on the way back out.
+
 4. **Fresh capacity measurement** including `observability` + `pulumi` staying up in Battery.
    [20](20-low-power-tier.md) §3 costed the amendment at **+1.23 cores / +5.49 GiB**, taking
    the trio to ~71 % of allocatable CPU in requests alone — confirming this file's "≈7.4 GiB"
