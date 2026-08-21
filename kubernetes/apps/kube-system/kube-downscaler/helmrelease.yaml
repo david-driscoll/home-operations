@@ -71,11 +71,24 @@ spec:
     arguments:
       - --interval=60
       - --include-resources=deployments,statefulsets,cronjobs,scaledobjects
-      # SAFETY: remove this line only after reading a full scan in the logs and
-      # confirming the would-be actions match the intended shed-list. Until then this
-      # controller reports and does not act. Leaving it here permanently is the other
-      # failure mode: the toggle would be flipped and nothing would happen.
-      - --dry-run
+      # `--dry-run` was REMOVED 2026-08-21, after two scans confirmed the shed-list
+      # matched the design. The condition its SAFETY note set -- "remove this line only
+      # after reading a full scan in the logs and confirming the would-be actions match
+      # the intended shed-list" -- was met:
+      #
+      #   scan 1: 40 workloads, all in `equestria`, 9 of 11 keep-list survived. Found
+      #           dynacat unannotated and three namespaces missing from the exclude
+      #           list -- both fixed in #1005.
+      #   scan 2: 40 workloads, 38 `equestria` + 2 `github-actions`, ALL 11 keep-list
+      #           entries survived, `coder`/`database` untouched. Replica counts and
+      #           CronJob suspend flags byte-identical before and after, cluster-wide.
+      #
+      # Removing it does NOT make this controller start acting. Scope is opt-out but
+      # ACTION is inert: with no DEFAULT_UPTIME/DEFAULT_DOWNTIME set, upstream defaults
+      # are `always`/`never`, so nothing is scaled until a namespace carries
+      # `downscaler/force-downtime`. What changes is that the toggle now works -- which
+      # is the point, and is also why a mistyped `kubectl annotate` is no longer
+      # harmless. That is what `excludedNamespaces` below is for.
 
     # Tier 0 and Tier 1 (docs/cluster-consolidation/20-low-power-tier.md §1) can never be
     # shed. They are never annotated with force-downtime either, so this list is

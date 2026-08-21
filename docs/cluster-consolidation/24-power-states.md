@@ -22,9 +22,11 @@ in the keep-list found that no amount of reading the manifests would have surfac
 See "Exercised 2026-08-21". Battery's half is further along still — [20](20-low-power-tier.md) §4
 is applied, so the control planes are tainted and the Tier-0/1 tolerations are live.
 
-What is left before Low Power is rehearsable rather than merely runnable: take `--dry-run` off
-(after #1005, so the re-run shows eleven survivors rather than nine), decide open item 1, and
-measure the Low-Power-specific capacity in open item 4.
+**`--dry-run` is off as of 2026-08-21**, after a second scan showed all eleven keep-list entries
+surviving and nothing moving cluster-wide. The mechanism is armed: annotating `equestria` and
+`github-actions` with `downscaler/force-downtime` now genuinely sheds. What is left before Low
+Power is *rehearsable* rather than merely runnable: decide open item 1, measure the
+Low-Power-specific capacity in open item 4, and settle which hosts are "power-hungry" in item 5.
 
 ### Revision, 2026-08-19 — two of the three unknowns are now known
 
@@ -455,9 +457,20 @@ Neither would have been caught by reading the manifests, and neither is visible 
 is thrown. **That is the argument for running the dry-run as its own step rather than as the
 first minute of a real window.**
 
-**Still `--dry-run`.** The scan is now clean and reviewable; removing the flag is the next
-decision, and it should be taken after #1005 lands so the re-run shows eleven survivors rather
-than nine.
+**Scan 2, after #1005 reconciled — the gate for arming it.** Same method, both shed namespaces
+annotated at once:
+
+- **40 workloads: 38 `equestria` + 2 `github-actions`.**
+- **All eleven keep-list entries survived**, `dynacat` and `dynacat-equestria-glance` included.
+- `coder` and `database` appeared nowhere.
+- Replica counts and CronJob suspend flags byte-identical before and after, **cluster-wide** this
+  time rather than just `equestria`.
+
+**`--dry-run` removed 2026-08-21** on the strength of that. Note what this does and does not do:
+it does **not** make the controller start acting, because action is still inert
+(`--default-uptime=always` / `--default-downtime=never`, no schedule set). What changes is that
+the toggle now works. The corollary is that a mistyped `kubectl annotate` is no longer harmless,
+which is exactly what `excludedNamespaces` is for.
 
 ### Node shutdown
 
