@@ -71,7 +71,7 @@ spec:
     arguments:
       - --interval=60
       - --include-resources=deployments,statefulsets,cronjobs,scaledobjects
-      # NIGHTLY LOW POWER — 02:00-09:00 America/New_York, every day.
+      # NIGHTLY LOW POWER — 02:00-09:00 estate-local time, every day.
       #
       # This is the Low Power tier of docs/cluster-consolidation/24-power-states.md
       # on a schedule rather than a manual toggle. It sheds Tier 2 only: the
@@ -90,9 +90,20 @@ spec:
       #   * end must be later than start in 24-hour time.
       # Comma-separate for more windows; `Mon-Sun` is every day.
       #
+      # ${TIMEZONE} comes from the `shared-secrets` Secret and is the estate's
+      # single source of truth for local time (America/New_York today). It is
+      # substituted here rather than hardcoded so this window and the Gatus
+      # maintenance windows that mirror it can never drift apart.
+      #
+      # This resolves because components/common patches child Kustomizations to
+      # add `shared-secrets` to substituteFrom -- verified on the LIVE
+      # kube-downscaler Kustomization, not just inferred from the component.
+      # A postBuild variable that does not resolve makes the Kustomization fail
+      # rather than render an empty string, so a regression here is loud.
+      #
       # The manual `downscaler/force-downtime` namespace toggle still works on
       # top of this for an ad-hoc window outside the nightly one.
-      - --default-downtime=Mon-Sun 02:00-09:00 America/New_York
+      - --default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}
       # `--dry-run` was REMOVED 2026-08-21, after two scans confirmed the shed-list
       # matched the design. The condition its SAFETY note set -- "remove this line only
       # after reading a full scan in the logs and confirming the would-be actions match
