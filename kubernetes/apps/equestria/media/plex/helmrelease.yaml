@@ -95,10 +95,14 @@ spec:
                 # contended for GPU time and it read as a CPU shortage. Observed
                 # steady state is single-digit millicores.
                 #
-                # It was also the hard blocker on control-plane placement -- 6
-                # cores exceeds a control plane's 3950m of allocatable CPU
-                # outright, so the scheduler could never place this there no
-                # matter what else was tuned.
+                # This survives the 2026-08-22 revert of the media relocation
+                # even though the memory cut made in the same PR did not. The
+                # two had different causes: the memory limit was cut only to fit
+                # a 16GB control plane, which is no longer a requirement,
+                # whereas the CPU request was measured against the wrong
+                # bottleneck and is equally wrong on a 64GB worker. CPU is also
+                # compressible, so unlike a memory limit this cannot OOM
+                # anything.
                 #
                 # No cpu limit on purpose: CPU is compressible, so without a
                 # ceiling this takes whatever the node has spare and throttles
@@ -106,23 +110,24 @@ spec:
                 # while cores sit idle. The request is what sets that
                 # proportional share, and what the scheduler reserves.
                 cpu: 1
-                # 1Gi requested / 4Gi limit, down from 4Gi / 8Gi.
+                # ⚠️  4Gi request / 8Gi limit, BOTH restored to their original
+                # values. Both were cut on 2026-08-22 (to 1Gi / 4Gi) for one
+                # reason only: to make this pod fit alongside etcd on a 16GB
+                # control plane during the overnight media relocation. That
+                # relocation is reverted -- plex stays on the media workers,
+                # which have 64GB -- so the constraint that forced the cut is
+                # gone.
                 #
-                # The old numbers were sized for a 64GB worker. The control
-                # planes are 16GB and also run etcd, so an 8Gi limit there is a
-                # large share of one node for a process that idles far below it:
-                # plex sits around 480Mi and jellyfin around 1.8Gi in steady
-                # state. 4Gi is roughly 8x plex's observed draw and a bit over
-                # 2x jellyfin's -- headroom for library scans and transcode
-                # buffers without reserving a quarter of a control plane.
-                #
-                # Requests are what the scheduler reads, so dropping plex's to
-                # 1Gi is what makes stacking it alongside the existing ~6.4Gi of
-                # control-plane workload viable at all.
-                memory: 1Gi
+                # The 4Gi limit was sized from IDLE usage (~482Mi) rather than
+                # PEAK, and plex was OOMKilled in production the same evening:
+                # exit 137 at 2026-08-22T18:52:15Z, ~65 minutes after start.
+                # Plex spikes hard during library scans and transcodes, so a
+                # steady-state reading says nothing about the ceiling it needs.
+                # Do not size a media memory limit off idle again.
+                memory: 4Gi
               limits:
                 gpu.intel.com/i915: 1
-                memory: 4Gi
+                memory: 8Gi
     defaultPodOptions:
       securityContext:
         runAsUser: 568
@@ -132,9 +137,6 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       affinity:
         nodeAffinity:
-          # HARD: must land on a node with an Intel iGPU. Both the media workers
-          # and the control planes carry this label, so this constrains the app
-          # to GPU-bearing nodes without deciding which tier.
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
@@ -142,39 +144,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-          # SOFT: prefer the media workers, whose iGPU is far stronger (Iris Xe,
-          # 96 EU) than the control planes' (Alder Lake-N, 24 EU).
-          #
-          # 46a6 is the worker device ID; the control planes are 46d4. This must
-          # stay PREFERRED and never become required -- the whole point is that
-          # when both media workers are shed overnight the preference becomes
-          # unsatisfiable and the pod schedules on a control plane anyway. A
-          # required term here would leave it Pending until 09:00.
-          #
-          # It is also what brings the pod home. The descheduler runs
-          # RemovePodsViolatingNodeAffinity with
-          # nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution,
-          # so once the workers return the pod is violating this preference and
-          # gets evicted back onto one. Without this block there is nothing to
-          # violate, and the pod would squat on a scarce control-plane GPU slot
-          # indefinitely. The two halves are a pair -- see
-          # kubernetes/apps/kube-system/descheduler/helmrelease.yaml.
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                - key: gpu.intel.com/device-id.0300-46a6.present
-                  operator: In
-                  values:
-                  - "true"
-      # Required for the overnight relocation: the control planes carry the
-      # NoSchedule taint from piece 20 §4, and a toleration only PERMITS
-      # placement -- it does not attract it. The soft affinity above is what
-      # keeps this on a worker while one is available.
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
 
     service:
       app:

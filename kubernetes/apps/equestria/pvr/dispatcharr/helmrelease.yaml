@@ -134,9 +134,6 @@ spec:
     defaultPodOptions:
       affinity:
         nodeAffinity:
-          # HARD: must land on a node with an Intel iGPU. Both the media workers
-          # and the control planes carry this label, so this constrains the app
-          # to GPU-bearing nodes without deciding which tier.
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
@@ -144,39 +141,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-          # SOFT: prefer the media workers, whose iGPU is far stronger (Iris Xe,
-          # 96 EU) than the control planes' (Alder Lake-N, 24 EU).
-          #
-          # 46a6 is the worker device ID; the control planes are 46d4. This must
-          # stay PREFERRED and never become required -- the whole point is that
-          # when both media workers are shed overnight the preference becomes
-          # unsatisfiable and the pod schedules on a control plane anyway. A
-          # required term here would leave it Pending until 09:00.
-          #
-          # It is also what brings the pod home. The descheduler runs
-          # RemovePodsViolatingNodeAffinity with
-          # nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution,
-          # so once the workers return the pod is violating this preference and
-          # gets evicted back onto one. Without this block there is nothing to
-          # violate, and the pod would squat on a scarce control-plane GPU slot
-          # indefinitely. The two halves are a pair -- see
-          # kubernetes/apps/kube-system/descheduler/helmrelease.yaml.
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                - key: gpu.intel.com/device-id.0300-46a6.present
-                  operator: In
-                  values:
-                  - "true"
-      # Required for the overnight relocation: the control planes carry the
-      # NoSchedule taint from piece 20 §4, and a toleration only PERMITS
-      # placement -- it does not attract it. The soft affinity above is what
-      # keeps this on a worker while one is available.
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
     service:
       app:
         controller: app
