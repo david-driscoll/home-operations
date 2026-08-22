@@ -71,6 +71,28 @@ spec:
     arguments:
       - --interval=60
       - --include-resources=deployments,statefulsets,cronjobs,scaledobjects
+      # NIGHTLY LOW POWER — 02:00-09:00 America/New_York, every day.
+      #
+      # This is the Low Power tier of docs/cluster-consolidation/24-power-states.md
+      # on a schedule rather than a manual toggle. It sheds Tier 2 only: the
+      # eleven keep-list workloads carry `downscaler/exclude: "true"` in Git and
+      # survive, because `define_scope` short-circuits on exclude BEFORE any
+      # uptime/downtime is evaluated (scaler.py:97) — the same precedence that
+      # makes the manual toggle safe, verified by two live dry-run scans.
+      #
+      # It does NOT power any node off. Node shutdown is 24's other half and
+      # needs a different mechanism; this is workloads only.
+      #
+      # FORMAT CONSTRAINTS, both load-bearing:
+      #   * a spec cannot cross midnight — the downscaler only interprets ranges
+      #     within a single day, so `22:00-06:00` would be silently wrong. 02:00
+      #     to 09:00 is same-day, which is why this window works as written.
+      #   * end must be later than start in 24-hour time.
+      # Comma-separate for more windows; `Mon-Sun` is every day.
+      #
+      # The manual `downscaler/force-downtime` namespace toggle still works on
+      # top of this for an ad-hoc window outside the nightly one.
+      - --default-downtime=Mon-Sun 02:00-09:00 America/New_York
       # `--dry-run` was REMOVED 2026-08-21, after two scans confirmed the shed-list
       # matched the design. The condition its SAFETY note set -- "remove this line only
       # after reading a full scan in the logs and confirming the would-be actions match
@@ -115,6 +137,12 @@ spec:
       # `force-downtime`, so listing it only makes a mistyped `kubectl annotate`
       # inert.
       - coder
+      # `system-upgrade` holds tuppr, which drives Talos and Kubernetes node
+      # upgrades. A nightly shed could stop it mid-upgrade — and tuppr does not
+      # self-clear a Failed TalosUpgrade, it needs a generation bump. Excluded
+      # because "CI can wait" does not extend to "the thing rebooting nodes can
+      # be stopped halfway".
+      - system-upgrade
       # `database` is not on the written keep-list but every keep-list app
       # depends on it. CNPG's Postgres is operator-managed and invisible to the
       # downscaler, but `valkey` is a plain Deployment and `postgres-backup` a
