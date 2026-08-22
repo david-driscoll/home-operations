@@ -226,9 +226,22 @@ kubectl -n kube-system create job --from=cronjob/openbao-replica-restore-test re
 
 One-time provisioning: the AppRole the test logs in with is minted by
 `bootstrap/openbao/restore-test.sh init` (needs an admin token — see the script header),
-which also prints the commands that place the credentials into the equestria repo's
+which also prints the commands that place the credentials into the
 `openbao-replica` secret. Until that has run, the test fails at approle login — loudly,
 by design.
+
+**If the canary path ever moves, the policy does not follow it.** The policy grants
+exactly one path, and four places name it: this file, `restore-test.sh` (which WRITES
+the policy), the `openbao-replica` HelmRelease `CANARY_PATH`, and
+`docker/alpha-site/bao-standby/restore.sh`. Editing the first, third and fourth changes
+what is *read*; only re-running `restore-test.sh init` under a root ceremony changes
+what is *permitted*. Miss that step and the role keeps a grant on a path that no longer
+exists — which is exactly what the `shared/` → `third-party-tokens/` reorganisation did
+in August 2026.
+
+`./restore-test.sh status` is the check for it: it now compares the live policy's grant
+against `CANARY_PATH` and exits non-zero on drift, instead of reporting that the policy
+"exists".
 
 ---
 

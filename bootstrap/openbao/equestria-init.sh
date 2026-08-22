@@ -252,8 +252,11 @@ EOF
 # later, with nothing in the run to point at.
 #
 # \`retired/\` is deliberately absent: nothing reads a retired secret, which is
-# what makes it retired. \`shared/\` is kept until bao-reorg phase 5 reaps the
-# sources; drop it once \`bao list secrets/metadata/shared\` is empty.
+# what makes it retired. \`shared/\` is now EMPTY -- phase 5 reaped the sources on
+# 2026-08-22, confirmed by list -- so its two grants are vestigial and can be
+# dropped at the next root ceremony. Left in place rather than removed in the
+# same change that fixes the restore-test policy: a grant on an empty prefix
+# permits nothing, so removing it buys nothing and costs a second live edit.
 path "secrets/data/shared/*" {
   capabilities = ["read"]
 }

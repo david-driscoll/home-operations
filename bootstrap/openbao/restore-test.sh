@@ -15,7 +15,11 @@
 # every dump, so it works against the restored copy by construction, and a
 # successful login doubles as proof the auth backends survived the round trip.
 #
-# `init` is idempotent: each step checks first and skips what is already done.
+# `init` is idempotent, and converges rather than only creating: the policy and
+# the approle role are rewritten from this script every run (both are PUTs), so
+# editing CANARY_PATH here and re-running is how a canary move actually lands.
+# The credentials are the irreversible half and stay guarded -- an existing
+# sealed approle file is left alone, never overwritten.
 #
 # Requires: bao, sops, jq, an age key, BAO_ADDR at the equestria cluster
 # (https://bao.equestria.driscoll.tech), and BAO_TOKEN holding a token with
@@ -43,9 +47,11 @@ readonly APPROLE_FILE="bootstrap/openbao/restore-test-approle.sops.yaml"
 # Moved from secrets/data/shared/cloudflare-driscoll-tech by the reorganisation
 # (docs/openbao-shared-secrets-reorg.md). The other three were updated when that
 # landed; this one could not be, because it was still in the vault repo. The
-# `restore-test` POLICY IN THE LIVE SERVER STILL GRANTS THE OLD PATH -- re-run
-# `./restore-test.sh init` (admin token) to rewrite it, or the monthly restore
-# test 403s on the canary read once bao-reorg phase 5 reaps `shared/`.
+# `restore-test` POLICY IN THE LIVE SERVER STILL GRANTS THE OLD PATH, and
+# phase 5 has now reaped `shared/` -- so the role can currently read NOTHING
+# (404 on the destroyed old path, 403 on the new one) and the monthly test will
+# fail at the canary read. Re-run `./restore-test.sh init` with an admin token
+# to converge the policy; `status` reports the drift without one.
 readonly CANARY_PATH="secrets/data/third-party-tokens/cloudflare/driscoll-tech"
 
 log()  { printf '  %s\n' "$*"; }
@@ -86,10 +92,31 @@ seal_to() {
 
 status() {
   preflight
+  local rc=0
   log "server: ${BAO_ADDR}"
-  if bao policy read restore-test >/dev/null 2>&1; then ok "policy restore-test exists"; else warn "policy restore-test missing"; fi
-  if bao read auth/approle/role/restore-test >/dev/null 2>&1; then ok "approle role restore-test exists"; else warn "approle role restore-test missing"; fi
-  if [[ -f "${REPO_ROOT}/${APPROLE_FILE}" ]]; then ok "${APPROLE_FILE} exists"; else warn "${APPROLE_FILE} not written yet"; fi
+
+  # "exists" was never the question. The policy names ONE path, and when the
+  # canary moved (the shared/ -> third-party-tokens/ reorganisation) the policy
+  # kept granting the old one -- so it existed, reported green, and granted a
+  # path that had been destroyed. Check the grant, not the object.
+  local policy
+  if policy="$(bao policy read restore-test 2>/dev/null)"; then
+    if grep -qF "path \"${CANARY_PATH}\"" <<<"${policy}"; then
+      ok "policy restore-test grants ${CANARY_PATH}"
+    else
+      warn "policy restore-test does NOT grant ${CANARY_PATH}"
+      warn "  it grants: $(grep -o 'path "[^"]*"' <<<"${policy}" | tr '\n' ' ')"
+      warn "  the monthly restore test will fail at the canary read — re-run 'init' with an admin token"
+      rc=1
+    fi
+  else
+    warn "policy restore-test missing (or this token cannot read it — init needs admin)"
+    rc=1
+  fi
+
+  if bao read auth/approle/role/restore-test >/dev/null 2>&1; then ok "approle role restore-test exists"; else warn "approle role restore-test missing"; rc=1; fi
+  if [[ -f "${REPO_ROOT}/${APPROLE_FILE}" ]]; then ok "${APPROLE_FILE} exists"; else warn "${APPROLE_FILE} not written yet"; rc=1; fi
+  return "${rc}"
 }
 
 init() {
@@ -98,10 +125,22 @@ init() {
 
   # Read-only on the one canary path, nothing else. The restored copy this
   # role is used against contains every estate secret; the role must not.
-  if bao policy read restore-test >/dev/null 2>&1; then
-    ok "policy restore-test already exists"
-  else
-    bao policy write restore-test - >/dev/null <<EOF
+  #
+  # WRITTEN UNCONDITIONALLY, and that is the fix rather than an oversight.
+  # This used to be guarded by `if bao policy read restore-test; then ok
+  # "already exists"`, which made the script unable to change a policy it had
+  # already written. When the canary moved from
+  # secrets/data/shared/cloudflare-driscoll-tech to
+  # secrets/data/third-party-tokens/cloudflare/driscoll-tech, re-running `init`
+  # printed a green "already exists" and repointed nothing; the live policy went
+  # on granting a path that the reorganisation then destroyed, leaving the role
+  # able to read NOTHING (404 on the old path, 403 on the new one) while every
+  # line of this script's output stayed green.
+  #
+  # `bao policy write` is a PUT, so writing every time is idempotent and
+  # self-healing: the script becomes the source of truth for the policy instead
+  # of a one-shot that can only ever create it.
+  bao policy write restore-test - >/dev/null <<EOF
 # Monthly restore test (bootstrap/RUNBOOK.md Scenario D): the single
 # canary read that proves a restored dump serves secrets. Deliberately not a
 # path glob — widening this widens what a leaked cluster Secret can read.
@@ -109,20 +148,17 @@ path "${CANARY_PATH}" {
   capabilities = ["read"]
 }
 EOF
-    ok "wrote policy restore-test (read on ${CANARY_PATH})"
-  fi
+  ok "wrote policy restore-test (read on ${CANARY_PATH})"
 
-  if bao read auth/approle/role/restore-test >/dev/null 2>&1; then
-    ok "approle role restore-test already exists"
-  else
-    # secret_id_ttl=0: the credential must stay valid inside months-old dumps.
-    # Short token TTL: each test logs in afresh and needs minutes, not hours.
-    bao write auth/approle/role/restore-test \
-      token_policies="restore-test" \
-      token_ttl=15m token_max_ttl=1h \
-      secret_id_ttl=0 secret_id_num_uses=0 >/dev/null
-    ok "wrote approle role restore-test"
-  fi
+  # Same reasoning, same PUT semantics. Re-writing the role does NOT invalidate
+  # issued secret_ids -- which matters here more than anywhere, because the
+  # credential has to keep working inside months-old dumps. Minting is the
+  # irreversible half and stays guarded, below.
+  bao write auth/approle/role/restore-test \
+    token_policies="restore-test" \
+    token_ttl=15m token_max_ttl=1h \
+    secret_id_ttl=0 secret_id_num_uses=0 >/dev/null
+  ok "wrote approle role restore-test"
 
   if [[ -f "${REPO_ROOT}/${APPROLE_FILE}" ]]; then
     warn "${APPROLE_FILE} exists — leaving it alone. Delete it first to mint fresh credentials."
