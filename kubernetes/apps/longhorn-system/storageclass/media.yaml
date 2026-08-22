@@ -90,11 +90,13 @@
 #      being shed — without touching the other.
 #
 # WHY `dataLocality: disabled` AND NOT `best-effort`.
-# Under this shape locality is already STRUCTURAL, so `best-effort` has nothing
-# to ask for. Five replicas across the five eligible nodes means every node the
-# pod can possibly run on already holds one: a worker by day, a control plane by
-# night. `best-effort` exists to chase a local replica when there isn't one, and
-# here there always is.
+# With three replicas over five eligible nodes, two nodes hold no replica at any
+# moment, so locality is likely but not guaranteed. `best-effort` looks like the
+# fix and is not: every node the pod can run on is inside the tag, so whenever it
+# CAN be satisfied it relocates a replica -- piling more rebuild traffic on top
+# of the nightly churn described below, for a config volume whose working set is
+# already in page cache. `replicaAutoBalance` already handles getting replicas
+# back onto the workers each morning.
 #
 # Leaving it `disabled` also keeps a known failure mode off the table. When
 # `best-effort` CANNOT be satisfied -- when the attached node is outside the tag
@@ -166,7 +168,7 @@ metadata:
 reclaimPolicy: Delete
 provisioner: driver.longhorn.io
 parameters:
-  numberOfReplicas: "5"
+  numberOfReplicas: "3"
   # `low-power-off` = the five nodes with an Intel iGPU, i.e. every node that can
   # actually run plex/jellyfin/dispatcharr: fluttershy and kerfuffle (the daytime
   # workers) plus the three control planes (where the apps land overnight).
@@ -191,17 +193,34 @@ parameters:
   #     The tuppr maintenance window in system-upgrade/upgrades/talos.yaml is
   #     enabled to keep upgrades inside the awake hours.
   #
-  # WHY 5 REPLICAS AND NOT 3. This is the part that is easy to get wrong.
-  # Replenishment fires when a replica FAILS, not when a node is merely empty --
-  # so at 02:00 the two worker replicas fail and Longhorn looks for somewhere to
-  # rebuild them. With 3 replicas over 5 eligible nodes there are two empty
-  # control planes waiting, so it rebuilds ~170GiB every night and unwinds it
-  # every morning. With 5 replicas every eligible node already holds one, there
-  # is nowhere to rebuild, and Longhorn simply waits and fast-resyncs at 09:00.
+  # WHY 3 REPLICAS STILL GUARANTEES ONE ON A CONTROL PLANE.
+  # The tag covers five nodes, only TWO of which are workers (fluttershy,
+  # kerfuffle). `replica-soft-anti-affinity` is false, so Longhorn places at most
+  # one replica per node -- three replicas cannot fit on two workers, so at least
+  # one MUST land on a control plane. Structural, not probabilistic, and it is
+  # what guarantees a surviving copy overnight.
   #
-  # 5 also gives locality in BOTH states: a replica on each worker for the day,
-  # and one on each control plane for the night. The cost is 5-way synchronous
-  # writes, which these config volumes can afford -- they are read-heavy.
+  # ⚠️ THE COST OF 3 RATHER THAN 5: NIGHTLY REBUILD CHURN, IN BOTH DIRECTIONS.
+  # Replenishment fires when a replica FAILS, not when a node is merely empty.
+  # At 02:00 the two worker replicas fail, and with only three replicas there are
+  # two EMPTY eligible control planes to rebuild onto. After
+  # `replica-replenishment-wait-interval` (600s) Longhorn does exactly that.
+  # Then at 09:00 the workers come back empty and `replicaAutoBalance:
+  # best-effort` below moves replicas back onto them -- which is not incidental,
+  # it is REQUIRED, because without it the replicas would stay on the control
+  # planes and the daytime locality this whole tag exists for would be lost
+  # after the first night.
+  #
+  # So the churn is inherent and bidirectional: roughly 170GiB rebuilt each way,
+  # at the 26-33 MiB/s this cluster actually achieves onto the control-plane
+  # disks. Budget it as real nightly and morning I/O, not a rounding error.
+  #
+  # Five replicas would have removed it entirely -- every eligible node holds one,
+  # so there is nowhere to rebuild and nothing to rebalance, and Longhorn just
+  # waits and fast-resyncs. Three was chosen for the lower write amplification;
+  # the churn is the accepted trade. The other way out, if the I/O hurts, is to
+  # narrow the tag to exactly three nodes (both workers plus ONE control plane),
+  # which restores "nowhere to rebuild" while keeping three replicas.
   #
   # NOT tagged `low-power-off`: hard-hat and shining-armor. Neither has an Intel
   # iGPU, so the media apps can never run there and a replica would be
