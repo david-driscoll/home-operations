@@ -17,7 +17,16 @@ spec:
   path: ./kubernetes/apps/longhorn-system/storageclass
   prune: true
   wait: true
-  force: false
+  # StorageClass `parameters` are IMMUTABLE. Without this, any change to a class
+  # in this directory fails to apply — Flux reports the Kustomization not-Ready
+  # with "updates to parameters are forbidden" and the live class silently keeps
+  # its old values. `force` lets Flux delete and recreate on that conflict.
+  #
+  # Safe here specifically because this path contains ONLY StorageClasses: they
+  # hold no data, and deleting one does not touch bound PVs or PVCs, which carry
+  # their own copy of the parameters. The only gap is that a PVC created during
+  # the recreate would fail to provision, which retries.
+  force: true
   interval: 1h
   retryInterval: 2m
   timeout: 10m

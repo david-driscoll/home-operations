@@ -10,6 +10,14 @@ parameters:
   # we set this to 1 replica for faster restores from the snapclass
   dataLocality: disabled
   numberOfReplicas: "2"
+  # Bulk tier, same as the default `longhorn` class. Piece 12 constrained
+  # `longhorn` and the three `longhorn-critical*` classes and left this one and
+  # `longhorn-cache` unconstrained, so every VolSync staging volume could place a
+  # replica anywhere — including the control planes this whole design is trying
+  # to keep free. Measured 2026-08-21: 79 volumes, ~48.5 GiB of staging data,
+  # sitting on the trio. See docs/cluster-consolidation/20-low-power-tier.md §9
+  # item 8.
+  nodeSelector: "bulk"
   replicaAutoBalance: best-effort
   staleReplicaTimeout: "30"
 allowVolumeExpansion: true
@@ -25,6 +33,8 @@ parameters:
   # we set this to 2 replica for less copies of the cache, which can be blown away safely.
   dataLocality: disabled
   numberOfReplicas: "2"
+  # Bulk tier — see the note on `longhorn-snapshot` above.
+  nodeSelector: "bulk"
   replicaAutoBalance: best-effort
   staleReplicaTimeout: "30"
 allowVolumeExpansion: true
@@ -37,6 +47,10 @@ metadata:
 reclaimPolicy: Delete
 provisioner: driver.longhorn.io
 parameters:
+  # NO nodeSelector here, deliberately: `strict-local` with one replica pins the
+  # volume to whichever node its workload runs on. A tier selector would fight
+  # that and can make the volume unschedulable — this is the class `postgres-3`
+  # uses, and piece 29 blocker C was exactly that kind of pin.
   dataLocality: strict-local
   numberOfReplicas: "1"
   replicaAutoBalance: best-effort
