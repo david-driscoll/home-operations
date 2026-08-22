@@ -29,27 +29,29 @@ spec:
       expr: status.robustness != "degraded"
       timeout: 15m
 
-  # ENABLED 2026-08-22, and it is now load-bearing rather than optional.
+  # DISABLED again 2026-08-22 (revert of #1054). Left here, commented, because
+  # it is the drafted-and-verified form of a window we may still want one day.
   #
-  # The health check above gates every node drain on
-  # `status.robustness != "degraded"`, and it names no volume -- it is
-  # CLUSTER-WIDE, so ANY degraded volume anywhere stalls the next drain.
+  # It was enabled only as a consequence of the `low-power-off` media tier:
+  # that design kept plex/jellyfin/dispatcharr replicas on fluttershy and
+  # kerfuffle while those two nodes powered off nightly, so those volumes read
+  # `degraded` 02:00-09:00 every night. The Longhorn health check above is
+  # CLUSTER-WIDE (`status.robustness != "degraded"` names no volume), so a
+  # nightly degraded volume would have stalled every node drain for seven hours
+  # a night -- and failed on the 15m timeout rather than waited, silently.
   #
-  # The media config volumes (longhorn-media) deliberately keep replicas on
-  # fluttershy and kerfuffle so the apps get a local replica during the day.
-  # Those two nodes power off for the nightly Low Power window, which means
-  # those replicas fail and their volumes read `degraded` from 02:00 to 09:00
-  # every single night, by design.
+  # That premise is gone. fluttershy and kerfuffle now STAY POWERED overnight
+  # (they idle instead of shutting down), the media volumes are back on the
+  # ordinary `longhorn` bulk class, and nothing is degraded on a schedule. With
+  # nothing to work around, restricting Talos upgrades to a 2h daily window is
+  # an unwanted constraint on when the estate can be patched.
   #
-  # Without this window, tuppr would therefore be unable to drain a node for
-  # seven hours a night, and would fail on the 15m timeout rather than wait --
-  # silently, since a blocked upgrade looks the same as an idle one.
+  # If this is ever re-enabled: the shape below was validated against the live
+  # CRD (`start` and `duration` required, `timezone` optional) and accepted by a
+  # server-side dry-run.
   #
-  # 11:00 for 2h puts upgrades squarely inside the awake hours, when the media
-  # workers are up and their replicas are healthy. Keep this window OUTSIDE
-  # 02:00-09:00 for as long as longhorn-media keeps replicas on the shed nodes.
-  maintenance:
-    windows:
-      - start: "0 11 * * *"    # Daily at 11
-        duration: "2h"         # How long window stays open
-        timezone: "${TIMEZONE}"
+  # maintenance:
+  #   windows:
+  #     - start: "0 11 * * *"    # Daily at 11
+  #       duration: "2h"         # How long window stays open
+  #       timezone: "${TIMEZONE}"

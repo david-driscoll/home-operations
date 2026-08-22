@@ -76,15 +76,19 @@ spec:
               requests:
                 # 1 CPU requested, and deliberately NO cpu limit.
                 #
-                # The old 6-core request was sized against the wrong bottleneck:
+                # The old 4-core request was sized against the wrong bottleneck:
                 # the iGPU was shared 5 ways rather than 3, so transcodes
                 # contended for GPU time and it read as a CPU shortage. Observed
                 # steady state is single-digit millicores.
                 #
-                # It was also the hard blocker on control-plane placement -- 6
-                # cores exceeds a control plane's 3950m of allocatable CPU
-                # outright, so the scheduler could never place this there no
-                # matter what else was tuned.
+                # This survives the 2026-08-22 revert of the media relocation
+                # even though the memory cut made in the same PR did not. The
+                # two had different causes: the memory limit was cut only to fit
+                # a 16GB control plane, which is no longer a requirement,
+                # whereas the CPU request was measured against the wrong
+                # bottleneck and is equally wrong on a 64GB worker. CPU is also
+                # compressible, so unlike a memory limit this cannot OOM
+                # anything.
                 #
                 # No cpu limit on purpose: CPU is compressible, so without a
                 # ceiling this takes whatever the node has spare and throttles
@@ -95,12 +99,17 @@ spec:
                 memory: 1Gi
                 gpu.intel.com/i915: 1
               limits:
-                # 4Gi, down from 8Gi -- matched to plex. Sized for a 16GB
-                # control plane that also runs etcd rather than a 64GB worker.
-                # Jellyfin's steady state is around 1.8Gi, so this is a little
-                # over 2x headroom; it is the closest of the three media apps to
-                # its ceiling, and the one to watch if OOMKills ever appear.
-                memory: 4Gi
+                # ⚠️  8Gi, restored to its original value. It was cut to 4Gi on
+                # 2026-08-22 to fit a 16GB control plane for the (now reverted)
+                # overnight media relocation, on a steady-state reading of
+                # ~1.8Gi. That sizing was wrong: plex, cut the same way and on
+                # the same reasoning, was OOMKilled that evening (exit 137,
+                # 2026-08-22T18:52:15Z), and Prometheus
+                # `max_over_time(container_memory_working_set_bytes[6h])` put a
+                # jellyfin pod at 2.62 GiB -- already two thirds of the way to a
+                # 4Gi ceiling, before a library scan. Size media memory limits
+                # off peak, never off idle.
+                memory: 8Gi
                 gpu.intel.com/i915: 1
 
     defaultPodOptions:
@@ -114,9 +123,6 @@ spec:
 
       affinity:
         nodeAffinity:
-          # HARD: must land on a node with an Intel iGPU. Both the media workers
-          # and the control planes carry this label, so this constrains the app
-          # to GPU-bearing nodes without deciding which tier.
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
@@ -124,39 +130,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-          # SOFT: prefer the media workers, whose iGPU is far stronger (Iris Xe,
-          # 96 EU) than the control planes' (Alder Lake-N, 24 EU).
-          #
-          # 46a6 is the worker device ID; the control planes are 46d4. This must
-          # stay PREFERRED and never become required -- the whole point is that
-          # when both media workers are shed overnight the preference becomes
-          # unsatisfiable and the pod schedules on a control plane anyway. A
-          # required term here would leave it Pending until 09:00.
-          #
-          # It is also what brings the pod home. The descheduler runs
-          # RemovePodsViolatingNodeAffinity with
-          # nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution,
-          # so once the workers return the pod is violating this preference and
-          # gets evicted back onto one. Without this block there is nothing to
-          # violate, and the pod would squat on a scarce control-plane GPU slot
-          # indefinitely. The two halves are a pair -- see
-          # kubernetes/apps/kube-system/descheduler/helmrelease.yaml.
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
-                - key: gpu.intel.com/device-id.0300-46a6.present
-                  operator: In
-                  values:
-                  - "true"
-      # Required for the overnight relocation: the control planes carry the
-      # NoSchedule taint from piece 20 §4, and a toleration only PERMITS
-      # placement -- it does not attract it. The soft affinity above is what
-      # keeps this on a worker while one is available.
-      tolerations:
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
 
     service:
       app:
