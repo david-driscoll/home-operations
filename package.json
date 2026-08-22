@@ -24,7 +24,7 @@
     "sdks/*"
   ],
   "devDependencies": {
-    "@biomejs/biome": "2.5.9",
+    "@biomejs/biome": "2.5.10",
     "@types/crypto-js": "^4.2.2",
     "@types/ssh2": "^1.15.5",
     "json-schema-to-typescript": "^15.0.4",
