@@ -23,34 +23,6 @@ spec:
     - name: backups
   # refresh: true
   envRefs:
-    # ⚠ TEMPORARY — REMOVE THIS ONCE THE STACK HAS GONE GREEN ONCE. ⚠
-    #
-    # SGC's nodes were wiped and rejoined to equestria in piece 18, so the
-    # cluster behind `sgc-provider` does not exist. `clusters/sgc.yaml` went in
-    # #1009 and `clusters/sgc/details` was hand-deleted from OpenBao (piece 22
-    # phase 2 step 3), so the stack no longer BUILDS the sgc provider — but it
-    # still holds four resources in state that it now wants to DELETE, and
-    # deleting a `SecretPatch` needs the apiserver it was written to:
-    #
-    #   sgc-provider · sgc-tailscale-app-authkey · sgc-tailscale-dns-authkey
-    #   sgc-github-github-app-token
-    #
-    #   error: configured Kubernetes cluster is unreachable. If the cluster was
-    #   deleted, you can remove this resource from Pulumi state by rerunning the
-    #   operation with the PULUMI_K8S_DELETE_UNREACHABLE environment variable
-    #   set to "true"
-    #
-    # That is this. It drops those records from state without calling the dead
-    # apiserver. Nothing live is touched — the cluster they describe is gone.
-    #
-    # WHY IT MUST NOT STAY: it applies to any unreachable cluster, not just this
-    # one. Left on, a transient network blip while Pulumi happens to be deleting
-    # a resource would silently drop it from state instead of failing — leaving
-    # a live orphan nobody is tracking. One run, then delete this block.
-    PULUMI_K8S_DELETE_UNREACHABLE:
-      type: Literal
-      literal:
-        value: "true"
     AWS_ACCESS_KEY_ID:
       type: Secret
       secret:
