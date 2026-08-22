@@ -65,8 +65,8 @@ describe("SecretRefResolver", () => {
   });
 
   it("resolves a reference and marks the whole content secret", async () => {
-    const fake = fakeVals({ "ref+openbao://secrets/shared/pdm-root#/password": "s3cret" });
-    const { value, isSecret } = await settle(resolver(fake).resolve('PASSWORD: "ref+openbao://secrets/shared/pdm-root#/password"'));
+    const fake = fakeVals({ "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password": "s3cret" });
+    const { value, isSecret } = await settle(resolver(fake).resolve('PASSWORD: "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password"'));
     assert.equal(value, 'PASSWORD: "s3cret"');
     // The resolved value is a credential by construction; the containing file
     // content must not reach Pulumi state in the clear.
@@ -74,8 +74,8 @@ describe("SecretRefResolver", () => {
   });
 
   it("hands vals the ENTIRE document, refs in place, with the client's env", async () => {
-    const fake = fakeVals({ "ref+openbao://secrets/shared/pdm-root#/password": "x" });
-    const doc = ["# a comment survives", 'PASSWORD: "ref+openbao://secrets/shared/pdm-root#/password"', "OTHER: plain"].join("\n");
+    const fake = fakeVals({ "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password": "x" });
+    const doc = ["# a comment survives", 'PASSWORD: "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password"', "OTHER: plain"].join("\n");
     const { value } = await settle(resolver(fake).resolve(doc));
     assert.equal(fake.calls[0].content, doc);
     assert.equal(value, ["# a comment survives", 'PASSWORD: "x"', "OTHER: plain"].join("\n"));
@@ -84,9 +84,9 @@ describe("SecretRefResolver", () => {
   });
 
   it("runs vals once per distinct document, however often it recurs", async () => {
-    const fake = fakeVals({ "ref+openbao://secrets/shared/pdm-root#/password": "x" });
+    const fake = fakeVals({ "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password": "x" });
     const r = resolver(fake);
-    const doc = "a: ref+openbao://secrets/shared/pdm-root#/password";
+    const doc = "a: ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password";
     await r.resolveText(doc);
     await r.resolveText(doc);
     assert.equal(fake.calls.length, 1);
@@ -113,8 +113,8 @@ describe("SecretRefResolver", () => {
   it("fails on a surviving reference scheme, naming the scheme and never the content", async () => {
     // An unsupported provider rides along with a resolvable openbao ref; vals
     // leaves it untouched and the residue guard must catch it.
-    const fake = fakeVals({ "ref+openbao://secrets/shared/pdm-root#/password": "x" });
-    const doc = ["a: ref+openbao://secrets/shared/pdm-root#/password", "b: ref+sops://bootstrap/thing.sops.yaml#/key"].join("\n");
+    const fake = fakeVals({ "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password": "x" });
+    const doc = ["a: ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password", "b: ref+sops://bootstrap/thing.sops.yaml#/key"].join("\n");
     await assert.rejects(
       () => resolver(fake).resolveText(doc),
       (error: Error) => {
@@ -219,8 +219,8 @@ describe("SecretRefResolver", () => {
   it("does not trip the residue guard on ref+ prose or shell globs", async () => {
     // provision.sh carries `ref+*)` and comments saying "ref+..." — scheme
     // shapes only (`ref+x://`) count as residue.
-    const fake = fakeVals({ "ref+openbao://secrets/shared/pdm-root#/password": "x" });
-    const doc = ['case "$pw" in op://* | ref+*) echo guarded ;; esac # catches "ref+..." literals', "PASSWORD=ref+openbao://secrets/shared/pdm-root#/password"].join("\n");
+    const fake = fakeVals({ "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password": "x" });
+    const doc = ['case "$pw" in op://* | ref+*) echo guarded ;; esac # catches "ref+..." literals', "PASSWORD=ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password"].join("\n");
     const { value } = await settle(resolver(fake).resolve(doc));
     assert.match(value, /ref\+\*\)/);
     assert.match(value, /PASSWORD=x/);
@@ -241,7 +241,7 @@ describe("SecretRefResolver", () => {
     // notice rather than write out an empty file if it ever regressed.
     const exec: ValsExec = async () => "";
     const r = new SecretRefResolver(exec, () => fakeBao);
-    await assert.rejects(() => r.resolveText("a: ref+openbao://secrets/shared/pdm-root#/password"), /returned no content/);
+    await assert.rejects(() => r.resolveText("a: ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password"), /returned no content/);
   });
 
   it("does not build a client when nothing references OpenBao", async () => {

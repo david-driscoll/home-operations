@@ -10,7 +10,7 @@ services:
     cap_add:
       - ALL
     environment:
-      PASSWORD: "ref+openbao://secrets/shared/pdm-root#/password"
+      PASSWORD: "ref+openbao://secrets/clusters/celestia/apps/pdm/root#/password"
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
       - /opt/stacks-data/pdm:/etc/proxmox-datacenter-manager

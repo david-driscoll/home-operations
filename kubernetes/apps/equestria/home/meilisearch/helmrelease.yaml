@@ -47,7 +47,7 @@ spec:
       # One-way on-startup DB migration 1.47.0 -> 1.51.0. See vault#102.
       MEILI_UPGRADE_DB: "true"
       # Production now that meilisearch-env resolves a real MEILI_MASTER_KEY
-      # (42 bytes, from secrets/shared/meilisearch-secret-key in OpenBao).
+      # (42 bytes, from secrets/clusters/equestria/apps/meilisearch/secret-key in OpenBao).
       # It was pinned to "development" only because that key rendered empty and
       # production refuses to boot without >=16 bytes.
       #

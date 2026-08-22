@@ -227,7 +227,7 @@ spec:
               SCRATCH_PG_DB: *scratchDb
               # Same transit path the real cluster unseals through.
               TRANSIT_ADDR: http://dockge-as.${TAILSCALE_DOMAIN}:8200
-              CANARY_PATH: secrets/data/shared/cloudflare-driscoll-tech
+              CANARY_PATH: secrets/data/third-party-tokens/cloudflare/driscoll-tech
               VAULT_TRANSIT_SEAL_TOKEN:
                 valueFrom:
                   secretKeyRef:

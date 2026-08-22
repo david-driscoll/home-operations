@@ -30,7 +30,7 @@ spec:
   dataFrom:
     - extract:
         # was: vaults/Eris/items/Eris Tailscale OAuth Operator
-        key: shared/eris-tailscale-oauth-operator
+        key: third-party-tokens/tailscale/oauth-operator
       rewrite:
         - regexp:
             source: "[^-._a-zA-Z0-9]"

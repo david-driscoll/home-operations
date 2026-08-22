@@ -40,8 +40,18 @@
  *      They do not: alpha-site is a Dockge host, so no `eso-alpha-site` role
  *      exists to grant, yet `clusters/alpha-site/apps/authentik/token` is read
  *      by two workloads on equestria. Under the old scope those got a 403 and
- *      blocked 15 Kustomizations behind `pulumi-secrets`. Still read-only;
- *      `secrets/shared/*` is still where genuinely estate-wide values belong.
+ *      blocked 15 Kustomizations behind `pulumi-secrets`. Still read-only.
+ *
+ *      ⚠️ `secrets/shared/*` is NO LONGER where estate-wide values belong, and
+ *      those two grants are no longer sufficient. The reorganisation
+ *      (`docs/openbao-shared-secrets-reorg.md`) drains `shared/` into
+ *      `secrets/third-party-tokens/*` (credentials someone else issues),
+ *      `secrets/apps/*` (infrastructure this repo operates) and
+ *      `secrets/docker/*` (things every Dockge host runs). None of those three
+ *      is covered by a `secrets/data/shared/*` or `secrets/data/clusters/*`
+ *      glob, so every `eso-*` policy needs all three added — an admin write,
+ *      therefore a root ceremony. `npx tsx scripts/bao-reorg --preflight`
+ *      prints the exact HCL.
  *
  * REACHABILITY IS A PRECONDITION, not an assumption. OpenBao dials the API
  * server on every login, so the cluster running OpenBao must be able to reach
@@ -146,8 +156,7 @@ export class OpenBaoClusterAuth extends pulumi.ComponentResource {
       const pem = d?.["ca.crt"];
       if (!pem) {
         throw new Error(
-          `kube-system/kube-root-ca.crt in ${clusterKey} has no \`ca.crt\` key. OpenBao cannot verify that ` +
-            "cluster's API server without it, and every ExternalSecret there would fail at login rather than at read.",
+          `kube-system/kube-root-ca.crt in ${clusterKey} has no \`ca.crt\` key. OpenBao cannot verify that cluster's API server without it, and every ExternalSecret there would fail at login rather than at read.`,
         );
       }
       return pem;

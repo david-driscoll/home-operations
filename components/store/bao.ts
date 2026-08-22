@@ -44,7 +44,7 @@
  * "nothing is secret".
  */
 
-import { all, log, type Output, output, secret } from "@pulumi/pulumi";
+import { all, type Output, output, secret } from "@pulumi/pulumi";
 import { BaoClient, baoSlug, dockgeBaoPath } from "../bao.ts";
 import { clusterSecretPath } from "./clusters.ts";
 import { shapeBackupPlans, shapeTailscaleExports, VaultStore } from "./index.ts";
@@ -123,7 +123,7 @@ export class BaoStore extends VaultStore {
   /**
    * Read a KV path and shape it like `getSecretItem` output. `path` is within
    * the `secrets` mount, no leading slash — e.g.
-   * `shared/cloudflare-driscoll-tech`.
+   * `third-party-tokens/cloudflare/driscoll-tech`.
    */
   public getSecretByPath<T>(path: string): Output<T & Meta> {
     return this.read(path) as Output<T & Meta>;
@@ -390,12 +390,60 @@ const INVENTORY_IN_OPENBAO: Record<string, string> = {
 };
 
 /**
+ * Every credential this repo still names by its 1Password title.
+ *
+ * These are the call sites that predate `getSecretByPath` — `globals.ts` builds
+ * seven providers this way, and three stacks name four more. Moving one of
+ * these paths WITHOUT editing this table is the failure mode with no symptom
+ * until a stack runs, because nothing in the repo contains the path string for
+ * a title-addressed read; `scripts/bao-reorg/rewrite.ts` therefore cannot see
+ * them and prints them as "no textual reference" instead.
+ *
+ * Sorted by destination prefix, which is also roughly by owner.
+ */
+const TITLE_PATHS: Record<string, string> = {
+  // third-party-tokens/ — issued by someone else's service
+  "Tailscale Terraform OAuth Client": "third-party-tokens/tailscale/pulumi-oauth",
+  "Cloudflare (driscoll.tech)": "third-party-tokens/cloudflare/driscoll-tech",
+  "Unifi Api Key Eris Cluster": "third-party-tokens/unifi/api-key",
+  "Authentik Plex Source": "third-party-tokens/plex/authentik-source",
+
+  // apps/ — estate infrastructure this repo operates
+  "Technitium ApiKey": "apps/technitium/api-key",
+  Proxmox: "apps/proxmox/root",
+  "Proxmox ApiKey": "apps/proxmox/api-key",
+  "Alpha Site Proxmox ApiKey": "apps/proxmox/alpha-site/api-key",
+  "minio root user": "apps/minio/root",
+  "Volsync Password": "apps/volsync/password",
+
+  // docker/ — every Dockge host
+  "Dockge Credential": "docker/apps/dockge/credential",
+  "Rclone SFTP Key": "docker/apps/rclone/sftp",
+
+  // clusters/ — scoped to one site
+  "Eris Truenas Credentials": "clusters/spike/truenas-credentials",
+  "RClone Web UI": "clusters/equestria/apps/rclone/web-ui",
+  // Was `shared/authentik-token`, a stale duplicate: alpha-site's authentik has
+  // written the live token to its own path since Phase 8a, and dynacat,
+  // .config/mise.toml and pulumi/secrets all already read that one. Only
+  // `DockgeLxc` still asked by title, so it was reading the frozen copy.
+  "Authentik Token": "clusters/alpha-site/apps/authentik/token",
+};
+
+/**
  * A 1Password title → its OpenBao path, or why there is not one.
  *
- * The `default` rule in `scripts/op-to-bao/mapping.ts` is `shared/<slug>`, and
- * it covers every credential this repo names as a string literal. It is NOT
- * enough on its own — a `pulumi preview` of `stacks/home` against OpenBao found
- * four more shapes, each a different reason the default is wrong:
+ * The `default` rule USED to be `shared/<baoSlug(title)>` — the same rule
+ * `op-to-bao` wrote with, so every flat `shared/` path fell out of it for free.
+ * The reorganisation (`docs/openbao-shared-secrets-reorg.md`) emptied `shared/`,
+ * which makes that rule actively dangerous: it still produces a well-formed
+ * path, it just produces one that no longer exists, and the failure surfaces as
+ * a 404 at read time rather than as "this title has no home". So the derivation
+ * is gone and `TITLE_PATHS` below is exhaustive — a title with no entry is an
+ * error naming itself, which is the outcome every other branch here already
+ * produces.
+ *
+ * The four shapes that always needed special handling still do:
  *
  *   `<cluster>-<app>-oidc-credentials`  generated per-app credential. Phase 4
  *       deliberately did not migrate these; Phase 8a writes them to
@@ -439,7 +487,12 @@ export function resolveBaoPath(title: string): { path: string; reason?: undefine
     return { reason: `'${title}' looks like a generated OIDC credential but names no known cluster key` };
   }
 
-  return { path: `shared/${baoSlug(title)}` };
+  const mapped = TITLE_PATHS[title];
+  if (mapped) return { path: mapped };
+
+  return {
+    reason: `no entry in TITLE_PATHS (components/store/bao.ts). Titles no longer derive a path — 'shared/${baoSlug(title)}' would have been the old rule, and that subtree is empty. Add the title with the path it actually lives at, or give the call site getSecretByPath()`,
+  };
 }
 
 /**
