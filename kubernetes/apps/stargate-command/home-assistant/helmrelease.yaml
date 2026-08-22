@@ -84,9 +84,17 @@ spec:
             resources:
               requests:
                 memory: 1Gi
-                cpu: 200m
+                # Was 200m. cgroup CPU shares are proportional to the request,
+                # so at 200m Home Assistant sat near the back of the queue on a
+                # node that spikes to 95% during Pulumi runs -- which is exactly
+                # when a HomeKit camera stream stalls and iOS gives up on it.
+                # This is a floor that keeps it competitive under contention,
+                # not a reservation of the peak.
+                cpu: 2
               limits:
-                # cpu: 2
+                # Still no cpu limit on purpose: CPU is compressible, so this
+                # takes spare capacity and throttles proportionally under
+                # contention rather than being capped while cores sit idle.
                 memory: 2Gi
             probes:
               startup:
