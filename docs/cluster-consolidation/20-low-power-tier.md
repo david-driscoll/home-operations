@@ -32,7 +32,14 @@ has still never been run.** Four PRs merged on 2026-08-22 and between them deliv
 | [#1046](https://github.com/david-driscoll/home-operations/pull/1046) | py-kube-downscaler `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` — Tier 2 sheds every night; the eleven keep-list workloads carry `downscaler/exclude: "true"` in Git and survive. `system-upgrade` (tuppr) excluded so a shed cannot stop a node upgrade halfway | live 2026-08-22: `kube-system/kube-downscaler-py-kube-downscaler` runs with that arg, `${TIMEZONE}` resolved to `America/New_York` out of the `shared-secrets` Secret rather than hardcoded |
 | [#1047](https://github.com/david-driscoll/home-operations/pull/1047) | Gatus `maintenance-windows` (`start: "02:00"`, `duration: 7h`, `timezone: ${TIMEZONE}`) on the **26** `definition.yaml` files whose services actually shed. Required un-pruning the Gatus fields on the `ApplicationDefinition` CRD, and brought the JSON schemas **and a real type generator** (`schemas/`, `scripts/generate-types.ts`, `mise run codegen`) into this repo from `stargate-command-cluster` — the generator had never existed here | 26 files carry the block; `schemas/` and `scripts/generate-types.ts` are present in-tree |
 | [#1048](https://github.com/david-driscoll/home-operations/pull/1048) | Intel GPU plugin split per node class: `intel-gpu-plugin` on the control planes (`sharedDevNum: 2`, and the **only** release that creates the fixed-name `NodeFeatureRule`) and `intel-gpu-plugin-workers` (`sharedDevNum: 3`, correcting the old and wrong `5`). Also right-sized the media apps — plex 6 CPU/4Gi/8Gi → 1 CPU/1Gi/4Gi with no CPU limit, jellyfin 4 CPU → 1 CPU and 8Gi → 4Gi, dispatcharr 1 CPU → 300m | live: both `GpuDevicePlugin` CRs exist with those ratios and disjoint device-id selectors (`46d4` control planes, `46a6` workers) |
-| [#1051](https://github.com/david-driscoll/home-operations/pull/1051) | Shed **both** media workers: control-plane tolerations plus a **soft** (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass. Design and runbook in [30](30-longhorn-media-tier.md) | live: `LowPowerReturnProfile` present in the descheduler ConfigMap; `longhorn-media` exists with `nodeSelector: critical`, 3 replicas, `dataLocality: disabled` |
+| [#1051](https://github.com/david-driscoll/home-operations/pull/1051) | Shed **both** media workers: control-plane tolerations plus a **soft** (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass. Design and runbook in [30](30-longhorn-media-tier.md) | live: `LowPowerReturnProfile` present in the descheduler ConfigMap; `longhorn-media` created (`nodeSelector: critical` as shipped, superseded hours later by #1053) |
+| [#1053](https://github.com/david-driscoll/home-operations/pull/1053) | A new **`low-power` Longhorn node tag** on the five nodes that stay powered through the nightly window — the three control planes (now `["critical", "low-power"]`) plus `hard-hat` and `shining-armor` (now `["bulk", "low-power"]`) — and `longhorn-media` repointed from `nodeSelector: critical` to `low-power`. `fluttershy` and `kerfuffle`, the pair that gets shed, are deliberately **not** tagged. Purely additive, so every existing `bulk`/`critical` selector is unaffected | live: all seven node tag lists read as above; `longhorn-media` has `nodeSelector: low-power`, 3 replicas, `dataLocality: disabled` |
+
+⚠️ **`low-power` is a different tag from Battery's node set, and the names invite confusion.**
+`low-power` is [24](24-power-states.md)'s **nightly** window: the five nodes that stay powered
+02:00–09:00. Battery — this file's S′ — takes `hard-hat` down too, so a `longhorn-media` replica
+there **will** fail during a Battery event and the volume will degrade. That is accepted:
+Battery is an emergency, not a nightly routine.
 
 **Keep the two states apart when reading this file.** [24](24-power-states.md)'s **Low Power**
 is what runs nightly — workloads scale to zero, and once [30](30-longhorn-media-tier.md)'s
@@ -43,8 +50,9 @@ Nothing in §6's runbook or §8's rehearsal has been overtaken by the nightly sc
 
 **What is still manual, stated because "automated" is easy to over-read:** nothing powers a node
 off or wakes one up on a schedule. #1046 sheds *workloads*; node shutdown and the WoL return trip
-are still §6's human runbook, and [30](30-longhorn-media-tier.md)'s volume migration is **in
-progress, not finished** — `dispatcharr` is mid-runbook, `plex` and `jellyfin` have not started.
+are still §6's human runbook, and [30](30-longhorn-media-tier.md)'s volume migration is **nearly
+finished but not finished** — `dispatcharr` and `plex` are migrated onto `nodeSelector:
+["low-power"]` and healthy; `jellyfin` is still mid-runbook.
 
 **§4 IS DONE AND LIVE.** Both halves landed on 2026-08-21:
 [#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations) and
@@ -1013,9 +1021,13 @@ The taint went in on 2026-08-21 (check 1), and since 2026-08-22 Tier 2 is additi
 nightly by py-kube-downscaler (#1046) — so that specific objection no longer holds. **Two new
 entries belong in this pre-flight once [30](30-longhorn-media-tier.md)'s migration lands**, and
 they are deliberately not numbered yet because the migration is unfinished: the three media
-volumes on `longhorn-media` holding three control-plane replicas each, and the descheduler's
-`LowPowerReturnProfile` being present and healthy (without it nothing brings the media pods home
-at 09:00).
+volumes holding all three replicas on `low-power`-tagged nodes and **none** on `fluttershy` or
+`kerfuffle`, and the descheduler's `LowPowerReturnProfile` being present and healthy (without it
+nothing brings the media pods home at 09:00).
+
+Note the first of those is a *Low Power* pre-flight, not a Battery one — for **Battery** the
+media volumes are not safe regardless, since `hard-hat` goes down and may hold one of the three
+replicas.
 
 ```bash
 # 1. Topology: 3 control-plane + 4 <none>, all Ready, none cordoned.
@@ -1853,10 +1865,10 @@ through in place rather than moved to the resolved list above — several sectio
     **What is still manual in the delivered half, so the item is not closed outright:** nothing
     powers a node off or wakes one up on a schedule. #1046 sheds *workloads only* — node
     shutdown and the WoL return trip are §6's human runbook — and #1051's node-shedding half is
-    blocked on [30](30-longhorn-media-tier.md)'s volume migration, which is **in progress**
-    (`dispatcharr` mid-runbook, `plex` and `jellyfin` not started). Until that lands, shutting a
-    media worker overnight still leaves its config volume degraded, which is exactly the
-    `LonghornVolumeStatusWarning` / stalled-tuppr-drain problem 30 exists to prevent.
+    blocked on [30](30-longhorn-media-tier.md)'s volume migration, which is **nearly complete**
+    (`dispatcharr` and `plex` done, `jellyfin` still running). Until that lands, shutting a
+    media worker overnight still leaves `jellyfin`'s config volume degraded, which is exactly
+    the `LonghornVolumeStatusWarning` / stalled-tuppr-drain problem 30 exists to prevent.
 11. ~~**etcd's memory footprint on Talos** is invisible to `kubectl top`.~~ **MEASURED
     2026-08-22** in §8 Stage 1: **585 / 448 / 431 MiB** on milky-way / othalla / pegasus,
     ≈ 1.43 GiB across the trio, leader highest. §3's arithmetic can now include it.
@@ -1866,15 +1878,22 @@ through in place rather than moved to the resolved list above — several sectio
     mains, healthy. Hardware-bound, matching the README's ShiJi-NVMe figures. It does not block a
     window; it is a measured reason §6.2's one-node-at-a-time exit is a real constraint rather
     than ceremony.
-12. **The `longhorn-media` volume migration is unfinished** — new 2026-08-22, owned by
-    [30](30-longhorn-media-tier.md) §6. Verified live 2026-08-22: `dispatcharr` is at
-    `nodeSelector: ["critical"]`, `numberOfReplicas: 4` and `healthy`, with replicas on all
-    three control planes plus one remaining `bulk` replica on `fluttershy` — i.e. through
-    step C, with step D (delete the last `bulk` replica, shrink to 3) outstanding. `plex` and
-    `jellyfin` are untouched: both still `nodeSelector: ["bulk"]` with three replicas across
-    `fluttershy`/`kerfuffle`/`shining-armor`. Until all three are done, #1051's scheduling and
-    return-trip halves are live but the **node-shedding half they exist for cannot be used** —
-    shutting a media worker overnight would leave its config volume degraded, which is the
+12. **The `longhorn-media` volume migration is unfinished — one volume left.** New 2026-08-22,
+    owned by [30](30-longhorn-media-tier.md) §6, and re-verified live at **18:21 UTC** after
+    #1053 changed the target tag from `critical` to `low-power`:
+    - `dispatcharr` — **COMPLETE.** `n=3 sel=["low-power"] dl=disabled`, `healthy`, replicas on
+      `milky-way`/`othalla`/`pegasus`. It was migrated first under the old `critical` design;
+      the later repoint to `low-power` moved **zero bytes**, because its replicas were already
+      on nodes that gained the tag.
+    - `plex` — **COMPLETE.** `n=3 sel=["low-power"] dl=disabled`, `healthy`, replicas on
+      `milky-way`/`othalla`/`shining-armor`. Only **two** replicas had to be rebuilt: the
+      `shining-armor` one already conformed once that node gained the tag.
+    - `jellyfin` — **IN FLIGHT.** `n=4 sel=["low-power"]`, `degraded`, rebuilding onto
+      `othalla`; still holds replicas on **both** `fluttershy` and `kerfuffle`.
+
+    Until `jellyfin` is done, #1051's scheduling and return-trip halves are live but the
+    **node-shedding half they exist for cannot be used** — shutting a media worker overnight
+    would leave `jellyfin`'s config volume degraded, which is the
     nightly-`LonghornVolumeStatusWarning` / stalled-tuppr-drain problem 30 exists to prevent.
 
 ---
