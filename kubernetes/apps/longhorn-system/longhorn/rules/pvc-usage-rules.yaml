@@ -86,14 +86,56 @@ spec:
     # counts allocated blocks, which never shrink after a delete), then enable.
     # Tracked in docs/cluster-consolidation/30-longhorn-media-tier.md,
     # section "The dead alerts".
-    - alert: LonghornVolumeActualSpaceUsedWarning
+    # REPLACED 2026-08-22. This was `LonghornVolumeActualSpaceUsedWarning`, and
+    # it had TWO problems, only one of which was the dead join.
+    #
+    # The join was broken the same way the robustness alerts were -- it matched
+    # `on(volume)` against a metric labelled `volumename` -- so it returned zero
+    # series and never fired. But simply repairing the join would have been the
+    # WRONG fix, because the thing it measured was not the thing anyone wants to
+    # know.
+    #
+    # `longhorn_volume_actual_size_bytes` is the on-disk footprint INCLUDING
+    # snapshots, measured against the PROVISIONED size. That ratio has almost no
+    # relationship to whether an application is about to run out of space, and
+    # it can legitimately exceed 100%. Measured live on 2026-08-22, the eight
+    # volumes the repaired expression would have alerted on:
+    #
+    #     volume                    old expr     actually full
+    #     storage-loki-0              102.3%          5.6%
+    #     prometheus-...-0            101.1%         11.7%
+    #     jellyfin                     99.9%          4.2%
+    #     thanos-compactor             99.8%         82.7%
+    #     radarr                       99.8%         54.0%
+    #     data-thanos-receive-0        98.5%         37.8%
+    #     sonarr                       96.9%         15.6%
+    #     valkey                       94.9%         14.7%
+    #
+    # Fixing the join would therefore have produced eight permanent, useless
+    # alerts -- the always-dirty check that teaches people to ignore the alert
+    # channel. jellyfin would page at "99.9%" while 4% full.
+    #
+    # What actually matters is filesystem usage, which kubelet reports directly
+    # and which needs no join at all. `max by` deduplicates RWX volumes, which
+    # report once per mounting pod (truenas-media appears four times).
+    #
+    # Longhorn's own space growth is not unmonitored: it threatens NODE disk,
+    # and LonghornNodeStorageWarning below already covers that at 80% and 90%.
+    #
+    # Threshold: 85%. Live high-water mark is thanos-compactor at 82.7%, so this
+    # is quiet today and has ~2 points of headroom before it speaks. Zero series
+    # at time of writing, which is the correct answer.
+    - alert: VolumeFilesystemSpaceWarning
       annotations:
-        description: The actual space used by PVC {{$labels.persistentvolumeclaim}} in namespace {{$labels.namespace}} (Longhorn volume {{$labels.volume}} on {{$labels.node}}) is at {{$value}}% capacity for more than 5 minutes.
-        summary: The actual used space of Longhorn volume is over 90% of the capacity.
-      expr: ((longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) * 100) * on(volume) group_left(persistentvolumeclaim, namespace) (kube_persistentvolumeclaim_info * on(volumename) group_right(persistentvolumeclaim, namespace) kube_persistentvolume_info{volumename=~"pvc-.*"}) > 90
-      for: 5m
+        description: PVC {{$labels.persistentvolumeclaim}} in namespace {{$labels.namespace}} is {{$value | printf "%.1f"}}% full and has been for more than 15 minutes.
+        summary: A persistent volume's filesystem is over 85% full.
+      expr: |
+        max by (namespace, persistentvolumeclaim) (
+          100 * (1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes)
+        ) > 85
+      for: 15m
       labels:
-        issue: The actual used space of PVC {{$labels.persistentvolumeclaim}} in namespace {{$labels.namespace}} is high.
+        issue: PVC {{$labels.persistentvolumeclaim}} in namespace {{$labels.namespace}} is running out of space.
         severity: warning
     # FIXED 2026-08-22 — was `longhorn_volume_robustness == 3` through the dead
     # kube-state-metrics join (see the header). `faulted` means every replica is
