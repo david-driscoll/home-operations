@@ -237,9 +237,23 @@ EOF
 # Widened deliberately: one OpenBao serves the whole estate and every cluster
 # is trusted equally, so per-cluster read isolation was buying separation
 # between components that already share an operator and a network. Still
-# read-only, and \`shared/\` remains the right home for anything genuinely
-# estate-wide -- this is the escape hatch for cross-site reads, not a licence
-# to file everything under clusters/.
+# read-only -- this is the escape hatch for cross-site reads, not a licence to
+# file everything under clusters/.
+#
+# THE THREE NON-CLUSTER PREFIXES BELOW ARE LOAD-BEARING AND WERE ADDED LATE.
+# \`shared/\` was drained into \`third-party-tokens/\`, \`apps/\` and \`docker/\` by
+# the reorganisation (docs/openbao-shared-secrets-reorg.md, scripts/bao-reorg).
+# A trailing \`*\` is a prefix glob that spans \`/\`, so \`clusters/*\` covers
+# everything filed per-site, but NONE of those three. They were applied to the
+# live policy by root ceremony at reorg time; this script lagged because it
+# lived in another repo and could not be edited in the same change. Re-running
+# it without them would NARROW the live policy back and flip ~30
+# ExternalSecrets to SecretSyncedError at their next refresh -- up to an hour
+# later, with nothing in the run to point at.
+#
+# \`retired/\` is deliberately absent: nothing reads a retired secret, which is
+# what makes it retired. \`shared/\` is kept until bao-reorg phase 5 reaps the
+# sources; drop it once \`bao list secrets/metadata/shared\` is empty.
 path "secrets/data/shared/*" {
   capabilities = ["read"]
 }
@@ -250,6 +264,24 @@ path "secrets/data/clusters/*" {
   capabilities = ["read"]
 }
 path "secrets/metadata/clusters/*" {
+  capabilities = ["read", "list"]
+}
+path "secrets/data/third-party-tokens/*" {
+  capabilities = ["read"]
+}
+path "secrets/metadata/third-party-tokens/*" {
+  capabilities = ["read", "list"]
+}
+path "secrets/data/apps/*" {
+  capabilities = ["read"]
+}
+path "secrets/metadata/apps/*" {
+  capabilities = ["read", "list"]
+}
+path "secrets/data/docker/*" {
+  capabilities = ["read"]
+}
+path "secrets/metadata/docker/*" {
   capabilities = ["read", "list"]
 }
 EOF

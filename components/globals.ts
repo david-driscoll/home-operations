@@ -248,13 +248,22 @@ export class GlobalResources extends ComponentResource {
    * `stacks/vault` uses it, and an eager read would make every other stack's
    * preview depend on one more OpenBao path for nothing.
    *
+   * By PATH, not by title, unlike the seven providers above. In the vault repo
+   * this was `getSecretByTitle("Github Actions Runner (david-driscoll)")`,
+   * which resolved through the old `shared/<slug(title)>` default rule. The
+   * reorganisation deleted that rule — `resolveBaoPath` now errors on any title
+   * absent from `TITLE_PATHS` — so the title form would fail outright here.
+   * A new call site should name the path anyway; `TITLE_PATHS` is the legacy
+   * set, not a place to grow. Same path the `vault-runners` scale set reads
+   * (kubernetes/apps/github-actions/runners/vault/secret.yaml).
+   *
    * Never log this Output. `.apply()` unwraps the private key into a plain
    * string, and Pulumi redacts secrets in resource inputs/outputs, not in
    * diagnostic text — a logged value lands in the Stack CR status and pod
    * logs in the clear.
    */
   public get githubCredential(): Output<GithubAppCredential> {
-    this._githubCredential ??= this.store.getSecretByTitle<GithubAppCredential>("Github Actions Runner (david-driscoll)");
+    this._githubCredential ??= this.store.getSecretByPath<GithubAppCredential>("third-party-tokens/github/actions-runner/david-driscoll");
     return this._githubCredential;
   }
 

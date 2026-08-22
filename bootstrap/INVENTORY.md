@@ -103,7 +103,8 @@ repo's history only; nothing in the estate reads them.
 Flux syncs home-operations over public HTTPS (`kubernetes/apps/flux-system/flux-instance/helm/values.yaml`),
 so no deploy key is load-bearing. The planned `bootstrap/<cluster>/github-deploy-key.sops.yaml`
 files were never created. The one deploy key that did exist — for the retired private
-`vault` repo — lives in OpenBao at `secrets/shared/github-david-driscoll-vault-deploy-key`
+`vault` repo — lives in OpenBao at
+`secrets/third-party-tokens/github/david-driscoll/vault/deploy-key`
 and has no consumer since the vault GitRepository was removed; it can be deleted from
 GitHub when the repo is archived.
 

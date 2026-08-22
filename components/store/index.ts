@@ -88,6 +88,19 @@ export abstract class VaultStore {
   public abstract getSecretByTitle<T>(title: string): Output<Unwrap<T & Meta>>;
 
   /**
+   * Read a credential by its OpenBao path, e.g.
+   * `third-party-tokens/cloudflare/driscoll-tech`.
+   *
+   * The preferred form for new call sites, and what `resolveBaoPath`'s own
+   * error tells you to reach for. `getSecretByTitle` above is the legacy half:
+   * titles used to derive a path through `shared/<slug(title)>`, that rule is
+   * gone with the `shared/` reorganisation, and every surviving title now needs
+   * a hand-written `TITLE_PATHS` entry. Abstract here rather than concrete on
+   * `BaoStore` so callers holding a `VaultStore` can use it.
+   */
+  public abstract getSecretByPath<T>(path: string): Output<Unwrap<T & Meta>>;
+
+  /**
    * `ref+openbao://secrets/<path>#/<field>` resolution (PLAN §D.1), the
    * `ref+openbao://secrets/<path>#/<field>` resolution — now the ONLY
    * reference syntax a rendered file can carry. It had a 1Password counterpart

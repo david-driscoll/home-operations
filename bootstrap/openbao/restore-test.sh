@@ -36,9 +36,17 @@ readonly REPO_ROOT
 readonly APPROLE_FILE="bootstrap/openbao/restore-test-approle.sops.yaml"
 
 # The canary is the same key PLAN §Verification and RUNBOOK Scenario B read.
-# If it ever moves, change it here, in the equestria helmrelease
-# (CANARY_PATH), and in the RUNBOOK together.
-readonly CANARY_PATH="secrets/data/shared/cloudflare-driscoll-tech"
+# If it ever moves, change it here, in the openbao-replica helmrelease
+# (CANARY_PATH), in docker/alpha-site/bao-standby/restore.sh, and in the
+# RUNBOOK together -- scripts/bao-reorg/plan.ts calls those out by name.
+#
+# Moved from secrets/data/shared/cloudflare-driscoll-tech by the reorganisation
+# (docs/openbao-shared-secrets-reorg.md). The other three were updated when that
+# landed; this one could not be, because it was still in the vault repo. The
+# `restore-test` POLICY IN THE LIVE SERVER STILL GRANTS THE OLD PATH -- re-run
+# `./restore-test.sh init` (admin token) to rewrite it, or the monthly restore
+# test 403s on the canary read once bao-reorg phase 5 reaps `shared/`.
+readonly CANARY_PATH="secrets/data/third-party-tokens/cloudflare/driscoll-tech"
 
 log()  { printf '  %s\n' "$*"; }
 ok()   { printf '  ✓ %s\n' "$*"; }
@@ -94,7 +102,7 @@ init() {
     ok "policy restore-test already exists"
   else
     bao policy write restore-test - >/dev/null <<EOF
-# Monthly restore test (vault/bootstrap/RUNBOOK.md Scenario D): the single
+# Monthly restore test (bootstrap/RUNBOOK.md Scenario D): the single
 # canary read that proves a restored dump serves secrets. Deliberately not a
 # path glob — widening this widens what a leaked cluster Secret can read.
 path "${CANARY_PATH}" {

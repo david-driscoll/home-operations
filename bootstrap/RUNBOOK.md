@@ -122,7 +122,7 @@ runs.
    ```sh
    export BAO_ADDR=https://bao-standby.<tailscale-domain>   # or http://<dockge-as tailnet IP>:8201
    bao status                                          # unsealed, active
-   bao kv get secrets/shared/cloudflare-driscoll-tech  # canary read
+   bao kv get secrets/third-party-tokens/cloudflare/driscoll-tech  # canary read
    ```
    The canary read needs a token. **Reach for an AppRole first — they ride inside the
    dump**, so they exist the moment the restore finishes: the pulumi AppRole
@@ -211,7 +211,7 @@ nothing mocked:
 3. Restores into a scratch Postgres sidecar, then starts a throwaway `bao` against it
    and lets it unseal via the real transit key on alpha-site
 4. Logs in with the restore-test AppRole and reads the canary key
-   (`secrets/shared/cloudflare-driscoll-tech`)
+   (`secrets/third-party-tokens/cloudflare/driscoll-tech`)
 5. Reports to the `OpenBao Break Glass` Gatus group on uptime — which pages on an
    explicit failure AND on silence: the nightly-dump heartbeat lapses after 26h, the
    restore-test heartbeat after 33 days, and both re-page daily until fixed
