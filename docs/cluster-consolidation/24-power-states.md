@@ -2,9 +2,11 @@
 
 Not yet filed as a vault#84 sub-issue letter — this piece is new, introduced
 2026-08-13, extending [20-low-power-tier.md](20-low-power-tier.md) rather than
-replacing it. **This is a design proposal, not yet executed or rehearsed.**
+replacing it. ~~**This is a design proposal, not yet executed or rehearsed.**~~
+**Low Power is built and running nightly as of 2026-08-22; Battery is still a design.**
 Where it states something as fact it was checked live against `admin@equestria`
-on 2026-08-13; where it proposes a mechanism that hasn't been verified against
+on 2026-08-13, and re-checked on 2026-08-19/21/22 where the revision blocks below say so;
+where it proposes a mechanism that hasn't been verified against
 the tool's actual behavior, it says so — don't treat those parts with the same
 confidence as the rest of this plan set.
 
@@ -12,6 +14,42 @@ Depends on [12-longhorn-critical-tier.md](12-longhorn-critical-tier.md) (storage
 tagging) and amends [20-low-power-tier.md](20-low-power-tier.md) (§1 Tier-1
 namespace list, §4 placement model) — read this file *and* 20 together; 20 is
 not being rewritten, this file records what changed and why.
+
+## Revision, 2026-08-22 — Low Power runs on a schedule now, and it can shed both media workers
+
+**Low Power stopped being a manual toggle.** Five PRs merged 2026-08-22:
+
+| PR | What landed | Verified |
+|---|---|---|
+| [#1046](https://github.com/david-driscoll/home-operations/pull/1046) | `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` on py-kube-downscaler — **Tier 2 sheds nightly with no human in the loop.** `${TIMEZONE}` comes from the `TIMEZONE` key of the `shared-secrets` Secret, not hardcoded, so this window and #1047's Gatus windows cannot drift apart. `system-upgrade` added to `excludedNamespaces`: a shed must not stop tuppr mid-upgrade | live 2026-08-22 — `kube-system/kube-downscaler-py-kube-downscaler` carries the arg with `${TIMEZONE}` resolved to `America/New_York` |
+| [#1047](https://github.com/david-driscoll/home-operations/pull/1047) | Gatus `maintenance-windows` (`start: "02:00"`, `duration: 7h`, `timezone: ${TIMEZONE}`) on the **26** `definition.yaml` files whose services actually shed — without it every shed service pages for seven hours a night. The `ApplicationDefinition` CRD had to regain the previously-pruned Gatus fields first, and the JSON schemas **plus a real type generator** (`schemas/`, `scripts/generate-types.ts`, `mise run codegen`) came into this repo from `stargate-command-cluster`; the generator had never existed here at all. Gatus fields synced to v5.36.0 | 26 files carry the block; `schemas/` and `scripts/generate-types.ts` present in-tree |
+| [#1048](https://github.com/david-driscoll/home-operations/pull/1048) | Intel GPU plugin split per node class — `intel-gpu-plugin` on the control planes (`sharedDevNum: 2`, and the only release creating the fixed-name `NodeFeatureRule`) and `intel-gpu-plugin-workers` (`sharedDevNum: 3`, correcting the old and wrong `5`). Also right-sized the media apps: plex 6 CPU/4Gi/8Gi → 1 CPU/1Gi/4Gi with no CPU limit, jellyfin 4 CPU → 1 CPU and 8Gi → 4Gi, dispatcharr 1 CPU → 300m | live — both `GpuDevicePlugin` CRs exist with those ratios and disjoint device-id selectors (`46d4` = control planes, `46a6` = workers) |
+| [#1051](https://github.com/david-driscoll/home-operations/pull/1051) | **Both** media workers become sheddable: control-plane tolerations plus a *soft* (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass. Design and runbook: [30](30-longhorn-media-tier.md) | live — `LowPowerReturnProfile` in the descheduler ConfigMap; `longhorn-media` created (`nodeSelector: critical` as shipped, superseded hours later by #1053) |
+| [#1053](https://github.com/david-driscoll/home-operations/pull/1053) | A **new `low-power` node tag** on exactly the five nodes that stay powered through the window — `milky-way`/`othalla`/`pegasus` (now `["critical", "low-power"]`) plus `hard-hat` (immich's GPU) and `shining-armor` (backup volumes) — and `longhorn-media` repointed from `nodeSelector: critical` to `low-power`. `fluttershy` and `kerfuffle` are deliberately **not** tagged. Purely additive: every existing `bulk`/`critical` selector still matches what it did. Three `talconfig.yaml` anchor edits cover all five nodes, but the annotation is read only at Longhorn node **creation**, so the live retag came from patching the `nodes.longhorn.io` CRs | live — all seven node tag lists verified; `longhorn-media` reads `nodeSelector: low-power`, 3 replicas, `dataLocality: disabled` |
+
+**Why the retag, in one line:** `critical` means "Tier-0/1 storage tier", so borrowing it both
+diluted that meaning and piled all three media config volumes onto the same three control-plane
+disks. And three replicas over **five** eligible nodes leaves **two spare**, so Longhorn can
+rebuild if a node dies — the `critical`-only shape had no spare at all. Three replicas still
+**structurally guarantee** one on a control plane: only two of the five tagged nodes are not
+control planes, and `replica-soft-anti-affinity: false` allows at most one replica per node.
+
+⚠️ **`low-power` is not `battery`.** In a real Battery event `hard-hat` does go down and a
+replica there will fail. Expected — Battery is an emergency, not a nightly routine.
+
+**What is NOT done, and it is the thing the node-shedding half depends on:**
+[30](30-longhorn-media-tier.md)'s volume migration is **nearly finished**. Verified live
+2026-08-22 18:21 UTC — `dispatcharr` **complete** (`n=3 sel=["low-power"]`, healthy, replicas
+on all three control planes) and `plex` **complete** (`n=3 sel=["low-power"]`, healthy,
+`milky-way`/`othalla`/`shining-armor`); `jellyfin` is mid-migration at `n=4`, `degraded`, still
+holding replicas on both `fluttershy` and `kerfuffle`. Until `jellyfin` finishes, shutting a
+media worker overnight leaves its config volume degraded every night — which fires
+`LonghornVolumeStatusWarning` and stalls tuppr's drain gate, the exact failure 30 exists to
+prevent. **So the workload half of Low Power is automated and the node half is not yet safe to
+use.**
+
+Also still manual, and easy to over-read as automated: **nothing powers a node off or wakes one
+up on a schedule.** #1046 sheds workloads only.
 
 ## Revision, 2026-08-21 — Low Power has been run, in dry-run, for the first time
 
@@ -24,9 +62,12 @@ is applied, so the control planes are tainted and the Tier-0/1 tolerations are l
 
 **`--dry-run` is off as of 2026-08-21**, after a second scan showed all eleven keep-list entries
 surviving and nothing moving cluster-wide. The mechanism is armed: annotating `equestria` and
-`github-actions` with `downscaler/force-downtime` now genuinely sheds. What is left before Low
+`github-actions` with `downscaler/force-downtime` now genuinely sheds. ~~What is left before Low
 Power is *rehearsable* rather than merely runnable: decide open item 1, measure the
-Low-Power-specific capacity in open item 4, and settle which hosts are "power-hungry" in item 5.
+Low-Power-specific capacity in open item 4, and settle which hosts are "power-hungry" in item 5.~~
+**Of those three: item 5 is answered (below), item 1 is settled as "leave it unbuilt", and item 4
+is the one that is genuinely still open.** And the toggle itself was superseded the next day by a
+schedule — see the 2026-08-22 revision above.
 
 ### Revision, 2026-08-19 — two of the three unknowns are now known
 
@@ -58,8 +99,8 @@ down. Three states:
 | State | Trigger | Workers | What runs |
 |---|---|---|---|
 | **Full** | default | all up | everything |
-| **Low Power** | manual toggle | some power-hungry hosts shut down (e.g. `fluttershy`); the rest stay up | Tier 0/1 + an explicit keep-list; everything else scaled to 0 by default |
-| **Battery** | Pecron UPS reports mains lost | all workers cordoned + shut down | Tier 0/1 only — this *is* 20's S′, amended below |
+| **Low Power** | **nightly schedule, 02:00–09:00 `${TIMEZONE}`** (#1046, live 2026-08-22) — the manual `downscaler/force-downtime` namespace annotation still works on top for an ad-hoc window | **workload shed is automatic; node shutdown is not.** The intended set is both media workers (`fluttershy` + `kerfuffle`) — exactly the two nodes #1053 left **out** of the `low-power` Longhorn tag — once [30](30-longhorn-media-tier.md)'s migration lands. **Not usable yet: `jellyfin` is unmigrated** | Tier 0/1 + an explicit keep-list; everything else scaled to 0 by default |
+| **Battery** | Pecron UPS reports mains lost — still a **human** decision, nothing acts on the signal | the three **bare-metal** workers cordoned + shut down. **`shining-armor` stays online** (David, 2026-08-22 — VM on `twilight-sparkle`, hosts the backup volumes) | Tier 0/1 only — this *is* 20's S′, amended below |
 
 Full → Low Power → Battery is a strictly increasing amount of shed load; Battery
 is not "Low Power taken further" mechanically (different node set, different
@@ -209,6 +250,17 @@ eleven are keep — so the mechanism below cannot be namespace-granular alone.
 | ~~namespace `github-actions`~~ | **removed from the keep-list 2026-08-21** — David: CI is safe to scale down and can wait out a window. It is a **shed** namespace; Low Power entry annotates it alongside `equestria` | `github-actions` |
 | watch-state | **not deployed** — no matching workload live | — |
 | strmgen | **not deployed** — no matching workload live | — |
+
+**Three keep-list entries now *move* during a window rather than merely staying up — new
+2026-08-22.** `plex`, `jellyfin` and `dispatcharr` are the reason both media workers can be shed
+at all: [#1051](https://github.com/david-driscoll/home-operations/pull/1051) gave them
+control-plane tolerations plus a *soft* iGPU affinity so they relocate onto the trio for the
+duration and are descheduled home at 09:00, and
+[#1048](https://github.com/david-driscoll/home-operations/pull/1048) gave the control planes GPU
+slots (`sharedDevNum: 2`) to land on. "Stays up" is therefore doing more work for these three
+than for the other eight — and it is **gated on [30](30-longhorn-media-tier.md)'s volume
+migration finishing**, which it has not: `dispatcharr` and `plex` are migrated, `jellyfin` is
+not. See "Node shutdown" below.
 
 `watch-state` and `strmgen` are named in the original keep-list but have no workload in the
 cluster today. **Re-confirmed live 2026-08-21** — no Deployment, StatefulSet or CronJob under
@@ -472,16 +524,108 @@ it does **not** make the controller start acting, because action is still inert
 the toggle now works. The corollary is that a mistyped `kubectl annotate` is no longer harmless,
 which is exactly what `excludedNamespaces` is for.
 
+### Scheduled 2026-08-22 — the toggle became a nightly window
+
+**[#1046](https://github.com/david-driscoll/home-operations/pull/1046).** David: *"enter a lower
+power state at night, starting around 2am, and restore normal operation at 9am."* Delivered as a
+default downtime rather than a cron or an operator:
+
+```yaml
+- --default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}
+```
+
+Five things about that line are load-bearing, all of them verified rather than assumed:
+
+- **It changes *when*, not *what*.** The shed-list is the same 40 workloads the two dry-run scans
+  named, so it needed no fresh dry-run. Only three namespaces are in scope at all — everything
+  else is already in `excludedNamespaces`.
+- **The keep-list still wins.** `define_scope` short-circuits on `downscaler/exclude` *before* any
+  uptime/downtime is evaluated (`scaler.py:97`), which is the same precedence that makes the
+  manual toggle safe. Plex, Jellyfin, Immich, n8n and the rest stay up overnight.
+- **A window cannot cross midnight.** The downscaler only interprets a range within a single day
+  and requires end later than start, so `22:00-06:00` would be *silently* wrong. 02:00–09:00 is
+  same-day. Worth knowing before anyone widens it backwards into the evening.
+- **`${TIMEZONE}` is substituted, not hardcoded** — it comes from the `TIMEZONE` key of the
+  `shared-secrets` Secret (`components/common` patches child Kustomizations to add it to
+  `substituteFrom`), so this window and the Gatus maintenance windows below cannot drift apart.
+  A postBuild variable that fails to resolve makes the Kustomization fail rather than render
+  empty, so a regression here is loud. Live 2026-08-22 it resolves to `America/New_York`.
+- **`system-upgrade` was added to `excludedNamespaces`.** That namespace holds tuppr, which drives
+  Talos and Kubernetes node upgrades — and tuppr does not self-clear a `Failed` TalosUpgrade, it
+  needs a generation bump. "CI can wait out a window" does not extend to "the thing rebooting
+  nodes can be stopped halfway."
+
+The manual `downscaler/force-downtime` toggle above still works on top of this, for an ad-hoc
+window outside the nightly one.
+
+**Companion: Gatus maintenance windows ([#1047](https://github.com/david-driscoll/home-operations/pull/1047)).**
+Without them every shed service pages for seven hours a night. **26** `definition.yaml` files
+gained:
+
+```yaml
+maintenance-windows:
+  - start: "02:00"
+    duration: 7h
+    timezone: ${TIMEZONE}
+```
+
+Which 26 was derived from *what actually sheds* — every Deployment/StatefulSet/CronJob in
+`equestria` and `github-actions` **without** `downscaler/exclude`, intersected with the set that
+has a Gatus endpoint. Listing `definition.yaml` files by name would have given 44 and been wrong
+twice over: it would have included apps with a definition but no live workload, and it would have
+included `equestria/dns/technitium`, which is Tier 1 and must never get a maintenance window —
+during a window it is exactly the thing that still has to answer.
+
+Two pieces of estate plumbing had to be fixed to make that field exist at all, and they outlast
+this change:
+
+- **The CRD was the real gate.** `ApplicationDefinition` carries no
+  `x-kubernetes-preserve-unknown-fields`, so an unrecognised key is pruned by the API server
+  before Pulumi ever sees it — the Pulumi path round-trips YAML with a cast and would have
+  happily passed it through. The Gatus fields were added back to the CRD with their own
+  validation, and synced to Gatus v5.36.0.
+- **The type generator did not exist in this repo.** `types/application-definition.d.ts` carried
+  the "generated by json-schema-to-typescript, modify the source JSONSchema" banner while neither
+  the schemas nor the generator lived here — both were in `stargate-command-cluster`, so the
+  types could only be edited by hand, which the banner forbids, and they had drifted from both
+  the schemas and the CRD. #1047 brought `schemas/` and `scripts/generate-types.ts` in and wired
+  them to `mise run codegen` (which `mise run update` depends on).
+
 ### Node shutdown
 
-Low Power additionally powers off specific power-hungry hosts — `fluttershy`
-named explicitly as the first case, more may follow as nodes join. This reuses
+Low Power additionally powers off specific power-hungry hosts — ~~`fluttershy`
+named explicitly as the first case, more may follow as nodes join.~~ This reuses
 20 §6's "cordon, don't drain, then power off" pattern and its "one at a time,
 verify between each" rule — no new mechanism needed there, just a smaller,
-selectable node set than Battery's "every worker." **Open item:** the keep-up
-service list above has to actually be schedulable on whichever workers remain
-after `fluttershy` (and any future additions) go dark — not verified here,
-needs a capacity check per node-set once the specific shutdown list is final.
+selectable node set than Battery's "every worker."
+
+**The node set is settled as of 2026-08-22, and it is both media workers, not one.**
+[#1051](https://github.com/david-driscoll/home-operations/pull/1051) exists precisely to make
+`kerfuffle` sheddable alongside `fluttershy`, by making the three media pods (plex, jellyfin,
+dispatcharr) relocatable onto the control planes for the duration:
+
+- **Outbound needs no help.** Shutting a node down evicts its pods; the control-plane toleration
+  plus the *soft* (weight 100) iGPU affinity means they land on a control plane rather than going
+  `Pending`. The soft half has to stay soft — with both workers gone a required term would leave
+  them `Pending` until 09:00.
+- **The 09:00 return trip does need help**, and it is the part that would have failed silently.
+  A second descheduler profile (`LowPowerReturnProfile`) runs `RemovePodsViolatingNodeAffinity`
+  against that same preference. It needs its **own** `DefaultEvictor` with
+  `evictLocalStoragePods: true`, because all three apps use `emptyDir` and the default profile's
+  `false` would have blocked every eviction — and flipping it on the *default* profile would have
+  handed `RemoveDuplicates`/`LowNodeUtilization` the right to evict every `emptyDir` pod in the
+  estate. `nodeFit: true` is set on both profiles, which also fixes churn flagged in
+  [29](29-taint-readiness-audit.md): tainted control planes read as permanently under-utilised.
+- **Storage is the blocker.** The three config volumes must hold their replicas only on
+  `low-power`-tagged nodes, or they sit degraded all night — see the `longhorn-media` row below
+  and [30](30-longhorn-media-tier.md). `dispatcharr` and `plex` are done; **`jellyfin` is
+  not**, so **do not shed a media worker yet.**
+
+**Capacity for the shed node-set is still the open question** (open item 4): the keep-up service
+list has to be schedulable on whatever remains once both media workers are dark. #1048 helps
+directly rather than incidentally — plex went from 6 CPU to 1 with no CPU limit, jellyfin from 4
+to 1, dispatcharr from 1 CPU to 300m, and the control planes gained two shared GPU slots each —
+but that is a right-sizing, not a measurement of the resulting node-set.
 
 ## Storage class summary (post-12, post-24)
 
@@ -489,7 +633,8 @@ needs a capacity check per node-set once the specific shutdown list is final.
 |---|---|---|---|
 | `longhorn` (default) | 3 | `bulk`-tagged nodes only (12 Step 3) | ordinary Tier-2 app storage |
 | `longhorn-critical` | 3 | `critical`-tagged nodes only, one per CP (12 Step 2) | data that must *never* leave a control plane — cluster-platform-adjacent state, not app data that floats |
-| `longhorn-controlplane` *(new, this piece)* | 2 | zone-split: one replica in `critical` zone, one in `bulk` zone | Tier-1 **application** state that normally lives on a worker and relocates to a CP only during Battery (Home Assistant, etc.) |
+| `longhorn-controlplane` *(new, this piece)* | 2 | zone-split: one replica in `critical` zone, one in `bulk` zone | Tier-1 **application** state that normally lives on a worker and relocates to a CP only during Battery (Home Assistant, etc.). **Recommended left unbuilt** — open item 1 |
+| `longhorn-media` *(new 2026-08-22, [#1051](https://github.com/david-driscoll/home-operations/pull/1051) + [#1053](https://github.com/david-driscoll/home-operations/pull/1053); owned by [30](30-longhorn-media-tier.md))* | 3 | `nodeSelector: low-power` — the **five** nodes that stay powered overnight (3 CPs + `hard-hat` + `shining-armor`), `dataLocality: disabled`. Two spare eligible nodes, so a single node failure can rebuild; at least one replica is always on a CP | The `plex`/`jellyfin`/`dispatcharr` config volumes, so shedding **both** media workers during a Low Power window leaves nothing degraded. Class is live; `dispatcharr` and `plex` migrated, **`jellyfin` still in progress** |
 | `longhorn-cache` / `longhorn-snapshot` / `longhorn-local` | unchanged | unchanged | unchanged, out of scope here (see 12's "out of scope") |
 
 ## Open items
@@ -599,11 +744,45 @@ Still open, in priority order:
    the trio to ~71 % of allocatable CPU in requests alone — confirming this file's "≈7.4 GiB"
    estimate on memory while identifying **CPU** as the tight axis instead. What remains
    unmeasured is Low Power specifically: §3 models Full and Battery, not the middle state.
-5. **PoE/host-shutdown ordering for Low Power's node list** — beyond `fluttershy`, which
-   other hosts qualify as "power-hungry," and what is the capacity floor once they are down.
-   Note this now interacts with [20](20-low-power-tier.md) §0.3: with Technitium moving to
-   the control planes, shutting `hard-hat` no longer takes in-cluster DNS with it, which
-   removes the main reason `hard-hat` was awkward to shed.
+
+   **Sharper as of 2026-08-22, and still open.** The middle state now has a concrete node set
+   (both media workers dark) and a concrete extra tenant on the trio (plex + jellyfin +
+   dispatcharr relocating there for seven hours a night). #1048's right-sizing pulls hard in the
+   helpful direction — plex 6 CPU → 1 with no CPU limit, jellyfin 4 → 1 and 8Gi → 4Gi,
+   dispatcharr 1 CPU → 300m, and two shared GPU slots per control plane — but nobody has
+   measured the trio's requests *with those three resident*, which is what this item asks for.
+   Measure it during a real 02:00 window rather than on paper; the window now happens on its own.
+5. ~~**PoE/host-shutdown ordering for Low Power's node list** — beyond `fluttershy`, which
+   other hosts qualify as "power-hungry," and what is the capacity floor once they are down.~~
+   **ANSWERED by David, 2026-08-22.** During a **true outage** `fluttershy`, `hard-hat` and
+   `kerfuffle` can be shut down. **`shining-armor` stays online** — it is a VM on
+   `twilight-sparkle` and it hosts the backup volumes.
+
+   Three consequences:
+
+   - **Battery is not "all four workers off."** [20](20-low-power-tier.md) §6.1 said so and has
+     been corrected; the end state is 3 control planes **+ `shining-armor`**, which makes 20 §3's
+     capacity model conservative rather than wrong.
+   - **The sheddable set is exactly the WoL set.** All three bare-metal workers can be woken by
+     WoL (David, 2026-08-20; [20](20-low-power-tier.md) §6.2), so every node the design turns off
+     has a remote path back. `shining-armor`'s `qm start` is now a convenience for a node that is
+     not being turned off in the first place.
+   - **Low Power's own node list is narrower than Battery's**, and settled separately: both media
+     workers, per "Node shutdown" above. `hard-hat` is *shed-capable* since Technitium moved to
+     the control planes ([20](20-low-power-tier.md) §0.3) but is not on Low Power's list.
+
+   **One derived claim, flagged rather than asserted:** for `shining-armor` to stay online,
+   `twilight-sparkle` must stay powered through the outage. That follows from David's answer but
+   was not separately confirmed.
+
+   The remaining half of the original question — *the capacity floor once they are down* — is not
+   closed here; it is item 4.
+
+   For completeness, the rest of the estate's power posture is recorded in
+   [20](20-low-power-tier.md) §7 rather than duplicated here: the battery powers **alpha-site**
+   (and therefore its PoE switch), **celestia and luna** are on battery, **skystar** is remote on
+   a different grid, and **the local network and the Internet uplink are battery/PoE-backed** —
+   so a window can be driven remotely and the battery telemetry stays readable off-site.
 6. ~~**`watch-state` and `strmgen` are on the keep-list but not in the cluster**~~ **CLOSED
    2026-08-21.** Re-confirmed live: no Deployment, StatefulSet or CronJob under either name, and
    no near-miss (`watchstate` searched too). They are gone. The keep-list is **eleven** entries,
@@ -622,3 +801,6 @@ Still open, in priority order:
   both, this file is not a replacement.
 - [25-unseal-key-scope.md](25-unseal-key-scope.md) — unrelated in mechanism,
   same 2026-08-13 design session.
+- [30-longhorn-media-tier.md](30-longhorn-media-tier.md) — owns `longhorn-media` and the
+  grow-then-shrink migration that Low Power's node-shutdown half is blocked on. Read it before
+  shedding either media worker.

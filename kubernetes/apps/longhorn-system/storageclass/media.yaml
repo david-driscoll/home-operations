@@ -77,31 +77,28 @@
 #      being shed — without touching the other.
 #
 # WHY `dataLocality: disabled` AND NOT `best-effort`.
-# `best-effort` asks Longhorn to keep a replica on the node the volume is
-# attached to. By DAY the pod is on a media worker, which is OUTSIDE the
-# `critical` tag, so that request is UNSATISFIABLE for most of every day — tags
-# are a hard AND filter in the replica scheduler and `best-effort` cannot
-# override them. What Longhorn does then is not "nothing": it mints a ghost
-# replica — `spec.nodeID: ""`, `state: stopped`, `hardNodeAffinity` pinned to
-# the node that rejected it, `rebuildRetryCount` capped at 5 — and parks a
-# permanent `Scheduled=False / LocalReplicaSchedulingFailure` condition on the
-# volume. That is upstream's "tags not fulfilled" ghost (longhorn#7312,
-# longhorn#11007). It does no I/O and cannot act as a replenishment slot, so it
-# is cruft rather than damage, and NO alert covers it — which is precisely why
-# it would go unnoticed forever.
+# Under this shape locality is already STRUCTURAL, so `best-effort` has nothing
+# to ask for. Five replicas across the five eligible nodes means every node the
+# pod can possibly run on already holds one: a worker by day, a control plane by
+# night. `best-effort` exists to chase a local replica when there isn't one, and
+# here there always is.
 #
-# It is not hypothetical here. `teamarr` and `pinepods` — same shape, reversed —
-# are carrying exactly that ghost replica and exactly that
-# `Scheduled=False (LocalReplicaSchedulingFailure)` condition right now, while
-# reporting `robustness: healthy`.
+# Leaving it `disabled` also keeps a known failure mode off the table. When
+# `best-effort` CANNOT be satisfied -- when the attached node is outside the tag
+# -- Longhorn does not quietly do nothing. It mints a ghost replica
+# (`spec.nodeID: ""`, `state: stopped`, `hardNodeAffinity` pinned to the node
+# that rejected it, `rebuildRetryCount` capped at 5) and parks a permanent
+# `Scheduled=False / LocalReplicaSchedulingFailure` condition on the volume.
+# That is upstream's "tags not fulfilled" ghost (longhorn#7312, longhorn#11007).
+# It does no I/O and cannot act as a replenishment slot, so it is cruft rather
+# than damage -- but NO alert covers it, which is why it would go unnoticed
+# forever.
 #
-# And `best-effort` buys nothing in exchange. OVERNIGHT, when the pod is on a
-# control plane, locality is already satisfied — every control plane holds a
-# replica — so `best-effort` has nothing left to ask for. So it is unsatisfiable
-# by day and redundant by night: pure downside. `disabled` it is.
-# (`longhorn-critical` keeps `best-effort` legitimately: its workloads run ON
-# the control planes, so for them the request is satisfiable.)
+# Not hypothetical: `teamarr` and `pinepods` are carrying exactly that ghost and
+# exactly that condition right now, while reporting `robustness: healthy`.
 #
+# So if `numberOfReplicas` is ever dropped below the number of tagged nodes,
+# this setting is the thing keeping that cruft from appearing.
 # WHY THE NIGHTLY WINDOW COSTS NOTHING HERE. Every `low-power` node stays
 # powered through it, so no replica ever fails, nothing goes `degraded`, no
 # `LonghornVolumeStatusWarning` fires, and the cluster-wide tuppr gate
@@ -140,28 +137,45 @@ metadata:
 reclaimPolicy: Delete
 provisioner: driver.longhorn.io
 parameters:
-  numberOfReplicas: "3"
-  # `low-power` = the nodes that stay powered through the nightly Low Power
-  # window: the three control planes plus hard-hat and shining-armor. It is a
-  # SEPARATE tag from `critical` on purpose -- `critical` means "Tier-0/1 storage
-  # tier", and borrowing it here would both dilute that meaning and pile every
-  # media config volume onto the same three disks that already serve the
-  # registry, home-assistant, technitium, mosquitto and tsidp.
+  numberOfReplicas: "5"
+  # `low-power-off` = the five nodes with an Intel iGPU, i.e. every node that can
+  # actually run plex/jellyfin/dispatcharr: fluttershy and kerfuffle (the daytime
+  # workers) plus the three control planes (where the apps land overnight).
   #
-  # Nodes carry more than one tag, so the control planes are
-  # ["critical", "low-power"] and hard-hat/shining-armor are ["bulk", "low-power"].
-  # fluttershy and kerfuffle are deliberately NOT tagged: they are the workers
-  # that get shed, and a replica there is exactly what makes the volume degrade
-  # every night.
+  # WHY REPLICAS LIVE ON THE WORKERS, given they are shed nightly. Data locality.
+  # The pods run on fluttershy/kerfuffle for the 17 hours a day the estate is
+  # awake, and that is when the volumes are actually used. plex's config is
+  # SQLite, which is a latency workload rather than a throughput one, so a local
+  # replica is worth real money during the day. The previous `low-power` shape
+  # kept nights spotless at the cost of every daytime read crossing the network.
   #
-  # WHY 3 REPLICAS IS ENOUGH, and why at least one always lands on a control
-  # plane: the tag covers five nodes, only TWO of which are not control planes
-  # (hard-hat, shining-armor). `replica-soft-anti-affinity` is false, so Longhorn
-  # places at most one replica per node -- three replicas therefore cannot fit on
-  # the two non-control-plane nodes, and at least one MUST land on a control
-  # plane. That is a structural guarantee, not a probability, and it is what
-  # keeps a local replica available to the pod overnight.
-  nodeSelector: "low-power"
+  # WHAT THIS COSTS, stated plainly. A replica on a node that powers off IS a
+  # failed replica, so these volumes go `degraded` every night by definition.
+  # That has two consequences, both of which need the companion changes shipped
+  # alongside this:
+  #   * `LonghornVolumeStatusWarning` would fire nightly -- silenced for the
+  #     window, the same way the Gatus maintenance windows are.
+  #   * tuppr's Talos health gate is `status.robustness != "degraded"` and is
+  #     CLUSTER-WIDE, so it would block every node drain for the whole window.
+  #     The tuppr maintenance window in system-upgrade/upgrades/talos.yaml is
+  #     enabled to keep upgrades inside the awake hours.
+  #
+  # WHY 5 REPLICAS AND NOT 3. This is the part that is easy to get wrong.
+  # Replenishment fires when a replica FAILS, not when a node is merely empty --
+  # so at 02:00 the two worker replicas fail and Longhorn looks for somewhere to
+  # rebuild them. With 3 replicas over 5 eligible nodes there are two empty
+  # control planes waiting, so it rebuilds ~170GiB every night and unwinds it
+  # every morning. With 5 replicas every eligible node already holds one, there
+  # is nowhere to rebuild, and Longhorn simply waits and fast-resyncs at 09:00.
+  #
+  # 5 also gives locality in BOTH states: a replica on each worker for the day,
+  # and one on each control plane for the night. The cost is 5-way synchronous
+  # writes, which these config volumes can afford -- they are read-heavy.
+  #
+  # NOT tagged: hard-hat and shining-armor. Neither has an Intel iGPU, so the
+  # media apps can never run there and a replica would be permanently remote.
+  # They keep `low-power` (see below), which is a different question.
+  nodeSelector: "low-power-off"
   dataLocality: disabled
   replicaAutoBalance: best-effort
   staleReplicaTimeout: "30"
