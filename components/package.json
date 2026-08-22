@@ -20,6 +20,7 @@
   "dependencies": {
     "@1password/connect": "^1.4.2",
     "@goauthentik/api": "^2026.2.3-rc1",
+    "@octokit/auth-app": "^8.2.0",
     "@pulumi/cloudflare": "^6.10.0",
     "@pulumi/minio": "^0.17.0",
     "@pulumi/random": "^4.18.4",
@@ -27,13 +28,16 @@
     "@pulumi/tls": "^5.2.2",
     "@pulumiverse/unifi": "^0.3.0",
     "crypto-js": "^4.2.0",
+    "moment": "^2.30.1",
     "node-unifi": "^2.5.1",
     "openapi-fetch": "^0.17.0",
+    "simple-oauth2": "^5.1.0",
     "vscode-ws-jsonrpc": "^3.5.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node-unifi": "^2.5.1",
+    "@types/simple-oauth2": "^5.0.8",
     "openapi-typescript": "^7.13.0"
   }
 }

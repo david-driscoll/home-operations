@@ -1,6 +1,6 @@
 /**
  * OpenBao-backed reads for Pulumi — Phase 8 of the 1Password→OpenBao migration
- * (vault repo: docs/openbao-migration/PLAN.md §D.3, §G).
+ * (docs/openbao-migration/PLAN.md §D.3, §G).
  *
  * `VaultStore` is the seam PLAN §D.3 identified: every stack reaches secrets
  * through `globals.store`, so reimplementing its reads against OpenBao covers
@@ -154,7 +154,7 @@ export class BaoStore extends VaultStore {
    * `stacks/system` from the checked-in YAML at `/clusters`.
    *
    * They used to be read straight off disk. That worked for home-operations
-   * and forced the vault repo to carry a byte-identical copy of six files
+   * and forced the (since retired) vault repo to carry a byte-identical copy of six files
    * under a "diff -r must come back empty" convention — a maintenance trap,
    * because copies drift the moment someone forgets and nothing fails when
    * they do. Publishing once and reading everywhere keeps the YAML as the

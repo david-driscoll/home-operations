@@ -1,8 +1,8 @@
 /**
  * The `secrets/shared/*` reorganisation, as data.
  *
- * `shared/` was never meant to be flat. The vault repo's PLAN.md §A specifies a
- * grouped layout; what shipped was `op-to-bao`'s DEFAULT rule (`shared/<slug>`)
+ * `shared/` was never meant to be flat. `docs/openbao-migration/PLAN.md` §A
+ * specifies a grouped layout; what shipped was `op-to-bao`'s DEFAULT rule (`shared/<slug>`)
  * because `mapping.yaml` was reviewed for collisions rather than for grouping.
  * This module is the correction, reviewed and signed off in
  * `docs/openbao-shared-secrets-reorg.md` — that document is the rationale, this
@@ -19,8 +19,8 @@
  * ## Phases exist because of one ACL fact
  *
  * `eso-<cluster>` grants read on `secrets/data/shared/*` and
- * `secrets/data/clusters/*` and NOTHING ELSE (vault repo,
- * `bootstrap/openbao/equestria-init.sh`, write_policies). A trailing `*` in an
+ * `secrets/data/clusters/*` and NOTHING ELSE
+ * (`bootstrap/openbao/equestria-init.sh`, write_policies). A trailing `*` in an
  * OpenBao ACL is a prefix glob, so it spans `/` — which is why
  * `clusters/equestria/apps/n8n/credentials` needs no grant. But
  * `third-party-tokens/`, `apps/` and `docker/` are NEW TOP-LEVEL prefixes, and
@@ -167,7 +167,7 @@ const NEW_PREFIX_MOVES: MoveEntry[] = [
     phase: 3,
     from: "shared/cloudflare-driscoll-tech",
     to: "third-party-tokens/cloudflare/driscoll-tech",
-    note: "THE CANARY. openbao-replica CANARY_PATH, bao-standby/restore.sh and the vault repo's RUNBOOK all name it — all three change in lockstep or break-glass verification fails",
+    note: "THE CANARY. openbao-replica CANARY_PATH, bao-standby/restore.sh, bootstrap/RUNBOOK.md and bootstrap/openbao/restore-test.sh all name it — they change in lockstep or break-glass verification fails. The last two lagged (they were in the vault repo); repointed when it was absorbed, but the LIVE restore-test policy still grants the old path until `restore-test.sh init` is re-run",
   },
   { kind: "move", phase: 3, from: "shared/unifi-api-key-eris-cluster", to: "third-party-tokens/unifi/api-key" },
   { kind: "move", phase: 3, from: "shared/unifi-discord", to: "third-party-tokens/discord/unifi-webhook" },
@@ -205,8 +205,8 @@ const NEW_PREFIX_MOVES: MoveEntry[] = [
   },
   { kind: "move", phase: 3, from: "shared/proxmox-apikey", to: "apps/proxmox/api-key" },
   { kind: "move", phase: 3, from: "shared/alpha-site-proxmox-apikey", to: "apps/proxmox/alpha-site/api-key", note: "alpha-site's own Proxmox host, not the main one — stacks/home reads both" },
-  { kind: "move", phase: 3, from: "shared/minio-root-user", to: "apps/minio/root", note: "bootstrap; also read by the vault repo's .config/mise.toml" },
-  { kind: "move", phase: 3, from: "shared/pulumi-passphrase", to: "apps/pulumi/passphrase", note: "bootstrap; also read by the vault repo's .config/mise.toml" },
+  { kind: "move", phase: 3, from: "shared/minio-root-user", to: "apps/minio/root", note: "bootstrap" },
+  { kind: "move", phase: 3, from: "shared/pulumi-passphrase", to: "apps/pulumi/passphrase", note: "bootstrap" },
   { kind: "move", phase: 3, from: "shared/volsync-password", to: "apps/volsync/password" },
 
   // docker/ — things every Dockge host runs
@@ -262,7 +262,8 @@ const SPLITS: SplitEntry[] = [
 /**
  * Retired: parked under `retired/` rather than destroyed.
  *
- * These have no reference anywhere in this repo and none in the vault repo.
+ * These have no reference anywhere in this repo (the vault repo, checked at the
+ * time and since absorbed, had none either).
  * They are all still at version 1 with `updated_time` 2026-08-08 — written once
  * by `op-to-bao --apply` and never read since. Parking rather than deleting
  * costs nothing and means a wrong call here is a `bao-move` away from being

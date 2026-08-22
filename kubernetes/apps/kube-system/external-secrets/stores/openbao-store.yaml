@@ -26,7 +26,7 @@ spec:
           mountPath: kubernetes
           # Bound in OpenBao to this exact ServiceAccount + namespace, and
           # carries the `eso-equestria` policy: read on secrets/shared/* and
-          # secrets/clusters/equestria/*. See vault:bootstrap/openbao/equestria-init.sh.
+          # secrets/clusters/equestria/*. See bootstrap/openbao/equestria-init.sh.
           role: eso-equestria
           serviceAccountRef:
             name: external-secrets

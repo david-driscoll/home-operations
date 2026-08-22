@@ -27,8 +27,9 @@ pulumi up --yes       # deploy
 Pulumi TypeScript monorepo managing homelab infrastructure across multiple clusters and services.
 
 ```
+bootstrap/      # Bootstrap-tier secrets (SOPS) + INVENTORY/RUNBOOK: the OpenBao seal chain, recovery shares, Pulumi AppRole/passphrase
 components/     # Shared Pulumi ComponentResource code (providers, helpers)
-stacks/         # Deployable Pulumi stacks (home, authentik, applications, backups, unifi-network)
+stacks/         # Deployable Pulumi stacks (home, authentik, applications, backups, unifi-network, system, vault, ...)
 sdks/           # Vendor SDK wrappers (unifi, authentik, adguard, b2, pbs, terrifi)
 dynamic/        # Code-generated Pulumi resources (1Password item types)
 docker/         # Docker/Dockge stack configs per cluster
@@ -55,6 +56,8 @@ docker/         # Docker/Dockge stack configs per cluster
 | `stacks/home/index.ts`      | Canonical stack usage example              |
 | `stacks/authentik/index.ts` | Example: writing outputs back to 1Password |
 | `.mise.toml`                | Tool versions and env var setup            |
+| `bootstrap/INVENTORY.md`    | Every secret needed to bring the estate up from nothing, and where it lives |
+| `bootstrap/RUNBOOK.md`      | Break-glass procedures (OpenBao sealed, cluster gone, rebuild) |
 
 ## Safety
 
@@ -62,6 +65,7 @@ docker/         # Docker/Dockge stack configs per cluster
 - Run `pulumi preview` before every `pulumi up`, especially for DNS/provider changes.
 - Test risky changes against a non-production stack (alpha-site) first.
 - Code can create/modify 1Password items — be intentional when touching `OPClient` or stacks that persist outputs.
+- Never run a formatter or editor auto-fix over a `*.sops.yaml`; `bootstrap/openbao/` holds the estate's recovery material and a corrupted MAC is unrecoverable.
 
 ## See also
 

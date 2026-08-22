@@ -1,4 +1,5 @@
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
+import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
 import { ComponentResource, type ComponentResourceOptions, type CustomResourceOptions, interpolate, type Output, output, runtime, secret } from "@pulumi/pulumi";
 import { Provider as TailscaleProvider } from "@pulumi/tailscale";
@@ -33,6 +34,8 @@ export class GlobalResources extends ComponentResource {
   public readonly cloudFlareAccountId: Output<string>;
   public readonly store: VaultStore;
   private _baoProvider?: VaultProvider;
+  private _githubCredential?: Output<GithubAppCredential>;
+  private _githubProvider?: GithubProvider;
 
   constructor(args: GlobalResourcesArgs, opts?: ComponentResourceOptions) {
     super("custom:home:resources", "globals", args, opts);
@@ -142,7 +145,7 @@ export class GlobalResources extends ComponentResource {
    * Whether the Phase 8a dual-writes should run at all.
    *
    * The in-cluster Pulumi operator has no BAO_TOKEN wiring yet (the AppRole in
-   * `vault/bootstrap/openbao/pulumi-approle.sops.yaml` is still delivered by
+   * `bootstrap/openbao/pulumi-approle.sops.yaml` is still delivered by
    * hand), so demanding a token unconditionally stalls every stack that reaches
    * a dual-write site. Callers skip the write when this is false and say so;
    * the paired `retainOnDelete` on those resources means a token-less run drops
@@ -189,9 +192,9 @@ export class GlobalResources extends ComponentResource {
     // The AppRole path is the normal one, and it is what removes the manual
     // step this used to require: nobody has to mint a token by hand before a
     // deploy. `.config/mise.toml` supplies both from
-    // `.config/bao-approle.sops.yaml`, resolved by `mise run vals-run`; the
-    // vault repo's `eval "$(bootstrap/openbao/pulumi-env.sh)"` still works and
-    // is the break-glass path. Either way they live in SOPS rather than
+    // `.config/bao-approle.sops.yaml`, resolved by `mise run vals-run`;
+    // `eval "$(bootstrap/openbao/pulumi-env.sh)"` still works and is the
+    // break-glass path. Either way they live in SOPS rather than
     // 1Password on purpose (INVENTORY §2: this is the credential Pulumi
     // authenticates WITH, so it cannot live in the store it unlocks).
     const token = baoEnv("BAO_TOKEN") ?? "";
@@ -238,4 +241,53 @@ export class GlobalResources extends ComponentResource {
     );
     return this._baoProvider;
   }
+
+  /**
+   * The GitHub App the estate automates GitHub with (installation tokens for
+   * the clusters, the Flux push webhooks). Lazy, like `baoProvider`: only
+   * `stacks/vault` uses it, and an eager read would make every other stack's
+   * preview depend on one more OpenBao path for nothing.
+   *
+   * By PATH, not by title, unlike the seven providers above. In the vault repo
+   * this was `getSecretByTitle("Github Actions Runner (david-driscoll)")`,
+   * which resolved through the old `shared/<slug(title)>` default rule. The
+   * reorganisation deleted that rule — `resolveBaoPath` now errors on any title
+   * absent from `TITLE_PATHS` — so the title form would fail outright here.
+   * A new call site should name the path anyway; `TITLE_PATHS` is the legacy
+   * set, not a place to grow. Same path the `vault-runners` scale set reads
+   * (kubernetes/apps/github-actions/runners/vault/secret.yaml).
+   *
+   * Never log this Output. `.apply()` unwraps the private key into a plain
+   * string, and Pulumi redacts secrets in resource inputs/outputs, not in
+   * diagnostic text — a logged value lands in the Stack CR status and pod
+   * logs in the clear.
+   */
+  public get githubCredential(): Output<GithubAppCredential> {
+    this._githubCredential ??= this.store.getSecretByPath<GithubAppCredential>("third-party-tokens/github/actions-runner/david-driscoll");
+    return this._githubCredential;
+  }
+
+  public get githubProvider(): GithubProvider {
+    if (this._githubProvider) return this._githubProvider;
+    const credential = this.githubCredential;
+    this._githubProvider = new GithubProvider(
+      "github",
+      {
+        owner: "david-driscoll",
+        appAuth: {
+          id: credential.github_app_id,
+          installationId: credential.github_app_installation_id,
+          pemFile: credential.github_app_private_key,
+        },
+      },
+      { parent: this },
+    );
+    return this._githubProvider;
+  }
+}
+
+export interface GithubAppCredential {
+  github_app_id: string;
+  github_app_installation_id: string;
+  github_app_private_key: string;
 }

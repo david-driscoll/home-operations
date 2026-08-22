@@ -7,10 +7,10 @@
 #   ./scripts/bao-mise-approle.sh rotate    # new secret_id, then destroy the old one
 #
 # Until now every `ref+openbao://` value in .config/mise.toml needed a manual
-# `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"` first, which mints a
-# VAULT_TOKEN out of the vault repo's `pulumi` AppRole. That works, but it puts
-# a sibling checkout and a shell-eval between the operator and every command,
-# and the token expires mid-session. This role is the same credential shape
+# `eval "$(bootstrap/openbao/pulumi-env.sh)"` first, which mints a
+# VAULT_TOKEN out of the `pulumi` AppRole (then in the vault repo, now under
+# bootstrap/ here). That works, but it puts a shell-eval between the operator
+# and every command, and the token expires mid-session. This role is the same credential shape
 # reachable from home-operations alone: the sealed file lives here, and
 # .config/mise.toml points BAO_ROLE_ID / BAO_SECRET_ID at it.
 #
@@ -21,7 +21,7 @@
 #
 # ## Policy
 #
-# `pulumi` — the same policy the vault repo's pulumi AppRole carries: create/
+# `pulumi` — the same policy the operator's pulumi AppRole carries: create/
 # read/update/delete/list on secrets/, docs/ and meta/, plus the OIDC auth
 # management paths. A separate ROLE rather than a copy of the pulumi
 # credential, so this one can be rotated or revoked without touching what the
@@ -36,7 +36,7 @@
 #
 # - BAO_ADDR and a PRIVILEGED BAO_TOKEN. Writing auth/approle/role/* is beyond
 #   the `pulumi` policy itself, so this needs `admin` — i.e. a root ceremony
-#   (vault:bootstrap/openbao/root-ceremony.sh) or an OIDC login in the admin
+#   (bootstrap/openbao/root-ceremony.sh) or an OIDC login in the admin
 #   group. Run it, then revoke.
 # - SOPS_AGE_KEY_FILE (or ~/.config/sops/age/keys.txt) holding one of the
 #   recipients in .sops.yaml.
@@ -73,7 +73,7 @@ preflight() {
   fi
 
   # sops walks up from the CURRENT DIRECTORY to find .sops.yaml and its
-  # creation rules, not from the path it is handed. The vault repo learned
+  # creation rules, not from the path it is handed. equestria-init.sh learned
   # this the expensive way (equestria-init.sh's comment: an encrypt that
   # failed AFTER keys were minted cost a re-initialised cluster).
   cd "${REPO_ROOT}"
@@ -140,7 +140,7 @@ ensure_role() {
     ok "approle role ${ROLE} already exists"
     return
   fi
-  # TTLs match the vault repo's pulumi role: a long-lived secret_id because
+  # TTLs match the operator's pulumi role: a long-lived secret_id because
   # nothing is resident to renew one between runs, and short TOKEN lifetimes
   # because each command logs in afresh.
   bao write "auth/approle/role/${ROLE}" \
@@ -172,13 +172,13 @@ Done. Next:
   2. Revoke the admin token you ran this with: bao token revoke -self
   3. Check it: ./scripts/bao-mise-approle.sh verify
   4. Use it: mise run vals-run pulumi preview
-     — no `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"` needed any more.
+     — no `eval "$(bootstrap/openbao/pulumi-env.sh)"` needed any more.
 NEXT
 }
 
 # Decrypt one key out of the sealed file. --extract rather than grep: sops
 # writes YAML scalars unquoted, and a parser that assumes quotes is the bug
-# that made the vault repo's regen_root read zero recovery shares and then
+# that made equestria-init.sh's regen_root read zero recovery shares and then
 # blame the shares.
 extract() {
   local key="$1" value

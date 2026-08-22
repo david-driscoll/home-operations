@@ -1,0 +1,21 @@
+# The project is named `applications`, NOT `vault`, and must stay that way.
+#
+# This stack moved here from david-driscoll/vault (2026-08-22) with its state
+# left in place at s3://home-operations/vault. The project name is part of
+# every resource URN (`urn:pulumi:vault::applications::…`), so renaming it
+# would make Pulumi see a brand-new project: every TailnetKey, GitHub App
+# token, Secret patch and webhook would be created again and the old ones
+# orphaned in the estate. `stacks/authentik` and `stacks/unifi-network` carry
+# the same project name for the same historical reason.
+name: applications
+description: Per-cluster Tailscale auth keys, GitHub App tokens and Flux GitHub webhooks.
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+    nodeargs: "--import tsx/esm"
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: typescript

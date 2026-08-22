@@ -63,9 +63,9 @@ job, not a move job.
 
 ## Where this came from
 
-`shared/` was never meant to look like this. The vault repo's
-[`docs/openbao-migration/PLAN.md` §A](https://github.com/david-driscoll/vault/blob/main/docs/openbao-migration/PLAN.md)
-specifies the layout:
+`shared/` was never meant to look like this.
+[`docs/openbao-migration/PLAN.md` §A](openbao-migration/PLAN.md) specifies the
+layout:
 
 ```
 secrets/shared/providers/{cloudflare,unifi,tailscale,proxmox,technitium,truenas,minio}
@@ -119,7 +119,7 @@ blob actually holds.
 ## Constraints that shape the answer
 
 **1. Nesting needs no policy change — verified against the live policy text.**
-[`bootstrap/openbao/equestria-init.sh`](https://github.com/david-driscoll/vault/blob/main/bootstrap/openbao/equestria-init.sh)
+[`bootstrap/openbao/equestria-init.sh`](../bootstrap/openbao/equestria-init.sh)
 writes `eso-<cluster>` as:
 
 ```hcl
@@ -170,7 +170,7 @@ change in lockstep:
 - `kubernetes/apps/kube-system/openbao-replica/helmrelease.yaml:230` —
   `CANARY_PATH: secrets/data/shared/cloudflare-driscoll-tech` (note the KV v2
   `data/` infix). If it 404s, the replica health check fails.
-- `docker/alpha-site/bao-standby/restore.sh:65` and the vault repo's
+- `docker/alpha-site/bao-standby/restore.sh:65` and
   `bootstrap/RUNBOOK.md` — the break-glass canary read.
 - `components/globals.ts:55` — the Cloudflare provider for every stack.
 
@@ -349,7 +349,7 @@ fields. So `hosts/pbs/` is the wrong home for these.
 
 | Current path | Why | ✎ Your call |
 | --- | --- | --- |
-| `shared/cloudflare-driscoll-tech` | The designated canary in two independent break-glass paths (Constraint 6). Moving it means editing the replica HelmRelease, `restore.sh`, and the vault repo's RUNBOOK together. | Use `third-party-tokens/cloudflare/driscoll-tech` |
+| `shared/cloudflare-driscoll-tech` | The designated canary in two independent break-glass paths (Constraint 6). Moving it means editing the replica HelmRelease, `restore.sh`, `bootstrap/RUNBOOK.md` and `bootstrap/openbao/restore-test.sh` together. | Use `third-party-tokens/cloudflare/driscoll-tech` |
 
 ---
 
@@ -399,7 +399,7 @@ We can remove all of these.
 
 | path | fields | why it needs a look |
 | --- | --- | --- |
-| `equestria-age-key`, `sgc-age-key` | `public key` | public halves only — harmless, but confirm the private halves live in `vault/bootstrap/` | RETIRE
+| `equestria-age-key`, `sgc-age-key` | `public key` | public halves only — harmless, but confirm the private halves live in `bootstrap/` | RETIRE
 | `equestria-github-deploy-key`, `github-deploy-key` | `credential`, `public key` | Flux's own git access. If either is what `flux-system` actually uses, this is not dead | RETIRE
 | `equestria-github-web-hook-token` | `credential` | receiver token for the Flux webhook | RETIRE
 | `equestria-postgres-superuser`, `equestria-postgres-user`, `postgres`, `postgres-user-login` | connection strings ×15 | CNPG creds. Probably superseded by the `database` ClusterSecretStore, but verify | RETIRE

@@ -30,7 +30,7 @@
  *      `auth/<mount>/config` and `auth/<mount>/role/*`. Those are named paths
  *      on purpose (never `sys/auth/*`), so Pulumi can manage the mounts the
  *      estate has chosen and cannot enable arbitrary new ones. Adding them is
- *      an admin write, so it costs one root ceremony. See the vault repo's
+ *      an admin write, so it costs one root ceremony. See
  *      `bootstrap/openbao/equestria-init.sh` write_policies().
  *   2. An `eso-<clusterKey>` policy. Those are already written for every
  *      cluster by the same script, granting read on `secrets/shared/*` plus

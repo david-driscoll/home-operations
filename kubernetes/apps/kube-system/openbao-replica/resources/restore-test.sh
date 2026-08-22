@@ -141,11 +141,11 @@ echo "throwaway bao is unsealed and active (via $TRANSIT_ADDR)"
 
 # ── 6. Canary read with the restore-test AppRole ────────────────────────────
 # The AppRole lives INSIDE the backup (minted against the live cluster by
-# vault/bootstrap/openbao/restore-test.sh), so a successful login also proves
+# bootstrap/openbao/restore-test.sh), so a successful login also proves
 # the auth backends survived the round trip.
 token="$(curl -sf -X POST "$BAO_ADDR/v1/auth/approle/login" \
   -d "{\"role_id\":\"$BAO_ROLE_ID\",\"secret_id\":\"$BAO_SECRET_ID\"}" | jq -r '.auth.client_token // empty')"
-[ -n "$token" ] || fail "approle login failed against the restored instance — was vault/bootstrap/openbao/restore-test.sh ever run?"
+[ -n "$token" ] || fail "approle login failed against the restored instance — was bootstrap/openbao/restore-test.sh ever run?"
 
 canary="$(curl -sf -H "X-Vault-Token: $token" "$BAO_ADDR/v1/$CANARY_PATH" | jq -r '.data.data | length')"
 [ -n "$canary" ] && [ "$canary" -gt 0 ] || fail "canary read of $CANARY_PATH returned no data"

@@ -127,9 +127,10 @@ function preflight(): void {
     console.log(`  ${p}/  — ${count} path(s), NOT covered by any eso-* policy`);
   }
   console.log(`
-Add these to eso-equestria (and eso-sgc while it exists) in the vault repo's
-bootstrap/openbao/equestria-init.sh write_policies(), then apply them with a
-root ceremony:
+Add these to eso-equestria in bootstrap/openbao/equestria-init.sh
+write_policies(), then apply them with a root ceremony. (They are already in
+that script and in the live policy as of the vault-repo absorption; this stays
+because a NEW prefix still needs both.)
 `);
   for (const p of prefixes.keys()) {
     console.log(`path "secrets/data/${p}/*"     { capabilities = ["read"] }`);

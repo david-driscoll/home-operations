@@ -1,7 +1,7 @@
 /**
  * OpenBao human login: OIDC against Authentik.
  *
- * This replaces the `oidc` subcommand of the vault repo's
+ * This replaces the `oidc` subcommand of
  * `bootstrap/openbao/equestria-init.sh`. Everything here is barrier state —
  * auth methods, their config and their roles live *inside* OpenBao and are
  * written through its API, so unlike the seal and storage settings they can

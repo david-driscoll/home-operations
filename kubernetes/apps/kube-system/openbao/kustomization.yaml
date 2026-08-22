@@ -24,7 +24,7 @@ resources:
   #                        transit/decrypt/openbao-equestria-unseal. Minted
   #                        against bao-transit; nothing here can regenerate it,
   #                        so it is mirrored at
-  #                        vault/bootstrap/openbao/transit-token.sops.yaml per
-  #                        that repo's INVENTORY.md.
+  #                        bootstrap/openbao/transit-token.sops.yaml per
+  #                        bootstrap/INVENTORY.md.
   #
   # Everything else about the server config is plaintext in helmrelease.yaml.

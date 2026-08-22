@@ -49,8 +49,8 @@ is a 404. Neither shows up until something needs the credential.
 
 ## Read this before phase 3
 
-**`eso-<cluster>` cannot read the new prefixes.** The policy the vault repo
-writes is exactly:
+**`eso-<cluster>` cannot read the new prefixes.** The policy
+`bootstrap/openbao/equestria-init.sh` writes was exactly:
 
 ```hcl
 path "secrets/data/shared/*"       { capabilities = ["read"] }
@@ -68,9 +68,11 @@ policy grants**. Running it early does not fail here: the `pulumi` AppRole holds
 nothing in the commit to point at.
 
 So `--phase 3` refuses to run without `--policies-widened`. Get the HCL from
-`--preflight`, add it to `write_policies()` in the vault repo's
+`--preflight`, add it to `write_policies()` in
 `bootstrap/openbao/equestria-init.sh`, apply it with a root ceremony, then pass
-the flag to assert it happened.
+the flag to assert it happened. The three prefixes this plan introduces are
+already in that script (added when the vault repo was absorbed) and already in
+the live policy — all 145 ExternalSecrets are `SecretSynced`.
 
 `retired/` is deliberately absent from that grant: nothing reads a retired
 secret, which is what makes it retired.

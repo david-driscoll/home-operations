@@ -28,7 +28,7 @@ spec:
         - openid
         # profile carries the `groups` claim, which the OpenBao roles bind on:
         # admins -> policy admin, family -> policy viewer (see
-        # vault:bootstrap/openbao/equestria-init.sh `oidc`).
+        # bootstrap/openbao/equestria-init.sh `oidc`).
         - profile
       includeClaimsInIdToken: true
       subMode: user_email
