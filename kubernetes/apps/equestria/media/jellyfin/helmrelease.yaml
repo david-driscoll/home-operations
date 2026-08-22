@@ -78,7 +78,12 @@ spec:
                 memory: 1Gi
                 gpu.intel.com/i915: 1
               limits:
-                memory: 8Gi
+                # 4Gi, down from 8Gi -- matched to plex. Sized for a 16GB
+                # control plane that also runs etcd rather than a 64GB worker.
+                # Jellyfin's steady state is around 1.8Gi, so this is a little
+                # over 2x headroom; it is the closest of the three media apps to
+                # its ceiling, and the one to watch if OOMKills ever appear.
+                memory: 4Gi
                 # cpu: 4
                 gpu.intel.com/i915: 1
 

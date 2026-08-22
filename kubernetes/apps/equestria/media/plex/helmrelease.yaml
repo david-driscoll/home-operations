@@ -89,11 +89,24 @@ spec:
               requests:
                 gpu.intel.com/i915: 1
                 cpu: 6
-                memory: 4Gi
+                # 1Gi requested / 4Gi limit, down from 4Gi / 8Gi.
+                #
+                # The old numbers were sized for a 64GB worker. The control
+                # planes are 16GB and also run etcd, so an 8Gi limit there is a
+                # large share of one node for a process that idles far below it:
+                # plex sits around 480Mi and jellyfin around 1.8Gi in steady
+                # state. 4Gi is roughly 8x plex's observed draw and a bit over
+                # 2x jellyfin's -- headroom for library scans and transcode
+                # buffers without reserving a quarter of a control plane.
+                #
+                # Requests are what the scheduler reads, so dropping plex's to
+                # 1Gi is what makes stacking it alongside the existing ~6.4Gi of
+                # control-plane workload viable at all.
+                memory: 1Gi
               limits:
                 gpu.intel.com/i915: 1
                 cpu: 12
-                memory: 8Gi
+                memory: 4Gi
     defaultPodOptions:
       securityContext:
         runAsUser: 568
