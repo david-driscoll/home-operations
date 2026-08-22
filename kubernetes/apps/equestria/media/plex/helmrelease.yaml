@@ -88,7 +88,24 @@ spec:
             resources:
               requests:
                 gpu.intel.com/i915: 1
-                cpu: 6
+                # 1 CPU requested, and deliberately NO cpu limit.
+                #
+                # The old 6-core request was sized against the wrong bottleneck:
+                # the iGPU was shared 5 ways rather than 3, so transcodes
+                # contended for GPU time and it read as a CPU shortage. Observed
+                # steady state is single-digit millicores.
+                #
+                # It was also the hard blocker on control-plane placement -- 6
+                # cores exceeds a control plane's 3950m of allocatable CPU
+                # outright, so the scheduler could never place this there no
+                # matter what else was tuned.
+                #
+                # No cpu limit on purpose: CPU is compressible, so without a
+                # ceiling this takes whatever the node has spare and throttles
+                # back proportionally under contention rather than being capped
+                # while cores sit idle. The request is what sets that
+                # proportional share, and what the scheduler reserves.
+                cpu: 1
                 # 1Gi requested / 4Gi limit, down from 4Gi / 8Gi.
                 #
                 # The old numbers were sized for a 64GB worker. The control
@@ -105,7 +122,6 @@ spec:
                 memory: 1Gi
               limits:
                 gpu.intel.com/i915: 1
-                cpu: 12
                 memory: 4Gi
     defaultPodOptions:
       securityContext:
