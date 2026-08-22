@@ -1,6 +1,6 @@
 /**
  * OpenBao KV v2 for Pulumi — the Phase 8a write path of the 1Password→OpenBao
- * migration (vault repo: docs/openbao-migration/PLAN.md §G).
+ * migration (docs/openbao-migration/PLAN.md §G).
  *
  * Two things live here:
  *
@@ -22,8 +22,8 @@
  * (`GlobalResources.baoProvider`) like every other provider in this repo, and
  * reads BAO_ADDR / BAO_TOKEN from the environment — the standard OpenBao CLI
  * variables, so the `bao` CLI, the imperative scripts under `scripts/` and
- * Pulumi all share one credential. Mint the token from the `pulumi` AppRole (vault repo:
- * bootstrap/openbao/pulumi-approle.sops.yaml).
+ * Pulumi all share one credential. Mint the token from the `pulumi` AppRole
+ * (bootstrap/openbao/pulumi-approle.sops.yaml).
  *
  * ## Dual-run rule (until Phase 11)
  *

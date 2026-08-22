@@ -195,7 +195,7 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
  * This used to be a 1Password item: two PushSecrets in each cluster pushed the
  * ServiceAccount token and CA there, and Pulumi read them back by title
  * (`<key>-authentik-outpost`) through `VaultStore.getKubeConfig`. Phase 10 of
- * the 1Password->OpenBao migration (vault repo docs/openbao-migration/PLAN.md
+ * the 1Password->OpenBao migration (docs/openbao-migration/PLAN.md
  * SS-G row 10) deletes that hop rather than moving it to OpenBao:
  *
  *   - Of the five fields the item carried, only `token` and `ca.crt` were ever

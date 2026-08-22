@@ -21,7 +21,7 @@ spec:
   workspaceReclaimPolicy: Delete
   prerequisites: []
   # Deliberately none. This stack publishes clusters/<key>/details, which every
-  # other stack and the vault repo read — Flux cannot express "before
+  # other stack reads — Flux cannot express "before
   # everything", so the ordering that matters is enforced where it can be: a
   # consumer reading a details path that does not exist fails loudly rather
   # than silently seeing no clusters. See BaoStore.getAllClusters.

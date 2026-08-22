@@ -1,6 +1,6 @@
 # Moving OpenBao configuration from bootstrap scripts into Pulumi
 
-The vault repo's `bootstrap/openbao/*.sh` scripts were written before OpenBao had a Pulumi
+The `bootstrap/openbao/*.sh` scripts (moved here from the retired vault repo) were written before OpenBao had a Pulumi
 provider in this estate. Now that `components/globals.ts` exposes `baoProvider` (the
 official `@pulumi/vault` provider, adopted in home-operations#683), most of what those
 scripts do is better expressed as resources.
@@ -57,7 +57,7 @@ verified against the live server before the next.
 Two cautions specific to this estate before anyone starts:
 
 1. **Do not reach for the `import` resource option as a shortcut.** The
-   `StandardDns`/Cloudflare incident (vault repo `docs/openbao-migration/STATUS.md`, and
+   `StandardDns`/Cloudflare incident (`docs/openbao-migration/STATUS.md`, and
    the `standarddns-cloudflare-import-outage` note) is the precedent: an `import` that
    cannot match the provider's ID format re-imports on every run, and combined with
    `deleteBeforeReplace` it destroyed live records twice. Vault's IDs are stable and

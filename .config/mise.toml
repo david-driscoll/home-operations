@@ -156,9 +156,9 @@ activate_aggressive = true
 # `mise run vals-run` is the `op run` replacement — it resolves whatever `ref+`
 # values are in the environment. It is self-contained: the OpenBao credential
 # comes from the BAO_* references at the bottom of this block, so there is no
-# `eval "$(../vault/bootstrap/openbao/pulumi-env.sh)"` step any more. That
-# script still works and is still the break-glass path when this repo's
-# AppRole is revoked.
+# `eval "$(bootstrap/openbao/pulumi-env.sh)"` step any more. That script
+# still works and is still the break-glass path when the mise AppRole is
+# revoked.
 AWS_ACCESS_KEY_ID = "ref+openbao://secrets/apps/minio/root#/username"
 AWS_SECRET_ACCESS_KEY = "ref+openbao://secrets/apps/minio/root#/password"
 AWS_REGION = "home"
@@ -195,7 +195,7 @@ _.python.venv = { path = "{{config_root}}/.venv", create = true }
 # fails with a bare 403.
 #
 # The AppRole lives in SOPS, not in OpenBao: the credential you authenticate
-# WITH cannot live in the store it unlocks (vault:bootstrap/INVENTORY.md §2).
+# WITH cannot live in the store it unlocks (bootstrap/INVENTORY.md §2).
 # Create or rotate it with ./scripts/bao-mise-approle.sh — the sealed file is
 # committed, and the age key is what actually gates access.
 BAO_ADDR = "https://bao.equestria.driscoll.tech"

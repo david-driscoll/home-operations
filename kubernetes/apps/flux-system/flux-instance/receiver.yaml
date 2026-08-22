@@ -24,9 +24,5 @@ spec:
       namespace: pulumi
     - apiVersion: source.toolkit.fluxcd.io/v1
       kind: GitRepository
-      name: vault
-      namespace: flux-system
-    - apiVersion: source.toolkit.fluxcd.io/v1
-      kind: GitRepository
       name: home-operations
       namespace: flux-system

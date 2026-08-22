@@ -3,10 +3,10 @@
  *
  * Cluster definitions are checked-in YAML at `/clusters/<key>.yaml` (Phase 8:
  * nothing generates them, so a secret store was never the right home for the
- * definitions themselves). But the vault repo needs them too, and copying six
- * files between repos under a "diff -r must come back empty" convention is a
- * maintenance trap: the copies stay in step only while someone remembers, and
- * nothing fails when they drift.
+ * definitions themselves). But the (since retired) vault repo needed them too,
+ * and copying six files between repos under a "diff -r must come back empty"
+ * convention was a maintenance trap: the copies stay in step only while
+ * someone remembers, and nothing fails when they drift.
  *
  * So this stack publishes them to OpenBao at `clusters/<key>/details`, and
  * every consumer reads them from there. The YAML stays the source of truth —
@@ -52,7 +52,7 @@ const haveApprole = roleId !== "" && secretId !== "";
 // twelve skipped writes behind a green `pulumi up`. Preview is exempt because
 // it makes no API call.
 if (!token && !haveApprole && !pulumi.runtime.isDryRun()) {
-  throw new Error('No OpenBao credentials — this stack would write nothing while reporting success. Run `eval "$(bootstrap/openbao/pulumi-env.sh)"` from the vault repo, or set BAO_TOKEN.');
+  throw new Error('No OpenBao credentials — this stack would write nothing while reporting success. Run it through `mise run vals-run`, `eval "$(bootstrap/openbao/pulumi-env.sh)"`, or set BAO_TOKEN.');
 }
 
 const provider = new VaultProvider("openbao", {

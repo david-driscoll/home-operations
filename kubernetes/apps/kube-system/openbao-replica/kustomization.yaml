@@ -27,7 +27,7 @@ generatorOptions:
 #                         migrated data.
 #
 #   secret.sops.yaml      The restore-test AppRole (minted by
-#                         vault/bootstrap/openbao/restore-test.sh —
+#                         bootstrap/openbao/restore-test.sh —
 #                         placeholders until that runs). SOPS because it has
 #                         no other in-cluster source.
 #

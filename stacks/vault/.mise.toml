@@ -1,0 +1,3 @@
+[env]
+PULUMI_STACK = "vault"
+PULUMI_BACKEND_URL = "s3://home-operations/vault?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true"

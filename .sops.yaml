@@ -5,21 +5,37 @@
 # material.
 #
 # Why this repo needs SOPS at all: the Pulumi operator authenticates to OpenBao
-# with the `pulumi` AppRole, and per vault:bootstrap/INVENTORY.md §2 the
-# credential Pulumi authenticates WITH cannot live in a store that mediates
-# access. Sourcing it from 1Password would make the operator depend on
-# 1Password Connect in order to reach OpenBao — exactly the dependency Phase 11
-# exists to remove.
+# with the `pulumi` AppRole, and per bootstrap/INVENTORY.md §2 the credential
+# Pulumi authenticates WITH cannot live in a store that mediates access.
+# Sourcing it from 1Password would make the operator depend on 1Password
+# Connect in order to reach OpenBao — exactly the dependency Phase 11 exists
+# to remove.
 #
 # encrypted_regex keeps Kubernetes Secret keys (`data`/`stringData`) encrypted
 # while leaving apiVersion/kind/metadata readable, so Flux and kustomize can
 # still parse the manifest before decryption.
 creation_rules:
+  # Bootstrap-tier material under bootstrap/ — the OpenBao seal chain, recovery
+  # shares, the Pulumi AppRole and passphrase. Moved here verbatim from the
+  # retired david-driscoll/vault repo (2026-08-22); this rule is byte-for-byte
+  # the one those files were encrypted under, so they decrypt unchanged and
+  # `sops --encrypt --filename-override bootstrap/...` keeps producing the
+  # same shape. No encrypted_regex: every value is encrypted, because these
+  # files are consumed by humans and `sops exec-file`, never reconciled in
+  # place by Flux. `mac_only_encrypted` lets the plaintext key NAMES and
+  # comments be edited without invalidating the MAC — key names are always
+  # visible anyway, so never put anything sensitive in one.
+  - path_regex: bootstrap/.*\.sops\.ya?ml
+    mac_only_encrypted: true
+    key_groups:
+      - age:
+        - "age1eurl2t7pepw66guv8m7lxh5fjhs4t4frsntqjp08lmypwudlsp7qdusgnf"
+        - "age150z0s36kl9vud8728c5e4zqq6nmyywekk76rwvjclcsfc8mrxuuqr0qfg6"
   # Tooling credentials under .config/ — the AppRole .config/mise.toml
   # authenticates to OpenBao with (scripts/bao-mise-approle.sh). No
   # encrypted_regex: these are not Kubernetes manifests, nothing needs to parse
-  # them before decryption, so every value is encrypted. Listed first because
-  # sops applies the FIRST matching rule.
+  # them before decryption, so every value is encrypted. Listed before the
+  # kubernetes/ rule because sops applies the FIRST matching rule.
   - path_regex: \.config/.*\.sops\.ya?ml
     key_groups:
       - age:

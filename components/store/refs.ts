@@ -1,6 +1,6 @@
 /**
  * `ref+openbao://` resolution for file content — Phase 8's PLAN §D.1 slice of
- * the 1Password→OpenBao migration (vault repo: docs/openbao-migration/PLAN.md).
+ * the 1Password→OpenBao migration (docs/openbao-migration/PLAN.md).
  *
  * Reference syntax, exactly as PLAN §D specifies:
  *
