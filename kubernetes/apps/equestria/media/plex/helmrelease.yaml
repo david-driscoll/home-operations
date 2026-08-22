@@ -88,12 +88,41 @@ spec:
             resources:
               requests:
                 gpu.intel.com/i915: 1
-                cpu: 6
-                memory: 4Gi
+                # 1 CPU requested, and deliberately NO cpu limit.
+                #
+                # The old 6-core request was sized against the wrong bottleneck:
+                # the iGPU was shared 5 ways rather than 3, so transcodes
+                # contended for GPU time and it read as a CPU shortage. Observed
+                # steady state is single-digit millicores.
+                #
+                # It was also the hard blocker on control-plane placement -- 6
+                # cores exceeds a control plane's 3950m of allocatable CPU
+                # outright, so the scheduler could never place this there no
+                # matter what else was tuned.
+                #
+                # No cpu limit on purpose: CPU is compressible, so without a
+                # ceiling this takes whatever the node has spare and throttles
+                # back proportionally under contention rather than being capped
+                # while cores sit idle. The request is what sets that
+                # proportional share, and what the scheduler reserves.
+                cpu: 1
+                # 1Gi requested / 4Gi limit, down from 4Gi / 8Gi.
+                #
+                # The old numbers were sized for a 64GB worker. The control
+                # planes are 16GB and also run etcd, so an 8Gi limit there is a
+                # large share of one node for a process that idles far below it:
+                # plex sits around 480Mi and jellyfin around 1.8Gi in steady
+                # state. 4Gi is roughly 8x plex's observed draw and a bit over
+                # 2x jellyfin's -- headroom for library scans and transcode
+                # buffers without reserving a quarter of a control plane.
+                #
+                # Requests are what the scheduler reads, so dropping plex's to
+                # 1Gi is what makes stacking it alongside the existing ~6.4Gi of
+                # control-plane workload viable at all.
+                memory: 1Gi
               limits:
                 gpu.intel.com/i915: 1
-                cpu: 12
-                memory: 8Gi
+                memory: 4Gi
     defaultPodOptions:
       securityContext:
         runAsUser: 568

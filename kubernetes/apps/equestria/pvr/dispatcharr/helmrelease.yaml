@@ -91,7 +91,21 @@ spec:
             resources:
               requests:
                 gpu.intel.com/i915: 1
-                cpu: 1
+                # 300m, down from a full core. The full core was compensating for
+                # the wrong bottleneck: the iGPU was being shared 5 ways
+                # (sharedDevNum 5) rather than 3, so transcodes were contending
+                # for GPU time and the symptom read as "needs more CPU". Fixing
+                # the split is the actual remedy; see the intel-gpu feature.
+                #
+                # 300m is still ~13x the observed steady-state draw (22m), so it
+                # is not a tight fit -- it is a request that reflects what this
+                # container does rather than a placeholder. The memory limit
+                # below is untouched, so a burst is still absorbed.
+                #
+                # The smaller request is also what lets this land on a control
+                # plane: those nodes have ~2.3 cores free, so a 1-core request
+                # made it a poor fit on the one tier that stays up overnight.
+                cpu: 300m
                 memory: 2Gi
               limits:
                 gpu.intel.com/i915: 1
