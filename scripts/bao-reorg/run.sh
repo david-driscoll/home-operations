@@ -43,19 +43,30 @@ fi
 
 export BAO_ADDR="${BAO_ADDR:-https://bao.equestria.driscoll.tech}"
 
-# Resolved straight into the child's environment with a command-prefix
-# assignment, never into a shell variable that outlives this line and never onto
-# stdout.
+# Resolved into this script's own environment and exported, then exec'd.
 #
-# This deliberately does NOT go through `vals exec` the way
-# `.config/mise/tasks/vals-run` does. `vals exec` rebuilds the child environment
-# from a fixed allowlist and drops HOME, which mise's npm-cache template needs
-# (`{{env.HOME}}/.local/share/mise/npm-cache`) — so the nesting required to put
-# node back on PATH fails on a missing HOME instead. One fewer layer is worth
-# more here than matching vals-run's shape: the AppRole is bootstrap-tier by
-# definition, sops is the bootstrap-tier backend, and this script exists
-# precisely for the window where the vals path does not work.
-exec env \
-  BAO_ROLE_ID="$(sops --decrypt --extract '["role_id"]' "${APPROLE}")" \
-  BAO_SECRET_ID="$(sops --decrypt --extract '["secret_id"]' "${APPROLE}")" \
-  npx tsx "${REPO_ROOT}/scripts/bao-reorg" "$@"
+# NOT `env BAO_ROLE_ID="$(sops ...)" npx ...`, which is what this did first and
+# is a real leak: `env` receives `BAO_ROLE_ID=<value>` as an ARGV ELEMENT, and
+# argv is world-readable through /proc/<pid>/cmdline on Linux. The AppRole this
+# hands over holds `secrets/*` read/write on the whole estate, so putting it in
+# the process table is not a theoretical exposure.
+#
+# A shell variable is the safer of the two, despite `.config/mise/tasks/vals-run`
+# avoiding them on principle. That principle is about not leaking a resolved
+# secret into an INTERACTIVE shell that outlives the command; this is a
+# dedicated script process that assigns, exports and immediately exec's, so the
+# variable's lifetime is a few microseconds and its only reader is the child
+# that needs it. Neither value is ever printed.
+#
+# This deliberately does not go through `vals exec` the way vals-run does:
+# `vals exec` rebuilds the child environment from a fixed allowlist and drops
+# HOME, which mise's npm-cache template needs (`{{env.HOME}}/...`), so the
+# nesting required to put node back on PATH fails on a missing HOME instead. One
+# fewer layer is worth more here — the AppRole is bootstrap-tier by definition,
+# sops is the bootstrap-tier backend, and this script exists precisely for the
+# window where the vals path does not work.
+BAO_ROLE_ID="$(sops --decrypt --extract '["role_id"]' "${APPROLE}")"
+BAO_SECRET_ID="$(sops --decrypt --extract '["secret_id"]' "${APPROLE}")"
+export BAO_ROLE_ID BAO_SECRET_ID
+
+exec npx tsx "${REPO_ROOT}/scripts/bao-reorg" "$@"
