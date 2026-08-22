@@ -21,7 +21,30 @@ runbook-driven.
 
 ---
 
-## Status — 2026-08-20, third revision, re-verified live against `admin@equestria`
+## Status — 2026-08-22, fourth revision, re-verified live against `admin@equestria`
+
+**Low Power now runs on a schedule. Battery — this file's S′ — is still a manual runbook and
+has still never been run.** Four PRs merged on 2026-08-22 and between them deliver most of
+§9 item 10 ("automate entering a low-power state at night"):
+
+| PR | What landed | Verified how |
+|---|---|---|
+| [#1046](https://github.com/david-driscoll/home-operations/pull/1046) | py-kube-downscaler `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` — Tier 2 sheds every night; the eleven keep-list workloads carry `downscaler/exclude: "true"` in Git and survive. `system-upgrade` (tuppr) excluded so a shed cannot stop a node upgrade halfway | live 2026-08-22: `kube-system/kube-downscaler-py-kube-downscaler` runs with that arg, `${TIMEZONE}` resolved to `America/New_York` out of the `shared-secrets` Secret rather than hardcoded |
+| [#1047](https://github.com/david-driscoll/home-operations/pull/1047) | Gatus `maintenance-windows` (`start: "02:00"`, `duration: 7h`, `timezone: ${TIMEZONE}`) on the **26** `definition.yaml` files whose services actually shed. Required un-pruning the Gatus fields on the `ApplicationDefinition` CRD, and brought the JSON schemas **and a real type generator** (`schemas/`, `scripts/generate-types.ts`, `mise run codegen`) into this repo from `stargate-command-cluster` — the generator had never existed here | 26 files carry the block; `schemas/` and `scripts/generate-types.ts` are present in-tree |
+| [#1048](https://github.com/david-driscoll/home-operations/pull/1048) | Intel GPU plugin split per node class: `intel-gpu-plugin` on the control planes (`sharedDevNum: 2`, and the **only** release that creates the fixed-name `NodeFeatureRule`) and `intel-gpu-plugin-workers` (`sharedDevNum: 3`, correcting the old and wrong `5`). Also right-sized the media apps — plex 6 CPU/4Gi/8Gi → 1 CPU/1Gi/4Gi with no CPU limit, jellyfin 4 CPU → 1 CPU and 8Gi → 4Gi, dispatcharr 1 CPU → 300m | live: both `GpuDevicePlugin` CRs exist with those ratios and disjoint device-id selectors (`46d4` control planes, `46a6` workers) |
+| [#1051](https://github.com/david-driscoll/home-operations/pull/1051) | Shed **both** media workers: control-plane tolerations plus a **soft** (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass. Design and runbook in [30](30-longhorn-media-tier.md) | live: `LowPowerReturnProfile` present in the descheduler ConfigMap; `longhorn-media` exists with `nodeSelector: critical`, 3 replicas, `dataLocality: disabled` |
+
+**Keep the two states apart when reading this file.** [24](24-power-states.md)'s **Low Power**
+is what runs nightly — workloads scale to zero, and once [30](30-longhorn-media-tier.md)'s
+volume migration finishes the two media workers can be powered off with nothing left degraded.
+**Battery** is the S′ posture this file specs: *every* worker down, Tier 0/1 only, on the Pecron.
+Low Power is not a small Battery — different node set, different tooling, different keep-list.
+Nothing in §6's runbook or §8's rehearsal has been overtaken by the nightly schedule.
+
+**What is still manual, stated because "automated" is easy to over-read:** nothing powers a node
+off or wakes one up on a schedule. #1046 sheds *workloads*; node shutdown and the WoL return trip
+are still §6's human runbook, and [30](30-longhorn-media-tier.md)'s volume migration is **in
+progress, not finished** — `dispatcharr` is mid-runbook, `plex` and `jellyfin` have not started.
 
 **§4 IS DONE AND LIVE.** Both halves landed on 2026-08-21:
 [#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations) and
@@ -51,8 +74,10 @@ upgrade with it.
 
 Everything below marked "verified" was re-checked live with read-only `kubectl`/`talosctl` —
 2026-08-19 (evening) for the storage and tier tables, 2026-08-20 (evening) for §6.0's pre-flight,
-§9's toleration audit and 29's four-command gate. Nothing in the cluster was mutated to write
-this revision; the taint has **not** been applied.
+§9's toleration audit and 29's four-command gate, and 2026-08-22 for the four PRs in the table
+above. **Correction to the third revision's closing sentence, which said "the taint has not been
+applied":** that was already stale when it was written — the taint was applied on 2026-08-21, as
+the top of this section says and as §6.0 check 1 verifies live.
 
 ### What changed between this morning's revision and this one
 
@@ -977,11 +1002,20 @@ David confirmed alpha-site's power. Check 8 (DNS) went green the same day with t
 cutover.
 
 **Do not read that as "ready to enter."** The pre-flight measures whether the cluster is
-*healthy enough* to try; it does not measure whether the design is *built*. §4's taint is still
-unapplied, so a window entered today would still have Tier 2 competing for the trio's CPU. And
-check 4's caveat — Tier-0 `registry` at zero control-plane replicas — is not counted as a
-failure of check 4 as written, but it is §9's sharpest storage item and should not be lost in
-the arithmetic.
+*healthy enough* to try; it does not measure whether Battery has ever been *rehearsed* — §8
+Stage 4 is still unrun. Check 4's caveat — Tier-0 `registry` at zero control-plane replicas — is
+not counted as a failure of check 4 as written, but it is §9's sharpest storage item and should
+not be lost in the arithmetic.
+
+**Superseded 2026-08-21/22:** the third revision's version of this paragraph said "§4's taint is
+still unapplied, so a window entered today would still have Tier 2 competing for the trio's CPU."
+The taint went in on 2026-08-21 (check 1), and since 2026-08-22 Tier 2 is additionally shed
+nightly by py-kube-downscaler (#1046) — so that specific objection no longer holds. **Two new
+entries belong in this pre-flight once [30](30-longhorn-media-tier.md)'s migration lands**, and
+they are deliberately not numbered yet because the migration is unfinished: the three media
+volumes on `longhorn-media` holding three control-plane replicas each, and the descheduler's
+`LowPowerReturnProfile` being present and healthy (without it nothing brings the media pods home
+at 09:00).
 
 ```bash
 # 1. Topology: 3 control-plane + 4 <none>, all Ready, none cordoned.
@@ -1073,6 +1107,12 @@ not exist: the required affinity already put them there. Under Path B, cordon fi
 reschedule cannot land back on a worker, then delete the Tier-1 pods that are on workers and
 let them reschedule:
 
+Since §6.1's 2026-08-22 correction, cordoning `shining-armor` is a **choice** rather than a
+consequence: it stays powered, so leaving it uncordoned would let Tier 1 keep running there
+instead of consolidating onto the trio. Cordon it anyway if the point of the window is to prove
+the trio can carry Tier 1; leave it uncordoned if the point is to ride out a real outage with the
+least churn. Decide before entry, not during.
+
 ```bash
 kubectl cordon hard-hat fluttershy kerfuffle shining-armor
 kubectl -n stargate-command delete pod -l app.kubernetes.io/name=home-assistant
@@ -1091,6 +1131,20 @@ single replica — confirm `robustness` before proceeding, not after.
 
 **Step 4 — power off the workers, one at a time.**
 
+> **⚠️ Corrected 2026-08-22 — it is three workers, not four.** David, answering
+> [24](24-power-states.md)'s "which hosts are power-hungry" item: during a **true outage**
+> `fluttershy`, `hard-hat` and `kerfuffle` can be shut down. **`shining-armor` stays online** —
+> it is a VM on `twilight-sparkle` and it hosts the backup volumes. Everything below that says
+> "all four workers" predates that answer and is wrong; the operative set is the **three
+> bare-metal workers**, which is also exactly the set WoL covers (§6.2).
+>
+> Two consequences worth stating rather than deriving. Battery therefore ends at **3 control
+> planes + `shining-armor`**, not at the control planes alone, so §3's capacity model is
+> *conservative* rather than wrong — it budgets for a node that will in fact still be there.
+> And the implication that `twilight-sparkle` itself stays powered through the outage follows
+> from David's answer but was **not separately confirmed**; treat it as the one derived claim
+> in this correction.
+
 ```bash
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.206.14 shutdown   # hard-hat
 ```
@@ -1104,9 +1158,10 @@ kubectl get volumes.longhorn.io -n longhorn-system \
   -o custom-columns=ROBUST:.status.robustness --no-headers | sort | uniq -c
 ```
 
-Order: `shining-armor`, then `kerfuffle`, then `fluttershy`, then `hard-hat` **last** — hard-hat
-carries the most Tier-1 pods and the `technitium-dns` label, so it is the node whose loss is
-most visible; taking it last leaves the longest window to abort. Do **not** `kubectl drain`:
+Order: ~~`shining-armor`, then~~ `kerfuffle`, then `fluttershy`, then `hard-hat` **last** —
+hard-hat carries the most Tier-1 pods and the `technitium-dns` label, so it is the node whose
+loss is most visible; taking it last leaves the longest window to abort. `shining-armor` is
+struck from the order per the correction above: it stays up. Do **not** `kubectl drain`:
 the nodes are about to lose power anyway, and a drain only adds a step that can hang on a
 `PodDisruptionBudget` at zero allowed disruptions.
 
@@ -1144,7 +1199,7 @@ hard-hat's talconfig network block is stale and should be corrected by whoever o
 
 | Worker | Power-on path |
 |---|---|
-| `shining-armor` | Proxmox VM (`ens18`, `bc:24:11:4c:62:fc`) — `qm start` against whichever host holds it |
+| `shining-armor` | Proxmox VM on `twilight-sparkle` (`ens18`, `bc:24:11:4c:62:fc`) — `qm start`. **Not powered off during a real window** (§6.1, 2026-08-22): it hosts the backup volumes and stays online |
 | `hard-hat` | **bare metal** — WoL or physical button |
 | `fluttershy` | bare metal — WoL or physical button |
 | `kerfuffle` | bare metal — WoL or physical button |
@@ -1159,8 +1214,9 @@ depends on it; that is proof, not investigation.
 **Exit sequence:**
 
 1. Power on **one** worker. Reverse of the shutdown order: `hard-hat` first (it is the
-   `technitium-dns` node, so restoring it restores DNS), then `fluttershy`, `kerfuffle`,
-   `shining-armor`.
+   `technitium-dns` node, so restoring it restores DNS), then `fluttershy`, then `kerfuffle`.
+   ~~then `shining-armor`~~ — per §6.1's 2026-08-22 correction `shining-armor` was never
+   powered off, so it only needs uncordoning (step 3), not starting.
 2. Before touching the next node, all four must hold:
 
    ```bash
@@ -1176,7 +1232,8 @@ depends on it; that is proof, not investigation.
    drives. Expect this to be slow. Slow is the design.
 3. `kubectl uncordon <worker>` only after its Longhorn rebuild completes. Uncordoning early
    invites the scheduler to place pods on a node whose storage is still catching up.
-4. After all four are back: reverse Step 2, then Step 1.
+4. After all the shut-down workers are back (three, per §6.1's correction): reverse Step 2,
+   then Step 1.
 
    ```bash
    kubectl cnpg hibernate off postgres -n database
@@ -1516,14 +1573,26 @@ Then power it back on and run §6.2's per-node gates.
 actually reaches them on the current VLAN, which is the part a BIOS setting does not guarantee.
 Cheaper to find a broken WoL path on one node now than on three during an exit.
 
+> **Reconsider the pick, 2026-08-22.** `shining-armor` is now the one worker that *stays up*
+> during a real window (§6.1), so shutting it down rehearses the node whose loss the design no
+> longer plans for. It is still the cheapest and safest single-node test — that is why it was
+> chosen — but if the goal is to rehearse Battery rather than to exercise §5's
+> `nodeDownPoddeletionPolicy`, use `kerfuffle` instead and take the WoL power-on on the same
+> node. Note what the nightly Low Power window (#1046) does **not** substitute for here: it
+> scales Tier 2 to zero and detaches those volumes cleanly, which is a graceful shutdown. §5's
+> `nodeDownPoddeletionPolicy` and the `replica-replenishment-wait-interval` only fire when a
+> node goes **away**, so Stage 3 still has to actually power something off.
+
 ### Stage 4 — the real thing (the gate)
 
-All four workers down, the full 3–4 h, one-at-a-time exit per §6.2.
+~~All four workers down~~ **the three bare-metal workers down** (§6.1's 2026-08-22 correction —
+`shining-armor` stays online), the full 3–4 h, one-at-a-time exit per §6.2.
 
 Gate checklist before calling this mode rehearsed:
 
 - [ ] §6.0's nine pre-flight checks all green before entry.
-- [ ] All four workers cordoned and shut down with no `kubectl drain` and no hang.
+- [ ] `hard-hat`, `fluttershy` and `kerfuffle` cordoned and shut down with no `kubectl drain`
+      and no hang; `shining-armor` left running, cordoned or not per §6.1 Step 3's choice.
 - [ ] Zero Tier-1 volumes degraded below 2 replicas for the full window.
 - [ ] DNS, NTP, MQTT, Home Assistant, Traefik and forward-auth (against alpha-site) verified
       reachable at the **1 h, 2 h and 3–4 h** marks, not just at entry.
@@ -1758,15 +1827,36 @@ through in place rather than moved to the resolved list above — several sectio
 9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.
-10. **Low-power trigger.** D6 settled duration (3–4 h+) but not trigger: purely a manual
-    runbook posture, or should grid-loss auto-trigger entry? **The signal now exists** —
-    alpha-site's `pecron-monitor` publishes `pecron_ac_input_power_watts` (mains loss) and
-    `pecron_runtime_remaining_seconds` (how long the window can last), off-cluster by design
-    (§7). What is still not built is anything that *acts* on it, and #967 deliberately
-    removed the one control rule that did act. So the question narrows: this is now a choice
-    between "alert David, David runs §6" and "automate entry," rather than an unanswered
-    engineering question. [24](24-power-states.md)'s live-toggle half is answered; this is
-    the remaining half, and it is a policy call rather than a build.
+10. **Low-power trigger.** ~~D6 settled duration (3–4 h+) but not trigger.~~ **SUBSTANTIALLY
+    DELIVERED 2026-08-22, for the *scheduled* trigger — not the grid-loss one.** The question
+    split in two, and the halves resolved differently:
+
+    * **"Enter a lower-power state at night" is built and running.**
+      [#1046](https://github.com/david-driscoll/home-operations/pull/1046) gives
+      py-kube-downscaler `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}`, so Tier 2 sheds
+      every night with no human in the loop and no annotation. The timezone comes from the
+      `TIMEZONE` key of the `shared-secrets` Secret rather than being hardcoded, so this window
+      and #1047's Gatus maintenance windows cannot drift apart. The keep-list survives on
+      `downscaler/exclude` precedence, already proven by two dry-run scans (24 "Exercised
+      2026-08-21"). Two companion changes make the window quiet and make it *deeper*:
+      [#1047](https://github.com/david-driscoll/home-operations/pull/1047) stops 26 shed
+      services paging Gatus for seven hours a night, and
+      [#1048](https://github.com/david-driscoll/home-operations/pull/1048) +
+      [#1051](https://github.com/david-driscoll/home-operations/pull/1051) make it possible to
+      power **both** media workers off during the window rather than one.
+    * **Grid-loss auto-entry is still not built, and is still a policy call.** The signal
+      exists — alpha-site's `pecron-monitor` publishes `pecron_ac_input_power_watts` and
+      `pecron_runtime_remaining_seconds`, off-cluster by design (§7) — and #967 deliberately
+      removed the one rule that *acted* on it. Nothing added since acts on it either. The
+      choice remains "alert David, David runs §6" versus "automate entry."
+
+    **What is still manual in the delivered half, so the item is not closed outright:** nothing
+    powers a node off or wakes one up on a schedule. #1046 sheds *workloads only* — node
+    shutdown and the WoL return trip are §6's human runbook — and #1051's node-shedding half is
+    blocked on [30](30-longhorn-media-tier.md)'s volume migration, which is **in progress**
+    (`dispatcharr` mid-runbook, `plex` and `jellyfin` not started). Until that lands, shutting a
+    media worker overnight still leaves its config volume degraded, which is exactly the
+    `LonghornVolumeStatusWarning` / stalled-tuppr-drain problem 30 exists to prevent.
 11. ~~**etcd's memory footprint on Talos** is invisible to `kubectl top`.~~ **MEASURED
     2026-08-22** in §8 Stage 1: **585 / 448 / 431 MiB** on milky-way / othalla / pegasus,
     ≈ 1.43 GiB across the trio, leader highest. §3's arithmetic can now include it.
@@ -1776,6 +1866,16 @@ through in place rather than moved to the resolved list above — several sectio
     mains, healthy. Hardware-bound, matching the README's ShiJi-NVMe figures. It does not block a
     window; it is a measured reason §6.2's one-node-at-a-time exit is a real constraint rather
     than ceremony.
+12. **The `longhorn-media` volume migration is unfinished** — new 2026-08-22, owned by
+    [30](30-longhorn-media-tier.md) §6. Verified live 2026-08-22: `dispatcharr` is at
+    `nodeSelector: ["critical"]`, `numberOfReplicas: 4` and `healthy`, with replicas on all
+    three control planes plus one remaining `bulk` replica on `fluttershy` — i.e. through
+    step C, with step D (delete the last `bulk` replica, shrink to 3) outstanding. `plex` and
+    `jellyfin` are untouched: both still `nodeSelector: ["bulk"]` with three replicas across
+    `fluttershy`/`kerfuffle`/`shining-armor`. Until all three are done, #1051's scheduling and
+    return-trip halves are live but the **node-shedding half they exist for cannot be used** —
+    shutting a media worker overnight would leave its config volume degraded, which is the
+    nightly-`LonghornVolumeStatusWarning` / stalled-tuppr-drain problem 30 exists to prevent.
 
 ---
 
@@ -1793,7 +1893,11 @@ through in place rather than moved to the resolved list above — several sectio
   this piece now runs on for real, the etcd fsync measurements §6.2 cites, and the owner of
   §6.2's stale-`deviceSelector` finding
 - [24-power-states.md](24-power-states.md) — amends §1 (tier membership) and §4 (placement
-  model); read both, this file is not superseded by it
+  model); read both, this file is not superseded by it. It also owns **Low Power**, the nightly
+  02:00–09:00 shed that landed 2026-08-22 — a different state from this file's Battery
+- [30-longhorn-media-tier.md](30-longhorn-media-tier.md) — the `longhorn-media` class and the
+  grow-then-shrink migration that lets both media workers be shed during a Low Power window;
+  §9 item 12 tracks its progress
 - [07-authentik-to-alpha-site.md](07-authentik-to-alpha-site.md) — the landed precondition that
   makes CNPG droppable to Tier 2, and the source of §7's concentration risk
 - [03-secrets-bootstrap-independence.md](03-secrets-bootstrap-independence.md) — the OpenBao-era

@@ -103,7 +103,7 @@ completed and eleven days have passed:
   [19](19-rotate-equestria-control-planes.md) flags this and gives an alternative node
   ordering; confirm against the Proxmox host inventory before relying on either.
 
-## Where the plan actually stands — 2026-08-18
+## Where the plan actually stands — 2026-08-22
 
 | Piece | State |
 |---|---|
@@ -112,9 +112,19 @@ completed and eleven days have passed:
 | 18 SGC → control planes | **done.** All three SGC nodes wiped and rejoined to equestria. **SGC no longer exists as a cluster** |
 | 19 rotate equestria CPs | **DONE 2026-08-19.** All three rotated. 3 CPs (`milky-way`/`othalla`/`pegasus`) + 4 workers; etcd at 3 members, quorum 2. vault#127 closed by construction. Executed on the current drives — see 19's disk measurements and "What execution changed" |
 | 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
-| 12 Longhorn critical tier | **planned, not executed.** 19 unblocked it; 12 now carries an ordered executable procedure, a rollback, and the Tier-1 volume list. Zero node tags and zero StorageClass selectors live — placement is still free-space-only |
+| 12 Longhorn critical tier | **landed 2026-08-19** (PR #960). Tags live, `longhorn-critical` exists, the default class is `nodeSelector: bulk`, and all seven Tier-1 volumes moved onto it (PRs #963/#966). **Still outstanding:** the Tier-2 `nodeSelector` backfill — ~100 volumes still hold a replica on the trio ([20](20-low-power-tier.md) §9 item 8) |
+| 20 low-power tier (**Battery**) | **§4 done and live 2026-08-21** — control planes tainted (`allowSchedulingOnControlPlanes: false`, PR #1002), Tier-0/1 tolerations in (PR #1001), all §6.0 pre-flight checks green. **The posture itself has never been run**; §8 Stage 4 is the gate |
+| 24 power states (**Low Power**) | **shipped nightly 2026-08-22.** py-kube-downscaler sheds Tier 2 on `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` (PR #1046), with Gatus maintenance windows on the 26 affected services (PR #1047). Workload shed is automatic; **node shutdown is not** — that half waits on 30 |
+| 30 Longhorn media tier | **class + scheduling live 2026-08-22** (PR #1051, with the Intel GPU split in #1048). **The volume migration is underway, not done:** `dispatcharr` is through step C, `plex` and `jellyfin` have not started. Until it finishes, do not shed a media worker overnight |
 
 Current cluster: 7 nodes, **3 etcd members** (`milky-way`, `othalla`, `pegasus`), all Ready.
+
+**Low Power and Battery are different states — do not merge them when reading.** Low Power is
+[24](24-power-states.md)'s nightly 02:00–09:00 window: Tier 2 scaled to zero, keep-list up, and
+(once 30 lands) both media workers powered off. Battery is [20](20-low-power-tier.md)'s S′: the
+three **bare-metal** workers off, Tier 0/1 only, on the Pecron. Correction recorded 2026-08-22 —
+Battery is *not* "all four workers off": David confirmed `shining-armor` stays online, being a VM
+on `twilight-sparkle` that hosts the backup volumes.
 
 **Two things the plan never accounted for, both now load-bearing on decisions:**
 

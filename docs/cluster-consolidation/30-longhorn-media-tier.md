@@ -33,8 +33,32 @@ option B's entire prerequisite phase disappears.
 
 Everything marked **verified live** was read from `admin@equestria` on **2026-08-22** with
 read-only commands, or with `--dry-run=server` patches that run the real admission chain and
-mutate nothing. **Nothing in this document has been executed.** Claims marked **inferred**
-are reasoning from Longhorn source or semantics, flagged as such. Longhorn is **v1.12.1**.
+mutate nothing. Claims marked **inferred** are reasoning from Longhorn source or semantics,
+flagged as such. Longhorn is **v1.12.1**.
+
+> ### ⚠️ Execution status — MIGRATION UNDERWAY, 2026-08-22
+>
+> ~~**Nothing in this document has been executed.**~~ The scheduling, return-trip and
+> StorageClass halves landed with
+> [#1051](https://github.com/david-driscoll/home-operations/pull/1051) and are live; §6's
+> **volume migration is in progress and is not finished.** Re-verified live 2026-08-22:
+>
+> | Volume | State | Where in §6.2 |
+> |---|---|---|
+> | `dispatcharr` (`pvc-633d7002…`) | `nodeSelector: ["critical"]`, `numberOfReplicas: 4`, `healthy`, attached `fluttershy`. Replicas on **`milky-way`, `othalla`, `pegasus`** plus one remaining `bulk` replica on `fluttershy` | **through step C.** Step D outstanding — delete the `fluttershy` replica, then patch `numberOfReplicas: 3` back to back |
+> | `plex` (`pvc-242324ae…`) | `nodeSelector: ["bulk"]`, 3 replicas on `fluttershy`/`kerfuffle`/`shining-armor`, `healthy` | **not started** |
+> | `jellyfin` (`pvc-d49e4972…`) | `nodeSelector: ["bulk"]`, 3 replicas on `fluttershy`/`kerfuffle`/`shining-armor`, `healthy` | **not started** |
+>
+> The three control-plane replicas of `dispatcharr` reached `healthy` at **17:47:56, 17:50:01 and
+> 17:51:21 UTC** — roughly two minutes apart for a 1.51 GiB volume. That bounds the rebuild
+> cost; it does **not** answer open item 2 (deleted-vs-failed replenishment timing), which needs
+> the deletion timestamps alongside these.
+>
+> **Until all three are done, do not shed a media worker overnight** — its config volume would
+> sit degraded for the whole window, which is exactly §2's problem.
+>
+> The replica names in §6.2's deletion table are from before this run and are stale by
+> construction. Re-read them with the command underneath it, as that section already says.
 
 ---
 
@@ -819,10 +843,16 @@ The drift resolves the next time each PVC is re-provisioned from scratch, if
 
 ## 11. Open items
 
-1. **Nothing here has been executed.** §6 is a proposal. The StorageClass in
-   `media.yaml` is new and inert until a volume is provisioned against it (§9).
-2. **The deleted-vs-failed replenishment timing is unverified** (§4.6, §7). Measure it on the
-   `dispatcharr` rehearsal; it is worth up to 90 minutes of the migration estimate.
+1. ~~**Nothing here has been executed.** §6 is a proposal.~~ **Partly executed as of
+   2026-08-22 — see the execution-status box at the top.** `dispatcharr` is through step C;
+   `plex` and `jellyfin` have not started. The `longhorn-media` StorageClass itself is live but
+   still has no volume provisioned against it — the migration patches existing volumes in place
+   rather than reprovisioning through the class (§10.2's drift).
+2. **The deleted-vs-failed replenishment timing is unverified** (§4.6, §7). ~~Measure it on the
+   `dispatcharr` rehearsal~~ — the rehearsal has now run and the three control-plane replicas
+   reached `healthy` about two minutes apart on a 1.51 GiB volume, but the **deletion**
+   timestamps were not captured alongside them, so the deleted-vs-failed question is still open.
+   Capture both on the `plex` run. It is worth up to 90 minutes of the migration estimate.
 3. **Which replica the extra-healthy cleanup culls is unverified** (§6.2 step D). The runbook
    avoids depending on it by deleting by name first. If someone later wants to shorten the
    procedure, that is the thing to verify.
