@@ -206,7 +206,12 @@ export function addUptimeGatus(
       {
         endpoints: unique(
           (a.endpoints ?? [])
-            .sort((a, b) => a.name.localeCompare(b.name))
+            // `name` is optional on the authored ApplicationDefinition -- the
+            // CRD only requires `url`, and 103 of the 109 gatus entries in this
+            // repo leave it out for the Pulumi stack to fill in from the
+            // ApplicationDefinition's metadata. Anything still unnamed by the
+            // time it reaches here sorts and dedupes as "".
+            .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
             .map(e => {
               return {
                 interval: "2m",

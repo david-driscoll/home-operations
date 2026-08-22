@@ -1,0 +1,1045 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_redirects": {
+          "type": "string"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "proxy_id": {
+          "type": "string"
+        },
+        "resend_interval": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        },
+        "tls_ca": {
+          "type": "string"
+        },
+        "tls_cert": {
+          "type": "string"
+        },
+        "tls_key": {
+          "type": "string"
+        },
+        "ignore_tls": {
+          "type": "boolean"
+        },
+        "expiry_notification": {
+          "type": "boolean"
+        },
+        "http_body_encoding": {
+          "type": "string",
+          "enum": ["none", "base64", "utf8"]
+        },
+        "body": {
+          "type": "string"
+        },
+        "auth_domain": {
+          "type": "string"
+        },
+        "authMethod": {
+          "type": "string",
+          "enum": ["basic", "oauth", "none"]
+        },
+        "auth_workstation": {
+          "type": "string"
+        },
+        "basic_auth_user": {
+          "type": "string"
+        },
+        "basic_auth_pass": {
+          "type": "string"
+        },
+        "oauth_auth_method": {
+          "type": "string",
+          "enum": ["client_credentials", "password", "none"]
+        },
+        "oauth_client_id": {
+          "type": "string"
+        },
+        "oauth_client_secret": {
+          "type": "string"
+        },
+        "oauth_scopes": {
+          "type": "string"
+        },
+        "oauth_token_url": {
+          "type": "string"
+        }
+      }
+    },
+    "ping": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "packet_size": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "docker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "docker_container": {
+          "type": "string"
+        },
+        "docker_host": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "dns_resolve_server": {
+          "type": "string"
+        },
+        "dns_resolve_type": {
+          "type": "string",
+          "enum": ["A", "AAAA", "CNAME", "MX", "TXT", "SRV", "PTR", "SOA", "NS"]
+        },
+        "port": {
+          "type": "integer"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      },
+      "required": ["dns_resolve_type"]
+    },
+    "gamedig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "game": {
+          "type": "string"
+        },
+        "gamedig_given_port_only": {
+          "type": "string"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "grpc-keyword": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "grpc_body": {
+          "type": "string"
+        },
+        "grpc_enable_tls": {
+          "type": "string"
+        },
+        "grpc_metadata": {
+          "type": "string"
+        },
+        "grpc_method": {
+          "type": "string"
+        },
+        "grpc_protobuf": {
+          "type": "string"
+        },
+        "grpc_service_name": {
+          "type": "string"
+        },
+        "grpc_url": {
+          "type": "string"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "invert_keyword": {
+          "type": "string"
+        },
+        "keyword": {
+          "type": "string"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "max_redirects": {
+          "type": "string"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "json-query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "json_path": {
+          "type": "string"
+        },
+        "expected_value": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "auth_domain": {
+          "type": "string"
+        },
+        "authMethod": {
+          "type": "string"
+        },
+        "auth_workstation": {
+          "type": "string"
+        },
+        "basic_auth_user": {
+          "type": "string"
+        },
+        "basic_auth_pass": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "expiry_notification": {
+          "type": "boolean"
+        },
+        "http_body_encoding": {
+          "type": "string"
+        },
+        "ignore_tls": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_redirects": {
+          "type": "string"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "oauth_auth_method": {
+          "type": "string"
+        },
+        "oauth_client_id": {
+          "type": "string"
+        },
+        "oauth_client_secret": {
+          "type": "string"
+        },
+        "oauth_scopes": {
+          "type": "string"
+        },
+        "oauth_token_url": {
+          "type": "string"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "proxy_id": {
+          "type": "string"
+        },
+        "resend_interval": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "integer"
+        },
+        "tls_ca": {
+          "type": "string"
+        },
+        "tls_cert": {
+          "type": "string"
+        },
+        "tls_key": {
+          "type": "string"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "kafka-producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kafka_producer_sasl_options_mechanism": {
+          "type": "string",
+          "enum": ["plain", "scram-sha-256", "scram-sha-512"]
+        },
+        "kafka_producer_ssl": {
+          "type": "string"
+        },
+        "kafka_producer_brokers": {
+          "type": "string"
+        },
+        "kafka_producer_topic": {
+          "type": "string"
+        },
+        "kafka_producer_message": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "keyword": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "keyword": {
+          "type": "string"
+        },
+        "invert_keyword": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "auth_domain": {
+          "type": "string"
+        },
+        "authMethod": {
+          "type": "string"
+        },
+        "auth_workstation": {
+          "type": "string"
+        },
+        "basic_auth_user": {
+          "type": "string"
+        },
+        "basic_auth_pass": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "expiry_notification": {
+          "type": "boolean"
+        },
+        "http_body_encoding": {
+          "type": "string"
+        },
+        "ignore_tls": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_redirects": {
+          "type": "string"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "oauth_auth_method": {
+          "type": "string"
+        },
+        "oauth_client_id": {
+          "type": "string"
+        },
+        "oauth_client_secret": {
+          "type": "string"
+        },
+        "oauth_scopes": {
+          "type": "string"
+        },
+        "oauth_token_url": {
+          "type": "string"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "proxy_id": {
+          "type": "string"
+        },
+        "resend_interval": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "integer"
+        },
+        "tls_ca": {
+          "type": "string"
+        },
+        "tls_cert": {
+          "type": "string"
+        },
+        "tls_key": {
+          "type": "string"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mongodb": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "database_connection_string": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mqtt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mqtt_check_type": {
+          "type": "string",
+          "enum": ["connect", "publish", "subscribe"]
+        },
+        "mqtt_username": {
+          "type": "string"
+        },
+        "mqtt_password": {
+          "type": "string"
+        },
+        "mqtt_topic": {
+          "type": "string"
+        },
+        "mqtt_success_message": {
+          "type": "string"
+        },
+        "hostname": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      },
+      "required": ["mqtt_check_type"]
+    },
+    "mysql": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "database_connection_string": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "radius_password": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "database_connection_string": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "push": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "push_token": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "radius": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "radius_called_station_id": {
+          "type": "string"
+        },
+        "radius_calling_station_id": {
+          "type": "string"
+        },
+        "radius_password": {
+          "type": "string"
+        },
+        "radius_secret": {
+          "type": "string"
+        },
+        "radius_username": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "real-browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "remote_browser": {
+          "type": "string"
+        },
+        "remote_browsers_toggle": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "database_connection_string": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "steam": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sqlserver": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "database_connection_string": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    },
+    "tailscale-ping": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "accepted_statuscodes": {
+          "items": {
+            "type": "string"
+          }
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "max_retries": {
+          "type": "integer"
+        },
+        "parent_name": {
+          "type": "string"
+        },
+        "retry_interval": {
+          "type": "integer"
+        },
+        "upside_down": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
