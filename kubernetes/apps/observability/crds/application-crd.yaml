@@ -786,6 +786,40 @@ spec:
                         type: string
                         default: "10s"
                         pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
+                      maintenance-windows:
+                        type: array
+                        description: >-
+                          Per-endpoint maintenance windows, passed through to Gatus
+                          `endpoints[].maintenance-windows`. During a window the endpoint is
+                          still checked but does not alert. Used by the nightly Low Power
+                          shed (02:00-09:00 America/New_York) so a deliberately scaled-down
+                          service does not page. This field MUST exist here: the CRD has no
+                          x-kubernetes-preserve-unknown-fields, so an unknown key is pruned
+                          by the API server before the Pulumi stack that renders the Gatus
+                          config ever sees it.
+                        items:
+                          type: object
+                          required: [start, duration]
+                          properties:
+                            start:
+                              type: string
+                              description: Window start, 24-hour hh:mm.
+                              pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+                            duration:
+                              type: string
+                              description: Window length, e.g. 7h or 30m.
+                              pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
+                            timezone:
+                              type: string
+                              description: Olson timezone. Gatus defaults to UTC when unset.
+                              default: "UTC"
+                            every:
+                              type: array
+                              description: >-
+                                Days the window applies to. Empty means every day.
+                              items:
+                                type: string
+                                enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
                       client:
                         type: object
                         properties:
