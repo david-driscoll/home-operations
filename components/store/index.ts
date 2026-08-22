@@ -1,6 +1,6 @@
-import { all, type Input, interpolate, jsonStringify, log, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
+import { all, type Input, interpolate, jsonStringify, type Output, output, secret, type Unwrap } from "@pulumi/pulumi";
 import { type OPClient, TypeEnum } from "../op.ts";
-import type { ClusterDefinition, DockgeClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
+import type { ClusterDefinition, DockgeLxcDefinition, KubernetesClusterDefinition, Meta, ProxmoxBackupServerLxcDefinition } from "./interfaces.ts";
 import { SecretRefResolver } from "./refs.ts";
 
 export * from "./interfaces.ts";

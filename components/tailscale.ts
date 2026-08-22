@@ -141,7 +141,8 @@ export class TailscaleMonitor {
 
     // Phase 8 dual-write (openbao-migration PLAN §G-8): the export also lands
     // at its reserved inventory path (`clusters/_inventory/<slug(title)>`, the
-    // tag:tailscale-export rule in scripts/op-to-bao/mapping.ts) with the exact
+    // path the migration reserved for the tag:tailscale-export family) with the
+    // exact
     // field shape of the OnePasswordItem above — `name`/`services` flat, one
     // nested object per node. 1Password stays authoritative until Phase 11 —
     // written ALONGSIDE the item, never instead of it; rollback is a plain
@@ -181,7 +182,9 @@ export class TailscaleMonitor {
         pulumi.mergeOptions(cro, { provider: this.globals.baoProvider }) as pulumi.CustomResourceOptions,
       );
     } else {
-      pulumi.log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the tailscale-export dual-write for ${stack}. 1Password stays authoritative; the inventory path stays stale until a credentialed run.`);
+      pulumi.log.warn(
+        `No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the tailscale-export dual-write for ${stack}. 1Password stays authoritative; the inventory path stays stale until a credentialed run.`,
+      );
     }
 
     return item;

@@ -561,7 +561,7 @@ systemctl reload proxmox-backup-proxy.service
 
     // Phase 8a dual-write (openbao-migration PLAN §G): the PBS credential
     // also lands at its canonical OpenBao path (`secrets/hosts/pbs/<slug>`,
-    // the tag:pbs rule in scripts/op-to-bao/mapping.ts) with the exact field
+    // derived by `pbsBaoPath` in components/bao.ts) with the exact field
     // shape of the OnePasswordItem above — root fields flat, sections nested.
     // 1Password stays authoritative until Phase 11 — this is written
     // ALONGSIDE the item, never instead of it; rollback is a plain
@@ -605,7 +605,10 @@ systemctl reload proxmox-backup-proxy.service
         mergeOptions(cro, { dependsOn: [...(args.dependsOn ?? [])], provider: args.globals.baoProvider }),
       );
     } else {
-      pulumi.log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${args.host.name}. 1Password stays authoritative; the canonical OpenBao path will be empty until a credentialed run.`, this);
+      pulumi.log.warn(
+        `No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for ${args.host.name}. 1Password stays authoritative; the canonical OpenBao path will be empty until a credentialed run.`,
+        this,
+      );
     }
 
     this.tailscaleIpAddress = deviceInfo.deviceInfo.addresses.apply(z => z[0]);
