@@ -335,11 +335,20 @@ if (verifyOnly) {
 
 if (phase === undefined) die("pass --phase 1|2|3|4 (or --verify / --preflight). There is no 'run everything': phase 3 is gated on a root ceremony.");
 
-if (phase === 3 && !policiesWidened) {
+// The gate is about CONSUMERS, not about writes, so it does not apply to
+// --copy. A copy destroys nothing and switches nothing: the new paths simply
+// exist, unread, until the repo change merges. Landing the data ahead of the
+// ceremony is strictly safer sequencing — when the policies do go in, there is
+// nothing left to do but merge. The gate still stands for the reap pass, which
+// is the one that leaves consumers with only the new spelling.
+if (phase === 3 && !policiesWidened && !copyOnly) {
   console.error(`Phase 3 moves secrets to top-level prefixes no eso-* policy grants:\n`);
   preflight();
   console.error(`\nRun 'bao-reorg --preflight' for the HCL, apply it with a root ceremony,
-then re-run with --policies-widened to assert it happened.`);
+then re-run with --policies-widened to assert it happened.
+
+To land the DATA ahead of that ceremony, add --copy: it writes the new paths,
+destroys nothing, and switches no consumer.`);
   process.exit(2);
 }
 
