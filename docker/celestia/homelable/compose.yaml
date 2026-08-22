@@ -14,8 +14,10 @@ services:
       SQLITE_PATH: /app/data/homelab.db
     volumes:
       # The SQLite DB *is* the hand-curated canvas and is not reproducible from
-      # git. Covered by the celestia dockge backrest plan, which syncs all of
-      # /opt/stacks-data minus an explicit exclude list (stacks/backups/index.ts).
+      # git. Covered by this stack's own backrest plan, which pre-syncs
+      # /opt/stacks-data/homelable/ and snapshots it. That plan exists only
+      # because this compose references `stacks-data` — see
+      # components/dockerStackBackups.ts.
       - /opt/stacks-data/homelable:/app/data
     # Strictly tighter than upstream, which only adds NET_RAW (a no-op — it is
     # already in Docker's default set). This sheds the other ~13 defaults and

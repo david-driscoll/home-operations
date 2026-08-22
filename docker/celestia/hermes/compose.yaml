@@ -87,12 +87,13 @@ services:
       # /opt/data is the single source of truth for ALL Hermes state: config,
       # .env, sessions, memories, skills, cron jobs, hooks, logs, and the
       # agent's workspace. Upstream's compose mounts ~/.hermes; that would put
-      # it outside the celestia dockge backrest plan and it would silently not
-      # be backed up.
+      # it outside this stack's backrest plan and it would silently not be
+      # backed up.
       #
-      # /opt/stacks-data/hermes IS in scope: stacks/backups/index.ts syncs the
-      # whole of /stacks/ (the sftp view of /opt/stacks-data) minus an explicit
-      # exclude list, and `hermes` is not on that list.
+      # /opt/stacks-data/hermes IS in scope: stacks/backups/index.ts gives every
+      # stack whose compose references `stacks-data` its own plan, whose pre-sync
+      # pulls exactly that directory. This mount is what qualifies hermes —
+      # move the state elsewhere and the plan disappears with it.
       - /opt/stacks-data/hermes:/opt/data
     # DELIBERATE: no docker socket, no host bind mounts beyond the data volume.
     # The image ships `docker-cli` and Hermes has a docker terminal backend, so

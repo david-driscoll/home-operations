@@ -134,11 +134,12 @@ services:
 
   # Periodic logical dumps — the actual backup source for this database.
   #
-  # The celestia dockge backrest plan (stacks/backups/index.ts) rclone-pulls
-  # /opt/stacks-data/ from each host and restic-snapshots it. That is a file
-  # copy of a live cluster, which for Postgres is not a restorable artifact.
-  # pg_dump produces one that is: each dump is a consistent snapshot taken
-  # inside a single transaction.
+  # This stack's backrest plan (stacks/backups/index.ts, one per dockge host)
+  # rclone-pulls /opt/stacks-data/postgres/ and restic-snapshots it, with
+  # pgdata/ excluded. A file copy of a live cluster is not a restorable
+  # artifact for Postgres. pg_dump produces one that is: each dump is a
+  # consistent snapshot taken inside a single transaction, which is why dumps/
+  # is the part of this directory the plan actually protects.
   postgres-backup:
     # Same major + digest as the server above — this is the one that MUST match.
     # pg_dump aborts against a newer server and backup.sh only warns, so a skew
