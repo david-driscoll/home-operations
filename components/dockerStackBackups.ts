@@ -1,0 +1,146 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { unique } from "moderndash";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const dockerPath = resolve(__dirname, "../docker");
+
+/**
+ * Which docker stacks get a backup, resolved from the repo working tree rather
+ * than from anything on the hosts.
+ *
+ * The rule: a stack is backed up when the compose.yaml that DockgeLxc would
+ * actually deploy for it mentions `stacks-data`. That string is the only thing
+ * that puts persistent state under `/opt/stacks-data/<stack>/`, so a compose
+ * without it has nothing on disk worth snapshotting — the stack's directory
+ * exists (createStack mkdir -p's it unconditionally) but stays empty.
+ *
+ * This deliberately mirrors DockgeLxc's own stack resolution, and has to keep
+ * mirroring it: same union of `_common/` and `<host>/`, same `.ignore`
+ * suppression, same host-file-wins merge. A stack this module thinks is
+ * deployed but isn't produces a plan whose pre-sync pulls an empty directory
+ * and whose Gatus heartbeat then goes red forever.
+ */
+export interface DockerStackBackupTarget {
+  /** Stack directory name — also its `/opt/stacks-data/<stack>/` directory and the suffix of the plan id. */
+  stack: string;
+  /** Repo-relative path of the compose.yaml that qualified it. Diagnostics only. */
+  composePath: string;
+  /** rclone `--exclude` patterns, rooted at `/opt/stacks-data/<stack>/`. */
+  excludes: string[];
+}
+
+/**
+ * Stacks that are never backed up even though their compose does reference
+ * `stacks-data`. Each of these holds the credentials or transport for the
+ * backup system itself:
+ *
+ *   backrest     `config/config.json` is every repo's restic password, so
+ *                snapshotting it into one of those repos makes the archive its
+ *                own key escrow. `ssh/` is the pre-sync client key.
+ *   backups      `keys/` is the SFTP client key the copy jobs authenticate with.
+ *   rclone-sftp  `keys/` is the SFTP host key plus authorized_keys — the thing
+ *                that decides who may read every other host's stack data.
+ *
+ * Everything else the old whole-host exclude list named (authentik-outpost,
+ * autoheal, docker-socket-proxy, prometheus, zot) is already skipped by the
+ * `stacks-data` rule itself; it keeps its state under `/opt/stacks/<stack>/`
+ * with relative compose paths. Those are NOT restated here — restating them
+ * would freeze the decision even if one later grew real state.
+ */
+export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set(["backrest", "backups", "rclone-sftp"]);
+
+/**
+ * Sub-paths inside a stack that the pre-sync must not copy, rooted at that
+ * stack's `/opt/stacks-data/<stack>/`.
+ *
+ * The `/**` suffix is load-bearing and is the fix for a live bug. rclone
+ * matches a pattern without a trailing `/` or `/**` against FILES ONLY, so the
+ * old host-rooted list ("/postgres/pgdata", "/technitium/config/stats", …)
+ * excluded nothing at all — verified against rclone 1.74: `rclone sync
+ * --exclude '/postgres/pgdata'` still copies `postgres/pgdata/base.dat`. Both
+ * entries below were therefore being copied every night despite the comments
+ * saying otherwise. Do not drop the glob.
+ */
+export const BACKUP_STACK_EXCLUDES: Readonly<Record<string, string[]>> = {
+  // The shared Postgres live data directory (docker/_common/postgres). A
+  // file-level copy of a running cluster is torn, not crash-consistent: the
+  // data files and the WAL are captured at different instants, so the snapshot
+  // can restore to nothing while still looking like a successful backup. That
+  // failure is silent until someone needs it. The restorable artifact is the
+  // nightly pg_dump output in `dumps/`, which is NOT excluded and is what this
+  // plan actually protects. Do not remove this line without replacing it with a
+  // proper WAL-archiving setup.
+  postgres: ["/pgdata/**"],
+  // Technitium's hourly query-statistics files (1103 of them, 222 MB on
+  // celestia). The current hour's .stat is appended to for the whole hour, so
+  // rclone reliably copies it mid-write and fails the transfer with "corrupted
+  // on transfer: md5 hashes differ" — which aborts the ON_ERROR_FATAL pre-sync
+  // hook and takes the plan's snapshot with it. Pure telemetry for the DNS
+  // dashboards; nothing is reconstructed from it.
+  technitium: ["/config/stats/**"],
+};
+
+/**
+ * The `docker/<dir>` directory a dockge instance deploys from.
+ *
+ * `getDockgeInstances()` hands back the DockgeLxc ComponentResource name
+ * ("celestia-dockge"), while `docker/` is keyed by `ProxmoxHost.name`
+ * ("celestia"). Every instance in the estate is named `<host>-dockge`, so the
+ * suffix is the mapping — but it is a convention, not a guarantee, which is why
+ * the directory is checked rather than assumed.
+ *
+ * This throws instead of skipping. A dockge host with no resolvable directory
+ * would otherwise contribute zero plans and the backups stack would succeed
+ * having quietly stopped backing that host up — the failure mode with no
+ * symptom until a restore is needed, same reasoning as `getBackupPlans`.
+ */
+export function dockerHostDirectory(dockgeName: string): string {
+  const hostDir = dockgeName.replace(/-dockge$/, "");
+  if (!existsSync(resolve(dockerPath, hostDir))) {
+    throw new Error(
+      `Dockge instance '${dockgeName}' maps to docker/${hostDir}/, which does not exist. Either the host's stack directory is missing or the instance is no longer named '<host>-dockge' — backups cannot enumerate its stacks.`,
+    );
+  }
+  return hostDir;
+}
+
+/** Every stack on `hostDir` that qualifies for its own backup plan, sorted by stack name. */
+export function listStackBackupTargets(hostDir: string): DockerStackBackupTarget[] {
+  const commonPath = resolve(dockerPath, "_common");
+  const hostPath = resolve(dockerPath, hostDir);
+
+  const stackNames = unique([...readdirSync(hostPath), ...readdirSync(commonPath)])
+    .filter(name => name !== ".keep" && !name.startsWith("."))
+    .sort();
+
+  const targets: DockerStackBackupTarget[] = [];
+  for (const stack of stackNames) {
+    // `.ignore` in either location suppresses the stack entirely — DockgeLxc
+    // never deploys it, so there is nothing on the host to back up.
+    if (existsSync(resolve(commonPath, stack, ".ignore")) || existsSync(resolve(hostPath, stack, ".ignore"))) continue;
+
+    // Host file wins wholesale, exactly as getStackFiles merges them: the
+    // per-host compose.yaml replaces the _common one rather than layering on it.
+    const hostCompose = resolve(hostPath, stack, "compose.yaml");
+    const commonCompose = resolve(commonPath, stack, "compose.yaml");
+    const composeFile = existsSync(hostCompose) ? hostCompose : existsSync(commonCompose) ? commonCompose : undefined;
+    if (!composeFile) continue;
+
+    // Matched before ${APP}/${STACK_NAME} substitution, which is fine: the
+    // literal "stacks-data" is present either way ("/opt/stacks-data/${APP}/…").
+    if (!readFileSync(composeFile, "utf-8").includes("stacks-data")) continue;
+
+    if (BACKUP_OPT_OUT_STACKS.has(stack)) continue;
+
+    targets.push({
+      stack,
+      composePath: relative(dockerPath, composeFile),
+      excludes: BACKUP_STACK_EXCLUDES[stack] ?? [],
+    });
+  }
+
+  return targets;
+}

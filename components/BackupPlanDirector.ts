@@ -10,6 +10,25 @@ import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
 import type { ClusterDefinition, ProxmoxBackupServerLxcDefinition } from "./store/interfaces.ts";
 
+/**
+ * Plan ids that must be REMOVED from every backrest config, while their repos
+ * are left exactly as they are.
+ *
+ * These are the four host-level dockge plans that per-stack plans replaced.
+ * `updateBackrestConfiguration` merges rather than replaces -- it has no notion
+ * of a plan going away -- so simply ceasing to emit them would leave them in
+ * config.json, still running their whole-host ON_ERROR_FATAL pre-sync into a
+ * staging tree nothing else maintains, still pushing to Gatus tokens whose
+ * endpoints no longer exist. Removing the PLAN stops the work; leaving the REPO
+ * keeps every existing snapshot restorable, since a restic history cannot be
+ * carried across a rename (`BackupPlanItem.name` is the repo id).
+ *
+ * The repos keep their own prune/check schedules and will go on tidying
+ * themselves. That is harmless. Delete these ids -- and the
+ * /data/backup/<id>/ directories -- by hand once the archive has aged out.
+ */
+export const RETIRED_BACKREST_PLANS: readonly string[] = ["celestia-dockge", "alpha-site-dockge", "luna-dockge", "skystar-dockge"];
+
 export class BackupPlanDirector extends ComponentResource {
   private readonly globals: GlobalResources;
   private readonly uptimeUrl: Output<string>;
@@ -177,8 +196,14 @@ export class BackupPlanDirector extends ComponentResource {
       });
     }
 
+    // CONDITION_SNAPSHOT_SKIPPED counts as success. `skipIfUnchanged` means a
+    // plan whose data did not move produces no snapshot at all, and at
+    // per-stack granularity that is the NORMAL outcome for the many stacks
+    // holding static config -- at host granularity something always changed, so
+    // this never came up. Without it those heartbeats would expire at 25h and
+    // page for a backup that ran perfectly.
     hooks.push({
-      conditions: ["CONDITION_SNAPSHOT_SUCCESS"],
+      conditions: ["CONDITION_SNAPSHOT_SUCCESS", "CONDITION_SNAPSHOT_SKIPPED"],
       actionCommand: {
         command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=true" || true`,
       },
@@ -268,6 +293,7 @@ export class BackupPlanDirector extends ComponentResource {
 
     updateRepos(updatedConfig, items.repos);
     updatePlans(updatedConfig, items.plans);
+    removeRetiredPlans(updatedConfig, cluster.key);
 
     const configOutput = jsonStringify(updatedConfig);
 
@@ -308,6 +334,19 @@ function updateRepos(updatedConfig: { repos: BackrestRepository[]; plans: Backre
     } else {
       updatedConfig.repos.push({ ...repo, autoInitialize: true });
     }
+  }
+}
+
+/**
+ * Drops retired plans from the config and leaves their repos untouched. See
+ * RETIRED_BACKREST_PLANS for why the two are treated differently.
+ */
+function removeRetiredPlans(updatedConfig: { repos: BackrestRepository[]; plans: BackrestPlan[] }, clusterKey: string) {
+  const before = updatedConfig.plans.length;
+  updatedConfig.plans = updatedConfig.plans.filter(p => !RETIRED_BACKREST_PLANS.includes(p.id ?? ""));
+  const removed = before - updatedConfig.plans.length;
+  if (removed > 0) {
+    log.info(`Removed ${removed} retired backrest plan(s) from ${clusterKey}; their repos stay on disk as a frozen archive.`);
   }
 }
 
