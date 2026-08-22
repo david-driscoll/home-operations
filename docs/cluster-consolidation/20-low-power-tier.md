@@ -76,10 +76,10 @@ The gate has moved from "three things are broken" to "three things are unbuilt":
    2026-08-21**. The taint flip is
    [#1002](https://github.com/david-driscoll/home-operations/pull/1002) — still draft, still
    unapplied, because it is applied by `talos:apply` rather than by Flux. §4.
-3. **`kube-system/registry` is Tier 0 with zero control-plane replicas.** §5. This replaced
-   the Tier-1 storage gap as the sharpest storage item, and it is a worse tier than the
-   problem it replaced. **With items 1 and 2 built, this is now the sharpest item in the
-   file.**
+3. ~~**`kube-system/registry` is Tier 0 with zero control-plane replicas.**~~ **Answered
+   2026-08-21** — and the premise was wrong: the registry was not in the pull path at all.
+   Fixed across #1012/#1013/#1015/#1016; the storage half (#1014) is a deliberate open
+   decision. §9 item 1 has the whole account.
 
 **Both questions that needed David are answered, 2026-08-20.** The battery powers alpha-site,
 so identity, the transit seal, netboot and the `pecron-monitor` telemetry all survive a grid
@@ -903,7 +903,9 @@ cleanly all-worker, which is the correct shape for anything Tier 2:
 - The three `crowdsec-*` volumes — CrowdSec is Tier 1 only by living in the `network`
   namespace, not because anyone decided the estate needs intrusion detection during a
   battery window. The honest answer is almost certainly Tier 2; it needs saying explicitly.
-- `kube-system/registry` is the one that is genuinely uncomfortable. It is **Tier 0** in §1
+- `kube-system/registry` reads as the uncomfortable one and is now a **written decision**
+  rather than a gap — see §9 item 1, which also records that the registry was not in the pull
+  path at all until 2026-08-21. It is **Tier 0** in §1
   and it has **zero** control-plane replicas, so a battery window has no in-cluster registry
   mirror. That is survivable — `spegel` serves from node-local image stores and nothing
   pulls a new image during a window unless something crash-loops — but "unless something
@@ -961,7 +963,7 @@ Two runbooks. **Path B is what the first rehearsal uses**, because Path A is gat
 | 1 | Topology: 3 CP + 4 workers, Ready, uncordoned; **the trio tainted and the workers not** | **pass** — re-verified live 2026-08-21: 7 nodes on Talos v1.13.9, all Ready, none cordoned; `milky-way`/`othalla`/`pegasus` carry `node-role.kubernetes.io/control-plane:NoSchedule`, the four workers carry nothing. **The sense of this check inverted on 2026-08-21** — it used to require *no* taints anywhere; since §4 landed, control-plane taints are the desired state and their *absence* is the failure |
 | 2 | etcd: 3 members healthy, no alarms | not re-run this revision |
 | 3 | Zero degraded volumes | **pass** — re-verified live 2026-08-20 evening: 0 degraded, 0 faulted, 62 healthy attached. The four Tier-2 degradations recorded in the previous revision have cleared |
-| 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). Tier-0 `kube-system/registry` has 0 — §5 |
+| 4 | Every Tier-1 volume ≥ 2 replicas on the trio | **pass** for the seven on `longhorn-critical` (3 each). `kube-system/registry` still has 0, by decision — §9 item 1 |
 | 5 | Piece 12 landed: default class `bulk`-confined, `longhorn-critical` exists, nodes tagged | **pass** (§0.2) |
 | 6 | Longhorn `taint-toleration` applied + annotation present — Path A only | **pass** (§0.1) |
 | 7 | Flux fully reconciled | **pass** — 0 not-ready, 0 suspended |
@@ -1489,12 +1491,69 @@ Still open, in priority order. **Items 4 and 5 are answered but keep their numbe
 through in place rather than moved to the resolved list above — several sections cross-reference
 "§9 item N", and renumbering has silently broken those references before.
 
-1. **`kube-system/registry` is Tier 0 and has zero control-plane replicas.** §5. It is the
-   sharpest storage item now that Tier 1 has moved, and it is a worse tier than the problem
-   it replaced. A battery window has no in-cluster registry mirror; `spegel` covers this
-   from node-local image stores right up until something crash-loops, which is exactly the
-   case a window creates. Either move it to `longhorn-critical` alongside Tier 1, or write
-   down explicitly that the window accepts no registry.
+1. ~~**`kube-system/registry` is Tier 0 and has zero control-plane replicas.**~~ **ANSWERED
+   2026-08-21, and the premise was wrong in a way worth reading.** The item assumed the
+   registry was a working mirror whose only defect was storage placement. It was not a
+   working mirror at all.
+
+   **It was not in the pull path.** `spegel.appendMirrors: true` does not exist in the spegel
+   chart — zero occurrences at 0.7.4 — so it was silently dropped, `--prepend-existing=false`
+   stood, and spegel moved the entire Talos mirror list into
+   `/etc/cri/conf.d/hosts/_backup/`, writing a `_default/hosts.toml` naming only itself. The
+   proof was zot's own catalog: **zero repositories on a 60Gi PVC.** Nothing had ever pulled
+   through it. Real path was spegel → upstream.
+
+   **And the mirror list would not have worked anyway**, in two different directions.
+   `overridePath` is a mirror-wide flag (Talos rejects per-endpoint objects), so
+   `docker.io`/`gcr.io`/`quay.io`/`ghcr.io` had working zot endpoints and *decorative*
+   upstream fallbacks (`https://index.docker.io` without `/v2` is a 301 to a web page, not a
+   registry API), while `registry.k8s.io`/`public.ecr.aws`/`cgr.dev` had the inverse — working
+   upstream, and zot endpoints resolving to `…/v2/<reg>/v2/<repo>`.
+
+   **Then a third fault, only visible once the first two were fixed:** the primary zot endpoint
+   was `registry.kube-system.svc.cluster.local`. containerd runs on the **host**, whose
+   resolvers are `9.9.9.9, 149.112.112.112, 10.10.10.9, 10.10.0.1` — no cluster DNS. It had
+   never resolved. Measured: a 2.8 MB `alpine` pull took **2m32s** walking dead endpoints.
+
+   Fixed in #1012 (paths), #1013 + #1015 (spegel `prependExisting` **and**
+   `mirroredRegistries` — the first is inert without the second), and #1016 (a resolvable
+   endpoint). Live chain, verified on a control plane and a worker:
+
+   **spegel → equestria zot → celestia zot → upstream**
+
+   Proven end to end rather than by inspection — zot's log shows the pull arriving from
+   `User-Agent: containerd/v2.2.7`, `X-Real-Ip: 10.10.206.10`, and the same pull now takes
+   **4.65s against 2m32s**. Note `registry.driscoll.tech` is **celestia's** zot, not a second
+   name for this one; it serves the same layout and is kept deliberately as a cross-cluster
+   fallback on another battery-backed host.
+
+   **The storage half is a deliberate open decision, not an oversight.**
+   [#1014](https://github.com/david-driscoll/home-operations/pull/1014) — the control-plane
+   toleration and `longhorn-critical` — is written and **left unmerged by David, 2026-08-21**.
+   Left whole rather than half-merged on purpose: toleration without storage is the same
+   deferred-failure shape as the taint without tolerations, so zot stays a coherently
+   worker-resident service (`kerfuffle`, no CP toleration) instead.
+
+   What that costs during a window, stated so nobody has to re-derive it:
+
+   - **Images still pull.** That is the point of the chain above. A dead-but-*resolvable*
+     endpoint fails fast through traefik — nothing like the 2m32s, which was an unresolvable
+     name black-holing. celestia's zot and upstream both stay reachable on battery (§7).
+   - **zot itself is down for the whole window.** All three replicas are on workers, and
+     because the volume is **RWX** its share-manager is on a worker too (`kerfuffle`), so
+     there is neither a replica nor a share-manager to attach from.
+   - **§6.0 check 3 is dirty by construction.** "Zero degraded volumes" can never pass during
+     a window while zot is on `bulk`. That is the sharpest cost — it degrades the signal used
+     to judge the window, and a check that is always noisy is a check nobody reads.
+   - **The cache is absent in the one case it exists for** — a pod crash-looping mid-window.
+   - It quietly moves the nearest cache onto **celestia**, whose tiering this file has never
+     reasoned about.
+
+   If that stands, it should eventually be written as a decision in §1 rather than left as an
+   open item. **One refinement to fold in if #1014 is ever revisited:** the Deployment is
+   `replicas: 1`, so RWX buys nothing and costs a share-manager pod that must itself be
+   schedulable on a tainted control plane. RWO would remove it — and access mode is immutable,
+   so the PVC recreate is the only moment to change it.
 2. ~~**Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**~~ **DONE and LIVE
    2026-08-21.** Split into two PRs deliberately, because the halves apply by different
    mechanisms and had to be sequenced:
