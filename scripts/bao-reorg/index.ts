@@ -162,6 +162,43 @@ function move(from: string, to: string): boolean {
   return result.status === 0;
 }
 
+/** Stable stringify, so key order is not a difference. Mirrors bao-move's. */
+function canonical(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
+}
+
+/**
+ * Finish a move whose destination has already been copied AND pruned.
+ *
+ * A pruned destination does not equal its source — that is the point — so
+ * `bao-move` sees "destination exists with different data", SKIPs, and
+ * `continue`s past its own destroy step. Left alone that means the reap pass
+ * silently never removes the source: no error, no failure count, and
+ * `--verify` reporting `BOTH ... source not destroyed` long after the run.
+ *
+ * The short-circuit is narrow on purpose. It fires ONLY when the destination is
+ * byte-identical to `source - dropFields`, which is proof the copy and the
+ * prune both completed. Any other difference falls through to `bao-move` and
+ * gets refused exactly as before — this widens nothing, it just teaches the
+ * driver to recognise the one shape it creates itself.
+ */
+async function settlePrunedMove(entry: MoveEntry): Promise<"done" | "failed" | "defer"> {
+  if (!entry.dropFields?.length) return "defer";
+  const src = await bao().read(MOUNT, entry.from);
+  const dst = await bao().read(MOUNT, entry.to);
+  if (!src || !dst) return "defer"; // nothing copied yet — let bao-move do the work
+  const pruned = Object.fromEntries(Object.entries(src.data).filter(([k]) => !entry.dropFields?.includes(k)));
+  if (canonical(pruned) !== canonical(dst.data)) return "defer"; // a real mismatch; bao-move must refuse it
+  console.log(`SAME  ${MOUNT}/${entry.from} -> ${MOUNT}/${entry.to}: destination is the source minus ${entry.dropFields.join(", ")}`);
+  if (copyOnly) return "done";
+  console.log(`${apply ? "DEL  " : "PLAN "} destroy ${MOUNT}/${entry.from} (all ${src.metadata.version} version(s) + metadata)`);
+  if (apply) await bao().destroy(MOUNT, entry.from);
+  return "done";
+}
+
 /**
  * Remove named fields from a path that has already been copied.
  *
@@ -358,10 +395,17 @@ console.log(`phase ${phase}: ${work.length} entr${work.length === 1 ? "y" : "ies
 let failed = 0;
 for (const entry of work) {
   switch (entry.kind) {
-    case "move":
+    case "move": {
+      const settled = await settlePrunedMove(entry);
+      if (settled === "done") break;
+      if (settled === "failed") {
+        failed++;
+        break;
+      }
       if (!move(entry.from, entry.to)) failed++;
       else if (entry.dropFields?.length) if (!(await prune(entry, entry.dropFields))) failed++;
       break;
+    }
     case "retire":
       if (!move(entry.from, retiredPath(entry.from))) failed++;
       break;
