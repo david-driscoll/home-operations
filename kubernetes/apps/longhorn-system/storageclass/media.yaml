@@ -4,58 +4,71 @@
 # THE PROBLEM. Nightly low-power mode (02:00-09:00) sheds BOTH media workers,
 # `fluttershy` and `kerfuffle`. All three apps are keep-list: they relocate onto
 # the control planes (`milky-way`, `othalla`, `pegasus`), which have Intel iGPUs
-# and never shut down. Today all three config volumes run 3 replicas on the
-# `bulk` tier, and two of those three replicas live on the shed pair — so every
-# night the volumes would drop to one copy and sit `degraded` for seven hours.
+# and never shut down. Originally all three config volumes ran 3 replicas on the
+# `bulk` tier, and two of those three replicas lived on the shed pair — so every
+# night the volumes would drop to one copy.
 #
-# THE ANSWER: PUT THE REPLICAS ONLY ON NODES THAT NEVER SHUT DOWN.
-# `nodeSelector: low-power` = the three control planes plus hard-hat and
-# shining-armor; `numberOfReplicas: "3"`. Every one of those five stays powered
-# through the window, so all three replicas stay up and the volume never leaves
-# `healthy`.
+# ⚠️ THIS FILE HAS BEEN THROUGH THREE ANSWERS IN ONE DAY. If you are reading a
+# comment further down that contradicts the one above the `parameters:` block,
+# the one above `parameters:` wins. The history, because the trade is the whole
+# point:
 #
-# Why that framing won over "keep 4 replicas on the 4 `bulk` nodes" (the design
-# this file used to carry). That design left the volumes DEGRADED every night,
-# which is not a cosmetic state — it has two teeth:
+#   * plan C / `nodeSelector: critical` (#1051) — replicas on the three control
+#     planes only. No spare eligible node; nothing to rebuild onto if one died.
+#   * `nodeSelector: low-power`, 3 replicas (#1053) — replicas ONLY on the five
+#     nodes that stay powered overnight (3 CPs + hard-hat + shining-armor).
+#     NOTHING was degraded overnight, so no alert and no stalled tuppr drain.
+#     Clean nights. But the pods run on fluttershy/kerfuffle for the seventeen
+#     hours a day the estate is AWAKE, and none of those five nodes is one the
+#     pods can run on, so EVERY DAYTIME READ AND WRITE CROSSED THE NETWORK.
+#   * `nodeSelector: low-power-off`, 5 replicas (CURRENT) — replicas on the five
+#     nodes with an Intel iGPU, which is exactly the set the apps can run on.
+#     The pod ALWAYS has a local replica: a worker by day, a control plane by
+#     night. The price is that the volumes ARE degraded 02:00-09:00 every night.
 #
-#   1. `LonghornVolumeStatusWarning` fires on `longhorn_volume_robustness == 2`
-#      `for: 5m` — three volumes, every night, forever.
-#      (kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml)
-#   2. It BLOCKS TALOS UPGRADES. The tuppr health check in
+# THE TRADE, in one line: `low-power` bought clean nights at the cost of every
+# daytime read; `low-power-off` buys daytime locality at the cost of a nightly
+# degraded state that had to be made safe. It went that way because these are
+# plex/jellyfin CONFIG volumes — SQLite — and daytime latency is what is
+# actually felt.
+#
+# ⚠️ THE NIGHTLY DEGRADED STATE IS REAL AND EXPECTED. A replica on a node that
+# powers off IS a failed replica. Longhorn defines `degraded` as "fewer healthy
+# replicas than numberOfReplicas", so there is no way to have a replica on a
+# shed node and not be degraded while it is shed. Two things had to be handled
+# for that to be safe, and BOTH ARE SHIPPED — do not undo either without
+# undoing this class:
+#
+#   1. `LonghornVolumeStatusWarning` would fire nightly, for three volumes,
+#      forever. Handled in
+#      kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml by
+#      scoping the rule: the three media PVCs are excluded from it precisely
+#      while `fluttershy` or `kerfuffle` is not Ready (plus a 30-minute
+#      post-wake resync grace). NOT a silence-operator `Silence` — that CRD has
+#      no time fields at all and would have hidden real daytime failures. The
+#      full reasoning is in that file's comment.
+#      (While fixing that rule it turned out the alert had NEVER been able to
+#      fire: it tested `longhorn_volume_robustness == 2` against a metric that
+#      is now one-hot with a `state=` label, through a kube-state-metrics join
+#      that could not match. Both are fixed there.)
+#   2. It BLOCKS TALOS UPGRADES CLUSTER-WIDE. The tuppr health check in
 #      kubernetes/apps/system-upgrade/upgrades/talos.yaml is
 #      `expr: status.robustness != "degraded"` over `longhorn.io/v1beta2 Volume`
-#      in `longhorn-system` with `timeout: 15m`, and it is CLUSTER-WIDE — it
-#      names no volume, so any degraded volume anywhere stalls the drain of the
-#      next node for the full 15m and then fails the upgrade. A design that is
-#      degraded 02:00-09:00 hands the cluster a nightly seven-hour window in
-#      which node upgrades cannot run.
+#      in `longhorn-system` with `timeout: 15m`, and it NAMES NO VOLUME — any
+#      degraded volume anywhere stalls the drain of the next node for the full
+#      15 minutes and then fails the upgrade. Handled by ENABLING the tuppr
+#      maintenance window in that file (11:00, 2h, `${TIMEZONE}`) so drains only
+#      ever run inside the awake hours. That window must stay OUTSIDE
+#      02:00-09:00 for as long as this class keeps replicas on the shed nodes.
 #
-# Under this class there is nothing degraded, so neither tooth bites. There is
-# also nowhere to rebuild TO and nothing to rebuild — the eligible set is
-# exactly the set of nodes that stay up, so the shed cannot create a vacancy.
-# That also disposes of the `replica-replenishment-wait-interval` (600s)
-# churn problem the old design had to engineer around: the rule is "churn
-# happens iff a tag-eligible node is AWAKE and holds no live replica", and here
-# every eligible node is awake and holds one.
-#
-# THE ACCEPTED COST. By DAY the pods prefer the media workers (stronger Iris Xe
-# iGPU — see the soft nodeAffinity in each app's helmrelease.yaml), so the pod
-# runs on a worker while all three replicas sit on control planes and every
-# read and write crosses the network. That shape is already proven in this
-# cluster in mirror image: `teamarr` (pvc-8cfbf411-…) and `pinepods`
-# (pvc-4f906258-…) are attached to `milky-way` and `othalla` with all three
-# replicas on `bulk` workers, and both are `state: attached`,
-# `robustness: healthy`, three replicas `RW`. Measured 7-day load on the three
-# media volumes is 4.2 write IOPS / 52 KB/s combined and ~0 reads (page cache
-# absorbs them), so there is very little traffic to make remote.
-#
-# The second half of the cost: the control-plane Longhorn disks are Transcend
-# TS1TMTS425S M.2 SATA (54-75 ms mean write latency over 7d) against the
-# workers' Samsung 990 EVO Plus NVMe (0.5-11 ms). Longhorn v1 acks a write only
-# once every replica has it, so these volumes inherit the slower disk 24/7 —
-# not just overnight. Affordable at 4.2 IOPS; it is the thing to watch during
-# the soak, because Plex library scans and Jellyfin metadata refreshes are
-# SQLite-fsync bursty and that is a latency workload, not a throughput one.
+# THE OTHER ACCEPTED COST: 5-way synchronous writes. Longhorn v1 acks a write
+# only once every replica has it, so these volumes are as slow as their slowest
+# replica, and at least three replicas are always on the control planes'
+# Transcend TS1TMTS425S M.2 SATA disks (54-75 ms mean write latency over 7d)
+# rather than the workers' Samsung 990 EVO Plus NVMe (0.5-11 ms). Measured
+# 7-day load on the three volumes is 4.2 write IOPS / 52 KB/s combined with ~0
+# reads, so that is affordable — but it is a LATENCY risk, not a throughput one,
+# and `plex`'s SQLite config under a library scan is the thing to watch.
 #
 # WHY THIS IS A SEPARATE CLASS AND NOT JUST `longhorn-critical`.
 # `longhorn-critical` (storageclass/critical.yaml) has `nodeSelector: critical`
@@ -99,25 +112,41 @@
 #
 # So if `numberOfReplicas` is ever dropped below the number of tagged nodes,
 # this setting is the thing keeping that cruft from appearing.
-# WHY THE NIGHTLY WINDOW COSTS NOTHING HERE. Every `low-power` node stays
-# powered through it, so no replica ever fails, nothing goes `degraded`, no
-# `LonghornVolumeStatusWarning` fires, and the cluster-wide tuppr gate
-# (`status.robustness != "degraded"`) never stalls a Talos drain. That gate is
-# what ruled out every design that kept a replica on fluttershy or kerfuffle.
 #
-# UNLIKE the earlier `critical`-only shape, three replicas across FIVE eligible
-# nodes leaves two spare, so Longhorn CAN rebuild if a single node dies. That is
-# a real improvement: a control-plane outage or Talos upgrade no longer strands
-# these volumes degraded until the node returns.
+# WHAT THE NIGHTLY WINDOW ACTUALLY COSTS. Two of the five `low-power-off` nodes
+# — fluttershy and kerfuffle — power off during it, so two replicas of each
+# volume fail and all three volumes read `degraded` from ~02:00 to ~09:00 every
+# night. That is the DESIGNED behaviour of this class, not a fault, and both of
+# its consequences are handled: see the two numbered items at the top of this
+# file (alert-rule scoping, and the tuppr maintenance window).
 #
-# COUPLING TO WATCH. If the `low-power` tag ever shrinks to three nodes, this
-# recovers the old no-spare-node behaviour silently — nothing alerts on it. And
-# if hard-hat or shining-armor is ever added to the nightly shed, it must lose
-# the tag at the same time, or the nightly-degraded problem returns.
+# ⚠️ THE PREVIOUS REVISION OF THIS COMMENT SAID THE OPPOSITE — that "no replica
+# ever fails, nothing goes degraded, no LonghornVolumeStatusWarning fires".
+# That was true of `nodeSelector: low-power`, which this class no longer uses.
+# It is recorded here because it is the single easiest thing to get backwards
+# about the current design.
 #
-# NOTE `low-power` IS NOT `battery`. In a real Battery event hard-hat does go
-# down, so a replica there will fail and the volume will degrade. That is
-# expected and acceptable — Battery is an emergency, not a nightly routine.
+# NOTHING TO REBUILD ONTO, AND THAT IS THE POINT. With 5 replicas over exactly 5
+# eligible nodes, when the two worker replicas fail at 02:00 Longhorn goes
+# looking for somewhere to rebuild them and finds nowhere: the two shed nodes
+# are unschedulable and the three control planes each already hold a replica
+# (`replica-soft-anti-affinity` is false, so one per node). So it logs a
+# scheduling failure, waits, and resyncs at 09:00. Drop this to 3 replicas and
+# the two empty control planes become rebuild targets — ~170 GiB copied every
+# night and unwound every morning. THE REPLICA COUNT AND THE TAG ARE A PAIR.
+#
+# COUPLING TO WATCH. `low-power-off` must remain exactly "the nodes that can run
+# these apps", and `numberOfReplicas` must remain exactly its size. If a node
+# gains or loses an Intel iGPU, or the app affinities change, both move
+# together. Nothing enforces or alerts on this.
+#
+# The alert-rule gate in pvc-usage-rules.yaml ALSO hardcodes `fluttershy` and
+# `kerfuffle` as the shed pair. If the shed set changes, that regex is a third
+# place to update.
+#
+# NOTE THIS IS NOT `battery`. In a real Battery event more nodes go down — see
+# docs/cluster-consolidation/24-power-states.md. Battery is an emergency, not a
+# nightly routine, and this class is tuned for the nightly routine.
 #
 # ⚠️ CHANGING THE CLASS IN GIT DOES NOT MIGRATE ANYTHING, AND IS NOT SAFE TO
 # POINT THE LIVE PVCs AT. All three PVCs carry
@@ -153,8 +182,10 @@ parameters:
   # failed replica, so these volumes go `degraded` every night by definition.
   # That has two consequences, both of which need the companion changes shipped
   # alongside this:
-  #   * `LonghornVolumeStatusWarning` would fire nightly -- silenced for the
-  #     window, the same way the Gatus maintenance windows are.
+  #   * `LonghornVolumeStatusWarning` would fire nightly -- handled by SCOPING
+  #     THE RULE in longhorn/rules/pvc-usage-rules.yaml, not by a silence. The
+  #     three media PVCs drop out of that alert exactly while a media worker is
+  #     not Ready. Nothing else is suppressed, at any hour.
   #   * tuppr's Talos health gate is `status.robustness != "degraded"` and is
   #     CLUSTER-WIDE, so it would block every node drain for the whole window.
   #     The tuppr maintenance window in system-upgrade/upgrades/talos.yaml is
@@ -172,9 +203,11 @@ parameters:
   # and one on each control plane for the night. The cost is 5-way synchronous
   # writes, which these config volumes can afford -- they are read-heavy.
   #
-  # NOT tagged: hard-hat and shining-armor. Neither has an Intel iGPU, so the
-  # media apps can never run there and a replica would be permanently remote.
-  # They keep `low-power` (see below), which is a different question.
+  # NOT tagged `low-power-off`: hard-hat and shining-armor. Neither has an Intel
+  # iGPU, so the media apps can never run there and a replica would be
+  # permanently remote. They keep `low-power`, which answers a DIFFERENT
+  # question -- "does this node stay powered overnight?" -- and is still the
+  # right tag for anything whose only requirement is power continuity.
   nodeSelector: "low-power-off"
   dataLocality: disabled
   replicaAutoBalance: best-effort
