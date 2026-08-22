@@ -56,8 +56,14 @@ interpolated by OpenBao — it stays literal in the compose stack's `config.hcl`
 The alpha-site stack (`docker/alpha-site/bao-transit/`) reads the key as
 `env://BAO_UNSEAL_KEY`, sourced from the host env_file `/var/local/unseal-key` on
 dockge-as (root, 0400) — provisioned out of band by `provision-static-unseal.sh push`,
-never rendered by anything automated (Phase 11 estate decision). **This SOPS file has
-not been committed yet** — see the warning in `../INVENTORY.md` §2.
+never rendered by anything automated (Phase 11 estate decision).
+
+Committed 2026-08-22. It is the one link in the seal chain whose loss is not
+recoverable from anything else here: RUNBOOK Scenario B needs a healthy
+`bao-transit` to unseal the standby, so without this key the nightly dumps
+cannot be read back at all. Check it with `provision-static-unseal.sh verify`,
+which compares the stored copy against the running host by sha256 and never
+prints the value.
 
 ---
 

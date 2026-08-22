@@ -47,7 +47,13 @@ readonly REPO_ROOT
 
 readonly SOPS_FILE="bootstrap/openbao/alpha-site-static-unseal.sops.yaml"
 readonly OP_REF="op://Eris/OpenBao Alpha Site Static Unseal/current_key"
-readonly HOST="${BAO_TRANSIT_HOST:-dockge-as}"
+# The TAILNET name, not the bare hostname. `dockge-as` alone picks up the local
+# search domain and resolves to dockge-as.driscoll.tech, whose port 22 is
+# refused -- and every ssh here hides stderr, so that surfaced as
+# "/var/local/unseal-key MISSING" and "could not read seal status" rather than
+# as a connection failure. A verify that reports the key is gone when it is
+# actually fine is worse than one that errors.
+readonly HOST="${BAO_TRANSIT_HOST:-dockge-as.opossum-yo.ts.net}"
 # An env-file on the host, outside every stack directory: nothing that renders
 # or syncs the compose stack can touch it, and `docker compose` reads it
 # directly via env_file. Estate decision 2026-08-12.
@@ -96,7 +102,28 @@ cmd_save() {
   fi
 
   # Piped, never staged on disk in plaintext.
-  printf 'current_key: %s\n' "${value}" | sops --encrypt --input-type yaml --output-type yaml /dev/stdin > "${SOPS_FILE}"
+  #
+  # --filename-override is REQUIRED and its absence is why this command had
+  # never once succeeded: sops picks its creation_rule by FILENAME, the rule
+  # here is `path_regex: bootstrap/.*\.sops\.ya?ml`, and `/dev/stdin` matches
+  # no rule at all -- `error loading config: no matching creation rules found`.
+  # bf78b76 fixed this same pair of defects in save-pulumi-passphrase.sh and
+  # did not reach this script, so the file INVENTORY.md §2 has claimed exists
+  # since Phase 1 could never actually be produced.
+  #
+  # A temp file then mv, rather than redirecting straight at the destination,
+  # for the second defect: `> "${SOPS_FILE}"` truncates BEFORE sops runs, so a
+  # failed encrypt leaves a zero-byte file behind -- which the guard above then
+  # reads as "exists", tries to decrypt, and dies on. One failed run would wedge
+  # the command until someone deleted the empty file by hand.
+  local tmp
+  tmp="$(mktemp "${SOPS_FILE}.XXXXXX")"
+  if printf 'current_key: %s\n' "${value}" | sops --encrypt --filename-override "${SOPS_FILE}" /dev/stdin > "${tmp}"; then
+    mv "${tmp}" "${SOPS_FILE}"
+  else
+    rm -f "${tmp}"
+    die "sops failed to encrypt ${SOPS_FILE} — nothing was written"
+  fi
   sops --decrypt --extract '["current_key"]' "${SOPS_FILE}" >/dev/null || die "wrote ${SOPS_FILE} but it does not decrypt — check .sops.yaml recipients"
   local digest
   digest="$(sha "${value}")"
@@ -146,8 +173,14 @@ cmd_verify() {
   fi
 
   # The point of all of it: is the seal root actually unsealed.
+  #
+  # Via the host's TAILNET address, not 127.0.0.1. The compose stack publishes
+  # 8200 on the tailnet IP only -- `ss -ltn` shows `100.111.10.9:8200`, and the
+  # header comment at the top of this script says as much -- so the loopback
+  # probe this used to do could never answer, and `-sf` made that silent. It
+  # reported "could not read seal status" on a perfectly healthy, unsealed node.
   local sealed
-  sealed="$(ssh "${HOST}" "curl -sf http://127.0.0.1:8200/v1/sys/seal-status" 2>/dev/null | sed -n 's/.*"sealed":\([a-z]*\).*/\1/p')" || true
+  sealed="$(ssh "${HOST}" 'ip="$(tailscale ip -4 2>/dev/null | head -1)"; curl -sf "http://${ip}:8200/v1/sys/seal-status"' 2>/dev/null | sed -n 's/.*"sealed":\([a-z]*\).*/\1/p')" || true
   case "${sealed}" in
     false) ok "bao-transit reports sealed=false" ;;
     true)  warn "bao-transit reports SEALED"; status=1 ;;

@@ -46,7 +46,7 @@ OpenBao cluster. Each link is useless without the one before it.
 
 | File | Contents | Consumed by |
 |---|---|---|
-| `bootstrap/openbao/alpha-site-static-unseal.sops.yaml` | 32-byte AES-256-GCM-96 key for `seal "static"` on alpha-site's `bao-transit` | `bao-transit` container on alpha-site, via `env://BAO_UNSEAL_KEY` from the host env_file `/var/local/unseal-key` (dockge-as, root 0400). **⚠️ The SOPS copy is NOT in git as of 2026-08-22** — `provision-static-unseal.sh save` has never been committed, so the only copies are the 1Password item `OpenBao Alpha Site Static Unseal` and the host file. Run `save` and commit it. |
+| `bootstrap/openbao/alpha-site-static-unseal.sops.yaml` | 32-byte AES-256-GCM-96 key for `seal "static"` on alpha-site's `bao-transit` | `bao-transit` container on alpha-site, via `env://BAO_UNSEAL_KEY` from the host env_file `/var/local/unseal-key` (dockge-as, root 0400). Committed 2026-08-22 and proven byte-identical to the running host by sha256 (`provision-static-unseal.sh verify` — all four checks green, `bao-transit` unsealed). Third copy: the 1Password item `OpenBao Alpha Site Static Unseal`. |
 | `bootstrap/openbao/transit-token.sops.yaml` | Orphan periodic token the equestria cluster uses to reach the transit engine | `seal "transit"` in the equestria OpenBao config, via `VAULT_TRANSIT_SEAL_TOKEN` |
 | `bootstrap/openbao/recovery-keys.sops.yaml` | `bao-transit` (alpha-site) recovery key shares, from `bao-transit.sh init` | Humans, for root-token regeneration and rekey on the seal root |
 | `bootstrap/openbao/equestria-recovery-keys.sops.yaml` | equestria OpenBao recovery shares (3-of-5), from `equestria-init.sh init` | `root-ceremony.sh`; humans, for rekey |
