@@ -24,7 +24,7 @@ jq = "1.8.2"
 sops = "3.13.3"
 flux2 = "2.9.4"
 age = "1.3.1"
-gh = "2.97.0"
+gh = "2.98.0"
 # Git hook manager (see .config/hk.pkl). MUST stay pinned here: hk registers
 # itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
