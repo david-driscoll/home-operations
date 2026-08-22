@@ -114,23 +114,25 @@ completed and eleven days have passed:
 | 22 decommission SGC | **phase 1 largely done**, phase 2 (ACLs, `clusters/sgc.yaml`, OpenBao mount, CNPG bucket) waits for power-off |
 | 12 Longhorn critical tier | **landed 2026-08-19** (PR #960). Tags live, `longhorn-critical` exists, the default class is `nodeSelector: bulk`, and all seven Tier-1 volumes moved onto it (PRs #963/#966). **Still outstanding:** the Tier-2 `nodeSelector` backfill — ~100 volumes still hold a replica on the trio ([20](20-low-power-tier.md) §9 item 8) |
 | 20 low-power tier (**Battery**) | **§4 done and live 2026-08-21** — control planes tainted (`allowSchedulingOnControlPlanes: false`, PR #1002), Tier-0/1 tolerations in (PR #1001), all §6.0 pre-flight checks green. **The posture itself has never been run**; §8 Stage 4 is the gate |
-| 24 power states (**Low Power**) | **shipped nightly 2026-08-22.** py-kube-downscaler sheds Tier 2 on `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` (PR #1046), with Gatus maintenance windows on the 26 affected services (PR #1047). Workload shed is automatic; **node shutdown is not** — that half waits on 30 |
-| 30 Longhorn media tier | **class + scheduling + node tag live 2026-08-22** (PRs #1051 and #1053, with the Intel GPU split in #1048). `longhorn-media` is `nodeSelector: low-power`, 3 replicas, `dataLocality: disabled`; the new **`low-power` tag** covers the five nodes that stay powered overnight — the three CPs plus `hard-hat` and `shining-armor` — and pointedly *not* `fluttershy`/`kerfuffle`. **The volume migration is 2 of 3 done:** `dispatcharr` and `plex` are migrated and healthy, **`jellyfin` is still running**. Until it finishes, do not shed a media worker overnight |
+| 24 power states (**Low Power**) | **shipped nightly 2026-08-22.** py-kube-downscaler sheds Tier 2 on `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` (PR #1046), with Gatus maintenance windows on the 26 affected services (PR #1047). **Workload shed only — no node powers off**, and after the 2026-08-22 reversal none is intended to |
+| 30 Longhorn media tier | **ABANDONED 2026-08-22, same day it shipped.** PRs #1051/#1053/#1054 built `longhorn-media`, the `low-power` and `low-power-off` node tags, and the scheduling machinery to relocate plex/jellyfin/dispatcharr onto the control planes overnight — **all reverted that evening** for costing more complexity and operational pain than it was worth. The class is deleted, both tags are gone from `talconfig.yaml`, and the three media PVCs are on `longhorn` (bulk), which is where they always were. 30 is now the post-mortem, and worth reading for the findings that outlived it |
 
 Current cluster: 7 nodes, **3 etcd members** (`milky-way`, `othalla`, `pegasus`), all Ready.
 
 **Low Power and Battery are different states — do not merge them when reading.** Low Power is
 [24](24-power-states.md)'s nightly 02:00–09:00 window: Tier 2 scaled to zero, keep-list up, and
-(once 30 lands) both media workers powered off. Battery is [20](20-low-power-tier.md)'s S′: the
-three **bare-metal** workers off, Tier 0/1 only, on the Pecron. Correction recorded 2026-08-22 —
+**every node still powered.** Battery is [20](20-low-power-tier.md)'s S′: the three
+**bare-metal** workers off, Tier 0/1 only, on the Pecron. Correction recorded 2026-08-22 —
 Battery is *not* "all four workers off": David confirmed `shining-armor` stays online, being a VM
 on `twilight-sparkle` that hosts the backup volumes.
 
-**The Longhorn `low-power` node tag (#1053) belongs to Low Power, not Battery.** It marks the
-five nodes that stay powered through the *nightly* window — the three control planes plus
-`hard-hat` (immich's GPU) and `shining-armor`. In a real **Battery** event `hard-hat` does go
-down, so a `longhorn-media` replica there will fail and the volume will degrade. Accepted:
-Battery is an emergency, not a nightly routine.
+> ⚠️ **REVERSAL — 2026-08-22 evening.** Earlier that day this section said Low Power would power
+> both media workers off "once 30 lands", and described a Longhorn `low-power` node tag that
+> marked the five nodes staying up through the window. **All of that was reverted.**
+> `fluttershy` and `kerfuffle` **stay powered** overnight and idle instead; the `low-power` and
+> `low-power-off` tags are gone from `talconfig.yaml` and the `longhorn-media` class is deleted.
+> **Low Power sheds workloads, never nodes.** See [30](30-longhorn-media-tier.md) for what was
+> tried, what each shape cost, and why keeping the workers powered won.
 
 **Two things the plan never accounted for, both now load-bearing on decisions:**
 
@@ -258,7 +260,7 @@ The v2/v2.1 discovery predates two waves of change; the plans reflect **today**:
 | [27-migration-churn-failure-modes.md](27-migration-churn-failure-modes.md) | *(unfiled)* | Two more 2026-08-13 incidents: `cilium-operator` silently dropped L2-announcement leader election under API-server pressure (cluster-wide external ingress outage, internal traffic unaffected); staging `tsidp` while SGC's copy stayed live crashed Gatus entirely (duplicate monitoring registration) |
 | [28-postgres-restore-and-bootstrap-deadlock.md](28-postgres-restore-and-bootstrap-deadlock.md) | *(unfiled)* | Restoring CNPG from the barman archive after the 2026-08-13 cascade: the archive-collision trap that blocks every same-path restore, and the OpenBao/postgres bootstrap deadlock that survives the restore (documented, deliberately unresolved) |
 | [29-taint-readiness-audit.md](29-taint-readiness-audit.md) | *(unfiled)* | Is it safe to flip `allowSchedulingOnControlPlanes` to `false`? Full live audit of all 81 control-plane-resident pods and all 20 DaemonSets (2026-08-19). **Verdict: not yet** — `etcd-tasks` backup/defrag pin to the control planes without tolerating them (fixed here), Longhorn's system-managed set still needs a volumes-detached window, and `postgres-3` is `strict-local` on `othalla` |
-| [30-longhorn-media-tier.md](30-longhorn-media-tier.md) | *(unfiled)* | The `longhorn-media` tier: putting the plex/jellyfin/dispatcharr config volumes on the five `low-power`-tagged nodes that stay powered overnight, so shedding BOTH media workers leaves nothing degraded — no nightly `LonghornVolumeStatusWarning` and no stalled tuppr drain. Three replicas over five eligible nodes still *structurally* guarantee one on a control plane, and leave two spare to rebuild onto. Includes the grow-then-shrink migration runbook, the measured rebuild throughput (~4× slower than estimated), and why a `nodeSelector` patch alone moves nothing: Longhorn's replenish path counts replicas and never re-checks tag conformance |
+| [30-longhorn-media-tier.md](30-longhorn-media-tier.md) | *(unfiled)* | **ABANDONED design, kept as a post-mortem.** Was the `longhorn-media` tier — moving the plex/jellyfin/dispatcharr config volumes so both media workers could power off overnight. Records the three shapes tried (`bulk`@4, `critical`/`low-power`@3, `low-power-off`@5→3) and why each failed, and the decision to keep the workers powered and idle instead. Worth reading for the findings that outlived it: Longhorn **never auto-evicts tag-nonconforming replicas** (`replenishReplicas()` counts replicas, never re-checks tags), so a `nodeSelector` patch alone moves nothing; `dataLocality: best-effort` mints permanent unscheduled ghost replicas that nothing alerts on; `kustomize.toolkit.fluxcd.io/force: enabled` on a PVC turns a storage-class edit into **data loss**; measured rebuild throughput was 26–33 MiB/s, ~4× below estimate; a deleted replica replenishes in 15–60 s, not after the 600 s interval; and **three Longhorn volume alerts had never been able to fire** — two are fixed here, one is a still-open gap |
 
 ## Sequencing
 
