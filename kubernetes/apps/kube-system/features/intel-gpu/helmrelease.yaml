@@ -44,15 +44,88 @@ spec:
     keepHistory: false
   values:
     name: intel-gpu-plugin
+    # The NodeFeatureRule is cluster-wide and is what applies the
+    # `intel.feature.node.kubernetes.io/gpu` label both releases select on. It
+    # must be created EXACTLY ONCE -- this release owns it, and the
+    # control-plane release below sets `nodeFeatureRule: false` so the two do
+    # not fight over the same object.
     nodeFeatureRule: true
-    sharedDevNum: 5 # Allow 5 containers per GPU (10 total slots across 2 nodes)
+    # Three containers per GPU. Currently claimed on these nodes: jellyfin and
+    # dispatcharr on fluttershy, plex on kerfuffle.
+    sharedDevNum: 3
     allocationPolicy: balanced # Spread workloads evenly across available GPUs
+    # Pinned to the WORKER iGPU by device ID. The control planes carry 46d4 and
+    # are served by the separate release below at a lower sharing ratio; the two
+    # device IDs are disjoint, so no node is ever claimed by both DaemonSets.
+    #
+    #   46a6 -> fluttershy, kerfuffle          (workers)
+    #   46d4 -> milky-way, othalla, pegasus    (control planes)
+    #
+    # Quoting is load-bearing: node label values are strings, and an unquoted
+    # `true` here is a YAML boolean that will not match the label.
+    nodeSelector:
+      intel.feature.node.kubernetes.io/gpu: "true"
+      gpu.intel.com/device-id.0300-46a6.present: "true"
     # NOTE: this chart renders a GpuDevicePlugin CR, not a DaemonSet -- the
     # intel-device-plugin-operator turns the CR into the
     # intel-gpu-plugin-intel-gpu-plugin DaemonSet. `tolerations` is a passthrough
     # field on the CR spec (templates/gpu.yaml), so it does reach the pods, but
     # the operator is the thing that applies it: hand-patching the DaemonSet
-    # would be reverted. Chart default is [], so nothing is being replaced here.
+    # would be reverted.
+    #
+    # No control-plane toleration here on purpose: this release's nodeSelector
+    # can never match a control plane, so a toleration would be dead config.
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: intel-gpu-plugin-cp
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: intel-device-plugins-gpu
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    name: intel-gpu-plugin-cp
+    # Owned by the worker release above -- see the comment there.
+    nodeFeatureRule: false
+    # One container per GPU, three control planes, so three slots total. That is
+    # deliberately tight: these are the low-power trio, and the slots exist to
+    # host plex and jellyfin when a media worker is shed overnight, not to be a
+    # general-purpose transcode pool.
+    sharedDevNum: 1
+    # MUST be `none` while sharedDevNum is 1. The operator's validating webhook
+    # (vgpudeviceplugin.kb.io) rejects the CR outright with
+    #   PreferredAllocationPolicy is valid only when setting sharedDevNum > 1
+    # for any other value -- `balanced` is refused, and so is an empty value, so
+    # this cannot simply be omitted. If sharedDevNum here is ever raised above 1,
+    # `balanced` becomes legal again.
+    allocationPolicy: none
+    # 46d4 is the control-plane iGPU. Disjoint from the workers' 46a6.
+    nodeSelector:
+      intel.feature.node.kubernetes.io/gpu: "true"
+      gpu.intel.com/device-id.0300-46d4.present: "true"
+    # Required: the control planes carry the NoSchedule taint from piece 20 §4.
     tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
