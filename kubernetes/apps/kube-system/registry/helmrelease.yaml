@@ -83,10 +83,23 @@ spec:
             resources:
               requests:
                 cpu: 50m
+                # Idles around 240Mi; the spikes are sync-shaped, not steady, so
+                # this stays small deliberately and the headroom lives in the limit.
                 memory: 512Mi
               limits:
                 # cpu: 1
-                memory: 1Gi
+                # 1Gi OOMKilled this pod 10x in 5h on 2026-08-22, and each kill
+                # took an in-flight on-demand sync down with it. That is not a
+                # crash-and-recover — it is a loop that cannot converge: a cold
+                # pull of a multi-GB image (windmill 1.794.0, the trigger here)
+                # asks zot to sync on demand, zot buffers layers while copying,
+                # hits the limit, dies, and the manifest is never served. Every
+                # containerd retry restarts the same doomed sync from zero, so
+                # the image stays unpullable for as long as the limit stands.
+                # Downstream that surfaced as `ErrImagePull ... not found` on an
+                # image that returns HTTP 200 upstream, which reads like a bad
+                # tag and is not one.
+                memory: 4Gi
             probes:
               liveness:
                 enabled: true
