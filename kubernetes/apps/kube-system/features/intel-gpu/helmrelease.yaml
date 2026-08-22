@@ -44,12 +44,9 @@ spec:
     keepHistory: false
   values:
     name: intel-gpu-plugin
-    # The NodeFeatureRule is cluster-wide and is what applies the
-    # `intel.feature.node.kubernetes.io/gpu` label both releases select on. It
-    # must be created EXACTLY ONCE -- this release owns it, and the
-    # control-plane release below sets `nodeFeatureRule: false` so the two do
-    # not fight over the same object.
-    nodeFeatureRule: true
+    # Owned by the CONTROL-PLANE release below -- see the comment there for why
+    # ownership sits on that side rather than this one.
+    nodeFeatureRule: false
     # Three containers per GPU. Currently claimed on these nodes: jellyfin and
     # dispatcharr on fluttershy, plex on kerfuffle.
     sharedDevNum: 3
@@ -107,20 +104,36 @@ spec:
     keepHistory: false
   values:
     name: intel-gpu-plugin-cp
-    # Owned by the worker release above -- see the comment there.
-    nodeFeatureRule: false
-    # One container per GPU, three control planes, so three slots total. That is
-    # deliberately tight: these are the low-power trio, and the slots exist to
-    # host plex and jellyfin when a media worker is shed overnight, not to be a
-    # general-purpose transcode pool.
-    sharedDevNum: 1
-    # MUST be `none` while sharedDevNum is 1. The operator's validating webhook
-    # (vgpudeviceplugin.kb.io) rejects the CR outright with
+    # This release owns the NodeFeatureRule for the whole cluster.
+    #
+    # The rule is a single cluster-scoped object with a FIXED name
+    # (`intel-dp-gpu-device`) that does NOT derive from .Values.name, so exactly
+    # one release may create it or the two fight over the same object. It is
+    # what applies the `intel.feature.node.kubernetes.io/gpu` label that BOTH
+    # releases select on -- including this one.
+    #
+    # Ownership belongs on the control-plane side because the control planes are
+    # the always-on tier. The worker release is the one that gets suspended or
+    # removed when the media workers are shed; if it owned the rule, Flux would
+    # prune the rule with it, the gpu label would vanish from every node, and
+    # this release would lose its own nodeSelector -- taking the control-plane
+    # GPUs down at exactly the moment they are the only ones left. Owning it
+    # from the tier that never goes away removes that failure mode entirely.
+    nodeFeatureRule: true
+    # Two containers per GPU across three control planes, so six slots.
+    #
+    # Three claims have to fit here when both media workers are shed overnight:
+    # plex, jellyfin and dispatcharr. One slot per GPU would give exactly three
+    # -- an exact fit with zero headroom, so a single control plane being down
+    # for an upgrade would leave one of the three unschedulable. Two per GPU
+    # keeps the whole set schedulable on any two of the three nodes.
+    sharedDevNum: 2
+    # Legal only because sharedDevNum is above 1. The operator's validating
+    # webhook (vgpudeviceplugin.kb.io) rejects any policy at sharedDevNum 1 with
     #   PreferredAllocationPolicy is valid only when setting sharedDevNum > 1
-    # for any other value -- `balanced` is refused, and so is an empty value, so
-    # this cannot simply be omitted. If sharedDevNum here is ever raised above 1,
-    # `balanced` becomes legal again.
-    allocationPolicy: none
+    # and rejects an empty value too, so at 1 this must read `none` rather than
+    # being omitted. Caught by a server-side dry run.
+    allocationPolicy: balanced
     # 46d4 is the control-plane iGPU. Disjoint from the workers' 46a6.
     nodeSelector:
       intel.feature.node.kubernetes.io/gpu: "true"
