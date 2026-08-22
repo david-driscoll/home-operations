@@ -37,4 +37,4 @@ spec:
       maintenance-windows:
         - start: "02:00"
           duration: 7h
-          timezone: America/New_York
+          timezone: ${TIMEZONE}
