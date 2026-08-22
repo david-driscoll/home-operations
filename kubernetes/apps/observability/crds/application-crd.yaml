@@ -757,12 +757,22 @@ spec:
                       type: string
                 gatus:
                   type: array
-                  description: List of endpoints to monitor
+                  description: >-
+                    Gatus `endpoints[]`. Kept in step with schemas/gatus.schema.json against
+                    Gatus v5.36.0 (config/endpoint/endpoint.go). This CRD carries NO
+                    x-kubernetes-preserve-unknown-fields, so any key absent from the schema
+                    below is silently pruned by the API server and never reaches the Pulumi
+                    stack that renders the Gatus config -- `mise run codegen` fails the build
+                    if this key set and the JSON Schema's diverge.
                   items:
                     type: object
                     description: Configuration for a monitored endpoint
                     required: [url]
                     properties:
+                      enabled:
+                        type: boolean
+                        description: Whether the endpoint is enabled.
+                        default: true
                       name:
                         type: string
                       group:
@@ -784,6 +794,11 @@ spec:
                         pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
                       timeout:
                         type: string
+                        description: >-
+                          DEPRECATED / NO-OP. Gatus has no endpoint-level timeout -- the
+                          request timeout is `client.timeout`. Gatus parses its config with a
+                          non-strict yaml.Unmarshal, so this key is accepted and then ignored.
+                          Kept because stacks/applications/kubernetes.ts still emits it.
                         default: "10s"
                         pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
                       maintenance-windows:
@@ -801,17 +816,21 @@ spec:
                           type: object
                           required: [start, duration]
                           properties:
+                            enabled:
+                              type: boolean
+                              description: Whether the window is enabled. Gatus treats an unset value as enabled.
+                              default: true
                             start:
                               type: string
                               description: Window start, 24-hour hh:mm.
                               pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
                             duration:
                               type: string
-                              description: Window length, e.g. 7h or 30m.
+                              description: Window length, e.g. 7h or 30m. Gatus rejects 0 and anything over 24h.
                               pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
                             timezone:
                               type: string
-                              description: Olson timezone. Gatus defaults to UTC when unset.
+                              description: IANA timezone. Gatus defaults to UTC when unset.
                               default: "UTC"
                             every:
                               type: array
@@ -819,7 +838,7 @@ spec:
                                 Days the window applies to. Empty means every day.
                               items:
                                 type: string
-                                enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+                                enum: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
                       client:
                         type: object
                         properties:
@@ -843,6 +862,13 @@ spec:
                                 type: string
                               client-secret:
                                 type: string
+                              scopes:
+                                type: array
+                                description: >-
+                                  Required by Gatus' own validation -- client/config.go
+                                  isValid() rejects an oauth2 block with an empty scopes list.
+                                items:
+                                  type: string
                             required: [token-url, client-id, client-secret]
                           identity-aware-proxy:
                             type: object
@@ -854,7 +880,32 @@ spec:
                             type: string
                           network:
                             type: string
-                            enum: [tcp4, tcp6]
+                            description: >-
+                              Address family for the ICMP client. Gatus' client.Config
+                              documents ip/ip4/ip6 and defaults to ip; the tcp4/tcp6 values
+                              this used to list were never valid.
+                            enum: [ip, ip4, ip6]
+                            default: ip
+                          tls:
+                            type: object
+                            description: mTLS configuration (client/config.go TLSConfig).
+                            properties:
+                              certificate-file:
+                                type: string
+                                description: Path to a client certificate in PEM format.
+                              private-key-file:
+                                type: string
+                                description: Path to a client private key in PEM format.
+                              renegotiation:
+                                type: string
+                                description: TLS renegotiation support.
+                                enum: [never, once, freely]
+                                default: never
+                          tunnel:
+                            type: string
+                            description: >-
+                              Name of the SSH tunnel, from Gatus' top-level `tunneling` config,
+                              to send this endpoint's requests through.
                       alerts:
                         type: array
                         items:
@@ -874,16 +925,37 @@ spec:
                               type: integer
                               default: 2
                               minimum: 1
+                            minimum-reminder-interval:
+                              type: string
+                              description: >-
+                                Minimum interval between reminders for a still-triggered alert.
+                                Empty or 0 disables reminders; Gatus rejects anything under 5m.
+                              pattern: '^[0-9]+(ns|us|µs|ms|s|m|h)$'
                             send-on-resolved:
                               type: boolean
                               default: false
                             description:
                               type: string
-                            # provider-specific fields will be accepted as additionalProperties
+                            provider-override:
+                              type: object
+                              description: >-
+                                Per-alert override of the global provider configuration. The
+                                shape is provider-specific, so this is the one place in this
+                                CRD that keeps unknown keys -- without the flag the override
+                                body would be pruned and the alert would silently fall back to
+                                the global provider settings.
+                              x-kubernetes-preserve-unknown-fields: true
                       body:
                         type: string
                       headers:
                         type: object
+                        additionalProperties:
+                          type: string
+                      extra-labels:
+                        type: object
+                        description: >-
+                          Extra labels added to the Prometheus metrics Gatus exports for this
+                          endpoint.
                         additionalProperties:
                           type: string
                       graphql:
@@ -894,7 +966,10 @@ spec:
                         properties:
                           query-type:
                             type: string
-                            enum: [A, AAAA, CNAME, MX, TXT, SRV, PTR, SOA, NS]
+                            description: >-
+                              Gatus accepts any miekg/dns record type; this enum is the subset
+                              the estate uses.
+                            enum: [A, AAAA, CAA, CNAME, MX, NS, PTR, SOA, SRV, TXT]
                           query-name:
                             type: string
                         required: [query-type, query-name]
@@ -910,31 +985,58 @@ spec:
                         required: [username]
                       ui:
                         type: object
+                        description: >-
+                          Endpoint-level UI configuration (config/endpoint/ui/ui.go). This
+                          used to describe Gatus' GLOBAL `ui:` block -- title, description,
+                          header, logo, link, buttons -- none of which is valid here, so every
+                          real endpoint UI key was being pruned on apply.
                         properties:
-                          title:
-                            type: string
-                            default: "Health Dashboard"
-                          description:
-                            type: string
-                          header:
-                            type: string
-                          logo:
-                            type: string
-                          link:
-                            type: string
-                          buttons:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                label:
-                                  type: string
-                                url:
-                                  type: string
-                                icon:
-                                  type: string
+                          hide-conditions:
+                            type: boolean
+                            default: false
+                          hide-hostname:
+                            type: boolean
+                            default: false
+                          hide-url:
+                            type: boolean
+                            description: Useful when the URL carries a token.
+                            default: false
+                          hide-port:
+                            type: boolean
+                            default: false
+                          hide-errors:
+                            type: boolean
+                            default: false
+                          dont-resolve-failed-conditions:
+                            type: boolean
+                            default: false
+                          resolve-successful-conditions:
+                            type: boolean
+                            default: false
+                          badge:
+                            type: object
+                            properties:
+                              response-time:
+                                type: object
+                                required: [thresholds]
+                                properties:
+                                  thresholds:
+                                    type: array
+                                    description: >-
+                                      Five ascending response-time thresholds in milliseconds.
+                                      Gatus refuses to start if there are not exactly five, or
+                                      if they are not ascending.
+                                    minItems: 5
+                                    maxItems: 5
+                                    items:
+                                      type: integer
                       disable-monitoring-lock:
                         type: boolean
+                        description: >-
+                          DEPRECATED / NO-OP at the endpoint level. Gatus reads
+                          `disable-monitoring-lock` only from the top level of its config
+                          (config/config.go). Accepted and then ignored; kept because
+                          stacks/applications/kubernetes.ts still emits it.
                 authentik:
                   type: object
                   properties:

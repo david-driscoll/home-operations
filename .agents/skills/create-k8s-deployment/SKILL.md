@@ -207,7 +207,7 @@ Use this logic to determine which components your app needs:
 
 ```yaml
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:

@@ -81,7 +81,7 @@ Import `Tailscale`, `dns`, `Roles`, `Groups` from `@components/constants.ts` for
 Place a `definition.yaml` alongside `compose.yaml`. It is the source of truth for Authentik SSO config, Gatus uptime checks, and homepage metadata.
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/definition.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:

@@ -56,11 +56,35 @@ dotnet = { version = "10.0.203" }
 # the workspace pods install the same pin via mise.
 vals = "0.46.0"
 
+[tasks.codegen]
+description = 'Regenerate types/application-definition.d.ts from schemas/'
+# schemas/ is the source of truth for the ApplicationDefinition types that
+# components/ and stacks/ compile against, and for the `$schema` every
+# kubernetes/**/definition.yaml points at. The generator also asserts that the
+# Gatus endpoint key set in schemas/gatus.schema.json matches the one in
+# kubernetes/apps/observability/crds/application-crd.yaml -- the CRD carries no
+# x-kubernetes-preserve-unknown-fields, so a key the CRD does not list is
+# silently PRUNED by the API server on apply and never reaches the Pulumi stack
+# that renders the Gatus config.
+#
+# `--no-install` keeps this honest: json-schema-to-typescript and yaml are
+# devDependencies, so a missing `npm ci` fails loudly here instead of silently
+# resolving a different version off the network.
+run = ['npx --no-install tsx scripts/generate-types.ts']
+
 [tasks.update]
 description = 'Update all apps that have an update script'
+# `depends`, not another `run` line, so codegen still happens if the dotnet
+# step below fails. It currently always does: `.mise/tasks/do-update.cs` was
+# never carried over from equestria-cluster and does not exist in this repo, so
+# `mise run update` errors on its first line. Left as-is rather than papered
+# over -- porting that script is its own piece of work.
+depends = ['codegen']
 run = [
   'dotnet run .mise/tasks/do-update.cs',
-  'mise task flate',
+  # `mise task <name>` prints information about a task; `mise run <name>` runs
+  # it. This line was the former and had never actually run flate.
+  'mise run flate',
 ]
 
 [tasks.flate]
