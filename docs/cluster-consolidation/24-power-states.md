@@ -25,28 +25,70 @@ not being rewritten, this file records what changed and why.
 | [#1047](https://github.com/david-driscoll/home-operations/pull/1047) | Gatus `maintenance-windows` (`start: "02:00"`, `duration: 7h`, `timezone: ${TIMEZONE}`) on the **26** `definition.yaml` files whose services actually shed — without it every shed service pages for seven hours a night. The `ApplicationDefinition` CRD had to regain the previously-pruned Gatus fields first, and the JSON schemas **plus a real type generator** (`schemas/`, `scripts/generate-types.ts`, `mise run codegen`) came into this repo from `stargate-command-cluster`; the generator had never existed here at all. Gatus fields synced to v5.36.0 | 26 files carry the block; `schemas/` and `scripts/generate-types.ts` present in-tree |
 | [#1048](https://github.com/david-driscoll/home-operations/pull/1048) | Intel GPU plugin split per node class — `intel-gpu-plugin` on the control planes (`sharedDevNum: 2`, and the only release creating the fixed-name `NodeFeatureRule`) and `intel-gpu-plugin-workers` (`sharedDevNum: 3`, correcting the old and wrong `5`). Also right-sized the media apps: plex 6 CPU/4Gi/8Gi → 1 CPU/1Gi/4Gi with no CPU limit, jellyfin 4 CPU → 1 CPU and 8Gi → 4Gi, dispatcharr 1 CPU → 300m | live — both `GpuDevicePlugin` CRs exist with those ratios and disjoint device-id selectors (`46d4` = control planes, `46a6` = workers) |
 | [#1051](https://github.com/david-driscoll/home-operations/pull/1051) | **Both** media workers become sheddable: control-plane tolerations plus a *soft* (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass. Design and runbook: [30](30-longhorn-media-tier.md) | live — `LowPowerReturnProfile` in the descheduler ConfigMap; `longhorn-media` created (`nodeSelector: critical` as shipped, superseded hours later by #1053) |
-| [#1053](https://github.com/david-driscoll/home-operations/pull/1053) | A **new `low-power` node tag** on exactly the five nodes that stay powered through the window — `milky-way`/`othalla`/`pegasus` (now `["critical", "low-power"]`) plus `hard-hat` (immich's GPU) and `shining-armor` (backup volumes) — and `longhorn-media` repointed from `nodeSelector: critical` to `low-power`. `fluttershy` and `kerfuffle` are deliberately **not** tagged. Purely additive: every existing `bulk`/`critical` selector still matches what it did. Three `talconfig.yaml` anchor edits cover all five nodes, but the annotation is read only at Longhorn node **creation**, so the live retag came from patching the `nodes.longhorn.io` CRs | live — all seven node tag lists verified; `longhorn-media` reads `nodeSelector: low-power`, 3 replicas, `dataLocality: disabled` |
+| [#1053](https://github.com/david-driscoll/home-operations/pull/1053) | A **new `low-power` node tag** on exactly the five nodes that stay powered through the window — `milky-way`/`othalla`/`pegasus` (now `["critical", "low-power"]`) plus `hard-hat` (immich's GPU) and `shining-armor` (backup volumes) — and `longhorn-media` repointed from `nodeSelector: critical` to `low-power`. `fluttershy` and `kerfuffle` deliberately **not** tagged. Purely additive. **Superseded the same evening — see the revision below** | live at the time; the `low-power` tag itself is still live and still correct for what it means |
 
 **Why the retag, in one line:** `critical` means "Tier-0/1 storage tier", so borrowing it both
 diluted that meaning and piled all three media config volumes onto the same three control-plane
-disks. And three replicas over **five** eligible nodes leaves **two spare**, so Longhorn can
-rebuild if a node dies — the `critical`-only shape had no spare at all. Three replicas still
-**structurally guarantee** one on a control plane: only two of the five tagged nodes are not
-control planes, and `replica-soft-anti-affinity: false` allows at most one replica per node.
+disks. The `low-power` tag is a good tag and stays. What changed hours later is which tag
+`longhorn-media` should point at.
 
-⚠️ **`low-power` is not `battery`.** In a real Battery event `hard-hat` does go down and a
-replica there will fail. Expected — Battery is an emergency, not a nightly routine.
+## Revision, 2026-08-22 (evening) — `longhorn-media` moved AGAIN, to `low-power-off`, and the media volumes are now degraded every night ON PURPOSE
 
-**What is NOT done, and it is the thing the node-shedding half depends on:**
-[30](30-longhorn-media-tier.md)'s volume migration is **nearly finished**. Verified live
-2026-08-22 18:21 UTC — `dispatcharr` **complete** (`n=3 sel=["low-power"]`, healthy, replicas
-on all three control planes) and `plex` **complete** (`n=3 sel=["low-power"]`, healthy,
-`milky-way`/`othalla`/`shining-armor`); `jellyfin` is mid-migration at `n=4`, `degraded`, still
-holding replicas on both `fluttershy` and `kerfuffle`. Until `jellyfin` finishes, shutting a
-media worker overnight leaves its config volume degraded every night — which fires
-`LonghornVolumeStatusWarning` and stalls tuppr's drain gate, the exact failure 30 exists to
-prevent. **So the workload half of Low Power is automated and the node half is not yet safe to
-use.**
+⚠️ **This reverses the headline claim of the block above.** #1053's design put the media config
+volumes only on nodes that stay powered overnight, so **nothing was degraded during the window**.
+That is no longer true and is no longer the goal.
+
+**What changed.** A new tag, **`low-power-off`**, on the **five Intel-iGPU nodes** —
+`fluttershy` and `kerfuffle` **plus** `milky-way`/`othalla`/`pegasus` — which is exactly the set
+of nodes plex/jellyfin/dispatcharr can run on. `longhorn-media` becomes
+`nodeSelector: low-power-off`, **`numberOfReplicas: 5`**, `dataLocality: disabled`.
+`hard-hat` and `shining-armor` do **not** get it (no Intel iGPU, so the apps can never run
+there) and keep `low-power`.
+
+**The trade, plainly.** `low-power` bought clean nights at the cost of **every daytime read and
+write crossing the network** — the pods run on the two media workers for the seventeen hours a
+day the estate is awake, and not one of `low-power`'s five nodes was a node they run on.
+`low-power-off` buys **daytime data locality** (the pod always sits on a node holding a local
+replica: a worker by day, a control plane by night) at the cost of **a nightly degraded state**.
+`plex`'s config is SQLite — a latency workload — so the daytime half is the expensive half to
+be remote in.
+
+⚠️ **CONSEQUENCE: all three media config volumes read `degraded` 02:00–09:00, every night, by
+design.** A replica on a node that powers off is a failed replica, and Longhorn defines degraded
+as "fewer healthy replicas than `numberOfReplicas`". There is no way around it. **If you see
+three degraded Longhorn volumes at 03:00, that is correct.**
+
+**Two companion changes make it safe, and both shipped with it:**
+
+| | What | Where |
+|---|---|---|
+| **1** | `LonghornVolumeStatusWarning` **scoped**, not silenced — the three media PVCs drop out of the alert exactly while `fluttershy` or `kerfuffle` is not `Ready`, plus a 30 min post-wake grace. Nothing else suppressed, at any hour. A silence-operator `Silence` could not do it: that CRD has **no time fields at all** | `kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml` |
+| **2** | **tuppr's maintenance window ENABLED** (`0 11 * * *`, 2 h, `${TIMEZONE}`). tuppr's Talos health gate is `status.robustness != "degraded"` and **names no volume** — cluster-wide — so three degraded volumes would block every node drain for seven hours a night, failing on the 15 m timeout rather than waiting. Must stay **outside** 02:00–09:00 | `kubernetes/apps/system-upgrade/upgrades/talos.yaml` |
+
+**Why 5 replicas and not 3, since it is easy to state backwards:** replenishment fires when a
+replica **fails**, not when a node is merely empty. At 02:00 the two worker replicas fail and
+Longhorn looks for somewhere to rebuild. With 3 replicas over 5 eligible nodes there are two
+empty control planes waiting, so it would rebuild ~170 GiB every night and unwind it every
+morning. With 5, every eligible node already holds one, there is nowhere to go, and Longhorn
+waits and resyncs at 09:00.
+
+> ⚠️ **While fixing the alert it turned out `LonghornVolumeStatusWarning` HAD NEVER BEEN ABLE
+> TO FIRE** — nor had `LonghornVolumeStatusCritical` (faulted volumes) or
+> `LonghornVolumeActualSpaceUsedWarning`. They test `longhorn_volume_robustness == 2` against a
+> metric that is now one-hot with a `state=` label, through a kube-state-metrics join whose
+> `volumename` label does not exist. Zero `ALERTS` series in 30 days of retention. The first
+> two are fixed; the third is deliberately left dead because fixing it fires eight alerts
+> immediately. **Every "no volume alert fired" reassurance in this document set was vacuous.**
+> [30](30-longhorn-media-tier.md) §2.2 and §11 item 12.
+
+**Execution status:** the `low-power` migration **completed** (all three volumes healthy). The
+`low-power-off` migration **has not started**, and neither has its precondition — **no live
+Longhorn node carries the `low-power-off` tag yet**; `talconfig.yaml` has it but that annotation
+is read only at node creation. ≈ 192.5 GiB across 7 rebuilds. See [30](30-longhorn-media-tier.md)
+§6.1 step 0.
+
+⚠️ **Neither tag is `battery`.** In a real Battery event `hard-hat` also goes down and more
+replicas fail. Expected — Battery is an emergency, not a nightly routine.
 
 Also still manual, and easy to over-read as automated: **nothing powers a node off or wakes one
 up on a schedule.** #1046 sheds workloads only.
@@ -99,7 +141,7 @@ down. Three states:
 | State | Trigger | Workers | What runs |
 |---|---|---|---|
 | **Full** | default | all up | everything |
-| **Low Power** | **nightly schedule, 02:00–09:00 `${TIMEZONE}`** (#1046, live 2026-08-22) — the manual `downscaler/force-downtime` namespace annotation still works on top for an ad-hoc window | **workload shed is automatic; node shutdown is not.** The intended set is both media workers (`fluttershy` + `kerfuffle`) — exactly the two nodes #1053 left **out** of the `low-power` Longhorn tag — once [30](30-longhorn-media-tier.md)'s migration lands. **Not usable yet: `jellyfin` is unmigrated** | Tier 0/1 + an explicit keep-list; everything else scaled to 0 by default |
+| **Low Power** | **nightly schedule, 02:00–09:00 `${TIMEZONE}`** (#1046, live 2026-08-22) — the manual `downscaler/force-downtime` namespace annotation still works on top for an ad-hoc window | **workload shed is automatic; node shutdown is not.** The intended set is both media workers (`fluttershy` + `kerfuffle`) — which are exactly the two nodes now **inside** the `low-power-off` Longhorn tag, on purpose. **Not usable yet: the `low-power-off` migration has not started, and the nodes are not even tagged** — [30](30-longhorn-media-tier.md) §6.1 step 0 | Tier 0/1 + an explicit keep-list; everything else scaled to 0 by default |
 | **Battery** | Pecron UPS reports mains lost — still a **human** decision, nothing acts on the signal | the three **bare-metal** workers cordoned + shut down. **`shining-armor` stays online** (David, 2026-08-22 — VM on `twilight-sparkle`, hosts the backup volumes) | Tier 0/1 only — this *is* 20's S′, amended below |
 
 Full → Low Power → Battery is a strictly increasing amount of shed load; Battery
@@ -259,8 +301,8 @@ duration and are descheduled home at 09:00, and
 [#1048](https://github.com/david-driscoll/home-operations/pull/1048) gave the control planes GPU
 slots (`sharedDevNum: 2`) to land on. "Stays up" is therefore doing more work for these three
 than for the other eight — and it is **gated on [30](30-longhorn-media-tier.md)'s volume
-migration finishing**, which it has not: `dispatcharr` and `plex` are migrated, `jellyfin` is
-not. See "Node shutdown" below.
+migration finishing**, which it has not. The `low-power` migration completed; the design then
+changed to `low-power-off` and **that** migration has not begun. See "Node shutdown" below.
 
 `watch-state` and `strmgen` are named in the original keep-list but have no workload in the
 cluster today. **Re-confirmed live 2026-08-21** — no Deployment, StatefulSet or CronJob under
@@ -616,10 +658,13 @@ dispatcharr) relocatable onto the control planes for the duration:
   handed `RemoveDuplicates`/`LowNodeUtilization` the right to evict every `emptyDir` pod in the
   estate. `nodeFit: true` is set on both profiles, which also fixes churn flagged in
   [29](29-taint-readiness-audit.md): tainted control planes read as permanently under-utilised.
-- **Storage is the blocker.** The three config volumes must hold their replicas only on
-  `low-power`-tagged nodes, or they sit degraded all night — see the `longhorn-media` row below
-  and [30](30-longhorn-media-tier.md). `dispatcharr` and `plex` are done; **`jellyfin` is
-  not**, so **do not shed a media worker yet.**
+- **Storage is the blocker, but the requirement INVERTED on 2026-08-22 evening.** The three
+  config volumes used to have to keep their replicas **off** the shed nodes so nothing degraded.
+  Under `low-power-off` they deliberately keep a replica **on** each shed node for daytime
+  locality, and **sit degraded all night on purpose** — with the alert scoped and tuppr's
+  maintenance window enabled to absorb it. See the `longhorn-media` row below and
+  [30](30-longhorn-media-tier.md). **The `low-power-off` migration has not started and the
+  nodes are not yet tagged, so do not shed a media worker yet.**
 
 **Capacity for the shed node-set is still the open question** (open item 4): the keep-up service
 list has to be schedulable on whatever remains once both media workers are dark. #1048 helps
@@ -634,7 +679,7 @@ but that is a right-sizing, not a measurement of the resulting node-set.
 | `longhorn` (default) | 3 | `bulk`-tagged nodes only (12 Step 3) | ordinary Tier-2 app storage |
 | `longhorn-critical` | 3 | `critical`-tagged nodes only, one per CP (12 Step 2) | data that must *never* leave a control plane — cluster-platform-adjacent state, not app data that floats |
 | `longhorn-controlplane` *(new, this piece)* | 2 | zone-split: one replica in `critical` zone, one in `bulk` zone | Tier-1 **application** state that normally lives on a worker and relocates to a CP only during Battery (Home Assistant, etc.). **Recommended left unbuilt** — open item 1 |
-| `longhorn-media` *(new 2026-08-22, [#1051](https://github.com/david-driscoll/home-operations/pull/1051) + [#1053](https://github.com/david-driscoll/home-operations/pull/1053); owned by [30](30-longhorn-media-tier.md))* | 3 | `nodeSelector: low-power` — the **five** nodes that stay powered overnight (3 CPs + `hard-hat` + `shining-armor`), `dataLocality: disabled`. Two spare eligible nodes, so a single node failure can rebuild; at least one replica is always on a CP | The `plex`/`jellyfin`/`dispatcharr` config volumes, so shedding **both** media workers during a Low Power window leaves nothing degraded. Class is live; `dispatcharr` and `plex` migrated, **`jellyfin` still in progress** |
+| `longhorn-media` *(new 2026-08-22, #1051 → #1053 → current; owned by [30](30-longhorn-media-tier.md))* | **5** | `nodeSelector: low-power-off` — the **five Intel-iGPU** nodes (3 CPs + `fluttershy` + `kerfuffle`), `dataLocality: disabled`. **Zero spare eligible nodes, deliberately**: 5 replicas over 5 nodes means nothing can rebuild during the nightly shed, which is what keeps the window churn-free | The `plex`/`jellyfin`/`dispatcharr` config volumes. The pod always has a **local** replica — a worker by day, a CP by night. ⚠️ **These volumes are `degraded` 02:00–09:00 every night by design**; the alert is scoped for it and tuppr's maintenance window avoids it. Class is live; **no volume migrated to it yet, and the nodes are not tagged** |
 | `longhorn-cache` / `longhorn-snapshot` / `longhorn-local` | unchanged | unchanged | unchanged, out of scope here (see 12's "out of scope") |
 
 ## Open items
@@ -801,6 +846,7 @@ Still open, in priority order:
   both, this file is not a replacement.
 - [25-unseal-key-scope.md](25-unseal-key-scope.md) — unrelated in mechanism,
   same 2026-08-13 design session.
-- [30-longhorn-media-tier.md](30-longhorn-media-tier.md) — owns `longhorn-media` and the
-  grow-then-shrink migration that Low Power's node-shutdown half is blocked on. Read it before
-  shedding either media worker.
+- [30-longhorn-media-tier.md](30-longhorn-media-tier.md) — owns `longhorn-media`, the
+  `low-power-off` migration that Low Power's node-shutdown half is blocked on, and the
+  `LonghornVolumeStatusWarning` scoping. **Read it before shedding either media worker**, and
+  read §2.2 before trusting any Longhorn volume alert anywhere.

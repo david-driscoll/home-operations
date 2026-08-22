@@ -1,135 +1,206 @@
 # 30 — Longhorn media tier
 
-Created **2026-08-22**, rewritten twice the same day: first for **plan C**, then — after
-[#1053](https://github.com/david-driscoll/home-operations/pull/1053) — for the **`low-power`
-node tag**, which is what actually shipped. **Unfiled** — standalone, like
-[24](24-power-states.md) through [29](29-taint-readiness-audit.md). Direct sequel to
+Created **2026-08-22**, rewritten **three** times the same day. **Unfiled** — standalone,
+like [24](24-power-states.md) through [29](29-taint-readiness-audit.md). Direct sequel to
 [12](12-longhorn-critical-tier.md) (which built `longhorn-critical` and the node-tag
 machinery) and to [20](20-low-power-tier.md) §9.
 
-Answers one question: **when low-power mode sheds both media workers overnight, how do the
-`plex`, `jellyfin` and `dispatcharr` config volumes keep more than one healthy replica?**
+Answers one question: **when low-power mode sheds both media workers overnight, where should
+the `plex`, `jellyfin` and `dispatcharr` config volumes keep their replicas?**
 
-> ## The decision: `longhorn-media`, `nodeSelector: low-power`, 3 replicas, `dataLocality: disabled`
+> ## ⚠️ THE DESIGN CHANGED, TWICE. Read this before anything else.
 >
-> **Put the replicas only on nodes that stay powered through the nightly window.** That is
-> **five** nodes, not three: the control planes `milky-way`, `othalla` and `pegasus`, plus
-> `hard-hat` (stays up for immich's GPU) and `shining-armor` (stays up because it hosts the
-> backup volumes). `fluttershy` and `kerfuffle` — the pair that gets shed — are deliberately
-> **not** tagged.
+> This document has argued for three different answers in one day, and the second one is
+> quoted throughout the estate. If you find a claim below that contradicts this box, this box
+> wins.
 >
-> Overnight every replica is on a node that is still up, so nothing fails, nothing rebuilds,
-> and the volume never leaves `healthy`.
+> | | Node set | Replicas | Nights | Days |
+> | --- | --- | --- | --- | --- |
+> | **plan C** (`critical`, [#1051](https://github.com/david-driscoll/home-operations/pull/1051)) | 3 control planes | 3 | clean | every read remote |
+> | **`low-power`** ([#1053](https://github.com/david-driscoll/home-operations/pull/1053)) | 3 CPs + hard-hat + shining-armor | 3 | **clean** | every read remote |
+> | **`low-power-off`** — **CURRENT** | the **5 Intel-iGPU** nodes: fluttershy, kerfuffle, milky-way, othalla, pegasus | **5** | **degraded 02:00–09:00, by design** | **always local** |
 >
-> **At least one replica always lands on a control plane, structurally.** The tag covers five
-> nodes, only **two** of which are not control planes. `replica-soft-anti-affinity` is `false`
-> (§1.2), so at most one replica per node — three replicas cannot fit on two nodes, therefore
-> **at least one must be on a control plane**. That is a proof, not a probability, and it is
-> what keeps a local replica available to the pod overnight when it relocates to a control
-> plane.
+> **THE TRADE, stated once and plainly:** `low-power` bought **spotless nights** at the cost
+> of **every daytime read and write crossing the network**. `low-power-off` buys **daytime
+> data locality** at the cost of **a nightly degraded state that had to be made safe**.
 >
-> **Three replicas across five eligible nodes leaves TWO SPARE**, so Longhorn can rebuild if a
-> single eligible node dies. See §6.6 — this is the concrete improvement over the earlier
-> `critical`-only shape, which had no spare at all.
+> It went that way because of what these volumes *are*. They are not media — they are the
+> apps' **config** volumes, and `plex`'s is **SQLite**: a latency workload, not a throughput
+> one. The pods run on `fluttershy`/`kerfuffle` for the **seventeen hours a day the estate is
+> awake**, which is when the volumes are actually used, and under `low-power` not one of the
+> five eligible nodes was a node the pods could run on. Being remote for the busy 71 % of the
+> day to be clean for the idle 29 % was the wrong way round.
 >
-> **The accepted cost:** by DAY the pods prefer the media workers, so the pod usually runs on
-> a node holding no replica and every read and write crosses the network. See §3.
+> `low-power` is **not** deleted and was not a mistake — it still tags the five nodes that
+> stay powered overnight, which is the right answer for anything whose only requirement is
+> power continuity. It is simply not the right answer for *these* volumes.
 
-> ### Why not `nodeSelector: critical`?
+> ## The decision: `longhorn-media`, `nodeSelector: low-power-off`, **5 replicas**, `dataLocality: disabled`
 >
-> The first revision of this document chose `critical` — the three control planes — and
-> [#1051](https://github.com/david-driscoll/home-operations/pull/1051) shipped the class that
-> way. [#1053](https://github.com/david-driscoll/home-operations/pull/1053) replaced it with a
-> new `low-power` tag for two reasons:
+> **`low-power-off` = the five nodes with an Intel iGPU** — `fluttershy` and `kerfuffle` (the
+> daytime workers) plus the control planes `milky-way`, `othalla` and `pegasus`. That is
+> **exactly the set of nodes plex/jellyfin/dispatcharr can run on**: every one of the three
+> carries a *hard* nodeAffinity requiring an Intel iGPU, and a *soft* one preferring the
+> workers' stronger Iris Xe.
 >
-> 1. **It borrowed a tag that means something else.** `critical` means "Tier-0/1 storage
->    tier". Using it here diluted that meaning *and* piled all three media config volumes onto
->    the same three control-plane disks already serving the registry, home-assistant,
->    technitium, mosquitto and tsidp.
-> 2. **It was needlessly narrow.** What these volumes actually need is *"a node that stays
->    powered through the nightly Low Power window"*. That property belongs to five nodes, and
->    `critical` names only three of them — throwing away the two spares that make rebuild
->    possible.
+> **Five replicas across five eligible nodes means the pod ALWAYS sits on a node holding a
+> local replica** — a worker by day, a control plane by night. Locality stops being something
+> Longhorn has to chase and becomes structural.
 >
-> **`low-power` is NOT `battery`.** In a real Battery event `hard-hat` **does** go down, so a
-> replica there fails and the volume degrades. That is expected and accepted — Battery is an
-> emergency, not a nightly routine. See [24](24-power-states.md) for the distinction and
-> [20](20-low-power-tier.md) §6 for Battery's node set.
+> **`hard-hat` and `shining-armor` deliberately do NOT get the tag.** Neither has an Intel
+> iGPU, so the media apps can never run there; a replica on either would be permanently
+> remote — paying the write cost of a fifth copy and never once serving a local read. They
+> keep `low-power`, which answers a different question.
+>
+> ### ⚠️ The accepted cost: these three volumes are `degraded` 02:00–09:00 EVERY NIGHT
+>
+> A replica on a node that powers off **is a failed replica**. Longhorn defines `degraded` as
+> *fewer healthy replicas than `numberOfReplicas`*, so there is no arrangement in which a
+> replica lives on a shed node and the volume is not degraded while that node is shed. This is
+> not a bug to be fixed later; it is the price of the trade above, and it is **permanent**
+> for as long as this class keeps replicas on the workers.
+>
+> **Someone reading a 03:00 dashboard will see three degraded volumes. That is correct.**
+>
+> ### The two companion changes that make it safe. BOTH ARE SHIPPED. Do not undo either.
+>
+> **1 — `LonghornVolumeStatusWarning` is scoped, not silenced.**
+> `kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml`. The three media PVCs
+> drop out of that alert exactly while `fluttershy` or `kerfuffle` is not `Ready`, plus a
+> 30-minute post-wake resync grace. Nothing else is suppressed at any hour, and these three
+> still page if they degrade while both workers are up. **§2.2 is the full argument**,
+> including why a silence-operator `Silence` could not do this and why an Alertmanager mute
+> interval was rejected — and the much larger thing that turned up while writing it: **all
+> three PVC-joined Longhorn volume alerts had been silently dead for the life of this
+> cluster.**
+>
+> **2 — tuppr's maintenance window is enabled.**
+> `kubernetes/apps/system-upgrade/upgrades/talos.yaml`, `start: "0 11 * * *"`, `duration: 2h`,
+> `timezone: ${TIMEZONE}`. tuppr's Talos health gate is `status.robustness != "degraded"` and
+> **names no volume** — it is cluster-wide, so three degraded volumes would block *every* node
+> drain for seven hours a night, and it would **fail on its 15 m timeout rather than wait**,
+> silently, because a blocked upgrade looks exactly like an idle one. The window must stay
+> **outside 02:00–09:00** for as long as this class keeps replicas on the shed nodes. §2.1.
+>
+> ### Why FIVE replicas and not three — the part that is easy to state backwards
+>
+> **Replenishment fires when a replica FAILS, not when a node is merely empty.** At 02:00 the
+> two worker replicas fail and Longhorn goes looking for somewhere to rebuild them.
+>
+> * With **3** replicas over 5 eligible nodes, **two control planes are sitting empty**. They
+>   are valid targets. Longhorn would rebuild **~170 GiB every night** and unwind it every
+>   morning when the workers came back and auto-balance pulled replicas the other way.
+> * With **5**, every eligible node already holds one and `replica-soft-anti-affinity` is
+>   `false` (at most one replica per node), so **there is nowhere to rebuild to**. Longhorn
+>   logs a scheduling failure, waits, and resyncs at 09:00.
+>
+> So the replica count is not a durability knob here — **it is the thing that stops nightly
+> churn**. `numberOfReplicas` and the size of the `low-power-off` tag are a matched pair and
+> must change together. See §2.3.
+>
+> ### What five replicas costs on the write path
+>
+> Longhorn v1 acks a write only once **every** replica has it, so these volumes are as slow as
+> their slowest replica and now have **five** of them — at least three always on the control
+> planes' Transcend SATA disks. Measured 7-day load is **4.2 write IOPS / ~52 KB/s combined**
+> with ~0 reads, so this is affordable, but see §3.
 
-**Two earlier designs are superseded** and are described only where the contrast is
-load-bearing: option A (4 replicas on the 4 `bulk` nodes) and option B (5 replicas on a new
-`media` tag over the five Intel-QuickSync nodes). Both left the volumes **degraded every
-night**, which §2 shows is not cosmetic.
+> ### Why not `low-power`, and why not `critical`?
+>
+> **Against `critical`** (the first revision, shipped by #1051): it borrowed a tag that means
+> "Tier-0/1 storage tier", diluting that meaning *and* piling all three media config volumes
+> onto the same three control-plane disks already serving the registry, home-assistant,
+> technitium, mosquitto and tsidp.
+>
+> **Against `low-power`** (#1053, and the design this document argued for for about four
+> hours): it is
+> a genuinely good tag that answers *"which nodes stay powered overnight?"* — but that is not
+> the question these volumes ask. Its five nodes are `{3 CPs, hard-hat, shining-armor}`, and
+> **not one of them is a node the media pods prefer by day.** The result was a volume whose
+> every daytime I/O crossed the network, in exchange for a clean night on volumes that are
+> idle at night. `low-power-off` inverts exactly that.
+>
+> The two tags now coexist and mean different things — see §1.1. Both are hand-maintained and
+> neither is guarded by anything (§11, item 6).
+>
+> **Neither tag is `battery`.** In a real Battery event more nodes go down and these volumes
+> degrade further; that is expected — Battery is an emergency, not a nightly routine. See
+> [24](24-power-states.md) and [20](20-low-power-tier.md) §6.
 
-The shipped design **does** need a new node tag, so `talos/talconfig.yaml` was edited —
-three edits covering five nodes, because the file uses YAML anchors: the `shining-armor`
-block, `&amd_minifm_annotations` (`hard-hat`), and `&nodeAnnotations` (the three control
-planes). `&intel_un1290_annotations` (`fluttershy`, `kerfuffle`) was deliberately left alone.
+**The shipped design needs a new node tag**, so `talos/talconfig.yaml` was edited. Because the
+file uses YAML anchors, **two** edits cover all five nodes: `&intel_un1290_annotations`
+(`fluttershy`, `kerfuffle`) gains `low-power-off` alongside `bulk`, and `&nodeAnnotations` (the
+three control planes) gains it alongside `critical` and `low-power`. The `shining-armor` block
+and `&amd_minifm_annotations` (`hard-hat`) are deliberately left at `["bulk", "low-power"]`.
 
 > ⚠️ **`node.longhorn.io/default-node-tags` is read only at Longhorn node CREATION.** The
 > talconfig edit is for persistence across a node rebuild; it does **not** retag a running
-> node. The live effect came from patching the `nodes.longhorn.io` CRs directly, which has
-> been done (§1.1 shows the result).
+> node. **As of the live read below the retag has NOT been done** — the live `nodes.longhorn.io`
+> CRs still show no `low-power-off` anywhere. That patch is now step 0 of the migration (§6.1),
+> and until it lands every replenish onto the new selector will simply fail to schedule.
+>
+> ⚠️ **Do NOT run `mise run talos:apply` for the talconfig change.** It would carry Renovate's
+> pending Kubernetes bump into a tuppr-owned upgrade. Patch per node, or let the change ride
+> the next node rebuild.
 
-Everything marked **verified live** was read from `admin@equestria` on **2026-08-22** with
-read-only commands, or with `--dry-run=server` patches that run the real admission chain and
-mutate nothing. Claims marked **inferred** are reasoning from Longhorn source or semantics,
-flagged as such. Longhorn is **v1.12.1**.
+Everything marked **verified live** was read from `admin@equestria` with read-only commands, or
+with `--dry-run=server` patches that run the real admission chain and mutate nothing. Claims
+marked **inferred** are reasoning from Longhorn source or semantics, flagged as such. Longhorn
+is **v1.12.1**.
 
-> ### ⚠️ Execution status — 2 of 3 DONE, `jellyfin` IN FLIGHT (2026-08-22, last read 18:37 UTC)
+> ### ⚠️ Execution status — the `low-power` migration COMPLETED, and is now the *starting* state for a second one (live 2026-08-22 18:58 UTC)
 >
-> ~~**Nothing in this document has been executed.**~~ The scheduling, return-trip and
-> StorageClass halves landed with
-> [#1051](https://github.com/david-driscoll/home-operations/pull/1051); the `low-power` tag and
-> the class repoint landed with
-> [#1053](https://github.com/david-driscoll/home-operations/pull/1053). Both are live. §6's
-> **volume migration ran the same afternoon** and is nearly complete. Verified live at
-> **2026-08-22 18:21 UTC**, `jellyfin` re-read at **18:37**:
+> The scheduling, return-trip and StorageClass halves landed with #1051; the `low-power` tag
+> and the class repoint landed with #1053; §6's volume migration ran the same afternoon and
+> **all three volumes reached `healthy`** — `jellyfin`'s last rebuild finished at ~18:5x while
+> this revision was being written. So the *previous* design is fully executed and stable.
 >
-> | Volume | Live state | Verdict |
-> |---|---|---|
-> | `dispatcharr` (`pvc-633d7002…`) | `n=3 sel=["low-power"] dl=disabled` · `attached`/**`healthy`** on `fluttershy` · replicas `milky-way`, `othalla`, `pegasus` — all `RW` | **COMPLETE** |
-> | `plex` (`pvc-242324ae…`) | `n=3 sel=["low-power"] dl=disabled` · `attached`/**`healthy`** on `kerfuffle` · replicas `milky-way`, `othalla`, **`shining-armor`** — all `RW` | **COMPLETE** |
-> | `jellyfin` (`pvc-d49e4972…`) | `n=4 sel=["low-power"] dl=disabled` · `attached`/`degraded` on `fluttershy` · replicas `fluttershy`, `kerfuffle`, `shining-armor` up, `othalla` **rebuilding — 4 % at 18:21, 52 % at 18:37** | **step A in flight**; two stranded replicas (`fluttershy`, `kerfuffle`) still to delete afterwards |
+> **Then the design changed.** None of the three volumes matches the `low-power-off` shape yet.
+> Live at **2026-08-22 18:58 UTC**:
 >
-> **Until `jellyfin` finishes, do not shed a media worker overnight** — it still holds replicas
-> on both, which is exactly §2's problem.
+> | Volume | Live now | Conforming replicas | Still needed for `n=5 low-power-off` |
+> | --- | --- | --- | --- |
+> | `dispatcharr` (`pvc-633d7002…`, 1.65 GiB) | `n=3 sel=["low-power"]` · `healthy`/`attached` on `fluttershy` · replicas `milky-way`, `othalla`, `pegasus` | **3 of 3** | **+2** — `fluttershy`, `kerfuffle`. Nothing to delete. **3.3 GiB** |
+> | `plex` (`pvc-242324ae…`, 23.09 GiB, **RWX**) | `n=3 sel=["low-power"]` · `healthy`/`attached` on `kerfuffle` · replicas `milky-way`, `othalla`, **`shining-armor`** | **2 of 3** | **+3** — `fluttershy`, `kerfuffle`, `pegasus`; **delete** the `shining-armor` replica. **69.3 GiB** |
+> | `jellyfin` (`pvc-d49e4972…`, 59.95 GiB) | `n=4 sel=["low-power"]` · `healthy`/`attached` on `fluttershy` · replicas `fluttershy`, `kerfuffle`, `othalla`, **`shining-armor`** | **3 of 4** | **+2** — `milky-way`, `pegasus`; **delete** the `shining-armor` replica. **119.9 GiB** |
 >
-> Three things this run established, each written up where it belongs:
+> **`jellyfin` is the closest to correct**, which is a piece of luck: it was stopped
+> deliberately at `n=4` mid-migration, and the two replicas it never gave up — `fluttershy`
+> and `kerfuffle` — are precisely the two the new design wants. Under `low-power` those were
+> the two "stranded" replicas still to delete. **Under `low-power-off` they are the point.**
+> Had the `low-power` migration been allowed to finish, they would have been destroyed and
+> would now have to be rebuilt at 60 GiB each.
 >
-> - **`shining-armor` replicas did not have to move.** Because `shining-armor` carries the
->   `low-power` tag, `plex`'s and `jellyfin`'s existing replicas there already conform. `plex`
->   is complete having rebuilt **two** replicas, not three, and its `shining-armor` replica
->   (`…-r-d459b0c5`, created **2026-08-13**) was never touched. That is the `critical`→`low-power`
->   change paying for itself in the migration as well as in the steady state — see §4's revised
->   copy table.
-> - **Repointing an already-migrated volume from `critical` to `low-power` moves ZERO bytes.**
->   `dispatcharr` was migrated first under the `critical` design onto all three control planes;
->   the repoint to `low-power` was a no-op because `{milky-way, othalla, pegasus}` ⊂ the
->   `low-power` node set. No replica was recreated.
-> - **A *deleted* replica is replenished immediately — open item 2 is CLOSED.** See §4.6 and §7
->   for the timestamps.
+> **Total to copy: ~192.5 GiB across 7 rebuilds**, ≈ 1 h 49 m of pure copying at the measured
+> ~30 MiB/s (§7). Two replicas get deleted (both on `shining-armor`).
 >
-> **Observed rebuild throughput was ~4× slower than §7 estimated** — ~26–33 MiB/s onto the
-> control-plane disks against a predicted median of 119 MiB/s. §7 carries the measurements and
-> the corrected table.
+> **Cluster-wide degraded count at the time of reading: 0.** No Longhorn volume anywhere is
+> degraded, which is the precondition §6.1 asks for.
 >
-> **On "the app never restarts":** all three pods report **0 restarts**, and all three volumes
-> stayed `attached` throughout — the migration is genuinely online, as designed. Do **not**
-> read pod *age* as proof of that, though: the three pods date from ~17:47 UTC because the
-> `app-template` HelmRelease was flapping between chart 5.0.1 and 5.1.0 that afternoon (six
-> `UpgradeSucceeded` events across the three apps between 18:02 and 18:16), which is unrelated
-> to this migration and would have recreated the pods regardless.
+> Three findings from the completed `low-power` run, each written up where it belongs and all
+> still true:
 >
-> The replica names in §6.2's deletion table are from before this run and are stale by
-> construction. Re-read them with the command underneath it, as that section already says.
+> - **Repointing an already-conforming volume moves ZERO bytes.** `dispatcharr` was migrated
+>   under the `critical` design first; the later repoint to `low-power` created no replica,
+>   because `{milky-way, othalla, pegasus}` ⊂ the `low-power` set. §4.2.
+> - **A *deleted* replica is replenished in 15–60 s, not after the 600 s replenishment wait.**
+>   Open item 2 is CLOSED. §4.6 and §7 carry the timestamps.
+> - **Rebuild throughput was ~4× slower than estimated** — **26–33 MiB/s** onto the
+>   control-plane disks against a predicted median of 119 MiB/s. §7.
+>
+> **On "the app never restarts":** all three pods reported **0 restarts** and all three volumes
+> stayed `attached` throughout, so the migration is genuinely online. Do **not** read pod *age*
+> as proof — the three pods date from ~17:47 UTC because the `app-template` HelmRelease was
+> flapping between chart 5.0.1 and 5.1.0 that afternoon, unrelated to this.
 
 ---
 
-## 1. Starting state (verified live, **before** the migration)
+## 1. Starting state (verified live, **before** the first migration)
 
-> This table is the **pre-migration** snapshot, kept because every number downstream is
-> derived from it. For where the volumes are **now**, see the execution-status box above.
+> ⚠️ This table is the **2026-08-22-morning** snapshot, from before *any* migration ran. It is
+> kept because every byte-count downstream is derived from it. **It is NOT the starting state
+> for the `low-power-off` migration** — that is the execution-status box above, and it is a
+> quite different picture.
 
 | App | Volume | Size / actual | Replicas on | Access | Attached to |
 | --- | --- | --- | --- | --- | --- |
@@ -145,30 +216,56 @@ PV `storageClassName: longhorn`, reclaim `Delete`. **Total actual data ≈ 84.66
 hold a replica of all three volumes. Shed the pair and `plex` and `jellyfin` drop to **one**
 copy until morning.
 
-### 1.1 Node tags (verified live, **after** #1053)
+### 1.1 Node tags — FOUR tags now, and they answer four different questions
+
+**Live, verified 2026-08-22 18:58 UTC** (`kubectl -n longhorn-system get nodes.longhorn.io`):
 
 ```
-fluttershy    ["bulk"]                 kerfuffle ["bulk"]
-hard-hat      ["bulk", "low-power"]    shining-armor ["bulk", "low-power"]
+fluttershy    ["bulk"]                    kerfuffle     ["bulk"]
+hard-hat      ["bulk", "low-power"]       shining-armor ["bulk", "low-power"]
 milky-way     ["critical", "low-power"]
 othalla       ["critical", "low-power"]
 pegasus       ["critical", "low-power"]
 ```
 
-**`low-power` covers five nodes; `fluttershy` and `kerfuffle` carry only `bulk`.** The change
-is **purely additive** — every pre-existing `bulk` and `critical` selector still matches
-exactly what it matched before, because a node's tag list is a set and nothing was removed.
+> ⚠️ **`low-power-off` does not exist on any live node yet.** The tag is committed to
+> `talos/talconfig.yaml`, but that annotation is read only at Longhorn node **creation**. The
+> live CRs must be patched before anything can schedule against it — §6.1 step 0.
 
-The three tiers now read:
+**Target state**, after that patch:
 
-| Tag | Nodes | Means |
+```
+fluttershy    ["bulk", "low-power-off"]                   kerfuffle ["bulk", "low-power-off"]
+hard-hat      ["bulk", "low-power"]                       shining-armor ["bulk", "low-power"]
+milky-way     ["critical", "low-power", "low-power-off"]
+othalla       ["critical", "low-power", "low-power-off"]
+pegasus       ["critical", "low-power", "low-power-off"]
+```
+
+The change is **purely additive** — every pre-existing `bulk`, `critical` and `low-power`
+selector still matches exactly what it matched before, because a node's tag list is a set and
+nothing is removed.
+
+| Tag | Nodes | Answers the question |
 | --- | --- | --- |
-| `bulk` | fluttershy, hard-hat, kerfuffle, shining-armor | the four workers — the default tier |
-| `critical` | milky-way, othalla, pegasus | **Tier-0/1 storage tier** ([12](12-longhorn-critical-tier.md)) |
-| `low-power` | milky-way, othalla, pegasus, hard-hat, shining-armor | **stays powered through the nightly 02:00–09:00 window** |
+| `bulk` | fluttershy, hard-hat, kerfuffle, shining-armor | *"is this a worker?"* — the default tier |
+| `critical` | milky-way, othalla, pegasus | *"where must **Tier-0/1 data** live?"* ([12](12-longhorn-critical-tier.md)) |
+| `low-power` | milky-way, othalla, pegasus, hard-hat, shining-armor | *"does this node **stay powered** through the nightly 02:00–09:00 window?"* |
+| `low-power-off` | milky-way, othalla, pegasus, **fluttershy, kerfuffle** | *"can the **media apps run** here?"* — i.e. does it have an Intel iGPU |
+
+**These last two are nearly complements of each other and it is worth saying why both exist.**
+`low-power` is about *power continuity*; `low-power-off` is about *where the workload can go*.
+They overlap on the three control planes and disagree on all four workers. `longhorn-media`
+wants the second, because a replica is only useful to these volumes if the pod that reads it
+can be on the same node. Anything that merely needs to survive the night wants the first.
+
+> ⚠️ **The name `low-power-off` is a trap.** It does not mean "nodes that power off". It means
+> "the node set for the media apps *across* the low-power window" — the set that has a member
+> up at every hour. `fluttershy` and `kerfuffle` are in it *and* are the two nodes that power
+> off. If you read it as "the nodes that go off", every conclusion in this document inverts.
 
 `critical` is a strict **subset** of `low-power`, which is why `longhorn-critical`'s volumes
-also survive the window — but the two tags answer different questions and are kept apart on
+also survive the window — but the tags answer different questions and are kept apart on
 purpose (§9).
 
 `nodeSelector` is a **hard AND filter over tags** — `getDiskCandidates` in
@@ -182,8 +279,10 @@ if !types.IsSelectorsInTags(node.Spec.Tags, volume.Spec.NodeSelector, allowEmpty
 ```
 
 So a class names exactly one tier; `"bulk,critical"` matches nothing. That is precisely why
-`low-power` had to be a **new tag** rather than a selector expression over the existing two —
-there is no way to write `critical ∪ (bulk ∩ {hard-hat, shining-armor})`.
+each of `low-power` and `low-power-off` had to be a **new tag** rather than a selector
+expression over the existing ones — there is no way to write
+`critical ∪ (bulk ∩ {fluttershy, kerfuffle})`, and the tag list is the only place the union
+can be expressed.
 
 ### 1.2 Relevant settings (verified live)
 
@@ -201,25 +300,16 @@ there is no way to write `critical ∪ (bulk ∩ {hard-hat, shining-armor})`.
 
 ---
 
-## 2. Why "degraded every night" killed the earlier designs
+## 2. "Degraded every night" — the thing the earlier designs were built to avoid, now ACCEPTED
 
-Both superseded designs left the three volumes `degraded` for the whole 02:00–09:00 window.
-That state has two teeth, and **both were verified in this repository**:
+The two earlier designs existed to keep these volumes out of `degraded`. `low-power-off`
+walks straight into it, deliberately, because the daytime locality is worth more (see the
+trade box at the top). That is only defensible because the two *consequences* of being
+degraded have each been dealt with. This section is those two, plus the replica-count
+reasoning that stops the third problem from existing at all.
 
-**1. It fires an alert, nightly, forever.**
-`kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml`:
+### 2.1 Tooth one: it blocks Talos upgrades CLUSTER-WIDE — fixed with a maintenance window
 
-```yaml
-- alert: LonghornVolumeStatusWarning
-  expr: (longhorn_volume_robustness == 2) * on(volume) group_left(…) (…)
-  for: 5m
-  labels:
-    severity: warning
-```
-
-`robustness == 2` is `degraded`. Three volumes × every night.
-
-**2. It blocks Talos upgrades cluster-wide.**
 `kubernetes/apps/system-upgrade/upgrades/talos.yaml`:
 
 ```yaml
@@ -231,116 +321,355 @@ That state has two teeth, and **both were verified in this repository**:
   timeout: 15m
 ```
 
-This check **names no volume**. It is a predicate over *every* `Volume` in
-`longhorn-system`, so **any** degraded volume anywhere stalls the drain of the next node for
-the full 15 minutes and then fails the upgrade. A design that is degraded 02:00–09:00 hands
-the cluster a nightly seven-hour window in which node upgrades cannot run.
+This check **names no volume**. It is a predicate over *every* `Volume` in `longhorn-system`,
+so **any** degraded volume anywhere stalls the drain of the next node — and it does not wait
+politely: it burns the full 15 minutes and then **fails the upgrade**. Silently, in the sense
+that matters, because a blocked upgrade and an idle one look identical from outside.
 
-Under the shipped design nothing is degraded overnight, so neither tooth bites. **Verified
-live:** `kubectl get talosupgrades.tuppr.home-operations.com` reported the `talos` upgrade
-`PHASE=Completed READY=True`, and `0` volumes were degraded cluster-wide when the migration
-began. (The one degraded volume visible at 18:21 UTC is `jellyfin` itself, mid-rebuild —
-§6.6 is why that window must not overlap a tuppr upgrade.)
+Under `low-power-off` three volumes are degraded 02:00–09:00, so tuppr would be unable to
+drain a node for **seven hours a night, every night**.
 
-### 2.1 The churn rule, restated correctly
+**Fix, shipped in the same commit as the class change:** the maintenance window in that file,
+previously drafted-and-commented-out, is now enabled.
+
+```yaml
+maintenance:
+  windows:
+    - start: "0 11 * * *"    # Daily at 11
+      duration: "2h"         # How long window stays open
+      timezone: "${TIMEZONE}"
+```
+
+11:00 for 2 h sits squarely inside the awake hours, when both media workers are up and their
+replicas are healthy. **This window must stay OUTSIDE 02:00–09:00 for as long as
+`longhorn-media` keeps replicas on the shed nodes.** Verified against the live CRD —
+`duration` and `start` are required, `timezone` optional — and accepted by a server-side
+dry-run.
+
+> **Note what this does NOT fix.** tuppr can still be blocked by a *genuinely* degraded volume
+> during the window, and a rebuild of `jellyfin` at measured throughput is ~34 minutes, well
+> past the 15 m gate. The maintenance window narrows *when* tuppr tries; it does not make the
+> gate more forgiving. §6.6.
+
+### 2.2 Tooth two: `LonghornVolumeStatusWarning` — fixed by SCOPING THE RULE
+
+`kubernetes/apps/longhorn-system/longhorn/rules/pvc-usage-rules.yaml` carries, from Longhorn's
+published example rules:
+
+```yaml
+- alert: LonghornVolumeStatusWarning
+  expr: (longhorn_volume_robustness == 2) * on(volume) group_left(…) (…)
+  for: 5m
+  labels:
+    severity: warning
+```
+
+Three media volumes × every night, forever. So it needed handling. What handling, though,
+turned out to be a longer question than expected — and answering it uncovered something worse.
+
+#### ⚠️ 2.2.1 The finding: this alert had NEVER been able to fire. Neither had two others.
+
+Before silencing an alert it is worth checking that it works. It did not. **Verified live
+against Prometheus on 2026-08-22**, and there are **two independent** faults, either of which
+alone is fatal:
+
+**Fault 1 — `longhorn_volume_robustness` is no longer an enum.** The rule tests `== 2`,
+against a metric that in Longhorn v1.5-era exported one series per volume valued
+`0=unknown / 1=healthy / 2=degraded / 3=faulted`. In the **v1.12.1** running here it is
+**one-hot**: four series per volume carrying a `state="unknown|healthy|degraded|faulted"`
+label, each valued **0 or 1**.
+
+```
+196 volumes → 784 series → exactly 196 of them valued 1
+count_values("robustness", longhorn_volume_robustness)  →  {robustness="0"} 588, {robustness="1"} 196
+```
+
+There is no `2` anywhere in the metric. `== 2` matches nothing and can never match anything.
+
+**Fault 2 — the kube-state-metrics join is broken on its own terms.** The rule reaches the PVC
+name through `kube_persistentvolume_info{volumename=~"pvc-.*"}`. **`kube_persistentvolume_info`
+has no `volumename` label.** Its label set is:
+
+```
+__name__, container, csi_driver, csi_volume_handle, endpoint, instance, job,
+kubernetes_node, namespace, persistentvolume, pod, reclaim_policy, service, storageclass
+```
+
+so that selector matches **0 of 200** series and collapses the join to empty. The outer
+`on(volume)` was equally unmatchable — nothing on the right-hand side carries a `volume` label
+either.
+
+**The consequence.** Three alerts share this shape and **all three have been dead for the life
+of this cluster**:
+
+| Alert | Was | Evidence |
+| --- | --- | --- |
+| `LonghornVolumeStatusWarning` | degraded volume | `state=inactive health=ok`, **0** `ALERTS` series in 30 d of retention |
+| `LonghornVolumeStatusCritical` | **faulted** volume — i.e. data down | same |
+| `LonghornVolumeActualSpaceUsedWarning` | volume >90 % full | same |
+
+`health: ok` is the cruel part: PromQL that returns an empty vector is *valid*, so Prometheus
+reports the rule as perfectly healthy and permanently inactive. Nothing anywhere says "this
+alert cannot fire". For contrast, the Longhorn alerts in the same file that do **not** use the
+join (`LonghornNodeCPUUsageWarning`) have fired normally in the same window.
+
+**This is a much bigger deal than the nightly-degraded question that found it.** For the whole
+life of the cluster, a Longhorn volume could go degraded — or **faulted**, which is data
+unavailable — and nothing would have paged. Every "no volume alerts fired" reassurance in
+docs [12](12-longhorn-critical-tier.md), [24](24-power-states.md) and earlier revisions of
+*this* file was true but vacuous.
+
+#### 2.2.2 The fix
+
+Longhorn now exports `pvc` and `pvc_namespace` **directly on the metric**, so the join is not
+just broken but unnecessary:
+
+```
+longhorn_volume_robustness{
+  volume="pvc-d49e4972-…", pvc="jellyfin", pvc_namespace="equestria",
+  node="fluttershy", state="degraded"
+} = 1
+```
+
+`LonghornVolumeStatusWarning` becomes `longhorn_volume_robustness{state="degraded"} == 1` and
+`LonghornVolumeStatusCritical` becomes the same with `state="faulted"`. Both were validated
+against live Prometheus and accepted by the prometheus-operator admission webhook, which
+does validate PromQL. At the moment of writing the fixed warning rule correctly returned the
+one degraded volume in the cluster and the fixed critical rule correctly returned none.
+
+> ⚠️ **Label rename.** These alerts now carry `pvc` / `pvc_namespace` where they used to
+> *intend* `persistentvolumeclaim` / `namespace`. `namespace` is still present but is the
+> **scrape** namespace, `longhorn-system`, not the PVC's. Nothing in this repo matched on the
+> old names — because the alerts had never fired — but anything added later must use the new
+> ones.
+
+> ⚠️ **`LonghornVolumeActualSpaceUsedWarning` is deliberately left dead**, with a comment
+> saying so. The same one-line fix applies, but running the fixed expression today returns
+> **eight** volumes, three of them over 100 %. Shipping that as a side effect of a
+> storage-placement change would have been an eight-alert pager storm nobody asked for. It
+> needs its own pass — including deciding whether `actual_size / capacity` is even the right
+> ratio for thin provisioning. **Open item 12; this is a real, currently-unmonitored gap.**
+
+#### 2.2.3 Why a rule edit and not a silence
+
+The estate's declarative silence mechanism is **silence-operator**
+(`kubernetes/apps/observability/silences`, chart 0.20.0, image 0.18.0), driving
+`observability.giantswarm.io/v1alpha2` `Silence` CRs. There is one in the tree today
+(`keda-hpa-maxed-out`).
+
+**It cannot express a window.** Read from the live CRD, the entire `spec` is:
+
+```json
+{"properties": {"matchers": {...}}, "required": ["matchers"]}
+```
+
+`matchers` and nothing else — **no schedule, no start/end, no recurrence, no timezone.** A
+`Silence` here would be **permanent**, and a media volume genuinely degraded at 14:00 would be
+hidden with it. That is the one outcome this must not produce, so a `Silence` is simply the
+wrong tool. (The Gatus `maintenance-windows` used by #1047 *are* time-aware, but Gatus is an
+uptime prober and has nothing to do with Prometheus alerts.)
+
+**Alertmanager mute time intervals** were the other candidate. The `AlertmanagerConfig` in
+`observability/alertmanager/config.yaml` is the global config, and the CRD does support
+`spec.muteTimeIntervals` plus a per-route `muteTimeIntervals`. Rejected for two reasons:
+
+1. **No timezone.** The prometheus-operator `TimeInterval` schema exposes
+   `times / weekdays / daysOfMonth / months / years` and **no `location`**, so the window
+   would be **UTC**. The shed itself is driven by `${TIMEZONE}` (`America/New_York`), so the
+   two would drift by an hour at every DST change — silently, twice a year.
+2. **A muted alert still shows as FIRING.** Muting suppresses the *notification*, not the
+   alert. The estate's stated convention is a **zero-firing-alerts baseline**, and the triage
+   skill counts *active* separately from *silenced*. A mute interval would leave three
+   permanent nightly false positives in every triage view. A `Silence`, by contrast, shows as
+   silenced — which is why silences are baseline-compatible and mute intervals are not.
+
+**So: scope the rule.** This is also what the estate's own guidance asks for —
+*"Silences are a LAST RESORT — fix the root cause first"* — and here the root cause is
+genuinely that the alert's predicate is wrong. The volume is not unexpectedly degraded; the
+alert is asking a question that has a known, boring answer for seven hours a night.
+
+#### 2.2.4 The gate, and what it deliberately does not cover
+
+```promql
+(longhorn_volume_robustness{state="degraded"} == 1)
+unless (
+  longhorn_volume_robustness{state="degraded", pvc_namespace="equestria", pvc=~"plex|jellyfin|dispatcharr"}
+  and on()
+  count(
+    min_over_time(
+      kube_node_status_condition{node=~"fluttershy|kerfuffle", condition="Ready", status="true"}[30m]
+    ) == 0
+  ) > 0
+)
+```
+
+**Gated on node readiness, not on a clock.** It suppresses exactly when the media workers are
+actually down, which means: no timezone to get wrong, no DST drift, it survives a change to
+the shed schedule, and it tracks a late wake or an early shed. And **a media volume degraded
+while both workers are up still pages** — which is the case that matters.
+
+**`min_over_time(...)[30m] == 0` is a post-wake resync grace.** It is true from the moment a
+worker drops until 30 minutes after it is back, because the returning replicas need time to
+catch up before the volume leaves `degraded`. The 02:00 leading edge needs no help: a node
+takes ~40 s to report `NotReady` while the volume degrades immediately, and the rule's
+`for: 5m` absorbs that gap and resets.
+
+**Not suppressed, at any hour:** any volume that is not one of those three PVCs; those three
+PVCs while both workers are up; and **anything at all** if kube-state-metrics is down or the
+Node objects are missing — the gate then yields an empty vector and removes nothing. **It
+fails open, on purpose.**
+
+**Validated live 2026-08-22**, both directions: with the gate open the expression returned the
+degraded volume; with the gate forced closed it returned nothing; and against a 63-series
+control set the `unless` removed **exactly** the media PVCs (63 → 61, the two that were in the
+set) and nothing else.
+
+**Residual gaps, stated so nobody is surprised:**
+
+- **A resync still running 30 minutes after wake WILL page at ~09:35.** That is intended — a
+  media volume needing more than half an hour to come back is news. But it is **unverified**
+  whether the 09:00 return is a fast resync at all: `staleReplicaTimeout` on these volumes is
+  `"30"`, which is **minutes**, so Longhorn may delete the failed replicas around 02:30 and
+  force a full **~170 GiB rebuild every morning** instead. **The first real night is the test.
+  Open item 13.**
+- **A media volume degraded for an unrelated reason inside the window is hidden.** Identical
+  blast radius to any time-window silence, and shorter.
+- **Node names are hardcoded** in the regex. If the shed set changes, the alert rule, the
+  `low-power-off` tag and `numberOfReplicas` must all change together. Nothing enforces it.
+
+### 2.3 Why five replicas — and the nightly churn that three would cause
 
 The old designs had to engineer around `replica-replenishment-wait-interval` (600 s). From
 `getCurrentNodesAndZones()` in `replica_scheduler.go`, a failed replica stops occupying its
-node once `creatingNewReplicasForReplenishment` is set — i.e. once the 600 s wait expires —
-at which point the shed nodes re-enter the candidate pool, are found unschedulable (powered
-off), and any *other* eligible-but-empty node gets a full rebuild.
+node once `creatingNewReplicasForReplenishment` is set — i.e. once the 600 s wait expires — at
+which point the shed nodes re-enter the candidate pool, are found unschedulable (powered off),
+and any *other* eligible-but-empty node gets a full rebuild.
 
 **The rule, stated correctly: replenishment needs a REPLICA TO FAIL. It is triggered by a
 deficit (`usableCount < numberOfReplicas`), not by the existence of an empty eligible node.**
 An awake, tag-eligible node holding no replica is a *destination* for churn; it is not a
 *cause* of it.
 
-> ⚠️ **Correction.** The `critical`-era revision of this section stated the rule as *"churn
+> ⚠️ **Correction, carried forward.** The `critical`-era revision stated the rule as *"churn
 > happens if and only if there is at least one tag-eligible node that is still awake and does
 > not already hold a live replica."* That was a necessary condition dressed up as a sufficient
 > one, and it only looked right because the `critical` design had **zero** spare eligible
-> nodes, so both halves were false together. Under `low-power` there are **two** spare
-> eligible nodes and still **no nightly churn**, because the shed causes no failure.
+> nodes, so both halves were false together.
 
-Under the shipped design no replica sits on `fluttershy` or `kerfuffle`, so the shed takes
-nothing down, `usableCount` stays at 3, `getReplenishReplicaCount()` returns `0`, and the
-scheduler is never consulted. **The two spare nodes are irrelevant overnight** — and load-
-bearing during an *outage*, which is exactly the asymmetry the design wants (§6.6).
+**Under `low-power-off` the deficit is real** — two replicas genuinely fail at 02:00 — so
+everything now turns on the *destination* half, which is where the replica count comes in:
 
----
+| `numberOfReplicas` | At 02:00, two worker replicas fail. Longhorn looks for a target… | Result |
+| --- | --- | --- |
+| **3** over 5 eligible nodes | …and finds **two empty control planes**. Both are valid. | **~170 GiB rebuilt every night**, unwound every morning when the workers return and `replica-auto-balance` pulls the other way. Churn forever. |
+| **5** over 5 eligible nodes | …and finds **nothing**: the two shed nodes are unschedulable, and each of the three control planes already holds a replica, which `replica-soft-anti-affinity: false` makes exclusive. | Scheduling failure logged, Longhorn waits, resync at 09:00. |
 
-## 3. The accepted cost: remote reads by day
+**So `numberOfReplicas: 5` is not a durability choice. It is the thing that makes the nightly
+window free of data movement**, and it works only because it exactly equals the size of the
+`low-power-off` node set. Change either and the other must change with it. Nothing in Longhorn
+or Flux checks this; it is a hand-maintained invariant (§11, item 6).
 
-The three apps carry a **soft** nodeAffinity preferring the media workers (stronger Iris Xe
-iGPU) and a **hard** one requiring an Intel iGPU. So by day the pod sits on `fluttershy` or
-`kerfuffle` — neither of which is `low-power`-tagged, so **neither can ever hold a replica of
-these volumes.** The engine runs on the worker and every read and write crosses the network.
+## 3. What this design buys, and what it costs
 
-That cost is unchanged by the move from `critical` to `low-power`: the two nodes the pods
-prefer by day are exactly the two nodes the tag excludes. What *did* change is that the
-daytime remote hop can now terminate on `hard-hat` or `shining-armor` as well as on a control
-plane.
+> ⚠️ **This section used to be titled "The accepted cost: remote reads by day" and argued the
+> opposite of what it now argues.** Under `low-power` the pods sat on nodes that could never
+> hold a replica, and the whole section was an argument that remote reads were tolerable. That
+> argument was *sound* — the evidence is kept below, because it is good evidence — but it was
+> answering "can we live with this?" when the better question was "why are we accepting it at
+> all?". `low-power-off` removes the remote read instead of justifying it.
 
-**This shape is already running healthy in this cluster, in mirror image** (verified live):
+### 3.1 What it buys: locality is now structural, in both states
+
+All three apps carry a **hard** nodeAffinity requiring an Intel iGPU and a **soft** one (weight
+100) preferring the media workers' stronger Iris Xe. `low-power-off` is exactly the set of
+nodes that satisfies the hard constraint. With one replica on each:
+
+| | Pod runs on | Local replica? |
+| --- | --- | --- |
+| **Day** (09:00–02:00, ~17 h) | `fluttershy` or `kerfuffle` (soft preference) | **yes** |
+| **Night** (02:00–09:00) | `milky-way`, `othalla` or `pegasus` (only iGPU nodes left) | **yes** |
+
+There is no state in which the pod can run somewhere that holds no replica, because there is
+nowhere it can run that is not in the tag. That is why `dataLocality` stays `disabled` rather
+than `best-effort` — there is nothing left for `best-effort` to ask for (§8).
+
+**Why this is worth paying for.** These are **config** volumes, not media. `plex`'s is
+**SQLite**: library scans and metadata refreshes are fsync-bursty and serialised, which makes
+them a **per-operation latency** workload, not a throughput one — the kind of workload a
+network hop hurts most and a benchmark shows least.
+
+### 3.2 What it costs, part one: five-way synchronous writes
+
+Longhorn v1 acks a write only once **every** replica has it, so a volume is as slow as its
+slowest replica, and there are now **five**. At least three are always on the control planes'
+Transcend TS1TMTS425S M.2 SATA disks (**54–75 ms** mean write latency over 7 d) against the
+workers' Samsung 990 EVO Plus NVMe (**0.5–11 ms**). Going from 3 replicas to 5 does not change
+the *slowest* disk — the control planes were already in the set — but it does add two more
+acks to wait for.
+
+Measured 7-day load on the three volumes is **4.2 write IOPS / ~52 KB/s combined**, with **~0
+reads** (page cache absorbs them). At that rate this is affordable. **It is still the thing to
+watch during the soak, and `plex` is the exposed one** (§11, item 5).
+
+### 3.3 What it costs, part two: `degraded` every night
+
+Covered at the top and in §2. Restated here because this is the section people read for
+"what does this cost": **02:00–09:00 every night, all three volumes are `degraded`.** The
+alert is scoped for it (§2.2) and tuppr's window avoids it (§2.1). Nothing else in the estate
+reads `robustness`, which was checked.
+
+### 3.4 The evidence that remote reads *were* survivable — kept, because it is still useful
+
+The `low-power` shape ran healthy on this cluster, and the mirror-image shape still does
+(verified live):
 
 | Volume | PVC | Attached to | Replicas on | Robustness | Engine replica modes |
 | --- | --- | --- | --- | --- | --- |
 | `pvc-8cfbf411-185d-4e9e-8b33-07a12bd66372` | `teamarr` | **`milky-way`** (CP) | `fluttershy`, `hard-hat`, `kerfuffle` (all `bulk`) | `healthy` | 3 × `RW` |
 | `pvc-4f906258-9fd8-4a94-bdca-e24bb44ff34d` | `pinepods` | **`othalla`** (CP) | `fluttershy`, `hard-hat`, `kerfuffle` (all `bulk`) | `healthy` | 3 × `RW` |
 
-Both have their engine on a node holding **zero** replicas and both are fully healthy. That
-is this design's day-state with the tiers swapped, and it is the empirical answer to "is
-remote read viable here".
-
-Measured 7-day load on the three media volumes is **4.2 write IOPS / ~52 KB/s combined**,
-with **~0 reads** (the page cache absorbs them), so there is very little traffic to make
-remote in the first place.
-
-**What to watch after cutover.** The control-plane Longhorn disks are Transcend
-TS1TMTS425S M.2 SATA (54–75 ms mean write latency over 7d) against the workers' Samsung
-990 EVO Plus NVMe (0.5–11 ms). Longhorn v1 acks a write only once **every** replica has it,
-so a volume is only as fast as its slowest replica. Under `low-power` a replica may land on
-`hard-hat` or `shining-armor` — both workers, both NVMe — but **at least one replica is always
-on a control plane** (the structural guarantee above), so these volumes still inherit the
-Transcend's write latency **24/7**, not just overnight, and now with a network hop on top for
-most of the day. The wider tag does **not** buy back steady-state latency; it buys rebuild
-headroom. At 4.2 IOPS that is affordable, but the risk is
-**per-operation latency, not throughput**, and **`plex`'s config is SQLite** — library scans
-and metadata refreshes are fsync-bursty and serialised. **`plex` is the most
-latency-sensitive of the three and is the thing to watch after cutover.** If it disappoints,
-the rollback in §6.5 is cheap.
-
----
+Both have their engine on a node holding **zero** replicas and both are fully healthy. So
+remote-read is not *dangerous*; the case for `low-power-off` is that it is not *free* either,
+and here it was avoidable. **These two volumes are also the live example of the ghost-replica
+failure mode in §8** — they are worth keeping around for that reason alone.
 
 ## 4. THE MIGRATION — the hard part
 
-Under the superseded designs the migration was small: `numberOfReplicas` went up, and
-Longhorn added one or two replicas to nodes that had none. Here **every replica on a node
-that is not `low-power`-tagged must move** — and only those.
+This is the **second** migration of these volumes in a day. The first (to `low-power`) is
+complete; this one moves them from there to `low-power-off`. §4.1–4.6 are the mechanics, and
+they are unchanged and all still verified — **what Longhorn will and will not do to a replica
+does not depend on which tag you are moving to.**
 
-**This is where the `critical` → `low-power` change pays for itself a second time.** Under
-`critical` the target set was `{milky-way, othalla, pegasus}` and current placement was
-**disjoint** from it, so all nine replicas had to be rebuilt. Under `low-power` the target set
-also contains `hard-hat` and `shining-armor`, and **three of the nine existing replicas
-already sit on those two nodes** — so they conform as they stand and are never touched:
+The shape of the work *is* different, and simpler. Under `low-power` the target count equalled
+the current count, so every rebuild had to be manufactured by deleting a replica first, which
+is why §6 uses a grow-then-shrink dance. **Here the target count is HIGHER than the current
+count (5 vs 3 or 4), so the growth happens by itself**: patch the volume and Longhorn
+replenishes into the deficit. Deletions are needed only for the two replicas sitting on
+`shining-armor`, which is not in the new tag.
 
-| Volume | Starting replicas | Already conforming | Must move | Bytes copied |
-| --- | --- | --- | --- | --- |
-| `dispatcharr` | fluttershy, **hard-hat**, kerfuffle | 1 (`hard-hat`) | **2** | 2 × 1.51 = **3.0 GiB** |
-| `plex` | fluttershy, kerfuffle, **shining-armor** | 1 (`shining-armor`) | **2** | 2 × 23.19 = **46.4 GiB** |
-| `jellyfin` | fluttershy, kerfuffle, **shining-armor** | 1 (`shining-armor`) | **2** | 2 × 59.96 = **119.9 GiB** |
-| | | | **6** | **≈ 169 GiB** |
+**What each volume needs**, from the live read at 2026-08-22 18:58 UTC:
 
-> ⚠️ The logical data is ~85 GiB, but **six** replicas are rebuilt, so **~169 GiB moves** —
-> down from the **nine** rebuilds and **~254 GiB** the `critical` design would have cost.
+| Volume | Actual size | Replicas now | Already conforming | Rebuilds needed | Deletions | Bytes copied |
+| --- | --- | --- | --- | --- | --- | --- |
+| `dispatcharr` | 1.65 GiB | milky-way, othalla, pegasus | **3** | **2** → fluttershy, kerfuffle | none | **3.3 GiB** |
+| `plex` | 23.09 GiB | milky-way, othalla, **shining-armor** | **2** | **3** → fluttershy, kerfuffle, pegasus | 1 (`shining-armor`) | **69.3 GiB** |
+| `jellyfin` | 59.95 GiB | fluttershy, kerfuffle, othalla, **shining-armor** | **3** | **2** → milky-way, pegasus | 1 (`shining-armor`) | **119.9 GiB** |
+| | | | | **7** | **2** | **≈ 192.5 GiB** |
 
-**What actually happened, verified live** (execution-status box): `plex` and `jellyfin` did
-exactly this — two rebuilds each, `shining-armor` untouched. `dispatcharr` did **not**: it was
-migrated first, under the `critical` design, before #1053 landed, so all three of its replicas
-were rebuilt onto control planes. The subsequent repoint from `critical` to `low-power` moved
-**zero bytes**, because `{milky-way, othalla, pegasus}` is a subset of the `low-power` node
-set and `getReplenishReplicaCount()` therefore still returned `0` (§4.2). Total actually
-copied: **3 × 1.51 + 2 × 23.19 + 2 × 59.96 ≈ 175 GiB.**
+At the measured ~30 MiB/s (§7) that is **≈ 1 h 49 m of pure copying**.
+
+> **`jellyfin` is the cheapest of the three relative to its size, and that is luck.** It was
+> deliberately stopped at `n=4` part-way through the `low-power` migration, still holding
+> replicas on `fluttershy` and `kerfuffle`. Under the old design those were the two "stranded"
+> replicas queued for deletion. **Under `low-power-off` they are exactly what is wanted.** Had
+> the first migration been allowed to finish, both would have been destroyed and would now
+> need rebuilding at 60 GiB apiece — a **120 GiB** round trip avoided by stopping.
+
+> ⚠️ **`shining-armor`'s two replicas are the mirror image**, and worth noting for the
+> next time a tag changes: under `low-power` they *conformed* and the runbook went out of its
+> way not to touch them, saving two rebuilds. Under `low-power-off` they are the only
+> non-conforming replicas left. **A replica's conformance is a property of the current tag,
+> not of the replica.** Nothing is stable across a tag change except the bytes.
 
 ### 4.1 Q1 — can `spec.nodeSelector` be patched live? **Yes.** (verified)
 
@@ -351,23 +680,28 @@ chain, mutates nothing) on **all three** volumes:
 
 ```bash
 kubectl -n longhorn-system patch volumes.longhorn.io <vol> --type=merge \
-  -p '{"spec":{"numberOfReplicas":3,"nodeSelector":["low-power"],"dataLocality":"disabled"}}' \
+  -p '{"spec":{"numberOfReplicas":5,"nodeSelector":["low-power-off"],"dataLocality":"disabled"}}' \
   --dry-run=server
 ```
 
 | Volume | Access mode | Result |
 | --- | --- | --- |
-| `pvc-633d7002-…` (dispatcharr) | RWO | `n=3 sel=[…] dl=disabled` — **accepted** |
-| `pvc-242324ae-…` (plex) | **RWX** | `n=3 sel=[…] dl=disabled` — **accepted** |
-| `pvc-d49e4972-…` (jellyfin) | RWO | `n=3 sel=[…] dl=disabled` — **accepted** |
+| `pvc-633d7002-…` (dispatcharr) | RWO | `n=… sel=[…] dl=disabled` — **accepted** |
+| `pvc-242324ae-…` (plex) | **RWX** | `n=… sel=[…] dl=disabled` — **accepted** |
+| `pvc-d49e4972-…` (jellyfin) | RWO | `n=… sel=[…] dl=disabled` — **accepted** |
 
-The `n=4` variant used by the runbook (§6) was dry-run separately and is **also accepted on
-all three**.
+*(These dry-runs were originally taken with `nodeSelector: ["critical"]`, then re-run for
+`["low-power"]` with `n=3` and `n=4`. All were accepted, and all three volumes were
+subsequently patched **for real**, live, attached and healthy. **The webhook does not inspect
+tag membership or replica count at all**, which is why every variant is accepted and why the
+`low-power-off`/`n=5` form needs no fresh dry-run to be trusted — but see the warning below,
+because "accepted" is emphatically not "will schedule".)*
 
-*(The dry-runs above were originally taken with `nodeSelector: ["critical"]`, before #1053.
-They have since been **superseded by real execution**: all three volumes were patched for
-real, live, attached and healthy, and all three now read `sel=["low-power"]`. The webhook
-does not inspect tag membership at all, so the selector value was never what it was checking.)*
+> ⚠️ **THE WEBHOOK WILL HAPPILY ACCEPT A SELECTOR THAT MATCHES NOTHING.** As of the live read,
+> **no Longhorn node carries the `low-power-off` tag** (§1.1). Patching a volume to
+> `nodeSelector: ["low-power-off"]` right now would be accepted, would immediately mark the
+> existing replicas non-conforming, and would leave every replenish unable to place anything.
+> **Tag the nodes first** — §6.1 step 0.
 
 **`plex` is RWX and was tested explicitly.** Its `sharemanagers.longhorn.io` is `running` on
 `kerfuffle`, exporting `nfs://10.196.249.75/pvc-242324ae-…`, with a
@@ -546,65 +880,90 @@ removes the contingent **+90 minutes** from §7's estimate.
 
 ---
 
-## 5. Capacity — do the eligible nodes have room? (verified live)
+## 5. Capacity — do the eligible nodes have room? (verified live 2026-08-22 18:58 UTC)
 
-Longhorn schedules against `storageMaximum × over-provisioning%` and refuses to go below
-`storage-minimal-available-percentage`.
+Longhorn schedules against `storageMaximum × over-provisioning%` (600 %) and refuses to go
+below `storage-minimal-available-percentage` (5 %).
 
-The table below is the **worst case**: all three volumes landing on the same control plane,
-adding **105 GiB scheduled** (spec sizes 40 + 60 + 5) and **~85 GiB actual**. Under
-`nodeSelector: critical` that worst case was also the *only* case — three replicas over
-exactly three nodes has one valid placement, so every control plane took all three volumes.
-**Under `low-power` it is genuinely a worst case**: five eligible nodes and three replicas
-means the load spreads, and no node is guaranteed to take all three. So this table is now
-conservative rather than exact, and it was already comfortable.
+**Under `low-power-off` this is no longer a worst-case question.** Five replicas over exactly
+five eligible nodes with hard anti-affinity has **one** valid placement: every one of the five
+takes **one replica of every volume**. So the load is known exactly — `+105 GiB scheduled`
+(spec sizes 40 + 60 + 5) and `+85 GiB actual` on **each** of the five, minus whatever it
+already holds.
 
-| Node | max | avail now | sched now | sched after (+105) | avail after (−85) | usage after |
-| --- | --- | --- | --- | --- | --- | --- |
-| `milky-way` | 930 GiB | 793 GiB | 491 GiB | 596 GiB | 708 GiB | **23 %** |
-| `othalla` | 930 GiB | 813 GiB | 349 GiB | 454 GiB | 728 GiB | **21 %** |
-| `pegasus` | 930 GiB | 780 GiB | 654 GiB | 759 GiB | 695 GiB | **25 %** |
+| Node | max | avail now | sched now | replicas now | sched after | avail after | headroom |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `fluttershy` | 931 GiB | 645 GiB | 620 GiB | 76 | 725 GiB | ~560 GiB | fine |
+| `kerfuffle` | 931 GiB | 601 GiB | 663 GiB | 59 | 768 GiB | ~516 GiB | fine |
+| `milky-way` | 931 GiB | 769 GiB | 536 GiB | 47 | 641 GiB | ~684 GiB | fine |
+| `othalla` | 931 GiB | 728 GiB | 454 GiB | 39 | 559 GiB | ~643 GiB | fine |
+| `pegasus` | 931 GiB | 778 GiB | 659 GiB | 53 | 764 GiB | ~693 GiB | fine |
 
-Over-provisioning limit is `930 × 6 = 5585 GiB` — not close. Minimum available is
-`930 × 5 % = 46 GiB` — not close. `LonghornNodeStorageWarning` fires above **80 %** usage;
-the worst case lands at **25 %**. **Capacity is not a constraint.**
+Over-provisioning limit is `931 × 6 = 5586 GiB` — the busiest node lands at **768 GiB
+scheduled**, nowhere near it. Minimum available is `931 × 5 % = 47 GiB`; the tightest node
+keeps **~516 GiB**. `LonghornNodeStorageWarning` fires above **80 %** usage and the worst node
+lands around **26 %**. **Capacity is not a constraint.**
 
-`hard-hat` and `shining-armor` are the other two eligible nodes. `hard-hat` already carries
-**79** replicas (§4.4) and `shining-armor` **26**, so `shining-armor` is the roomier of the
-two; neither was anywhere near a limit during the migration, and in practice the only
-`low-power` worker that ended up holding a media replica was `shining-armor` — because it
-already held one and never had to move it.
+> Note the two workers already carry the *largest* scheduled totals (620 and 663 GiB) and the
+> most replicas, because they are `bulk` — the default tier — and everything else in the
+> cluster lands there. Adding the media config volumes to them is still comfortable, but they
+> are the two to watch if this class ever grows.
 
----
+**Freed by the migration:** two replicas leave `shining-armor` (23.09 + 59.95 = **83 GiB
+actual**, 100 GiB scheduled), which is the tightest node in the cluster at 441 GiB available.
+A small side benefit, and the only node that gets *better* out of this change.
 
 ## 6. The migration runbook — do NOT execute unattended
 
-**Method: grow-then-shrink.** Rather than deleting a replica and letting the volume run at
-two copies while it rebuilds, temporarily set `numberOfReplicas: 4`. Every intermediate state
-then holds **at least three** healthy replicas — comfortably better than the "never below 2"
-bar — for the same rebuilds and the same total copy volume.
+> ⚠️ **REWRITTEN for `low-power-off` / 5 replicas.** The previous version of this section
+> described a **grow-then-shrink** dance: bump `numberOfReplicas` to 4, delete a stranded
+> replica, delete another, shrink back to 3. **That is no longer the right procedure and its
+> commands are actively wrong** — wrong tag, wrong count, and it would delete the two worker
+> replicas this design exists to keep. If you have that version open, close it.
 
-Why the obvious alternative is worse: patching to `nodeSelector: ["low-power"]` and simply
-deleting one replica at a time works, but the volume sits at **2** healthy replicas during
-each rebuild. Grow-then-shrink costs one extra patch per volume and never does.
+**Method now: grow, then prune.** The target count (5) is *higher* than the current count (3
+or 4), so Longhorn manufactures the rebuilds by itself the moment the volume is patched —
+`usableCount < numberOfReplicas` is a deficit, and §4.6's replenish path fills it one replica
+at a time, applying the volume's **current** `nodeSelector`. Only the two `shining-armor`
+replicas need deleting, and only *after* the growth has landed.
 
-Why you cannot just "add replicas first, then drop the old ones" without setting the selector:
-there is no way to express `bulk ∪ low-power` — tags are a hard **AND** (§1.1). With an empty
-selector the scheduler would pick by free space and could place a new replica right back on
-`fluttershy` or `kerfuffle`. `numberOfReplicas: 4` **with** `nodeSelector: ["low-power"]` is
-what makes each new replica land on a node that survives the window.
-
-> **Two replicas per volume, not three.** Because `hard-hat` and `shining-armor` are
-> `low-power`-tagged, a replica already sitting on either of them **conforms and must not be
-> deleted** (§4). For `plex` and `jellyfin` that means the `shining-armor` replica stays and
-> only two rebuilds are needed; for `dispatcharr` the `hard-hat` replica would have stayed had
-> it not already been migrated under the old `critical` design.
->
-> ⚠️ **This is the single most important difference from the `critical`-era runbook**, which
-> told you to delete all three. Deleting a conforming replica costs a needless full rebuild —
-> 23 GiB for `plex`, 60 GiB for `jellyfin` — and buys nothing.
+**Minimum healthy replicas at any point: 3** (`plex`, at the very start, before its first new
+replica lands). Every other moment is 4 or better. There is no window in which these volumes
+are less safe than they are today.
 
 ### 6.1 Preconditions — check ALL of these first
+
+> ### ⚠️ STEP 0 — TAG THE NODES. Nothing else works until this is done.
+>
+> `low-power-off` exists in `talos/talconfig.yaml` and on **no live Longhorn node**
+> (§1.1). `node.longhorn.io/default-node-tags` is read only at Longhorn node **creation**, so
+> the talconfig edit will not retag a running node — it exists so a *rebuilt* node comes back
+> correct. The live effect comes from patching the `nodes.longhorn.io` CRs:
+>
+> ```bash
+> # additive — read the current list, append, write back. Do NOT overwrite blindly.
+> kubectl -n longhorn-system get nodes.longhorn.io \
+>   -o custom-columns=NAME:.metadata.name,TAGS:.spec.tags
+>
+> # workers: ["bulk"] -> ["bulk","low-power-off"]
+> for n in fluttershy kerfuffle; do
+>   kubectl -n longhorn-system patch nodes.longhorn.io "$n" --type=merge \
+>     -p '{"spec":{"tags":["bulk","low-power-off"]}}' --dry-run=server
+> done
+>
+> # control planes: ["critical","low-power"] -> +["low-power-off"]
+> for n in milky-way othalla pegasus; do
+>   kubectl -n longhorn-system patch nodes.longhorn.io "$n" --type=merge \
+>     -p '{"spec":{"tags":["critical","low-power","low-power-off"]}}' --dry-run=server
+> done
+> ```
+>
+> **Drop `--dry-run=server` only once the printed tag lists match §1.1's target block.** This
+> is purely additive: no existing `bulk`, `critical` or `low-power` selector changes meaning,
+> because a tag list is a set and nothing is removed.
+>
+> ⚠️ **Do NOT reach for `mise run talos:apply`** to make the talconfig edit live. It would
+> carry Renovate's pending Kubernetes bump into a tuppr-owned upgrade.
 
 ```bash
 # 1. No Talos upgrade in flight or pending. THIS IS THE IMPORTANT ONE — see §6.6.
@@ -614,7 +973,7 @@ kubectl get talosupgrades.tuppr.home-operations.com -A
 # 2. Nothing already degraded (would confuse both your verification and tuppr)
 kubectl -n longhorn-system get volumes.longhorn.io -o json \
   | jq -r '[.items[]|select(.status.robustness=="degraded")|.metadata.name]|"degraded=\(length) \(.)"'
-#    require: degraded=0
+#    require: degraded=0   <- was true at 2026-08-22 18:58 UTC
 
 # 3. All three target volumes attached + healthy
 kubectl -n longhorn-system get volumes.longhorn.io \
@@ -622,101 +981,83 @@ kubectl -n longhorn-system get volumes.longhorn.io \
   pvc-633d7002-9640-4f86-b9a0-127d8d14a9c2 \
   -o custom-columns=NAME:.metadata.name,STATE:.status.state,ROBUST:.status.robustness,N:.spec.numberOfReplicas
 
-# 4. All FIVE low-power nodes tagged, schedulable and with room (§5).
-#    Expect: milky-way/othalla/pegasus = [critical low-power];
-#            hard-hat/shining-armor    = [bulk low-power];
-#            fluttershy/kerfuffle      = [bulk]   <- NOT tagged, by design
+# 4. All FIVE low-power-off nodes tagged, schedulable and with room (§5).
+#    Expect: milky-way/othalla/pegasus = [critical low-power low-power-off];
+#            fluttershy/kerfuffle      = [bulk low-power-off];
+#            hard-hat/shining-armor    = [bulk low-power]   <- NOT low-power-off, by design
 kubectl -n longhorn-system get nodes.longhorn.io \
   -o custom-columns=NAME:.metadata.name,TAGS:.spec.tags,SCHED:.spec.allowScheduling,EVICT:.spec.evictionRequested
 
-# 5. NOT inside the low-power window (02:00-09:00) — you want the workers awake so
-#    the source replicas are all available to read from.
+# 5. NOT inside the low-power window (02:00-09:00). Two reasons now, not one:
+#    the workers must be AWAKE to receive their new replicas at all, and you want
+#    every source replica available to read from.
 ```
 
 ### 6.2 Per-volume procedure
 
-Run it **one volume at a time**, in this order — **`dispatcharr` first as a cheap
-rehearsal** (1.5 GiB, about a minute per replica), then `plex`, then `jellyfin` last.
+Run it **one volume at a time**, in this order — **`dispatcharr` first as a cheap rehearsal**
+(1.65 GiB, ~1 minute per replica), then `plex`, then `jellyfin` last.
 
-Let `V` be the volume. Call a replica **stranded** if it sits on `fluttershy` or `kerfuffle`
-(the untagged pair) and **conforming** if it sits on any of the five `low-power` nodes.
-**Only stranded replicas get deleted.** For all three volumes that is exactly **two**.
+Let `V` be the volume. Under `low-power-off` a replica is **conforming** if it sits on
+`fluttershy`, `kerfuffle`, `milky-way`, `othalla` or `pegasus`, and **stranded** if it sits
+anywhere else. Today that means **only `shining-armor` replicas are stranded** — two of them,
+one on `plex` and one on `jellyfin`. `dispatcharr` has none.
 
-**Step A — grow onto a `low-power` node.**
+> ⚠️ **DO NOT delete replicas on `fluttershy` or `kerfuffle`.** The `low-power`-era runbook
+> told you to, and `jellyfin` still carries two of them. **They conform now and they are the
+> entire point of this design.** Deleting them would cost 120 GiB of needless rebuild and
+> leave the volume with no daytime local replica until it finished.
+
+**Step A — patch to the new shape. This starts the rebuilds by itself.**
 
 ```bash
 kubectl -n longhorn-system patch volumes.longhorn.io "$V" --type=merge \
-  -p '{"spec":{"numberOfReplicas":4,"nodeSelector":["low-power"],"dataLocality":"disabled"}}'
+  -p '{"spec":{"numberOfReplicas":5,"nodeSelector":["low-power-off"],"dataLocality":"disabled"}}'
 ```
 
-Longhorn now has 3 usable replicas against `numberOfReplicas: 4` → replenish 1 → the
-scheduler filters candidates to `low-power`-tagged nodes that do not already hold a replica of
-this volume → the new replica lands on one of them. The volume reads `degraded` while it
-rebuilds (3 healthy < 4), then returns to `healthy` at 4.
+Longhorn now sees `usableCount` (3 or 4) below `numberOfReplicas: 5` → replenishes → the
+scheduler filters candidates to `low-power-off`-tagged nodes not already holding a replica of
+this volume → new replicas land there, **one at a time** (§4.6, the replenish count is forced
+to 1 per pass and the volume controller serialises rebuilds). The volume reads `degraded`
+while each rebuild runs and returns to `healthy` between them.
 
-*Wait for:* `robustness: healthy` **and** 4 running replicas, the new one on a `low-power`
-node.
+Per volume this step produces:
 
-**Step B — replace the first stranded replica.**
-
-Take the stranded replica on the node the volume is **NOT** attached to first, so the engine's
-own node keeps a local replica for as long as possible:
-
-```bash
-kubectl -n longhorn-system delete replicas.longhorn.io <stranded-replica-name>
-```
-
-Healthy count drops 4 → 3, which is below `numberOfReplicas: 4`, so Longhorn replenishes onto
-the next `low-power` node that has no replica of this volume. **Minimum healthy replicas
-during this: 3.**
-
-*Wait for:* `robustness: healthy` and 4 running replicas again.
-
-**Step C — drop the last stranded replica and shrink back to 3.**
-
-Run these two commands **back to back**:
-
-```bash
-kubectl -n longhorn-system delete replicas.longhorn.io <last-stranded-replica-name>
-kubectl -n longhorn-system patch volumes.longhorn.io "$V" --type=merge \
-  -p '{"spec":{"numberOfReplicas":3}}'
-```
-
-> ⚠️ **"Back to back" means it, and it matters MORE than it did under `critical`.** Between
-> the two commands the volume is `degraded` at 3 healthy against `numberOfReplicas: 4`.
->
-> Under the old `critical` design Longhorn would look for a fourth eligible node, **find
-> none**, and simply log a scheduling failure — harmless, and the shrink patch cleared it.
->
-> **Under `low-power` there are two spare eligible nodes, so Longhorn WILL find one** and
-> start a real fourth rebuild — a needless full copy (up to 60 GiB for `jellyfin`), after
-> which the shrink patch culls *some* replica of the controller's choosing (open item 3).
-> Have the second command ready to paste. If a fourth rebuild does start, it is wasteful but
-> not dangerous: let it finish, then delete the replica you do not want by name and re-patch.
-
-> **Why this order.** Do **not** patch `numberOfReplicas: 3` while four healthy replicas
-> exist: the controller's extra-healthy-replica cleanup would then choose which one to cull,
-> and **which one it picks is not verified** — it could remove a conforming replica and leave
-> the stranded one. Deleting by name first keeps the choice yours.
-
-**Replica names for the deletions.** The `critical`-era table that used to sit here listed
-**three** replicas per volume and is deleted, because under `low-power` two of the nine
-entries it named — `plex`'s `…-r-d459b0c5` and `jellyfin`'s `…-r-d90dbcc1`, both on
-`shining-armor` — **conform and must NOT be deleted.** Following it would have cost two
-needless rebuilds.
-
-Only replicas on `fluttershy` and `kerfuffle` are stranded. The remaining live example, as of
-2026-08-22 18:21 UTC:
-
-| Volume | Stranded replicas to delete, in order | Leave alone |
+| Volume | New replicas it must create | Ends at |
 | --- | --- | --- |
-| `dispatcharr` | *(none — complete)* | all three |
-| `plex` | *(none — complete)* | all three, incl. `…-r-d459b0c5` on `shining-armor` |
-| `jellyfin` (attached `fluttershy`) | `…-r-a4e2f069` (kerfuffle), then `…-r-9c1d4987` (fluttershy) | `…-r-d90dbcc1` (**shining-armor — conforms**), `…-r-b37dec84` (othalla) |
+| `dispatcharr` | 2 → `fluttershy`, `kerfuffle` | **5 healthy — DONE, no step B** |
+| `plex` | 2 → two of `fluttershy` / `kerfuffle` / `pegasus` | 5 healthy, one of them still on `shining-armor` |
+| `jellyfin` | 1 → `milky-way` or `pegasus` | 5 healthy, one of them still on `shining-armor` |
 
-**Re-read the names immediately before acting** — they change whenever a replica is rebuilt.
-The command below prints the node for each, which is the only thing you need: delete it if and
-only if the node is `fluttershy` or `kerfuffle`.
+*Wait for:* `robustness: healthy` **and** 5 running replicas before going on.
+
+**Step B — delete the stranded `shining-armor` replica (`plex` and `jellyfin` only).**
+
+```bash
+kubectl -n longhorn-system delete replicas.longhorn.io <shining-armor-replica-name>
+```
+
+Healthy count drops 5 → 4, below `numberOfReplicas: 5`, so Longhorn replenishes onto the one
+remaining `low-power-off` node that holds no replica of this volume. **Minimum healthy
+replicas during this: 4.**
+
+*Wait for:* `robustness: healthy` and 5 running replicas, all on `low-power-off` nodes.
+
+> **Why B comes after A and not before.** Deleting first would run the volume at 2 (plex) or 3
+> (jellyfin) healthy replicas during a rebuild for no benefit. Growing first means the stranded
+> replica is redundant by the time it goes. There is also no `numberOfReplicas` shrink at the
+> end of this procedure — 5 is the final count — so the old runbook's "run these two commands
+> back to back" hazard, and the open question about *which* replica the extra-healthy cleanup
+> culls, **do not arise here at all.**
+
+**Replica names.** Live at 2026-08-22 18:58 UTC — **re-read them immediately before acting**,
+because every rebuild changes them:
+
+| Volume | Delete (stranded) | Leave alone |
+| --- | --- | --- |
+| `dispatcharr` | *(none)* | `…-r-a7727873` (milky-way), `…-r-d4c5f23f` (othalla), `…-r-b10ddafa` (pegasus) |
+| `plex` | `…-r-d459b0c5` (**shining-armor**) | `…-r-ae3cc55f` (milky-way), `…-r-a863798c` (othalla) |
+| `jellyfin` | `…-r-d90dbcc1` (**shining-armor**) | `…-r-9c1d4987` (**fluttershy**), `…-r-a4e2f069` (**kerfuffle**), `…-r-b37dec84` (othalla) |
 
 ```bash
 kubectl -n longhorn-system get replicas.longhorn.io -o json | jq -r \
@@ -724,11 +1065,14 @@ kubectl -n longhorn-system get replicas.longhorn.io -o json | jq -r \
    |"\(.metadata.name) node=\(.spec.nodeID) state=\(.status.currentState) hardAff=\(.spec.hardNodeAffinity//"-")"'
 ```
 
-> **`plex` had a pinned replica.** Its `kerfuffle` replica carried
-> `hardNodeAffinity: kerfuffle`, left by `dataLocality: best-effort`. That pin is why it had to
-> be the **last** one deleted — and it was harmless, because its replacement was created under
-> `dataLocality: disabled` and got no pin. **Verified live post-migration:** none of `plex`'s
-> three replicas carries a `hardNodeAffinity`, and no ghost replica was minted.
+The rule is simple enough to apply from that output alone: **delete it if and only if the node
+is not one of the five `low-power-off` nodes.**
+
+> **On `hardNodeAffinity`.** Under the `low-power` migration `plex`'s `kerfuffle` replica
+> carried `hardNodeAffinity: kerfuffle`, a leftover from `dataLocality: best-effort`, and it
+> had to be deleted last. **Verified live now: none of the ten current replicas across the
+> three volumes carries a `hardNodeAffinity`**, because every one of them was created under
+> `dataLocality: disabled`. That hazard is gone, and §8 is why it should not come back.
 
 ### 6.3 What to watch during each step
 
@@ -765,25 +1109,45 @@ kubectl -n longhorn-system get volumes.longhorn.io -o json | jq -r \
    |"\(.metadata.name) n=\(.spec.numberOfReplicas) sel=\(.spec.nodeSelector) dl=\(.spec.dataLocality) rob=\(.status.robustness) state=\(.status.state)"'
 ```
 
-Expect for all three: `n=3 sel=["low-power"] dl=disabled rob=healthy state=attached`.
+Expect for all three: `n=5 sel=["low-power-off"] dl=disabled rob=healthy state=attached`.
 
-**The gate that actually matters — simulate the shed on paper and count survivors.** Every
-volume must have all three replicas on `low-power` nodes, and **none** on `fluttershy` or
-`kerfuffle` — the only two nodes the shed takes down:
+**The gate that actually matters — simulate the shed on paper and count what survives, AND
+what stays local.** Under `low-power-off` there are two things to prove, not one:
 
 ```bash
 kubectl -n longhorn-system get replicas.longhorn.io -o json | jq -r \
   '[.items[]|select((.spec.volumeName|test("242324ae|d49e4972|633d7002")) and .spec.nodeID!="" and (.spec.failedAt//"")=="")]
    | group_by(.spec.volumeName)[]
-   | "\(.[0].spec.volumeName) survivors=\([.[]|select(.spec.nodeID|test("milky-way|othalla|pegasus|hard-hat|shining-armor"))]|length) onShed=\([.[]|select(.spec.nodeID|test("fluttershy|kerfuffle"))]|length) onCP=\([.[]|select(.spec.nodeID|test("milky-way|othalla|pegasus"))]|length)"'
+   | "\(.[0].spec.volumeName) total=\(length) onWorkers=\([.[]|select(.spec.nodeID|test("^(fluttershy|kerfuffle)$"))]|length) onCP=\([.[]|select(.spec.nodeID|test("^(milky-way|othalla|pegasus)$"))]|length) offTag=\([.[]|select(.spec.nodeID|test("^(hard-hat|shining-armor)$"))]|length)"'
 ```
 
-**Required: `survivors=3 onShed=0` for all three volumes**, and `onCP>=1` — which cannot fail
-while `replica-soft-anti-affinity` is `false` (the structural guarantee at the top), but is
-worth printing because it is the whole reason three replicas is enough.
+**Required for all three: `total=5 onWorkers=2 onCP=3 offTag=0`.**
 
-**Verified live 2026-08-22 18:21 UTC:** `dispatcharr` `survivors=3 onShed=0 onCP=3`, `plex`
-`survivors=3 onShed=0 onCP=2`. `jellyfin` is mid-migration and still reads `onShed=2`.
+* `onWorkers=2` is the **daytime locality** guarantee — whichever worker the pod prefers, it
+  has a local replica.
+* `onCP=3` is the **overnight locality** guarantee — whichever control plane the pod relocates
+  to, it has a local replica.
+* `offTag=0` proves nothing is stranded on `hard-hat` or `shining-armor`, where it would be
+  permanently remote.
+
+⚠️ **Note this is the exact inverse of the check the previous revision demanded**, which was
+`survivors=3 onShed=0`. If you run the old command it will report a "failure" on a correctly
+migrated volume.
+
+**And the honest one: confirm the nightly degradation is EXPECTED, not surprising.** After
+migration, simulating the shed means 2 of 5 replicas fail, so `robustness` goes `degraded`.
+There is no command that makes that go away, and none should be written. What to verify
+instead is that the two things which react to it are correctly configured:
+
+```bash
+# the alert rule must carry the media exclusion
+kubectl -n longhorn-system get prometheusrule longhorn-pvc-usage-rules -o yaml \
+  | grep -A2 'pvc_namespace="equestria"'
+
+# tuppr's maintenance window must be enabled and outside 02:00-09:00
+kubectl get talosupgrades.tuppr.home-operations.com talos -o jsonpath='{.spec.maintenance}'
+# expect: {"windows":[{"duration":"2h","start":"0 11 * * *","timezone":"America/New_York"}]}
+```
 
 Also confirm **no ghost replicas** were minted (`dataLocality: disabled` should prevent them
 entirely — §8):
@@ -795,31 +1159,47 @@ kubectl -n longhorn-system get replicas.longhorn.io -o json | jq -r \
 # expect: no output
 ```
 
+**Then watch one real night.** The things to check the following morning, because none of them
+can be established from the daytime:
+
+1. Did any page fire? (It should not — §2.2.4.)
+2. Did tuppr attempt and fail a drain? (`kubectl get talosupgrades -A`, look for a failed
+   health check.)
+3. **Did Longhorn rebuild anything overnight?** Compare replica `metadata.creationTimestamp`
+   against yesterday's. **Any replica created between 02:00 and 09:00 means the
+   "nowhere to rebuild to" argument (§2.3) is wrong and the design needs re-examining.**
+4. **How long did the 09:00 recovery take, and was it a resync or a full rebuild?** If replica
+   creation timestamps changed, it was a full rebuild — see open item 13 on
+   `staleReplicaTimeout: 30`.
+
 ### 6.5 Rollback, mid-flight
 
-Every step is reversible and **shrinking is instant** — reducing `numberOfReplicas` deletes
+Every step is reversible, and **shrinking is instant** — reducing `numberOfReplicas` deletes
 replicas rather than copying anything.
 
-- **Before step C on a given volume**, the original stranded replicas that have not yet been
-  deleted are still present and healthy. To abort: patch
-  `{"spec":{"numberOfReplicas":3,"nodeSelector":["bulk"],"dataLocality":"best-effort"}}` and
-  then delete the new replicas by name. The volume returns to its original shape, rebuilding
-  onto `bulk` if fewer than three `bulk` replicas remain.
-- **After step C**, rollback is a migration in reverse — but a *cheaper* one than the
-  `critical` design would have needed, because a replica on `hard-hat` or `shining-armor` is
-  already `bulk`-conformant and stays put. Not dangerous, just not free.
-- **Aborting between volumes is safe.** The three volumes are independent; a half-migrated
-  set (say `dispatcharr` on `low-power`, the others still on `bulk`) is a perfectly valid
-  resting state. There is no ordering dependency between them.
-- **Nothing here is one-way**, and none of it touches the PVC, the PV or Git.
+- **Before step B on a given volume**, nothing has been destroyed at all: step A is purely
+  additive. To abort, patch back to `{"spec":{"numberOfReplicas":3,"nodeSelector":["low-power"]}}`
+  and Longhorn culls down to three. The `shining-armor` replica is still there, so `plex` and
+  `jellyfin` return to exactly the shape they have today.
+- **After step B** the `shining-armor` replica is gone and rolling back to `low-power` means
+  rebuilding it — 23 GiB or 60 GiB. Not dangerous, not free.
+- **Aborting between volumes is safe.** The three are independent; a half-migrated set is a
+  valid resting state. There is no ordering dependency between them.
+
+  ⚠️ **But a half-migrated set is NOT a safe state to leave overnight**, and this is new. A
+  volume already on `low-power-off` will go degraded during the shed, which is fine — the
+  alert scoping covers all three PVCs regardless of which shape each is in, and tuppr's window
+  covers the rest. What is *not* covered is a volume left mid-step-A with a rebuild in flight.
+  **Finish the volume you started, or roll it back, before 02:00.**
+- **Nothing here touches the PVC, the PV or Git.**
 
 ### 6.6 ⚠️ Do not overlap a tuppr upgrade window
 
-Per §2, `kubernetes/apps/system-upgrade/upgrades/talos.yaml` gates node drains on
+Per §2.1, `kubernetes/apps/system-upgrade/upgrades/talos.yaml` gates node drains on
 `status.robustness != "degraded"` across **every** volume in `longhorn-system`, with a 15 m
-timeout. This migration deliberately makes a volume degraded **six times**, each for the
-duration of one rebuild — and at the throughput actually measured (§7) **`jellyfin`'s rebuilds
-run ~34 minutes each, comfortably PAST that 15 m timeout on their own.**
+timeout. This migration deliberately makes a volume degraded **seven times**, each for the
+duration of one rebuild — and at the measured throughput (§7) **`jellyfin`'s rebuilds run ~34
+minutes each, comfortably past that 15 m timeout on their own.**
 
 **Before starting:**
 
@@ -828,41 +1208,53 @@ kubectl get talosupgrades.tuppr.home-operations.com -A
 # require PHASE=Completed / READY=True — not Progressing, not pending
 ```
 
-**Verified live 2026-08-22:** the `talos` TalosUpgrade was `PHASE=Completed READY=True`,
-44 h old, when the migration began — so there was no upgrade in flight.
-
 Also check Renovate has not just merged a Talos or Kubernetes version bump that tuppr will
-pick up mid-migration. If an upgrade starts while a rebuild is running, tuppr will stall on
-the health check and may fail the upgrade — recoverable, but noisy and confusing.
+pick up mid-migration. If an upgrade starts while a rebuild is running, tuppr will stall on the
+health check and may fail the upgrade — recoverable, but noisy and confusing.
 
-### 6.7 What happens when an eligible node dies — CORRECTED for `low-power`
+> ⚠️ **The tuppr maintenance window makes this WORSE during the migration, not better.** The
+> window is now 11:00–13:00 daily, which is a perfectly reasonable time to be running a
+> supervised volume migration. **Do the migration outside 11:00–13:00**, or accept that tuppr
+> may start a drain into the middle of it.
 
-> ⚠️ **The `critical`-era revision of this document stated as fact that "there is no fourth
-> `critical` node to rebuild onto", so these volumes would sit degraded until the node
-> returned. Under `low-power` that is FALSE, and its being false is the main operational
-> improvement #1053 bought.**
+### 6.7 What happens when an eligible node dies — ⚠️ REVERSED for `low-power-off`
 
-Three replicas over **five** eligible nodes leaves **two spare**. If one eligible node goes
-down — a Talos upgrade, a crash, a control-plane rotation — the replica there gets `failedAt`
-set, and once `replica-replenishment-wait-interval` (600 s) expires Longhorn **rebuilds onto
-one of the spares**. The volume heals itself instead of waiting for the node to come back.
-Under `critical` there was nowhere to rebuild to, so the volume was **stranded degraded** for
-the entire outage.
+> ⚠️ **Read the correction chain, because this claim has now flipped twice.**
+>
+> * The `critical`-era revision said: three replicas on three eligible nodes, **no spare**, so
+>   an eligible node dying strands the volume degraded until it returns.
+> * The `low-power` revision said that was FALSE and boasted about it: three replicas over
+>   **five** eligible nodes leaves **two spare**, so the volume self-heals.
+> * **Under `low-power-off` we are back to no spare**, and it is a deliberate choice this
+>   time, not an accident of a narrow tag.
 
-Two honest qualifications, so this is not oversold:
+Five replicas over exactly five eligible nodes leaves **zero** spare. `replica-soft-anti-affinity`
+is `false`, so at most one replica per node, so there is nowhere to rebuild. **If an eligible
+node goes down, the volume degrades and stays degraded until that node comes back.**
 
-1. **It still goes degraded first.** Self-healing is not no-impact: the volume is `degraded`
-   for at least the 600 s wait plus one full rebuild. For `jellyfin` at measured throughput
-   that is ~44 minutes, **well past tuppr's 15 m gate**, so a control-plane Talos upgrade will
-   still stall the drain of the next node. The improvement is that it *ends on its own*, not
-   that it stops happening.
-2. **A second simultaneous failure is not covered.** Two eligible nodes down leaves one spare
-   and one rebuild; three down leaves no spare at all.
+**This is the same property that makes the nightly window free** (§2.3) — you cannot have
+"nothing rebuilds at 02:00" and "something rebuilds when a node dies" at the same time, because
+Longhorn cannot tell the two apart. Both are just a failed replica on an unreachable node.
+**The design chose no-nightly-churn, and self-healing is what it paid.**
 
-Control-plane maintenance therefore still belongs in the awake window — but for a shorter
-reason than before.
+What that means in practice:
 
----
+1. **A control-plane Talos upgrade degrades all three volumes** for the length of the drain
+   and reboot, and tuppr's own cluster-wide gate will then stall the *next* node's drain. The
+   maintenance window bounds when this can start; it does not prevent it.
+2. **The nightly shed is indistinguishable from a two-node outage**, which is exactly why the
+   alert gate in §2.2.4 keys on node readiness — it correctly suppresses in both cases, and
+   the *node* alerts are what tell you which one you are in.
+3. **A third eligible node failing overnight** takes a volume to 2 of 5. Still readable,
+   still writable, and now genuinely worth paging about — but the media exclusion would
+   suppress it, because a media worker is not Ready. **That is the design's sharpest edge.**
+   The `LonghornVolumeStatusCritical` (`faulted`) alert is deliberately **not** gated and
+   would still fire if it went all the way down.
+
+**Is the trade right?** For Tier-2 config volumes with VolSync backups, yes: the failure mode
+is "degraded for the length of an outage you already know about", not data loss. It would be
+the wrong trade for Tier-1 data, which is why `longhorn-critical` is a separate class with a
+different shape (§9).
 
 ## 7. Wall-clock estimate — and what it actually cost
 
@@ -888,14 +1280,24 @@ reason than before.
 > them), or the live workload during a supervised daytime migration competes for the Transcend
 > SATA disks in a way an idle historical rebuild did not.
 >
-> **Use ~30 MiB/s for planning.** At that rate `jellyfin`'s two rebuilds are ~34 minutes each,
-> and the whole six-rebuild migration is **~1 h 36 m of pure copying**, not 36 minutes. In
+> **Use ~30 MiB/s for planning.** At that rate `jellyfin`'s rebuilds are ~34 minutes each. In
 > practice `dispatcharr` + `plex` took **32 minutes wall-clock end to end** (17:46 → 18:18),
-> and `jellyfin` alone is expected to take longer than both together.
+> and `jellyfin`'s single rebuild took roughly as long as both together.
+>
+> ⚠️ **These numbers were all measured writing to CONTROL-PLANE disks** (Transcend SATA),
+> because that is where the `low-power` migration was going. **The `low-power-off` migration
+> writes four of its seven rebuilds to the WORKERS' NVMe instead** (`fluttershy` ×3,
+> `kerfuffle` ×3 — 3 of `dispatcharr`+`plex`+`jellyfin` each way). Historic worker-side figures
+> were 122–373 MiB/s, so those four may be much faster than 30 MiB/s. **Plan at 30 anyway** —
+> the historic figures are exactly the sample set §11 item 11 says is untrustworthy, and being
+> early is not a problem.
+
+**Copy volume for the `low-power-off` migration: ~192.5 GiB across 7 sequential rebuilds**
+(§4). The superseded figures were ~169 GiB across 6 (`low-power`) and ~254 GiB across 9
+(`critical`).
 
 **Original estimate, left in place because the *method* is sound and only the input rate was
-bad. Copy volume: ~169 GiB across 6 sequential rebuilds** (§4 — the `critical`-era figure of
-254 GiB across 9 is superseded).
+bad:**
 
 **Throughput, measured on this cluster**, from `spec.healthyAt − metadata.creationTimestamp`
 against `status.actualSize`. These are **upper bounds on elapsed time**, so the *faster*
@@ -921,16 +1323,18 @@ control-plane median.
 
 **Pure data-movement time:**
 
-| Volume | Bytes copied | @ 119 MiB/s (predicted median) | @ **30 MiB/s** (MEASURED) |
+**For the `low-power-off` migration**, at the measured rate:
+
+| Volume | Bytes copied | Rebuilds | @ **30 MiB/s** (MEASURED) |
 | --- | --- | --- | --- |
-| `dispatcharr` | 3.0 GiB (2 rebuilds) | 26 s | **1.7 min** |
-| `plex` | 46.4 GiB (2 rebuilds) | 6.7 min | **26 min** |
-| `jellyfin` | 119.9 GiB (2 rebuilds) | 17 min | **68 min** |
-| **total** | **169 GiB (6 rebuilds)** | **24 min** | **≈ 1 h 36 m** |
+| `dispatcharr` | 3.3 GiB | 2 (→ fluttershy, kerfuffle) | **~2 min** |
+| `plex` | 69.3 GiB | 3 (→ fluttershy, kerfuffle, pegasus) | **~39 min** |
+| `jellyfin` | 119.9 GiB | 2 (→ milky-way, pegasus) | **~68 min** |
+| **total** | **≈ 192.5 GiB** | **7** | **≈ 1 h 49 m** |
 
 Per individual rebuild, at the **measured** rate: **~1 min** (dispatcharr), **~13 min**
-(plex), **~34 min** (jellyfin). The predicted-median column is kept only to show the size of
-the miss.
+(plex), **~34 min** (jellyfin) — unchanged, because per-rebuild cost is a function of volume
+size, not of how many are needed.
 
 **`concurrent-replica-rebuild-per-node-limit: 2` does not bind this migration.** The volume
 controller already serialises to **one rebuild per volume** (§4.6), and the runbook does one
@@ -943,10 +1347,14 @@ verification meaningful and rollback simple.
 sync, the `robustness` transition settling, and a human verifying each of the 9 steps —
 call it 2–4 minutes per step, ~25–35 minutes total.
 
-> **Budget a 3-hour window; reserve 4.** At the measured rate expect **~1 h 36 m of actual
-> copying** plus per-step overhead. `jellyfin` alone is ~71 % of the work and should be
-> started with at least 90 minutes left in the window. The original "budget 2 hours" advice
-> was based on the 119 MiB/s figure and is too tight.
+> **Budget a 3-hour window; reserve 4.** At the measured rate expect **~1 h 49 m of actual
+> copying** plus per-step overhead. `jellyfin` alone is ~62 % of the work and should be started
+> with at least 90 minutes left in the window.
+>
+> ⚠️ **And the window has two hard edges now, not one.** It must not overlap **02:00–09:00**
+> (the workers must be awake to receive replicas at all) and it should not overlap
+> **11:00–13:00** (tuppr's maintenance window, §6.6). That leaves 09:00–11:00 and
+> 13:00–02:00 — which is plenty, but it does mean a migration started at 10:00 is a mistake.
 
 **✅ Resolved — the 600 s contingency does not apply.** Whether a *deleted* (as opposed to
 *failed*) replica waits out `replica-replenishment-wait-interval: 600` is now answered: **it
@@ -956,26 +1364,37 @@ larger.
 
 ---
 
-## 8. `dataLocality: disabled`, not `best-effort` (verified live)
+## 8. `dataLocality: disabled`, not `best-effort` — same answer, different reason
 
-`best-effort` asks Longhorn to keep a replica on the node the volume is attached to. The pods
-sit on `fluttershy` or `kerfuffle` for most of every day (§3) — the two nodes that are
-**outside** the `low-power` tag by construction — so the request is **unsatisfiable**, and
-tags are a hard filter that `best-effort` cannot override. Widening the tag from `critical` to
-`low-power` does not help: the widening added `hard-hat` and `shining-armor`, not the two
-nodes the pods actually prefer.
+> ⚠️ **The setting did not change; the argument for it did, completely.** Under `low-power`
+> the case was *"`best-effort` is UNSATISFIABLE, because the pods sit on nodes outside the
+> tag"*. Under `low-power-off` the pods sit **inside** the tag, so that sentence is now false.
+> The setting survives on a different and simpler argument.
 
-What Longhorn does then is not "nothing". It mints a **ghost replica**: `spec.nodeID: ""`,
+### 8.1 The new reason: locality is already structural
+
+`best-effort` exists to chase a local replica when there isn't one. Under `low-power-off`
+**there always is one** — five replicas across the five nodes the pod can possibly run on, one
+per node, guaranteed by `replica-soft-anti-affinity: false` (§3.1). Whichever node the pod
+lands on, day or night, it is reading locally.
+
+So `best-effort` has nothing left to ask for. It would be a no-op, and a no-op with a footgun
+attached.
+
+### 8.2 The footgun it keeps off the table
+
+When `best-effort` **cannot** be satisfied — when the attached node is outside the volume's
+tag — Longhorn does not quietly do nothing. It mints a **ghost replica**: `spec.nodeID: ""`,
 `status.currentState: stopped`, `spec.hardNodeAffinity` pinned to the node that rejected it,
 `rebuildRetryCount` capped at 5, and a permanent
-`Scheduled=False / LocalReplicaSchedulingFailure` condition on the volume. Upstream calls
-this "tags not fulfilled" ([longhorn#7312](https://github.com/longhorn/longhorn/discussions/7312),
+`Scheduled=False / LocalReplicaSchedulingFailure` condition on the volume. Upstream calls this
+"tags not fulfilled" ([longhorn#7312](https://github.com/longhorn/longhorn/discussions/7312),
 [longhorn#11007](https://github.com/longhorn/longhorn/issues/11007)). It performs no I/O and
 cannot serve as a replenishment slot (`spec.nodeID` is empty, and `hardNodeAffinity` pins it
 to the one node that rejected it), so it is **cruft, not damage**.
 
-**This is not hypothetical — it is live right now**, on the same two volumes that prove the
-remote-read case in §3:
+**This is not hypothetical — it is live right now**, on the same two volumes that provide §3.4's
+remote-read evidence:
 
 ```
 pvc-8cfbf411-… (teamarr)   replica: node=""  state=stopped  hardNodeAffinity=milky-way
@@ -983,52 +1402,55 @@ pvc-4f906258-… (pinepods)  replica: node=""  state=stopped  hardNodeAffinity=o
 ```
 
 both with `Scheduled=False (LocalReplicaSchedulingFailure)` while reporting
-`robustness: healthy`. That is precisely what these volumes would inherit under
-`best-effort`, with the tiers swapped.
+`robustness: healthy`.
 
-**And `best-effort` buys little in exchange.** Overnight the pod relocates to a control plane,
-and **at least one replica is always on a control plane** (the structural guarantee at the
-top) — so locality is usually already satisfied and `best-effort` has nothing left to ask for.
-It is *not* guaranteed: with 3 replicas over 5 eligible nodes the pod could land on the one
-control plane holding no replica. But the fix for that would be a remote read on an idle
-overnight volume, against the certainty of a permanently `Scheduled=False` condition and a
-ghost replica CR by day. **`disabled` is still the right trade.**
+**So `disabled` is the setting that keeps this design safe under change.** The moment
+`numberOfReplicas` drops below the size of the `low-power-off` tag — or a node loses the tag,
+or an app's affinity changes so it can run somewhere untagged — `best-effort` would start
+minting ghosts and parking a permanent `Scheduled=False` on these volumes. `disabled` makes
+that structurally impossible. Given that §2.3 already makes the replica count a
+hand-maintained invariant, this is worth having.
 
-**Verified live post-migration:** none of the three volumes has a ghost replica
-(`spec.nodeID: ""`), and `jellyfin`'s `Scheduled` condition reads `True`.
+**Verified live post-`low-power`-migration:** none of the three volumes has a ghost replica
+(`spec.nodeID: ""`), none of their ten replicas carries a `hardNodeAffinity`, and `jellyfin`'s
+`Scheduled` condition reads `True`.
 
-**No alert covers any of this.** Grepping the Longhorn rules confirms the alerts are on
-`robustness`, actual-space usage, node storage, node-down and CPU — **nothing watches the
-`Scheduled` condition**. A `best-effort` choice here would leave three volumes permanently
-`Scheduled=False` with three orphan replica CRs and nothing would ever say so.
+### 8.3 And nothing would tell you if it broke
 
-**Conclusion: `disabled` is correct, and the reasoning survives the tag change.**
+**No alert covers any of this.** The Longhorn rules watch `robustness`, actual-space usage,
+node storage, node-down and CPU — **nothing watches the `Scheduled` condition**. A
+`best-effort` choice here would leave three volumes permanently `Scheduled=False` with three
+orphan replica CRs and nothing would ever say so.
+
+That observation deserves a sharper reading now than when it was first written: §2.2.1 showed
+that the alerts which *do* exist for volume state had been **dead since the cluster was built**.
+"No alert covers this" was not a statement about a gap at the edge of the monitoring; it was
+the general case.
+
+**Conclusion: `disabled` is correct, and it is correct for a better reason than before.**
 `longhorn-critical` keeps `best-effort` legitimately — its workloads run **on** the control
-planes, so for them the request is satisfiable.
-
----
+planes, so for them the request is both satisfiable and useful.
 
 ## 9. Why a separate class and not `longhorn-critical`
 
-`longhorn-critical` has `nodeSelector: critical` and `numberOfReplicas: "3"`. That is now a
-strict **subset** of `longhorn-media`'s five eligible nodes, so it would no longer even place
-these volumes identically. Three reasons not to reuse it:
+`longhorn-critical` has `nodeSelector: critical` and `numberOfReplicas: "3"`. Under
+`low-power-off` the two classes are no longer even close: `critical` is the three control
+planes, `low-power-off` is those three **plus both media workers** at **5** replicas. Three
+reasons not to reuse it:
 
 1. **Different `dataLocality`.** `longhorn-critical` is `best-effort`; `longhorn-media` must
    be `disabled` (§8). The parameter is per-class, so this alone requires a second class.
-2. **Different node set, for a different reason.** `critical` answers *"where must Tier-0/1
-   data live?"*; `low-power` answers *"which nodes stay powered overnight?"*. They happen to
-   overlap, but they are not the same question and will not stay in sync — `hard-hat` is
-   `low-power` because of immich's GPU and `shining-armor` because of the backup volumes,
-   neither of which has anything to do with Tier-1 data.
-3. **An independent knob, and an undiluted tier.** `longhorn-critical` means "Tier-0/1 data
-   that must survive low-power mode". Media config volumes are **Tier-2 data that happens to
-   need power continuity for an unrelated reason**. Folding them in would make the critical
-   tier's replica count, capacity budget and future placement changes hostage to media config,
-   and would pile all three onto the same three control-plane disks already serving the
-   registry, home-assistant, technitium, mosquitto and tsidp. Separate classes mean either
-   tier can be retuned — replica count, disk selector, a move back to `bulk` when the media
-   workers stop being shed — without touching the other.
+2. **Different node set, for a genuinely different reason.** `critical` answers *"where must
+   Tier-0/1 data live?"*; `low-power-off` answers *"where can the media apps run?"*. They
+   overlap on the control planes by coincidence — because those happen to have Intel iGPUs —
+   and will not stay in sync. Put an Intel iGPU in a new worker and `low-power-off` grows;
+   that has nothing to do with Tier-1 data.
+3. **Different tolerance for being degraded, and this is the decisive one.**
+   `longhorn-critical` exists so Tier-0/1 data *never* loses redundancy overnight.
+   `longhorn-media` is a class that is **deliberately degraded seven hours a night**. Those
+   are opposite requirements and cannot share a class no matter how similar the node lists
+   look. Folding media config into `critical` would drag Tier-1 data into the nightly
+   degradation, drag it into the alert exclusion, and hand tuppr a permanent reason to stall.
 
 The class lives in `kubernetes/apps/longhorn-system/storageclass/media.yaml`. That directory
 has **no** `kustomization.yaml`, so kustomize-controller auto-generates one over every YAML
@@ -1043,7 +1465,10 @@ file it finds — **`storageclass/ks.yaml` needs no edit.**
 >
 > #1053 changed `parameters.nodeSelector` from `critical` to `low-power`, which is exactly that
 > case, and it is the first time this repository has exercised the flag. **It worked: Flux
-> deleted and recreated the class.** Verified live by the object's identity —
+> deleted and recreated the class.** The `low-power-off` change edits **both**
+> `parameters.nodeSelector` **and** `parameters.numberOfReplicas`, so it depends on the same
+> mechanism and is expected to delete-and-recreate the class again. Verified live by the
+> object's identity —
 > `longhorn-media`'s `metadata.creationTimestamp` reads **2026-08-22T18:14:10Z**, one minute
 > after #1053 merged (14:13 EDT) and **thirty minutes after #1051 created the class**
 > (13:44 EDT). A patched object would have kept its original creation time and UID; this one
@@ -1062,13 +1487,15 @@ kubectl get sc longhorn-media -o yaml
 
 **Creating the class does nothing to the existing volumes.** §6 is what moves them.
 
-Like the superseded option B — and unlike the first `critical`-based revision of this
-document — the shipped design **does** need a new node tag, so `talos/talconfig.yaml` was
-edited (three anchor edits covering five nodes; see the top of this document). The
-tag-before-provision ordering hazard does **not** apply, because
-`node.longhorn.io/default-node-tags` is only read at Longhorn node **creation** and the live
-retag was done by patching the `nodes.longhorn.io` CRs directly. The talconfig edit exists so
-a rebuilt node comes back correctly tagged.
+The shipped design **does** need a new node tag, so `talos/talconfig.yaml` was edited — **two**
+anchor edits covering five nodes, because of the YAML anchors (see the top of this document).
+
+⚠️ **Unlike #1053, the live retag has NOT been done yet.** `node.longhorn.io/default-node-tags`
+is only read at Longhorn node **creation**, so the talconfig edit alone changes nothing on a
+running node, and no live `nodes.longhorn.io` CR carries `low-power-off` (§1.1). **That patch
+is §6.1 step 0 and everything else in §6 is blocked on it.** Reconciling the StorageClass
+before the nodes are tagged is harmless — the class binds nothing today (§10.2) — but patching
+a *volume* before then is not.
 
 ---
 
@@ -1111,8 +1538,15 @@ PVC.
 The three PVCs will keep saying `storageClassName: longhorn` for as long as they exist, while
 their Longhorn volumes run at `longhorn-media`'s parameters. **Say this out loud, because it
 is invisible:** anyone reading `kubectl get pvc` will conclude these are ordinary `longhorn`
-volumes at 3 replicas on `bulk`. They are not — they are `nodeSelector: ["low-power"]` with
-`dataLocality: disabled`. **The only place the truth lives is the Volume CR.**
+volumes at 3 replicas on `bulk`. They are not — after §6 they are
+`nodeSelector: ["low-power-off"]`, **5 replicas**, `dataLocality: disabled`. **The only place
+the truth lives is the Volume CR.**
+
+**Verified live: `longhorn-media` still has ZERO volumes provisioned against it.** All three
+media PVCs report `storageclass: longhorn` (checked via `kube_persistentvolumeclaim_info`).
+The class has now been rewritten twice without a single volume ever having been created from
+it — it is, so far, purely documentation-of-intent plus a template for the next
+re-provision.
 
 Nothing reconciles the two, in either direction. A future edit to `longhorn-media`'s
 `parameters` will be delete-and-recreated onto the *class* by `force: true` (§9) and will
@@ -1139,58 +1573,128 @@ The drift resolves the next time each PVC is re-provisioned from scratch, if
 
 ## 11. Open items
 
-1. ~~**Nothing here has been executed.** §6 is a proposal.~~ **Executed 2026-08-22 — see the
-   execution-status box at the top.** `dispatcharr` and `plex` are **complete**; `jellyfin` is
-   mid-step-A with two stranded replicas left to delete. **Finishing `jellyfin` is the only
-   remaining blocker on shedding a media worker overnight.** Separately, the `longhorn-media`
-   StorageClass itself still has **no volume provisioned against it** — the migration patched
-   existing volumes in place rather than reprovisioning through the class (§10.2's drift).
+1. **⚠️ THE `low-power-off` MIGRATION HAS NOT STARTED, AND NEITHER HAS ITS PRECONDITION.**
+   The `low-power` migration is **complete** — all three volumes reached `n=3`/`n=4`,
+   `sel=["low-power"]`, `healthy` — and that is now the *starting* state for a second
+   migration. **Nothing is live for `low-power-off`:** no Longhorn node carries the tag
+   (§1.1), no volume has been repatched, and the StorageClass is the only artefact in place.
+   **§6.1 step 0 — patching the five `nodes.longhorn.io` CRs — blocks everything else.**
+   ≈ 192.5 GiB across 7 rebuilds, ≈ 1 h 49 m of copying.
+
 2. ~~**The deleted-vs-failed replenishment timing is unverified.**~~ **✅ CLOSED 2026-08-22 —
    a deleted replica does NOT wait out the 600 s interval.** Replacement replicas were created
-   15–60 s after the previous one went healthy, and the gap is operator reaction time, not a
-   Longhorn wait. Timestamps in §4.6; the contingent +90 min is removed from §7.
-3. **Which replica the extra-healthy cleanup culls is unverified** (§6.2 step C). The runbook
-   avoids depending on it by deleting by name first. **This got MORE important under
-   `low-power`, not less:** with two spare eligible nodes, a slow step C actually starts a
-   fourth rebuild rather than harmlessly failing to schedule, so the cull can now be reached
-   in normal operation. See the warning in §6.2 step C.
-4. **Overnight VolSync backups for the media tier are not addressed** (§10.2). The
-   `longhorn-critical-snapshot` / `-cache` classes already exist; pointing the three apps at
-   them is a small, separate change.
-5. **Steady-state write latency is the thing to watch during the soak** (§3). The
-   measurements say "affordable at 4.2 IOPS"; they do not prove Plex library scans feel the
-   same afterwards. **`plex` is SQLite and is the most exposed of the three.**
-6. **The `low-power` tag is a hand-maintained invariant and nothing guards it** — CORRECTED
-   from "coupled to the control-plane count", which was the `critical`-era framing. Two ways
-   it can rot silently, neither alerted on, both leaving the volumes reading `healthy`:
-   - **If the tag ever shrinks to three nodes**, the two spares disappear and §6.7's
-     self-healing goes with them, back to the old stranded-degraded behaviour.
-   - **If `hard-hat` or `shining-armor` is ever added to the nightly shed, it must lose the
-     tag in the same change**, or a replica there fails every night and §2's nightly-degraded
-     problem returns in full.
+   **15–60 s** after the previous one went healthy, and the gap is operator reaction time, not
+   a Longhorn wait. Timestamps in §4.6; the contingent +90 min is removed from §7.
 
-   A cheap guard is an alert on the eligible-node count, or a line in
-   [24](24-power-states.md)'s node-tagging procedure. Note the tag lives in **two** places —
-   the live `nodes.longhorn.io` CRs and `talos/talconfig.yaml` — and only the CRs take effect;
-   talconfig applies at node creation only, so the two can silently disagree.
-7. ~~**Control-plane maintenance now degrades three more volumes.**~~ **Corrected — see §6.7.**
-   It still degrades them, but they now **self-heal onto a spare** rather than staying
-   degraded until the node returns. The residual issue is duration: 600 s replenishment wait
-   plus a rebuild is ~44 min for `jellyfin`, past tuppr's 15 m gate, so a control-plane Talos
-   upgrade will still stall the drain of the next node.
-8. **The `Scheduled` condition is unmonitored** (§8). `dataLocality: disabled` means this
+3. ~~**Which replica the extra-healthy cleanup culls is unverified.**~~ **✅ NO LONGER
+   REACHABLE by this runbook.** That question only arose because the `low-power` procedure
+   ended with a `numberOfReplicas` *shrink* while extra healthy replicas existed. The
+   `low-power-off` procedure only ever grows (§6.2), so the cleanup path is never entered.
+   The underlying behaviour is still unverified; it is simply no longer on the critical path.
+   It becomes relevant again if this class is ever rolled back to 3 replicas.
+
+4. **Overnight VolSync backups for the media tier are not addressed** (§10.2), and
+   `low-power-off` makes this **worse, not better**. `VOLSYNC_STAGING_STORAGECLASS` /
+   `VOLSYNC_CACHE_SNAPSHOTCLASS` default to `longhorn-snapshot` / `longhorn-cache`, both
+   `nodeSelector: bulk`. Under `low-power` the source volumes were at least fully healthy
+   overnight; under `low-power-off` they are **degraded** during exactly the window when the
+   backup would run, on top of the mover-scheduling problem that already existed. Pointing the
+   three apps at `longhorn-critical-snapshot` / `longhorn-critical-cache` (which
+   [12](12-longhorn-critical-tier.md) created for this) is safe on a live app — unlike
+   `VOLSYNC_STORAGECLASS`, those only affect the next throwaway mover volume. **Still not
+   done**, and it is now the largest unaddressed consequence of this design.
+
+5. **Steady-state write latency is the thing to watch during the soak** (§3.2), and the bar
+   moved: the volumes went from **3-way to 5-way synchronous writes**. The measurements say
+   "affordable at 4.2 IOPS"; they do not prove Plex library scans feel the same afterwards.
+   **`plex` is SQLite and is the most exposed of the three.**
+
+6. **THREE hand-maintained invariants now, all silent, all coupled.** Nothing checks any of
+   them and every one of them fails by leaving the volumes reading `healthy` while the design
+   is quietly wrong:
+   - **`numberOfReplicas` must equal the size of the `low-power-off` tag.** Drop it below and
+     the nightly shed starts rebuilding ~170 GiB into the empty control planes every night
+     (§2.3). Raise the tag without raising the count and the same thing happens.
+   - **`low-power-off` must remain exactly "the nodes the media apps can run on".** If a node
+     gains or loses an Intel iGPU, or an app's nodeAffinity changes, the tag must follow.
+   - **The alert rule's `node=~"fluttershy|kerfuffle"` regex must match the shed set** (§2.2.4).
+     If the shed set changes, that is a *third* place to edit, in a different file, with
+     nothing linking it to the other two.
+
+   The tag also lives in **two** places — the live `nodes.longhorn.io` CRs and
+   `talos/talconfig.yaml` — and only the CRs take effect, so those two can silently disagree
+   (they do, right now, in the other direction: talconfig has `low-power-off` and the CRs do
+   not). A cheap guard would be an alert on the eligible-node count, or a line in
+   [24](24-power-states.md)'s node-tagging procedure.
+
+7. ~~**Control-plane maintenance now degrades three more volumes.**~~ **⚠️ REOPENED AND
+   WORSE.** The `low-power` revision closed this by pointing at two spare eligible nodes.
+   `low-power-off` has **zero spares** (§6.7), so a downed eligible node strands these volumes
+   degraded until it returns — the `critical`-era behaviour, chosen deliberately this time
+   because it is the same property that makes the nightly window churn-free. A control-plane
+   Talos upgrade will degrade all three volumes for the length of the drain and stall tuppr's
+   next drain behind them.
+
+8. **The `Scheduled` condition is unmonitored** (§8.3). `dataLocality: disabled` means this
    design should never set it — and post-migration it reads `True` on all three — but nothing
-   would tell you if that assumption broke.
+   would tell you if that assumption broke. **See item 12 for how much larger this problem
+   turned out to be.**
+
 9. **The three `volsync-src-*-cache` volumes carrying non-conforming `pegasus` replicas**
-   (§4.2) are unrelated cruft this investigation surfaced. Harmless — they are `bulk`-selector
-   volumes with a replica on a control plane — but they are evidence that the Tier-2
-   `nodeSelector` backfill doc 12 deferred is still outstanding.
-10. **The `longhorn-media` class and the three live volumes can now drift apart** (§10.2). A
-    future edit to the class's `parameters` is delete-and-recreated onto the class by
-    `force: true` and does **not** reach the existing volumes, which must be patched by hand.
-    Nothing detects the divergence.
-11. **⚠️ NEW — rebuild throughput was over-estimated by ~4×** (§7). Measured **26–33 MiB/s**
-    onto the control-plane Transcend disks against a predicted median of **119 MiB/s**, and
-    the historical `healthyAt − creationTimestamp` sample set that produced 119 has not been
-    re-examined to find out why. Anything else in the estate planning a Longhorn migration off
-    those historical figures is planning off a bad number.
+   (§4.2) are unrelated cruft this investigation surfaced. Harmless — `bulk`-selector volumes
+   with a replica on a control plane — but evidence that the Tier-2 `nodeSelector` backfill
+   doc 12 deferred is still outstanding.
+
+10. **The `longhorn-media` class and the three live volumes drift apart by construction**
+    (§10.2). A future edit to the class's `parameters` is delete-and-recreated onto the *class*
+    by `force: true` and does **not** reach the existing volumes, which must be patched by
+    hand. This has now happened twice in one day and nothing detects the divergence. **The
+    class still has zero volumes provisioned against it.**
+
+11. **Rebuild throughput was over-estimated by ~4×** (§7). Measured **26–33 MiB/s** onto the
+    control-plane Transcend disks against a predicted median of **119 MiB/s**, and the
+    historical `healthyAt − creationTimestamp` sample set that produced 119 has not been
+    re-examined. Anything else in the estate planning a Longhorn migration off those historical
+    figures is planning off a bad number. **Four of the seven `low-power-off` rebuilds target
+    worker NVMe rather than control-plane SATA, which will produce the first clean comparison.**
+
+12. **⚠️ NEW, AND THE BIGGEST FINDING HERE — three Longhorn volume alerts had been dead since
+    this cluster was built** (§2.2.1). `longhorn_volume_robustness == 2` tests an enum the
+    metric stopped being (it is one-hot with a `state=` label in v1.12.1), *and* the
+    kube-state-metrics join used a `volumename` label that `kube_persistentvolume_info` does
+    not have. Either fault alone is fatal; both were present. Prometheus reported the rules
+    `health: ok` and `state: inactive` throughout, and there are **zero** `ALERTS` series for
+    them in 30 days of retention.
+    - `LonghornVolumeStatusWarning` and `LonghornVolumeStatusCritical` (**faulted** — data
+      down) are **FIXED** in this change.
+    - **`LonghornVolumeActualSpaceUsedWarning` is deliberately still dead.** The same one-line
+      fix applies, but the fixed expression returns **eight** volumes today, three over 100 %.
+      That needs its own triage pass — and a decision about whether
+      `actual_size / capacity` is even meaningful for thin-provisioned volumes, since
+      `longhorn_volume_actual_size_bytes` counts allocated blocks that never shrink after a
+      delete. **Until then, nothing warns that a Longhorn volume is nearly full.**
+    - **Wider lesson worth carrying:** every "no volume alerts fired" reassurance in this
+      document set was true and meaningless. **A vendored example alert rule is a claim, not a
+      guarantee**, and it should be checked against the live metric shape after every upgrade
+      of the thing that emits it. The header of `pvc-usage-rules.yaml` now carries a 30-second
+      recipe for doing exactly that.
+
+13. **⚠️ NEW — the 09:00 recovery is UNVERIFIED, and `staleReplicaTimeout` may make it
+    expensive.** §2.3 argues Longhorn has nowhere to rebuild at 02:00 and therefore waits and
+    fast-resyncs at 09:00. The "nowhere to rebuild" half is well grounded in source. The
+    "fast-resync" half is **assumed**. Against it: `staleReplicaTimeout` on these volumes is
+    `"30"` — **minutes** — and Longhorn deletes failed replicas older than that when the
+    volume still has healthy ones. If that fires at ~02:30, the overnight replicas are *gone*
+    by morning and 09:00 becomes a full **~170 GiB rebuild every single day**, which would be
+    a serious and continuing cost that nothing currently measures.
+    **The first real night is the test** — §6.4's morning checklist is written for it. If
+    replica `creationTimestamp`s change overnight, this design needs `staleReplicaTimeout`
+    raised well past the seven-hour window (or the whole thing reconsidered).
+
+14. **⚠️ NEW — a third eligible node failing during the window is invisible** (§6.7 item 3).
+    The alert exclusion keys on "a media worker is not Ready", so during the shed it also
+    suppresses a *genuine* extra failure that takes a volume from 3 healthy to 2. The
+    `faulted` alert is not gated and would still fire on total loss, but the degraded-further
+    case is hidden. This is the sharpest edge of the design and no cheap fix presents itself:
+    distinguishing "degraded by exactly the expected two replicas" from "degraded by three"
+    would need a replica-count metric the alert does not currently have.
