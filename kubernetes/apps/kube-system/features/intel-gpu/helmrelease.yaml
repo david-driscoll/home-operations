@@ -14,6 +14,31 @@ spec:
   url: oci://ghcr.io/home-operations/charts-mirror/intel-device-plugins-gpu
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+#
+# THE CONTROL-PLANE GPU PLUGIN.
+#
+# The generic name is deliberate and worth explaining, because the obvious
+# reading -- that `intel-gpu-plugin` should be the workers and the control
+# planes get the suffixed name -- is the expensive one.
+#
+# This release already exists and already OWNS the two NodeFeatureRules
+# (`intel-dp-gpu-device` and `intel-gpu-platform-labeling`). Those rules are
+# cluster-scoped with fixed names that do not derive from .Values.name, so only
+# one release can create them. Handing the generic name to a new workers release
+# would mean transferring Helm ownership of live objects -- and
+# `intel-gpu-platform-labeling` is what emits the `gpu.intel.com/device-id.*`
+# labels that BOTH releases below select on. A botched transfer takes out every
+# GPU workload in the cluster, not just one node class.
+#
+# Keeping the rules with the release that already owns them makes the whole
+# problem disappear: no adoption step, no `helm.sh/resource-policy: keep`, no
+# ordering dependency between two Flux reconciles.
+#
+# Control planes are also the right long-term owner regardless: they are the
+# always-on tier. The workers release is the one that gets suspended or removed
+# when the media workers are shed, and a rule pruned along with it would strip
+# the gpu labels from every node -- including the control planes that would then
+# be the only GPUs left.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -44,40 +69,57 @@ spec:
     keepHistory: false
   values:
     name: intel-gpu-plugin
-    # Owned by the CONTROL-PLANE release below -- see the comment there for why
-    # ownership sits on that side rather than this one.
-    nodeFeatureRule: false
-    # Three containers per GPU. Currently claimed on these nodes: jellyfin and
-    # dispatcharr on fluttershy, plex on kerfuffle.
-    sharedDevNum: 3
-    allocationPolicy: balanced # Spread workloads evenly across available GPUs
-    # Pinned to the WORKER iGPU by device ID. The control planes carry 46d4 and
-    # are served by the separate release below at a lower sharing ratio; the two
-    # device IDs are disjoint, so no node is ever claimed by both DaemonSets.
+    # This release owns the cluster's NodeFeatureRules -- see the block above.
+    nodeFeatureRule: true
+    # Two containers per GPU across three control planes, so six slots.
     #
-    #   46a6 -> fluttershy, kerfuffle          (workers)
+    # Three claims have to fit here when the media workers are shed overnight:
+    # plex, jellyfin and dispatcharr. One slot per GPU would give exactly three
+    # -- an exact fit with zero headroom, so a single control plane down for an
+    # upgrade would leave one of the three unschedulable. Two per GPU keeps the
+    # whole set schedulable on any two of the three nodes.
+    sharedDevNum: 2
+    # Legal only because sharedDevNum is above 1. The operator's validating
+    # webhook (vgpudeviceplugin.kb.io) rejects any policy at sharedDevNum 1 with
+    #   PreferredAllocationPolicy is valid only when setting sharedDevNum > 1
+    # and rejects an empty value too, so at 1 this would have to read `none`
+    # rather than being omitted. Caught by a server-side dry run.
+    allocationPolicy: balanced
+    # Pinned to the CONTROL-PLANE iGPU by device ID. The control planes and the
+    # media workers run different Intel silicon, and NFD already publishes the
+    # device ID -- so the two node classes separate without inventing a label.
+    #
     #   46d4 -> milky-way, othalla, pegasus    (control planes)
+    #   46a6 -> fluttershy, kerfuffle          (workers)
+    #
+    # Disjoint by construction: a node has one iGPU, so no node is ever claimed
+    # by both DaemonSets and nothing has to be kept in sync by hand.
     #
     # Quoting is load-bearing: node label values are strings, and an unquoted
     # `true` here is a YAML boolean that will not match the label.
     nodeSelector:
       intel.feature.node.kubernetes.io/gpu: "true"
-      gpu.intel.com/device-id.0300-46a6.present: "true"
+      gpu.intel.com/device-id.0300-46d4.present: "true"
     # NOTE: this chart renders a GpuDevicePlugin CR, not a DaemonSet -- the
-    # intel-device-plugin-operator turns the CR into the
-    # intel-gpu-plugin-intel-gpu-plugin DaemonSet. `tolerations` is a passthrough
-    # field on the CR spec (templates/gpu.yaml), so it does reach the pods, but
-    # the operator is the thing that applies it: hand-patching the DaemonSet
-    # would be reverted.
+    # intel-device-plugin-operator turns the CR into the DaemonSet.
+    # `tolerations` is a passthrough field on the CR spec (templates/gpu.yaml),
+    # so it does reach the pods, but the operator is the thing that applies it:
+    # hand-patching the DaemonSet would be reverted.
     #
-    # No control-plane toleration here on purpose: this release's nodeSelector
-    # can never match a control plane, so a toleration would be dead config.
+    # Required here: the control planes carry the NoSchedule taint from piece 20 §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+#
+# THE WORKER GPU PLUGIN. New release, so it creates only its own
+# GpuDevicePlugin CR and takes ownership of nothing that already exists.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: intel-gpu-plugin-cp
+  name: intel-gpu-plugin-workers
 spec:
   chartRef:
     kind: OCIRepository
@@ -103,43 +145,18 @@ spec:
   uninstall:
     keepHistory: false
   values:
-    name: intel-gpu-plugin-cp
-    # This release owns the NodeFeatureRule for the whole cluster.
-    #
-    # The rule is a single cluster-scoped object with a FIXED name
-    # (`intel-dp-gpu-device`) that does NOT derive from .Values.name, so exactly
-    # one release may create it or the two fight over the same object. It is
-    # what applies the `intel.feature.node.kubernetes.io/gpu` label that BOTH
-    # releases select on -- including this one.
-    #
-    # Ownership belongs on the control-plane side because the control planes are
-    # the always-on tier. The worker release is the one that gets suspended or
-    # removed when the media workers are shed; if it owned the rule, Flux would
-    # prune the rule with it, the gpu label would vanish from every node, and
-    # this release would lose its own nodeSelector -- taking the control-plane
-    # GPUs down at exactly the moment they are the only ones left. Owning it
-    # from the tier that never goes away removes that failure mode entirely.
-    nodeFeatureRule: true
-    # Two containers per GPU across three control planes, so six slots.
-    #
-    # Three claims have to fit here when both media workers are shed overnight:
-    # plex, jellyfin and dispatcharr. One slot per GPU would give exactly three
-    # -- an exact fit with zero headroom, so a single control plane being down
-    # for an upgrade would leave one of the three unschedulable. Two per GPU
-    # keeps the whole set schedulable on any two of the three nodes.
-    sharedDevNum: 2
-    # Legal only because sharedDevNum is above 1. The operator's validating
-    # webhook (vgpudeviceplugin.kb.io) rejects any policy at sharedDevNum 1 with
-    #   PreferredAllocationPolicy is valid only when setting sharedDevNum > 1
-    # and rejects an empty value too, so at 1 this must read `none` rather than
-    # being omitted. Caught by a server-side dry run.
-    allocationPolicy: balanced
-    # 46d4 is the control-plane iGPU. Disjoint from the workers' 46a6.
+    name: intel-gpu-plugin-workers
+    # MUST stay false. The NodeFeatureRules are owned by the control-plane
+    # release above; setting this true would make two releases fight over the
+    # same two fixed-name cluster-scoped objects.
+    nodeFeatureRule: false
+    # Three containers per GPU. Currently claimed on these nodes: jellyfin and
+    # dispatcharr on fluttershy, plex on kerfuffle.
+    sharedDevNum: 3
+    allocationPolicy: balanced # Spread workloads evenly across available GPUs
+    # 46a6 is the worker iGPU (Iris Xe). Disjoint from the control planes' 46d4.
     nodeSelector:
       intel.feature.node.kubernetes.io/gpu: "true"
-      gpu.intel.com/device-id.0300-46d4.present: "true"
-    # Required: the control planes carry the NoSchedule taint from piece 20 §4.
-    tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        operator: Exists
-        effect: NoSchedule
+      gpu.intel.com/device-id.0300-46a6.present: "true"
+    # No control-plane toleration on purpose: this release's nodeSelector can
+    # never match a control plane, so a toleration would be dead config.
