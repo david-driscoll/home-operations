@@ -51,8 +51,8 @@ spec:
     GITHUB_TOKEN:
       type: Secret
       secret:
-        name: pulumi-operator-github
-        key: credential
+        name: github-token
+        key: token
     PULUMI_CONFIG_PASSPHRASE:
       type: Secret
       secret:
@@ -87,8 +87,8 @@ spec:
     github:token:
       type: Secret
       secret:
-        name: pulumi-operator-github
-        key: credential
+        name: github-token
+        key: token
     authentik:token:
       type: Secret
       secret:
@@ -107,8 +107,8 @@ spec:
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
-              name: pulumi-operator-github
-              key: credential
+              name: github-token
+              key: token
         # Cap V8's heap well under the 6Gi container limit so Node proactively GCs
         # instead of ballooning until the kernel OOM-kills the whole process tree.
         - name: NODE_OPTIONS

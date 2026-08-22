@@ -493,8 +493,8 @@ export class DockgeLxc extends ComponentResource {
     );
 
     // Phase 8 dual-write (openbao-migration PLAN §G): the item also lands at
-    // its canonical OpenBao path (`secrets/hosts/dockge/<slug>`, the
-    // tag:dockge rule in scripts/op-to-bao/mapping.ts) with the exact field
+    // its canonical OpenBao path (`secrets/hosts/dockge/<slug>`, derived by
+    // `dockgeBaoPath` in components/bao.ts) with the exact field
     // shape of the OnePasswordItem above. That prefix was seeded by the
     // one-time Phase 4 migration and then FROZE — found live the day the
     // 1Password write-back was fixed, when `DockgeLxc: Luna`'s new ipAddress

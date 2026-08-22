@@ -4,11 +4,11 @@
  *
  * Two things live here:
  *
- * 1. `BaoClient` — the minimal KV v2 REST client. This is the long-lived home
- *    of the client that started life in `scripts/op-to-bao/bao.ts` (that file
- *    now re-exports from here); the migration script gets deleted after
- *    Phase 11, this component does not. It is for imperative callers (the
- *    migration tool); Pulumi resources go through the provider below.
+ * 1. `BaoClient` — the minimal KV v2 REST client. It started life inside the
+ *    1Password→OpenBao migration script and moved here when Phase 8a gave it a
+ *    second consumer; that script has since been deleted and this has not. It
+ *    is for imperative callers (`scripts/bao-move.ts`, `scripts/bao-reorg/`);
+ *    Pulumi resources go through the provider below.
  *
  * 2. `baoKvSecret()` — a thin factory over `vault.kv.SecretV2` from the
  *    official Pulumi Vault provider. OpenBao is an API-compatible Vault fork,
@@ -21,8 +21,8 @@
  * The provider itself is constructed once in `components/globals.ts`
  * (`GlobalResources.baoProvider`) like every other provider in this repo, and
  * reads BAO_ADDR / BAO_TOKEN from the environment — the standard OpenBao CLI
- * variables, so `bao`, the op-to-bao migration script and Pulumi all share one
- * credential. Mint the token from the `pulumi` AppRole (vault repo:
+ * variables, so the `bao` CLI, the imperative scripts under `scripts/` and
+ * Pulumi all share one credential. Mint the token from the `pulumi` AppRole (vault repo:
  * bootstrap/openbao/pulumi-approle.sops.yaml).
  *
  * ## Dual-run rule (until Phase 11)
@@ -230,10 +230,15 @@ export class BaoClient {
 /**
  * lowercase, non-alphanumerics collapsed to a single dash, trimmed.
  *
- * MUST stay byte-identical to `slug()` in `scripts/op-to-bao/mapping.ts` —
- * both derive the same OpenBao paths from 1Password titles, and a divergence
- * would silently split one credential across two paths. A test in
- * `scripts/op-to-bao/bao-paths.test.ts` asserts the two agree.
+ * This used to have a twin — `slug()` in the migration script — and the rule
+ * here was "stay byte-identical or one credential silently splits across two
+ * paths". That script is gone, so this is now the only implementation and the
+ * hazard is different: the paths it derives are ALREADY WRITTEN in OpenBao.
+ * Changing the rule does not move them, it just stops finding them — and the
+ * two biggest callers (`dockgeBaoPath`, `pbsBaoPath`) are read back by a LIST
+ * of their prefix, which returns a smaller set rather than an error.
+ *
+ * `components/bao.test.ts` pins the behaviour.
  */
 export function baoSlug(input: string): string {
   return input
@@ -258,8 +263,10 @@ export function oidcBaoPath(clusterKey: string, appName: string): string {
 
 /**
  * Canonical OpenBao path (within the `secrets` mount) for a PBS credential
- * item, from its 1Password title — matches the `tag:pbs` rule in
- * `scripts/op-to-bao/mapping.ts` (`hosts/pbs/<slug(title)>`).
+ * item, from its 1Password title: `hosts/pbs/<slug(title)>`.
+ *
+ * This is the prefix `BaoStore.proxmoxBackupServers` lists, so it is half of a
+ * round trip — see the note on `baoSlug`.
  */
 export function pbsBaoPath(title: string): string {
   return `hosts/pbs/${baoSlug(title)}`;
@@ -267,9 +274,8 @@ export function pbsBaoPath(title: string): string {
 
 /**
  * Canonical OpenBao path (within the `secrets` mount) for a Dockge LXC item,
- * from its 1Password title — matches the `tag:dockge` rule in
- * `scripts/op-to-bao/mapping.ts` (`hosts/dockge/<slug(title)>`), which is the
- * prefix `BaoStore.getDockgeInstances` lists.
+ * from its 1Password title: `hosts/dockge/<slug(title)>`, which is the prefix
+ * `BaoStore.getDockgeInstances` lists.
  */
 export function dockgeBaoPath(title: string): string {
   return `hosts/dockge/${baoSlug(title)}`;
@@ -277,8 +283,9 @@ export function dockgeBaoPath(title: string): string {
 
 /**
  * Standard custom_metadata provenance for Pulumi-generated secrets, mirroring
- * the op-to-bao convention: labels about the secret live in custom_metadata,
- * values consumers need live in data (vals cannot read metadata).
+ * the convention the 1Password migration established: labels about the secret
+ * live in custom_metadata, values consumers need live in data (vals cannot
+ * read metadata).
  */
 export function baoProvenance(extra: Record<string, pulumi.Input<string>> = {}): Record<string, pulumi.Input<string>> {
   return {
@@ -300,8 +307,9 @@ export interface BaoKvSecretArgs {
   /** Path within the mount, no leading slash, e.g. `clusters/equestria/apps/headlamp/oidc`. */
   path: pulumi.Input<string>;
   /**
-   * Secret payload. Nested objects become nested KV data (the section shape
-   * op-to-bao uses). Serialized to `dataJson` and marked secret, so it is
+   * Secret payload. Nested objects become nested KV data — the shape the
+   * migration gave 1Password sections. Serialized to `dataJson` and marked
+   * secret, so it is
    * encrypted in Pulumi state.
    */
   data: pulumi.Input<Record<string, unknown>>;

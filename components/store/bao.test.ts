@@ -3,8 +3,12 @@
  *
  * Covers the Phase 8 read path: KV v2 result -> the object shape stacks
  * already consume. No Pulumi engine and no network — `shapeItem` is pure, and
- * `BaoClient`'s wire behaviour is covered in scripts/op-to-bao/mapping.test.ts
- * against a stub server.
+ * every client here is a stub.
+ *
+ * `BaoClient`'s own wire behaviour is NOT covered anywhere: the stub-server
+ * tests that covered it lived in the migration script's `mapping.test.ts`,
+ * deleted with the rest of it once the migration completed. Its path-derivation
+ * helpers are pinned by components/bao.test.ts; the HTTP layer is not.
  *
  * The point of these is the `secret()` markers. A field that loses one still
  * renders the right value, still produces a clean `pulumi preview`, and writes
@@ -115,8 +119,8 @@ describe("BaoStore", () => {
     } as unknown as ConstructorParameters<typeof BaoStore>[0];
   }
 
-  it("resolves a 1Password title to shared/<slug>", async () => {
-    const store = new BaoStore(stubClient({ "shared/cloudflare-driscoll-tech": kv({ zoneId: "z" }) }));
+  it("resolves a 1Password title to the path TITLE_PATHS names", async () => {
+    const store = new BaoStore(stubClient({ "third-party-tokens/cloudflare/driscoll-tech": kv({ zoneId: "z" }) }));
     const item = await new Promise<any>(res => store.getSecretByTitle<{ zoneId: string }>("Cloudflare (driscoll.tech)").apply(v => (res(v), v)));
     assert.equal(item.zoneId, "z");
   });
@@ -160,9 +164,18 @@ describe("BaoStore", () => {
 });
 
 describe("resolveBaoPath", () => {
-  it("slugs an ordinary title into shared/", () => {
-    assert.equal(resolveBaoPath("Cloudflare (driscoll.tech)").path, "shared/cloudflare-driscoll-tech");
-    assert.equal(resolveBaoPath("minio root user").path, "shared/minio-root-user");
+  it("resolves a named title through TITLE_PATHS", () => {
+    assert.equal(resolveBaoPath("Cloudflare (driscoll.tech)").path, "third-party-tokens/cloudflare/driscoll-tech");
+    assert.equal(resolveBaoPath("minio root user").path, "apps/minio/root");
+  });
+
+  it("refuses an unlisted title instead of deriving a shared/ path", () => {
+    // The old default was `shared/<slug>`, which the reorganisation emptied. A
+    // derived path would still be well-formed and would still 404 — at read
+    // time, far from the call site that needs the entry.
+    const r = resolveBaoPath("Some Credential Nobody Listed");
+    assert.equal(r.path, undefined);
+    assert.match(r.reason ?? "", /TITLE_PATHS/);
   });
 
   it("sends a generated OIDC credential to its per-app path, not to shared/", () => {
@@ -206,8 +219,10 @@ describe("resolveBaoPath", () => {
     // pins is the slug, not the cluster.
     assert.equal(resolveBaoPath("Alpha Site Backup Plan").path, "clusters/_inventory/alpha-site-backup-plan");
     assert.equal(resolveBaoPath("Tailscale Export - home-operations").path, "clusters/_inventory/tailscale-export-home-operations");
-    // A title merely containing the words is not the family.
-    assert.equal(resolveBaoPath("Backup Plan Review Notes").path, "shared/backup-plan-review-notes");
+    // A title merely containing the words is not the family. It now falls
+    // through to the unlisted-title refusal rather than to a slugged path, but
+    // the property under test is the same one: it must not be routed here.
+    assert.equal(resolveBaoPath("Backup Plan Review Notes").path, undefined);
   });
 
   it("does not slug a UUID-addressed item into a UUID-shaped path", () => {

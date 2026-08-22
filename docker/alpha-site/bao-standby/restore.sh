@@ -62,7 +62,7 @@ Standby is up and unsealed. Before trusting it, run the canary read
 
   export BAO_ADDR=https://bao-standby.<tailscale-domain>   # or http://<tailnet-ip>:8201
   bao login   # or use an approle that lives in the restored data
-  bao kv get secrets/shared/cloudflare-driscoll-tech
+  bao kv get secrets/third-party-tokens/cloudflare/driscoll-tech
 
 Then re-point consumers (Scenario B step 6). Remember: everything written to
 OpenBao after the dump's timestamp does not exist here — RPO is up to 24h.

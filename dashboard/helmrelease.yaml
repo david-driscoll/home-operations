@@ -66,6 +66,17 @@ spec:
               tag: 2.3.1@sha256:879f07646aaf6fc5f6ded8d734711a4c8364df3a64ab48091ddd1be9b7151172
             env:
               TZ: "${TIMEZONE}"
+              # Minted by the vault stack from the GitHub App and reflected into
+              # every namespace by emberstack, so it rotates on its own. It is
+              # deliberately NOT part of ${APP}-env: that Secret is assembled
+              # from OpenBao, and putting a self-rotating token behind an
+              # ExternalSecret refresh would pin it to whatever value the last
+              # sync saw.
+              GITHUB_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: github-token
+                    key: token
             envFrom:
               - secretRef:
                   name: ${APP}-env

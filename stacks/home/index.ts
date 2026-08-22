@@ -165,7 +165,7 @@ const _thanosMinioSecret = new OnePasswordItem("thanos-minio-secret", {
 // The OpenBao twin of the item above.
 //
 // This one was missing, and it is the Phase 8 "frozen twin" bug live: TWO
-// ExternalSecrets read `shared/thanos-s3-storage` (equestria observability/thanos
+// ExternalSecrets read `clusters/equestria/apps/thanos/s3` (equestria observability/thanos
 // and SGC observability/prometheus-proxy), but the only producer wrote
 // 1Password. What they were reading is the one-time op-to-bao copy from
 // 2026-08-08, version 1, never refreshed — so the day this Minio credential
@@ -180,7 +180,7 @@ if (globals.baoDualWriteEnabled) {
     "thanos-minio-secret-bao",
     {
       mount: "secrets",
-      path: "shared/thanos-s3-storage",
+      path: "clusters/equestria/apps/thanos/s3",
       data: {
         username: globals.truenasMinioProvider.minioUser,
         password: globals.truenasMinioProvider.minioPassword,
@@ -194,7 +194,7 @@ if (globals.baoDualWriteEnabled) {
   );
 } else {
   pulumi.log.warn(
-    "No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for Thanos S3 Storage. The shared/thanos-s3-storage path its ExternalSecrets read stays frozen until a credentialed run.",
+    "No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the OpenBao dual-write for Thanos S3 Storage. The clusters/equestria/apps/thanos/s3 path its ExternalSecrets read stays frozen until a credentialed run.",
   );
 }
 

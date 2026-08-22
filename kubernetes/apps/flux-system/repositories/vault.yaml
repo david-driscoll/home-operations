@@ -39,7 +39,7 @@ spec:
   dataFrom:
     - extract:
         # was: GitHub david-driscoll/vault Deploy Key
-        key: shared/github-david-driscoll-vault-deploy-key
+        key: third-party-tokens/github/david-driscoll/vault/deploy-key
       rewrite:
         - regexp:
             source: "[\\W]"

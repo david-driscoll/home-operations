@@ -75,7 +75,7 @@ export class BackupPlanOrchestrator extends ComponentResource {
 
     // Phase 8 dual-write (openbao-migration PLAN §G-8): the plan also lands at
     // its reserved inventory path (`clusters/_inventory/<slug(title)>`, the
-    // tag:backup-plan rule in scripts/op-to-bao/mapping.ts). The 1Password
+    // path the migration reserved for the tag:backup-plan family). The 1Password
     // field is Concealed, so `concealed_fields: plan` keeps the `secret()`
     // marker on the read side. 1Password stays authoritative until Phase 11 —
     // written ALONGSIDE the item, never instead of it; rollback is a plain
@@ -97,7 +97,10 @@ export class BackupPlanOrchestrator extends ComponentResource {
         { parent: this, provider: this.globals.baoProvider },
       );
     } else {
-      log.warn(`No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the backup-plan dual-write for '${title}'. 1Password stays authoritative; the inventory path stays stale until a credentialed run.`, this);
+      log.warn(
+        `No OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID + BAO_SECRET_ID) — skipping the backup-plan dual-write for '${title}'. 1Password stays authoritative; the inventory path stays stale until a credentialed run.`,
+        this,
+      );
     }
 
     return item;

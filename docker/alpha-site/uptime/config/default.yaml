@@ -10,8 +10,8 @@ concurrency: 2
 
 alerting:
   pushover:
-    application-token: "ref+openbao://secrets/shared/gatus-pushover-key#/credential"
-    user-key: "ref+openbao://secrets/shared/gatus-pushover-key#/username"
+    application-token: "ref+openbao://secrets/third-party-tokens/pushover/gatus#/credential"
+    user-key: "ref+openbao://secrets/third-party-tokens/pushover/gatus#/username"
     priority: 1
     resolved-priority: -1
     default-alert:
