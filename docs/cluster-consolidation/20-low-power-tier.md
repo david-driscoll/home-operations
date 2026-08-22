@@ -1377,11 +1377,107 @@ pecron_runtime_remaining_seconds   # the real answer to "how long can a window l
 pecron_battery_percent
 ```
 
-Record `pecron_runtime_remaining_seconds` at idle here, on mains, with everything up. It is the
-ceiling: a window can never last longer than the figure reported while the workers are *still
-running*, so if that number is already near 3–4 h at full load, the design's headroom is thinner
-than D6 assumed. Stage 4 then records the slope with the workers actually off, which is the
-number that matters. §9 item 11.
+~~Record `pecron_runtime_remaining_seconds` at idle here, on mains, with everything up. It is the
+ceiling.~~ **That does not work — corrected 2026-08-22.** On mains the device has nothing to
+estimate from and reports a flat sentinel (`359640` s = 99.9 h) on all three units. Anyone
+following the original instruction would have recorded 99.9 h and moved on.
+
+Compute the ceiling from **load** instead — `pecron_ac_output_power_watts` against the F3000LFP's
+3072 Wh — and record the 24 h mean *and* peak, because they give very different answers. See
+"Stage 1 RESULTS" below. Stage 4 then records the real discharge slope with the workers off, which
+is the only number that settles it. §9 item 11.
+
+#### Stage 1 RESULTS — run 2026-08-22
+
+**All nine pre-flight checks pass. First time.** Check 2 (etcd) had never been re-run in this
+plan's history and is included below.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Topology | **pass** — 7 Ready, none cordoned; the trio carries `node-role.kubernetes.io/control-plane:NoSchedule`, the four workers carry none |
+| 2 | etcd | **pass** — 3 voting members, no learners, **no alarms**, all three at raft index 266533227 / term 408, leader `milky-way`. DB 296–307 MB, 141 MB in use (46 %) against the 4 GiB `quota-backend-bytes` |
+| 3 | Zero degraded volumes | **pass** — 0 degraded, 0 faulted |
+| 4 | Tier-1 volumes ≥ 2 replicas on the trio | **pass**, but the check as worded reports 10 false failures — see below |
+| 5 | Piece 12 landed | **pass** — `longhorn` is `bulk`, `longhorn-critical` exists, all 7 nodes tagged (`critical` ×3, `bulk` ×4) |
+| 6 | Longhorn `taint-toleration` | **pass** — `APPLIED: true`, annotation present on `longhorn-csi-plugin` |
+| 7 | Flux reconciled | **pass** — 0 Kustomizations and 0 HelmReleases not-ready |
+| 8 | DNS on a control plane | **pass** — `technitium` on `othalla` via `technitium-dns: "true"` |
+| 9 | alpha-site up | **pass** — Gatus answered |
+
+**Check 4 is worded so that it can never read clean, and that needs fixing before it trains
+anyone to ignore it.** It asks for ≥ 2 replicas on the trio across every `critical` volume, but
+piece 12 also introduced `longhorn-critical-snapshot` and `longhorn-critical-cache` at
+`numberOfReplicas: 1`. Ten VolSync staging volumes therefore report "1 replica" forever, by
+design. The seven real Tier-1 volumes — `home-assistant`, `matter`, `mosquitto-0`, `mosquitto-1`,
+`technitium`, `tsidp`, `tsiam` — all hold **3 replicas on the trio and are `healthy`**. Read the
+check as "every 3-replica `critical` volume", or it is the same always-dirty signal §9 item 1
+already flags for the registry.
+
+#### etcd's footprint — §9 item 11, answered
+
+The number §3's capacity model excluded, because it is a host service and invisible to
+`kubectl top`:
+
+| Node | etcd RSS |
+|---|---|
+| `milky-way` (leader) | **585 MiB** |
+| `othalla` | **448 MiB** |
+| `pegasus` | **431 MiB** |
+
+≈ **1.43 GiB across the trio**, ~0.5 GiB per 16 GiB node. Meaningful against §3's arithmetic but
+not alarming, and the leader carries the most — worth remembering when the leader is also the node
+you are about to reboot.
+
+#### etcd fsync — the exit-storm risk, and it is real
+
+Over a 6-hour window, cluster-wide:
+
+    p50   3.8 ms
+    p99  14.4 ms      ← etcd's guidance is < 10 ms
+
+Per node the p99 sits at 13–14 ms, and backend-commit p99 at 16 ms. **This is at idle, on mains,
+with everything healthy.** It matches the README's ShiJi-NVMe measurement (3.7 ms p50 / 13.7 ms
+p99) almost exactly, which makes it hardware-bound and persistent rather than transient load.
+
+§6.2 calls the exit the dangerous direction because of the write burst when workers return. That
+burst lands on an etcd already outside guidance before it starts. Not a blocker for entering a
+window — but it is a measured reason to bring workers back **one at a time with the gates between
+them**, exactly as §6.2 already insists, rather than treating that rule as ceremony.
+
+#### The battery baseline — and the metric this file told you to use does not work
+
+**`pecron_runtime_remaining_seconds` is a sentinel while on mains.** All three units report a flat
+`359640` (99.9 h), unchanged across the whole retention window. The device has nothing to estimate
+from when it is not discharging. Stage 1 as originally written said to "record
+`pecron_runtime_remaining_seconds` at idle here, on mains… It is the ceiling" — that cannot work,
+and anyone following it would have written down 99.9 h and moved on.
+
+Compute it from load instead. Three units, `pecron-monitor` scraped through to Thanos:
+
+| Unit | Now | 24 h mean | 24 h peak | Battery |
+|---|---|---|---|---|
+| **Primary** | 294 W | **349 W** | **1650 W** | 98 % |
+| **Backup** | 79 W | 116 W | 901 W | 98 % |
+| **Spare** | 0 W | 3.5 W | 27 W | 100 % (standby) |
+
+At the F3000LFP's 3072 Wh, and derating 0.88 for inverter losses:
+
+| Unit | at 24 h mean | at 24 h peak |
+|---|---|---|
+| **Primary** | **≈ 7.7 h** | **≈ 1.6 h** |
+| Backup | ≈ 23.3 h | ≈ 3.0 h |
+
+**Primary is the binding unit, and the answer is better than D6 assumed at typical load and worse
+at peak.** ~7.7 h against a 3–4 h target is real headroom. But the observed 24-hour peak of 1650 W
+gives only ~1.6 h — under target. That peak is workers under load, which is precisely what a
+low-power window removes, so the design is sound; what it means is that **entering late, after
+load has already spiked, is materially different from entering at rest**, and the runbook should
+say which one it assumes.
+
+Two things this does not answer, and Stage 4 must: which loads sit on which unit (the mapping is
+not in the metrics), and the actual discharge slope with the workers off — the only number that
+settles it. Pack voltage 53.1–53.6 V, current −0.2 to −0.3 A (float), temperatures 26 °C / 26 °C /
+32 °C.
 
 ### Stage 2 — scheduling dry-run (reversible in seconds, no node powered off)
 
@@ -1671,8 +1767,15 @@ through in place rather than moved to the resolved list above — several sectio
     between "alert David, David runs §6" and "automate entry," rather than an unanswered
     engineering question. [24](24-power-states.md)'s live-toggle half is answered; this is
     the remaining half, and it is a policy call rather than a build.
-11. **etcd's memory footprint on Talos** is invisible to `kubectl top` (a host service), so
-    §3 excludes it. §8 Stage 1 measures it.
+11. ~~**etcd's memory footprint on Talos** is invisible to `kubectl top`.~~ **MEASURED
+    2026-08-22** in §8 Stage 1: **585 / 448 / 431 MiB** on milky-way / othalla / pegasus,
+    ≈ 1.43 GiB across the trio, leader highest. §3's arithmetic can now include it.
+
+    The same run measured the thing that turned out to matter more: **etcd's WAL fsync p99 is
+    14.4 ms cluster-wide over 6 h (p50 3.8 ms), against etcd's < 10 ms guidance** — at idle, on
+    mains, healthy. Hardware-bound, matching the README's ShiJi-NVMe figures. It does not block a
+    window; it is a measured reason §6.2's one-node-at-a-time exit is a real constraint rather
+    than ceremony.
 
 ---
 
