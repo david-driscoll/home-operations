@@ -29,8 +29,27 @@ spec:
       expr: status.robustness != "degraded"
       timeout: 15m
 
-  # maintenance:
-  #   windows:
-  #     - start: "0 11 * * *"    # Daily at 11
-  #       duration: "2h"         # How long window stays open
-  #       timezone: "${TIMEZONE}"
+  # ENABLED 2026-08-22, and it is now load-bearing rather than optional.
+  #
+  # The health check above gates every node drain on
+  # `status.robustness != "degraded"`, and it names no volume -- it is
+  # CLUSTER-WIDE, so ANY degraded volume anywhere stalls the next drain.
+  #
+  # The media config volumes (longhorn-media) deliberately keep replicas on
+  # fluttershy and kerfuffle so the apps get a local replica during the day.
+  # Those two nodes power off for the nightly Low Power window, which means
+  # those replicas fail and their volumes read `degraded` from 02:00 to 09:00
+  # every single night, by design.
+  #
+  # Without this window, tuppr would therefore be unable to drain a node for
+  # seven hours a night, and would fail on the 15m timeout rather than wait --
+  # silently, since a blocked upgrade looks the same as an idle one.
+  #
+  # 11:00 for 2h puts upgrades squarely inside the awake hours, when the media
+  # workers are up and their replicas are healthy. Keep this window OUTSIDE
+  # 02:00-09:00 for as long as longhorn-media keeps replicas on the shed nodes.
+  maintenance:
+    windows:
+      - start: "0 11 * * *"    # Daily at 11
+        duration: "2h"         # How long window stays open
+        timezone: "${TIMEZONE}"
