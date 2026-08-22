@@ -9,9 +9,10 @@
 # night the volumes would drop to one copy and sit `degraded` for seven hours.
 #
 # THE ANSWER: PUT THE REPLICAS ONLY ON NODES THAT NEVER SHUT DOWN.
-# `nodeSelector: critical` = the three control planes; `numberOfReplicas: "3"`.
-# Overnight the pod runs on a control plane that already holds a replica, all
-# three replicas stay up, and the volume never leaves `healthy`.
+# `nodeSelector: low-power` = the three control planes plus hard-hat and
+# shining-armor; `numberOfReplicas: "3"`. Every one of those five stays powered
+# through the window, so all three replicas stay up and the volume never leaves
+# `healthy`.
 #
 # Why that framing won over "keep 4 replicas on the 4 `bulk` nodes" (the design
 # this file used to carry). That design left the volumes DEGRADED every night,
@@ -57,9 +58,9 @@
 # SQLite-fsync bursty and that is a latency workload, not a throughput one.
 #
 # WHY THIS IS A SEPARATE CLASS AND NOT JUST `longhorn-critical`.
-# `longhorn-critical` (storageclass/critical.yaml) already has
-# `nodeSelector: critical` and `numberOfReplicas: "3"`, so it would place these
-# volumes identically today. Two reasons not to reuse it:
+# `longhorn-critical` (storageclass/critical.yaml) has `nodeSelector: critical`
+# and `numberOfReplicas: "3"`, which is a strict SUBSET of this class's five
+# eligible nodes. Two reasons not to reuse it:
 #
 #   1. DIFFERENT `dataLocality`. `longhorn-critical` is `best-effort`; this
 #      class must be `disabled` (see below). That difference alone requires a
@@ -101,14 +102,25 @@
 # (`longhorn-critical` keeps `best-effort` legitimately: its workloads run ON
 # the control planes, so for them the request is satisfiable.)
 #
-# COUPLING TO WATCH. `numberOfReplicas` (3) equals the number of `critical`
-# nodes (3). That is deliberate — it is what guarantees no eligible node is ever
-# awake-and-empty. Add or remove a control plane and this number must move with
-# it, or nightly rebuild churn returns silently: nothing alerts on it and the
-# volumes stay `healthy`. There is also no spare node to rebuild onto if one
-# control plane dies, so a control-plane outage or Talos upgrade DOES degrade
-# these volumes until it returns — the same trade `longhorn-critical` already
-# makes, and the reason maintenance belongs in the awake window.
+# WHY THE NIGHTLY WINDOW COSTS NOTHING HERE. Every `low-power` node stays
+# powered through it, so no replica ever fails, nothing goes `degraded`, no
+# `LonghornVolumeStatusWarning` fires, and the cluster-wide tuppr gate
+# (`status.robustness != "degraded"`) never stalls a Talos drain. That gate is
+# what ruled out every design that kept a replica on fluttershy or kerfuffle.
+#
+# UNLIKE the earlier `critical`-only shape, three replicas across FIVE eligible
+# nodes leaves two spare, so Longhorn CAN rebuild if a single node dies. That is
+# a real improvement: a control-plane outage or Talos upgrade no longer strands
+# these volumes degraded until the node returns.
+#
+# COUPLING TO WATCH. If the `low-power` tag ever shrinks to three nodes, this
+# recovers the old no-spare-node behaviour silently — nothing alerts on it. And
+# if hard-hat or shining-armor is ever added to the nightly shed, it must lose
+# the tag at the same time, or the nightly-degraded problem returns.
+#
+# NOTE `low-power` IS NOT `battery`. In a real Battery event hard-hat does go
+# down, so a replica there will fail and the volume will degrade. That is
+# expected and acceptable — Battery is an emergency, not a nightly routine.
 #
 # ⚠️ CHANGING THE CLASS IN GIT DOES NOT MIGRATE ANYTHING, AND IS NOT SAFE TO
 # POINT THE LIVE PVCs AT. All three PVCs carry
@@ -129,7 +141,27 @@ reclaimPolicy: Delete
 provisioner: driver.longhorn.io
 parameters:
   numberOfReplicas: "3"
-  nodeSelector: "critical"
+  # `low-power` = the nodes that stay powered through the nightly Low Power
+  # window: the three control planes plus hard-hat and shining-armor. It is a
+  # SEPARATE tag from `critical` on purpose -- `critical` means "Tier-0/1 storage
+  # tier", and borrowing it here would both dilute that meaning and pile every
+  # media config volume onto the same three disks that already serve the
+  # registry, home-assistant, technitium, mosquitto and tsidp.
+  #
+  # Nodes carry more than one tag, so the control planes are
+  # ["critical", "low-power"] and hard-hat/shining-armor are ["bulk", "low-power"].
+  # fluttershy and kerfuffle are deliberately NOT tagged: they are the workers
+  # that get shed, and a replica there is exactly what makes the volume degrade
+  # every night.
+  #
+  # WHY 3 REPLICAS IS ENOUGH, and why at least one always lands on a control
+  # plane: the tag covers five nodes, only TWO of which are not control planes
+  # (hard-hat, shining-armor). `replica-soft-anti-affinity` is false, so Longhorn
+  # places at most one replica per node -- three replicas therefore cannot fit on
+  # the two non-control-plane nodes, and at least one MUST land on a control
+  # plane. That is a structural guarantee, not a probability, and it is what
+  # keeps a local replica available to the pod overnight.
+  nodeSelector: "low-power"
   dataLocality: disabled
   replicaAutoBalance: best-effort
   staleReplicaTimeout: "30"
