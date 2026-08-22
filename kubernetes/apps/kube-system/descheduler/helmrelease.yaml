@@ -54,6 +54,8 @@ spec:
       apiVersion: "descheduler/v1alpha2"
       kind: "DeschedulerPolicy"
       profiles:
+        # DefaultProfile — the pre-existing cluster rebalancer. Plugin membership
+        # is unchanged; the only new setting is `nodeFit` on its evictor.
         - name: DefaultProfile
           plugins:
             evict:
@@ -69,6 +71,22 @@ spec:
               args:
                 evictSystemCriticalPods: false
                 evictLocalStoragePods: false
+                # nodeFit makes DefaultEvictor.PreEvictionFilter run
+                # PodFitsAnyOtherNode() before every eviction — re-checking
+                # nodeSelector, required node affinity, taints, unschedulable and
+                # resource fit against the ready nodes — and refuse the eviction
+                # when nothing else can take the pod.
+                # It was unset (i.e. false) until now, and
+                # docs/cluster-consolidation/29-taint-readiness-audit.md flagged
+                # exactly what that costs: with the three control planes tainted
+                # they read as permanently under-utilised, so LowNodeUtilization
+                # evicts pods off the workers toward targets that can never accept
+                # them. The pod is destroyed, the scheduler puts it straight back,
+                # and two minutes later this CronJob does it again. Churn, not
+                # outage — but pure loss.
+                # Turning it on can only ever REDUCE evictions, never add one, so
+                # it is safe to apply to the existing balance plugins.
+                nodeFit: true
             - name: RemoveDuplicates
             - name: RemovePodsViolatingTopologySpreadConstraint
             - name: LowNodeUtilization
@@ -81,3 +99,93 @@ spec:
                   cpu: 50
                   memory: 50
                   pods: 50
+
+        # LowPowerReturnProfile — the 09:00 return trip out of Low Power mode.
+        #
+        # Nightly the two media workers (fluttershy, kerfuffle) power off at 02:00
+        # and come back at 09:00. The OUTBOUND leg needs no help: shutting a node
+        # down evicts its pods and the scheduler re-places them on whichever
+        # control plane fits and is tolerated. The RETURN leg is the gap — the
+        # workers come back empty and nothing pulls plex / jellyfin / dispatcharr
+        # back off milky-way/othalla/pegasus, so they squat on the scarce
+        # control-plane iGPUs indefinitely. This profile closes that.
+        #
+        # The three apps carry a SOFT (preferred) node affinity toward the worker
+        # iGPU nodes — added on the app manifests, not here. Then:
+        #   workers gone  -> preference unsatisfiable, pod still schedules, lands
+        #                    on a control plane, and this plugin does NOT fire
+        #                    (with the workers absent from the ready-node list the
+        #                    control plane already IS the best-weighted node)
+        #   workers back  -> a better-weighted node now exists, the pod is judged
+        #                    to violate its preference, it is evicted, and the
+        #                    scheduler puts it home
+        #
+        # COST: eviction is a POD DELETE, not a live migration. plex, jellyfin and
+        # dispatcharr each RESTART at ~09:00 every morning. In-flight Plex/Jellyfin
+        # transcodes die and clients have to resume. That is the price of the
+        # return trip and it is deliberate, not a surprise.
+        #
+        # Why a SECOND profile instead of adding the plugin to DefaultProfile:
+        # `evictLocalStoragePods` below has to be flipped for this to work at all,
+        # and DefaultEvictor args are per-profile (descheduler wires one evictor
+        # per profile in pkg/descheduler/policyconfig.go), so isolating it here
+        # keeps that flip away from the three balance plugins.
+        - name: LowPowerReturnProfile
+          plugins:
+            # `evict:` is kept only to mirror DefaultProfile above. It is inert:
+            # v0.36.0's Plugins struct (pkg/api/types.go) has presort, sort,
+            # deschedule, balance, filter and preevictionfilter and no evict
+            # extension point at all, so the key is dropped at decode.
+            # DefaultEvictor is force-wired into filter/preEvictionFilter for
+            # EVERY profile by setDefaultEvictor() in
+            # pkg/descheduler/policyconfig.go -- which is also what makes the
+            # per-profile DefaultEvictor args below actually take effect.
+            evict:
+              enabled:
+                - DefaultEvictor
+            # `deschedule`, NOT `balance`. RemovePodsViolatingNodeAffinity
+            # implements the DeschedulePlugin interface — v0.36.0 asserts
+            # `var _ frameworktypes.DeschedulePlugin = &RemovePodsViolatingNodeAffinity{}`
+            # in pkg/framework/plugins/removepodsviolatingnodeaffinity/node_affinity.go
+            # and exposes Deschedule(), not Balance(). Listing it under `balance`
+            # is a hard startup error, not a silent no-op
+            # (pkg/framework/profile/profile.go: "configures balance extension
+            # point of non-existing plugins").
+            deschedule:
+              enabled:
+                - RemovePodsViolatingNodeAffinity
+          pluginConfig:
+            - name: DefaultEvictor
+              args:
+                evictSystemCriticalPods: false
+                # evictLocalStoragePods MUST be true here, and this is the one
+                # setting that decides whether this whole profile does anything.
+                # `false` installs the PodsWithLocalStorage protection, and
+                # utils.IsPodWithLocalStorage() counts a pod as local-storage if
+                # ANY volume is an emptyDir or a hostPath. It has nothing to do
+                # with PVCs — a Longhorn/NFS PVC volume is never local storage, and
+                # PVC-backed pods are only protected by the separate opt-in
+                # `ignorePvcPods`, which is not set anywhere in this file.
+                # But all three target apps mount emptyDirs today: plex has
+                # logs/tmp/transcode, jellyfin has transcode/cache/logs,
+                # dispatcharr has tmpfs -> /tmp. With the default `false` the
+                # evictor would refuse every one of them and the 09:00 return trip
+                # would silently never happen.
+                evictLocalStoragePods: true
+                # Same PodFitsAnyOtherNode() gate as above. Here it is what stops
+                # the descheduler evicting a media pod into thin air: if the
+                # workers are down, or up but too full, the pod stays put rather
+                # than being deleted with nowhere to go.
+                nodeFit: true
+            - name: RemovePodsViolatingNodeAffinity
+              args:
+                # nodeAffinityType is `[]string` in v0.36.0
+                # (RemovePodsViolatingNodeAffinityArgs, types.go), so it must be a
+                # LIST — a bare scalar fails to decode. Validation also rejects an
+                # empty list outright ("nodeAffinityType needs to be set").
+                # Only the preferred form is enabled. The required form is
+                # deliberately left out: nothing in the low-power design uses hard
+                # node affinity for these workloads, and enabling it would let the
+                # descheduler start evicting unrelated pods estate-wide.
+                nodeAffinityType:
+                  - preferredDuringSchedulingIgnoredDuringExecution
