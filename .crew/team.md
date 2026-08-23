@@ -33,40 +33,40 @@
 - **Project:** home-operations
 - **Owner:** David Driscoll
 - **Created:** 2026-07-26
-- **Primary crew:** Yes — this crew manages all four repositories in the estate.
-- **Issue tracker:** `david-driscoll/vault` (private). All crew issues for all four
-  repos are filed there, not in the individual repos.
+- **Primary crew:** Yes — and the only one. The estate consolidated from four
+  repositories into `home-operations`; there are no peer crews left to delegate to.
+- **Issue tracker:** `david-driscoll/vault` (private). It holds no code any more, but it
+  remains the tracker and hosts the crew workflows. File issues there, not in
+  `home-operations`. Moving the tracker is outstanding work.
 
-### Repositories managed
+### Repository
 
 | Repo | Local path | What it is |
 |------|-----------|------------|
-| `home-operations` | `~/Development/david-driscoll/home-operations` | Pulumi TypeScript monorepo — stacks, components, sdks, dynamic, docker |
-| `equestria-cluster` | `~/Development/david-driscoll/equestria-cluster` | Talos/Kubernetes GitOps cluster (Flux, sops/age, mise, Taskfile) |
-| `stargate-command-cluster` | `~/Development/david-driscoll/stargate-command-cluster` | Sibling Talos/Kubernetes GitOps cluster |
-| `vault` | `~/Development/david-driscoll/vault` | Smaller Pulumi TypeScript repo; also the issue tracker for the estate |
+| `home-operations` | `~/Development/david-driscoll/home-operations` | The whole estate: Pulumi stacks/components/sdks/dynamic, the Flux tree (`kubernetes/`), Talos config (`talos/`, `clusters/`), Dockge compose (`docker/`), bootstrap secrets (`bootstrap/`) |
+
+The `equestria-cluster`, `stargate-command-cluster` and `vault` code trees were merged in
+during the cluster-consolidation work; see `docs/cluster-consolidation/`. Their GitHub
+repositories may still exist as history — they are not live sources for anything.
 
 ### Stack
 
 - **IaC:** Pulumi (TypeScript, run via `tsx` ESM loader — no compile step)
 - **GitOps:** Flux CD on Talos Kubernetes
-- **Clusters:** Celestia, Luna (Kubernetes); Equestria, Stargate Command, Alpha Site (Dockge/Docker)
+- **Clusters:** Equestria (Kubernetes — the only one; SGC folded into it); Celestia, Luna, Skystar, Alpha Site (Dockge/Docker)
 - **Secrets:** 1Password Connect (`OPClient`), sops/age, Authentik for identity
 - **Networking:** UniFi, Cloudflare DNS, AdGuard
-- **Tooling:** mise (tool versions + `op://` env refs), npm workspaces, Taskfile
+- **Tooling:** mise (tool versions, tasks under `.config/mise/tasks/`, `op://` env refs), npm workspaces, `hk` git hooks
 
 ### Platform domain ownership
 
-The two Kubernetes clusters are **platform twins** — every platform namespace exists in
-both at near-identical counts. They diverge only in workload namespaces (`equestria` 61
-vs `sgc` 11) and equestria's extra `github-actions` and `pulumi`. Ownership is therefore
-split **by domain, not by cluster**: each owner below covers their domain in *both*
-clusters. This survives the planned move of the clusters into `home-operations` —
-per-cluster seats would not.
+There is one Kubernetes cluster, `equestria` — SGC folded into it during the
+consolidation. Ownership is split **by domain**, which is why it survived the merge
+intact: per-cluster seats would not have.
 
 | Namespace | Owner |
 |-----------|-------|
-| `flux-system`, `equestria`, `sgc` | Tank |
+| `flux-system`, `equestria`, `stargate-command` | Tank |
 | `longhorn-system`, `openebs-system`, `nfs-system`, `volsync-system`, `cloudnative-pg`, `database` | Seraph |
 | `system-upgrade`, plus unclaimed `kube-system` platform add-ons | Roland |
 | `observability` | Oracle |
@@ -82,7 +82,7 @@ and reflector. Seraph owns snapshot-controller.
 
 ### Cross-crew topology
 
-home-operations is the **hub**. The three peers are registered here for discovery and
-delegation only (`crew registry add`); each peer lists home-operations as its
-`upstream` so governance flows outward from this crew. See `.crew/manifest.json`
-and `.crew/crew-registry.json`.
+None. There was a hub-and-spoke topology while the estate spanned four repositories —
+`home-operations` as hub, with `equestria-cluster`, `stargate-command-cluster` and
+`vault` crews registered as peers. Consolidation removed the spokes; `crew-registry.json`
+is now empty and `crew delegate` has no target. See `.crew/manifest.json`.

@@ -1,8 +1,7 @@
 {
-  // Ported from david-driscoll/equestria-cluster and adapted to this repo's
-  // shape (Pulumi TypeScript + Flux manifests, rather than Talos + helmfile).
+  // Tuned for this repo's shape: Pulumi TypeScript plus Flux manifests.
   //
-  // Deliberately NOT carried across from equestria's list:
+  // Deliberately NOT recommended:
   //   * esbenp.prettier-vscode        — this repo formats with Biome, and the
   //                                     two fight over the same files.
   //   * streetsidesoftware.code-spell-checker

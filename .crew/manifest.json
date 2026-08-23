@@ -1,7 +1,7 @@
 {
   "name": "home-operations-crew",
   "version": "1.0.0",
-  "description": "Primary crew for the David Driscoll homelab estate. Manages Pulumi IaC, two Talos/Flux Kubernetes clusters, networking, and secrets across four repositories.",
+  "description": "Primary crew for the David Driscoll homelab estate. Manages Pulumi IaC, the equestria Talos/Flux Kubernetes cluster, the Dockge hosts, networking, and secrets — all in the single home-operations repository.",
   "role": "primary",
   "capabilities": [
     "pulumi",
@@ -23,9 +23,14 @@
   ],
   "contact": {
     "repo": "david-driscoll/vault",
-    "labels": ["crew:morpheus"]
+    "labels": [
+      "crew:morpheus"
+    ]
   },
-  "accepts": ["issues", "prs"],
+  "accepts": [
+    "issues",
+    "prs"
+  ],
   "skills": [
     "flux-gitops",
     "k8s",
@@ -37,10 +42,7 @@
     "deploy-app"
   ],
   "manages": [
-    "david-driscoll/home-operations",
-    "david-driscoll/equestria-cluster",
-    "david-driscoll/stargate-command-cluster",
-    "david-driscoll/vault"
+    "david-driscoll/home-operations"
   ],
-  "notes": "Hub crew. Peers are registered here for discovery and delegation only; each peer lists this crew as its upstream. All issues for all four repos are tracked in david-driscoll/vault."
+  "notes": "Sole crew. The estate consolidated from four repositories into home-operations, so there are no peer crews and crew-registry.json is empty. Issues are still tracked in david-driscoll/vault, which holds no code but hosts the crew workflows."
 }

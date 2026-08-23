@@ -13,7 +13,7 @@
 
 - The pre-deploy gate: every `pulumi up`, `flux reconcile`, DNS change, and firewall change gets a reviewed preview or diff first
 - Drift detection — finding where live state has diverged from the repo
-- PR review across all four repos
+- PR review in `home-operations`
 - Regression guarding: knowing which past incidents a change could re-trigger
 
 ## How I Work

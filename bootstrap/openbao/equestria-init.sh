@@ -57,7 +57,7 @@ readonly APPROLE_FILE="bootstrap/openbao/pulumi-approle.sops.yaml"
 readonly KV_MOUNTS=(secrets docs meta)
 
 # The two OIDC redirect URIs, mirrored EXACTLY from the Authentik client in
-# equestria-cluster kubernetes/apps/kube-system/openbao/definition.yaml — a
+# kubernetes/apps/kube-system/openbao/definition.yaml — a
 # mismatch fails the login with "unauthorized redirect_uri". The UI path has
 # "oidc" twice by design: /auth/<mount-path>/oidc/callback with the default
 # mount path "oidc". Port 8250 is the local listener `bao login -method=oidc`
@@ -183,15 +183,23 @@ path "auth/oidc/role/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# SGC's kubernetes auth mount (Phase 7), managed by home-operations
-# components/openbao/sgc.ts. Same shape and same reasoning as the oidc grants
-# above: named paths, never sys/auth/* or sys/mounts/auth/*, so Pulumi can
-# manage THIS mount and cannot enable arbitrary others.
+# SGC's kubernetes auth mount (Phase 7), managed by
+# components/openbao/clusterAuth.ts. Same shape and same reasoning as the oidc
+# grants above: named paths, never sys/auth/* or sys/mounts/auth/*, so Pulumi
+# can manage THIS mount and cannot enable arbitrary others.
 #
-# SGC needs a mount of its own because `auth/kubernetes` is configured with
+# It needed a mount of its own because `auth/kubernetes` is configured with
 # kubernetes_host="https://kubernetes.default.svc:443" — equestria's own API
 # server — so it can only validate equestria ServiceAccount tokens. See the
 # warning in configure_kubernetes_auth() below.
+#
+# ⚠️ VESTIGIAL. SGC was decommissioned 2026-08-17 and equestria is the only
+# cluster left, so nothing logs in through `kubernetes-sgc` any more. These
+# grants and the `eso-sgc` policy written below are deliberately left in place:
+# retiring them is step 4 of Phase 2 in
+# docs/cluster-consolidation/22-decommission-sgc.md, which also hand-deletes
+# the server-side mount. Do not drop them here in isolation — the mount would
+# outlive the grant that lets Pulumi clean it up.
 path "sys/auth/kubernetes-sgc" {
   capabilities = ["create", "read", "update", "delete", "sudo"]
 }
@@ -547,7 +555,7 @@ oidc() {
     # localhost (STATUS.md, "facts established the hard way"). Probe first so
     # the failure names the fix instead of dying mid-ceremony.
     bao operator generate-root -status >/dev/null 2>&1 \
-      || die "generate-root is unavailable — on OpenBao >= 2.5.3 the unauthenticated endpoints 403 by default. Either export BAO_TOKEN, or land the TEMPORARY listener toggle disable_unauthed_generate_root_endpoints = false (equestria-cluster branch feat/openbao-oidc, kubernetes/apps/kube-system/openbao/helmrelease.yaml), let the pods roll, run this again — and REVERT the toggle once this completes."
+      || die "generate-root is unavailable — on OpenBao >= 2.5.3 the unauthenticated endpoints 403 by default. Either export BAO_TOKEN, or land the TEMPORARY listener toggle disable_unauthed_generate_root_endpoints = false in kubernetes/apps/kube-system/openbao/helmrelease.yaml, let the pods roll, run this again — and REVERT the toggle once this completes."
     regen_root
   fi
 
@@ -567,8 +575,8 @@ oidc() {
 
 Done. Next:
   1. REVERT the disable_unauthed_generate_root_endpoints listener toggle in
-     equestria-cluster and let the pods roll — do not leave generate-root
-     reachable unauthenticated.
+     kubernetes/apps/kube-system/openbao/helmrelease.yaml and let the pods
+     roll — do not leave generate-root reachable unauthenticated.
   2. Verify: log in at https://bao.equestria.driscoll.tech/ui with OIDC as an
      `admins` member (expect the admin policy) and a `family` member (expect
      viewer: browse secrets/, read docs/, no secret values).
@@ -699,20 +707,27 @@ setup() {
     token_ttl="1h" >/dev/null
   ok "wrote kubernetes auth role eso-equestria"
 
-  # ⚠️ SGC CANNOT reuse this mount. `auth/kubernetes/config` above points at
-  # equestria's own API server, so it can only validate equestria ServiceAccount
-  # tokens. SGC gets a SECOND mount, `kubernetes-sgc`.
+  # ⚠️ ONE MOUNT PER CLUSTER. `auth/kubernetes/config` above points at
+  # equestria's own API server, so it can only validate equestria
+  # ServiceAccount tokens. Any additional cluster needs its own mount,
+  # `kubernetes-<key>`, and its own `eso-<key>` policy.
   #
-  # That mount is NOT created here. It is a Pulumi resource in home-operations
-  # `components/openbao/sgc.ts`, for the same reason OIDC moved out of this
-  # script: barrier state belongs in git where it is reviewable and drift is
-  # caught on every preview. This script only grants `pulumi` the narrow paths
-  # it needs to manage it — see write_policies() above.
+  # Such a mount is NOT created here. It is a Pulumi resource — see
+  # `components/openbao/clusterAuth.ts` — for the same reason OIDC moved out of
+  # this script: barrier state belongs in git where it is reviewable and drift
+  # is caught on every preview. This script only grants `pulumi` the narrow
+  # paths it needs to manage it — see write_policies() above.
   #
-  # It also carries no reviewer JWT. Instead SGC's external-secrets
-  # ServiceAccount is bound to `system:auth-delegator` in the
-  # stargate-command-cluster repo, so OpenBao reviews the client's own token
-  # and there is no long-lived credential to store or rotate.
+  # Those mounts carry no reviewer JWT. The client cluster's external-secrets
+  # ServiceAccount is bound to `system:auth-delegator` in its own tree, so
+  # OpenBao reviews the client's own token and there is no long-lived
+  # credential to store or rotate.
+  #
+  # equestria is the only cluster in the estate today. SGC's `kubernetes-sgc`
+  # mount and `eso-sgc` policy/role still exist server-side — they are
+  # `retainOnDelete`, so removing the Pulumi resource never reached them. They
+  # need hand-deletion: step 4 of Phase 2 in
+  # docs/cluster-consolidation/22-decommission-sgc.md.
   #
   # Applying the widened `pulumi` policy needs an admin token, so it takes one
   # root ceremony: `root-ceremony.sh run`, then re-run this script's `resume`

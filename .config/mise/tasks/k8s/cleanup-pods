@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 #MISE description="Delete Failed and Succeeded pods across all namespaces"
 #
-# Ported from equestria-cluster/.taskfiles/k8s/Taskfile.yaml (`kubernetes:cleanup-pods`).
-#
-# PORTED AS-IS, INCLUDING THE MISMATCH. The original description said
-# "Failed/Pending/Succeeded" but its matrix only ever listed Failed and
-# Succeeded — and correctly so: a Pending pod is one the scheduler has not
-# placed yet, and deleting those in bulk would fight the scheduler rather than
-# clean up after it. The description here matches the code.
+# Failed and Succeeded ONLY — Pending is deliberately excluded. A Pending pod is
+# one the scheduler has not placed yet; deleting those in bulk fights the
+# scheduler rather than cleaning up after it.
 #
 # Follows the AMBIENT kubeconfig/context.
 set -Eeuo pipefail

@@ -18,9 +18,8 @@
 # `source`, `source-path`, `external-sources` and `shell` are valid .shellcheckrc
 # directives; `severity` is a CLI-only flag and is silently ignored in this file.
 #
-# Unlike equestria-cluster, this repo does NOT disable SC1091 or SC2155 --
-# neither fires here, so carrying those across would suppress rules that
-# currently find nothing.
+# SC1091 and SC2155 are deliberately NOT disabled -- neither fires here, so
+# disabling them would suppress rules that currently find nothing.
 disable=SC2015
 disable=SC2329
 disable=SC2001

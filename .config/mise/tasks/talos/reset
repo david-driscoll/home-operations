@@ -4,9 +4,6 @@
 #MISE depends=["talos:genconfig"]
 #MISE confirm="This DESTROYS the cluster and resets every node to maintenance mode. Continue?"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:reset`).
-# go-task's `prompt:` becomes mise's `confirm=`.
-#
 # STATE and EPHEMERAL are both wiped, so this takes etcd with it. There is no
 # undo and no partial form — `talos:reset-node` is the one-node version.
 set -Eeuo pipefail

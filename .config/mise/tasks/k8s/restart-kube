@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Roll every Deployment, StatefulSet and DaemonSet in kube-system"
 #
-# Ported from equestria-cluster/.taskfiles/k8s/Taskfile.yaml (`kubernetes:restart-kube`).
 # Follows the AMBIENT kubeconfig/context.
 set -Eeuo pipefail
 

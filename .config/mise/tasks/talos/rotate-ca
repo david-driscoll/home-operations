@@ -4,8 +4,7 @@
 #MISE depends=["talos:validate-config"]
 #USAGE arg "<ip>" help="Control-plane IP, as it appears in talos/talconfig.yaml"
 #
-# Not a port. Neither source repo had this task; it was written for the
-# 2026-08-17 incident in which talos/talosconfig — an os:admin client
+# Written for the 2026-08-17 incident in which talos/talosconfig — an os:admin client
 # certificate and its unencrypted private key — was committed to a public repo.
 #
 # Talos has no CRL. A leaked client certificate cannot be revoked, and issuing

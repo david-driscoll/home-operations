@@ -12,13 +12,14 @@ Fetch live data from AlertManager and the Gatus uptime instance, then identify r
 | Source | Access Method | URL |
 |---|---|---|
 | Gatus | Direct HTTPS | `https://uptime.driscoll.tech/api/v1/endpoints/statuses` |
-| AlertManager (equestria + SGC) | Direct HTTPS | `https://alertmanager.driscoll.tech/api/v2/alerts` |
+| AlertManager | Direct HTTPS | `https://alertmanager.driscoll.tech/api/v2/alerts` |
 | AlertManager silences | Direct HTTPS | `https://alertmanager.driscoll.tech/api/v2/silences` |
 
-> AlertManager runs in the equestria cluster (`observability` namespace) and covers alerts from **both equestria and SGC**.
-> Service name: `alertmanager-alertmanager`, port **9093**. For port-forward use:
+> AlertManager runs in the equestria cluster (`observability` namespace), the estate's only
+> Kubernetes cluster. Service name: `alertmanager-alertmanager`, port **9093**. If the
+> ingress is unavailable, port-forward instead:
 > ```bash
-> kubectl --kubeconfig $EQ port-forward -n observability svc/alertmanager-alertmanager 9093:9093 &
+> kubectl port-forward -n observability svc/alertmanager-alertmanager 9093:9093 &
 > # then use http://localhost:9093/api/v2/...
 > ```
 
@@ -50,11 +51,10 @@ alerts = json.load(sys.stdin)
 active = [a for a in alerts if a['status']['state'] == 'active']
 print(f'{len(active)} active alerts')
 SEV_ORDER = {'critical': 0, 'error': 1, 'warning': 2, 'none': 3}
-for a in sorted(active, key=lambda x: (SEV_ORDER.get(x['labels'].get('severity','none'), 9), x['labels'].get('cluster',''), x['labels'].get('namespace',''))):
+for a in sorted(active, key=lambda x: (SEV_ORDER.get(x['labels'].get('severity','none'), 9), x['labels'].get('namespace',''))):
     labels = a['labels']
     ann = a['annotations']
-    cluster = labels.get('cluster', labels.get('prometheus', '-'))
-    print(f\"  [{labels.get('severity','?')}] {cluster} | {labels.get('namespace','-')} | {labels.get('alertname')} — {ann.get('summary', ann.get('description',''))}\")
+    print(f\"  [{labels.get('severity','?')}] {labels.get('namespace','-')} | {labels.get('alertname')} — {ann.get('summary', ann.get('description',''))}\")
 "
 ```
 
@@ -82,36 +82,39 @@ Group alerts and failures into root-cause buckets:
 | `KubeDeploymentRolloutStuck` + replicas mismatch | New ReplicaSet CrashLooping while old stays alive |
 | `KubePodCrashLooping` on database pods | CNPG postgres WAL corruption or missing PVC |
 | `CreateContainerConfigError` on any pod | Required Secret/ConfigMap deleted or not synced |
-| ExternalSecret `SecretSyncError` | 1Password Connect unavailable or vault item renamed |
+| ExternalSecret `SecretSyncError` | OpenBao or 1Password Connect unavailable, or the item was renamed |
 | `HelmRelease` stuck `RollbackFailed` | Use status patch to break the loop (see below) |
+
+Some Gatus endpoints cover the Dockge hosts (celestia, luna, skystar, alpha-site) rather
+than Kubernetes. Those will never have a matching AlertManager alert — check the host over
+Tailscale SSH and the relevant `docker/<host>/` compose stack instead of a namespace.
 
 ### Step 4 — Check cluster state for implicated namespaces
 
-For each failing namespace identified above, use the appropriate kubeconfig:
+This repo does not carry a kubeconfig and nothing here pins `KUBECONFIG` — commands follow
+the ambient kubeconfig and context. Confirm you are pointed at equestria first:
 
 ```bash
-EQ=/Users/david/Development/david-driscoll/equestria-cluster/kubeconfig
-SGC=/Users/david/Development/david-driscoll/stargate-command-cluster/kubeconfig
-KF=$EQ  # or $SGC depending on the cluster
+kubectl config current-context   # expect admin@equestria
 
 # HelmRelease health in namespace
-kubectl --kubeconfig $KF get helmrelease -n <namespace> -o wide
+kubectl get helmrelease -n <namespace> -o wide
 
 # Kustomization health
-kubectl --kubeconfig $KF get kustomization -n <namespace>
+kubectl get kustomization -n <namespace>
 
 # Pod state
-kubectl --kubeconfig $KF get pods -n <namespace>
+kubectl get pods -n <namespace>
 
 # Events (last 20, sorted)
-kubectl --kubeconfig $KF get events -n <namespace> --sort-by='.lastTimestamp' | tail -20
+kubectl get events -n <namespace> --sort-by='.lastTimestamp' | tail -20
 ```
 
 ### Step 5 — Common remediation patterns
 
 **Break a stuck HelmRelease (`RollbackFailed` / `MissingRollbackTarget`):**
 ```bash
-kubectl --kubeconfig $KF patch helmrelease <name> -n <namespace> \
+kubectl patch helmrelease <name> -n <namespace> \
   --type=json \
   -p '[{"op":"remove","path":"/status/conditions"},{"op":"remove","path":"/status/failures"}]' \
   --subresource=status
@@ -119,24 +122,24 @@ kubectl --kubeconfig $KF patch helmrelease <name> -n <namespace> \
 
 **Force ExternalSecret re-sync (e.g., after a cleanup deleted the secret):**
 ```bash
-kubectl --kubeconfig $KF annotate externalsecret <name> -n <namespace> \
+kubectl annotate externalsecret <name> -n <namespace> \
   force-sync="$(date +%s)" --overwrite
 ```
 
 **Force a Flux kustomization reconcile:**
 ```bash
-kubectl --kubeconfig $KF annotate kustomization <name> -n <namespace> \
+kubectl annotate kustomization <name> -n <namespace> \
   reconcile.fluxcd.io/requestedAt="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --overwrite
 ```
 
 **Restart a crashing deployment after root cause is fixed:**
 ```bash
-kubectl --kubeconfig $KF rollout restart deployment/<name> -n <namespace>
+kubectl rollout restart deployment/<name> -n <namespace>
 ```
 
 **Delete a CrashLooping pod so it reschedules cleanly:**
 ```bash
-kubectl --kubeconfig $KF delete pod -n <namespace> <pod-name>
+kubectl delete pod -n <namespace> <pod-name>
 ```
 
 ### Step 6 — Verify recovery
@@ -155,23 +158,23 @@ for e in failing: print(f\"  {e[\"group\"]}/{e[\"name\"]}\")
 
 ## Output Format
 
-Produce a triage report in this structure. Sort alerts flat by severity (critical → error → warning) then cluster (equestria before sgc):
+Produce a triage report in this structure. Sort alerts flat by severity (critical → error → warning), then namespace:
 
 ```
 ## Triage Report — <timestamp>
 
 ### Gatus: X failing / Y total  (https://uptime.driscoll.tech)
-- [cluster] NAME — HTTP <status> / error detail
+- [group] NAME — HTTP <status> / error detail
   (sorted by severity: failing → degraded → healthy)
 
-### AlertManager: X active / Y silenced  (equestria + sgc)
-- [critical] equestria | namespace | AlertName — summary
-- [error]    sgc       | namespace | AlertName — summary
-- [warning]  equestria | namespace | AlertName — summary
+### AlertManager: X active / Y silenced
+- [critical] namespace | AlertName — summary
+- [error]    namespace | AlertName — summary
+- [warning]  namespace | AlertName — summary
 
 ### Root Cause Analysis
-1. <Primary root cause> → <affected components / clusters>
-2. <Secondary root cause> → <affected components / clusters>
+1. <Primary root cause> → <affected components>
+2. <Secondary root cause> → <affected components>
 
 ### Remediation Plan
 - [ ] Step 1 — specific command or action
@@ -186,5 +189,5 @@ Produce a triage report in this structure. Sort alerts flat by severity (critica
 - **Alertmanager route matchers are ANDed within a route**: `severity=error` AND `severity=critical` in the same route matcher never match simultaneously — use separate routes or `=~` regex.
 - **adguard-dns webhook port**: chart hardcodes `--webhook-provider-url=http://localhost:8888`; sidecar default is 8080. Fix: `SERVER_PORT: "8888"` env var on the sidecar AND set liveness/readiness probes to port 8888.
 - **Authentik outpost depends on DNS**: If adguard-dns is down, `canterlot.driscoll.tech` won't resolve → outpost loops → all ForwardAuth-protected apps return 500.
-- **Cleanup tasks delete secrets too**: `kubernetes:cleanup-resource` removes all resources including ExternalSecrets and their synced Secrets. Force re-sync after cleanup.
+- **Cleanup tasks delete secrets too**: `mise run k8s:cleanup-pods` and friends remove resources including ExternalSecrets and their synced Secrets. Force re-sync after cleanup.
 - **CNPG WAL corruption**: When a postgres pod shows `pg_rewind` failure with `invalid record length`, CNPG auto-provisions a replacement pod. Delete the stuck pod; CNPG cleans the PVC automatically.

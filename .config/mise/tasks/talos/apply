@@ -4,9 +4,7 @@
 #MISE depends=["talos:genconfig"]
 #USAGE flag "--mode <mode>" default="auto" help="talosctl apply-config --mode (auto|no-reboot|reboot|staged|try)"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:apply`).
-# go-task's `MODE=…` variable becomes a `--mode` flag; `mise run talos:apply
-# --mode reboot` replaces `task talos:apply MODE=reboot`.
+# The apply mode is a flag: `mise run talos:apply --mode reboot`.
 # shellcheck disable=SC2154  # usage_mode is injected by mise from the #USAGE
 #                            header above; shellcheck cannot see where it is
 #                            assigned.

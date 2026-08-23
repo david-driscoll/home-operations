@@ -3,20 +3,15 @@
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:genconfig"]
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:reboot`).
+# NAME/BEHAVIOUR MISMATCH, KEPT ON PURPOSE. This task is commonly described as
+# "reboot the cluster without downtime", but the node selector is
+# `-l node-role.kubernetes.io/control-plane` — workers are never touched. The
+# #MISE description above says what the code does rather than what the name
+# suggests; widening the selector would change what a destructive task does,
+# which is a decision for a separate change.
 #
-# PORTED AS-IS, INCLUDING THE MISMATCH. The original is described as "reboot the
-# cluster without downtime" but its node selector is
-# `-l node-role.kubernetes.io/control-plane`, so workers are never touched. The
-# description here says what the code does rather than what the old one claimed;
-# widening the selector would change what a destructive task does, which is a
-# decision for a separate change, not a mechanical port.
-#
-# The unused `MODE` var the original declared is dropped — nothing in the body
-# ever read it.
-#
-# Uses kubectl, so it follows the AMBIENT kubeconfig/context. Unlike the source
-# repo this one does not pin KUBECONFIG to a repo-local file; check
+# Uses kubectl, so it follows the AMBIENT kubeconfig/context — nothing in this
+# repo pins KUBECONFIG to a repo-local file; check
 # `kubectl config current-context` before running.
 set -Eeuo pipefail
 

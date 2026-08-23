@@ -1,14 +1,1 @@
-[
-  {
-    "name": "equestria-cluster-crew",
-    "path": "../equestria-cluster"
-  },
-  {
-    "name": "stargate-command-cluster-crew",
-    "path": "../stargate-command-cluster"
-  },
-  {
-    "name": "vault-crew",
-    "path": "../vault"
-  }
-]
+[]

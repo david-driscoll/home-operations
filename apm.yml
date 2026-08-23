@@ -1,6 +1,6 @@
-name: equestria-cluster
+name: home-operations
 version: 1.0.0
-description: APM project for equestria-cluster
+description: APM project for home-operations — the single repository for the estate
 author: David Driscoll
 targets:
 - claude

@@ -3,14 +3,12 @@
 #USAGE arg "<namespace>" help="Namespace of the Kustomization"
 #USAGE arg "<name>" help="Name of the Kustomization"
 #
-# Ported from equestria-cluster/.taskfiles/flux/Taskfile.yaml (`flux:delete-kustomization`).
-#
 # For a Kustomization wedged in Terminating: removing the finalizer is what lets
 # the delete complete, and `flux delete` on its own will not do it.
 #
-# `cluster-apps` is the parent that owns ./kubernetes/apps in this repo
+# `cluster-apps` is the parent that owns ./kubernetes/apps
 # (kubernetes/flux/cluster/ks.yaml), so reconciling it is what re-creates the
-# child if it should still exist. That name is unchanged from the source repo.
+# child if it should still exist.
 #
 # Follows the AMBIENT kubeconfig/context.
 # shellcheck disable=SC2154  # usage_namespace / usage_name are injected by

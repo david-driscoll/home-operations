@@ -4,8 +4,6 @@
 #MISE depends=["talos:validate-config"]
 #USAGE arg "<version>" help="Kubernetes version to step to, e.g. v1.35.4"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:upgrade-k8s-to`).
-#
 # Exists because Kubernetes refuses to skip a minor version. Going v1.34 -> v1.36
 # means running this once for v1.35.x and only then `talos:upgrade-k8s`.
 #

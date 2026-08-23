@@ -2,8 +2,6 @@
 #MISE description="Take an etcd snapshot from a control-plane node before a major upgrade"
 #MISE dir="{{config_root}}/talos"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:backup-etcd`).
-#
 # The snapshot lands in talos/ as etcd-pre-upgrade-<timestamp>.db. The repo root
 # .gitignore already carries `*.db*`, so it cannot be committed by accident —
 # but it also is not backed up anywhere. Move it somewhere durable if it matters.

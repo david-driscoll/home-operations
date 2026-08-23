@@ -4,10 +4,8 @@
 #MISE depends=["talos:genconfig"]
 #USAGE arg "<ip>" help="Node IP address, as it appears in talos/talconfig.yaml"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:upgrade-node`).
-#
-# Only `genconfig`, matching the original: the whole point of the per-node task
-# is to retry or resume a single node after `talos:upgrade` has already run its
+# `genconfig` only, deliberately: the whole point of the per-node task is to
+# retry or resume a single node after `talos:upgrade` has already run its
 # validation once.
 # shellcheck disable=SC2154  # usage_ip is injected by mise from the #USAGE
 #                            header above; shellcheck cannot see where it is

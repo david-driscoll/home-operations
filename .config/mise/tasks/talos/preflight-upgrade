@@ -2,8 +2,6 @@
 #MISE description="Read-only gate to run before a Talos or Kubernetes minor upgrade"
 #MISE dir="{{config_root}}/talos"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:preflight-upgrade`).
-#
 # Read-only: it inspects and exits non-zero, it never changes anything. Run it
 # before talos:upgrade / talos:upgrade-k8s.
 #
@@ -12,11 +10,11 @@
 # a mid-upgrade retry of a single node could not run while the cluster is —
 # correctly — still settling.
 #
-# The original's `echo "\nSection"` printed a literal backslash-n under bash,
-# whose builtin echo does not interpret escapes without -e. Uses printf here.
+# Section headers use printf, not echo: bash's builtin echo does not interpret
+# `\n` without -e, and prints a literal backslash-n instead.
 #
-# Uses kubectl, so it follows the AMBIENT kubeconfig/context — this repo does
-# not pin KUBECONFIG the way equestria-cluster's Taskfile did.
+# Uses kubectl, so it follows the AMBIENT kubeconfig/context — nothing in this
+# repo pins KUBECONFIG.
 set -Eeuo pipefail
 
 printf 'Target versions from talenv.yaml\n'

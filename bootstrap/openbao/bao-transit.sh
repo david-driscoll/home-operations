@@ -239,7 +239,8 @@ EOF
     {
       printf '# Token equestria OpenBao presents to bao-transit to auto-unseal.\n'
       printf '# Consumed as VAULT_TRANSIT_SEAL_TOKEN. Orphan + periodic (%s).\n' "${TOKEN_PERIOD}"
-      printf '# Also goes in equestria-cluster secret.sops.yaml as openbao-seal/transit-token.\n'
+      printf '# Also goes in kubernetes/apps/kube-system/openbao/secret.sops.yaml\n'
+      printf '# as openbao-seal/transit-token.\n'
       printf 'token: "%s"\n' "${seal_token}"
     } | seal_to "${TOKEN_FILE}"
     unset seal_token
@@ -262,7 +263,7 @@ Done. Next:
      bootstrap/openbao/alpha-site-static-unseal.sops.yaml, then repoint
      home-operations docker/alpha-site/bao-transit/.env at it. Until that
      happens 1Password is still a root of trust for the whole estate.
-  3. In equestria-cluster, create kubernetes/apps/kube-system/openbao/secret.sops.yaml
+  3. Create kubernetes/apps/kube-system/openbao/secret.sops.yaml in this repo
      with Secret `openbao-seal`:
         transit-token       <- token from transit-token.sops.yaml
         pg-connection-url   <- postgres://openbao:<pw>@postgres-rw.database.svc.cluster.local:5432/openbao

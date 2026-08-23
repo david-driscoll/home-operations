@@ -1,5 +1,17 @@
 # Cluster consolidation — SGC folds into equestria
 
+> **Historical record — repository names in these files are as they were.** The repo
+> consolidation ([21](21-repo-consolidation-flux-repoint.md)) is **done**: `home-operations`
+> is the single repository and the only live Flux source. `equestria-cluster`,
+> `stargate-command-cluster` and `vault` are no longer code repositories — `vault` remains
+> the estate's issue tracker only. Every reference to them below describes the estate as it
+> was mid-migration and is deliberately left unrewritten; do not read them as places to go
+> look for code. Paths named as living in those repos now resolve inside `home-operations`.
+>
+> Not every *cluster* piece is finished. For what is actually done, see
+> [Where the plan actually stands](#where-the-plan-actually-stands--2026-08-22) below — that
+> table is the current status, not this banner.
+
 Planning set for [vault#84 — Migrate all kubernetes clusters into home-operations](https://github.com/david-driscoll/vault/issues/84).
 Each numbered file is a standalone, executable plan for one migration piece. The letters
 (A, B, C′…) are the sub-issue anchors established in the issue's
