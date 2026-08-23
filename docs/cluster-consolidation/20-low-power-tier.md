@@ -2113,12 +2113,33 @@ through in place rather than moved to the resolved list above — several sectio
    > chart-created and carry no Flux ownership labels, so there the same edit stalls the
    > HelmRelease instead of destroying anything — bad, but not destructive.
 
-   **A gap found while planning this, independent of the migration:** `crowdsec-ui` has a
-   working VolSync `ReplicationSource` (last sync `2026-08-23T14:04Z`, next `2026-08-24T14:00Z`),
-   but **`crowdsec-config-pvc` and `crowdsec-db-pvc` have no `ReplicationSource` at all.** The
-   LAPI's API credentials and its decisions database are unbacked. For an app that is now
-   Tier 1 that is a hole in its own right, and it also means the safe-because-recoverable
-   argument for a PVC-recreating migration does not apply to two of the three volumes.
+   **A gap found while planning this, independent of the migration — now CLOSED.**
+   `crowdsec-ui` has had a working VolSync `ReplicationSource` all along, but
+   **`crowdsec-config-pvc` and `crowdsec-db-pvc` had none at all** — the LAPI's API
+   credentials and its decisions database were unbacked. For an app that is now Tier 1 that
+   is a hole in its own right, and it also meant the safe-because-recoverable argument did
+   not apply to two of the three volumes.
+
+   **Fixed first, deliberately, before the migration** — David, 2026-08-23: *"lets configure
+   volsync for crowdsec first, so we can have a backup, and then lets do the migration."*
+   `kubernetes/apps/network/crowdsec/volsync.yaml` adds two `ReplicationSource`s and their
+   `ExternalSecret`s.
+
+   Three things about that file are deliberate and would otherwise be re-litigated:
+
+   - **It does not use `components/volsync`.** That component is `${APP}`-scoped and assumes
+     **one** PVC which it also *creates* (`pvc.yaml`, named `${APP}`). The LAPI has **two**
+     volumes and the crowdsec chart creates both itself under fixed names, so adding the
+     component here would provision an unrelated third PVC called `crowdsec` and back up
+     nothing that matters.
+   - **Adopting the component properly would mean a PVC migration of its own** — moving both
+     volumes onto `lapi.persistentVolume.{data,config}.existingClaim`. This file adds backup
+     **without touching either PVC**, which is the whole point: the storage migration now
+     starts from a restorable position rather than an unbacked one.
+   - **`runAsUser: 0`, not the component's 568.** `crowdsec-lapi` runs as **root** and both
+     volumes are `root:root` — verified live (`id` → `uid=0`, both mount points owned `0 0`).
+     A 568 mover cannot read them, and would have failed at the first sync rather than at
+     restore time, but only after someone assumed the backup existed.
 
    **Status: not executed.** The selector patch is a live Longhorn mutation and was not run.
    Sequence when it is: `crowdsec-ui` first (it has a fresh backup, so the procedure is

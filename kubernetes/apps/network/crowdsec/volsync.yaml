@@ -1,0 +1,140 @@
+---
+# Bespoke VolSync wiring for the LAPI's two PVCs.
+#
+# WHY NOT `components/volsync`: that component is `${APP}`-scoped and assumes ONE
+# PVC which it also creates (`pvc.yaml`, named `${APP}`). crowdsec's LAPI has TWO
+# volumes and the crowdsec chart creates both itself, with fixed names -- so
+# adding the component here would provision an unrelated third PVC called
+# `crowdsec` and back up nothing that matters. Adopting the component properly
+# would mean moving both volumes onto `lapi.persistentVolume.*.existingClaim`,
+# which is a PVC migration in its own right; this file deliberately adds backup
+# WITHOUT touching either PVC, so the migration in
+# docs/cluster-consolidation/20-low-power-tier.md §9 item 3 starts from a
+# restorable position instead of an unbacked one.
+#
+# These two volumes were found completely unbacked on 2026-08-23 while planning
+# that migration: `crowdsec-ui` has had a ReplicationSource all along, the LAPI's
+# API credentials (`crowdsec-config-pvc`) and its decisions database
+# (`crowdsec-db-pvc`) never did. crowdsec is Tier 1 as of David's 2026-08-23
+# ruling, which makes that a hole on its own terms.
+#
+# uid 0 is not a copy-paste slip. crowdsec-lapi runs as root and both volumes are
+# root:root (verified live: `id` -> uid=0, and both mount points are `0 0`), so
+# the component's 568 default mover would not be able to read them.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: crowdsec-config-volsync
+spec:
+  refreshInterval: 4m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  target:
+    name: crowdsec-config-volsync-secret
+    template:
+      metadata:
+        labels:
+          volsync: "true"
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        # Own repository per source -- restic repositories are per-volume here,
+        # matching the one-repo-per-`${APP}` shape the component establishes.
+        RESTIC_REPOSITORY: "/repository/crowdsec-config"
+        RESTIC_PASSWORD: "{{ .credential }}"
+  dataFrom:
+    - extract:
+        key: apps/volsync/password
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: crowdsec-db-volsync
+spec:
+  refreshInterval: 4m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  target:
+    name: crowdsec-db-volsync-secret
+    template:
+      metadata:
+        labels:
+          volsync: "true"
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        RESTIC_REPOSITORY: "/repository/crowdsec-db"
+        RESTIC_PASSWORD: "{{ .credential }}"
+  dataFrom:
+    - extract:
+        key: apps/volsync/password
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/volsync.backube/replicationsource_v1alpha1.json
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: crowdsec-config
+spec:
+  sourcePVC: crowdsec-config-pvc
+  trigger:
+    schedule: "0 14 * * *"
+  restic:
+    copyMethod: Snapshot
+    pruneIntervalDays: 14
+    repository: crowdsec-config-volsync-secret
+    # Same estate-wide stale-lock sweep the component carries; see
+    # kubernetes/components/volsync/replicationsource.yaml for the full account.
+    unlock: "2026-08-21-locks-stranded-by-k8s-node-roll"
+    volumeSnapshotClassName: longhorn-snapclass
+    cacheCapacity: 1Gi
+    cacheStorageClassName: longhorn-cache
+    cacheAccessModes: ["ReadWriteOnce"]
+    # Staging clone for the mover, not the app's volume -- kept off the app's tier
+    # per AGENTS.md "Two storage classes, not one".
+    storageClassName: longhorn-snapshot
+    accessModes: ["ReadWriteOnce"]
+    moverSecurityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      fsGroup: 0
+    retain:
+      hourly: 0
+      daily: 7
+      weekly: 4
+      monthly: 4
+      yearly: 1
+      last: "5"
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/volsync.backube/replicationsource_v1alpha1.json
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: crowdsec-db
+spec:
+  sourcePVC: crowdsec-db-pvc
+  trigger:
+    schedule: "0 14 * * *"
+  restic:
+    copyMethod: Snapshot
+    pruneIntervalDays: 14
+    repository: crowdsec-db-volsync-secret
+    unlock: "2026-08-21-locks-stranded-by-k8s-node-roll"
+    volumeSnapshotClassName: longhorn-snapclass
+    cacheCapacity: 1Gi
+    cacheStorageClassName: longhorn-cache
+    cacheAccessModes: ["ReadWriteOnce"]
+    storageClassName: longhorn-snapshot
+    accessModes: ["ReadWriteOnce"]
+    moverSecurityContext:
+      runAsUser: 0
+      runAsGroup: 0
+      fsGroup: 0
+    retain:
+      hourly: 0
+      daily: 7
+      weekly: 4
+      monthly: 4
+      yearly: 1
+      last: "5"
