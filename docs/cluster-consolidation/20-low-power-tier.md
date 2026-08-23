@@ -2155,10 +2155,50 @@ through in place rather than moved to the resolved list above — several sectio
      A 568 mover cannot read them, and would have failed at the first sync rather than at
      restore time, but only after someone assumed the backup existed.
 
-   **Status: not executed.** The selector patch is a live Longhorn mutation and was not run.
-   Sequence when it is: `crowdsec-ui` first (it has a fresh backup, so the procedure is
-   validated on the recoverable volume), then `crowdsec-db-pvc`, then `crowdsec-config-pvc`,
-   one replica at a time with a `robustness: healthy` gate between each.
+   #### Executed on `crowdsec-ui`, 2026-08-23 — the procedure works
+
+   Run on the recoverable volume first, deliberately. Elapsed ≈ 4 minutes, no downtime, and
+   `crowdsec-ui` served throughout.
+
+   | Step | Result |
+   |---|---|
+   | Patch `spec.nodeSelector` → `["critical"]` | Applied. **Nothing moved** — all three replicas stayed on `hard-hat`/`fluttershy`/`kerfuffle`, confirming [30](30-longhorn-media-tier.md)'s "Longhorn never evicts tag-nonconforming replicas" against a second, independent case |
+   | Delete replica 1 (`hard-hat`) | Rebuilt onto **`othalla`**, healthy in ≈ 60 s |
+   | Delete replica 2 (`fluttershy`) | Rebuilt onto **`milky-way`** |
+   | Delete replica 3 (`kerfuffle`) | Rebuilt onto **`pegasus`** |
+   | Final | **3/3 on the trio, `robustness: healthy`**, 0 degraded volumes cluster-wide |
+
+   The volume reads `degraded` *while a rebuild is in flight* and returns to `healthy` on its
+   own — do not mistake the transient for a failure and start deleting more replicas.
+
+   **It also produces a ghost replica, and that is expected rather than a fault.** After the
+   migration the volume carries a fourth `Replica` CR with `nodeID: ""`, `currentState:
+   stopped`, never healthy — and the volume condition `Scheduled=False`, reason
+   **`LocalReplicaSchedulingFailure`**. Cause: `dataLocality: best-effort` (which *both*
+   `longhorn` and `longhorn-critical` set) wants a replica local to the consumer pod, and
+   `crowdsec-ui` runs on `fluttershy` — a `bulk` node the new selector forbids. This is
+   [30](30-longhorn-media-tier.md)'s ghost-replica finding reproduced exactly.
+
+   **Do not treat it as this migration's defect: it is pre-existing and estate-wide.**
+   Measured the same day, **7 volumes** already carry `LocalReplicaSchedulingFailure`,
+   `home-assistant` among them — every `longhorn-critical` volume whose consumer pod sits on
+   a worker has it, and all of them still report `robustness: healthy`. `technitium` is the
+   counter-example that proves the mechanism: its pod runs on `pegasus`, so its local replica
+   *can* be placed and its condition reads `Scheduled=True`.
+
+   Two consequences worth carrying:
+
+   - **It resolves itself once the pod can follow the data.** Each of these clears when the
+     workload lands on a control plane — which is what the §4 toleration work enables. Until
+     that lands, the condition is the expected steady state, not drift.
+   - **§6.0 check 3a is unaffected** (it reads `robustness`, which stays `healthy`), but any
+     alert written against the `Scheduled` condition would fire on seven volumes today. Worth
+     knowing before someone adds one.
+
+   **Status: `crowdsec-ui` done. `crowdsec-config-pvc` and `crowdsec-db-pvc` still pending** —
+   the `spec.nodeSelector` patch is a live Longhorn mutation. Same two-step per volume:
+   patch the selector, then delete one non-conforming replica at a time with a
+   `robustness: healthy` gate between each.
 4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
    the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
    too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
