@@ -260,8 +260,8 @@ previous key on the next pass. Update
   rewrite invalidates the MAC and the file is permanently undecryptable. `.config/hk.pkl`
   excludes them at the top level; keep it that way.
 - **The age recipient list must stay identical** across every `.sops.yaml` creation rule
-  in this repo (and `equestria-cluster`, for as long as it exists). A divergent set is how
-  a secret becomes undecryptable on the one machine that needs it.
+  in this repo. A divergent set is how a secret becomes undecryptable on the one machine
+  that needs it.
 - **`bao-transit` and `bao-standby` are deliberately separate.** Co-locating them would
   put the ciphertext and the key that decrypts it in one container. They share a host,
   which already weakens this — the age layer on the dump and keeping `bao-standby` stopped

@@ -287,7 +287,8 @@ run() {
   "${HERE}/restore-test.sh" init
 
   printf '\nDone. The root token is revoked on exit.\n'
-  printf 'NEXT: revert the generate-root listener toggle in equestria-cluster and roll the pods.\n'
+  printf 'NEXT: revert the generate-root listener toggle in\n'
+  printf '      kubernetes/apps/kube-system/openbao/helmrelease.yaml and roll the pods.\n'
 }
 
 # Provision the `break-glass` AppRole: a credential whose ONLY power is to open

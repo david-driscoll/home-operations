@@ -1,20 +1,11 @@
 {
+	// One folder: the estate consolidated into this repository. The Pulumi IaC,
+	// the Flux tree, the Dockge compose stacks and the bootstrap secrets all
+	// live here now.
 	"folders": [
 		{
 			"name": "home-operations",
 			"path": "."
-		},
-		{
-			"name": "vault",
-			"path": "../vault"
-		},
-		{
-			"name": "stargate-command-cluster",
-			"path": "../stargate-command-cluster"
-		},
-		{
-			"name": "equestria-cluster",
-			"path": "../equestria-cluster"
 		}
 	],
 	"settings": {
@@ -40,7 +31,9 @@
 			"**/bin/**": true,
 			"**/apm_modules/**": true
 		},
-		"sops.defaults.ageKeyFile": "../stargate-command-cluster/age.key",
+		// The estate's single age key, at this repo's root (gitignored). See
+		// bootstrap/INVENTORY.md for where the material itself is held.
+		"sops.defaults.ageKeyFile": "age.key",
 		"sops.binPath": "/opt/homebrew/bin/sops",
 		"sops.beta": false,
 		"sops.creationEnabled": true,
@@ -73,9 +66,9 @@
 			// "vs-kubernetes.kubectlVersioning": "user-provided",
 			"vs-kubernetes.outputFormat": "yaml",
 			"vs-kubernetes.kubeconfig": "",
-			"vs-kubernetes.knownKubeconfigs": [
-				"/Users/david/Development/david-driscoll/equestria-cluster/kubeconfig"
-			],
+			// Empty on purpose: this repo carries no kubeconfig and pins no
+			// KUBECONFIG, so tooling follows the ambient context (admin@equestria).
+			"vs-kubernetes.knownKubeconfigs": [],
 			"vs-kubernetes.autoCleanupOnDebugTerminate": false,
 			"vs-kubernetes.nodejs-autodetect-remote-root": true,
 			"vs-kubernetes.nodejs-remote-root": "",

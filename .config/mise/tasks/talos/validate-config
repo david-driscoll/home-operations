@@ -3,18 +3,16 @@
 #MISE dir="{{config_root}}/talos"
 #MISE depends=["talos:genconfig"]
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:validate-config`).
-#
-# CHANGED FROM THE ORIGINAL, deliberately. The source version resolved the
-# talosctl to test with as `mise exec talosctl@${expected} -- talosctl version`
-# and then compared that to ${expected} — which mise satisfies by installing
-# exactly the version asked for, so the comparison could never fail. It was a
-# tautology dressed as a drift check.
-#
-# This version compares the talosctl PINNED IN .config/mise.toml against
-# talenv.yaml's talosVersion, which is the drift that actually bites: bump
+# The check that matters is talosctl PINNED IN .config/mise.toml against
+# talenv.yaml's talosVersion. That is the drift that actually bites: bump
 # talenv without bumping [tools] and you validate next release's config with
 # last release's schema.
+#
+# Do NOT rewrite this to resolve talosctl as
+# `mise exec talosctl@${expected} -- talosctl version` and compare to
+# ${expected} — mise satisfies that by installing exactly the version asked
+# for, so the comparison can never fail. That is a tautology, not a drift
+# check, and it is what this task previously did.
 # shellcheck disable=SC2016  # the backticks below are prose emphasis in an
 #                            operator-facing message, not a command
 #                            substitution -- the single quotes are intentional.

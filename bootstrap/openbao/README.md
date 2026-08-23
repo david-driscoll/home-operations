@@ -11,7 +11,7 @@ See `../INVENTORY.md` for why each one can never live inside OpenBao itself, and
 `transit-token.sops.yaml`. Don't hand-write those; the script encrypts them directly and
 never puts a secret on disk in plaintext. See `../RUNBOOK.md` Scenario 0.
 
-The rest need a real `age.key` and, for the postgres one, a `task update` in equestria.
+The rest need a real `age.key` and, for the postgres one, a `mise run update`.
 The shapes below are the contract; fill in real values and encrypt in place.
 
 ```sh

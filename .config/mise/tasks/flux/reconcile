@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 #MISE description="Force Flux to pull the three GitRepositories and re-reconcile the root"
 #
-# Ported from equestria-cluster/Taskfile.yaml (the root `reconcile` task).
-#
 # All three sources named here exist in this repo's Flux tree:
 #   flux-system     — kubernetes/flux/cluster/ks.yaml (the root, this repo)
 #   home-operations — kubernetes/apps/flux-system/repositories/home-operations.yaml
 #   vault           — kubernetes/apps/flux-system/repositories/vault.yaml
 #
-# Follows the AMBIENT kubeconfig/context: equestria-cluster's Taskfile pinned
-# KUBECONFIG to a repo-local file and this repo carries no such file, so check
-# `kubectl config current-context` first.
+# Follows the AMBIENT kubeconfig/context — this repo carries no kubeconfig and
+# pins no KUBECONFIG, so check `kubectl config current-context` first.
 set -Eeuo pipefail
 
 flux --namespace flux-system reconcile source git flux-system

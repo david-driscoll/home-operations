@@ -178,7 +178,7 @@ work. It sat, it was checked, and it must not be raised — see
 
 ## Scope — PR review feedback
 
-vault#105 asked whether PR review comments in the four code repos deserve the same
+vault#105 asked whether PR review comments in the code repos deserve the same
 treatment. This section recorded the recommendation; it is now **built**, upstream in
 [Blacklite/crew#4](https://github.com/Blacklite/crew/pull/4) with the config below.
 
@@ -239,10 +239,17 @@ automatically. That is also the one job the marker does on the PR side — disti
 
 ### Repo scope
 
-Configurable, not hardcoded — the estate has crew PRs outside the four code repos.
-`commentWatch.pullRequestRepos` lists all six: the four code repos, plus `Blacklite/crew`
-(crew's own protocol PRs) and `david-driscoll/.github` (shared Renovate config). Cost is
-one GraphQL request per cycle for all six, via aliases.
+Configurable, not hardcoded — the estate has crew PRs outside its own repository.
+`commentWatch.pullRequestRepos` lists four: `david-driscoll/home-operations` (the estate,
+since the four-repo consolidation), `david-driscoll/vault` (no code, but still the tracker
+and the host of the crew workflows), `Blacklite/crew` (crew's own protocol PRs) and
+`david-driscoll/.github` (shared Renovate config). Cost is one GraphQL request per cycle
+for all four, via aliases.
+
+> The measurement below was taken while the estate still spanned six repositories with
+> eight open PRs. The **ratio** it establishes — top-level review comments are a bot
+> firehose, inline threads are not — is what the design rests on, and that is unchanged.
+> The absolute counts are historical.
 
 Full spec, including the query and the fixture results: `.crew/templates/ralph-reference.md`
 → "PR Review Feedback Detection", once Blacklite/crew#4 lands and `crew upgrade` runs.
@@ -257,8 +264,6 @@ Full spec, including the query and the fixture results: `.crew/templates/ralph-r
   "pullRequestRepos": [
     "david-driscoll/home-operations",
     "david-driscoll/vault",
-    "david-driscoll/equestria-cluster",
-    "david-driscoll/stargate-command-cluster",
     "Blacklite/crew",
     "david-driscoll/.github"
   ]

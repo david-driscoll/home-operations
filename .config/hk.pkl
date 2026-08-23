@@ -19,9 +19,8 @@ import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtin
 //
 // NOTE: pre-commit previously carried `fix = true`, which contradicted the
 // paragraph directly above it — a drift bug from the #601/#603 merge. It is
-// now `false`, matching both the stated contract and the sibling config in
-// david-driscoll/equestria-cluster. This matters more than it used to: the
-// `typos` step added below rewrites file contents.
+// now `false`, matching the stated contract. This matters more than it used
+// to: the `typos` step added below rewrites file contents.
 //
 // Crew's own hooks are NOT re-expressed here. hk registers via git config
 // (`hook.hk-pre-commit.*`) and git 2.55 runs that channel *alongside*
@@ -111,8 +110,7 @@ local linters = new Mapping<String, Step> {
   // Closes the blind spot named in the `flate` comment directly above: this is
   // the step that DOES run Flux postBuild envsubst and the external-secrets
   // `templateAs: Values` template engine, over the files a kustomize
-  // `configMapGenerator` slurps whole. Ported from equestria-cluster with the
-  // flux-local workflow (piece 21); the same binary runs as the
+  // `configMapGenerator` slurps whole. The same binary runs as the
   // `eso-values-lint` job in .github/workflows/flux-local.yaml.
   //
   // Both renderers treat a *comment* as live text, so a `${VAR}` or `{{ ... }}`

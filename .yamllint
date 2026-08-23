@@ -1,8 +1,5 @@
 # yamllint config for the hk `yamllint` step (see .config/hk.pkl).
 #
-# Adapted from david-driscoll/equestria-cluster, whose manifest conventions
-# this repo's kubernetes/ tree was seeded from.
-#
 # Intent: catch YAML that Flux would mis-apply, NOT enforce a house style on
 # ~1070 existing files. Every rule disabled below is a style disagreement with
 # the upstream home-operations manifest conventions, not a class of bug.

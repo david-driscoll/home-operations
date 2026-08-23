@@ -2,23 +2,20 @@
 #MISE description="Render Talos machine configs into talos/clusterconfig with talhelper"
 #MISE dir="{{config_root}}/talos"
 #
-# Ported from equestria-cluster/.taskfiles/talos/Taskfile.yaml (`talos:generate-config`).
-# Renamed to `genconfig` to match the talhelper subcommand it wraps — every
-# other task in this namespace is named after its talhelper verb.
+# Named `genconfig` after the talhelper subcommand it wraps — every other task
+# in this namespace is named after its talhelper verb.
 #
 # This is the root of the namespace: every task that needs a rendered machine
-# config or a working talosconfig `depends` on it, which is what replaces
-# go-task's `deps: [generate-config]`.
+# config or a working talosconfig `depends` on it.
 #
 # Outputs land in talos/clusterconfig/, which is gitignored per node (see
 # talos/clusterconfig/.gitignore) — including the generated `talosconfig` that
 # $TALOSCONFIG points at.
 set -Eeuo pipefail
 
-# go-task expressed these as `preconditions:`; mise has no equivalent, so they
-# are inline. The `which talhelper / talosctl` checks the original carried are
-# dropped on purpose — both are pinned in .config/mise.toml [tools], so mise
-# installs them before the task body ever runs.
+# Preconditions, inline: mise has no `preconditions:` mechanism. There is
+# deliberately no `which talhelper / talosctl` check — both are pinned in
+# .config/mise.toml [tools], so mise installs them before the task body runs.
 [[ -f talconfig.yaml ]] || {
   printf 'talos:genconfig: talos/talconfig.yaml is missing.\n' >&2
   exit 1

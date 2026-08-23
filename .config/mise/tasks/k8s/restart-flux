@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Roll every Deployment, StatefulSet and DaemonSet in flux-system"
 #
-# Ported from equestria-cluster/.taskfiles/k8s/Taskfile.yaml (`kubernetes:restart-flux`).
 # Follows the AMBIENT kubeconfig/context.
 set -Eeuo pipefail
 

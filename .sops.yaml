@@ -1,8 +1,7 @@
 ---
-# SOPS config for home-operations. Mirrors equestria-cluster/.sops.yaml and uses
-# the SAME single estate age recipient, so the existing age.key decrypts these
-# files unchanged and Flux's `sops-age` Secret works without any new key
-# material.
+# SOPS config for home-operations. Uses the single estate age recipient, so
+# `age.key` decrypts every file here and Flux's `sops-age` Secret needs no
+# separate key material.
 #
 # Why this repo needs SOPS at all: the Pulumi operator authenticates to OpenBao
 # with the `pulumi` AppRole, and per bootstrap/INVENTORY.md §2 the credential
@@ -16,11 +15,10 @@
 # still parse the manifest before decryption.
 creation_rules:
   # Bootstrap-tier material under bootstrap/ — the OpenBao seal chain, recovery
-  # shares, the Pulumi AppRole and passphrase. Moved here verbatim from the
-  # retired david-driscoll/vault repo (2026-08-22); this rule is byte-for-byte
-  # the one those files were encrypted under, so they decrypt unchanged and
-  # `sops --encrypt --filename-override bootstrap/...` keeps producing the
-  # same shape. No encrypted_regex: every value is encrypted, because these
+  # shares, the Pulumi AppRole and passphrase. DO NOT reshape this rule: it is
+  # byte-for-byte the one those files were encrypted under, so they decrypt
+  # unchanged and `sops --encrypt --filename-override bootstrap/...` keeps
+  # producing the same shape. No encrypted_regex: every value is encrypted, because these
   # files are consumed by humans and `sops exec-file`, never reconciled in
   # place by Flux. `mac_only_encrypted` lets the plaintext key NAMES and
   # comments be edited without invalidating the MAC — key names are always

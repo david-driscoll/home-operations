@@ -18,9 +18,8 @@ apm_modules/
 stacks/unifi-network/tailscale-acl.json
 /headlamp/
 # Runtime caches that must never be committed. xcproxy writes a ~20MB
-# tmdb_cache.db into its resources/ dir; equestria-cluster ignores these
-# and home-operations did not, so a verbatim copy during the piece 21
-# migration committed it. Matches equestria-cluster's own rule.
+# tmdb_cache.db into its resources/ dir, which has been committed by accident
+# before. Bare pattern, so it matches at any depth.
 *.db*
 # Crew: ignore runtime state (logs, inbox, sessions)
 # Note: .crew/casting/* is identity and MUST be committed to main, not ignored
@@ -44,11 +43,10 @@ stacks/unifi-network/tailscale-acl.json
 #
 # `talosconfig` carries an unencrypted `os:admin` client certificate and its
 # private key — full machine-API control: config read/write, reboot, reset,
-# and machine secrets. It must never be committed. equestria-cluster ignored
-# it at its repo root; the talhelper migration brought over
-# talos/clusterconfig/.gitignore, whose rule only scopes to that subdirectory,
-# so talos/talosconfig one level up was left uncovered and got committed.
-# Bare patterns here, so they match at any depth.
+# and machine secrets. It must never be committed. talos/clusterconfig/.gitignore
+# scopes its rule to that subdirectory only, which once left talos/talosconfig
+# one level up uncovered — and it got committed. Bare patterns here, so they
+# match at any depth.
 kubeconfig
 talosconfig
 

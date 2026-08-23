@@ -9,8 +9,7 @@ kubectl = "1.36.4"
 "github:cloudnative-pg/cloudnative-pg" = { version = "v1.30.0", bin = "kubectl-cnpg" }
 powershell-core = "7.6.5"
 1password-cli = "2.39.0"
-# Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/, ported
-# from equestria-cluster alongside the talos/ tree in 9cd47c0a.
+# Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/.
 #
 # `talosctl` MUST stay in step with talos/talenv.yaml's talosVersion. That is
 # not a convention, it is enforced: `mise run talos:validate-config` compares
@@ -35,8 +34,7 @@ biome = "2.5.2"
 typos = "1.49.0"
 # Linters invoked by hk. The same pinning rule as hk applies -- an unpinned
 # shim here fails the individual step rather than the whole commit, but still
-# breaks the hook. Versions match david-driscoll/equestria-cluster, which runs
-# the same three steps against the same .yamllint / .shellcheckrc.
+# breaks the hook.
 #
 # actionlint shells out to `shellcheck` for `run:` blocks, so it hard-fails with
 # a `fatal error` if shellcheck is on PATH as an unpinned shim -- which is the
@@ -74,14 +72,25 @@ run = ['npx --no-install tsx scripts/generate-types.ts']
 
 [tasks.update]
 description = 'Update all apps that have an update script'
-# `depends`, not another `run` line, so codegen still happens if the dotnet
-# step below fails. It currently always does: `.mise/tasks/do-update.cs` was
-# never carried over from equestria-cluster and does not exist in this repo, so
-# `mise run update` errors on its first line. Left as-is rather than papered
-# over -- porting that script is its own piece of work.
+# `depends`, not another `run` line, so codegen still happens even if the dotnet
+# step below fails.
+#
+# `dir` is pinned because scripts/do-update.cs walks `kubernetes/` RELATIVE to
+# the working directory -- without it, `mise run update` from a subdirectory
+# finds no update scripts.
+#
+# The dotnet step goes through `vals-run` rather than resolving secrets itself:
+# the Update.cs scripts read credentials from the environment, and this way they
+# are resolved ONCE for the whole run instead of once per script. In
+# equestria-cluster this was `op run` inside do-update.cs; see that file.
+#
+# do-update.cs runs every kubernetes/**/Update.cs and exits non-zero if any of
+# them fail, having run them all, so one broken script reports itself rather
+# than hiding the state of the others.
+dir = '{{config_root}}'
 depends = ['codegen']
 run = [
-  'dotnet run .mise/tasks/do-update.cs',
+  'mise run vals-run dotnet run scripts/do-update.cs',
   # `mise task <name>` prints information about a task; `mise run <name>` runs
   # it. This line was the former and had never actually run flate.
   'mise run flate',
@@ -141,7 +150,7 @@ activate_aggressive = true
 [env]
 # Secret values are `vals` references, resolved per command:
 #
-#   mise exec -- ./scripts/vals-run pulumi preview
+#   mise run vals-run pulumi preview
 #
 # They were `op://` literals, which mise passed through untouched and `op run`
 # substituted — so every value had to come from 1Password. Each one now names
@@ -179,6 +188,18 @@ CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "ref+openbao://secrets/third-party-tokens/onepassword/eris-connect#/credential"
 AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/credential"
 AUTHENTIK_URL = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
+
+# Tailscale OAuth client, read by kubernetes/apps/tailscale-system/services/Update.cs
+# (via `mise run update`). That script REFUSES to run without these rather than
+# regenerating an empty list, because a run without the API would delete every
+# per-device Service, Gatus probe and alert it manages.
+#
+# These were declared in equestria-cluster's mise.toml and never carried across
+# during the repo consolidation, which is why `mise run update` could not
+# complete here. The path also moved: it was `secrets/shared/tailscale-terraform-oauth-client`
+# before `secrets/shared/` was drained (scripts/bao-reorg/plan.ts, phase 3).
+TAILSCALE_CLIENT_ID = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/username"
+TAILSCALE_CLIENT_SECRET = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/credential"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 
 # How every ref+openbao:// value above authenticates.
@@ -206,8 +227,7 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 
 # Where talhelper writes the generated admin talosconfig, and where every
 # `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in
-# this repo targets equestria too, matching what equestria-cluster's Taskfile
-# did with its `env:` block.
+# this repo targets equestria too.
 #
 # This path does not exist until `mise run talos:genconfig` has run —
 # talos/clusterconfig/.gitignore excludes the generated files, including this
@@ -218,11 +238,10 @@ SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 # `endpoints: []`, so every command through it would need an explicit
 # `--endpoints`.
 #
-# Note what is deliberately NOT set here: KUBECONFIG. equestria-cluster's
-# Taskfile pinned it to a repo-local ./kubeconfig; this repo carries no such
-# file, and setting it to a missing path would break every kubectl invocation
-# for anyone using their own. The migrated kubectl/flux tasks therefore follow
-# the ambient context — check `kubectl config current-context` first.
+# Note what is deliberately NOT set here: KUBECONFIG. This repo carries no
+# kubeconfig, and pinning the var at a missing path would break every kubectl
+# invocation for anyone using their own. The kubectl/flux tasks therefore
+# follow the ambient context — check `kubectl config current-context` first.
 TALOSCONFIG = "{{config_root}}/talos/clusterconfig/talosconfig"
 
 # UNIFI_HOST = "unifi.driscoll.tech"

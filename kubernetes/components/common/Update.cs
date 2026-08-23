@@ -39,7 +39,13 @@ var factory = LoggerFactory.Create(configure =>
        );
 try
 {
-  var localCluster = new Kubernetes(KubernetesClientConfiguration.BuildConfigFromConfigFile("./kubeconfig"));
+  // BuildDefaultConfig, not BuildConfigFromConfigFile("./kubeconfig"): this repo
+  // carries no kubeconfig at its root (it is gitignored) and deliberately pins
+  // no KUBECONFIG -- see the TALOSCONFIG block in .config/mise.toml. The default
+  // resolution honours $KUBECONFIG then ~/.kube/config, so this follows the same
+  // ambient context as every kubectl/flux task here. Confirm it with
+  // `kubectl config current-context` before running.
+  var localCluster = new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
 
   var result = await localCluster.CustomObjects.GetClusterCustomObjectAsync<TailscaleDns>("tailscale.com", "v1alpha1", "dnsconfigs", "tailscale-nameserver");
 

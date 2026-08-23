@@ -64,7 +64,7 @@ cd "${REPO_ROOT}"
 if [[ -n "${SOPS_AGE_KEY_FILE:-}" ]]; then
   [[ -f "${SOPS_AGE_KEY_FILE}" ]] || die "SOPS_AGE_KEY_FILE points at ${SOPS_AGE_KEY_FILE}, which does not exist"
 elif [[ -z "${SOPS_AGE_KEY:-}" && ! -f "${HOME}/.config/sops/age/keys.txt" ]]; then
-  die "no age key — set SOPS_AGE_KEY_FILE (e.g. equestria-cluster/age.key) or populate ~/.config/sops/age/keys.txt"
+  die "no age key — set SOPS_AGE_KEY_FILE (e.g. the repo-root age.key) or populate ~/.config/sops/age/keys.txt"
 fi
 
 # --extract rather than grep/sed. sops writes YAML scalars UNQUOTED, and a
