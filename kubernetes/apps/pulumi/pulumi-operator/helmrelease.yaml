@@ -35,6 +35,18 @@ spec:
     remediation:
       retries: 5
   values:
+    # Tier 1 per docs/cluster-consolidation/24-power-states.md §1 (`pulumi` stays up
+    # during Battery). Top-level `tolerations` is the key
+    # pulumi-kubernetes-operator reads, verified against its values.
+    # Added after §8 Stage 2 found this among the 51 untolerated Tier-0/1 workloads.
+    # NOTE: this covers the OPERATOR only. The `*-workspace-0` pods are created from
+    # each Stack's `spec.workspaceTemplate.spec.podTemplate`, which lives in the
+    # Pulumi program rather than here, and is tracked separately -- see §4.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     resources:
       limits:
         memory: 1Gi
