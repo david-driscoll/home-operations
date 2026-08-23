@@ -1848,13 +1848,51 @@ through in place rather than moved to the resolved list above — several sectio
    Note `chrony` and `mosquitto` are the same two workloads PR #970 moved to `critical-tier`:
    their priority is now right and their *placement* is still wrong, which is the sharpest
    illustration of why the taint without the tolerations is only half a change.
-3. **Tier calls at the margins** — moved up from item 6 now that the storage measurements
-   exist. `golink` (link shortener, 0 CP replicas) and `taildrive` (file share, 0) should be
-   written down as **Tier 2**; their placement already matches. `crowdsec-*` is Tier 1 only
-   by living in `network` and is almost certainly Tier 2 — three volumes, 0 CP replicas.
-   `matter` (`hostNetwork`, shares `${AUTOMATION_VIP}`) and `tsiam` have never been
-   tier-assigned explicitly. None of these blocks anything; all of them make §6.0's check 4
-   ambiguous until written down.
+3. ~~**Tier calls at the margins**~~ **DECIDED by David, 2026-08-23 — with one consequence
+   that is real work, not bookkeeping.** The item existed because §6.0's check 4 is ambiguous
+   while any Tier-1 membership is implied rather than written. The rulings:
+
+   | App | Ruling | Basis |
+   |---|---|---|
+   | `tsiam` | **Tier 1** | David: *"tsiam and tsidp"* — same tier as `tsidp`, which §1 already lists as Tier 1 |
+   | `crowdsec` (agent + `lapi` + `ui`) | **Tier 1** | David: *"crowdsec should be the same tier as traefik"* — and `traefik` is Tier 1 in §1 |
+   | `matter` | **Tier 1** | Not separately ruled, but settled by construction: it is already in §1's table on `longhorn-critical` with 3 trio replicas, placed there by #966 |
+   | `golink`, `taildrive` | **Tier 2** | The standing recommendation, unchallenged. Placement already matches (0 CP replicas, default `bulk` class), so nothing moves |
+
+   `tsiam`, `matter`, `golink` and `taildrive` are pure bookkeeping — every one of them
+   already sits where its new tier says it should.
+
+   > **`crowdsec` is not.** Ruling it Tier 1 makes it the **only** Tier-1 app whose storage is
+   > not on `longhorn-critical`, and the gap is total rather than partial:
+   >
+   > | PVC | Class | Replicas on the trio |
+   > |---|---|---|
+   > | `crowdsec-config-pvc` (100 Mi) | `longhorn` | **0** |
+   > | `crowdsec-db-pvc` (1 Gi) | `longhorn` | **0** |
+   > | `crowdsec-ui` (5 Gi) | `longhorn` | **0** |
+   >
+   > **As it stands, crowdsec cannot run during a Battery window at all** — not one replica of
+   > any of its three volumes is on a node that stays up. It is now the item that would fail
+   > §6.0's corrected check 4 if that check were widened from "3-replica `critical` volumes" to
+   > "every Tier-1 app", which is the honest reading of what the check is for.
+   >
+   > **This is the same migration #963 and #966 performed**, and it is not a YAML edit:
+   > `storageClassName` is immutable on a bound PVC. #966's precedent is the VolSync
+   > choreography under a suspended Kustomization for VolSync-backed volumes, and an
+   > imperative clone-and-recreate where the PVC comes from a StatefulSet template.
+   > `crowdsec-ui` is VolSync-backed (`volsync-src-crowdsec-ui-cache` exists); the `config`
+   > and `db` PVCs need checking before a route is chosen.
+   >
+   > ⚠️ **And the `force: enabled` trap applies here specifically.**
+   > `components/volsync/kustomization.yaml` stamps `kustomize.toolkit.fluxcd.io/force:
+   > enabled` on every resource it renders, `pvc.yaml` included. With `force` on a PVC, Flux
+   > answers an immutable-field change by **deleting and recreating** the object rather than
+   > failing — which is [30](30-longhorn-media-tier.md)'s data-loss finding, and a
+   > StorageClass change is exactly such a field. Confirm which of crowdsec's PVCs carry that
+   > label before touching any of them.
+
+   **Tracked as its own piece of work rather than closed with the ruling** — the tier question
+   is answered, the storage that the answer implies is not.
 4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
    the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
    too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
@@ -2005,6 +2043,78 @@ through in place rather than moved to the resolved list above — several sectio
    against the corrected StorageClasses — and to fix the `robustness`-blind check separately,
    since that one is real whether or not the burndown ever runs. Needs David's call before
    anything is deleted.
+
+   ---
+
+   **2026-08-23, second pass — where the 63.7 GiB actually comes from, and why the obvious
+   fix is the dangerous one.** Chasing "why is there 44.6 GiB of VolSync restore-destination
+   data parked on the control planes" found a live recurrence of
+   [vault#120](https://github.com/david-driscoll/vault/issues/120), armed for **44 apps**
+   rather than one.
+
+   The mechanism, each part verified live:
+
+   1. **`components/volsync` — the *base* component every app gets — ships a
+      `ReplicationDestination` with `trigger: {manual: restore-once}`.** Not
+      `components/volsync-restore`, the transient one that is supposed to be added for a
+      restore and then removed again. Every app carries a standing restore-once RD.
+   2. **`volsync-system/restore-cleanup` reaps them at 03:30 nightly.** Its script deletes
+      any RD where `spec.trigger.manual == status.lastManualSync == "restore-once"`, which
+      cascades through `ownerReferences` to delete the `*-dst-dest` and `*-dst-cache` PVCs.
+      Its own comment states the assumption that makes it safe — *"the value set by
+      `components/volsync-restore`"* — and that assumption is wrong: the base component sets
+      it too.
+   3. **So Flux recreates what the cleanup deleted, and a fresh restore-once RD fires a full
+      restic restore.** The loop closes.
+
+   The evidence that it ran, rather than merely could:
+
+   | Observation | Value |
+   |---|---|
+   | `restore-cleanup` last succeeded | `2026-08-21T03:30:12Z` |
+   | All 44 RDs created | `2026-08-21T04:05:22Z` – `04:11:22Z` |
+   | All 44 RDs synced | `04:06Z` – `04:21Z` |
+   | Their `*-dst-dest` volumes today | 39 volumes, **44.6 GiB**, all `detached`, mostly on the trio |
+
+   44 apps ran a **full restic restore** within an hour of the cleanup deleting their RDs.
+   That is vault#120's exact signature — *"the restore-once trigger had already fired, the
+   nightly `restore-cleanup` CronJob reaped the RD at 03:30, and Flux recreated it on the next
+   reconcile — re-running a full restic restore and re-provisioning a 5Gi `longhorn-snapshot`
+   + 8Gi `longhorn-cache` PVC pair, every single day"* — the wording `dynacat`'s `ks.yaml`
+   carries as a warning against one app doing it.
+
+   **It is currently paused, by accident, and the pause is the only reason this is not
+   happening tonight.** `restore-cleanup` has not succeeded since 2026-08-21: its 2026-08-22
+   run is absent from history entirely, and its 2026-08-23 03:30 run failed
+   `DeadlineExceeded` after the full `activeDeadlineSeconds: 300`. **Cause not determined** —
+   the pod is gone and the events have expired, and the two cheap hypotheses were both tested
+   and disproved: the `bitnami/kubectl` digest still resolves (HTTP 200), and `volsync-system`
+   *is* in the downscaler's `excludedNamespaces`, so the nightly shed is not suspending it.
+   The plausible remaining candidate is the script's 44 sequential `kubectl delete` calls,
+   each blocking on VolSync finalizers and a PVC cascade, exceeding 300 s.
+
+   > ⚠️ **Do not "fix" `restore-cleanup` in isolation.** It is the trigger, not the victim.
+   > Making it succeed again restarts a nightly 44-app full restic restore. The order has to
+   > be: stop the base component shipping a standing `restore-once` RD **first**, then restore
+   > the cleanup.
+
+   **This supersedes the recommendation above.** Item 8's burndown is not a storage exercise at
+   all. The 63.7 GiB is debris from the last iteration of this loop; break the loop and the
+   debris stops being regenerated, after which it can be removed once and stays gone. Doing
+   any replica surgery before that would move data that should not exist.
+
+   **Needs David** — the fix is a design change to `components/volsync`, which every app in the
+   estate consumes, and the safe shape (drop the RD from the base; make restores explicitly
+   opt-in via `components/volsync-restore` as `dynacat`'s comment already assumes) is a bigger
+   change than this piece should make unilaterally.
+
+   **One further trap for whoever takes it**, because it is adjacent and armed:
+   `components/volsync/kustomization.yaml` sets `kustomize.toolkit.fluxcd.io/force: enabled`
+   as a `commonLabel` across **all** its resources — including `pvc.yaml`, the app's real PVC.
+   That is precisely [30](30-longhorn-media-tier.md)'s data-loss finding: with `force` on a
+   PVC, an immutable-field edit such as a StorageClass change makes Flux delete and recreate
+   it rather than fail. Any future tier change that moves an app's PVC between `longhorn` and
+   `longhorn-critical` has to reckon with that first.
 9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.
