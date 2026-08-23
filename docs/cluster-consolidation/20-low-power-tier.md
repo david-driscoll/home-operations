@@ -1997,6 +1997,53 @@ through in place rather than moved to the resolved list above — several sectio
 
    **Tracked as its own piece of work rather than closed with the ruling** — the tier question
    is answered, the storage that the answer implies is not.
+
+   #### The migration, measured and planned 2026-08-23 — with a cheaper route than #963/#966
+
+   Live state of all three volumes: **`attached`, `robustness: healthy`, 3 replicas,
+   `nodeSelector: ["bulk"]`**, replicas spread over `hard-hat` / `fluttershy` / `kerfuffle`.
+
+   **The two classes differ, for placement purposes, in exactly one parameter:**
+
+   | | `longhorn` | `longhorn-critical` |
+   |---|---|---|
+   | `nodeSelector` | **`bulk`** | **`critical`** |
+   | `numberOfReplicas` | 3 | 3 |
+   | `dataLocality` | best-effort | best-effort |
+
+   So the Battery-relevant outcome — replicas resident on the trio — is reachable by patching
+   the **Longhorn Volume's** `spec.nodeSelector` and then deleting one non-conforming replica
+   at a time, waiting for `healthy` between each. That never drops below 2 replicas, never
+   touches the PVC, and is reversible by patching the selector back. It needs the
+   delete-a-replica step because [30](30-longhorn-media-tier.md) established that Longhorn
+   never evicts tag-nonconforming replicas on its own.
+
+   **That is a different trade from #963/#966's choreography, and the difference is worth
+   stating.** The choreography changes the PVC's `storageClassName`, which is declarative and
+   survives a PVC recreate; the selector patch changes only the live volume, so a future PVC
+   recreate would land back on `bulk`. The selector patch buys zero data-loss risk at the cost
+   of leaving Git and the cluster disagreeing about the class.
+
+   > ⚠️ **The declarative change is the hazardous one, and must not merge before the
+   > choreography runs.** `crowdsec-ui`'s PVC carries
+   > `kustomize.toolkit.fluxcd.io/force: enabled` (verified live) from
+   > `components/volsync`'s `commonLabels`, so editing `VOLSYNC_STORAGECLASS` in its `ks.yaml`
+   > makes Flux **delete and recreate** the PVC rather than fail on the immutable field —
+   > [30](30-longhorn-media-tier.md)'s data-loss finding, armed. The two lapi PVCs are
+   > chart-created and carry no Flux ownership labels, so there the same edit stalls the
+   > HelmRelease instead of destroying anything — bad, but not destructive.
+
+   **A gap found while planning this, independent of the migration:** `crowdsec-ui` has a
+   working VolSync `ReplicationSource` (last sync `2026-08-23T14:04Z`, next `2026-08-24T14:00Z`),
+   but **`crowdsec-config-pvc` and `crowdsec-db-pvc` have no `ReplicationSource` at all.** The
+   LAPI's API credentials and its decisions database are unbacked. For an app that is now
+   Tier 1 that is a hole in its own right, and it also means the safe-because-recoverable
+   argument for a PVC-recreating migration does not apply to two of the three volumes.
+
+   **Status: not executed.** The selector patch is a live Longhorn mutation and was not run.
+   Sequence when it is: `crowdsec-ui` first (it has a fresh backup, so the procedure is
+   validated on the recoverable volume), then `crowdsec-db-pvc`, then `crowdsec-config-pvc`,
+   one replica at a time with a `robustness: healthy` gate between each.
 4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
    the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
    too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
