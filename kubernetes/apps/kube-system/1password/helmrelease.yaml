@@ -34,8 +34,18 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    # Tier 0 (§1's named components): OpenBao cannot boot at exit without
+    # external-secrets + onepassword-connect, so these must be placeable on a
+    # control plane once §4's taint is live. Key verified against the chart.
+    # Added after §8 Stage 2. See docs/cluster-consolidation/20-low-power-tier.md §4.
     connect:
       applicationName: onepassword-connect
+      # `connect.tolerations` and `operator.tolerations` are separate keys in the
+      # connect chart -- setting only one leaves the other pod untolerated.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       host: onepassword-connect
       annotations:
         reloader.stakater.com/auto: "true"
@@ -63,6 +73,15 @@ spec:
           - host: "op-connect.${CLUSTER_DOMAIN}"
     operator:
       create: true
+      # Tier 0: the ExternalSecrets stores depend on onepassword-connect, which
+      # OpenBao's Kustomization transitively depends on -- so it must be placeable
+      # on a control plane once §4's taint is live. `connect.tolerations` and
+      # `operator.tolerations` are separate keys; both are set.
+      # Added after §8 Stage 2. See docs/cluster-consolidation/20-low-power-tier.md §4.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       autoRestart: true
       imagePullPolicy: IfNotPresent
       pollingInterval: 600
