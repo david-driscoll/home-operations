@@ -44,6 +44,13 @@ spec:
     cleanPrometheusOperatorObjectNames: true
     grafana:
       replicas: 1
+      # Tier 1 per docs/cluster-consolidation/24-power-states.md §1 (`observability`
+      # stays up during Battery). Path verified against the chart's values.
+      # Added after §8 Stage 2. See docs/cluster-consolidation/20-low-power-tier.md §4.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       deploymentStrategy:
         type: Recreate
       headlessService: true

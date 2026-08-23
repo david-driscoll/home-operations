@@ -40,11 +40,14 @@ prometheus:
     # Longhorn PVC (storageSpec below); a toleration widens where it MAY
     # schedule but does not move the volume, so the pod still follows its data.
     #
-    # Scope note: this release also renders kube-state-metrics and the
-    # Prometheus operator, which are NOT given tolerations here -- they are
-    # stateless Deployments that are fine on the workers, and the request was
-    # for Prometheus itself. prometheus-node-exporter already tolerates
-    # everything via the chart default.
+    # Scope note, REVISED 2026-08-23. This release also renders kube-state-metrics
+    # and the Prometheus operator. They used to be left untolerated here on the
+    # grounds that they are "stateless Deployments that are fine on the workers" --
+    # which is true in Full and Low Power and false in Battery, where there ARE no
+    # workers. §8 Stage 2 proved the general form of that mistake by leaving
+    # home-assistant Pending on a cordoned cluster, so both now get tolerations
+    # below. prometheus-node-exporter already tolerates everything via the chart
+    # default.
     tolerations:
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
@@ -183,7 +186,20 @@ prometheus-node-exporter:
           replacement: $1
           sourceLabels: [__meta_kubernetes_pod_node_name]
           targetLabel: instance
+prometheusOperator:
+  # Tier 1 per 24 §1. Was deliberately left untolerated -- see the revised scope
+  # note above; "fine on the workers" does not hold in Battery.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
 kube-state-metrics:
+  # Tier 1 per 24 §1 (`observability` stays up during Battery). Subchart path,
+  # verified by rendering kube-prometheus-stack with the key set.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
   fullnameOverride: kube-state-metrics
   metricLabelsAllowlist:
     - pods=[*]
