@@ -178,20 +178,27 @@ if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecre
 {
   AnsiConsole.MarkupLine("[red]TAILSCALE_CLIENT_ID / TAILSCALE_CLIENT_SECRET are not set — refusing to regenerate.[/]");
   AnsiConsole.MarkupLine("[red]Regenerating without the Tailscale API would delete every per-device service, probe and alert.[/]");
-  AnsiConsole.MarkupLine("[yellow]Run through 1Password (e.g. `op run --no-masking -- mise run update`) so the credentials resolve.[/]");
+  AnsiConsole.MarkupLine("[yellow]Run `mise run update`, which resolves them via vals-run, or `mise run vals-run dotnet run <this script>` to run it alone.[/]");
   AnsiConsole.MarkupLine("[yellow]No files were written.[/]");
   Environment.Exit(1);
 }
 
-// .mise.toml sets both variables to literal `op://…` references that only `op run` expands.
-// Running this script directly under mise (without `op run`) therefore yields credentials that
-// are non-empty but unusable — which would sail past the emptiness check above and fail later
-// as an opaque OAuth error. Name the real problem instead.
-if (clientId.StartsWith("op://", StringComparison.OrdinalIgnoreCase) ||
+// .config/mise.toml sets both variables to secret REFERENCES, which mise passes through
+// untouched — a wrapper has to expand them. Running this script bare therefore yields
+// credentials that are non-empty but unusable, which would sail past the emptiness check
+// above and fail later as an opaque OAuth error. Name the real problem instead.
+//
+// Both prefixes are checked. `ref+…` is the current form (vals, expanded by
+// `mise run vals-run`); `op://` is the pre-OpenBao form this repo used when the
+// values all came from 1Password and `op run` was the wrapper. A stale `op://`
+// value would otherwise fail the same opaque way the `ref+` case does.
+if (clientId.StartsWith("ref+", StringComparison.OrdinalIgnoreCase) ||
+    clientSecret.StartsWith("ref+", StringComparison.OrdinalIgnoreCase) ||
+    clientId.StartsWith("op://", StringComparison.OrdinalIgnoreCase) ||
     clientSecret.StartsWith("op://", StringComparison.OrdinalIgnoreCase))
 {
-  AnsiConsole.MarkupLine("[red]Tailscale credentials are unresolved 1Password references (`op://…`) — refusing to regenerate.[/]");
-  AnsiConsole.MarkupLine("[yellow]Wrap the command in `op run --no-masking --` so 1Password expands them.[/]");
+  AnsiConsole.MarkupLine("[red]Tailscale credentials are unresolved secret references — refusing to regenerate.[/]");
+  AnsiConsole.MarkupLine("[yellow]Run `mise run update`, or wrap the command in `mise run vals-run` so they expand.[/]");
   AnsiConsole.MarkupLine("[yellow]No files were written.[/]");
   Environment.Exit(1);
 }

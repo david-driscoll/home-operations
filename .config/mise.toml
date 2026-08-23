@@ -72,14 +72,25 @@ run = ['npx --no-install tsx scripts/generate-types.ts']
 
 [tasks.update]
 description = 'Update all apps that have an update script'
-# `depends`, not another `run` line, so codegen still happens if the dotnet
-# step below fails. It currently always does: `.mise/tasks/do-update.cs` does
-# not exist in this repo, so `mise run update` errors on its first line. Left
-# as-is rather than papered over -- writing that script is its own piece of
-# work.
+# `depends`, not another `run` line, so codegen still happens even if the dotnet
+# step below fails.
+#
+# `dir` is pinned because scripts/do-update.cs walks `kubernetes/` RELATIVE to
+# the working directory -- without it, `mise run update` from a subdirectory
+# finds no update scripts.
+#
+# The dotnet step goes through `vals-run` rather than resolving secrets itself:
+# the Update.cs scripts read credentials from the environment, and this way they
+# are resolved ONCE for the whole run instead of once per script. In
+# equestria-cluster this was `op run` inside do-update.cs; see that file.
+#
+# do-update.cs runs every kubernetes/**/Update.cs and exits non-zero if any of
+# them fail, having run them all, so one broken script reports itself rather
+# than hiding the state of the others.
+dir = '{{config_root}}'
 depends = ['codegen']
 run = [
-  'dotnet run .mise/tasks/do-update.cs',
+  'mise run vals-run dotnet run scripts/do-update.cs',
   # `mise task <name>` prints information about a task; `mise run <name>` runs
   # it. This line was the former and had never actually run flate.
   'mise run flate',
@@ -139,7 +150,7 @@ activate_aggressive = true
 [env]
 # Secret values are `vals` references, resolved per command:
 #
-#   mise exec -- ./scripts/vals-run pulumi preview
+#   mise run vals-run pulumi preview
 #
 # They were `op://` literals, which mise passed through untouched and `op run`
 # substituted — so every value had to come from 1Password. Each one now names
@@ -177,6 +188,18 @@ CONNECT_VAULT = "Eris"
 CONNECT_TOKEN = "ref+openbao://secrets/third-party-tokens/onepassword/eris-connect#/credential"
 AUTHENTIK_TOKEN = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/credential"
 AUTHENTIK_URL = "ref+openbao://secrets/clusters/alpha-site/apps/authentik/token#/url"
+
+# Tailscale OAuth client, read by kubernetes/apps/tailscale-system/services/Update.cs
+# (via `mise run update`). That script REFUSES to run without these rather than
+# regenerating an empty list, because a run without the API would delete every
+# per-device Service, Gatus probe and alert it manages.
+#
+# These were declared in equestria-cluster's mise.toml and never carried across
+# during the repo consolidation, which is why `mise run update` could not
+# complete here. The path also moved: it was `secrets/shared/tailscale-terraform-oauth-client`
+# before `secrets/shared/` was drained (scripts/bao-reorg/plan.ts, phase 3).
+TAILSCALE_CLIENT_ID = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/username"
+TAILSCALE_CLIENT_SECRET = "ref+openbao://secrets/third-party-tokens/tailscale/pulumi-oauth#/credential"
 _.python.venv = { path = "{{config_root}}/.venv", create = true }
 
 # How every ref+openbao:// value above authenticates.
