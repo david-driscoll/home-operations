@@ -1711,6 +1711,55 @@ to a control plane.
   current set would take down Home Assistant, DNS, Traefik, identity and observability at
   once, on battery.
 
+#### What was fixed, 2026-08-23 — 38 of the 51
+
+Landed across four commits, one per namespace group. **Every key path was read out of the
+chart that consumes it and, where a subchart was involved, confirmed by rendering** — #1001's
+own lesson, and it paid: three of the paths were not the obvious name.
+
+| Group | Covered | How |
+|---|---|---|
+| `stargate-command` | `home-assistant`, `matter` | app-template `controllers.<n>.pod.tolerations` |
+| `network` | `traefik`, `k8s-gateway`, `cloudflare-dns`, `technitium-dns`, `unifi-dns`, `cloudflare-tunnel`, `error-pages`, `crowdsec-ui`, `crowdsec` lapi | mixed; see below |
+| `tailscale-system` | `operator`, `tsidp`, `tsiam` | `operatorConfig.tolerations` / app-template |
+| `kube-system` (Tier 0) | `external-secrets` ×4, `onepassword-connect` ×2, `reflector`, `reloader`, `snapshot-controller` | `global.` / `connect.`+`operator.` / `reloader.deployment.` / `controller.` |
+| `observability` | `grafana`, `grafana-operator`, `kube-state-metrics`, `prometheus-operator`, `blackbox-exporter`, `speedtest-exporter`, `thanos` ×7 | subchart + per-component keys |
+| `pulumi` | `pulumi-operator` | top-level |
+
+**Four findings came out of doing it, each one a thing that would have failed silently:**
+
+1. **traefik reads top-level `.Values.tolerations`, not `deployment.tolerations`.** Rendering
+   41.3.0 with both keys set shows only the top-level one reaching the pod spec — so the
+   nested block in `values.yaml` was **dead**, and its `tolerationSeconds: 60` had never
+   applied. Live pods carried the admission controller's defaults at 300. Both entries moved
+   to the working key, so that intent finally takes effect.
+2. **external-secrets has `global.tolerations`**, which reaches all three of its pods at once
+   — verified by rendering and counting three pod specs. One key instead of three.
+3. **Several charts split the key per component with no global one**: bitnami/thanos has seven,
+   1Password connect has `connect.` *and* `operator.` (setting one leaves the other pod
+   untolerated), snapshot-controller has `controller.` and `webhook.`.
+4. **crowdsec's agent DaemonSet already tolerated the control plane** from the chart default.
+   Setting `agent.tolerations` would have **replaced** that default rather than added to it —
+   a change that looks additive and is not. Only `lapi` was touched.
+
+Three charts needed the toleration **merged into a value block that already existed** rather
+than appended; a second `operator:`, `controller:` or `query:` key is a YAML duplicate-key
+error that fails the whole Kustomization. `flate` caught each one.
+
+#### What was deliberately NOT fixed — 13, and why
+
+| Left alone | Count | Reason |
+|---|---|---|
+| `golink`, `taildrive` | 2 | **Tier 2** by David's 2026-08-23 ruling — placement already correct |
+| `tailnet-inbound`, `tailnet-outbound` ProxyGroups | 2 | #1001 explicitly placed them outside Tier 1 when it created the `control-plane-tolerant` ProxyClass. Reversing that is a tier decision, not a mechanical fix |
+| `nameserver`, `ts-mosquitto-*`, `ts-primary-connector-*` | 3 | Operator-created proxies. Reachable only via a `ProxyClass`, and their tier has never been written down — `ts-mosquitto` fronts a Tier-1 service, which argues one way; §1 never lists them, which argues the other |
+| `headlamp`, `intel-gpu-plugin`, `inteldeviceplugins-controller-manager`, `node-feature-discovery-gc` | 4 | In `kube-system` but **not** among §1's named Tier-0 components. They need a tier ruling before a toleration |
+| `pulumi` `*-workspace-0` ×2 | 2 | Created from each Stack's `spec.workspaceTemplate.spec.podTemplate`, which lives in the Pulumi program, not this tree |
+| `observability/glance-k8s` | 1 | **Orphaned Helm release** — carries `helm.toolkit.fluxcd.io/name=glance-k8s` but no such HelmRelease exists. Not in this tree to patch, and worth investigating on its own |
+
+**So the re-audit will not return empty even when this is right** — it should return `openbao`
+(deliberately Tier 2) plus these 13, and each of those needs a decision rather than a patch.
+
 #### Method note for the re-do
 
 Audit by **tier membership**, never by current placement — the whole failure is that a
