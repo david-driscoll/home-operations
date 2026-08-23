@@ -1,17 +1,26 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: app-template
-spec:
-  interval: 1h
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
-  ref:
-    tag: 5.0.1
-  url: oci://ghcr.io/bjw-s-labs/helm/app-template
+# NOTE: this file deliberately does NOT define its own `OCIRepository`.
+#
+# It used to, named `app-template` at tag 5.0.1 with no digest pin -- and that
+# collided with the shared `kubernetes/components/repos/app-template`, which
+# `kubernetes/apps/equestria/kustomization.yaml` already pulls into this exact
+# namespace at 5.1.0 WITH a digest. Two Kustomizations, one object name, one
+# namespace: `dynacat` won ownership, so all of equestria ran the stale
+# un-pinned 5.0.1.
+#
+# The un-pinned tag is what made it expensive. Without a digest, source-
+# controller re-resolved the tag every interval and re-stored the artifact --
+# 116 `NewArtifact` events for an unchanged revision -- and every re-store made
+# ALL 40 equestria HelmReleases run a `helm upgrade`. Each upgrade reset
+# `spec.replicas` to the chart default, which the nightly downscaler then had to
+# undo: 378 scale operations in one night across 38 workloads, instead of 76.
+#
+# Same shape as the Traefik middleware alias collision -- a locally-defined
+# resource sharing a name with a shared one in the same namespace silently wins
+# and nothing reports the conflict.
+#
+# The HelmRelease below refers to `OCIRepository/app-template` by name and
+# resolves to the shared one. Do not reintroduce a local copy.
 
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
