@@ -107,14 +107,18 @@ lapi:
   # Tier 1 as of David's 2026-08-23 ruling ("crowdsec should be the same tier as
   # traefik"), reversing the exclusion noted under `agent.tolerations` above.
   #
-  # ⚠️ INERT UNTIL THE STORAGE MOVES. That comment's objection was correct on its
-  # own terms: a toleration widens where lapi MAY schedule and does not move its
-  # data, and `crowdsec-config-pvc` / `crowdsec-db-pvc` still hold all three
-  # replicas on `bulk`-tagged workers. During a Battery window lapi could be
-  # scheduled onto a control plane and then fail to attach. This is deliberately
-  # the #1014 pairing -- never a toleration without its storage -- and the storage
-  # half is planned but NOT yet run: see docs/cluster-consolidation/20-low-power-tier.md
-  # §9 item 3, which also records that these two PVCs have no VolSync backup at all.
+  # The storage half is DONE, so this is live rather than inert. It was flagged
+  # inert when it landed, because the objection it reverses was correct on its own
+  # terms: a toleration widens where lapi MAY schedule and does not move its data,
+  # so with both PVCs still on `bulk` workers lapi could be scheduled onto a
+  # control plane and then fail to attach.
+  #
+  # Closed 2026-08-23: `crowdsec-config-pvc` and `crowdsec-db-pvc` were migrated to
+  # `nodeSelector: ["critical"]` and now hold all three replicas on
+  # milky-way/othalla/pegasus, `robustness: healthy`. Both were given VolSync
+  # ReplicationSources first (see ./volsync.yaml) so the migration ran from a
+  # restorable position. This is the #1014 pairing with BOTH halves landed --
+  # docs/cluster-consolidation/20-low-power-tier.md §9 item 3.
   tolerations:
     - key: node-role.kubernetes.io/control-plane
       operator: Exists
