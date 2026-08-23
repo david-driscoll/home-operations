@@ -52,3 +52,13 @@ spec:
       name: cloudflare-tunnel
       valuesKey: credential
       targetPath: cloudflare.tunnel_token
+  values:
+    # Tier 1: must survive a Battery window, when the workers are off and the
+    # control planes carry §4's taint. Top-level `tolerations` is the key
+    # cloudflare-tunnel-remote 0.1.2 reads, verified against its values.
+    # Added after §8 Stage 2 found this among the 51 untolerated Tier-0/1 workloads.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

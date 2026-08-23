@@ -37,6 +37,15 @@ spec:
           reloader.stakater.com/auto: "true"
         pod:
           hostNetwork: true
+          # Tier 1: must survive a Battery window, when the workers are off and the
+          # control planes carry the taint (§4). app-template renders
+          # controllers.<name>.pod.tolerations into the pod spec.
+          # Added after §8 Stage 2 found this workload Pending on a cordoned cluster.
+          # See docs/cluster-consolidation/20-low-power-tier.md §4.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
         containers:
           app:
             image:

@@ -66,6 +66,18 @@ spec:
   # `flate test` says nothing about whether this release's real values are
   # sound. It never sees them. `scripts/eso-values-lint` is the check that does.
   values:
+    # Tier 1 as of David's 2026-08-23 ruling ("crowdsec should be the same tier as
+    # traefik"). Only the LAPI needs one: `lapi.tolerations` and `agent.tolerations`
+    # are separate keys in this chart, and the agent DaemonSet ALREADY carries
+    # node-role.kubernetes.io/control-plane from the chart's own default -- verified
+    # live on crowdsec-agent-4cl9j. Setting `agent.tolerations` here would REPLACE
+    # that default rather than add to it, so it is deliberately left alone.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4 and §9 item 3.
+    lapi:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     agent:
       acquisition:
         - namespace: network
