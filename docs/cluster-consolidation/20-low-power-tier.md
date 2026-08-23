@@ -70,7 +70,20 @@ off or wakes one up on a schedule, and after the 2026-08-22 reversal nothing is 
 overnight. #1046 sheds *workloads*; node shutdown and the WoL return trip remain §6's human
 runbook for a Battery event.
 
-**§4 IS DONE AND LIVE.** Both halves landed on 2026-08-21:
+> ### ⛔ **§4 IS NOT DONE — corrected 2026-08-23 by §8 Stage 2.**
+>
+> The block below is kept because both PRs did land and the taint half *is* done. But the
+> toleration half covered **6 of 51** Tier-0/1 workloads, because §9 item 2's audit filtered
+> on *pods currently resident on the trio* rather than on tier membership — so every Tier-0/1
+> workload sitting on a worker was invisible to it.
+>
+> **`home-assistant` has no control-plane toleration and sat `Pending` for the whole of
+> Stage 2.** So do `traefik`, `tsidp`, `tsiam`, the Tailscale operator, all of `observability`
+> and `pulumi`, and Tier-0 `external-secrets` + `onepassword-connect`. Battery would have
+> failed on entry, on the workload D6 exists to protect. Full list and method note in
+> §8 "Stage 2 RESULTS". **Stages 3 and 4 must not run until this is fixed.**
+
+**§4's two PRs landed on 2026-08-21:**
 [#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations) and
 [#1002](https://github.com/david-driscoll/home-operations/pull/1002) (the taint). All three
 control planes now carry `node-role.kubernetes.io/control-plane:NoSchedule`; all six Tier-0/1
@@ -80,6 +93,12 @@ Post-flip verification (29 §7) passed clean: no `FailedScheduling` events, noth
 `Pending`, every DaemonSet that covered 7 nodes still covers 7, 0 degraded and 0 faulted volumes,
 Flux 0 not-ready. `mosquitto-0` is running on `othalla` — a tainted control plane — which is the
 positive proof that the tolerations work rather than merely being present.
+
+**Read that verification for what it measured.** It asked whether the flip *stranded* anything —
+blast radius — and the answer was correctly no. It could not ask whether Tier 1 can *return* to
+the trio, because nothing had been evicted from one. That second question is §8 Stage 2's, it was
+run on 2026-08-23, and it failed. And `mosquitto-0` proves the six patched workloads work; it
+says nothing about the 51 never examined.
 
 **Every hardware question in this file is now closed**, all answered by David on 2026-08-20/21:
 the battery powers **alpha-site**; all three bare-metal workers can be started by **WoL** (§6.2);
@@ -1614,6 +1633,91 @@ question from whether it can *run* there. It is where §0.3's Technitium problem
 `ContainerCreating` pod with a CNI error rather than as a theory. Undo with
 `kubectl uncordon hard-hat fluttershy kerfuffle shining-armor` and let Flux/the descheduler
 settle it back.
+
+### Stage 2 RESULTS — run 2026-08-23. **It failed, and it failed on Home Assistant.**
+
+Run exactly as written above: four workers cordoned (never shut down), the `home-assistant`
+pod deleted, placement observed, then uncordoned. Total Home Assistant outage **3 m 41 s**;
+the cluster was returned to baseline (7 Ready, none cordoned, 0 degraded volumes) and nothing
+else moved.
+
+**Home Assistant did not schedule. It sat `Pending` for the entire cordon.**
+
+    Warning  FailedScheduling  default-scheduler
+    0/7 nodes are available: 3 node(s) had untolerated taint(s), 4 node(s) were unschedulable.
+
+The pod's complete toleration list, read off the `Pending` pod:
+
+    node.kubernetes.io/not-ready     Exists  NoExecute
+    node.kubernetes.io/unreachable   Exists  NoExecute
+
+**There is no `node-role.kubernetes.io/control-plane` toleration on Home Assistant** — the one
+application D6 names by name, the reason Tier 1 exists at all. In a real Battery window it
+would not come back. Its storage was never the problem: `home-assistant` has held three
+`longhorn-critical` replicas on the trio since #966. It simply cannot be scheduled there.
+
+#### The audit that said otherwise was scoped wrong
+
+§9 item 2 records the toleration work as **"DONE and LIVE 2026-08-21… all six verified live
+carrying the key, and the audit filter now returns only the Tier-2 set."** That is true of the
+six workloads it names, and the six are correct. The **method** is what failed: its filter was
+*"pods on the trio that carry neither the explicit control-plane toleration nor a blanket
+`operator: Exists`"* — it audited **pods already resident on the control planes**, not
+membership of Tier 0/1. Every Tier-0/1 workload that happened to be running on a worker at
+audit time was invisible to it, and after §4's taint most of them were.
+
+The tell was in the record and read as good news. [24](24-power-states.md)'s item 3 notes
+*"`kube-state-metrics` and `prometheus-operator` no longer run on the trio"* and drops them
+from the list — treating a workload leaving the control planes as the problem going away,
+when it is the workload leaving the audit's field of view.
+
+`mosquitto-0` running on `othalla` was cited as *"the positive proof that the tolerations
+work rather than merely being present."* It proves the six that were patched work. It says
+nothing about the ones never examined.
+
+#### Re-audited by tier membership, 2026-08-23 — **51 workloads, not six**
+
+Every pod in a Tier-0/1 namespace carrying neither an explicit control-plane toleration nor a
+blanket `operator: Exists`, with static pods (`ownerReference: Node` — they bypass the
+scheduler) and the deliberately-Tier-2 `openbao` excluded:
+
+| Namespace | Count | Workloads |
+|---|---|---|
+| `kube-system` (**Tier 0**) | 13 | `external-secrets` + `-webhook`, `-cert-controller`, `-reloader` · `onepassword-connect` + operator · `reflector` · `reloader` · `snapshot-controller` · `headlamp` · `intel-gpu-plugin` · `inteldeviceplugins-controller-manager` · `node-feature-discovery-gc` |
+| `network` (Tier 1) | 9 | `traefik` · `k8s-gateway` · `cloudflare-dns` · `cloudflare-tunnel` · `unifi-dns` · `technitium-dns` · `error-pages` · `crowdsec-lapi` · `crowdsec-ui` |
+| `tailscale-system` (Tier 1) | 10 | `operator` · `tsidp` · `tsiam` · `nameserver` · `golink` · `taildrive` · `tailnet-inbound-0` · `tailnet-outbound-0` · `ts-mosquitto-…-0` · `ts-primary-connector-…-0` |
+| `stargate-command` (Tier 1) | 2 | **`home-assistant`** · `matter` |
+| `observability` (Tier 1 per [24](24-power-states.md) §1) | 14 | `grafana` · `grafana-operator` · `kube-state-metrics` · `prometheus-operator` · `blackbox-exporter` · `speedtest-exporter` · `glance-k8s` · the seven `thanos-*` |
+| `pulumi` (Tier 1 per [24](24-power-states.md) §1) | 3 | `pulumi-operator-controller-manager` · `equestria-workspace-0` · `unifi-network-workspace-0` |
+
+**Tier 0 is in the list.** `external-secrets` and `onepassword-connect` are the pair §1 keeps
+in Tier 0 precisely because OpenBao cannot boot at exit without them, and neither can return
+to a control plane.
+
+#### What this means for the plan
+
+- **§4 is not done.** This file's status block says "§4 IS DONE AND LIVE" on the strength of
+  #1001 + #1002. The taint half is done. The toleration half covered 6 of 51.
+- **Battery would have failed on entry**, and would have failed on the exact workload D6 was
+  written to protect. The post-flip verification that "passed clean" (29 §7) checked that
+  nothing was *stranded* — no `FailedScheduling`, nothing newly `Pending` — which is a check
+  on the flip's blast radius, not on whether Tier 1 can *return*. Both were needed; only one
+  was run.
+- **This is Stage 2 doing its job.** Its stated purpose — *"proves, or disproves, that Tier 1
+  can schedule on the trio, which is a different question from whether it can run there"* —
+  is exactly what it disproved, at a cost of one four-minute Home Assistant restart. §8's
+  premise, that rehearsal beats reasoning, is now evidenced rather than asserted.
+- **Stage 3 and Stage 4 must not run until the tolerations are real.** Stage 4 with the
+  current set would take down Home Assistant, DNS, Traefik, identity and observability at
+  once, on battery.
+
+#### Method note for the re-do
+
+Audit by **tier membership**, never by current placement — the whole failure is that a
+worker-resident workload looks fine to a placement-scoped filter. The re-audit query is the
+one above: every pod in a Tier-0/1 namespace, minus blanket-`Exists` DaemonSets, minus static
+pods, minus deliberate Tier-2 residents. Re-run it **after** the tolerations land and expect
+it to return only `openbao`.
 
 ### Stage 3 — one worker off, mains power untouched
 
