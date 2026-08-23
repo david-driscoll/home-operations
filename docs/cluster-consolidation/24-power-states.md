@@ -604,6 +604,88 @@ this change:
   the schemas and the CRD. #1047 brought `schemas/` and `scripts/generate-types.ts` in and wired
   them to `mise run codegen` (which `mise run update` depends on).
 
+### First unattended night, 2026-08-23 — the window ran, and it exposed a week-old defect
+
+The 02:00–09:00 window fired on its own for the first time overnight 08-22 → 08-23. Read live at
+09:28 EDT, 28 minutes after it closed.
+
+**The schedule itself is correct.** The shed ran at `06:00:21Z` (= 02:00 EDT) and the restore at
+`13:00:06Z` (= 09:00 EDT), both to the second, with `${TIMEZONE}` resolving to
+`America/New_York`. 40 workloads down at entry, 40 back up at exit, two CronJobs suspended and
+unsuspended. The keep-list held. Nothing was left `Terminating` and no workload failed to return.
+
+**But the shed did not stay shed.** 29 of the 40 were scaled to zero **10–14 times each** during
+the seven hours — they came back up roughly hourly and the downscaler killed them again. The
+other 11 (`windmill-*`, `pinepods`, `meilisearch`, `github-actions/*`) were shed exactly once and
+stayed down.
+
+**This is not the `driftDetection` conflict #971 fixed.** The ignore rules are present and
+correct on the bouncing releases — `radarr` carries both `/spec/replicas` and the `CronJob`
+`/spec/suspend` rule. helm-controller says what is actually happening:
+
+    release out-of-sync with desired state: release chart changed
+    running 'upgrade' action with timeout of 10m0s
+
+A **`helm upgrade` re-renders `spec.replicas` from the chart**, and drift-detection `ignore` does
+not apply to the upgrade path. That is exactly the caveat this file recorded as **"Untested here:
+whether `downscaler/exclude` on a workload also survives a `helm upgrade` that re-renders
+`spec.replicas` — drift detection and chart upgrade are different paths."** It is now tested. It
+does not.
+
+**Why the chart "changed" hourly: two Flux Kustomizations own one OCIRepository.**
+`equestria/app-template` is in the inventory of **both** `cluster-apps` and `equestria/dynacat`,
+and each applies a different spec, so it flip-flops on every reconcile:
+
+| Applied by | `spec.ref` | Resulting `status.artifact.revision` |
+|---|---|---|
+| `cluster-apps` (via `components/repos/app-template`) | `tag: 5.1.0` + `digest: sha256:0d039f77…` | `sha256:0d039f77…` |
+| `equestria/dynacat` (inline copy) | `tag: 5.0.1`, **no digest** | `5.0.1@sha256:70a7cb…` |
+
+Every other namespace holds this object once, under `cluster-apps`, at 5.1.0 + digest, and is
+stable. **`equestria` is the only one with two owners** — which is why `equestria` is the only
+namespace whose apps bounce, and it is a coincidence that `equestria` is also the shed-list
+namespace.
+
+The source was a single inline `OCIRepository/app-template` at the top of
+`dashboard/helmrelease.yaml`, duplicating the shared component instead of consuming it. Renovate
+bumped the shared component 5.0.1 → 5.1.0 in **#862 on 2026-08-16** and never saw the inline
+copy, so the two have been fighting for a week. Repo-wide audit: that file was the **only**
+duplicate definition of this object.
+
+**Three things this costs, only one of which is about Low Power:**
+
+- **All 40 `equestria` apps have been alternating between app-template 5.0.1 and 5.1.0
+  roughly hourly since 2026-08-16**, with a full `helm upgrade` each time. The nightly window
+  did not cause this; it made it visible.
+- The shed is defeated for the ~29 affected apps — they run for part of every hour of the
+  window, so the power saving the window exists for is substantially less than it looks.
+- It is silent. Nothing alerts on it; every HelmRelease reports `Ready`.
+
+**Fixed in [#1071](https://github.com/david-driscoll/home-operations/pull/1071)**, merged
+2026-08-23: the inline block is gone and `dashboard/helmrelease.yaml` consumes the namespace's
+shared OCIRepository via its existing `chartRef`. The file keeps a comment in its place saying
+why it deliberately defines no `OCIRepository` of its own — the duplicate is the kind of thing
+that gets helpfully re-added by someone reading the file in isolation.
+
+> ⚠️ **Apply-order trap.** Both Kustomizations have `prune: true` and a 1 h interval, and the
+> live object currently carries `kustomize.toolkit.fluxcd.io/name: dynacat`. When `dynacat`
+> reconciles and drops it from its inventory, it will **delete** the OCIRepository — and
+> `cluster-apps` may not recreate it for up to an hour, during which all 40 `equestria`
+> HelmReleases have no chart source. Reconcile the two back to back after merging rather than
+> letting the intervals find it:
+>
+> ```bash
+> flux reconcile kustomization dynacat -n equestria && \
+>   flux reconcile kustomization cluster-apps -n flux-system
+> ```
+>
+> Then confirm a single stable owner:
+> `kubectl -n equestria get ocirepository app-template -o jsonpath='{.metadata.labels.kustomize\.toolkit\.fluxcd\.io/name}{" "}{.status.artifact.revision}'`
+
+**What the night does *not* answer.** The re-shed churn means the power figures from this window
+are not a clean measurement of what Low Power saves — item 4's capacity question stays open, and
+the first honest measurement is the *next* night, after this fix lands.
+
 ### Node shutdown
 
 Low Power additionally powers off specific power-hungry hosts — ~~`fluttershy`
