@@ -52,13 +52,32 @@ spec:
       name: cloudflare-tunnel
       valuesKey: credential
       targetPath: cloudflare.tunnel_token
-  values:
-    # Tier 1: must survive a Battery window, when the workers are off and the
-    # control planes carry §4's taint. Top-level `tolerations` is the key
-    # cloudflare-tunnel-remote 0.1.2 reads, verified against its values.
-    # Added after §8 Stage 2 found this among the 51 untolerated Tier-0/1 workloads.
-    # See docs/cluster-consolidation/20-low-power-tier.md §4.
-    tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        operator: Exists
-        effect: NoSchedule
+  # Tier 1: must survive a Battery window, when the workers are off and the control
+  # planes carry §4's taint (§8 Stage 2 found this among the 51 untolerated Tier-0/1
+  # workloads).
+  #
+  # This has to be a postRenderer, NOT a chart value. cloudflare-tunnel-remote 0.1.2
+  # documents `tolerations: []` in values.yaml but its templates/deployment.yaml has
+  # no tolerations, nodeSelector or affinity block at all -- the key is inert.
+  # Verified twice: rendering with `--set tolerations[0].key=SENTINEL` yields zero
+  # occurrences, and the unpacked chart's only workload template has no such field.
+  # Setting the value would have looked correct in review and done nothing.
+  # See docs/cluster-consolidation/20-low-power-tier.md §4.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: cloudflare-tunnel-cloudflare-tunnel-remote
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: cloudflare-tunnel-cloudflare-tunnel-remote
+              spec:
+                template:
+                  spec:
+                    tolerations:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+                        effect: NoSchedule
