@@ -1726,7 +1726,13 @@ own lesson, and it paid: three of the paths were not the obvious name.
 | `observability` | `grafana`, `grafana-operator`, `kube-state-metrics`, `prometheus-operator`, `blackbox-exporter`, `speedtest-exporter`, `thanos` ×7 | subchart + per-component keys |
 | `pulumi` | `pulumi-operator` | top-level |
 
-**Four findings came out of doing it, each one a thing that would have failed silently:**
+**Verified by rendering, not by reading — and that is the part to copy.** For each release:
+extract its *real* values (inline `spec.values` deep-merged over any `valuesFrom` file),
+`helm template` the chart with them, and inspect the resulting `Deployment`/`StatefulSet`/
+`DaemonSet` pod specs for the toleration. Reviewing the YAML would have passed all three of
+the failures below.
+
+**Six findings came out of doing it, each one a thing that would have failed silently:**
 
 1. **traefik reads top-level `.Values.tolerations`, not `deployment.tolerations`.** Rendering
    41.3.0 with both keys set shows only the top-level one reaching the pod spec — so the
@@ -1745,6 +1751,31 @@ own lesson, and it paid: three of the paths were not the obvious name.
 Three charts needed the toleration **merged into a value block that already existed** rather
 than appended; a second `operator:`, `controller:` or `query:` key is a YAML duplicate-key
 error that fails the whole Kustomization. `flate` caught each one.
+
+5. **`cloudflare-tunnel-remote` 0.1.2 ignores `.Values.tolerations` entirely.** Its
+   `values.yaml` documents the key; `templates/deployment.yaml` has no `tolerations`,
+   `nodeSelector` or `affinity` block at all. Rendering with `--set
+   tolerations[0].key=SENTINEL` yields zero occurrences. Setting the value reads as correct
+   in a diff and does nothing — it needs a **postRenderer** kustomize patch instead.
+6. **crowdsec's `lapi` toleration was silently reversing a written decision.**
+   `kubernetes/apps/network/crowdsec/values.yaml` — the real values source via `valuesFrom`
+   — already carried `agent.tolerations` *and* an explicit note that *"`lapi` is deliberately
+   NOT given the same toleration … Leave it on the workers."* Because `spec.values`
+   deep-merges **over** `valuesFrom`, an inline `lapi.tolerations` would have overridden that
+   decision with nothing in the diff to show it. The toleration now lives in `values.yaml`
+   next to the decision, which is revised rather than deleted: both halves of the original
+   objection still hold, what changed is the Tier-1 ruling and the fact that Battery has no
+   workers.
+
+   The same finding corrects this file's earlier claim that the agent's toleration came from
+   "the chart's own default". It does not — the chart default is `[]` and renders empty. It
+   comes from `values.yaml`.
+
+> ⚠️ **`crowdsec-lapi`'s toleration is INERT until §9 item 3's storage migration runs.** The
+> decision it reverses was right on its own terms: a toleration does not move data, and both
+> lapi PVCs still hold every replica on `bulk`-tagged workers. During a window lapi could be
+> scheduled onto a control plane and then fail to attach. This is deliberately the #1014
+> pairing — never a toleration without its storage — and only the toleration half has landed.
 
 #### What was deliberately NOT fixed — 13, and why
 
