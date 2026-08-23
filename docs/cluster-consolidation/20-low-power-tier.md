@@ -1059,13 +1059,47 @@ talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10 etcd memb
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10,10.10.209.11,10.10.209.12 etcd status
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10 etcd alarm list
 
-# 3. Zero degraded Longhorn volumes cluster-wide  (must print 0)
-kubectl get volumes.longhorn.io -n longhorn-system \
-  -o custom-columns=ROBUST:.status.robustness --no-headers | grep -c degraded
+# 3. Longhorn health. TWO checks -- the single "count degraded" line this used to be is
+#    structurally blind, and read clean on 2026-08-23 while 62 volumes were under-replicated.
+#    `robustness` is only meaningful while a volume is ATTACHED; a detached volume reports
+#    `unknown` no matter how few replicas it has. §9 item 8.
+#
+# 3a. Zero degraded among attached volumes  (must print 0)
+kubectl get volumes.longhorn.io -n longhorn-system -o json \
+  | jq '[.items[] | select(.status.robustness=="degraded")] | length'
 
-# 4. Every Tier-1 volume has >= 2 replicas on the trio  (see the §5 table for the shape)
-kubectl get replicas.longhorn.io -n longhorn-system \
-  -o custom-columns=VOL:.spec.volumeName,NODE:.spec.nodeID,STATE:.status.currentState
+# 3b. Detached volumes holding fewer replicas than they want -- invisible to 3a.
+#     Not a hard fail today (they are regenerable VolSync scratch, §9 item 8), but it must be
+#     a KNOWN number before entry, not a surprise found during one.
+kubectl get volumes.longhorn.io -n longhorn-system -o json > /tmp/lh-v.json
+kubectl get replicas.longhorn.io -n longhorn-system -o json > /tmp/lh-r.json
+jq -n --slurpfile v /tmp/lh-v.json --slurpfile r /tmp/lh-r.json '
+  ($r[0].items | map(.spec.volumeName) | group_by(.)
+     | map({key:.[0], value:length}) | from_entries) as $cnt
+  | [ $v[0].items[]
+      | select(.status.state=="detached")
+      | {pvc:(.status.kubernetesStatus.pvcName // .metadata.name),
+         want:.spec.numberOfReplicas, have:($cnt[.metadata.name] // 0)}
+      | select(.have < .want) ]
+  | {count: length, volumes: .}'
+
+# 4. Every Tier-1 volume has >= 2 replicas on the trio.
+#    Scoped to 3-replica `critical` volumes deliberately. The old wording asked this of every
+#    `critical` volume, but piece 12 also created longhorn-critical-snapshot and
+#    longhorn-critical-cache at numberOfReplicas: 1, so ten VolSync staging volumes reported
+#    "1 replica" forever and the check could never read clean. A check nobody can pass is a
+#    check nobody reads.  (must print failing: [])
+jq -n --slurpfile v /tmp/lh-v.json --slurpfile r /tmp/lh-r.json '
+  ($r[0].items
+     | map(select(.spec.nodeID as $n | ["milky-way","othalla","pegasus"] | index($n)))
+     | map(.spec.volumeName) | group_by(.)
+     | map({key:.[0], value:length}) | from_entries) as $trio
+  | [ $v[0].items[]
+      | select((.spec.nodeSelector // []) | index("critical"))
+      | select(.spec.numberOfReplicas >= 3)
+      | {pvc:(.status.kubernetesStatus.pvcName // .metadata.name),
+         onTrio:($trio[.metadata.name] // 0), robustness:.status.robustness} ]
+  | {tier1_volumes: length, failing: [.[] | select(.onTrio < 2)], all: .}'
 
 # 5. Piece 12 landed: default class confined to bulk, longhorn-critical exists
 kubectl get sc longhorn -o jsonpath='{.parameters.nodeSelector}{"\n"}'    # must be: bulk
@@ -1721,33 +1755,53 @@ through in place rather than moved to the resolved list above — several sectio
    name for this one; it serves the same layout and is kept deliberately as a cross-cluster
    fallback on another battery-backed host.
 
-   **The storage half is a deliberate open decision, not an oversight.**
-   [#1014](https://github.com/david-driscoll/home-operations/pull/1014) — the control-plane
-   toleration and `longhorn-critical` — is written and **left unmerged by David, 2026-08-21**.
-   Left whole rather than half-merged on purpose: toleration without storage is the same
-   deferred-failure shape as the taint without tolerations, so zot stays a coherently
-   worker-resident service (`kerfuffle`, no CP toleration) instead.
+   ~~**The storage half is a deliberate open decision, not an oversight.**~~
+   **MERGED — the decision reversed, and every cost below is retired. Verified live
+   2026-08-23.** [#1014](https://github.com/david-driscoll/home-operations/pull/1014) landed
+   as `a229071b` ("make zot Tier 1 — control-plane toleration and `longhorn-critical`"), so
+   the paragraph that follows describes a posture the estate no longer holds. Kept because
+   the reasoning is still the reasoning, and because the *shape* of the argument — never
+   half-merge a toleration without its storage — is the one this file keeps re-learning.
 
-   What that costs during a window, stated so nobody has to re-derive it:
+   Live today: the `registry` PVC is `longhorn-critical` with **3 replicas on the trio, all
+   `healthy`**, and the zot pod carries `node-role.kubernetes.io/control-plane`. §6.0's
+   corrected check 4 now returns **eight** Tier-1 volumes rather than seven — `registry`
+   joined `home-assistant`, `matter`, `mosquitto-0/1`, `technitium`, `tsidp` and `tsiam`.
 
-   - **Images still pull.** That is the point of the chain above. A dead-but-*resolvable*
-     endpoint fails fast through traefik — nothing like the 2m32s, which was an unresolvable
-     name black-holing. celestia's zot and upstream both stay reachable on battery (§7).
-   - **zot itself is down for the whole window.** All three replicas are on workers, and
-     because the volume is **RWX** its share-manager is on a worker too (`kerfuffle`), so
-     there is neither a replica nor a share-manager to attach from.
-   - **§6.0 check 3 is dirty by construction.** "Zero degraded volumes" can never pass during
-     a window while zot is on `bulk`. That is the sharpest cost — it degrades the signal used
-     to judge the window, and a check that is always noisy is a check nobody reads.
-   - **The cache is absent in the one case it exists for** — a pod crash-looping mid-window.
-   - It quietly moves the nearest cache onto **celestia**, whose tiering this file has never
-     reasoned about.
+   **The RWX refinement is answered too, and the answer is milder than this file expected.**
+   The concern was that a `ReadWriteMany` volume needs a share-manager pod that must itself be
+   schedulable on a tainted control plane. It is: Longhorn's `taint-toleration` setting (§0.1)
+   propagates to share-manager pods, and `share-manager-pvc-8eea418a…` was observed carrying
+   `node-role.kubernetes.io/control-plane`. It currently runs on `shining-armor`, which stays
+   online through Battery anyway (§6.1's 2026-08-22 correction), so it does not even need to
+   move. **RWX is no longer a Battery blocker** — RWO would still be simpler for a
+   `replicas: 1` Deployment, but it is now a tidiness argument, not a correctness one, and
+   access mode is immutable so it would still cost a PVC recreate.
 
-   If that stands, it should eventually be written as a decision in §1 rather than left as an
-   open item. **One refinement to fold in if #1014 is ever revisited:** the Deployment is
-   `replicas: 1`, so RWX buys nothing and costs a share-manager pod that must itself be
-   schedulable on a tainted control plane. RWO would remove it — and access mode is immutable,
-   so the PVC recreate is the only moment to change it.
+   The original text, for the record:
+
+   > Left whole rather than half-merged on purpose: toleration without storage is the same
+   > deferred-failure shape as the taint without tolerations, so zot stays a coherently
+   > worker-resident service (`kerfuffle`, no CP toleration) instead.
+   >
+   > What that costs during a window, stated so nobody has to re-derive it:
+   >
+   > - **Images still pull.** That is the point of the chain above. A dead-but-*resolvable*
+   >   endpoint fails fast through traefik — nothing like the 2m32s, which was an unresolvable
+   >   name black-holing. celestia's zot and upstream both stay reachable on battery (§7).
+   > - **zot itself is down for the whole window.** All three replicas are on workers, and
+   >   because the volume is **RWX** its share-manager is on a worker too (`kerfuffle`), so
+   >   there is neither a replica nor a share-manager to attach from.
+   > - **§6.0 check 3 is dirty by construction.** "Zero degraded volumes" can never pass
+   >   during a window while zot is on `bulk`.
+   > - **The cache is absent in the one case it exists for** — a pod crash-looping mid-window.
+   > - It quietly moves the nearest cache onto **celestia**, whose tiering this file has never
+   >   reasoned about.
+
+   **What still needs doing:** write zot into §1's tier table as Tier 1 rather than leaving
+   its status implied by a closed open-item. Note also that check 3's "dirty by construction"
+   cost was retired twice over — once by #1014 moving zot onto `critical`, and once by §6.0's
+   check 3 being rewritten (§9 item 8) so that it measures the right thing in the first place.
 2. ~~**Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**~~ **DONE and LIVE
    2026-08-21.** Split into two PRs deliberately, because the halves apply by different
    mechanisms and had to be sequenced:
