@@ -2195,10 +2195,34 @@ through in place rather than moved to the resolved list above — several sectio
      alert written against the `Scheduled` condition would fire on seven volumes today. Worth
      knowing before someone adds one.
 
-   **Status: `crowdsec-ui` done. `crowdsec-config-pvc` and `crowdsec-db-pvc` still pending** —
-   the `spec.nodeSelector` patch is a live Longhorn mutation. Same two-step per volume:
-   patch the selector, then delete one non-conforming replica at a time with a
-   `robustness: healthy` gate between each.
+   #### COMPLETE — all three volumes, 2026-08-23
+
+   | PVC | `nodeSelector` | Replicas | Robustness |
+   |---|---|---|---|
+   | `crowdsec-ui` | `critical` | `milky-way`, `othalla`, `pegasus` | healthy |
+   | `crowdsec-db-pvc` | `critical` | `milky-way`, `othalla`, `pegasus` | healthy |
+   | `crowdsec-config-pvc` | `critical` | `milky-way`, `othalla`, `pegasus` | healthy |
+
+   0 degraded volumes cluster-wide at the end. **No downtime and no pod restarts** — the
+   `crowdsec-lapi` and `crowdsec-ui` pods ran throughout (uptime 40 m / 37 m across a
+   migration that took ~15 minutes), and both HelmReleases stayed `Ready`. Verified
+   functionally rather than by pod status: `cscli decisions list` and `cscli machines list`
+   both answer, the LAPI's logs carry zero errors over 200 lines, and the agents are still
+   tailing traefik's container logs.
+
+   **crowdsec is now a complete Tier-1 citizen**: tolerations on `lapi`, `ui` and the agent
+   DaemonSet (#1073), storage on the trio (this), and backups for all three volumes
+   (#1076). The `INERT UNTIL THE STORAGE MOVES` warning in `crowdsec/values.yaml` is cleared —
+   this is the #1014 pairing with **both** halves landed.
+
+   Two observations from doing all three, worth keeping:
+
+   - **The `degraded` transient is per-rebuild and always self-clears.** Every one of the nine
+     replica evictions produced it. Waiting for `robustness: healthy` before deleting the next
+     replica is the whole safety mechanism, and it never took more than ~60 s.
+   - **The ghost replica appears on each migrated volume** and is the pre-existing
+     `LocalReplicaSchedulingFailure` described above, not a per-volume fault. It will clear
+     for `lapi` and `ui` once their pods actually land on a control plane.
 4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
    the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
    too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
