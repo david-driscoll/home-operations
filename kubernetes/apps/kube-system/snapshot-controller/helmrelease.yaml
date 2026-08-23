@@ -44,6 +44,9 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    # Tier 0 (§1's named components): must be placeable on a control plane once
+    # §4's taint is live. Key path verified against the chart's own values.
+    # Added after §8 Stage 2. See docs/cluster-consolidation/20-low-power-tier.md §4.
     # Chart v5 enables webhook by default; disable to avoid TLS setup
     webhook:
       enabled: false
@@ -57,6 +60,13 @@ spec:
     # ownership.
     installCRDs: false
     controller:
+      # `controller.tolerations` -- verified against the chart's values. The chart
+      # also exposes `webhook.tolerations`, deliberately not set: the webhook is
+      # disabled above, so there is no pod to place.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       replicaCount: 2
       serviceMonitor:
         create: true

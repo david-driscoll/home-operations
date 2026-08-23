@@ -11,15 +11,6 @@ deployment:
   kind: Deployment
   replicas: 2
   priorityClassName: system-node-critical
-  tolerations:
-    - key: node.kubernetes.io/not-ready
-      operator: Exists
-      effect: NoExecute
-      tolerationSeconds: 60
-    - key: node.kubernetes.io/unreachable
-      operator: Exists
-      effect: NoExecute
-      tolerationSeconds: 60
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: "kubernetes.io/hostname"
@@ -27,6 +18,30 @@ deployment:
       labelSelector:
         matchLabels:
           app.kubernetes.io/name: traefik
+# TOP-LEVEL, not `deployment.tolerations`. Verified against traefik 41.3.0 by
+# rendering the chart with both keys set: only `.Values.tolerations` reaches the
+# pod spec. The nested copy that used to live under `deployment:` was therefore
+# silently dead -- the live pods carried the admission controller's DEFAULT
+# not-ready/unreachable tolerations at tolerationSeconds 300, never the 60 the
+# nested block asked for. Both entries are preserved here so that intent finally
+# takes effect.
+#
+# The control-plane entry is Tier 1: traefik must survive a Battery window, when
+# the workers are off and the control planes carry §4's taint. §8 Stage 2 found
+# it among the 51 untolerated Tier-0/1 workloads.
+# See docs/cluster-consolidation/20-low-power-tier.md §4.
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  - key: node.kubernetes.io/not-ready
+    operator: Exists
+    effect: NoExecute
+    tolerationSeconds: 60
+  - key: node.kubernetes.io/unreachable
+    operator: Exists
+    effect: NoExecute
+    tolerationSeconds: 60
 service:
   annotations:
     reloader.stakater.com/auto: "true"

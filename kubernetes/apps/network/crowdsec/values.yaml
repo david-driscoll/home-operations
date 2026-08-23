@@ -104,6 +104,21 @@ config:
 deployAnnotations:
   reloader.stakater.com/auto: "true"
 lapi:
+  # Tier 1 as of David's 2026-08-23 ruling ("crowdsec should be the same tier as
+  # traefik"), reversing the exclusion noted under `agent.tolerations` above.
+  #
+  # ⚠️ INERT UNTIL THE STORAGE MOVES. That comment's objection was correct on its
+  # own terms: a toleration widens where lapi MAY schedule and does not move its
+  # data, and `crowdsec-config-pvc` / `crowdsec-db-pvc` still hold all three
+  # replicas on `bulk`-tagged workers. During a Battery window lapi could be
+  # scheduled onto a control plane and then fail to attach. This is deliberately
+  # the #1014 pairing -- never a toleration without its storage -- and the storage
+  # half is planned but NOT yet run: see docs/cluster-consolidation/20-low-power-tier.md
+  # §9 item 3, which also records that these two PVCs have no VolSync backup at all.
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
   enabled: true
   env:
     - name: TZ
@@ -236,9 +251,11 @@ agent:
   # control plane without one is a blind spot rather than a broken pod. Chart
   # default is [], so nothing is being replaced.
   #
-  # `lapi` is deliberately NOT given the same toleration: it is a single-replica
-  # Deployment with two Longhorn PVCs, and widening where it may schedule does
-  # not move its data. Leave it on the workers.
+  # `lapi` gets one too now -- see the `lapi:` block below. This comment used to
+  # say lapi was deliberately excluded because "widening where it may schedule
+  # does not move its data. Leave it on the workers." Both halves of that are
+  # still true; what changed is that David ruled crowdsec Tier 1 on 2026-08-23
+  # (same tier as traefik), and in a Battery window there ARE no workers.
   tolerations:
     - key: node-role.kubernetes.io/control-plane
       operator: Exists

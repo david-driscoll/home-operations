@@ -29,6 +29,16 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    # Tier 0 (§1's named components): OpenBao cannot boot at exit without
+    # external-secrets + onepassword-connect, so these must be placeable on a
+    # control plane once §4's taint is live. `global.tolerations` reaches all
+    # three pods (main, webhook, certController) -- verified by rendering 2.9.0.
+    # Added after §8 Stage 2. See docs/cluster-consolidation/20-low-power-tier.md §4.
+    global:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
     installCRDs: true
     image:
       repository: ghcr.io/external-secrets/external-secrets

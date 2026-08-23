@@ -70,7 +70,20 @@ off or wakes one up on a schedule, and after the 2026-08-22 reversal nothing is 
 overnight. #1046 sheds *workloads*; node shutdown and the WoL return trip remain §6's human
 runbook for a Battery event.
 
-**§4 IS DONE AND LIVE.** Both halves landed on 2026-08-21:
+> ### ⛔ **§4 IS NOT DONE — corrected 2026-08-23 by §8 Stage 2.**
+>
+> The block below is kept because both PRs did land and the taint half *is* done. But the
+> toleration half covered **6 of 51** Tier-0/1 workloads, because §9 item 2's audit filtered
+> on *pods currently resident on the trio* rather than on tier membership — so every Tier-0/1
+> workload sitting on a worker was invisible to it.
+>
+> **`home-assistant` has no control-plane toleration and sat `Pending` for the whole of
+> Stage 2.** So do `traefik`, `tsidp`, `tsiam`, the Tailscale operator, all of `observability`
+> and `pulumi`, and Tier-0 `external-secrets` + `onepassword-connect`. Battery would have
+> failed on entry, on the workload D6 exists to protect. Full list and method note in
+> §8 "Stage 2 RESULTS". **Stages 3 and 4 must not run until this is fixed.**
+
+**§4's two PRs landed on 2026-08-21:**
 [#1001](https://github.com/david-driscoll/home-operations/pull/1001) (Tier-0/1 tolerations) and
 [#1002](https://github.com/david-driscoll/home-operations/pull/1002) (the taint). All three
 control planes now carry `node-role.kubernetes.io/control-plane:NoSchedule`; all six Tier-0/1
@@ -80,6 +93,12 @@ Post-flip verification (29 §7) passed clean: no `FailedScheduling` events, noth
 `Pending`, every DaemonSet that covered 7 nodes still covers 7, 0 degraded and 0 faulted volumes,
 Flux 0 not-ready. `mosquitto-0` is running on `othalla` — a tainted control plane — which is the
 positive proof that the tolerations work rather than merely being present.
+
+**Read that verification for what it measured.** It asked whether the flip *stranded* anything —
+blast radius — and the answer was correctly no. It could not ask whether Tier 1 can *return* to
+the trio, because nothing had been evicted from one. That second question is §8 Stage 2's, it was
+run on 2026-08-23, and it failed. And `mosquitto-0` proves the six patched workloads work; it
+says nothing about the 51 never examined.
 
 **Every hardware question in this file is now closed**, all answered by David on 2026-08-20/21:
 the battery powers **alpha-site**; all three bare-metal workers can be started by **WoL** (§6.2);
@@ -1059,13 +1078,47 @@ talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10 etcd memb
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10,10.10.209.11,10.10.209.12 etcd status
 talosctl --talosconfig talos/clusterconfig/talosconfig -n 10.10.209.10 etcd alarm list
 
-# 3. Zero degraded Longhorn volumes cluster-wide  (must print 0)
-kubectl get volumes.longhorn.io -n longhorn-system \
-  -o custom-columns=ROBUST:.status.robustness --no-headers | grep -c degraded
+# 3. Longhorn health. TWO checks -- the single "count degraded" line this used to be is
+#    structurally blind, and read clean on 2026-08-23 while 62 volumes were under-replicated.
+#    `robustness` is only meaningful while a volume is ATTACHED; a detached volume reports
+#    `unknown` no matter how few replicas it has. §9 item 8.
+#
+# 3a. Zero degraded among attached volumes  (must print 0)
+kubectl get volumes.longhorn.io -n longhorn-system -o json \
+  | jq '[.items[] | select(.status.robustness=="degraded")] | length'
 
-# 4. Every Tier-1 volume has >= 2 replicas on the trio  (see the §5 table for the shape)
-kubectl get replicas.longhorn.io -n longhorn-system \
-  -o custom-columns=VOL:.spec.volumeName,NODE:.spec.nodeID,STATE:.status.currentState
+# 3b. Detached volumes holding fewer replicas than they want -- invisible to 3a.
+#     Not a hard fail today (they are regenerable VolSync scratch, §9 item 8), but it must be
+#     a KNOWN number before entry, not a surprise found during one.
+kubectl get volumes.longhorn.io -n longhorn-system -o json > /tmp/lh-v.json
+kubectl get replicas.longhorn.io -n longhorn-system -o json > /tmp/lh-r.json
+jq -n --slurpfile v /tmp/lh-v.json --slurpfile r /tmp/lh-r.json '
+  ($r[0].items | map(.spec.volumeName) | group_by(.)
+     | map({key:.[0], value:length}) | from_entries) as $cnt
+  | [ $v[0].items[]
+      | select(.status.state=="detached")
+      | {pvc:(.status.kubernetesStatus.pvcName // .metadata.name),
+         want:.spec.numberOfReplicas, have:($cnt[.metadata.name] // 0)}
+      | select(.have < .want) ]
+  | {count: length, volumes: .}'
+
+# 4. Every Tier-1 volume has >= 2 replicas on the trio.
+#    Scoped to 3-replica `critical` volumes deliberately. The old wording asked this of every
+#    `critical` volume, but piece 12 also created longhorn-critical-snapshot and
+#    longhorn-critical-cache at numberOfReplicas: 1, so ten VolSync staging volumes reported
+#    "1 replica" forever and the check could never read clean. A check nobody can pass is a
+#    check nobody reads.  (must print failing: [])
+jq -n --slurpfile v /tmp/lh-v.json --slurpfile r /tmp/lh-r.json '
+  ($r[0].items
+     | map(select(.spec.nodeID as $n | ["milky-way","othalla","pegasus"] | index($n)))
+     | map(.spec.volumeName) | group_by(.)
+     | map({key:.[0], value:length}) | from_entries) as $trio
+  | [ $v[0].items[]
+      | select((.spec.nodeSelector // []) | index("critical"))
+      | select(.spec.numberOfReplicas >= 3)
+      | {pvc:(.status.kubernetesStatus.pvcName // .metadata.name),
+         onTrio:($trio[.metadata.name] // 0), robustness:.status.robustness} ]
+  | {tier1_volumes: length, failing: [.[] | select(.onTrio < 2)], all: .}'
 
 # 5. Piece 12 landed: default class confined to bulk, longhorn-critical exists
 kubectl get sc longhorn -o jsonpath='{.parameters.nodeSelector}{"\n"}'    # must be: bulk
@@ -1581,6 +1634,171 @@ question from whether it can *run* there. It is where §0.3's Technitium problem
 `kubectl uncordon hard-hat fluttershy kerfuffle shining-armor` and let Flux/the descheduler
 settle it back.
 
+### Stage 2 RESULTS — run 2026-08-23. **It failed, and it failed on Home Assistant.**
+
+Run exactly as written above: four workers cordoned (never shut down), the `home-assistant`
+pod deleted, placement observed, then uncordoned. Total Home Assistant outage **3 m 41 s**;
+the cluster was returned to baseline (7 Ready, none cordoned, 0 degraded volumes) and nothing
+else moved.
+
+**Home Assistant did not schedule. It sat `Pending` for the entire cordon.**
+
+    Warning  FailedScheduling  default-scheduler
+    0/7 nodes are available: 3 node(s) had untolerated taint(s), 4 node(s) were unschedulable.
+
+The pod's complete toleration list, read off the `Pending` pod:
+
+    node.kubernetes.io/not-ready     Exists  NoExecute
+    node.kubernetes.io/unreachable   Exists  NoExecute
+
+**There is no `node-role.kubernetes.io/control-plane` toleration on Home Assistant** — the one
+application D6 names by name, the reason Tier 1 exists at all. In a real Battery window it
+would not come back. Its storage was never the problem: `home-assistant` has held three
+`longhorn-critical` replicas on the trio since #966. It simply cannot be scheduled there.
+
+#### The audit that said otherwise was scoped wrong
+
+§9 item 2 records the toleration work as **"DONE and LIVE 2026-08-21… all six verified live
+carrying the key, and the audit filter now returns only the Tier-2 set."** That is true of the
+six workloads it names, and the six are correct. The **method** is what failed: its filter was
+*"pods on the trio that carry neither the explicit control-plane toleration nor a blanket
+`operator: Exists`"* — it audited **pods already resident on the control planes**, not
+membership of Tier 0/1. Every Tier-0/1 workload that happened to be running on a worker at
+audit time was invisible to it, and after §4's taint most of them were.
+
+The tell was in the record and read as good news. [24](24-power-states.md)'s item 3 notes
+*"`kube-state-metrics` and `prometheus-operator` no longer run on the trio"* and drops them
+from the list — treating a workload leaving the control planes as the problem going away,
+when it is the workload leaving the audit's field of view.
+
+`mosquitto-0` running on `othalla` was cited as *"the positive proof that the tolerations
+work rather than merely being present."* It proves the six that were patched work. It says
+nothing about the ones never examined.
+
+#### Re-audited by tier membership, 2026-08-23 — **51 workloads, not six**
+
+Every pod in a Tier-0/1 namespace carrying neither an explicit control-plane toleration nor a
+blanket `operator: Exists`, with static pods (`ownerReference: Node` — they bypass the
+scheduler) and the deliberately-Tier-2 `openbao` excluded:
+
+| Namespace | Count | Workloads |
+|---|---|---|
+| `kube-system` (**Tier 0**) | 13 | `external-secrets` + `-webhook`, `-cert-controller`, `-reloader` · `onepassword-connect` + operator · `reflector` · `reloader` · `snapshot-controller` · `headlamp` · `intel-gpu-plugin` · `inteldeviceplugins-controller-manager` · `node-feature-discovery-gc` |
+| `network` (Tier 1) | 9 | `traefik` · `k8s-gateway` · `cloudflare-dns` · `cloudflare-tunnel` · `unifi-dns` · `technitium-dns` · `error-pages` · `crowdsec-lapi` · `crowdsec-ui` |
+| `tailscale-system` (Tier 1) | 10 | `operator` · `tsidp` · `tsiam` · `nameserver` · `golink` · `taildrive` · `tailnet-inbound-0` · `tailnet-outbound-0` · `ts-mosquitto-…-0` · `ts-primary-connector-…-0` |
+| `stargate-command` (Tier 1) | 2 | **`home-assistant`** · `matter` |
+| `observability` (Tier 1 per [24](24-power-states.md) §1) | 14 | `grafana` · `grafana-operator` · `kube-state-metrics` · `prometheus-operator` · `blackbox-exporter` · `speedtest-exporter` · `glance-k8s` · the seven `thanos-*` |
+| `pulumi` (Tier 1 per [24](24-power-states.md) §1) | 3 | `pulumi-operator-controller-manager` · `equestria-workspace-0` · `unifi-network-workspace-0` |
+
+**Tier 0 is in the list.** `external-secrets` and `onepassword-connect` are the pair §1 keeps
+in Tier 0 precisely because OpenBao cannot boot at exit without them, and neither can return
+to a control plane.
+
+#### What this means for the plan
+
+- **§4 is not done.** This file's status block says "§4 IS DONE AND LIVE" on the strength of
+  #1001 + #1002. The taint half is done. The toleration half covered 6 of 51.
+- **Battery would have failed on entry**, and would have failed on the exact workload D6 was
+  written to protect. The post-flip verification that "passed clean" (29 §7) checked that
+  nothing was *stranded* — no `FailedScheduling`, nothing newly `Pending` — which is a check
+  on the flip's blast radius, not on whether Tier 1 can *return*. Both were needed; only one
+  was run.
+- **This is Stage 2 doing its job.** Its stated purpose — *"proves, or disproves, that Tier 1
+  can schedule on the trio, which is a different question from whether it can run there"* —
+  is exactly what it disproved, at a cost of one four-minute Home Assistant restart. §8's
+  premise, that rehearsal beats reasoning, is now evidenced rather than asserted.
+- **Stage 3 and Stage 4 must not run until the tolerations are real.** Stage 4 with the
+  current set would take down Home Assistant, DNS, Traefik, identity and observability at
+  once, on battery.
+
+#### What was fixed, 2026-08-23 — 38 of the 51
+
+Landed across four commits, one per namespace group. **Every key path was read out of the
+chart that consumes it and, where a subchart was involved, confirmed by rendering** — #1001's
+own lesson, and it paid: three of the paths were not the obvious name.
+
+| Group | Covered | How |
+|---|---|---|
+| `stargate-command` | `home-assistant`, `matter` | app-template `controllers.<n>.pod.tolerations` |
+| `network` | `traefik`, `k8s-gateway`, `cloudflare-dns`, `technitium-dns`, `unifi-dns`, `cloudflare-tunnel`, `error-pages`, `crowdsec-ui`, `crowdsec` lapi | mixed; see below |
+| `tailscale-system` | `operator`, `tsidp`, `tsiam` | `operatorConfig.tolerations` / app-template |
+| `kube-system` (Tier 0) | `external-secrets` ×4, `onepassword-connect` ×2, `reflector`, `reloader`, `snapshot-controller` | `global.` / `connect.`+`operator.` / `reloader.deployment.` / `controller.` |
+| `observability` | `grafana`, `grafana-operator`, `kube-state-metrics`, `prometheus-operator`, `blackbox-exporter`, `speedtest-exporter`, `thanos` ×7 | subchart + per-component keys |
+| `pulumi` | `pulumi-operator` | top-level |
+
+**Verified by rendering, not by reading — and that is the part to copy.** For each release:
+extract its *real* values (inline `spec.values` deep-merged over any `valuesFrom` file),
+`helm template` the chart with them, and inspect the resulting `Deployment`/`StatefulSet`/
+`DaemonSet` pod specs for the toleration. Reviewing the YAML would have passed all three of
+the failures below.
+
+**Six findings came out of doing it, each one a thing that would have failed silently:**
+
+1. **traefik reads top-level `.Values.tolerations`, not `deployment.tolerations`.** Rendering
+   41.3.0 with both keys set shows only the top-level one reaching the pod spec — so the
+   nested block in `values.yaml` was **dead**, and its `tolerationSeconds: 60` had never
+   applied. Live pods carried the admission controller's defaults at 300. Both entries moved
+   to the working key, so that intent finally takes effect.
+2. **external-secrets has `global.tolerations`**, which reaches all three of its pods at once
+   — verified by rendering and counting three pod specs. One key instead of three.
+3. **Several charts split the key per component with no global one**: bitnami/thanos has seven,
+   1Password connect has `connect.` *and* `operator.` (setting one leaves the other pod
+   untolerated), snapshot-controller has `controller.` and `webhook.`.
+4. **crowdsec's agent DaemonSet already tolerated the control plane** from the chart default.
+   Setting `agent.tolerations` would have **replaced** that default rather than added to it —
+   a change that looks additive and is not. Only `lapi` was touched.
+
+Three charts needed the toleration **merged into a value block that already existed** rather
+than appended; a second `operator:`, `controller:` or `query:` key is a YAML duplicate-key
+error that fails the whole Kustomization. `flate` caught each one.
+
+5. **`cloudflare-tunnel-remote` 0.1.2 ignores `.Values.tolerations` entirely.** Its
+   `values.yaml` documents the key; `templates/deployment.yaml` has no `tolerations`,
+   `nodeSelector` or `affinity` block at all. Rendering with `--set
+   tolerations[0].key=SENTINEL` yields zero occurrences. Setting the value reads as correct
+   in a diff and does nothing — it needs a **postRenderer** kustomize patch instead.
+6. **crowdsec's `lapi` toleration was silently reversing a written decision.**
+   `kubernetes/apps/network/crowdsec/values.yaml` — the real values source via `valuesFrom`
+   — already carried `agent.tolerations` *and* an explicit note that *"`lapi` is deliberately
+   NOT given the same toleration … Leave it on the workers."* Because `spec.values`
+   deep-merges **over** `valuesFrom`, an inline `lapi.tolerations` would have overridden that
+   decision with nothing in the diff to show it. The toleration now lives in `values.yaml`
+   next to the decision, which is revised rather than deleted: both halves of the original
+   objection still hold, what changed is the Tier-1 ruling and the fact that Battery has no
+   workers.
+
+   The same finding corrects this file's earlier claim that the agent's toleration came from
+   "the chart's own default". It does not — the chart default is `[]` and renders empty. It
+   comes from `values.yaml`.
+
+> ⚠️ **`crowdsec-lapi`'s toleration is INERT until §9 item 3's storage migration runs.** The
+> decision it reverses was right on its own terms: a toleration does not move data, and both
+> lapi PVCs still hold every replica on `bulk`-tagged workers. During a window lapi could be
+> scheduled onto a control plane and then fail to attach. This is deliberately the #1014
+> pairing — never a toleration without its storage — and only the toleration half has landed.
+
+#### What was deliberately NOT fixed — 13, and why
+
+| Left alone | Count | Reason |
+|---|---|---|
+| `golink`, `taildrive` | 2 | **Tier 2** by David's 2026-08-23 ruling — placement already correct |
+| `tailnet-inbound`, `tailnet-outbound` ProxyGroups | 2 | #1001 explicitly placed them outside Tier 1 when it created the `control-plane-tolerant` ProxyClass. Reversing that is a tier decision, not a mechanical fix |
+| `nameserver`, `ts-mosquitto-*`, `ts-primary-connector-*` | 3 | Operator-created proxies. Reachable only via a `ProxyClass`, and their tier has never been written down — `ts-mosquitto` fronts a Tier-1 service, which argues one way; §1 never lists them, which argues the other |
+| `headlamp`, `intel-gpu-plugin`, `inteldeviceplugins-controller-manager`, `node-feature-discovery-gc` | 4 | In `kube-system` but **not** among §1's named Tier-0 components. They need a tier ruling before a toleration |
+| `pulumi` `*-workspace-0` ×2 | 2 | **Correction:** these *are* reachable from this tree — `spec.workspaceTemplate` in `kubernetes/apps/pulumi/<stack>/stack.yaml`. Left untolerated **on purpose**: nine long-lived workspace pods (≈1.1 GiB of requests, `workspaceReclaimPolicy: Retain`, resyncing every 300 s) are exactly the load a Battery window exists to shed, and [24](24-power-states.md) §1 already notes a `pulumi up` cannot usefully run mid-outage — its state backend is Postgres on **celestia**. Operator placeable, workspaces down, is the intended shape |
+| `observability/glance-k8s` | 1 | **Orphaned Helm release** — carries `helm.toolkit.fluxcd.io/name=glance-k8s` but no such HelmRelease exists. Not in this tree to patch, and worth investigating on its own |
+
+**So the re-audit will not return empty even when this is right** — it should return `openbao`
+(deliberately Tier 2) plus these 13, and each of those needs a decision rather than a patch.
+
+#### Method note for the re-do
+
+Audit by **tier membership**, never by current placement — the whole failure is that a
+worker-resident workload looks fine to a placement-scoped filter. The re-audit query is the
+one above: every pod in a Tier-0/1 namespace, minus blanket-`Exists` DaemonSets, minus static
+pods, minus deliberate Tier-2 residents. Re-run it **after** the tolerations land and expect
+it to return only `openbao`.
+
 ### Stage 3 — one worker off, mains power untouched
 
 `talosctl shutdown` **one** worker (`shining-armor` — fewest Tier-1 pods, and restartable with
@@ -1721,33 +1939,53 @@ through in place rather than moved to the resolved list above — several sectio
    name for this one; it serves the same layout and is kept deliberately as a cross-cluster
    fallback on another battery-backed host.
 
-   **The storage half is a deliberate open decision, not an oversight.**
-   [#1014](https://github.com/david-driscoll/home-operations/pull/1014) — the control-plane
-   toleration and `longhorn-critical` — is written and **left unmerged by David, 2026-08-21**.
-   Left whole rather than half-merged on purpose: toleration without storage is the same
-   deferred-failure shape as the taint without tolerations, so zot stays a coherently
-   worker-resident service (`kerfuffle`, no CP toleration) instead.
+   ~~**The storage half is a deliberate open decision, not an oversight.**~~
+   **MERGED — the decision reversed, and every cost below is retired. Verified live
+   2026-08-23.** [#1014](https://github.com/david-driscoll/home-operations/pull/1014) landed
+   as `a229071b` ("make zot Tier 1 — control-plane toleration and `longhorn-critical`"), so
+   the paragraph that follows describes a posture the estate no longer holds. Kept because
+   the reasoning is still the reasoning, and because the *shape* of the argument — never
+   half-merge a toleration without its storage — is the one this file keeps re-learning.
 
-   What that costs during a window, stated so nobody has to re-derive it:
+   Live today: the `registry` PVC is `longhorn-critical` with **3 replicas on the trio, all
+   `healthy`**, and the zot pod carries `node-role.kubernetes.io/control-plane`. §6.0's
+   corrected check 4 now returns **eight** Tier-1 volumes rather than seven — `registry`
+   joined `home-assistant`, `matter`, `mosquitto-0/1`, `technitium`, `tsidp` and `tsiam`.
 
-   - **Images still pull.** That is the point of the chain above. A dead-but-*resolvable*
-     endpoint fails fast through traefik — nothing like the 2m32s, which was an unresolvable
-     name black-holing. celestia's zot and upstream both stay reachable on battery (§7).
-   - **zot itself is down for the whole window.** All three replicas are on workers, and
-     because the volume is **RWX** its share-manager is on a worker too (`kerfuffle`), so
-     there is neither a replica nor a share-manager to attach from.
-   - **§6.0 check 3 is dirty by construction.** "Zero degraded volumes" can never pass during
-     a window while zot is on `bulk`. That is the sharpest cost — it degrades the signal used
-     to judge the window, and a check that is always noisy is a check nobody reads.
-   - **The cache is absent in the one case it exists for** — a pod crash-looping mid-window.
-   - It quietly moves the nearest cache onto **celestia**, whose tiering this file has never
-     reasoned about.
+   **The RWX refinement is answered too, and the answer is milder than this file expected.**
+   The concern was that a `ReadWriteMany` volume needs a share-manager pod that must itself be
+   schedulable on a tainted control plane. It is: Longhorn's `taint-toleration` setting (§0.1)
+   propagates to share-manager pods, and `share-manager-pvc-8eea418a…` was observed carrying
+   `node-role.kubernetes.io/control-plane`. It currently runs on `shining-armor`, which stays
+   online through Battery anyway (§6.1's 2026-08-22 correction), so it does not even need to
+   move. **RWX is no longer a Battery blocker** — RWO would still be simpler for a
+   `replicas: 1` Deployment, but it is now a tidiness argument, not a correctness one, and
+   access mode is immutable so it would still cost a PVC recreate.
 
-   If that stands, it should eventually be written as a decision in §1 rather than left as an
-   open item. **One refinement to fold in if #1014 is ever revisited:** the Deployment is
-   `replicas: 1`, so RWX buys nothing and costs a share-manager pod that must itself be
-   schedulable on a tainted control plane. RWO would remove it — and access mode is immutable,
-   so the PVC recreate is the only moment to change it.
+   The original text, for the record:
+
+   > Left whole rather than half-merged on purpose: toleration without storage is the same
+   > deferred-failure shape as the taint without tolerations, so zot stays a coherently
+   > worker-resident service (`kerfuffle`, no CP toleration) instead.
+   >
+   > What that costs during a window, stated so nobody has to re-derive it:
+   >
+   > - **Images still pull.** That is the point of the chain above. A dead-but-*resolvable*
+   >   endpoint fails fast through traefik — nothing like the 2m32s, which was an unresolvable
+   >   name black-holing. celestia's zot and upstream both stay reachable on battery (§7).
+   > - **zot itself is down for the whole window.** All three replicas are on workers, and
+   >   because the volume is **RWX** its share-manager is on a worker too (`kerfuffle`), so
+   >   there is neither a replica nor a share-manager to attach from.
+   > - **§6.0 check 3 is dirty by construction.** "Zero degraded volumes" can never pass
+   >   during a window while zot is on `bulk`.
+   > - **The cache is absent in the one case it exists for** — a pod crash-looping mid-window.
+   > - It quietly moves the nearest cache onto **celestia**, whose tiering this file has never
+   >   reasoned about.
+
+   **What still needs doing:** write zot into §1's tier table as Tier 1 rather than leaving
+   its status implied by a closed open-item. Note also that check 3's "dirty by construction"
+   cost was retired twice over — once by #1014 moving zot onto `critical`, and once by §6.0's
+   check 3 being rewritten (§9 item 8) so that it measures the right thing in the first place.
 2. ~~**Build §4's remaining half: Tier-0/1 tolerations and the taint flip.**~~ **DONE and LIVE
    2026-08-21.** Split into two PRs deliberately, because the halves apply by different
    mechanisms and had to be sequenced:
@@ -1794,13 +2032,98 @@ through in place rather than moved to the resolved list above — several sectio
    Note `chrony` and `mosquitto` are the same two workloads PR #970 moved to `critical-tier`:
    their priority is now right and their *placement* is still wrong, which is the sharpest
    illustration of why the taint without the tolerations is only half a change.
-3. **Tier calls at the margins** — moved up from item 6 now that the storage measurements
-   exist. `golink` (link shortener, 0 CP replicas) and `taildrive` (file share, 0) should be
-   written down as **Tier 2**; their placement already matches. `crowdsec-*` is Tier 1 only
-   by living in `network` and is almost certainly Tier 2 — three volumes, 0 CP replicas.
-   `matter` (`hostNetwork`, shares `${AUTOMATION_VIP}`) and `tsiam` have never been
-   tier-assigned explicitly. None of these blocks anything; all of them make §6.0's check 4
-   ambiguous until written down.
+3. ~~**Tier calls at the margins**~~ **DECIDED by David, 2026-08-23 — with one consequence
+   that is real work, not bookkeeping.** The item existed because §6.0's check 4 is ambiguous
+   while any Tier-1 membership is implied rather than written. The rulings:
+
+   | App | Ruling | Basis |
+   |---|---|---|
+   | `tsiam` | **Tier 1** | David: *"tsiam and tsidp"* — same tier as `tsidp`, which §1 already lists as Tier 1 |
+   | `crowdsec` (agent + `lapi` + `ui`) | **Tier 1** | David: *"crowdsec should be the same tier as traefik"* — and `traefik` is Tier 1 in §1 |
+   | `matter` | **Tier 1** | Not separately ruled, but settled by construction: it is already in §1's table on `longhorn-critical` with 3 trio replicas, placed there by #966 |
+   | `golink`, `taildrive` | **Tier 2** | The standing recommendation, unchallenged. Placement already matches (0 CP replicas, default `bulk` class), so nothing moves |
+
+   `tsiam`, `matter`, `golink` and `taildrive` are pure bookkeeping — every one of them
+   already sits where its new tier says it should.
+
+   > **`crowdsec` is not.** Ruling it Tier 1 makes it the **only** Tier-1 app whose storage is
+   > not on `longhorn-critical`, and the gap is total rather than partial:
+   >
+   > | PVC | Class | Replicas on the trio |
+   > |---|---|---|
+   > | `crowdsec-config-pvc` (100 Mi) | `longhorn` | **0** |
+   > | `crowdsec-db-pvc` (1 Gi) | `longhorn` | **0** |
+   > | `crowdsec-ui` (5 Gi) | `longhorn` | **0** |
+   >
+   > **As it stands, crowdsec cannot run during a Battery window at all** — not one replica of
+   > any of its three volumes is on a node that stays up. It is now the item that would fail
+   > §6.0's corrected check 4 if that check were widened from "3-replica `critical` volumes" to
+   > "every Tier-1 app", which is the honest reading of what the check is for.
+   >
+   > **This is the same migration #963 and #966 performed**, and it is not a YAML edit:
+   > `storageClassName` is immutable on a bound PVC. #966's precedent is the VolSync
+   > choreography under a suspended Kustomization for VolSync-backed volumes, and an
+   > imperative clone-and-recreate where the PVC comes from a StatefulSet template.
+   > `crowdsec-ui` is VolSync-backed (`volsync-src-crowdsec-ui-cache` exists); the `config`
+   > and `db` PVCs need checking before a route is chosen.
+   >
+   > ⚠️ **And the `force: enabled` trap applies here specifically.**
+   > `components/volsync/kustomization.yaml` stamps `kustomize.toolkit.fluxcd.io/force:
+   > enabled` on every resource it renders, `pvc.yaml` included. With `force` on a PVC, Flux
+   > answers an immutable-field change by **deleting and recreating** the object rather than
+   > failing — which is [30](30-longhorn-media-tier.md)'s data-loss finding, and a
+   > StorageClass change is exactly such a field. Confirm which of crowdsec's PVCs carry that
+   > label before touching any of them.
+
+   **Tracked as its own piece of work rather than closed with the ruling** — the tier question
+   is answered, the storage that the answer implies is not.
+
+   #### The migration, measured and planned 2026-08-23 — with a cheaper route than #963/#966
+
+   Live state of all three volumes: **`attached`, `robustness: healthy`, 3 replicas,
+   `nodeSelector: ["bulk"]`**, replicas spread over `hard-hat` / `fluttershy` / `kerfuffle`.
+
+   **The two classes differ, for placement purposes, in exactly one parameter:**
+
+   | | `longhorn` | `longhorn-critical` |
+   |---|---|---|
+   | `nodeSelector` | **`bulk`** | **`critical`** |
+   | `numberOfReplicas` | 3 | 3 |
+   | `dataLocality` | best-effort | best-effort |
+
+   So the Battery-relevant outcome — replicas resident on the trio — is reachable by patching
+   the **Longhorn Volume's** `spec.nodeSelector` and then deleting one non-conforming replica
+   at a time, waiting for `healthy` between each. That never drops below 2 replicas, never
+   touches the PVC, and is reversible by patching the selector back. It needs the
+   delete-a-replica step because [30](30-longhorn-media-tier.md) established that Longhorn
+   never evicts tag-nonconforming replicas on its own.
+
+   **That is a different trade from #963/#966's choreography, and the difference is worth
+   stating.** The choreography changes the PVC's `storageClassName`, which is declarative and
+   survives a PVC recreate; the selector patch changes only the live volume, so a future PVC
+   recreate would land back on `bulk`. The selector patch buys zero data-loss risk at the cost
+   of leaving Git and the cluster disagreeing about the class.
+
+   > ⚠️ **The declarative change is the hazardous one, and must not merge before the
+   > choreography runs.** `crowdsec-ui`'s PVC carries
+   > `kustomize.toolkit.fluxcd.io/force: enabled` (verified live) from
+   > `components/volsync`'s `commonLabels`, so editing `VOLSYNC_STORAGECLASS` in its `ks.yaml`
+   > makes Flux **delete and recreate** the PVC rather than fail on the immutable field —
+   > [30](30-longhorn-media-tier.md)'s data-loss finding, armed. The two lapi PVCs are
+   > chart-created and carry no Flux ownership labels, so there the same edit stalls the
+   > HelmRelease instead of destroying anything — bad, but not destructive.
+
+   **A gap found while planning this, independent of the migration:** `crowdsec-ui` has a
+   working VolSync `ReplicationSource` (last sync `2026-08-23T14:04Z`, next `2026-08-24T14:00Z`),
+   but **`crowdsec-config-pvc` and `crowdsec-db-pvc` have no `ReplicationSource` at all.** The
+   LAPI's API credentials and its decisions database are unbacked. For an app that is now
+   Tier 1 that is a hole in its own right, and it also means the safe-because-recoverable
+   argument for a PVC-recreating migration does not apply to two of the three volumes.
+
+   **Status: not executed.** The selector patch is a live Longhorn mutation and was not run.
+   Sequence when it is: `crowdsec-ui` first (it has a fresh backup, so the procedure is
+   validated on the recoverable volume), then `crowdsec-db-pvc`, then `crowdsec-config-pvc`,
+   one replica at a time with a `robustness: healthy` gate between each.
 4. ~~**Is alpha-site's PoE switch on the battery circuit?**~~ **ANSWERED by David 2026-08-20:
    the battery powers alpha-site.** A PoE Pi has no other power path, so that settles the switch
    too. The estate keeps identity, the transit seal, break-glass Postgres, netboot, the
@@ -1843,6 +2166,38 @@ through in place rather than moved to the resolved list above — several sectio
 7. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
    from a control plane. Copied verbatim during piece 21; confirm whether the reason still
    applies before §4's required affinity is written.
+
+   **Investigated 2026-08-23. Still open — but the question is sharper, and it needs David
+   rather than more digging.** What the investigation establishes:
+
+   - **No commit records a reason.** The constraint enters the tree in `786176d7`, the
+     wholesale piece-21 namespace import, so its origin is in the retired
+     `stargate-command-cluster` history. `git log -S othalla` on the file returns that commit
+     and nothing else.
+   - **It predates a topology change that inverts its meaning.** When it was written `othalla`
+     was an **SGC node**. After [18](18-sgc-nodes-join-control-plane.md) it is one of
+     equestria's three control planes — so a rule that once excluded one worker out of many
+     now excludes **a third of the Battery-eligible node set** for a Tier-1 workload.
+   - **It is `requiredDuringSchedulingIgnoredDuringExecution`**, i.e. a hard constraint. In
+     Battery, `tsidp` can only land on `milky-way`, `pegasus` or `shining-armor`.
+   - **It is about scheduling only, not storage.** The `tsidp` volume holds all three of its
+     `longhorn-critical` replicas on the trio — **including one on `othalla`** — so whatever
+     the rule was protecting against, it was not the disk.
+   - **Live placement today: `shining-armor`**, a worker, with the volume read from
+     control-plane replicas. Since `shining-armor` stays online through Battery (§6.1), this
+     costs nothing *today* — which is exactly why it can sit unnoticed until the one window
+     where `shining-armor` is unavailable and two of three control planes are eligible.
+
+   **Do not assume it is stale cruft.** `othalla` is also the node the README flags with the
+   hottest Transcend SATA data disk (69 °C), and [vault#95](https://github.com/david-driscoll/vault/issues/95)
+   tracks NVMe media errors on it. A hardware-motivated exclusion would be a *reasonable*
+   thing to have written and would still be valid. The two readings — "stale SGC-era rule" and
+   "deliberate quarantine of a sick node" — are indistinguishable from the repo alone.
+
+   **The ask:** David confirms which it was. If stale, delete the `affinity` block. If it was
+   hardware, it should be recorded as such next to the rule and generalised — because nothing
+   else in the tree avoids `othalla`, so a genuine reason to quarantine it is currently being
+   applied to exactly one workload.
 8. **Tier-2 backfill of `spec.nodeSelector: ["bulk"]`** onto existing volumes, and the
    rebuilds that actually move them off the control-plane disks (§0.2). Owned by
    [12](12-longhorn-critical-tier.md). **Measured 2026-08-20: 100 volumes still hold at least
@@ -1853,6 +2208,144 @@ through in place rather than moved to the resolved list above — several sectio
    still carry Tier-2 data and §0.2's thermal argument is only half-retired. The Tier-1
    migration (#963/#966) has now *added* ~68 GB of Tier-1 data to those same disks, which is
    by design but raises the stakes on evicting the Tier-2 tenants.
+
+   **Re-measured in full, 2026-08-23 — the count barely moved, but what it is made of changes
+   the item.** 99 of 195 volumes still hold a trio replica, against 100 on 2026-08-20, which
+   confirms the "a selector never evicts" mechanism exactly. Broken down for the first time:
+
+   | Volumes with a trio replica | `nodeSelector` | Count |
+   |---|---|---|
+   | legitimately resident (Tier 1) | `critical` | 18 |
+   | **the backfill target** | **`(none)`** | **78** |
+   | the selector working as intended | `bulk` | 3 |
+
+   **The target volumes do not carry `bulk` — they carry no selector at all.** This item has
+   been written as "backfill `bulk` onto existing volumes", which reads as though the label is
+   present and merely unenforced. It is absent: these 81 volumes predate
+   [12](12-longhorn-critical-tier.md) landing on 2026-08-19, and Longhorn stamps
+   `spec.nodeSelector` at *provision* time from the StorageClass. Volumes created before that
+   day are free to place replicas anywhere, permanently.
+
+   **Every Longhorn StorageClass is now correct, so nothing refills this.** Verified live:
+   `longhorn`, `longhorn-cache` and `longhorn-snapshot` are all `nodeSelector: bulk`;
+   `longhorn-critical{,-cache,-snapshot}` are `critical`; only `longhorn-local`
+   (`strict-local`, 1 replica, by design) has none. The backfill is a **one-time, bounded
+   burndown of 81 legacy volumes**, not a leak that has to be plugged first.
+
+   **And what is actually on those disks is not application data.** 97 non-critical replicas,
+   **63.7 GiB** (milky-way 32 / 27.6 GiB, othalla 22 / 7.8 GiB, pegasus 43 / 28.2 GiB):
+
+   | What | Volumes | Size |
+   |---|---|---|
+   | VolSync restore destinations (`*-dst-dest`) | 39 | 44.6 GiB |
+   | VolSync restic caches (`*-dst-cache`) | 39 | 3.5 GiB |
+   | VolSync source caches (`volsync-src-*-cache`) | 3 | 0.3 GiB |
+   | **real application data** | **0** | **0** |
+
+   **There is no Tier-2 application data on the control planes.** It is 100 % VolSync scratch,
+   all of it regenerable from restic. That materially weakens §0.2's thermal argument rather
+   than half-retiring it: **all 97 replicas belong to `detached` volumes** — zero attached, so
+   they do no I/O and generate no heat except during an actual restore. The disks are carrying
+   idle bytes, not write load. §0.2's concern was Tier-2 *workloads* doing I/O on the trio's
+   Transcend SATA disks, and by that measure the trio is already clean.
+
+   > ⚠️ **Do not burn this down the obvious way — it is a data-loss trap.** The natural move
+   > is "patch `spec.nodeSelector`, delete the trio replica, let it replenish onto `bulk`",
+   > which is what [30](30-longhorn-media-tier.md) established is required because a selector
+   > patch alone moves nothing. **78 of the 81 target volumes have their *only* replicas on
+   > the trio** (`want: 2`, `have: 1` for most; a few hold 2, both on the trio). Deleting the
+   > trio replica on those destroys the volume. Only 3 — the `volsync-src-*-cache` trio, the
+   > ones already carrying `bulk` — have a replica off the trio to fall back on.
+   >
+   > Compounding it: a **detached** volume does not rebuild. Longhorn replenishes on attach,
+   > so the delete-and-replenish loop does not even run until something mounts the volume.
+
+   **A monitoring blind spot falls out of the same measurement, and it is the part worth
+   acting on.** Those 78 volumes are under-replicated *right now* — `numberOfReplicas: 2` with
+   one replica — and **nothing can see it.** Detached volumes report
+   `robustness: unknown`, not `degraded`, so §6.0 check 3 ("zero degraded volumes", which
+   returns a clean 0 today) is structurally blind to them, as is any alert written against
+   `robustness`. This is the same family as [30](30-longhorn-media-tier.md)'s finding that
+   three Longhorn volume alerts had never been able to fire.
+
+   **Recommended shape, given all of the above:** stop treating this as a replica-eviction
+   exercise. The cheapest correct route is to let VolSync scratch be *recreated* rather than
+   *moved* — the destinations and caches are disposable by construction and will provision
+   against the corrected StorageClasses — and to fix the `robustness`-blind check separately,
+   since that one is real whether or not the burndown ever runs. Needs David's call before
+   anything is deleted.
+
+   ---
+
+   **2026-08-23, second pass — where the 63.7 GiB actually comes from, and why the obvious
+   fix is the dangerous one.** Chasing "why is there 44.6 GiB of VolSync restore-destination
+   data parked on the control planes" found a live recurrence of
+   [vault#120](https://github.com/david-driscoll/vault/issues/120), armed for **44 apps**
+   rather than one.
+
+   The mechanism, each part verified live:
+
+   1. **`components/volsync` — the *base* component every app gets — ships a
+      `ReplicationDestination` with `trigger: {manual: restore-once}`.** Not
+      `components/volsync-restore`, the transient one that is supposed to be added for a
+      restore and then removed again. Every app carries a standing restore-once RD.
+   2. **`volsync-system/restore-cleanup` reaps them at 03:30 nightly.** Its script deletes
+      any RD where `spec.trigger.manual == status.lastManualSync == "restore-once"`, which
+      cascades through `ownerReferences` to delete the `*-dst-dest` and `*-dst-cache` PVCs.
+      Its own comment states the assumption that makes it safe — *"the value set by
+      `components/volsync-restore`"* — and that assumption is wrong: the base component sets
+      it too.
+   3. **So Flux recreates what the cleanup deleted, and a fresh restore-once RD fires a full
+      restic restore.** The loop closes.
+
+   The evidence that it ran, rather than merely could:
+
+   | Observation | Value |
+   |---|---|
+   | `restore-cleanup` last succeeded | `2026-08-21T03:30:12Z` |
+   | All 44 RDs created | `2026-08-21T04:05:22Z` – `04:11:22Z` |
+   | All 44 RDs synced | `04:06Z` – `04:21Z` |
+   | Their `*-dst-dest` volumes today | 39 volumes, **44.6 GiB**, all `detached`, mostly on the trio |
+
+   44 apps ran a **full restic restore** within an hour of the cleanup deleting their RDs.
+   That is vault#120's exact signature — *"the restore-once trigger had already fired, the
+   nightly `restore-cleanup` CronJob reaped the RD at 03:30, and Flux recreated it on the next
+   reconcile — re-running a full restic restore and re-provisioning a 5Gi `longhorn-snapshot`
+   + 8Gi `longhorn-cache` PVC pair, every single day"* — the wording `dynacat`'s `ks.yaml`
+   carries as a warning against one app doing it.
+
+   **It is currently paused, by accident, and the pause is the only reason this is not
+   happening tonight.** `restore-cleanup` has not succeeded since 2026-08-21: its 2026-08-22
+   run is absent from history entirely, and its 2026-08-23 03:30 run failed
+   `DeadlineExceeded` after the full `activeDeadlineSeconds: 300`. **Cause not determined** —
+   the pod is gone and the events have expired, and the two cheap hypotheses were both tested
+   and disproved: the `bitnami/kubectl` digest still resolves (HTTP 200), and `volsync-system`
+   *is* in the downscaler's `excludedNamespaces`, so the nightly shed is not suspending it.
+   The plausible remaining candidate is the script's 44 sequential `kubectl delete` calls,
+   each blocking on VolSync finalizers and a PVC cascade, exceeding 300 s.
+
+   > ⚠️ **Do not "fix" `restore-cleanup` in isolation.** It is the trigger, not the victim.
+   > Making it succeed again restarts a nightly 44-app full restic restore. The order has to
+   > be: stop the base component shipping a standing `restore-once` RD **first**, then restore
+   > the cleanup.
+
+   **This supersedes the recommendation above.** Item 8's burndown is not a storage exercise at
+   all. The 63.7 GiB is debris from the last iteration of this loop; break the loop and the
+   debris stops being regenerated, after which it can be removed once and stays gone. Doing
+   any replica surgery before that would move data that should not exist.
+
+   **Needs David** — the fix is a design change to `components/volsync`, which every app in the
+   estate consumes, and the safe shape (drop the RD from the base; make restores explicitly
+   opt-in via `components/volsync-restore` as `dynacat`'s comment already assumes) is a bigger
+   change than this piece should make unilaterally.
+
+   **One further trap for whoever takes it**, because it is adjacent and armed:
+   `components/volsync/kustomization.yaml` sets `kustomize.toolkit.fluxcd.io/force: enabled`
+   as a `commonLabel` across **all** its resources — including `pvc.yaml`, the app's real PVC.
+   That is precisely [30](30-longhorn-media-tier.md)'s data-loss finding: with `force` on a
+   PVC, an immutable-field edit such as a StorageClass change makes Flux delete and recreate
+   it rather than fail. Any future tier change that moves an app's PVC between `longhorn` and
+   `longhorn-critical` has to reckon with that first.
 9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.

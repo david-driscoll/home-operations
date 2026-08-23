@@ -35,6 +35,24 @@ spec:
     remediation:
       retries: 5
   values:
+    # Tier 1 per docs/cluster-consolidation/24-power-states.md §1 (`pulumi` stays up
+    # during Battery). Top-level `tolerations` is the key
+    # pulumi-kubernetes-operator reads, verified against its values.
+    # Added after §8 Stage 2 found this among the 51 untolerated Tier-0/1 workloads.
+    # NOTE: this covers the OPERATOR only, deliberately. The `*-workspace-0` pods
+    # come from each Stack's `spec.workspaceTemplate` in
+    # kubernetes/apps/pulumi/<stack>/stack.yaml -- reachable from this tree, but
+    # left untolerated on purpose: nine long-lived workspace pods (~1.1 GiB of
+    # requests, `workspaceReclaimPolicy: Retain`, resyncing every 300s) are load a
+    # Battery window exists to shed, and 24 §1 notes a `pulumi up` cannot usefully
+    # run mid-outage anyway since its state backend is Postgres on celestia.
+    # Keeping the operator placeable and letting the workspaces stay down is the
+    # intended shape. See docs/cluster-consolidation/20-low-power-tier.md §4.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     resources:
       limits:
         memory: 1Gi

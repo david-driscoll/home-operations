@@ -26,6 +26,13 @@ spec:
   driftDetection:
     mode: enabled
   values:
+    # Tier 1 per 24 §1 (`observability` stays up during Battery). Path verified
+    # against the chart. Added after §8 Stage 2.
+    # See docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
     dashboard:
       enabled: true
     serviceMonitor:

@@ -40,6 +40,14 @@ spec:
     # Thanos Query - Aggregates data from sidecars and object storage
     query:
       enabled: true
+      # Tier 1 per 24 §1 (`observability` stays up during Battery). bitnami/thanos
+      # exposes ONE tolerations key per component -- there is no global one, so
+      # every component this release runs carries its own. Added after §8 Stage 2.
+      # See docs/cluster-consolidation/20-low-power-tier.md §4.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       replicaCount: 1
       replicaLabel: ["__replica__"]
       dnsDiscovery:
@@ -55,6 +63,10 @@ spec:
     # Query Frontend - Caching layer for queries (Grafana connects here)
     queryFrontend:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       replicaCount: 1
       resources:
         requests:
@@ -75,6 +87,10 @@ spec:
     # Bucket Web - Browse object storage via web UI
     bucketweb:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       replicaCount: 1
       resources:
         requests:
@@ -86,6 +102,10 @@ spec:
     # Store Gateway - Accesses historical data from object storage
     storegateway:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       replicaCount: 1
       persistence:
         enabled: true
@@ -101,6 +121,10 @@ spec:
     # Compactor - Downsamples and compacts object storage data
     compactor:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       retentionResolutionRaw: 7d
       retentionResolution5m: 90d
       retentionResolution1h: 180d
@@ -118,6 +142,10 @@ spec:
     # Ruler - Evaluates recording and alerting rules on historical data
     ruler:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       alertmanagersConfig:
         alertmanagers:
           - static_configs:
@@ -147,6 +175,10 @@ spec:
 
     receive:
       enabled: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
       networkPolicy:
         enabled: false
       mode: standalone
