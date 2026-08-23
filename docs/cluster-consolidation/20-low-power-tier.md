@@ -1853,6 +1853,72 @@ through in place rather than moved to the resolved list above — several sectio
    still carry Tier-2 data and §0.2's thermal argument is only half-retired. The Tier-1
    migration (#963/#966) has now *added* ~68 GB of Tier-1 data to those same disks, which is
    by design but raises the stakes on evicting the Tier-2 tenants.
+
+   **Re-measured in full, 2026-08-23 — the count barely moved, but what it is made of changes
+   the item.** 99 of 195 volumes still hold a trio replica, against 100 on 2026-08-20, which
+   confirms the "a selector never evicts" mechanism exactly. Broken down for the first time:
+
+   | Volumes with a trio replica | `nodeSelector` | Count |
+   |---|---|---|
+   | legitimately resident (Tier 1) | `critical` | 18 |
+   | **the backfill target** | **`(none)`** | **78** |
+   | the selector working as intended | `bulk` | 3 |
+
+   **The target volumes do not carry `bulk` — they carry no selector at all.** This item has
+   been written as "backfill `bulk` onto existing volumes", which reads as though the label is
+   present and merely unenforced. It is absent: these 81 volumes predate
+   [12](12-longhorn-critical-tier.md) landing on 2026-08-19, and Longhorn stamps
+   `spec.nodeSelector` at *provision* time from the StorageClass. Volumes created before that
+   day are free to place replicas anywhere, permanently.
+
+   **Every Longhorn StorageClass is now correct, so nothing refills this.** Verified live:
+   `longhorn`, `longhorn-cache` and `longhorn-snapshot` are all `nodeSelector: bulk`;
+   `longhorn-critical{,-cache,-snapshot}` are `critical`; only `longhorn-local`
+   (`strict-local`, 1 replica, by design) has none. The backfill is a **one-time, bounded
+   burndown of 81 legacy volumes**, not a leak that has to be plugged first.
+
+   **And what is actually on those disks is not application data.** 97 non-critical replicas,
+   **63.7 GiB** (milky-way 32 / 27.6 GiB, othalla 22 / 7.8 GiB, pegasus 43 / 28.2 GiB):
+
+   | What | Volumes | Size |
+   |---|---|---|
+   | VolSync restore destinations (`*-dst-dest`) | 39 | 44.6 GiB |
+   | VolSync restic caches (`*-dst-cache`) | 39 | 3.5 GiB |
+   | VolSync source caches (`volsync-src-*-cache`) | 3 | 0.3 GiB |
+   | **real application data** | **0** | **0** |
+
+   **There is no Tier-2 application data on the control planes.** It is 100 % VolSync scratch,
+   all of it regenerable from restic. That materially weakens §0.2's thermal argument rather
+   than half-retiring it: **all 97 replicas belong to `detached` volumes** — zero attached, so
+   they do no I/O and generate no heat except during an actual restore. The disks are carrying
+   idle bytes, not write load. §0.2's concern was Tier-2 *workloads* doing I/O on the trio's
+   Transcend SATA disks, and by that measure the trio is already clean.
+
+   > ⚠️ **Do not burn this down the obvious way — it is a data-loss trap.** The natural move
+   > is "patch `spec.nodeSelector`, delete the trio replica, let it replenish onto `bulk`",
+   > which is what [30](30-longhorn-media-tier.md) established is required because a selector
+   > patch alone moves nothing. **78 of the 81 target volumes have their *only* replicas on
+   > the trio** (`want: 2`, `have: 1` for most; a few hold 2, both on the trio). Deleting the
+   > trio replica on those destroys the volume. Only 3 — the `volsync-src-*-cache` trio, the
+   > ones already carrying `bulk` — have a replica off the trio to fall back on.
+   >
+   > Compounding it: a **detached** volume does not rebuild. Longhorn replenishes on attach,
+   > so the delete-and-replenish loop does not even run until something mounts the volume.
+
+   **A monitoring blind spot falls out of the same measurement, and it is the part worth
+   acting on.** Those 78 volumes are under-replicated *right now* — `numberOfReplicas: 2` with
+   one replica — and **nothing can see it.** Detached volumes report
+   `robustness: unknown`, not `degraded`, so §6.0 check 3 ("zero degraded volumes", which
+   returns a clean 0 today) is structurally blind to them, as is any alert written against
+   `robustness`. This is the same family as [30](30-longhorn-media-tier.md)'s finding that
+   three Longhorn volume alerts had never been able to fire.
+
+   **Recommended shape, given all of the above:** stop treating this as a replica-eviction
+   exercise. The cheapest correct route is to let VolSync scratch be *recreated* rather than
+   *moved* — the destinations and caches are disposable by construction and will provision
+   against the corrected StorageClasses — and to fix the `robustness`-blind check separately,
+   since that one is real whether or not the burndown ever runs. Needs David's call before
+   anything is deleted.
 9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.
