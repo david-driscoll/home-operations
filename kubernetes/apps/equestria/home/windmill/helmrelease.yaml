@@ -23,6 +23,17 @@ spec:
         kind: HelmRepository
         name: windmill
   maxHistory: 2
+  # 15m, not helm-controller's 5m default. An appVersion bump rolls seven pods
+  # (app x2, extra, workers-default x3, workers-native) onto freshly-pulled
+  # windmill images, and 4.0.246 (1.792.2 -> 1.794.0) could not finish inside
+  # 5m: it burned all four attempts on
+  #   `timeout waiting for: [Deployment/windmill-{app,extra,workers-native,workers-default} InProgress]`
+  # then rolled back to 4.0.245 and stalled on RetriesExceeded, which is a
+  # not-Ready HelmRelease and so a dirty §6.0 check 7 in
+  # docs/cluster-consolidation/20-low-power-tier.md. Both 1.794.0 images were
+  # confirmed present upstream (HTTP 200) -- this was slowness, not the missing
+  # windmill-extra image that pinned an earlier bump to 4.0.231.
+  timeout: 15m
   install:
     remediation:
       retries: -1
