@@ -2115,10 +2115,24 @@ through in place rather than moved to the resolved list above — several sectio
 
    **A gap found while planning this, independent of the migration — now CLOSED.**
    `crowdsec-ui` has had a working VolSync `ReplicationSource` all along, but
-   **`crowdsec-config-pvc` and `crowdsec-db-pvc` had none at all** — the LAPI's API
-   credentials and its decisions database were unbacked. For an app that is now Tier 1 that
-   is a hole in its own right, and it also meant the safe-because-recoverable argument did
-   not apply to two of the three volumes.
+   **`crowdsec-config-pvc` and `crowdsec-db-pvc` had none at all.** For an app that is now
+   Tier 1 that is a hole in its own right, and it also meant the safe-because-recoverable
+   argument did not apply to two of the three volumes.
+
+   > **Correction, made on the evidence of the first backup.** This item first said the
+   > unbacked pair was "the LAPI's API credentials **and its decisions database**". Only the
+   > first half is right. `crowdsec-db-pvc` is **near-empty and vestigial**: the first restic
+   > run captured **1 file, 1.297 KiB**, and the volume holds nothing but an empty `trace/`
+   > directory (12 K total on a 1 Gi PVC). crowdsec's LAPI on this cluster runs on
+   > **PostgreSQL**, not SQLite — `config.yaml.local` sets `db_config.type: postgresql`, and
+   > there is a CNPG `Database` CR named `crowdsec` — so the decisions database has always
+   > been covered by CNPG's WAL archiving and nightly dumps, never by this PVC. The genuinely
+   > unbacked volume was `crowdsec-config-pvc`, the API credentials, at **2.7 MiB**.
+   >
+   > `crowdsec-db-pvc` keeps its `ReplicationSource` anyway. It costs a 1 KiB nightly
+   > snapshot, and the volume still has to **attach** for the LAPI pod to start — so it is
+   > still in scope for the storage migration below even though there is almost nothing on
+   > it.
 
    **Fixed first, deliberately, before the migration** — David, 2026-08-23: *"lets configure
    volsync for crowdsec first, so we can have a backup, and then lets do the migration."*
