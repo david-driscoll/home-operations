@@ -1897,6 +1897,38 @@ through in place rather than moved to the resolved list above — several sectio
 7. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
    from a control plane. Copied verbatim during piece 21; confirm whether the reason still
    applies before §4's required affinity is written.
+
+   **Investigated 2026-08-23. Still open — but the question is sharper, and it needs David
+   rather than more digging.** What the investigation establishes:
+
+   - **No commit records a reason.** The constraint enters the tree in `786176d7`, the
+     wholesale piece-21 namespace import, so its origin is in the retired
+     `stargate-command-cluster` history. `git log -S othalla` on the file returns that commit
+     and nothing else.
+   - **It predates a topology change that inverts its meaning.** When it was written `othalla`
+     was an **SGC node**. After [18](18-sgc-nodes-join-control-plane.md) it is one of
+     equestria's three control planes — so a rule that once excluded one worker out of many
+     now excludes **a third of the Battery-eligible node set** for a Tier-1 workload.
+   - **It is `requiredDuringSchedulingIgnoredDuringExecution`**, i.e. a hard constraint. In
+     Battery, `tsidp` can only land on `milky-way`, `pegasus` or `shining-armor`.
+   - **It is about scheduling only, not storage.** The `tsidp` volume holds all three of its
+     `longhorn-critical` replicas on the trio — **including one on `othalla`** — so whatever
+     the rule was protecting against, it was not the disk.
+   - **Live placement today: `shining-armor`**, a worker, with the volume read from
+     control-plane replicas. Since `shining-armor` stays online through Battery (§6.1), this
+     costs nothing *today* — which is exactly why it can sit unnoticed until the one window
+     where `shining-armor` is unavailable and two of three control planes are eligible.
+
+   **Do not assume it is stale cruft.** `othalla` is also the node the README flags with the
+   hottest Transcend SATA data disk (69 °C), and [vault#95](https://github.com/david-driscoll/vault/issues/95)
+   tracks NVMe media errors on it. A hardware-motivated exclusion would be a *reasonable*
+   thing to have written and would still be valid. The two readings — "stale SGC-era rule" and
+   "deliberate quarantine of a sick node" — are indistinguishable from the repo alone.
+
+   **The ask:** David confirms which it was. If stale, delete the `affinity` block. If it was
+   hardware, it should be recorded as such next to the rule and generalised — because nothing
+   else in the tree avoids `othalla`, so a genuine reason to quarantine it is currently being
+   applied to exactly one workload.
 8. **Tier-2 backfill of `spec.nodeSelector: ["bulk"]`** onto existing volumes, and the
    rebuilds that actually move them off the control-plane disks (§0.2). Owned by
    [12](12-longhorn-critical-tier.md). **Measured 2026-08-20: 100 volumes still hold at least
