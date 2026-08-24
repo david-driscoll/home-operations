@@ -266,21 +266,71 @@ kubectl -n database exec postgres-1 -c postgres -- psql -U postgres -tAc \
 
 Expect `ssl=t` and `client_dn=/CN=openbao`. Before the cutover this read `ssl=f`, `dn=-`.
 
-### 2.4 — remove the password
+### 2.3b outcome — verified in production 2026-08-24
 
-Once soaked: drop `passwordSecret` from the DatabaseRole, delete the `openbao-postgres-password`
-document from `passwords.sops.yaml`, delete the `openbao-storage` ExternalSecret, and move the
-now-secretless `connection_url` from `extraSecretEnvironmentVars` into the HCL config in
-`helmrelease.yaml`. Optionally add `hostnossl openbao openbao all reject`.
+```
+openbao | 6 | t | TLSv1.3 | /CN=openbao
+```
 
-**Correction to an earlier claim.** This does *not* remove the `external-secrets` ordering
-dependency. 2.2 established that the client certificate has to reach `kube-system` through
-`ClusterSecretStore/database`, because the operator-created source Secrets cannot be annotated
-for reflector. So ESO stays in OpenBao's boot path either way.
+All six of OpenBao's PostgreSQL connections on TLS 1.3 with client-certificate auth, zero
+non-SSL. The connection URL parses to `password: None`. All three replicas unsealed, leadership
+on `openbao-1`, **110 ExternalSecrets on `ClusterSecretStore/openbao` never left Ready**, and
+181/181 Kustomizations Ready afterwards.
 
-What 2.4 actually buys is narrower, and still worth having: no password exists for this role
-anywhere — not in sops, not in KV, not in the connection URL — and the credential renews and
-revokes itself on the cluster's own PKI.
+**One thing to expect on the next roll.** `openbao-2` sat in `Terminating` for ~2.5 minutes
+against a 10s grace period. It was not stuck: the process had already logged `vault is sealed`
+and shut down cleanly, and kubelet was reporting a stale `ready=true` for a pod whose readiness
+probe had started timing out (`command timed out: bao status` in the events). It completed on
+its own and the replacement came up unsealed. Do not force-delete on the strength of the pod
+list alone — read the container log first, and check that the surviving replicas still hold
+quorum, which they did throughout.
+
+### 2.4 — retire the password (split in two)
+
+Both halves remove something. The first removes plumbing that is already dead; the second
+removes the rollback. They are deliberately separate changes with a soak between them.
+
+#### 2.4a — retire the dead plumbing *(this phase)*
+
+- `openbao` leaves `components/postgres` entirely; `Database` and `DatabaseRole` are
+  hand-written in `kubernetes/apps/database/postgres/app/openbao-role.yaml`. The component
+  exists to render a credential Secret, and this role no longer has one.
+- `passwordSecret` drops off the `DatabaseRole`. Per the docs, with no `passwordSecret` the
+  instance manager will not `CREATE`/`ALTER` the role with a password — so the password already
+  in PostgreSQL is left alone, unmanaged. **That is the rollback.**
+- The `openbao-storage` ExternalSecret is retired and `connection_url` moves into the HCL in
+  `helmrelease.yaml`. It is a literal with no credential in it, so templating it through a
+  Secret bought nothing.
+
+Rollback for 2.4a is still a plain revert: the sops document is still in git and the password is
+still live in PostgreSQL, so restoring the old URL restores password auth.
+
+**Manual cleanup this leaves behind.** Removing the component prunes the nested
+`openbao-postgres` Kustomization, and its `deletionPolicy: Orphan` means the objects it rendered
+survive. `Database/openbao` and `DatabaseRole/openbao` are adopted by the hand-written pair
+(same names, so ownership simply transfers). These three are orphaned with no new owner and
+nothing deletes them, by design:
+
+```bash
+kubectl -n database delete externalsecret openbao-postgres   # no longer rendered
+kubectl -n database delete secret         openbao-postgres   # its target, deletionPolicy Retain
+kubectl -n kube-system delete secret      openbao-storage    # target of the retired ExternalSecret
+```
+
+Do that only once 2.4a has soaked — the `openbao-postgres` Secret is what a rollback to
+password auth would read.
+
+#### 2.4b — remove the rollback *(post-soak, separate change)*
+
+- `disablePassword: true` on the `DatabaseRole`, which `ALTER`s the role's password to NULL.
+- Delete the `openbao-postgres-password` document from `passwords.sops.yaml`.
+- `hostnossl openbao openbao all reject` in the cluster's `pg_hba`.
+
+Any one of these removes the ability to fall back to password auth; together they make the
+claim "no password exists for this role anywhere" literally true. Do them as one change, after
+2.4a has run long enough to be trusted — including at least one pod restart and ideally a node
+reboot, since the failure mode this protects against is "OpenBao cannot reach storage at
+startup".
 
 ## Findings from the spike
 

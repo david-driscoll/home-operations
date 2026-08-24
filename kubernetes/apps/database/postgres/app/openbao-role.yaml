@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/database_v1.json
+#
+# OpenBao's database and role, hand-written rather than rendered by
+# `components/postgres`. Phase 2.4 of docs/postgres-credentials/PLAN.md.
+#
+# It is carved out because OpenBao authenticates with a client certificate and
+# needs no credential Secret at all — and rendering one is the component's
+# entire job. Keeping it on the component would mean carrying a
+# `<app>-postgres` ExternalSecret, a `<app>-postgres-password` sops document
+# and a `passwordSecret` reference that nothing reads.
+#
+# The deeper reason it can never rejoin: OpenBao stores its own state in this
+# cluster, so its database credential is the one credential in the estate that
+# cannot come from OpenBao. Phase 3 hands every other app's password to
+# OpenBao's database secrets engine; this role has to sit outside that.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: openbao
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  name: openbao
+  owner: openbao
+  ensure: present
+  allowConnections: true
+  databaseReclaimPolicy: retain
+  schemas:
+    - ensure: present
+      name: public
+      owner: openbao
+    - ensure: present
+      name: openbao
+      owner: openbao
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: openbao
+  annotations:
+    # REQUIRED, not defensive. With clientCertificate enabled this role OWNS
+    # the generated `openbao-client-cert` Secret through a controller
+    # ownerReference, and CNPG's deleteOwnedCertSecret removes it outright the
+    # moment `enabled` goes false. Pruning this object would take OpenBao's
+    # only storage credential with it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  name: openbao
+  comment: "openbao storage backend"
+  ensure: present
+  login: true
+  superuser: false
+  databaseRoleReclaimPolicy: retain
+  clientCertificate:
+    enabled: true
+  # NO passwordSecret, and deliberately no `disablePassword: true` either.
+  #
+  # Omitting passwordSecret means the instance manager stops managing this
+  # role's password — the docs are explicit that with no passwordSecret it will
+  # not CREATE/ALTER the role with one. The password already in PostgreSQL is
+  # left alone, unmanaged.
+  #
+  # That is the rollback, and it is why `disablePassword: true` is NOT set here.
+  # Setting it would ALTER the role's password to NULL, and combined with the
+  # sops document still being in git that is the difference between "revert one
+  # line and OpenBao is back on passwords" and "no way back without a manual
+  # ALTER ROLE". It belongs in the post-soak hardening step alongside
+  # `hostnossl openbao openbao all reject`.
