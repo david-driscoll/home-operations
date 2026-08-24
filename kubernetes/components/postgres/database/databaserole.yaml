@@ -36,7 +36,9 @@ spec:
   comment: "${APP} application role"
   ensure: present
   login: true
-  superuser: ${POSTGRES_SUPERUSER}
+  # Flipped to true by the ./superuser component, not by a substitution -- a
+  # boolean cannot travel through postBuild.substitute. See ../ks.yaml.
+  superuser: false
   # Deleting this object must never drop the role -- it owns the app's data.
   databaseRoleReclaimPolicy: retain
   passwordSecret:

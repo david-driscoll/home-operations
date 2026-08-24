@@ -36,17 +36,20 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # immich needs a superuser role -- it installs extensions (vectors/vchord)
+    # into its own database at startup. This was `superuser: true` in the
+    # generated `cluster.roles` block, and it has to be restated because a
+    # DatabaseRole ADOPTS an existing role and forces every attribute to match
+    # the manifest, so leaving it out would silently demote the live role.
+    #
+    # A component, not a substitution: booleans cannot pass through
+    # postBuild.substitute. See components/postgres/superuser.
+    - ../../../../components/postgres/superuser
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
     substitute:
       APP: *app
-      # immich needs a superuser role -- it installs extensions (vectors/vchord)
-      # into its own database at startup. This was `superuser: true` in the
-      # generated `cluster.roles` block; it has to be restated here because a
-      # DatabaseRole ADOPTS an existing role and forces every attribute to match
-      # the manifest, so omitting it would silently demote the live role.
-      POSTGRES_SUPERUSER: "true"
       NAMESPACE: *namespace
       VOLSYNC_ACCESSMODES: ReadWriteMany
       TAILSCALE_HOST: photos

@@ -49,7 +49,7 @@ four. The list is defined once, in `user-template.yaml`.
 2. Add a `${APP}-postgres-password` Secret document to
    `kubernetes/apps/database/postgres/app/passwords.sops.yaml`. Its `username` must equal the
    app name.
-3. If the app needs a superuser role, set `POSTGRES_SUPERUSER: "true"` in its `postBuild.substitute`.
+3. If the app needs a superuser role, add `../../../../components/postgres/superuser` to `spec.components` as well (a component, not a substitution — booleans cannot pass through `postBuild.substitute`).
 
 Step 2 goes away in phase 4 of [the plan](../../postgres-credentials/PLAN.md), when OpenBao's
 database secrets engine takes over password ownership.

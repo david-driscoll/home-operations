@@ -20,14 +20,14 @@ spec:
   cluster:
     name: postgres
   name: ${APP}
-  owner: ${POSTGRES_DB_OWNER}
+  owner: ${APP}
   ensure: present
   allowConnections: true
   databaseReclaimPolicy: retain
   schemas:
     - ensure: present
       name: public
-      owner: ${POSTGRES_DB_OWNER}
+      owner: ${APP}
     - ensure: present
       name: ${APP}
-      owner: ${POSTGRES_DB_OWNER}
+      owner: ${APP}
