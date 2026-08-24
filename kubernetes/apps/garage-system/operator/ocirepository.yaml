@@ -1,0 +1,20 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: garage-operator
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 0.7.6
+    digest: sha256:8d10c7c906ef73699888099dfb2af866fae21433de8f6b0b25034efd8ddf62df
+  url: oci://ghcr.io/rajsinghtech/charts/garage-operator
+  # Chart releases are keyless-signed by the project's helm.yml workflow.
+  # `provider: cosign` with no key verifies the keyless signature via Rekor,
+  # matching the app-template OCIRepository this file is modelled on.
+  verify:
+    provider: cosign

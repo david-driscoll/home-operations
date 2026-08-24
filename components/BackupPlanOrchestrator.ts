@@ -4,7 +4,19 @@ import type { BackrestPlan, BackrestRepository } from "@openapi/backrest.js";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, jsonStringify, log, type Output, output } from "@pulumi/pulumi";
 import { baoKvSecret, baoProvenance, baoSlug } from "./bao.ts";
 import type { GlobalResources } from "./globals.ts";
-export interface PreSyncArgs {
+/**
+ * Stage a remote filesystem over SFTP before the snapshot.
+ *
+ * `type` is OPTIONAL and defaults to "sftp" on purpose. Plans are serialized
+ * into 1Password/OpenBao and read back by `BackupPlanDirector` on a later,
+ * separate run, so every plan already persisted out there predates this field
+ * and has no `type` at all. Making sftp the fall-through means those keep
+ * rendering exactly the same rclone command they always did; requiring the
+ * discriminant would have silently reclassified all of them at the first
+ * director run after this shipped.
+ */
+export interface SftpPreSyncArgs {
+  type?: "sftp";
   /** SFTP hostname of the host whose data should be staged before the backup */
   sftpHost: string;
   /** Absolute path on the remote host to sync from (e.g. "/opt/stacks-data/") */
@@ -13,6 +25,40 @@ export interface PreSyncArgs {
   sftpPort?: number;
   exclude?: string[];
 }
+
+/**
+ * Stage the contents of an S3 bucket before the snapshot.
+ *
+ * This exists because restic cannot read an S3 bucket as a SOURCE — its S3
+ * support is for the repository DESTINATION, which is the opposite direction.
+ * So a bucket is backed up the same way a dockge host already is: rclone
+ * mirrors it onto backrest's local staging tree, and restic snapshots that
+ * tree. Everything downstream — repo, retention, prune/check, the Gatus
+ * heartbeat, the copy jobs to the other Proxmox Backup Servers — is then the
+ * mechanism that was already there.
+ *
+ * Credentials are NOT rendered into the hook command. They go into
+ * `rclone.conf` on the backrest host (see `renderRcloneConfig`), which keeps
+ * them out of config.json and makes a rotation one file write rather than a
+ * rewrite of every plan.
+ */
+export interface S3PreSyncArgs {
+  type: "s3";
+  /** S3 endpoint INCLUDING scheme, reachable from the backrest host. */
+  endpoint: string;
+  /** Bucket to mirror. */
+  bucket: string;
+  /** SigV4 region. Not geographic — it just has to match what the server expects. */
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  /** Optional key prefix, so a plan can cover part of a bucket. No leading slash. */
+  prefix?: string;
+  /** rclone `--exclude` patterns. Remember a bare `/dir` matches FILES only — use `/dir/**`. */
+  exclude?: string[];
+}
+
+export type PreSyncArgs = SftpPreSyncArgs | S3PreSyncArgs;
 
 export interface BackupPlanItem {
   source: "celestia" | "skystar" | "luna" | "volsync";

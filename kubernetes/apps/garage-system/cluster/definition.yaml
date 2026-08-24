@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Garage
+  category: ${CLUSTER_TITLE}
+  description: S3-compatible object storage
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/s3.svg
+  # No `url:` and no `authentik:` block. There is no web UI to publish, and the
+  # S3 endpoint must never sit behind forward-auth -- see httproute.yaml.
+  gatus:
+    - url: "https://s3.${ROOT_DOMAIN}/"
+      method: GET
+      interval: 1m
+      conditions:
+        # An unsigned GET / is a ListBuckets that Garage rejects. That REJECTION
+        # is the health signal: it proves the route resolved, TLS terminated,
+        # the Service had endpoints, and a Garage process parsed the request.
+        # 200 is listed because a future anonymous-read bucket policy could make
+        # the root answer, and that should not page.
+        #
+        # Do NOT tighten this to a single code. A gateway with no backends
+        # answers 503 and a Garage that has lost quorum answers 5xx, which is
+        # exactly what this is here to catch.
+        - "[STATUS] == any(200, 400, 403)"

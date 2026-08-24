@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# The S3 API, and ONLY the S3 API.
+#
+# Deliberately NOT behind authentik forward-auth, unlike every other route in
+# this estate: S3 clients authenticate with SigV4 and cannot follow an
+# interactive redirect. A middleware here would break every client at once
+# while looking like a Garage fault. Access control is the GarageKey grant.
+#
+# Deliberately NOT publishing the Admin API (3903) or RPC (3901). Admin is the
+# control plane and RPC is the mesh; both stay on the ClusterIP Service, where
+# the only clients are the operator and the Garage pods themselves.
+#
+# `internal` gateway, so this resolves only on the LAN and the tailnet through
+# Technitium's split horizon. That matters for more than tidiness: backrest on
+# celestia reaches Garage through this hostname, and it must not be a public
+# egress path for the whole object store.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}-s3
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    # Path-style addressing only (`https://s3.<domain>/<bucket>/<key>`).
+    # Virtual-hosted style would need `s3Api.rootDomain` plus a wildcard
+    # hostname here and a wildcard cert to match; nothing needs it yet.
+    - "s3.${ROOT_DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        # The operator names the cluster API Service after the GarageCluster and
+        # selects storage pods by {garage.rajsingh.info/cluster,
+        # garage.rajsingh.info/tier=storage}.
+        - name: ${APP}
+          port: 3900
