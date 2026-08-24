@@ -238,6 +238,27 @@ static-role rotation. The mitigation is that it is a *second* superuser: `postgr
 sops-backed and outside OpenBao's reach as break-glass, so revoking `baoadmin` is a one-line
 change that cannot lock anybody out.
 
+**3a outcome — verified 2026-08-24.** `baoadmin-client-cert` issued with subject `/CN=baoadmin`,
+issuer `OU=database, CN=postgres`, valid to 2026-11-22. Both certificates mounted and distinct
+(`/etc/pg-certs` and `/etc/pg-admin-certs`). All three replicas rolled and came back unsealed —
+quickly this time, ~15s each with none of the slow `Terminating` seen on earlier rolls. The
+storage connection was untouched throughout (`openbao | 6 | ssl=t | /CN=openbao`), 110
+ExternalSecrets Ready, 180/180 Kustomizations Ready, 15/15 DatabaseRoles applied.
+
+The identity was then proven from a throwaway pod using the projected certificate, before
+anything depends on it:
+
+```
+ADMIN_CERT_OK as baoadmin ssl=true dn=/CN=baoadmin superuser=true can_alter_roles=true
+```
+
+> **Budget ~5 minutes for a `resources/values.yaml` change to reach the Cluster CR, and do not
+> conclude it failed.** The path is not direct: `configMapGenerator` builds the
+> `postgres-values` ConfigMap, an ExternalSecret templates that into the `postgres-values`
+> Secret on a **4-minute** `refreshInterval`, and only then does the HelmRelease see new values.
+> During 3a the ConfigMap had both `pg_hba` rules while the Secret and the live Cluster still
+> had one, for about three minutes. That looks exactly like a broken change and is not one.
+
 ### 3b — configure the engine from Pulumi
 
 `@pulumi/vault` v7 (already a dependency) against OpenBao's API:
