@@ -357,6 +357,41 @@ rotation — is still open. Every app in the tranche becomes a rotating-credenti
 permanently, with reloader-driven restarts on the rotation cadence. Choose `rotation_period`
 accordingly (720h is a reasonable start) and roll in tranches, tolerant apps first.
 
+### How an app opts in
+
+One line in its `ks.yaml`:
+
+```yaml
+components:
+  - ../../../components/postgres
+  - ../../../components/postgres/rotate      # <- this
+```
+
+`components/postgres/rotate` does the two things that must happen together:
+
+1. **Drops `passwordSecret` from the `DatabaseRole`.** Without it CNPG and OpenBao fight —
+   OpenBao rotates, CNPG's role sync sees the role's transaction ID move and re-applies the sops
+   password, OpenBao rotates again. With no `passwordSecret` the instance manager stops managing
+   the password at all.
+2. **Repoints the credential ExternalSecret** at the `VaultDynamicSecret` generator that
+   `database/credentials.yaml` already renders for every app, inert until referenced.
+
+The same component is what the Pulumi stack discovers to create the static role. Both halves
+derive from one signal on purpose: the Kubernetes half makes the app able to read a rotated
+password, the OpenBao half rotates it, and if only one landed the app would hold a credential it
+cannot use. A hand-maintained list in the stack could disagree; a discovered one cannot.
+
+**Merge the component before the Pulumi run picks the app up** — they are different systems and
+cannot be atomic. In that order the generator reads a `static-creds` path that does not exist
+yet, ESO errors, and `deletionPolicy: Retain` keeps the existing Secret so the app rides through
+on its current password until the static role appears. The reverse order is an outage.
+
+**The sops document is still read**, for `hostname`/`port`/`database`/`username` — a
+`static-creds` response carries only `username` and `password`, and the shared
+`pgsql-user-template` ConfigMap needs the rest. The generator is listed second so its password
+wins. Retiring `passwords.sops.yaml` therefore needs those three descriptive fields sourced
+elsewhere first.
+
 ### Prerequisite: every consuming workload must see a rotated password
 
 A rotated password only reaches an app if *something* makes it take effect. Re-audited properly
