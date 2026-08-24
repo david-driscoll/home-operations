@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Have CNPG issue and auto-renew a TLS client certificate for the app's
+# database role. Add it AFTER ../../postgres in the app's `spec.components`:
+#
+#   components:
+#     - ../../../components/postgres
+#     - ../../../components/postgres/client-cert
+#
+# The operator writes `<app>-client-cert` (tls.crt/tls.key) into the `database`
+# namespace, signed by the cluster's own client CA -- the same mechanism
+# `streaming_replica` already authenticates with here -- and renews it at 90
+# days with a 7-day margin. The certificate CN is the role name, which is what
+# PostgreSQL `cert` auth maps on.
+#
+# Enabling this does NOT change how the app authenticates. It only makes the
+# certificate exist. Authentication changes when a `hostssl <db> <role> all
+# cert` rule is added to the cluster's pg_hba AND the client asks for SSL --
+# `hostssl` does not match a non-SSL connection, so the password path stays
+# live until the connection string is switched.
+#
+# A component rather than a substitution for the same reason as ./superuser:
+# `postBuild.substitute` is map[string]string and cannot carry a boolean. See
+# ../ks.yaml.
+#
+# WARNING: the generated Secret has a controller ownerReference back to the
+# DatabaseRole, and CNPG deletes it outright if `enabled` goes false. The
+# DatabaseRole already carries `kustomize.toolkit.fluxcd.io/prune: disabled`
+# (../database/databaserole.yaml) precisely so that pruning it cannot
+# garbage-collect a live credential.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: not-used
+      spec:
+        patches:
+          - target:
+              group: postgresql.cnpg.io
+              kind: DatabaseRole
+            patch: |-
+              apiVersion: postgresql.cnpg.io/v1
+              kind: DatabaseRole
+              metadata:
+                name: not-used
+              spec:
+                clientCertificate:
+                  enabled: true
