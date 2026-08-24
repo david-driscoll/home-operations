@@ -301,11 +301,41 @@ spec:
           SSH_DOMAIN: git.${ROOT_DOMAIN}
           SSH_PORT: 22
           SSH_LISTEN_PORT: 2222
+          # What the clone box actually shows, and why each part of it:
+          #
+          #   ssh://git@git.driscoll.tech/<owner>/<repo>.git
+          #
+          # No port, because ComposeSSHCloneURL (models/repo/repo.go) only
+          # writes one when SSH_PORT != 22. The `ssh://` form rather than the
+          # scp-style `git@host:owner/repo.git` comes from USE_COMPAT_SSH_URI
+          # in the [repository] section below.
+          #
+          # SSH_USER is pinned rather than inherited. Forgejo derives it
+          # SSH_USER -> BUILTIN_SSH_SERVER_USER -> RUN_USER ->
+          # user.CurrentUsername(), so with none of them set the clone URL is
+          # whatever the image happens to call uid 1000. It is `git` today; if
+          # upstream ever renamed it every clone URL would change and nothing
+          # would fail loudly -- the URL would simply be wrong.
+          SSH_USER: git
           # LFS objects live in Garage, not on this volume -- the `[storage]`
           # block below is the default for the `lfs` subsystem too, so they land
           # under `lfs/` in the bucket. Only the git repositories themselves are
           # on the PVC; Forgejo has no S3 backend for those.
           LFS_START_SERVER: true
+
+        repository:
+          # Pinned to the upstream default so a chart or image bump cannot
+          # quietly change what the clone box tells people to paste. true keeps
+          # the `ssh://` form; false would switch every SSH clone URL to the
+          # scp-style `git@git.driscoll.tech:<owner>/<repo>.git`. The two are
+          # equivalent to git -- this is a display choice, not a routing one.
+          #
+          # It belongs HERE and not under `server:` next to the other SSH keys,
+          # which is where it looks like it should go: Forgejo reads it from
+          # `rootCfg.Section("repository")` (modules/setting/repository.go), so
+          # in [server] it would be silently ignored and the default would keep
+          # applying with nothing to show for the line.
+          USE_COMPAT_SSH_URI: true
 
         database:
           DB_TYPE: postgres
