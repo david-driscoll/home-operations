@@ -312,6 +312,27 @@ that take PEM inline. Using them would put the `baoadmin` superuser private key 
 state and therefore into the Minio backend. The `connectionUrl` form points at the files phase
 3a mounts into the OpenBao pods instead, so Pulumi only ever writes a path string.
 
+**3b engine outcome — verified 2026-08-24.** The root ceremony applied the widened policy, and
+flipping `ENGINE_ENABLED` created the mount on a clean state. The `system` stack run succeeded,
+which is itself the proof — `verifyConnection` defaults true, so the apply opened a connection.
+Confirmed live from the database side:
+
+```
+baoadmin | 1 | ssl=t | TLSv1.3 | /CN=baoadmin     <- the rotation connection
+openbao  | 6 | ssl=t | TLSv1.3 | /CN=openbao      <- storage, unaffected
+```
+
+and from OpenBao: mount `database/` present, `allowed_roles: []`, no static roles, connection
+URL carrying the certificate paths with `password_authentication: scram-sha-256`. **No password
+was touched.** 181/181 Kustomizations Ready.
+
+> **A capabilities check is the wrong way to verify a policy mid-ceremony.** `bao token
+> capabilities` reports what the *current token* can do. Immediately after a ceremony that token
+> is the OIDC admin (`policies: ['admin','default']`), so every path — including the ones
+> deliberately withheld — comes back with full access and `sudo`. It reported
+> `database/creds/*` as writable when the policy grants nothing there. Read the policy document
+> itself: `bao policy read pulumi`.
+
 **Static roles, never dynamic.** `database/creds/<role>` mints a new PostgreSQL user per lease;
 every object that user creates is owned by it, and lease expiry either fails the `DROP ROLE` or
 orphans the objects. With `Database.spec.owner: ${APP}` the apps own their own schemas, so
