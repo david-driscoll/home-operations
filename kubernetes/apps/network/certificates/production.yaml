@@ -1,5 +1,10 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
+#
+# TWIN of staging.yaml -- the `dnsNames` lists must stay identical. Adding a SAN
+# here without adding it there means the name is never rehearsed against Let's
+# Encrypt's staging endpoint before it is issued for real. Adding a SAN is a
+# TWO-FILE change.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
