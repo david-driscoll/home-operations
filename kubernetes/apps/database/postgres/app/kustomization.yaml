@@ -12,6 +12,7 @@ resources:
   - ./cluster-users.yaml
   - ./openbao-role.yaml
   - ./openbao-credentials.yaml
+  - ./baoadmin-role.yaml
   - ./role-broad-access.yaml
 configMapGenerator:
 - name: ${APP}-values

@@ -121,6 +121,12 @@ cluster:
     # reject`) is a separate later step, after the cert path has soaked.
     pg_hba:
       - hostssl openbao openbao all cert
+      # Phase 3: the database secrets engine's rotation connection. Same
+      # inertness as the line above -- `hostssl` cannot match a non-SSL
+      # connection, and nothing connects as baoadmin until the engine is
+      # configured from Pulumi. Database is `postgres`, not an app database:
+      # the engine connects to the maintenance database to ALTER other roles.
+      - hostssl postgres baoadmin all cert
     pg_ident: []
     shared_preload_libraries: []
     ldap: {}
