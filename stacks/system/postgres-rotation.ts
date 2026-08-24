@@ -48,15 +48,21 @@ import { parseAllDocuments } from "yaml";
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /**
- * OFF until the widened `pulumi` policy is live. See the header.
+ * ON since the widened `pulumi` policy was applied by root ceremony, 2026-08-24.
  *
- * Flip this in its own commit, run the stack, and confirm the connection
- * verified before adding anything to ROTATION_TRANCHE — creating the mount
- * proves OpenBao can reach Postgres as `baoadmin` over the client certificate
- * WITHOUT touching a single password, because `verifyConnection` defaults true.
- * That checkpoint is the whole reason these are two separate switches.
+ * Verified against the live policy before flipping: it grants
+ * `sys/mounts/database` (+`/tune`, both with sudo), `database/config/*`,
+ * `database/static-roles/*` and `database/rotate-role/*`, and grants nothing on
+ * `database/creds/*` — so reaching for dynamic roles is still a 403. The
+ * `database/` mount did not exist yet, so this creates it from a clean state.
+ *
+ * Turning this on creates the mount and nothing else. Because `verifyConnection`
+ * defaults true, the apply opens a connection as `baoadmin` over the client
+ * certificate — proving that path WITHOUT touching a single password. That is
+ * the last cheap checkpoint before rotation becomes irreversible, and the whole
+ * reason this is separate from ROTATION_TRANCHE.
  */
-const ENGINE_ENABLED = false;
+const ENGINE_ENABLED = true;
 
 /**
  * Apps whose password OpenBao owns. Every entry must be a discovered app.
