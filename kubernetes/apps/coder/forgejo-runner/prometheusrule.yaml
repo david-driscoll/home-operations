@@ -8,19 +8,78 @@ spec:
   groups:
     - name: forgejo-runner.rules
       rules:
-        # kube-state-metrics, not a runner metric: forgejo-runner exports none,
-        # and neither does Forgejo (its collector has no runner series at all).
-        # A runner that has lost its registration keeps running and Forgejo
-        # keeps queueing jobs, so "the pod is not Ready" is the only signal
-        # available without polling the API.
+        # WHAT IS AND IS NOT COVERED HERE.
+        #
+        # Neither side of this exports a usable signal. forgejo-runner has no
+        # metrics endpoint at all, and Forgejo's collector
+        # (modules/metrics/collector.go) has no runner series -- so there is
+        # nothing that reports "a runner is connected" or "jobs are being
+        # claimed". Everything below is inferred from kube-state-metrics, and
+        # the inference has a hole:
+        #
+        #   A runner whose poller has stopped but whose process is alive keeps
+        #   its pod Ready and keeps this group silent, while Forgejo queues
+        #   workflows indefinitely rather than failing them. Nothing here fires.
+        #
+        # The livenessProbe added in helmrelease.yaml narrows that -- a hung or
+        # deadlocked process now fails its TCP check and restarts, which
+        # ForgejoRunnerFlapping below will see. It does NOT close the hole: a
+        # process that is healthy but idle is indistinguishable from one that is
+        # healthy and simply has no work. Closing it properly needs a synthetic
+        # job (a scheduled canary workflow whose absence alerts) and is left
+        # deliberately undone rather than papered over with a rule that cannot
+        # fire.
         - alert: ForgejoRunnerDown
           annotations:
             description: >-
-              No Forgejo Actions runner is ready. Workflows will queue
-              indefinitely rather than fail.
-            summary: Forgejo Actions runner is unavailable.
+              The Forgejo Actions runner has no ready replica, so no workflow
+              can start. Note this only covers the runner being ABSENT --
+              a running-but-idle runner is invisible here; see the group
+              comment.
+            summary: Forgejo Actions runner is not running.
           expr: |
             kube_statefulset_status_replicas_ready{namespace="coder", statefulset="forgejo-runner"} == 0
           for: 30m
           labels:
             severity: warning
+
+        # The failure mode the livenessProbe converts a hang into. Also catches
+        # the dind sidecar dying, which is invisible to the rule above -- the
+        # StatefulSet reports Ready off the main container, so a crash-looping
+        # Docker daemon leaves the runner "ready" and every job failing.
+        - alert: ForgejoRunnerFlapping
+          annotations:
+            description: >-
+              {{ humanize $value }} container restarts in the last hour in the
+              forgejo-runner pod. A restarting daemon fails whatever job it was
+              running, and a crash-looping dind sidecar fails every job while
+              the pod still reports Ready.
+            summary: Forgejo Actions runner is restarting.
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="coder", pod=~"forgejo-runner-.*"}[1h]) > 3
+          for: 10m
+          labels:
+            severity: warning
+
+        # NO ALERT FOR THE 60Gi DISK BOUND, deliberately.
+        #
+        # Every candidate was checked against this cluster's Prometheus rather
+        # than assumed, and none of them exist here:
+        #
+        #   ephemeral_storage_pod_usage_bytes   not scraped
+        #   container_fs_usage_bytes            not scraped
+        #   kubelet_volume_stats_used_bytes     PVCs only, and this app has none
+        #   kube_pod_status_reason              metric name known, ZERO series
+        #
+        # So neither a "filling up" warning nor an "was evicted" notice can be
+        # written today. Both were drafted and both would have been dead rules
+        # -- silent forever, indistinguishable from healthy, which is the exact
+        # failure this file already carries a warning about for
+        # `gitea_runners_online`.
+        #
+        # The consequence is still visible, just indirectly: an eviction
+        # replaces the pod, so ForgejoRunnerDown covers a sustained outage and
+        # ForgejoRunnerFlapping covers a repeating one. If pre-warning is ever
+        # wanted, it needs kube-state-metrics' pod-status collector or cAdvisor
+        # container_fs_* enabled at the scrape config first -- a platform
+        # change, not a rule.

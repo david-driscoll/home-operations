@@ -17,9 +17,16 @@ log:
 
 runner:
   file: /data/.runner
-  # Four concurrent jobs in one daemon, rather than four replicas: each replica
-  # would need its own registration, its own Docker-in-Docker sidecar and its
-  # own image cache. Raise this before raising replicas.
+  # Four concurrent jobs in one daemon. This is the ONLY scaling knob here --
+  # `replicas` must stay 1.
+  #
+  # Not a storage limitation (the volumes are emptyDirs now) but an identity
+  # one: every replica mounts the same config Secret, so every replica would
+  # present the SAME runner uuid and token. Forgejo keys a runner on that pair,
+  # so two daemons would be one runner as far as it is concerned, racing to
+  # claim the same jobs and reporting status over each other. Scaling out needs
+  # a second registration, which means a second OpenBao path, a second Secret
+  # and a second StatefulSet -- not a bigger number here.
   capacity: 4
   timeout: 3h
   # How long a job gets to finish after SIGTERM. Must stay below the pod's
@@ -49,6 +56,12 @@ cache:
   # host is correct and does not need pinning.
   enabled: true
   dir: /data/.cache/actcache
+  # Pinned rather than left at the default 0 (random). forgejo-runner has no
+  # health endpoint and no metrics, so this listener is the only thing in the
+  # process a probe can reach at all -- helmrelease.yaml points a livenessProbe
+  # at it. Keep the two in step.
+  port: 8088
+  proxy_port: 8089
 
 container:
   # Empty means the runner creates a per-job network on the Docker-in-Docker
