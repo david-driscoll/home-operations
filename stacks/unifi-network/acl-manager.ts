@@ -137,7 +137,23 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       {
         src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
         dst: [tag.apps, tag.dockge, tag.dns, tag.idp],
-        ip: [...ports.web, ...ports.git],
+        ip: [...ports.web],
+      },
+      { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
+    );
+
+    // Split out of `default-apps-access` when Forgejo's git SSH moved from 2222
+    // to 22. `ports.git` is now the same port as `ports.ssh`, and the grant
+    // above reaches tag:dockge and tag:dns — hosts that run a REAL sshd and
+    // whose shell access is deliberately admin-only (the grant below this one).
+    // Folding git back into that list would silently promote every member to
+    // shell on them. tag:apps is the only destination that serves git.
+    manager.setGrant(
+      "forgejo-git-ssh",
+      {
+        src: [autogroups.tagged, autogroups.member, tag.mediaDevice],
+        dst: [tag.apps],
+        ip: [...ports.git],
       },
       { accept: testData.knownNormalUsers.concat(testData.taggedDevices) },
     );

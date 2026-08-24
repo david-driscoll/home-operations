@@ -1,0 +1,47 @@
+# .forgejo/workflows/canary.yml in the Forgejo repo `forgejo-admin/canary`.
+#
+# Proves the Actions runner is not merely Running but actually executing jobs,
+# by reporting into the Gatus external endpoint `Forgejo Actions / canary`
+# (docker/alpha-site/uptime/config/forgejo-actions.yaml). Gatus fails that
+# endpoint if no push arrives within its heartbeat interval, so this workflow
+# failing to RUN is as loud as this workflow failing.
+#
+# This file is the canonical copy. The one that executes lives inside Forgejo,
+# which is manual state -- see docs/runbooks/forgejo-equestria-cutover.md for
+# the bootstrap, and remember that restoring Forgejo from a backup does not
+# restore this unless the repository was in the snapshot.
+name: canary
+on:
+  schedule:
+    # Hourly, off the top of the hour so it does not land with everything else.
+    # Forgejo only schedules workflows on the repository's DEFAULT branch.
+    - cron: "17 * * * *"
+  # So the bootstrap can prove the path without waiting up to an hour.
+  workflow_dispatch:
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    # A heartbeat that hangs is a heartbeat that pages. Nothing here should
+    # take more than seconds once the image is cached.
+    timeout-minutes: 5
+    steps:
+      - name: Report to Gatus
+        env:
+          # Both are repository secrets. GATUS_TOKEN is the endpoint token,
+          # which Gatus uses as BOTH the path segment and the bearer.
+          # GATUS_CONNECT_TO is a secret only to keep the tailnet host out of
+          # a repository that Forgejo serves; it is not sensitive.
+          GATUS_TOKEN: ${{ secrets.GATUS_TOKEN }}
+          GATUS_CONNECT_TO: ${{ secrets.GATUS_CONNECT_TO }}
+        run: |
+          set -euo pipefail
+          # --connect-to keeps Host and SNI intact so Traefik routes the
+          # request and the Let's Encrypt certificate still validates, while
+          # the connection actually goes out through the dockge-as egress.
+          # Pods have no direct route to the tailnet.
+          curl -sSf -X POST \
+            --max-time 30 \
+            --connect-to "$GATUS_CONNECT_TO" \
+            -H "Authorization: Bearer $GATUS_TOKEN" \
+            "https://uptime.driscoll.tech/api/v1/endpoints/${GATUS_TOKEN}/external?success=true"

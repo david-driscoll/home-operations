@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/stargate-command-cluster/refs/heads/main/schemas/gatus.schema.json
+#
+# Dead-man's switch for the Forgejo Actions runner
+# (kubernetes/apps/coder/forgejo-runner/).
+#
+# The runner is otherwise only observable WHILE IT IS FAILING. Its two
+# PrometheusRules watch the pod -- `ForgejoRunnerDown` on ready replicas,
+# `ForgejoRunnerFlapping` on restarts -- and Forgejo itself exports no runner
+# metric at all (`modules/metrics/collector.go`, namespace `gitea_`, 28 series,
+# none about runners). So the failure that matters most is invisible: a pod
+# that is Running and Ready, registered, and no longer accepting jobs. A
+# revoked registration, a wedged poller and an expired token all look exactly
+# like an idle CI system.
+#
+# The only thing that distinguishes "idle" from "broken" is a job that is
+# SUPPOSED to run. `canary` is reported into hourly by a scheduled workflow in
+# the Forgejo repo of the same name -- see the bootstrap procedure in
+# docs/runbooks/forgejo-equestria-cutover.md. Silence for three hours means the
+# heartbeat lapsed and the endpoint goes red.
+#
+# Note what this covers for free: the canary lives INSIDE Forgejo, as a repo
+# and a workflow, so it is destroyed by anything that destroys Forgejo's data
+# volume. The 2026-08-24 volume loss took the test repository with it and
+# nothing said a word. Had the canary existed, its silence would have.
+#
+# Token convention matches toGatusKey(group, name) in
+# home-operations/components/helpers.ts, like the OpenBao endpoints next door.
+external-endpoints:
+  - name: canary
+    group: "Forgejo Actions"
+    token: forgejo-actions_canary
+    # The workflow is on `17 * * * *`. Three hours tolerates two missed runs
+    # before paging -- enough to ride out a node move, a Low Power window or a
+    # cold image pull, and short enough that a genuinely wedged runner is
+    # caught the same morning.
+    heartbeat:
+      interval: 3h
+    alerts:
+      - type: pushover
+        enabled: true
+        success-threshold: 1
+        failure-threshold: 1
+        minimum-reminder-interval: 24h
