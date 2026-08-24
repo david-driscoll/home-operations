@@ -62,16 +62,25 @@ spec:
               repository: data.forgejo.org/oci/docker
               tag: 29-dind@sha256:12e683a161823b2a839aeea999b9d960e6e1f9a97b1679ad6b441982e2d9cf07
             env:
-              # Empty disables the entrypoint's automatic TLS bootstrap. Safe
-              # ONLY because of the loopback bind below.
-              DOCKER_TLS_CERTDIR: ""
-            args:
-              # 127.0.0.1, NOT 0.0.0.0. Containers in a pod share a network
-              # namespace, so the runner reaches this over loopback while
-              # nothing else in the cluster can -- and pod IPs are routable
-              # cluster-wide, so an unauthenticated dockerd on 0.0.0.0 would be
-              # root on the node for anything that found it.
-              - --host=tcp://127.0.0.1:2375
+              # TLS ON, with client verification. This is not belt-and-braces --
+              # it is the only way to keep an unauthenticated Docker daemon off
+              # the pod network.
+              #
+              # The first cut set this empty and passed
+              # `--host=tcp://127.0.0.1:2375`, intending a loopback-only
+              # listener. That cannot work: dockerd-entrypoint.sh prepends its
+              # OWN `--host` before anything you pass, unconditionally --
+              # `tcp://0.0.0.0:2376` with TLS, `tcp://0.0.0.0:2375` without. So
+              # the flag became a SECOND --host on the same port, dockerd bound
+              # 0.0.0.0 first and then died on "port is already allocated", and
+              # the sidecar crash-looped with an unauthenticated daemon briefly
+              # live on a routable pod IP each time round.
+              #
+              # With a certdir the entrypoint generates a CA plus server and
+              # client certs into it and starts the daemon with --tlsverify, so
+              # the 0.0.0.0 listener is useless without the client key that only
+              # the runner container has.
+              DOCKER_TLS_CERTDIR: /certs
             securityContext:
               # Unavoidable for Docker-in-Docker: dockerd needs to manage
               # cgroups, mounts and iptables in its own namespace. It is the
@@ -96,7 +105,15 @@ spec:
                 custom: true
                 spec:
                   exec:
-                    command: ["docker", "-H", "tcp://127.0.0.1:2375", "info"]
+                    command:
+                      - sh
+                      - -c
+                      - >-
+                        docker --tlsverify
+                        --tlscacert=/certs/client/ca.pem
+                        --tlscert=/certs/client/cert.pem
+                        --tlskey=/certs/client/key.pem
+                        -H tcp://127.0.0.1:2376 info
                   initialDelaySeconds: 5
                   periodSeconds: 2
                   failureThreshold: 30
@@ -110,7 +127,12 @@ spec:
             args: ["daemon", "--config", "/config/config.yml"]
             env:
               TZ: "${TIMEZONE}"
-              DOCKER_HOST: tcp://127.0.0.1:2375
+              # 127.0.0.1 still, because the containers share a network
+              # namespace -- but the security now comes from the client
+              # certificate, not from the bind address.
+              DOCKER_HOST: tcp://127.0.0.1:2376
+              DOCKER_TLS_VERIFY: "1"
+              DOCKER_CERT_PATH: /certs/client
               # The image runs as uid 1000 with no home directory of its own;
               # without these the runner writes its cache under / and fails.
               HOME: /data
@@ -162,6 +184,25 @@ spec:
           *app :
             dind:
               - path: /var/lib/docker
+
+      # The TLS material dockerd-entrypoint.sh generates on start: a CA, a
+      # server pair under /certs/server, and a client pair under /certs/client.
+      # It has to be a shared volume rather than each container's own, because
+      # the whole point is that the runner presents the client key the daemon
+      # will accept.
+      #
+      # emptyDir, so it is regenerated every start. Nothing outside this pod
+      # ever needs to verify against it, and a CA that lives exactly as long as
+      # the daemon it authenticates is one fewer thing to rotate.
+      docker-certs:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            dind:
+              - path: /certs
+            app:
+              - path: /certs
+                readOnly: true
 
       config:
         type: secret
