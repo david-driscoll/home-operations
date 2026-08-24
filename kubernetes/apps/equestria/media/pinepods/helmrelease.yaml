@@ -47,6 +47,32 @@ spec:
     - kind: Secret
       name: ${APP}-values
       valuesKey: values.yaml
+  # pinepods reads its database password from the `pinepods-env` Secret via
+  # envFrom, so a rotated password does not reach the running pod unless
+  # something restarts it. Stakater Reloader does that, but only when the
+  # annotation is on the WORKLOAD -- and this chart offers no value for
+  # Deployment-level annotations, so it goes on with a post-render patch (the
+  # same mechanism network/crowdsec and network/cloudflare-tunnel already use).
+  #
+  # This becomes load-bearing at phase 4 of docs/postgres-credentials/PLAN.md,
+  # when OpenBao's database secrets engine starts rotating these passwords on a
+  # schedule. Without it the first rotation is an outage that looks like a
+  # database fault.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              version: v1
+              group: apps
+              kind: Deployment
+              name: pinepods
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: pinepods
+                annotations:
+                  reloader.stakater.com/auto: "true"
   values:
     backend:
       # -- Enable backend deployment

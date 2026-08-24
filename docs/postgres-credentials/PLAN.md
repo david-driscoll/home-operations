@@ -308,24 +308,36 @@ rotation — is still open. Every app in the tranche becomes a rotating-credenti
 permanently, with reloader-driven restarts on the rotation cadence. Choose `rotation_period`
 accordingly (720h is a reasonable start) and roll in tranches, tolerant apps first.
 
-### Prerequisite: every consuming workload needs reloader
+### Prerequisite: every consuming workload must see a rotated password
 
-A rotated password only reaches an app if something restarts it.
-`reloader.stakater.com/auto: "true"` on the **workload** is what does that — the same annotation
-on a Secret or ExternalSecret is a no-op, which is worth knowing because the estate has it in
-both places.
+A rotated password only reaches an app if *something* makes it take effect. Re-audited properly
+on 2026-08-24, and there are **three** mechanisms in play, not one — an earlier version of this
+table assumed only the first and got two apps wrong.
 
-Audited live on 2026-08-24, and it is not universal:
+| Mechanism | How it works | Needs |
+| --- | --- | --- |
+| Stakater Reloader | restarts the workload when a Secret it references changes | `reloader.stakater.com/auto: "true"` **on the workload**, not the pod template |
+| Helm `valuesFrom` | helm-controller re-renders the release when a referenced Secret changes | nothing — automatic |
+| ESO reloader | annotates *downstream ExternalSecrets* so a chained sync re-runs | the `Config` CR, already deployed |
 
-| App | State |
-| --- | --- |
-| coder, crowdsec (lapi + ui), freshrss, grafana, immich, n8n, openbao, pulsarr, questarr, romm, tandoor | `auto: "true"` — fine |
-| **pinepods** | Deployment exists, **no reloader annotation** |
-| **windmill** (`-app`, `-extra`, `-workers-default`, `-workers-native`) | **no reloader annotation** on any of the four |
-| forgejo, outline, retrom, strmgen | no running workload at audit time — recheck before their tranche |
+Per app:
 
-Fix pinepods and windmill before either lands in a rotation tranche, or their first rotation is
-an outage that looks like a database fault.
+| App | Mechanism | State |
+| --- | --- | --- |
+| coder, crowdsec (lapi + ui), freshrss, grafana, immich, n8n, openbao, pulsarr, questarr, romm, tandoor | Stakater, annotation present on the Deployment | fine |
+| **windmill** | **Helm `valuesFrom`** — `windmill-pguser-secret.uri` → `targetPath: windmill.databaseUrl` | **fine, and Reloader is the wrong tool**: its pods reference no Secrets at all, so the annotation would be inert. A rotation changes the ExternalSecret, helm-controller re-renders, the Deployment's literal `DATABASE_URL` changes and the pods roll. |
+| **pinepods** | Stakater — `envFrom: pinepods-env`, which carries `DB_PASSWORD` | **was the only real gap.** Fixed by a `postRenderers` patch; the chart offers no Deployment-annotation value. |
+| forgejo, outline, retrom, strmgen | — | no running workload; `outline`/`retrom`/`strmgen` are not deployed at all (see the phase 1 outcome) |
+
+Two things worth carrying forward:
+
+- **The annotation must be on the Deployment.** Windmill's chart puts `windmill.app.annotations`
+  on the *pod template*, which is why the estate looked like it had reloader coverage there and
+  did not. Check `metadata.annotations` on the workload, never the values file.
+- **Windmill's password ends up as a plaintext literal in the Deployment's pod spec**, because
+  `valuesFrom`/`targetPath` injects it into Helm values at render time. That is pre-existing and
+  out of scope here, but it means `kubectl get deploy windmill-app -o yaml` prints a live
+  database password.
 
 ### OpenBao policy
 
