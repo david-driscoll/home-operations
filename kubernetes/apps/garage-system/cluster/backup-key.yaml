@@ -1,0 +1,51 @@
+---
+# The read-only S3 identity the estate's backup system uses.
+#
+# ONE key for every backed-up bucket, not one key per bucket. `allBuckets` is
+# what makes the annotation-driven design work: adding a GarageBucket with
+# `driscoll.dev/backup: "true"` must be a one-file change, and it would not be
+# if it also required minting a key, plumbing its Secret, and re-running Pulumi
+# to learn the credentials.
+#
+# The cost of that choice is stated plainly: this key can read EVERY bucket in
+# the cluster, including ones that were never opted in. It is a read-only
+# credential held by a backup process, which is the same trust level restic
+# already has over /spike and every dockge host -- but it is not least
+# privilege, and if a bucket ever holds something backrest must not see, that
+# bucket needs its own cluster, not a comment.
+#
+# `owner: false` and no `permissions.createBucket`: this identity must never be
+# able to write, delete, or change a bucket's configuration. A backup that can
+# mutate its source is a backup that can destroy it.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: ${APP}-backup
+spec:
+  clusterRef:
+    name: ${APP}
+  name: Backup (read-only)
+  allBuckets:
+    read: true
+    write: false
+    owner: false
+  neverExpires: true
+  secretTemplate:
+    name: ${APP}-backup-credentials
+    # How Pulumi FINDS this Secret. `stacks/applications/kubernetes-backups.ts`
+    # selects on this label rather than on the name above, so the two sides are
+    # coupled by an explicit marker instead of a string convention that nothing
+    # would catch if it drifted.
+    labels:
+      driscoll.dev/garage-backup-credentials: "true"
+    includeEndpoint: true
+    includeRegion: true
+    additionalData:
+      # The endpoint the OPERATOR writes into this Secret is the in-cluster
+      # Service URL, which is useless to backrest -- it runs in a container on
+      # celestia, not in this cluster. This is the address it should actually
+      # dial, declared here so git stays the single source of truth and Pulumi
+      # does not have to hardcode a hostname of its own.
+      #
+      # Must match httproute.yaml's hostname.
+      external-endpoint: "https://s3.${ROOT_DOMAIN}"

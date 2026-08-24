@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app garage
+  namespace: &namespace garage-system
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: garage-operator
+      namespace: garage-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/garage-system/cluster
+  prune: true
+  # The GarageCluster CR is the identity of the object store: its StatefulSets,
+  # their PVCs, and the Garage layout all hang off it. Orphan on ownership
+  # change for the same reason the operator Kustomization does.
+  deletionPolicy: Orphan
+  force: false
+  # Deliberately false. `wait: true` would block this Kustomization on the
+  # GarageCluster reaching Ready, and Ready needs three schedulable bulk
+  # workers. In Low Power mode (D6) there are none, so a waiting Kustomization
+  # would sit failing for the whole window and drag every dependent with it.
+  # Health is judged by the Gatus endpoint in definition.yaml instead.
+  wait: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

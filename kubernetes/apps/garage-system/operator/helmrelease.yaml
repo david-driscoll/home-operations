@@ -1,0 +1,98 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app garage-operator
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    crds:
+      install: true
+      # Deleting a CRD deletes every custom resource of that kind, and for
+      # GarageCluster that reaches all the way down to the PVCs. `keep` is the
+      # chart default; restated because it is the difference between an
+      # uninstall and a data loss.
+      keep: true
+
+    # Cluster-scoped watch (the chart default). `zoneFrom` and node-local pools
+    # both require it, and a namespaced install would have to be widened later
+    # by a RBAC change rather than a values change.
+    watchNamespaces: []
+
+    webhooks:
+      # Conversion (v1beta1 <-> v1beta2) plus the admission guards that refuse
+      # an identity-destroying edit to a live storage node. Not optional for
+      # anything holding real objects -- see the operator's install docs.
+      enabled: true
+      failurePolicy: Fail
+      certManager:
+        enabled: true
+        # Empty issuerName makes the chart render its own self-signed Issuer in
+        # this namespace. Deliberate: the estate ClusterIssuers mint publicly
+        # trusted certs through ACME/DNS-01, and burning rate limit on a
+        # webhook cert that only the apiserver ever validates (against the CA
+        # bundle the chart injects) would be pure waste.
+        issuerName: ""
+
+    # serviceMonitorSelectorNilUsesHelmValues is false on this Prometheus, so a
+    # bare ServiceMonitor is discovered with no release label needed.
+    metrics:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+    grafanaDashboard:
+      enabled: true
+      labels:
+        # "true", NOT the chart's default "1". kube-prometheus-stack's sidecar
+        # is configured with `labelValue: "true"` (grafana/helmrelease.yaml), so
+        # a ConfigMap labelled "1" carries the right key with the wrong value
+        # and is silently skipped -- no error anywhere, the dashboard just never
+        # appears.
+        grafana_dashboard: "true"
+
+    prometheusRules:
+      enabled: true
+
+    resources:
+      requests:
+        cpu: 10m
+        memory: 128Mi
+      limits:
+        # The chart's own note: 128Mi OOMs during certificate generation and
+        # when many resources are in flight. Left at the chart default rather
+        # than trimmed.
+        memory: 256Mi
+
+    # The operator is a controller, not a data plane -- it belongs with the
+    # rest of the control plane so it survives Low Power mode (D6) and can keep
+    # reconciling the moment the storage tier comes back. The Garage nodes
+    # themselves stay on the bulk workers; see cluster/garagecluster.yaml.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule

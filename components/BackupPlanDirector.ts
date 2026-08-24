@@ -4,7 +4,7 @@ import type { BackrestConfig, BackrestPlan, BackrestRepository } from "@openapi/
 import { remote } from "@pulumi/command";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, jsonStringify, log, type Output, output, type Resource, type Unwrap, type UnwrappedArray } from "@pulumi/pulumi";
 import { NodeSSH } from "node-ssh";
-import type { BackupPlanItem } from "./BackupPlanOrchestrator.ts";
+import type { BackupPlanItem, S3PreSyncArgs } from "./BackupPlanOrchestrator.ts";
 import type { DockgeLxc } from "./DockgeLxc.ts";
 import type { GlobalResources } from "./globals.ts";
 import type { ProxmoxBackupServerLxc } from "./ProxmoxBackupServerLxc.ts";
@@ -162,7 +162,12 @@ export class BackupPlanDirector extends ComponentResource {
 
     const allDeps = all([depends, uptime, copyJobs]).apply(d => d.flat());
 
-    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems));
+    // Only the plans this host actually RUNS need an rclone remote. A
+    // destination host copies finished repos over SFTP and never touches the
+    // bucket, so shipping it these credentials would be gratuitous spread.
+    const rcloneConfig = renderRcloneConfig(sourcePlans);
+
+    return output(this.updateBackrestConfiguration(dockgeConnection, cluster, allDeps, backrestItems, rcloneConfig));
   }
 
   private _createSourceBackrestPlan(_detail: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, plan: BackupPlanItem, uptimeUrl: string, password: string) {
@@ -175,22 +180,7 @@ export class BackupPlanDirector extends ComponentResource {
       hooks.push({
         conditions: ["CONDITION_SNAPSHOT_START"],
         actionCommand: {
-          command: [
-            "rclone sync",
-            `:sftp:${plan.preSync.sourcePath}`,
-            plan.path,
-            `--sftp-host=${plan.preSync.sftpHost}`,
-            `--sftp-port=${plan.preSync.sftpPort ?? 2022}`,
-            "--sftp-user=sftp",
-            "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
-            "--sftp-shell-type=none",
-            "--delete-excluded",
-            "--log-level INFO",
-            "--no-update-dir-modtime",
-            "--no-update-modtime",
-            // "--ignore-errors",
-            ...(plan.preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
-          ].join(" "),
+          command: preSyncCommand(plan),
         },
         onError: "ON_ERROR_FATAL",
       });
@@ -250,7 +240,13 @@ export class BackupPlanDirector extends ComponentResource {
     return { plan: backrestPlan, repo: backrestRepo };
   }
 
-  async updateBackrestConfiguration(connection: Unwrap<DockgeLxc["remoteConnection"]>, cluster: ClusterDefinition, depends: Input<Resource[]>, items: { repos: BackrestRepository[]; plans: BackrestPlan[] }) {
+  async updateBackrestConfiguration(
+    connection: Unwrap<DockgeLxc["remoteConnection"]>,
+    cluster: ClusterDefinition,
+    depends: Input<Resource[]>,
+    items: { repos: BackrestRepository[]; plans: BackrestPlan[] },
+    rcloneConfig?: string,
+  ) {
     let updatedConfig: BackrestConfig = {
       repos: [],
       plans: [],
@@ -306,16 +302,60 @@ export class BackupPlanDirector extends ComponentResource {
       parent: this,
     });
 
+    // The S3 credentials for every bucket-backed plan, in one file, written
+    // ALONGSIDE config.json rather than into it.
+    //
+    // Two reasons it is not inlined into the hook command the way the SFTP key
+    // path is. First, config.json is read back and merged on every run and is
+    // shown in full in backrest's own UI; access keys do not belong in a string
+    // that gets echoed around. Second, rotating a key becomes one file write
+    // rather than a rewrite of every plan that uses it.
+    //
+    // `garage.conf`, NOT `rclone.conf`: compose.yaml already bind-mounts
+    // ./rclone as the container's rclone config directory, and rclone.conf
+    // there is rclone's own default name. Writing to that name would silently
+    // replace whatever a human had put there. A distinct name cannot.
+    //
+    // The path sits under /opt/stacks-data/ for the same reason the SFTP key
+    // does: that tree is bind-mounted read-only into the container, so the
+    // absolute path is identical inside and out. See DockgeLxc.ts.
+    const rcloneDeps: Input<Resource>[] = [];
+    if (rcloneConfig) {
+      const rcloneFile = copyFileToRemote("backrest-rclone-garage.conf", {
+        content: rcloneConfig,
+        connection: connection,
+        remotePath: RCLONE_CONFIG_PATH,
+        triggers: [rcloneConfig],
+        dependsOn: depends,
+        parent: this,
+      });
+      rcloneDeps.push(rcloneFile);
+
+      // copyFileToRemote leaves the file world-readable. These are live S3
+      // credentials, and 65534 is the uid the backrest container runs as.
+      rcloneDeps.push(
+        new remote.Command(
+          `backrest-rclone-garage-perms`,
+          {
+            connection: connection,
+            triggers: [rcloneConfig],
+            create: `chmod 600 ${RCLONE_CONFIG_PATH} && chown 65534:65534 ${RCLONE_CONFIG_PATH}`,
+          },
+          { parent: this, dependsOn: [rcloneFile] },
+        ),
+      );
+    }
+
     const compose = new remote.Command(
       `backrest-restart`,
       {
         connection: connection,
-        triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo)],
+        triggers: [...items.repos.map(z => z.uri), ...items.plans.map(z => z.repo), ...(rcloneConfig ? [rcloneConfig] : [])],
         create: interpolate`cd /opt/stacks/backrest && docker compose -f compose.yaml build && docker compose -f compose.yaml up -d && docker compose -f compose.yaml restart`,
       },
       {
         parent: this,
-        dependsOn: output(depends).apply(x => [...x, backrestConfig]),
+        dependsOn: output(depends).apply(x => [...x, backrestConfig, ...rcloneDeps]),
       },
     );
 
@@ -362,6 +402,112 @@ function updatePlans(updatedConfig: { repos: BackrestRepository[]; plans: Backre
       updatedConfig.plans.push(plan);
     }
   }
+}
+
+/**
+ * Where the generated rclone remotes live on a backrest host.
+ *
+ * Identical inside and outside the container: /opt/stacks-data is bind-mounted
+ * read-only at the same path (docker/_common/backrest/compose.yaml), which is
+ * why the existing SFTP hook can name an absolute key path and have it resolve.
+ */
+const RCLONE_CONFIG_PATH = "/opt/stacks-data/backrest/rclone/garage.conf";
+
+/** Narrowing helper. An absent `type` means sftp -- see SftpPreSyncArgs for why. */
+function isS3PreSync(preSync: NonNullable<BackupPlanItem["preSync"]>): preSync is S3PreSyncArgs {
+  return preSync.type === "s3";
+}
+
+/**
+ * rclone remote name for a plan. One remote per plan rather than one per
+ * endpoint: plan ids are already unique and already the repo id, so this needs
+ * no second namespace, and a stray remote is trivially traceable to its plan.
+ */
+function rcloneRemoteName(planName: string) {
+  return `garage-${planName}`;
+}
+
+/**
+ * The CONDITION_SNAPSHOT_START hook body: mirror the source onto backrest's
+ * staging path so restic has a local tree to snapshot.
+ */
+function preSyncCommand(plan: BackupPlanItem): string {
+  const preSync = plan.preSync!;
+
+  if (isS3PreSync(preSync)) {
+    // No --no-update-*modtime pair here, unlike the SFTP branch. A bucket has
+    // no directory mtimes and rclone cannot carry object timestamps onto a
+    // local filesystem anyway, so suppressing the updates would only defeat the
+    // size+modtime comparison that makes every steady-state run cheap.
+    const remoteSpec = `${rcloneRemoteName(plan.name)}:${preSync.bucket}${preSync.prefix ? `/${preSync.prefix}` : ""}`;
+    return [
+      "rclone sync",
+      remoteSpec,
+      plan.path,
+      `--config ${RCLONE_CONFIG_PATH}`,
+      // Same reason as the SFTP path: a file dropped from the exclude list has
+      // to leave the staging tree too, or restic keeps snapshotting it forever.
+      "--delete-excluded",
+      "--log-level INFO",
+      // Reminder, because this bit every dockge exclude once already: a bare
+      // '/dir' matches FILES only. Directories need '/dir/**'.
+      ...(preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
+    ].join(" ");
+  }
+
+  return [
+    "rclone sync",
+    `:sftp:${preSync.sourcePath}`,
+    plan.path,
+    `--sftp-host=${preSync.sftpHost}`,
+    `--sftp-port=${preSync.sftpPort ?? 2022}`,
+    "--sftp-user=sftp",
+    "--sftp-key-file=/opt/stacks-data/backrest/ssh/id_ed25519",
+    "--sftp-shell-type=none",
+    "--delete-excluded",
+    "--log-level INFO",
+    "--no-update-dir-modtime",
+    "--no-update-modtime",
+    // "--ignore-errors",
+    ...(preSync.exclude?.map(e => `--exclude '${e}'`) ?? []),
+  ].join(" ");
+}
+
+/**
+ * Renders garage.conf, or undefined when no plan on this host needs one.
+ *
+ * `provider = Other` plus `force_path_style` is the Garage-compatible shape:
+ * Garage speaks S3 but is not AWS, and virtual-hosted addressing would need
+ * `s3Api.rootDomain` plus a wildcard certificate the internal gateway does not
+ * carry.
+ */
+function renderRcloneConfig(plans: UnwrappedArray<BackupPlanItem>): string | undefined {
+  const s3Plans = plans.filter(p => p.preSync && isS3PreSync(p.preSync)).map(p => ({ name: p.name, preSync: p.preSync as S3PreSyncArgs }));
+
+  if (s3Plans.length === 0) return undefined;
+
+  const sections = s3Plans
+    // Sorted so an unchanged set of buckets renders byte-identical output.
+    // copyFileToRemote hashes the content to decide whether to re-copy, and the
+    // upstream ordering comes from a Kubernetes namespace listing, which is not
+    // guaranteed stable -- without this, an unrelated reorder would rewrite the
+    // file and restart backrest on every run.
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ name, preSync }) =>
+      [
+        `[${rcloneRemoteName(name)}]`,
+        "type = s3",
+        "provider = Other",
+        `endpoint = ${preSync.endpoint}`,
+        `region = ${preSync.region}`,
+        `access_key_id = ${preSync.accessKeyId}`,
+        `secret_access_key = ${preSync.secretAccessKey}`,
+        "force_path_style = true",
+        "",
+      ].join("\n"),
+    );
+
+  return ["# Generated by BackupPlanDirector. Do not edit by hand -- every Pulumi run rewrites it.", "# One remote per bucket-backed backrest plan; the plan's own hook names it.", "", ...sections].join("\n");
 }
 
 function makeEndpoint(groupName: string, planId: string): ExternalEndpoint {

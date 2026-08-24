@@ -1,0 +1,146 @@
+---
+apiVersion: garage.rajsingh.info/v1beta2
+kind: GarageCluster
+metadata:
+  name: ${APP}
+spec:
+  # No `image:` on purpose.
+  #
+  # The operator carries a tested Garage digest per release (v0.7.x ships
+  # v2.3.0) and the compatibility matrix is stated per operator version, not per
+  # Garage version. Pinning `spec.image` here would add a second Renovate
+  # dependency that can drift out of that matrix -- and worse, the repo's
+  # customManager regex updates the TAG of an annotated `image:` line but never
+  # its `@sha256:` digest, so a bump would leave `v2.4.0@sha256:<v2.3.0>` and
+  # silently keep running the old image. One pinned version (the chart, in
+  # ../operator/ocirepository.yaml) is the honest number.
+
+  # Garage's failure domain. One zone: every storage node is a bulk worker in
+  # the same rack on the same switch, and claiming otherwise would let Garage
+  # believe it has zone redundancy it does not have.
+  zone: equestria
+
+  replication:
+    # Three-way replication across three distinct workers. Survives one worker
+    # (or one Longhorn volume) being lost outright.
+    #
+    # CHANGING THIS LATER IS DESTRUCTIVE -- the operator routes a factor change
+    # through a full layout rebuild (`status.factorMigration`). Pick it now.
+    factor: 3
+    consistencyMode: consistent
+
+  storage:
+    replicas: 3
+
+    metadata:
+      # Garage's LMDB metadata plus `node_key` -- the file that IS this node's
+      # identity in the layout. Small, latency-sensitive, and the one volume
+      # whose loss costs more than a resync.
+      size: 10Gi
+      storageClassName: longhorn-local
+    data:
+      size: 250Gi
+      # longhorn-local (numberOfReplicas 1, dataLocality strict-local), NOT the
+      # default `longhorn` class.
+      #
+      # Garage already keeps 3 copies. Layering the default class's 3 Longhorn
+      # replicas underneath would store NINE copies of every object and put 3x
+      # the write amplification on the disks for redundancy Garage is already
+      # providing. Same reasoning CNPG uses for its postgres PVCs.
+      storageClassName: longhorn-local
+
+    # Never let a scale-down or a StatefulSet delete take the claims with it.
+    #
+    # This is the mosquitto trap: a StatefulSet whose PVC retention says Delete,
+    # sitting on a Delete-reclaim StorageClass, discards its volumes the moment
+    # it is scaled to 0 -- and low-power/maintenance work scales things to 0
+    # routinely. longhorn-local IS a Delete-reclaim class, so the retention
+    # policy here is the only thing standing between a scale-down and losing
+    # every object. See docs/cluster-consolidation/24-power-states.md.
+    pvcRetentionPolicy:
+      whenScaled: Retain
+      whenDeleted: Retain
+
+    # Leaves headroom so a full disk degrades to "no more writes" rather than
+    # Garage wedging with no room to compact or rebalance.
+    capacityReservePercent: 10
+
+    podDisruptionBudget:
+      enabled: true
+      # factor 3 tolerates exactly one node down. A drain that takes a second
+      # one breaks quorum for every partition those two share.
+      maxUnavailable: 1
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 4Gi
+
+    # Bulk workers only. No control-plane toleration: the trio runs on small
+    # SATA disks that already carry every Tier-1 volume plus etcd, and object
+    # storage IO does not belong there.
+    #
+    # Consequence, stated plainly: Garage is a Tier-2 service. It goes away with
+    # the bulk tier in Low Power mode (D6), so nothing in Tier 0 or Tier 1 may
+    # be given a hard dependency on it.
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          # One storage node per Kubernetes node, enforced, not preferred. With
+          # `preferred` the scheduler is free to stack two Garage replicas on
+          # one worker, and 3x replication across 2 machines is not 3x anything.
+          - labelSelector:
+              matchLabels:
+                garage.rajsingh.info/cluster: ${APP}
+                garage.rajsingh.info/tier: storage
+            topologyKey: kubernetes.io/hostname
+
+  network:
+    rpcBindPort: 3901
+    rpcSecretRef:
+      name: ${APP}-secrets
+      key: rpc-secret
+    service:
+      type: ClusterIP
+
+  s3Api:
+    bindPort: 3900
+    # Clients must send this as their AWS region. It is not a real region and
+    # nothing geographic depends on it, but it is baked into every SigV4
+    # signature, so changing it invalidates every configured client at once.
+    region: equestria
+
+  webApi:
+    # Bucket-as-website hosting. Nothing needs it, and leaving it on means an
+    # extra unauthenticated listener reachable from the pod network.
+    enabled: false
+
+  admin:
+    bindPort: 3903
+    adminTokenSecretRef:
+      name: ${APP}-secrets
+      key: admin-token
+    # No metricsTokenSecretRef: the /metrics endpoint stays open to the pod
+    # network so Prometheus can scrape it without RBAC on this namespace's
+    # secrets. The Admin API itself still requires the token above. Only the
+    # ClusterIP Service exposes either, and httproute.yaml publishes S3 alone.
+
+  monitoring:
+    enabled: true
+    interval: 30s
+
+  database:
+    # Garage's default and the engine its docs recommend for metadata.
+    engine: lmdb
+
+  workers:
+    # Deliberately gentle. These workers share four spinning-rust-adjacent bulk
+    # workers with Plex transcodes, the *arr stack, and Immich's ML -- a scrub
+    # running flat out is felt by all of them. Higher tranquility trades a
+    # longer scrub/resync for staying out of the way; raise resyncWorkerCount if
+    # a real recovery is ever taking too long.
+    scrubTranquility: 10
+    resyncWorkerCount: 2
+    resyncTranquility: 5

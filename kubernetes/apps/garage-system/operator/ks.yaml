@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app garage-operator
+  namespace: &namespace garage-system
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The chart's admission and conversion webhooks are on by default and their
+    # certificates come from cert-manager. Without the controller present the
+    # HelmRelease installs a Certificate that never issues, the webhook Service
+    # has no serving cert, and every GarageCluster/Bucket/Key apply fails at
+    # admission -- which looks like a broken CRD rather than a missing issuer.
+    - name: cert-manager-controller
+      namespace: cert-manager
+  path: ./kubernetes/apps/garage-system/operator
+  prune: true
+  # Same reasoning as the CNPG operator: never cascade-delete what this manages
+  # on a Kustomization ownership change. The CRDs here own GarageCluster --
+  # deleting the CRD deletes the cluster CR, and with it the StatefulSets and
+  # (under a Delete retention policy) the PVCs holding every object. See
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md for the
+  # external-secrets cascade that made this rule.
+  deletionPolicy: Orphan
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
