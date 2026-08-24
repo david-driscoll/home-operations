@@ -11,6 +11,7 @@ resources:
   - ./passwords.sops.yaml
   - ./cluster-users.yaml
   - ./openbao-role.yaml
+  - ./openbao-credentials.yaml
   - ./role-broad-access.yaml
 configMapGenerator:
 - name: ${APP}-values

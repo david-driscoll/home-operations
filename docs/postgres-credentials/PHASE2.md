@@ -305,25 +305,45 @@ removes the rollback. They are deliberately separate changes with a soak between
 Rollback for 2.4a is still a plain revert: the sops document is still in git and the password is
 still live in PostgreSQL, so restoring the old URL restores password auth.
 
-**Manual cleanup this leaves behind.** Removing the component prunes the nested
-`openbao-postgres` Kustomization, and its `deletionPolicy: Orphan` means the objects it rendered
-survive. `Database/openbao` and `DatabaseRole/openbao` are adopted by the hand-written pair
-(same names, so ownership simply transfers). These three are orphaned with no new owner and
-nothing deletes them, by design:
+**Cleanup — and a correction.** An earlier draft of this section listed
+`externalsecret/openbao-postgres`, `secret/openbao-postgres` and `secret/openbao-storage` as
+orphans to delete after the soak. **Deleting the first two would have broken the OpenBao backup
+path.**
 
-```bash
-kubectl -n database delete externalsecret openbao-postgres   # no longer rendered
-kubectl -n database delete secret         openbao-postgres   # its target, deletionPolicy Retain
-kubectl -n kube-system delete secret      openbao-storage    # target of the retired ExternalSecret
-```
+`openbao-replica-dump` is a nightly CronJob that runs `pg_dump` against the openbao database
+using `PG_URI`, and its ExternalSecret pulls that URI straight out of the `openbao-postgres`
+Secret via `ClusterSecretStore/database`. OpenBao itself stopped using that Secret at 2.3b;
+its *backup* did not. That is `bootstrap/RUNBOOK.md` Scenarios B and D.
 
-Do that only once 2.4a has soaked — the `openbao-postgres` Secret is what a rollback to
-password auth would read.
+What is actually true after 2.4a:
+
+| Object | State | Action |
+| --- | --- | --- |
+| `kube-system/secret/openbao-storage` | already gone — `creationPolicy: Owner` garbage-collected it with its ExternalSecret | none |
+| `database/externalsecret/openbao-postgres` | alive and syncing, but **orphaned** — nothing in git rendered it after openbao left the component | **re-declared** in `openbao-credentials.yaml` |
+| `database/secret/openbao-postgres` | alive, owned by the above | keep |
+| `database/{database,databaserole}/openbao` | adopted by the hand-written pair | none |
+
+The orphan was the real hazard, and not the one the prune guard was built for: the guard and
+`deletionPolicy: Orphan` both worked exactly as intended and kept the object alive. The problem
+was that it survived with *nothing in git declaring it*, so the next person tidying up orphans
+would have taken the nightly dump with them — which is precisely what this document told them to
+do.
 
 #### 2.4b — remove the rollback *(post-soak, separate change)*
 
+**Prerequisite, discovered in 2.4a: move `openbao-replica` onto the certificate first.** Its
+nightly `pg_dump` authenticates with the password. `disablePassword: true` sets that password to
+NULL, so doing 2.4b without converting the CronJob first silently breaks the OpenBao backup —
+and the failure surfaces at 03:00, not at merge. The conversion needs `openbao-client-cert`
+projected into `kube-system` (the `openbao-pg-client-cert` Secret already is), mounted on the
+CronJob's pod, and `PG_URI` rewritten to the cert form.
+
+Then, as one change:
+
 - `disablePassword: true` on the `DatabaseRole`, which `ALTER`s the role's password to NULL.
 - Delete the `openbao-postgres-password` document from `passwords.sops.yaml`.
+- Delete `openbao-credentials.yaml` and, once pruned, the `openbao-postgres` Secret.
 - `hostnossl openbao openbao all reject` in the cluster's `pg_hba`.
 
 Any one of these removes the ability to fall back to password auth; together they make the
