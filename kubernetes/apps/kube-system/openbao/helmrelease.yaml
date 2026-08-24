@@ -107,7 +107,16 @@ spec:
           }
 
           storage "postgresql" {
-            // connection_url comes from BAO_PG_CONNECTION_URL.
+            // Phase 2.4: this used to come from BAO_PG_CONNECTION_URL, injected
+            // from an ExternalSecret, because it carried the role's password.
+            // It does not any more — authentication is the client certificate
+            // mounted at /etc/pg-certs, so the whole string is public and lives
+            // here where it is reviewable in git.
+            //
+            // verify-full, not require: postgres-rw...cluster.local is in the
+            // server certificate's serverAltDNSNames, and ca.crt is the cluster
+            // CA (serverCASecret and clientCASecret are the same Secret).
+            connection_url = "postgres://openbao@postgres-rw.database.svc.cluster.local:5432/openbao?sslmode=verify-full&sslcert=/etc/pg-certs/tls.crt&sslkey=/etc/pg-certs/tls.key&sslrootcert=/etc/pg-certs/ca.crt"
             table      = "openbao_kv_store"
             ha_enabled = "true"
             ha_table   = "openbao_ha_locks"
@@ -181,9 +190,6 @@ spec:
           mountPath: /etc/pg-certs
           readOnly: true
       extraSecretEnvironmentVars:
-        - envName: BAO_PG_CONNECTION_URL
-          secretName: openbao-storage
-          secretKey: pg-connection-url
         - envName: VAULT_TRANSIT_SEAL_TOKEN
           secretName: openbao-seal
           secretKey: transit-token
