@@ -74,7 +74,19 @@ spec:
       # flag today -- and it must, because creating a DatabaseRole for an
       # existing role ADOPTS it and forces every attribute to match the
       # manifest, including the ones you leave out.
-      POSTGRES_SUPERUSER: ${POSTGRES_SUPERUSER:=false}
+      # QUOTED, and it must stay quoted. `spec.postBuild.substitute` is
+      # map[string]string in the Flux API. Unquoted, `${POSTGRES_SUPERUSER:=false}`
+      # resolves to the bare token `false`, which YAML types as a BOOLEAN, and
+      # kustomize-controller then fails the whole Kustomization on a dry-run:
+      #
+      #   .spec.postBuild.substitute.POSTGRES_SUPERUSER: expected string,
+      #   got &value.valueUnstructured{Value:false}
+      #
+      # That is not a one-app failure -- it took out 8 Kustomizations directly
+      # and 24 more via `DependencyNotReady` on 2026-08-24, including
+      # home-assistant, technitium, crowdsec and most of `equestria`.
+      # `immich` sets `"true"` and hit the same fault from the other side.
+      POSTGRES_SUPERUSER: "${POSTGRES_SUPERUSER:=false}"
       POSTGRES_DB_OWNER: ${POSTGRES_DB_OWNER:=${APP}}
     substituteFrom:
       - name: cluster-secrets
