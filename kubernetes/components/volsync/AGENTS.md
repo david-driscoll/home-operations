@@ -37,7 +37,8 @@ populator re-enqueues unbound PVCs, so creating the `ReplicationDestination` is 
 also that `kustomization.yaml` stamps `kustomize.toolkit.fluxcd.io/force: enabled` on everything
 here — changing an immutable PVC field (`storageClassName`, `dataSourceRef`) makes Flux delete
 and recreate the PVC, which destroys the data. Expanding `VOLSYNC_CAPACITY` is safe; changing
-storage class is not.
+storage class is not, and neither is *lowering* the capacity — see **`VOLSYNC_CAPACITY` only
+ever goes up** below.
 
 Leaving the `ReplicationDestination` bundled into this component is what caused the **2026-07
 Longhorn storage incident**: a `restore-once` trigger that had already fired kept a fully
@@ -96,9 +97,30 @@ Changing either staging variable is safe on a live app: it only affects the next
 throwaway volume the mover creates. Changing `VOLSYNC_STORAGECLASS` on a bound PVC is
 **not** — see the `force: enabled` warning above.
 
+## `VOLSYNC_CAPACITY` only ever goes up
+
+Raising it is safe — Longhorn expands the volume in place. **Lowering it destroys the volume and
+then strands its replacement.** Two independent one-way constraints fire together:
+
+1. `resources.requests.storage` is immutable *downward*. With the `force: enabled` stamp above,
+   Flux resolves the rejected patch by deleting the bound PVC and creating a new one. It is the
+   same trap as `storageClassName`, reached through a field that looks mutable because growing
+   it works.
+2. The replacement then cannot bind. It provisions through the VolSync populator, and a snapshot
+   cannot be restored into a volume smaller than its `RESTORESIZE` — which is still the old,
+   larger capacity.
+
+The symptom names neither cause: the app PVC and a `vs-prime-*` PVC both sit `Pending` forever
+with only `assuming an external populator will provision the volume`. Nothing anywhere mentions
+size. Recovery is to put the number back and let the restore run.
+
+Shipped once — #1084 cut forgejo from 20Gi to 10Gi, Flux deleted the bound PVC inside the minute,
+and #1100 put it back. The data loss was nil only because the volume was a day old and the
+forge's real state was in Postgres.
+
 ## Substitutions worth pinning in the app's `ks.yaml`
 
-- `VOLSYNC_CAPACITY` — the app PVC size. Always set it.
+- `VOLSYNC_CAPACITY` — the app PVC size. Always set it, and only ever raise it (above).
 - `VOLSYNC_CACHE_CAPACITY` — the restic metadata cache. The defaults are **asymmetric**
   (`ReplicationSource` 2Gi, `ReplicationDestination` 8Gi), so pin it explicitly rather than
   inheriting an 8Gi `longhorn-cache` volume by accident during a restore.

@@ -56,12 +56,17 @@ with the merge:
   `kubernetes/apps/database/postgres/app/{passwords.sops.yaml,users.yaml,resources/values.yaml}`.
 - **Runner** — one `forgejo-runner` StatefulSet with a privileged `docker:dind`
   native sidecar. Four concurrent jobs, labels `ubuntu-latest` / `ubuntu-24.04` /
-  `ubuntu-22.04` / `docker`. Not Tier 1 — no critical-tier priority, no
-  control-plane toleration, data volume on the bulk `longhorn` class. It does
-  inherit `coder`'s downscaler exclusion, because that list is namespace-wide
-  with no per-workload opt back in; the effect is cosmetic, since a volume on
-  `bulk` leaves the runner Pending during Low Power rather than scaled to 0.
-  Either way CI waits out the window, the same call already recorded for
+  `ubuntu-22.04` / `docker`. **`replicas` must stay 1**: every replica would read
+  the same registration secret and therefore share one runner identity with the
+  forge. Storage is entirely ephemeral — `emptyDir` for `/data` (10Gi) and for
+  the dind layer store (60Gi), with the `sizeLimit` acting as the disk bound a
+  CI workload otherwise has no reason to respect. Nothing is lost when the pod
+  moves: the registration lives in the config Secret, and everything else is a
+  rebuildable cache. Not Tier 1 — no critical-tier priority and no control-plane
+  toleration, so with the workers off it goes Pending until Low Power ends. It
+  does inherit `coder`'s downscaler exclusion, because that list is
+  namespace-wide with no per-workload opt back in, but the outcome is the same
+  either way: CI waits out the window, the call already recorded for
   `github-actions`.
 
 ## Manual steps
@@ -351,9 +356,19 @@ satisfied the new instance is good.
   `kubernetes/apps/coder/forgejo-runner/resources/config.yml` sit inside
   a config file rather than a Kubernetes image field, so none of the Renovate
   managers in `.github/renovate.json5` can see them.
-- **LFS and the package registry share the data volume.** Both can move to Minio
-  natively (`[lfs] STORAGE_TYPE=minio`) without touching the git data if they
-  ever outgrow it.
+- **The runner is only observable while it is failing.** `ForgejoRunnerDown`
+  and `ForgejoRunnerFlapping` watch the pod, and Forgejo exports no runner
+  metric at all (`modules/metrics/collector.go` has 28 series, none about
+  runners), so a runner that is up but no longer accepting jobs — a revoked
+  registration, a wedged poller — looks healthy. Closing this needs a canary
+  workflow on a schedule with a dead-man's-switch alert, not another rule.
+- **Nothing alerts on the 60Gi disk bound.** The runner's `docker-storage`
+  `emptyDir` is capped at 60Gi and the kubelet evicts the pod when it is
+  exceeded, which `ForgejoRunnerFlapping` would catch after the fact. There is
+  no leading indicator: `ephemeral_storage_pod_usage_bytes` and
+  `container_fs_usage_bytes` are not scraped here, `kubelet_volume_stats_*` is
+  PVC-only, and `kube_pod_status_reason` has zero series. See the note in
+  `kubernetes/apps/coder/forgejo-runner/prometheusrule.yaml`.
 - **Workflows cannot reach the Docker daemon.** `container.docker_host` is `"-"`,
   so jobs get container and service steps but no socket. Changing it to
   `automount` hands every workflow — including one from a pull request — control

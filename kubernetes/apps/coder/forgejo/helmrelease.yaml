@@ -286,9 +286,10 @@ spec:
           SSH_DOMAIN: git.${ROOT_DOMAIN}
           SSH_PORT: 2222
           SSH_LISTEN_PORT: 2222
-          # LFS on the same volume for now. If LFS content ever gets big it moves
-          # to Minio via [lfs] STORAGE_TYPE=minio, natively and without touching
-          # the git data.
+          # LFS objects live in Garage, not on this volume -- the `[storage]`
+          # block below is the default for the `lfs` subsystem too, so they land
+          # under `lfs/` in the bucket. Only the git repositories themselves are
+          # on the PVC; Forgejo has no S3 backend for those.
           LFS_START_SERVER: true
 
         database:
