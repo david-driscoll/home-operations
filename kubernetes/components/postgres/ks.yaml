@@ -1,0 +1,85 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The app's database, role and credential Secret, rendered into the `database`
+# namespace where the CNPG Cluster lives.
+#
+# WHY A NESTED KUSTOMIZATION AND NOT PLAIN RESOURCES IN THIS COMPONENT:
+# `Database`, `DatabaseRole` and the password Secret are namespace-scoped and
+# must be co-located with the `Cluster` they reference. A component rendered
+# into the app's build cannot put them in `database` -- Flux's `targetNamespace`
+# is Kustomize's namespace transformer, which OVERRIDES an explicitly-set
+# `metadata.namespace` (verified; both a `namespace: database` document and a
+# namespace-less one come out in the app's namespace). So the component emits
+# this Kustomization instead: the object itself lands in the app's namespace,
+# and `spec.targetNamespace` below puts what it renders in the right place.
+#
+# `decryption` and `substituteFrom` are spelled out rather than inherited.
+# `components/common` patches every Kustomization with them, but it is applied
+# by the UMBRELLA kustomization (kubernetes/apps/<group>/kustomization.yaml) --
+# a Kustomization emitted by a component of an APP is built from the app's path
+# and never passes through it. Without these, ${CLUSTER_DOMAIN} and friends
+# resolve to nothing, silently.
+#
+# See docs/postgres-credentials/PLAN.md.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${APP}-postgres
+spec:
+  targetNamespace: database
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ${APP}
+      driscoll.dev/name: ${APP}
+  path: ./kubernetes/components/postgres/database
+  # The OPERATOR, not the `postgres` cluster Kustomization. There is a live
+  # readiness cycle between the two: the postgres ks reads its Helm values
+  # through ClusterSecretStore/openbao, and openbao reads its storage URL out of
+  # the `database` namespace. kube-system/openbao/ks.yaml breaks that cycle by
+  # deliberately commenting out its own `dependsOn: postgres` -- depending on it
+  # here would reintroduce it through the back door for every app that has one.
+  # `postgres-operator` has no dependsOn at all and is safe.
+  dependsOn:
+    - name: postgres-operator
+      namespace: cloudnative-pg
+  prune: true
+  # Same reason as every other ks that owns data: an ownership change must never
+  # cascade-delete. See docs/cluster-consolidation/27-migration-churn-failure-modes.md.
+  deletionPolicy: Orphan
+  # `false` on purpose. With `wait: true` the parent app ks -- most of which set
+  # `wait: true` -- would transitively block on `Database` reaching
+  # `status.applied`, which needs a healthy CNPG cluster, which on a cold boot
+  # needs OpenBao: the same cycle again. This reproduces today's behaviour
+  # exactly (no gating). Opting a single app into `wait: true` plus
+  # `healthCheckExprs` on `status.applied` is a fine follow-up, per app.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substitute:
+      APP: ${APP}
+      # Resolved by the PARENT before this document is applied, so the child
+      # receives a literal. `immich` is the only app that sets the superuser
+      # flag today -- and it must, because creating a DatabaseRole for an
+      # existing role ADOPTS it and forces every attribute to match the
+      # manifest, including the ones you leave out.
+      POSTGRES_SUPERUSER: ${POSTGRES_SUPERUSER:=false}
+      POSTGRES_DB_OWNER: ${POSTGRES_DB_OWNER:=${APP}}
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+      - name: cluster-versions
+        kind: ConfigMap
+      - name: shared-secrets
+        kind: Secret

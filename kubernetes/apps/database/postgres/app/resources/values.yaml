@@ -75,108 +75,14 @@ cluster:
     superuser: true
     passwordSecret:
       name: postgres-user-password
-  - name: crowdsec
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: crowdsec-postgres-password
-  - name: grafana
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: grafana-postgres-password
-  - name: openbao
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: openbao-postgres-password
-  - name: coder
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: coder-postgres-password
-  - name: forgejo
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: forgejo-postgres-password
-  - name: tandoor
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: tandoor-postgres-password
-  - name: immich
-    ensure: present
-    login: true
-    superuser: true
-    passwordSecret:
-      name: immich-postgres-password
-  - name: windmill
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: windmill-postgres-password
-  - name: freshrss
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: freshrss-postgres-password
-  - name: n8n
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: n8n-postgres-password
-  - name: outline
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: outline-postgres-password
-  - name: strmgen
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: strmgen-postgres-password
-  - name: retrom
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: retrom-postgres-password
-  - name: questarr
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: questarr-postgres-password
-  - name: romm
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: romm-postgres-password
-  - name: pinepods
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: pinepods-postgres-password
-  - name: pulsarr
-    ensure: present
-    login: true
-    superuser: false
-    passwordSecret:
-      name: pulsarr-postgres-password
+  # The 17 app roles that used to be spliced in here by
+  # kubernetes/components/postgres/Update.cs are now `DatabaseRole` CRs,
+  # rendered per app by components/postgres. See
+  # docs/postgres-credentials/PLAN.md.
+  #
+  # $${CLUSTER_CNAME} stays inline deliberately: it is not app-scoped, and
+  # together with `superuserSecret` above it is the break-glass path into
+  # this cluster. Neither may move under OpenBao's control.
   monitoring:
     enabled: true
     podMonitor:
