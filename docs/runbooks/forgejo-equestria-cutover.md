@@ -78,10 +78,42 @@ the `eso-equestria` policy already covers, so no root ceremony is needed.
 | `username` | the break-glass admin login, e.g. `forgejo-admin` |
 | `password` | a generated password |
 | `secret_key` | `openssl rand -base64 48` — encrypts 2FA seeds, webhook secrets and Actions secrets at rest |
-| `jwt_secret` | `openssl rand -base64 48` — signs session and OAuth2 JWTs |
+| `jwt_secret` | `openssl rand -base64 32` — signs session and OAuth2 JWTs. **32, not 48** |
 
 `secret_key` and `jwt_secret` must never change after first boot: rotating either
 one orphans everything it encrypted or signed.
+
+**The lengths are not interchangeable, and getting `jwt_secret` wrong fails
+open.** `[security] SECRET_KEY` is a free-form string of any length, but
+`[oauth2] JWT_SECRET` must decode to exactly 32 bytes. Hand it 48 and Forgejo
+does not refuse to start — it logs one line and quietly proceeds with a key it
+made up:
+
+```
+[oauth2] JWT_SECRET or JWT_SECRET_URI failed loading:
+  invalid base64 decoded length: 48, expects: 32 - creating new key
+```
+
+Because the chart rebuilds `app.ini` from the environment on every boot, that
+invented key is different every restart — so Actions task tokens and any
+Forgejo-issued OAuth2 tokens silently die with the pod, which is the exact
+failure storing the secret was supposed to prevent. Nothing else reports it.
+
+Generating it inside the container avoids the question entirely, since Forgejo
+emits the format it wants:
+
+```bash
+kubectl -n coder exec deploy/forgejo -- forgejo generate secret JWT_SECRET
+```
+
+Verify after the first boot, before anyone depends on it:
+
+```bash
+kubectl -n coder logs deploy/forgejo -c configure-gitea | grep -i jwt_secret
+```
+
+Silence is success. A `creating new key` line means the stored value was
+rejected.
 
 `clusters/equestria/apps/forgejo/runner`:
 
