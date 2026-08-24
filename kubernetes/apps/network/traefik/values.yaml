@@ -130,11 +130,14 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
-  # Forgejo's built-in Go SSH server (kubernetes/apps/forgejo). 2222 rather
-  # than 22 so it does not collide with anything on the node and so the number
-  # in the UI's clone URLs, the Service, this entrypoint and the Gateway
-  # listener are all the same. `Tailscale.ports.git` in components/constants.ts
-  # already grants tcp:2222 to tag:apps.
+  # Forgejo's built-in Go SSH server (kubernetes/apps/coder/forgejo), on the
+  # standard port so clone URLs are plain `git@git.driscoll.tech:owner/repo`.
+  # Nothing collides: Talos nodes run no sshd, and this binds the Gateway's
+  # LoadBalancer IP, not a node. Traefik takes 22 despite running as uid 65532
+  # with all capabilities dropped, for the same reason it already takes 80 and
+  # 443 -- Kubernetes sets net.ipv4.ip_unprivileged_port_start=0 in the pod
+  # sandbox. `Tailscale.ports.git` in components/constants.ts grants tcp:22,
+  # and note it is NOT the same grant as `ports.ssh`.
   #
   # The readTimeout override matters here for the same reason it does on
   # postgres: a long `git clone` over SSH is a single idle-then-bursty stream
@@ -142,8 +145,8 @@ ports:
   gitssh:
     expose:
       default: true
-    port: 2222
-    exposedPort: 2222
+    port: 22
+    exposedPort: 22
     protocol: TCP
     transport:
       respondingTimeouts:
@@ -286,6 +289,6 @@ gateway:
     # entrypoint on the same port is silently dropped.
     gitssh:
       protocol: TCP
-      port: 2222
+      port: 22
       namespacePolicy:
         from: All

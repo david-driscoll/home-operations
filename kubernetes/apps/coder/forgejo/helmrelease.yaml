@@ -155,11 +155,12 @@ spec:
         port: 3000
       ssh:
         type: ClusterIP
-        # 2222 rather than the chart's default 22, so that the Service port, the
-        # Gateway listener, the TCPRoute and the SSH_PORT advertised in the UI's
-        # clone URLs are all the same number. `Tailscale.ports.git` in
-        # components/constants.ts already grants tcp:2222 to tag:apps.
-        port: 2222
+        # 22, matching the Gateway listener, the TCPRoute and the SSH_PORT in
+        # the UI's clone URLs. This is the SERVICE port and is free to be
+        # privileged; the container still binds 2222 (see SSH_LISTEN_PORT).
+        # The chart emits `targetPort: ssh` -- the NAMED container port --
+        # whenever SSH_LISTEN_PORT is set, which is what lets the two differ.
+        port: 22
 
     httpRoute:
       enabled: true
@@ -187,7 +188,7 @@ spec:
         - name: internal
           namespace: network
           sectionName: gitssh
-      port: 2222
+      port: 22
 
     ingress:
       enabled: false
@@ -280,11 +281,25 @@ spec:
           ROOT_URL: https://git.${ROOT_DOMAIN}/
           HTTP_PORT: 3000
           # The rootless image has no sshd; this is Forgejo's built-in Go SSH
-          # server. Both numbers are 2222 so the UI's clone URLs and reality
-          # agree: ssh://git@git.driscoll.tech:2222/<owner>/<repo>.git
+          # server. The two numbers deliberately DIFFER:
+          #
+          #   SSH_PORT        22   -- advertised in clone URLs, and the port
+          #                           the Service and Gateway listener publish,
+          #                           so a clone is plain
+          #                           git@git.driscoll.tech:<owner>/<repo>.git
+          #   SSH_LISTEN_PORT 2222 -- what the process actually binds INSIDE
+          #                           the container. It cannot be 22: the
+          #                           rootless image runs as uid 1000, and
+          #                           unlike Traefik's pod this one is not
+          #                           relying on the sandbox's unprivileged
+          #                           port range. Keep it >= 1024.
+          #
+          # Setting SSH_LISTEN_PORT is also what makes the chart target the
+          # named container port rather than the Service port -- without it the
+          # Service would point at 22 inside the pod, where nothing listens.
           START_SSH_SERVER: true
           SSH_DOMAIN: git.${ROOT_DOMAIN}
-          SSH_PORT: 2222
+          SSH_PORT: 22
           SSH_LISTEN_PORT: 2222
           # LFS objects live in Garage, not on this volume -- the `[storage]`
           # block below is the default for the `lfs` subsystem too, so they land

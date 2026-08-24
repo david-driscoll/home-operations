@@ -33,10 +33,16 @@ with the merge:
 - **HTTP** — `git.${ROOT_DOMAIN}` through the `internal` Gateway with the
   `local-user` middleware (network-gated, not authentik-gated), plus a Tailscale
   Ingress at `git.${TAILSCALE_DOMAIN}`.
-- **SSH** — a new `gitssh` entrypoint and Gateway listener on 2222 in
+- **SSH** — a `gitssh` entrypoint and Gateway listener on **22** in
   `kubernetes/apps/network/traefik/values.yaml`, and a `TCPRoute` from the
-  Forgejo chart. `Tailscale.ports.git` already grants `tcp:2222` to `tag:apps`,
-  so the tailnet side needs no ACL change.
+  Forgejo chart, so clones are plain `git@git.driscoll.tech:owner/repo.git`.
+  The container still binds 2222 (`SSH_LISTEN_PORT`) because the rootless image
+  runs as uid 1000; only the Service, listener and advertised port are 22.
+  Talos nodes run no sshd and this binds the Gateway's LoadBalancer IP, so
+  nothing collides. The tailnet grant `Tailscale.ports.git` is `tcp:22` and has
+  its own `forgejo-git-ssh` grant restricted to `tag:apps` — it must never be
+  folded back into `default-apps-access`, which also reaches `tag:dockge` and
+  `tag:dns` where 22 is a real shell.
 - **Object storage** — a dedicated single-node Garage cluster
   (`kubernetes/apps/coder/forgejo-garage`) backs all eight of Forgejo's object
   subsystems via one `[storage] STORAGE_TYPE = minio` block: LFS, packages,
@@ -257,10 +263,12 @@ curl -s https://git.driscoll.tech/api/healthz
 # resolves and TLS verifies against the *.git.driscoll.tech SAN.
 curl -s -o /dev/null -w '%{http_code} tls=%{ssl_verify_result}\n' https://s3.git.driscoll.tech/
 
-# SSH. The port has to be spelled; it is not 22. "Permission denied
-# (publickey)" with a host key exchanged is a PASS -- it proves the gitssh
-# entrypoint, the Gateway listener, the TCPRoute and Forgejo's Go SSH server.
-ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null git@git.driscoll.tech
+# SSH on the default port. "Permission denied (publickey)" with a host key
+# exchanged is a PASS -- it proves the gitssh entrypoint, the Gateway listener,
+# the TCPRoute and Forgejo's Go SSH server. Note the host key CHANGED on
+# 2026-08-24 when the data volume was lost, so an older known_hosts entry will
+# fail loudly rather than connect.
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null git@git.driscoll.tech
 ```
 
 Then Actions, which is the only part that exercises the runner, the
