@@ -177,8 +177,27 @@ nodes:
           - network: "0.0.0.0/0"
             gateway: "10.10.0.1"
         mtu: 1500
-        vip:
-          ip: "10.10.206.201"
+        # No `vip:` here on purpose. This node carried
+        # `vip: {ip: 10.10.206.201}` -- the API server VIP -- until 2026-08-24,
+        # left behind by piece 19's rotation: it was a control plane, and the
+        # stanza was not removed when it was wiped and rejoined as a worker.
+        # fluttershy and kerfuffle had the same leftover.
+        #
+        # It was inert, and that was VERIFIED rather than assumed: ARP for
+        # 10.10.206.201 resolves to othalla's NIC (e0:51:d8:19:d4:98), a current
+        # control plane. Talos only advertises the VIP from a control plane, so a
+        # worker declaring it simply never claims the address.
+        #
+        # Removed anyway, because "inert today" is not "correct": the stanza is
+        # config that says this node may serve the Kubernetes API, and the next
+        # person to read it -- or the next tool to act on it -- has no way to know
+        # it is vestigial. The three control-plane entries below keep theirs.
+        #
+        # NOTE: talconfig.yaml is NOT GitOps -- Flux never reads it. This change
+        # is inert in-cluster until someone applies it, and it should be applied
+        # PER NODE (`talos:apply-node`), never with a blanket `mise run
+        # talos:apply`, which would carry any pending Kubernetes version bump
+        # into a tuppr-owned upgrade.
   # - hostname: "unused"
   #   ipAddress: "10.10.206.15"
   - hostname: "fluttershy"
@@ -232,8 +251,7 @@ nodes:
           - network: "0.0.0.0/0"
             gateway: "10.10.0.1"
         mtu: 1500
-        vip:
-          ip: "10.10.206.201"
+        # No `vip:` here on purpose -- see the note on hard-hat.
   - hostname: "kerfuffle"
     ipAddress: "10.10.206.17"
     installDisk: "/dev/sda"
@@ -258,8 +276,7 @@ nodes:
           - network: "0.0.0.0/0"
             gateway: "10.10.0.1"
         mtu: 1500
-        vip:
-          ip: "10.10.206.201"
+        # No `vip:` here on purpose -- see the note on hard-hat.
 
   - hostname: "milky-way"
     ipAddress: "10.10.209.10"
