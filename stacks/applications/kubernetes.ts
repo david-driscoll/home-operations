@@ -87,28 +87,78 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
 
   const createdApplications = pulumi
     .output(
-      applications.map(app =>
-        applicationManager.createApplication(app).apply(res => {
-          if (res.provider && res.isProxy === false) {
-            new pk8s.core.v1.Secret(
-              `${kebabCase(app.metadata!.name)}-oidc-credentials`,
-              {
-                metadata: {
-                  name: `${kebabCase(app.metadata!.name)}-oidc-credentials`,
-                  namespace: app.metadata.namespace ?? clusterDefinition.key,
-                },
-                stringData: res.oidcCredentials.fields.apply(z => Object.fromEntries(Object.entries(z).map(([key, value]) => [key, value.value ?? ""]))),
+      applications.map(app => {
+        const created = applicationManager.createApplication(app);
+
+        // The branch is taken on the CR, NOT on the resolved output.
+        //
+        // This Secret used to be constructed inside `created.apply(res => ...)`,
+        // which is the one thing Pulumi asks you never to do: an apply callback
+        // is not guaranteed to run exactly once, and every resource it
+        // constructs is registered again each time it does. That is invisible
+        // for as long as nothing perturbs it, and it is not what broke the
+        // stack in August 2026 -- that turned out to be a dropped gRPC stream,
+        // and a preview before and after this change plans the identical 25
+        // steps. This is hygiene, not a bug fix: the hazard is real (the same
+        // trap is documented on tailscale.ts) and worth removing while someone
+        // is looking at it, not evidence of a defect that was observed.
+        //
+        // Nothing here actually needed to be deferred. `res.isProxy === false`
+        // is just "this definition asked for oauth2", and that is plain data on
+        // the ApplicationDefinition we already hold in hand -- no Output is
+        // involved in deciding whether the Secret exists, only in filling it
+        // in. So the condition moves out to the CR and the resource is
+        // registered once, unconditionally-at-graph-build-time, the way every
+        // other resource in this file is.
+        // `authentikFrom` is the one shape this cannot decide from the CR --
+        // it names a ConfigMap/Secret whose CONTENTS say whether the app is
+        // oauth2, and reading those is inherently deferred. No definition in
+        // the estate uses it (the only mention is the CRD schema itself), so
+        // rather than create a speculative empty Secret for it, say so out
+        // loud: silence here would look exactly like an app that legitimately
+        // has no OIDC credentials.
+        if (app.spec?.authentikFrom) {
+          pulumi.log.warn(
+            `ApplicationDefinition ${app.metadata.namespace}/${app.metadata.name} uses spec.authentikFrom, whose oauth2-ness is only known after the referenced ${app.spec.authentikFrom.type} is read. No <app>-oidc-credentials Secret will be created for it. If this definition is oauth2, widen the condition below.`,
+            applicationManager,
+          );
+        }
+
+        if (app.spec?.authentik?.oauth2) {
+          new pk8s.core.v1.Secret(
+            `${kebabCase(app.metadata!.name)}-oidc-credentials`,
+            {
+              metadata: {
+                name: `${kebabCase(app.metadata!.name)}-oidc-credentials`,
+                namespace: app.metadata.namespace ?? clusterDefinition.key,
               },
-              {
-                parent: applicationManager,
-                provider,
-                dependsOn: [res.provider],
-              },
-            );
-          }
-          return res;
-        }),
-      ),
+              // Same `res.provider && res.isProxy === false` narrowing the old
+              // inline branch used -- it is what discriminates the union down to
+              // the arm that actually declares `oidcCredentials`. It has moved
+              // from deciding WHETHER the resource exists to deciding what goes
+              // in it, which is the whole point of the change: a value can be
+              // computed inside an apply safely, a resource cannot.
+              //
+              // The empty fall-through is unreachable for anything that
+              // satisfied the oauth2 condition above, and is here only so the
+              // union has a total branch.
+              stringData: created
+                .apply(res => (res.provider && res.isProxy === false ? res.oidcCredentials.fields : pulumi.output({} as Record<string, { value?: string }>)))
+                .apply(fields => Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, field.value ?? ""]))),
+            },
+            {
+              parent: applicationManager,
+              provider,
+              // An Output<Resource>, not the resolved `res.provider` -- same
+              // edge in the dependency graph, expressed without needing the
+              // value first.
+              dependsOn: created.apply(res => res.provider!),
+            },
+          );
+        }
+
+        return created;
+      }),
     )
     .apply(apps => {
       return addUptimeGatus(
