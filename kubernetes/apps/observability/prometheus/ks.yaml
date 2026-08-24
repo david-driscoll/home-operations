@@ -15,6 +15,8 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
+    - name: observability-repositories
+      namespace: observability
     - name: volsync
       namespace: volsync-system
     - name: onepassword-connect
