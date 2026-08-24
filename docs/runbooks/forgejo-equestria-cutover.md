@@ -344,6 +344,51 @@ Finally, remove the old `clusters/celestia/apps/forgejo/*` paths from OpenBao an
 delete the stack's data directory `/opt/stacks-data/forgejo` once you are
 satisfied the new instance is good.
 
+### 7. Bootstrap the runner canary
+
+Everything above leaves one hole. Step 4 registers the runner and step 5 proves
+it once; after that nothing distinguishes "nobody pushed today" from "the poller
+is wedged". Forgejo exports no runner metric, so the only thing that can tell
+those apart is a job that is *supposed* to run.
+
+The Gatus side is declarative and ships with this repo:
+`docker/alpha-site/uptime/config/forgejo-actions.yaml` -- group **Forgejo
+Actions**, name **canary**, three-hour heartbeat, Pushover on lapse. The half
+that lives inside Forgejo is manual state and has to be created by hand:
+
+1. **Create the repository.** As `forgejo-admin`, a new **private** repository
+   named `canary`, initialised with a README -- a scheduled workflow only runs
+   on a default branch, so an empty repo never fires.
+
+2. **Add two repository secrets** (Settings -> Actions -> Secrets):
+
+   | Secret | Value |
+   |---|---|
+   | `GATUS_TOKEN` | `forgejo-actions_canary` |
+   | `GATUS_CONNECT_TO` | `uptime.driscoll.tech:443:dockge-as.opossum-yo.ts.net:443` |
+
+   The token is both the URL path segment and the bearer. That is Gatus's
+   external-endpoint convention, not a copy-paste error.
+
+3. **Commit the workflow** to `.forgejo/workflows/canary.yml` on the default
+   branch, verbatim from `docs/runbooks/assets/forgejo-runner-canary.yml`.
+
+4. **Prove it now** with Actions -> canary -> Run workflow, rather than waiting
+   up to an hour for the schedule. A green run plus the endpoint appearing in
+   Gatus is the pass. The first run pulls about a gigabyte of
+   `catthehacker/ubuntu:act-24.04` and takes a couple of minutes; once the
+   layer cache is warm it is seconds.
+
+Two properties of this design are worth knowing:
+
+- **It covers its own disappearance.** The canary is a repository inside
+  Forgejo, so whatever destroys the data volume destroys the canary too, the
+  heartbeat lapses, and Gatus goes red. On 2026-08-24 the volume was lost and
+  nothing said a word. This is the thing that would have.
+- **It is manual state.** A VolSync restore brings the canary back only if the
+  repository was in that snapshot. After any restore, confirm Gatus is still
+  receiving pushes before trusting the silence.
+
 ## Known gaps
 
 - **Low Power is not actually survivable yet.** Forgejo is Tier 1 on every axis
@@ -356,12 +401,14 @@ satisfied the new instance is good.
   `kubernetes/apps/coder/forgejo-runner/resources/config.yml` sit inside
   a config file rather than a Kubernetes image field, so none of the Renovate
   managers in `.github/renovate.json5` can see them.
-- **The runner is only observable while it is failing.** `ForgejoRunnerDown`
-  and `ForgejoRunnerFlapping` watch the pod, and Forgejo exports no runner
-  metric at all (`modules/metrics/collector.go` has 28 series, none about
-  runners), so a runner that is up but no longer accepting jobs — a revoked
-  registration, a wedged poller — looks healthy. Closing this needs a canary
-  workflow on a schedule with a dead-man's-switch alert, not another rule.
+- **The runner is only observable while it is failing — unless step 7 is
+  done.** `ForgejoRunnerDown` and `ForgejoRunnerFlapping` watch the pod, and
+  Forgejo exports no runner metric at all (`modules/metrics/collector.go` has
+  28 series, none about runners), so a runner that is up but no longer
+  accepting jobs — a revoked registration, a wedged poller — looks healthy to
+  both. The canary in step 7 is what closes this, and it is the only part of
+  the monitoring that is not declarative: if nobody creates that repository,
+  the gap is still open and looks exactly like it is shut.
 - **Nothing alerts on the 60Gi disk bound.** The runner's `docker-storage`
   `emptyDir` is capped at 60Gi and the kubelet evicts the pod when it is
   exceeded, which `ForgejoRunnerFlapping` would catch after the fact. There is
