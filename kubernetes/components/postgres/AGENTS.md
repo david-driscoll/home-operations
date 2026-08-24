@@ -24,15 +24,36 @@ Apps consume the credential the same way they always have — through
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `APP` | — | required; already set by every app's `ks.yaml` |
-| `POSTGRES_SUPERUSER` | `false` | set to `"true"` only for `immich` |
-| `POSTGRES_DB_OWNER` | `${APP}` | for the rare case where the database owner is not the app role |
+| `APP` | — | required; already set by every app's `ks.yaml`. The only one. |
+
+Anything that is not a string is a **sibling component**, not a variable:
+
+| Component | Effect |
+| --- | --- |
+| `../../components/postgres/superuser` | `DatabaseRole.spec.superuser: true` — used by `immich` only |
+
+**Why:** `postBuild.substitute` is typed `map[string]string`, and the parent resolves these
+values before the child Kustomization is applied. A boolean-valued variable therefore lands as
+a bare `false` and the CRD rejects the whole object:
+
+```
+spec.postBuild.substitute.POSTGRES_SUPERUSER: Invalid value: "boolean": must be of type string
+```
+
+Quoting the source does not help — kustomize re-emits `"${X:=false}"` as bare `${X:=false}`,
+because at build time that scalar is an ordinary string needing no quotes. Verified: double,
+single and bare all render identically.
 
 ## Things that will bite you
 
 - **A `DatabaseRole` adopts an existing role and forces every attribute to match the
-  manifest, including the ones you omit.** Never drop `POSTGRES_SUPERUSER` from an app that
-  needs it — the live role is demoted silently.
+  manifest, including the ones you omit.** Never drop the `superuser` component from an app
+  that needs it — the live role is demoted silently.
+- **`flate` cannot catch a bad `postBuild.substitute` value.** It renders the placeholder, not
+  the substituted result, so a type error only appears when Flux applies the child object for
+  real. To check by hand, build the app, apply Flux's `${VAR:=default}` semantics to the output,
+  and `kubectl apply --dry-run=server` the nested Kustomization that falls out. That is exactly
+  what the controller does.
 - **The password is still hand-maintained.** `${APP}-postgres-password` is a document in
   `kubernetes/apps/database/postgres/app/passwords.sops.yaml`. Adding a new app means adding
   one Secret document there until phase 4 moves this to OpenBao. The `username` key in it

@@ -68,14 +68,23 @@ spec:
       name: sops-age
   postBuild:
     substitute:
+      # APP is the ONLY substitution here, and that is deliberate.
+      #
+      # `postBuild.substitute` is typed map[string]string, and these values are
+      # resolved by the PARENT before this document is applied. A boolean-valued
+      # variable therefore lands as a bare `false`, which YAML parses as a
+      # boolean and the Kustomization CRD rejects outright:
+      #   spec.postBuild.substitute.POSTGRES_SUPERUSER: Invalid value:
+      #   "boolean": ... must be of type string
+      #
+      # Quoting the source does NOT help: kustomize re-emits `"${X:=false}"` as
+      # bare `${X:=false}`, because at build time that scalar is an ordinary
+      # string needing no quotes. It has no way to know Flux will later turn it
+      # into `false`. Verified -- double, single and bare all render identically.
+      #
+      # So anything non-string is expressed as a sibling COMPONENT that patches
+      # this Kustomization, not as a variable. See ./superuser.
       APP: ${APP}
-      # Resolved by the PARENT before this document is applied, so the child
-      # receives a literal. `immich` is the only app that sets the superuser
-      # flag today -- and it must, because creating a DatabaseRole for an
-      # existing role ADOPTS it and forces every attribute to match the
-      # manifest, including the ones you leave out.
-      POSTGRES_SUPERUSER: ${POSTGRES_SUPERUSER:=false}
-      POSTGRES_DB_OWNER: ${POSTGRES_DB_OWNER:=${APP}}
     substituteFrom:
       - name: cluster-secrets
         kind: Secret
