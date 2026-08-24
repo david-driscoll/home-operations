@@ -23,21 +23,18 @@ spec:
     - name: external-secrets
       namespace: kube-system
   path: ./kubernetes/apps/network/crowdsec
-  # D4 (superseded): this entry was previously dropped on the grounds that
-  # ../../../components/postgres is `resources: []` and only re-stamps the two
-  # labels commonMetadata already applies. That is true of the component as
-  # *kustomize* sees it, but it missed the second job the entry does:
+  # D4 (superseded twice): this entry was once dropped on the grounds that
+  # ../../../components/postgres was `resources: []` and only re-stamped labels
+  # commonMetadata already applies. It was restored because the generator
+  # discovered databases by scanning ks.yaml for exactly this reference, and
+  # without it `task update` regenerated crowdsec's role, Database CR and
+  # password Secret away (1056ef2) while its ExternalSecret went on extracting
+  # `${APP}-postgres`.
   #
-  #   components/postgres/Update.cs discovers which apps need a database by
-  #   scanning every ks.yaml for this exact reference in spec.components.
-  #
-  # With it absent, crowdsec was invisible to the generator. Its role, Database
-  # CR, password Secret and PushSecrets survived only because nobody re-ran
-  # `task update` -- and the moment someone did (1056ef2), all four were
-  # regenerated away while crowdsec's ExternalSecret went on extracting
-  # `${APP}-postgres`. Restored so the generator can see it again.
-  #
-  # Do not drop this again to tidy up. It is load-bearing.
+  # The generator is gone, but the entry is more load-bearing than ever: the
+  # component now RENDERS the DatabaseRole, Database and credential
+  # ExternalSecret directly. Dropping it stops crowdsec's database being
+  # declared at all.
   components:
     - ../../../components/postgres
   prune: true

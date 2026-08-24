@@ -45,12 +45,15 @@ spec:
   #   1. DONE — `bao-transit` is initialised and unsealed on alpha-site, with
   #      the transit key `openbao-equestria-unseal` and the `equestria-unseal`
   #      policy in place (migration Phase 2).
-  #   2. DONE — `task update` has been run: the `openbao` role exists in
-  #      kubernetes/apps/database/postgres/app/resources/values.yaml, its
-  #      password in passwords.sops.yaml, and the generated `openbao-postgres`
-  #      secret is live in the `database` namespace. The components entry below
-  #      is what makes components/postgres/Update.cs discover this app — do not
-  #      remove it as a tidy-up, it silently drops the whole database.
+  #   2. DONE — the `openbao` role, its database and its credential Secret all
+  #      exist. They are declared by the components entry below, which renders
+  #      a DatabaseRole, a Database and the `openbao-postgres` ExternalSecret
+  #      into the `database` namespace; the password itself is a document in
+  #      kubernetes/apps/database/postgres/app/passwords.sops.yaml. Do not
+  #      remove the entry as a tidy-up — it silently drops the whole database.
+  #      (Phase 2 of docs/postgres-credentials/PLAN.md replaces that password
+  #      with a CNPG-issued client certificate and moves these two objects out
+  #      of the component; this comment goes with it.)
   #   3. DONE — secret.sops.yaml exists here with the transit token, and
   #      externalsecret.yaml supplies the connection URL.
   #   4. DONE — port 8200 is declared on the dockge-as egress Service, so these

@@ -9,9 +9,9 @@
 #:property JsonSerializerIsReflectionEnabledByDefault=true
 
 // Postgres backup. Credentials come from the Kubernetes Secrets in THIS
-// namespace -- the same objects the ExternalSecrets in
-// kubernetes/apps/database/postgres/app/users.yaml render from the sops-held
-// per-app passwords.
+// namespace -- the same `<app>-postgres` objects the ExternalSecret in
+// kubernetes/components/postgres/database/credentials.yaml renders, once per
+// app, from the sops-held per-app passwords.
 //
 // This used to read them back out of 1Password, where a PushSecret had pushed
 // these very Secrets 24h earlier (Phase 10 of the 1Password->OpenBao

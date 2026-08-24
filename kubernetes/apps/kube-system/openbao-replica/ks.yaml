@@ -21,10 +21,9 @@ spec:
   # bootstrap/RUNBOOK.md Scenarios B and D.
   #
   # NO `components: - ../../../components/postgres` here, deliberately: this
-  # app reads the existing `openbao` database with the credential the postgres
-  # generator already provisions for the openbao app. Adding the component
-  # would make components/postgres/Update.cs provision a SECOND database
-  # named after this app.
+  # app reads the existing `openbao` database with the credential provisioned
+  # for the openbao app. Adding the component would declare a SECOND database,
+  # role and credential named after this app.
   dependsOn:
     # The database being dumped, and the app that owns it. Depending on the
     # openbao ks (not just postgres) means we never dump a half-initialised

@@ -234,6 +234,25 @@ rotation — is still open. Every app in the tranche becomes a rotating-credenti
 permanently, with reloader-driven restarts on the rotation cadence. Choose `rotation_period`
 accordingly (720h is a reasonable start) and roll in tranches, tolerant apps first.
 
+### Prerequisite: every consuming workload needs reloader
+
+A rotated password only reaches an app if something restarts it.
+`reloader.stakater.com/auto: "true"` on the **workload** is what does that — the same annotation
+on a Secret or ExternalSecret is a no-op, which is worth knowing because the estate has it in
+both places.
+
+Audited live on 2026-08-24, and it is not universal:
+
+| App | State |
+| --- | --- |
+| coder, crowdsec (lapi + ui), freshrss, grafana, immich, n8n, openbao, pulsarr, questarr, romm, tandoor | `auto: "true"` — fine |
+| **pinepods** | Deployment exists, **no reloader annotation** |
+| **windmill** (`-app`, `-extra`, `-workers-default`, `-workers-native`) | **no reloader annotation** on any of the four |
+| forgejo, outline, retrom, strmgen | no running workload at audit time — recheck before their tranche |
+
+Fix pinepods and windmill before either lands in a rotation tranche, or their first rotation is
+an outage that looks like a database fault.
+
 ### OpenBao policy
 
 ESO's AppRole is read-only over `secrets/data/*` prefixes today

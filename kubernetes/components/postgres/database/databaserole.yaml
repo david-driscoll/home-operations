@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+#
+# Replaces the entry `components/postgres/Update.cs` used to splice into
+# `cluster.roles` in kubernetes/apps/database/postgres/app/resources/values.yaml.
+# Needs CNPG >= 1.30 (the estate runs 1.30.0).
+#
+# CAREFUL: creating a DatabaseRole for a role that already exists ADOPTS it, and
+# the operator then alters that role so every attribute matches this manifest --
+# including the attributes omitted here, which are forced back to their
+# defaults. Anything set on a role out of band will be reverted.
+#
+# `passwordSecret` still points at the sops-managed `${APP}-postgres-password`,
+# exactly as `cluster.roles` did. Phase 4 of docs/postgres-credentials/PLAN.md
+# removes it entirely and hands the password to OpenBao's database secrets
+# engine; do not fold it into `${APP}-postgres` in the meantime.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: ${APP}
+  annotations:
+    # Nothing this component renders is ever pruned. The nested ks is
+    # `deletionPolicy: Orphan` and both CRs carry `retain` reclaim policies, so
+    # the guard is not what protects the data -- it protects the objects from a
+    # reconcile that stops rendering them, which would otherwise churn every
+    # app's database at once. It is also a prerequisite for phase 2 of
+    # docs/postgres-credentials/PLAN.md: a DatabaseRole with
+    # `clientCertificate` OWNS the generated `<name>-client-cert` Secret
+    # through a controller ownerReference, so pruning the role garbage-collects
+    # the credential. Do not enable client certificates on an unguarded role.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  name: ${APP}
+  comment: "${APP} application role"
+  ensure: present
+  login: true
+  superuser: ${POSTGRES_SUPERUSER}
+  # Deleting this object must never drop the role -- it owns the app's data.
+  databaseRoleReclaimPolicy: retain
+  passwordSecret:
+    name: ${APP}-postgres-password

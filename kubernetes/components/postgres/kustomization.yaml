@@ -5,4 +5,5 @@ kind: Component
 commonLabels:
   app.kubernetes.io/name: "${APP}"
   driscoll.dev/name: "${APP}"
-resources: []
+resources:
+  - ./ks.yaml
