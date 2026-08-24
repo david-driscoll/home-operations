@@ -170,6 +170,58 @@ StatefulSet is `updateStrategyType: RollingUpdate` with reloader watching it —
 three replicas one at a time on its own. Watch replica 0 come back **unsealed and joined**
 before trusting the change.
 
+### 2.1–2.3a outcome — verified in production 2026-08-24
+
+Merged as #1102 and reconciled. Everything below was observed, not predicted.
+
+**The certificate.** `openbao-client-cert` issued in `database`:
+
+```
+subject = CN=openbao
+issuer  = OU=database, CN=postgres
+notBefore = Aug 24 18:48:58 2026 GMT
+notAfter  = Nov 22 18:48:58 2026 GMT
+X509v3 Extended Key Usage: TLS Web Client Authentication
+```
+
+CN is the bare role name, which is what PostgreSQL `cert` auth maps on.
+`DatabaseRole.status.clientCertificate.expiration` agrees: `2026-11-22T18:48:58Z`.
+
+**The roll.** Reloader saw the new mounted Secret and rolled all three replicas in reverse
+ordinal order (2, 1, 0), each back to `1/1` within ~20s. All three came back
+`sealed=false initialized=true ha_enabled=true`, and leadership migrated cleanly to
+`openbao-2` when the active `openbao-0` rolled last. **110 ExternalSecrets on
+`ClusterSecretStore/openbao` stayed Ready throughout** — the estate's secret store never lost
+service.
+
+**The mount.** `/etc/pg-certs` carries `tls.crt`, `tls.key`, `ca.crt`.
+
+**`defaultMode: 0400` lands as `0440` — and that is correct, not a chart override.** The
+StatefulSet does carry `defaultMode: 256`; kubelet then applies the pod's `fsGroup: 1000` to the
+volume, which ORs in group-read. The files end up `r--r-----` owned by group 1000, readable by
+the OpenBao process and nothing else. This was the open question flagged earlier about the mode
+"interacting with fsGroup"; it does, this is the interaction, and it does not matter — pgx does
+`os.ReadFile` straight into `tls.X509KeyPair` with no permission check.
+
+**Inertness proven, not assumed.** `pg_stat_ssl` joined to `pg_stat_activity`:
+
+```
+usename  | conns | ssl | tlsver | client_dn
+openbao  |   6   |  f  |   -    |     -
+```
+
+Six live connections, none using SSL, no client DN presented. The `hostssl openbao openbao all
+cert` rule is in `pg_hba` and is matching nothing, exactly as designed — OpenBao is still
+falling through to the catch-all with its password. The cutover is now a one-line change with a
+database-free rollback.
+
+**One prediction sharpened.** The client certificate expires 2026-11-22, but the client CA
+(`postgres-ca`) expires **2026-11-11** — earlier. So the first renewal this path sees will be
+CA-driven, around **2026-11-04** (CNPG's 7-day margin), not leaf-driven in mid-November.
+`clientCertSignedByCurrentCA` detects the CA change and re-issues the leaf; both Secrets are
+projected by the same ExternalSecret and mounted in the same volume, so one reloader roll should
+carry both. That is the event to watch.
+
 ### 2.4 — remove the password
 
 Once soaked: drop `passwordSecret` from the DatabaseRole, delete the `openbao-postgres-password`
@@ -257,6 +309,8 @@ carry the bare role name and nothing else, signed by the cluster CA — exactly 
 **Break-glass.** Confirm the `postgres` superuser path works from a debug pod *before* adding
 `hostnossl ... reject` in the hardening step. This is the credential that recovers the estate if
 the cert path breaks, and it must never be the thing under test.
+
+Everything else on this list is now answered — see the 2.1–2.3a outcome above.
 
 ## Two hazards found while reading the controller
 
