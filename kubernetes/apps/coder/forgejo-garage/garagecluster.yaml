@@ -1,0 +1,157 @@
+---
+apiVersion: garage.rajsingh.info/v1beta2
+kind: GarageCluster
+metadata:
+  name: ${APP}
+spec:
+  # No `image:` — same reasoning as garage-system/cluster: the operator carries
+  # a tested Garage digest per release, and the repo's customManager updates an
+  # annotated `image:` TAG but never its `@sha256:` digest, so a bump here would
+  # silently keep running the old image.
+
+  # Garage's failure domain. One node, so one zone; claiming more would be
+  # a fiction.
+  zone: coder
+
+  replication:
+    # ONE replica, deliberately.
+    #
+    # Forgejo is explicitly not HA — the chart refuses to be useful above one
+    # replica — so a 3x-replicated object store in front of a single-replica
+    # application is redundancy that can never be exercised. It would triple the
+    # write amplification and the disk footprint to protect against a failure
+    # mode the application in front of it does not survive anyway.
+    #
+    # CHANGING THIS LATER IS DESTRUCTIVE: the operator routes a factor change
+    # through a full layout rebuild (`status.factorMigration`).
+    factor: 1
+    # Meaningless at factor 1 (there is no quorum to be consistent about), but
+    # set explicitly so a future factor bump does not silently inherit a weaker
+    # mode than garage-system runs.
+    consistencyMode: consistent
+
+  storage:
+    replicas: 1
+
+    metadata:
+      # LMDB metadata plus `node_key` — the file that IS this node's identity in
+      # the layout. Small, latency-sensitive, and the one volume whose loss
+      # costs more than a resync.
+      size: 5Gi
+      storageClassName: longhorn-critical
+    data:
+      # LFS objects, packages, attachments, avatars, repo archives and Actions
+      # artifacts for one forge.
+      #
+      # THIS NUMBER IS EASY TO RAISE AND EFFECTIVELY IMPOSSIBLE TO LOWER. Growth
+      # is in-place (the operator expands the PVCs); a shrink is rejected by the
+      # admission webhook and Kubernetes cannot shrink a PVC anyway, so the only
+      # route down is deleting the claims and rebuilding the layout from empty.
+      # Start small.
+      size: 20Gi
+      # longhorn-critical, NOT the longhorn-local that garage-system uses.
+      #
+      # This is the one place a single-node Garage must diverge from the estate
+      # cluster, and getting it wrong loses data silently. garage-system can use
+      # a 1-replica storage class because Garage itself keeps 3 copies across 3
+      # nodes — the block layer is allowed to be disposable. At factor 1 Garage
+      # keeps exactly ONE copy, so if the block layer is also single-replica
+      # there is no redundancy at any layer and one Longhorn replica loss is
+      # total loss of every object.
+      #
+      # `longhorn-critical` is 3 replicas pinned to the `critical`-tagged
+      # control planes, which is also what makes this Tier 1 — see below.
+      storageClassName: longhorn-critical
+
+    # Never let a scale-down or a StatefulSet delete take the claims with it.
+    # longhorn-critical is a Delete-reclaim class, so this retention policy is
+    # the only thing standing between a scale-to-0 and losing every object.
+    # See docs/cluster-consolidation/24-power-states.md and the mosquitto
+    # incident it records.
+    pvcRetentionPolicy:
+      whenScaled: Retain
+      whenDeleted: Retain
+
+    # Leaves headroom so a full disk degrades to "no more writes" rather than
+    # Garage wedging with no room to compact.
+    capacityReservePercent: 10
+
+    # Tier 1 (docs/cluster-consolidation/20-low-power-tier.md). Forgejo is Tier 1
+    # and, with `[storage] STORAGE_TYPE = minio`, its LFS objects and package
+    # registry are served from here — so this has to survive the same window the
+    # forge does, or "Tier 1" is a claim about git-over-HTTP only.
+    #
+    # Consequence, stated plainly: object-storage IO now lands on the
+    # control-plane trio's SATA disks, which garage-system deliberately avoids.
+    # That call was made for a 180Gi general-purpose store shared with Plex and
+    # Immich; this is 20Gi for one forge's LFS, which is a different animal. If
+    # it ever stops being one, the fix is to demote this cluster to `longhorn`
+    # and take Forgejo's LFS off S3 in the same change — not to leave a Tier-1
+    # app depending on a Tier-2 store.
+    priorityClassName: critical-tier
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+    # No podAntiAffinity, unlike garage-system: with `replicas: 1` there is
+    # nothing to spread, and a required anti-affinity rule against a label the
+    # pod itself carries is a no-op at best.
+
+    # No podDisruptionBudget either. At one replica a PDB with maxUnavailable 1
+    # permits the eviction anyway, and minAvailable 1 would block every drain of
+    # whichever node holds it — turning routine node maintenance into a manual
+    # step. Availability here comes from the volume being replicated, not from
+    # the pod being unevictable.
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 2Gi
+
+  network:
+    rpcBindPort: 3901
+    rpcSecretRef:
+      name: ${APP}-secrets
+      key: rpc-secret
+    service:
+      type: ClusterIP
+
+  s3Api:
+    bindPort: 3900
+    # Clients must send this as their AWS region. It is not geographic, but it
+    # is baked into every SigV4 signature, so changing it invalidates every
+    # configured client at once — including Forgejo's MINIO_LOCATION and the
+    # backup key's `region`.
+    region: equestria
+
+  webApi:
+    # Bucket-as-website hosting. Nothing needs it, and leaving it on means an
+    # extra unauthenticated listener reachable from the pod network.
+    enabled: false
+
+  admin:
+    bindPort: 3903
+    adminTokenSecretRef:
+      name: ${APP}-secrets
+      key: admin-token
+    # No metricsTokenSecretRef: /metrics stays open to the pod network so
+    # Prometheus can scrape without RBAC on this namespace's secrets. The Admin
+    # API itself still requires the token above, and only the ClusterIP Service
+    # exposes either.
+
+  monitoring:
+    enabled: true
+    interval: 30s
+
+  database:
+    engine: lmdb
+
+  workers:
+    # Gentle on purpose: at factor 1 there is no resync traffic to speak of, and
+    # a scrub running flat out on a control-plane SATA disk is felt by etcd.
+    scrubTranquility: 10
+    resyncWorkerCount: 1
+    resyncTranquility: 5

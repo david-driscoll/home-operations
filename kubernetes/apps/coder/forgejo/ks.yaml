@@ -17,6 +17,11 @@ spec:
   dependsOn:
     - name: postgres
       namespace: database
+    # wait: true on that Kustomization, so the bucket and access key exist
+    # before Forgejo's init containers try to reach S3. Without it the forge
+    # crash-loops on a 404 bucket for however long the operator takes.
+    - name: forgejo-garage
+      namespace: coder
     - name: external-secrets
       namespace: kube-system
     - name: volsync
@@ -52,11 +57,17 @@ spec:
       TAILSCALE_HOST: git
       TAILSCALE_SERVICE: forgejo-http
       TAILSCALE_PORT: http
-      # Repositories, LFS objects and the package registry all live on this one
-      # volume (the chart mounts it at /data). 20Gi is a starting point with
-      # room for the estate's own repos; expanding it later is safe, changing
-      # its storage class is not — see components/volsync/AGENTS.md.
-      VOLSYNC_CAPACITY: 20Gi
+      # Bare git repositories only. Forgejo never puts repositories on S3 --
+      # `[storage]` covers the eight ancillary object stores (LFS, packages,
+      # attachments, avatars, repo avatars, repo archives, Actions logs and
+      # Actions artifacts) and those now live in forgejo-garage, so this volume
+      # no longer has to absorb LFS growth.
+      #
+      # Still 10Gi rather than smaller: repositories, the SQLite-free /data
+      # tree, app.ini and the SSH host keys all live here, and expanding is safe
+      # while changing the storage class is not -- see
+      # components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 10Gi
       VOLSYNC_ACCESSMODES: ReadWriteOnce
       # Tier 1: the git forge has to keep serving with the workers powered down,
       # so the data lands on the control-plane trio and its scratch volumes have
