@@ -33,6 +33,17 @@ spec:
       app.kubernetes.io/name: ${APP}
       driscoll.dev/name: ${APP}
   path: ./kubernetes/components/postgres/database
+  # Empty on purpose, and load-bearing. The sibling components (./superuser,
+  # ./client-cert, ./rotate) append to this list with a JSON6902
+  # `add /spec/patches/-`, which requires the list to already exist.
+  #
+  # They append rather than strategic-merge because a Flux Kustomization is a
+  # CRD with no Go schema, so kustomize applies a JSON merge patch and a list
+  # REPLACES rather than merges. Two components each setting `spec.patches`
+  # meant the second silently won: verified with a fixture, `from-c1` vanished
+  # entirely. That would have dropped immich's superuser flag the moment it also
+  # opted into rotation, with nothing failing.
+  patches: []
   # The OPERATOR, not the `postgres` cluster Kustomization. There is a live
   # readiness cycle between the two: the postgres ks reads its Helm values
   # through ClusterSecretStore/openbao, and openbao reads its storage URL out of
