@@ -270,6 +270,20 @@ spec:
       *app :
         replicas: 1
         pod:
+          # Tier 0. §1 names this explicitly -- "external-secrets (+ webhook,
+          # cert-controller, reloader)" -- so it must be placeable on a control plane
+          # once §4's taint is live.
+          #
+          # Missed by #1073's sweep: that PR set `global.tolerations` on the
+          # external-secrets chart, which covers the main/webhook/certController pods,
+          # and this reloader is a SEPARATE app-template HelmRelease that the global
+          # never reaches. Found by re-running the tier-membership audit after #1073
+          # merged, which is the check that exists for exactly this.
+          # See docs/cluster-consolidation/20-low-power-tier.md §4.
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
           restartPolicy: Always
           terminationGracePeriodSeconds: 30
           automountServiceAccountToken: true
