@@ -1,0 +1,324 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: forgejo
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 17.1.5
+  # data.forgejo.org, not code.forgejo.org (the chart's own default), for the
+  # same reason docker/celestia/forgejo used it: code.forgejo.org is itself a
+  # Forgejo instance and answers /v2/ with a Bearer challenge that Renovate
+  # intermittently fails to complete, dropping the dep with "no-result" and
+  # silently stranding the pin. data.forgejo.org is the project's own mirror,
+  # serves /v2/ anonymously, and carries byte-identical manifests.
+  url: oci://data.forgejo.org/forgejo-helm/forgejo
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app forgejo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  maxHistory: 3
+  interval: 15m
+  timeout: 15m
+  install:
+    createNamespace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  valuesFrom:
+    # Only the OIDC discovery URL comes from here. `gitea.oauth[].autoDiscoverUrl`
+    # is rendered into the `forgejo admin auth add-oauth` command line by the
+    # chart, so unlike the client id/secret it cannot be sourced from a Secret
+    # at runtime -- it has to be a Helm value. Flux merges valuesFrom first and
+    # `spec.values` on top, and the merge is recursive, so the `gitea` map below
+    # and the `gitea.oauth` list in the Secret combine rather than replace.
+    - kind: Secret
+      name: ${APP}-values
+      valuesKey: values.yaml
+  values:
+    image:
+      # `fullOverride` rather than registry/repository/tag, and NO digest.
+      #
+      # The chart's `gitea.image` helper builds the reference as
+      # <registry>/<repo>:<tag><rootless><digest> -- it inserts the literal
+      # "-rootless" BETWEEN the tag and the digest whenever `image.rootless` is
+      # true and the tag does not already end in it. Every other spelling loses:
+      #   tag: 16.0.3 + image.digest  -> Renovate rewrites `tag` to
+      #     `16.0.3@sha256:<non-rootless digest>` and the helper then appends
+      #     "-rootless" after the digest, producing an invalid reference.
+      #   tag: 16.0.3-rootless        -> same, once a digest is appended the
+      #     hasSuffix check stops matching and "-rootless" lands at the end.
+      # `image.rootless` is not just a tag suffix -- it also drives HOME, the
+      # SSH port defaults and the directory init script -- so it has to stay
+      # true. That leaves fullOverride, which the annotation below keeps
+      # Renovate-managed via the repo's `Process annotated dependencies`
+      # customManager (.github/renovate.json5).
+      rootless: true
+      # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
+      fullOverride: data.forgejo.org/forgejo/forgejo:16.0.3-rootless
+      pullPolicy: IfNotPresent
+
+    # Forgejo is explicitly not HA -- the chart refuses to be useful above one
+    # replica and `strategy: Recreate` avoids two processes touching the RWO
+    # volume during a rollout.
+    replicaCount: 1
+    strategy:
+      type: Recreate
+
+    # Tier 1 (docs/cluster-consolidation/20-low-power-tier.md): the forge must
+    # not be shed, and must be placeable on a control plane once the workers are
+    # powered down. The `forgejo` namespace is also in kube-downscaler's
+    # excludedNamespaces so a mistyped `kubectl annotate` cannot scale it to 0.
+    priorityClassName: critical-tier
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      # The failover/fast-node-eviction equivalent; that component only patches
+      # `defaultPodOptions`, which this chart does not read.
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 60
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 60
+
+    deployment:
+      annotations:
+        reloader.stakater.com/auto: "true"
+      # First boot runs the full schema migration; the default 60s is enough for
+      # shutdown but a long migration should not be interrupted by a rollout.
+      terminationGracePeriodSeconds: 60
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+    initContainers:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+    # The PVC is owned by components/volsync (named `${APP}`), not by the chart:
+    # that is what puts the volume on the Tier-1 storage class and what gives it
+    # a nightly restic ReplicationSource. `create: false` keeps the chart from
+    # provisioning its own `gitea-shared-storage` alongside it.
+    persistence:
+      enabled: true
+      create: false
+      mount: true
+      claimName: *app
+
+    podSecurityContext:
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+    containerSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+
+    service:
+      http:
+        type: ClusterIP
+        port: 3000
+      ssh:
+        type: ClusterIP
+        # 2222 rather than the chart's default 22, so that the Service port, the
+        # Gateway listener, the TCPRoute and the SSH_PORT advertised in the UI's
+        # clone URLs are all the same number. `Tailscale.ports.git` in
+        # components/constants.ts already grants tcp:2222 to tag:apps.
+        port: 2222
+
+    httpRoute:
+      enabled: true
+      annotations:
+        external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+      parentRefs:
+        - name: internal
+          namespace: network
+          kind: Gateway
+      hostnames:
+        - "git.${ROOT_DOMAIN}"
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # error-pages -> internal-network. Network-gated, not authentik-gated:
+            # the runner, Flux and `git push` all authenticate to Forgejo itself,
+            # and an authentik outage must not take the forge with it.
+            name: local-user
+
+    tcpRoute:
+      enabled: true
+      parentRefs:
+        - name: internal
+          namespace: network
+          sectionName: gitssh
+      port: 2222
+
+    ingress:
+      enabled: false
+
+    # The chart's helm-test Pod. Disabled because Flux never runs Helm tests, so
+    # the only thing it contributes is a `busybox:latest` reference in the
+    # rendered output for lint and Renovate to trip over.
+    test:
+      enabled: false
+
+    gitea:
+      admin:
+        # Break-glass local admin, the same account docker/celestia/forgejo's
+        # provision.sh reconciled. The email is deliberately not a real person's:
+        # ACCOUNT_LINKING=auto links OIDC logins to local accounts BY EMAIL, and
+        # this account must never be silently claimed by an SSO identity.
+        existingSecret: ${APP}-admin
+        email: forgejo-admin@driscoll.tech
+        passwordMode: keepUpdated
+
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+
+      # The client id and secret arrive through `existingSecret`; the rest of the
+      # oauth entry (including autoDiscoverUrl) comes from the values Secret --
+      # see `valuesFrom` above and resources/values.yaml.
+
+      additionalConfigFromEnvs:
+        # Everything secret in app.ini is injected here rather than written into
+        # gitea.config, which the chart renders into a plain ConfigMap-like
+        # Secret it also prints in `helm get values`.
+        - name: FORGEJO__database__HOST
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-db
+              key: host
+        - name: FORGEJO__database__NAME
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-db
+              key: database
+        - name: FORGEJO__database__USER
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-db
+              key: username
+        - name: FORGEJO__database__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-db
+              key: password
+        # Encrypts secrets at rest in the database (2FA seeds, webhook secrets,
+        # Actions secrets). Losing it after first boot orphans that data, which
+        # is why it is a stored credential rather than something generated in
+        # the container.
+        - name: FORGEJO__security__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-secrets
+              key: secret_key
+        # Signs session and OAuth2 JWTs. Same argument as SECRET_KEY: if it is
+        # regenerated every restart, every issued Actions token dies with the pod.
+        - name: FORGEJO__oauth2__JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ${APP}-secrets
+              key: jwt_secret
+
+      config:
+        APP_NAME: Forgejo
+        RUN_MODE: prod
+
+        server:
+          DOMAIN: git.${ROOT_DOMAIN}
+          ROOT_URL: https://git.${ROOT_DOMAIN}/
+          HTTP_PORT: 3000
+          # The rootless image has no sshd; this is Forgejo's built-in Go SSH
+          # server. Both numbers are 2222 so the UI's clone URLs and reality
+          # agree: ssh://git@git.driscoll.tech:2222/<owner>/<repo>.git
+          START_SSH_SERVER: true
+          SSH_DOMAIN: git.${ROOT_DOMAIN}
+          SSH_PORT: 2222
+          SSH_LISTEN_PORT: 2222
+          # LFS on the same volume for now. If LFS content ever gets big it moves
+          # to Minio via [lfs] STORAGE_TYPE=minio, natively and without touching
+          # the git data.
+          LFS_START_SERVER: true
+
+        database:
+          DB_TYPE: postgres
+          # HOST / NAME / USER / PASSWD come from additionalConfigFromEnvs above.
+
+        security:
+          # No web installer; this instance is configured entirely from here.
+          INSTALL_LOCK: true
+
+        service:
+          # This exact pair is the documented combination for "accounts come only
+          # from the IdP": registration stays technically enabled, but only the
+          # external (OAuth2) path may exercise it. DISABLE_REGISTRATION=true
+          # would block OIDC auto-registration too.
+          DISABLE_REGISTRATION: false
+          ALLOW_ONLY_EXTERNAL_REGISTRATION: true
+          # Private instance: nothing is browsable anonymously. The runner and
+          # any automation authenticate with tokens, so this costs nothing.
+          REQUIRE_SIGNIN_VIEW: true
+          DEFAULT_KEEP_EMAIL_PRIVATE: true
+
+        oauth2_client:
+          ENABLE_AUTO_REGISTRATION: true
+          ACCOUNT_LINKING: auto
+
+        session:
+          # `db`, not the chart's `memory` default: sessions must survive the
+          # pod restart that a `Recreate` rollout guarantees.
+          PROVIDER: db
+
+        actions:
+          ENABLED: true
+          # Where `uses: actions/checkout@v4` resolves from when a workflow does
+          # not fully qualify the action. `github` keeps GitHub-authored
+          # workflows working unmodified; the alternative is a self-hosted
+          # mirror, which is a separate piece of work.
+          DEFAULT_ACTIONS_URL: github
+
+        metrics:
+          ENABLED: true
+
+        cron.update_checker:
+          # Nothing here should be phoning home for release announcements; the
+          # image tag is Renovate's job.
+          ENABLED: false

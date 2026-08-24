@@ -148,6 +148,11 @@ spec:
       # `force-downtime`, so listing it only makes a mistyped `kubectl annotate`
       # inert.
       - coder
+      # Same reasoning as `coder`: Tier 1, never annotated with force-downtime,
+      # listed only so a mistyped `kubectl annotate` cannot take the estate's
+      # git forge down. Its runner lives in `forgejo-runner`, which is
+      # deliberately NOT here -- CI can wait out a window.
+      - forgejo
       # `system-upgrade` holds tuppr, which drives Talos and Kubernetes node
       # upgrades. A nightly shed could stop it mid-upgrade — and tuppr does not
       # self-clear a Failed TalosUpgrade, it needs a generation bump. Excluded

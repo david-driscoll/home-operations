@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: forgejo-runner
+components:
+  - ../../components/alerts
+  - ../../components/common
+  # The app-template OCIRepository. It is namespace-scoped and the runner's
+  # HelmRelease refers to it by bare name, so every namespace that uses the
+  # chart has to bring its own copy -- `equestria` does the same thing.
+  - ../../components/repos/app-template
+resources:
+  - ./forgejo-runner/ks.yaml

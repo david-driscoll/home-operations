@@ -3,12 +3,12 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: forgejo
+  name: ${APP}
 spec:
   name: Forgejo
   category: Applications
   description: Self-hosted git forge — repositories, issues, and Actions
-  url: &url https://git.${searchDomain}
+  url: &url https://git.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/forgejo.svg
   access_policy:
     groups:
@@ -21,9 +21,10 @@ spec:
       clientType: confidential
       allowedRedirectUris:
         # The path segment after /user/oauth2/ must exactly match the auth
-        # source name provision.sh registers ("authentik"). Change one, change
-        # both.
-        - url: "https://git.${searchDomain}/user/oauth2/authentik/callback"
+        # source name in resources/values.yaml ("authentik"). Change one,
+        # change both.
+        - url: "https://git.${ROOT_DOMAIN}/user/oauth2/authentik/callback"
+        - url: "https://git.${TAILSCALE_DOMAIN}/user/oauth2/authentik/callback"
       propertyMappings:
         - email
         - openid
@@ -31,14 +32,14 @@ spec:
       includeClaimsInIdToken: true
       subMode: user_email
   gatus:
-    # /api/healthz is the same unauthenticated liveness endpoint the container
-    # healthcheck uses; it answers even with REQUIRE_SIGNIN_VIEW=true. The
-    # body assertion catches the degraded case where the process serves HTTP
-    # but a component (database, cache) is failing its internal check — that
-    # reports "fail"/"warn" rather than "pass".
+    # /api/healthz is Forgejo's unauthenticated liveness endpoint; it answers
+    # even with REQUIRE_SIGNIN_VIEW=true. The body assertion catches the
+    # degraded case where the process serves HTTP but a component (database,
+    # cache) is failing its internal check — that reports "fail"/"warn" rather
+    # than "pass".
     - name: Forgejo
-      group: ${CLUSTER_TITLE}
-      url: https://git.${searchDomain}/api/healthz
+      group: "Applications"
+      url: https://git.${ROOT_DOMAIN}/api/healthz
       method: GET
       conditions:
         - "[STATUS] == 200"

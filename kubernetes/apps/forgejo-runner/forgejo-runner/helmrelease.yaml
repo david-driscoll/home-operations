@@ -1,0 +1,177 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app forgejo-runner
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      *app :
+        type: statefulset
+        replicas: 1
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+          # Jobs can run for a long time; `runner.shutdown_timeout` in the
+          # config gives them 30m to finish after SIGTERM, so the kubelet has to
+          # be willing to wait roughly that long before it sends SIGKILL.
+          terminationGracePeriodSeconds: 1860
+
+        initContainers:
+          # A native sidecar (`restartPolicy: Always` on an initContainer), not
+          # a plain container: that makes the kubelet start it BEFORE the runner
+          # and keep it running for the pod's lifetime. A plain container gives
+          # no ordering guarantee, and the runner logs a hard error when the
+          # Docker host is unreachable at startup.
+          dind:
+            restartPolicy: Always
+            image:
+              # The Forgejo project's own mirror of docker:dind. Same content as
+              # Docker Hub's library image, but anonymous and not rate-limited,
+              # and it keeps this app on a single registry with the runner and
+              # the forge.
+              repository: data.forgejo.org/oci/docker
+              tag: 29-dind@sha256:12e683a161823b2a839aeea999b9d960e6e1f9a97b1679ad6b441982e2d9cf07
+            env:
+              # Empty disables the entrypoint's automatic TLS bootstrap. Safe
+              # ONLY because of the loopback bind below.
+              DOCKER_TLS_CERTDIR: ""
+            args:
+              # 127.0.0.1, NOT 0.0.0.0. Containers in a pod share a network
+              # namespace, so the runner reaches this over loopback while
+              # nothing else in the cluster can -- and pod IPs are routable
+              # cluster-wide, so an unauthenticated dockerd on 0.0.0.0 would be
+              # root on the node for anything that found it.
+              - --host=tcp://127.0.0.1:2375
+            securityContext:
+              # Unavoidable for Docker-in-Docker: dockerd needs to manage
+              # cgroups, mounts and iptables in its own namespace. It is the
+              # reason this runs in its own namespace rather than alongside the
+              # forge.
+              privileged: true
+              runAsUser: 0
+              runAsNonRoot: false
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 4Gi
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["docker", "-H", "tcp://127.0.0.1:2375", "info"]
+                  initialDelaySeconds: 5
+                  periodSeconds: 2
+                  failureThreshold: 30
+
+        containers:
+          app:
+            image:
+              repository: data.forgejo.org/forgejo/runner
+              tag: 13.0.0@sha256:7fb853bfe73c229be6349398359c0a7bd01fadfd17c106607b2221150b799ed2
+            command: ["forgejo-runner"]
+            args: ["daemon", "--config", "/config/config.yml"]
+            env:
+              TZ: "${TIMEZONE}"
+              DOCKER_HOST: tcp://127.0.0.1:2375
+              # The image runs as uid 1000 with no home directory of its own;
+              # without these the runner writes its cache under / and fails.
+              HOME: /data
+              XDG_CACHE_HOME: /data/.cache
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+            probes:
+              # The daemon serves no HTTP endpoint of its own and exports no
+              # metrics, so there is nothing to probe. It exits on a fatal
+              # error, which restartPolicy already handles.
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+
+    persistence:
+      # Runner state: the actions cache and job working directories. Not backed
+      # up on purpose -- see the note in ks.yaml.
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        storageClass: longhorn
+        advancedMounts:
+          *app :
+            app:
+              - path: /data
+
+      # Docker's image and layer store. emptyDir rather than a PVC: it is pure
+      # cache, it churns hard enough to be unkind to Longhorn, and a cold pull
+      # after a restart costs minutes, not data.
+      docker-storage:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            dind:
+              - path: /var/lib/docker
+
+      config:
+        type: secret
+        name: ${APP}-config
+        advancedMounts:
+          *app :
+            app:
+              - path: /config
+                readOnly: true
+
+    service:
+      app:
+        enabled: false

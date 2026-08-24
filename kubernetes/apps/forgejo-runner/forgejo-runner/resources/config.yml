@@ -1,0 +1,85 @@
+# forgejo-runner daemon configuration, rendered by this app's `-config`
+# ExternalSecret and mounted at /config/config.yml.
+#
+# The whole file lives in a Secret rather than a ConfigMap because the
+# server.connections block below carries the runner's token, which is a
+# credential equivalent to a password for this runner's identity.
+#
+# Keep envsubst and Go-template syntax out of the comments in this file: both
+# Flux postBuild and the external-secrets templating engine treat a comment as
+# live text and will execute what they find there. scripts/eso-values-lint
+# checks for exactly that.
+log:
+  # What the runner process prints.
+  level: info
+  # What is shipped to Forgejo and shown in the job log in the web UI.
+  job_level: info
+
+runner:
+  file: /data/.runner
+  # Four concurrent jobs in one daemon, rather than four replicas: each replica
+  # would need its own registration, its own Docker-in-Docker sidecar and its
+  # own image cache. Raise this before raising replicas.
+  capacity: 4
+  timeout: 3h
+  # How long a job gets to finish after SIGTERM. Must stay below the pod's
+  # terminationGracePeriodSeconds in helmrelease.yaml or the kubelet SIGKILLs
+  # the daemon mid-job.
+  shutdown_timeout: 30m
+  insecure: false
+  fetch_timeout: 30s
+  fetch_interval: 10s
+  # <label-name>:<backend>://<default image>. These images are pinned by hand:
+  # they sit inside a config file rather than a Kubernetes image field, so none
+  # of the Renovate managers configured in .github/renovate.json5 can see them.
+  #
+  # catthehacker's images are the community rebuilds of the GitHub-hosted
+  # runners; they carry Node.js, which `uses: actions/checkout@v4` and most
+  # other JavaScript actions require.
+  labels:
+    - ubuntu-latest:docker://ghcr.io/catthehacker/ubuntu:act-24.04
+    - ubuntu-24.04:docker://ghcr.io/catthehacker/ubuntu:act-24.04
+    - ubuntu-22.04:docker://ghcr.io/catthehacker/ubuntu:act-22.04
+    - docker:docker://ghcr.io/catthehacker/ubuntu:act-24.04
+
+cache:
+  # Serves ACTIONS_CACHE_URL to workflow containers, which is what
+  # actions/cache and setup-* actions use. The proxy binds inside the pod's
+  # network namespace and the job containers share it, so the auto-detected
+  # host is correct and does not need pinning.
+  enabled: true
+  dir: /data/.cache/actcache
+
+container:
+  # Empty means the runner creates a per-job network on the Docker-in-Docker
+  # daemon, which is what isolates concurrent jobs from each other.
+  network: ""
+  enable_ipv6: false
+  # Job containers are NOT privileged. The privilege lives in the dind sidecar,
+  # which is the whole point of the sidecar: a workflow gets a Docker daemon to
+  # talk to, not the ability to become root on the node.
+  privileged: false
+  # "-" means no Docker socket is mounted into the job container. Workflows can
+  # therefore run containers and services, but cannot reach the daemon
+  # directly. Flip this to "automount" only deliberately -- it hands every
+  # workflow, including one from a pull request, control of the daemon.
+  docker_host: "-"
+  workdir_parent: /workspace
+  # Empty means no host path may be bind-mounted into a job container.
+  valid_volumes: []
+  force_pull: false
+  force_rebuild: false
+
+host:
+  workdir_parent: /data/act
+
+server:
+  connections:
+    equestria:
+      # The in-cluster Service, not https://git.driscoll.tech: this is a
+      # constant poll and there is no reason to hairpin it through Traefik.
+      # Workflow containers still clone over the public URL, because Forgejo
+      # builds the clone URL from its own ROOT_URL rather than from this one.
+      url: http://forgejo-http.forgejo.svc.cluster.local:3000/
+      uuid: "{{ .runner_uuid }}"
+      token: "{{ .runner_token }}"

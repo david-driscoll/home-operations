@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app forgejo
+  namespace: &namespace forgejo
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/forgejo/forgejo
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # No failover/fast-node-eviction: that component patches
+    # `spec.values.defaultPodOptions`, which only the app-template chart reads.
+    # The forgejo chart takes tolerations natively — the equivalent pair is set
+    # under `tolerations:` in helmrelease.yaml, alongside the control-plane
+    # toleration Tier 1 needs.
+    - ../../../components/postgres
+    - ../../../components/tailscale
+    - ../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # `git`, not `forgejo`: the tailnet name has to match the public one so a
+      # single remote works from either side. The component builds
+      # `${TAILSCALE_HOST}.${TAILSCALE_DOMAIN}` and points it at the named
+      # Service, which the chart calls `<release>-http`.
+      TAILSCALE_HOST: git
+      TAILSCALE_SERVICE: forgejo-http
+      TAILSCALE_PORT: http
+      # Repositories, LFS objects and the package registry all live on this one
+      # volume (the chart mounts it at /data). 20Gi is a starting point with
+      # room for the estate's own repos; expanding it later is safe, changing
+      # its storage class is not — see components/volsync/AGENTS.md.
+      VOLSYNC_CAPACITY: 20Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # Tier 1: the git forge has to keep serving with the workers powered down,
+      # so the data lands on the control-plane trio and its scratch volumes have
+      # to follow it there — `longhorn-snapshot`/`longhorn-cache` are pinned to
+      # `bulk` and would have nowhere to schedule during Low Power.
+      # See docs/cluster-consolidation/12-longhorn-critical-tier.md.
+      VOLSYNC_STORAGECLASS: longhorn-critical
+      VOLSYNC_STAGING_STORAGECLASS: longhorn-critical-snapshot
+      VOLSYNC_CACHE_SNAPSHOTCLASS: longhorn-critical-cache
+      # Pinned rather than inherited: the two movers default differently (2Gi on
+      # the ReplicationSource, 8Gi on the ReplicationDestination), so leaving it
+      # unset means a restore quietly provisions a volume four times the size.
+      VOLSYNC_CACHE_CAPACITY: 2Gi
+      # The rootless image runs as 1000:1000; the restic mover must match or it
+      # cannot read what it is backing up.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"

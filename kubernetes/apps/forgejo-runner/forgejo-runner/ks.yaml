@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app forgejo-runner
+  namespace: &namespace forgejo-runner
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # `forgejo` is wait: true, so the runner only starts once the forge is
+    # actually Ready -- the daemon exits if it cannot reach the instance on
+    # startup and would otherwise spend the first minutes in CrashLoopBackOff.
+    - name: forgejo
+      namespace: forgejo
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/forgejo-runner/forgejo-runner
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # No components/volsync: everything on the runner's volume is either
+      # rebuildable (the actions cache) or a copy of what is already in the
+      # forge. Backing up CI scratch would cost a nightly restic run for data
+      # nobody would ever restore.
+      #
+      # Deliberately NOT Tier 1 and NOT in kube-downscaler's excludedNamespaces:
+      # CI can wait out a Low Power window, the same call
+      # docs/cluster-consolidation/24-power-states.md records for
+      # `github-actions`.

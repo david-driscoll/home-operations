@@ -1,0 +1,28 @@
+# Helm values rendered by this app's `-values` ExternalSecret.
+#
+# Only the pieces that must come out of a secret store live here. Everything
+# else is plain, reviewable YAML in helmrelease.yaml -- Flux merges this file
+# first and spec.values on top, recursively, so the two `gitea` maps combine.
+#
+# Keep envsubst and Go-template syntax out of the comments in this file: both
+# Flux postBuild and the external-secrets `templateAs: Values` engine treat a
+# comment as live text and will execute what they find there. That is what
+# scripts/eso-values-lint checks for.
+gitea:
+  oauth:
+    # The name is load-bearing: it is the path segment in the OIDC callback URL
+    # that definition.yaml registers with authentik --
+    # https://git.<domain>/user/oauth2/authentik/callback -- so renaming it here
+    # without changing definition.yaml breaks login. The chart reconciles this
+    # entry on every start with `forgejo admin auth add-oauth` /
+    # `update-oauth`, which is exactly what celestia's provision.sh did by hand.
+    - name: authentik
+      provider: openidConnect
+      # Supplies the GITEA_OAUTH_KEY_0 / GITEA_OAUTH_SECRET_0 env vars that the
+      # chart substitutes into the CLI call, so the client secret never appears
+      # in a Helm value.
+      existingSecret: ${APP}-oauth
+      autoDiscoverUrl: "{{ .oidc_openid_configuration_url }}"
+      scopes: openid profile email
+      groupClaimName: groups
+      adminGroup: admins

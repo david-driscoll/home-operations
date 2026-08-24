@@ -130,6 +130,24 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # Forgejo's built-in Go SSH server (kubernetes/apps/forgejo). 2222 rather
+  # than 22 so it does not collide with anything on the node and so the number
+  # in the UI's clone URLs, the Service, this entrypoint and the Gateway
+  # listener are all the same. `Tailscale.ports.git` in components/constants.ts
+  # already grants tcp:2222 to tag:apps.
+  #
+  # The readTimeout override matters here for the same reason it does on
+  # postgres: a long `git clone` over SSH is a single idle-then-bursty stream
+  # and the default responding timeout would cut it.
+  gitssh:
+    expose:
+      default: true
+    port: 2222
+    exposedPort: 2222
+    protocol: TCP
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
 ingressClass:
   enabled: true
   isDefaultClass: false
@@ -260,5 +278,14 @@ gateway:
     bolt:
       protocol: TCP
       port: 7687
+      namespacePolicy:
+        from: All
+
+    # Traefik matches a Gateway listener to an entryPoint BY PORT, so this and
+    # the `gitssh` entrypoint above have to move together -- a listener with no
+    # entrypoint on the same port is silently dropped.
+    gitssh:
+      protocol: TCP
+      port: 2222
       namespacePolicy:
         from: All
