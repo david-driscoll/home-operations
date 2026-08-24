@@ -18,6 +18,17 @@ apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
   name: ${APP}
+  annotations:
+    # Nothing this component renders is ever pruned. The nested ks is
+    # `deletionPolicy: Orphan` and both CRs carry `retain` reclaim policies, so
+    # the guard is not what protects the data -- it protects the objects from a
+    # reconcile that stops rendering them, which would otherwise churn every
+    # app's database at once. It is also a prerequisite for phase 2 of
+    # docs/postgres-credentials/PLAN.md: a DatabaseRole with
+    # `clientCertificate` OWNS the generated `<name>-client-cert` Secret
+    # through a controller ownerReference, so pruning the role garbage-collects
+    # the credential. Do not enable client certificates on an unguarded role.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   cluster:
     name: postgres

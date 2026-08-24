@@ -38,9 +38,20 @@ Apps consume the credential the same way they always have — through
   one Secret document there until phase 4 moves this to OpenBao. The `username` key in it
   **must equal the role name** — CNPG rejects the secret otherwise, with
   "the username in secret does not match role".
-- **Removing the component does not drop anything.** The nested ks is `deletionPolicy: Orphan`
-  and both CRs carry `retain` reclaim policies. Cleaning up for real means deleting the
-  database by hand.
+- **Nothing here ever deletes anything.** That is a deliberate, consistent policy, not three
+  unrelated settings: the nested ks is `deletionPolicy: Orphan`, both CRs carry `retain`
+  reclaim policies, and all three rendered objects carry
+  `kustomize.toolkit.fluxcd.io/prune: disabled`. Removing the component from an app, or a file
+  from `database/`, leaves the live objects alone. Cleaning up for real is a manual job.
+- **Do not enable `clientCertificate` on a role without that prune guard.** A `DatabaseRole`
+  with client certificates owns the generated `<name>-client-cert` Secret through a controller
+  `ownerReference`, so pruning the role garbage-collects the credential — and CNPG's
+  `deleteOwnedCertSecret` removes it outright the moment `enabled` goes false.
+- **`reloader.stakater.com/auto` belongs on the WORKLOAD, not on a Secret.** It is present on
+  the rendered `ExternalSecret` because the generator put it there and churning it would break
+  the byte-for-byte match with the live object, but it does nothing where it sits. What makes
+  an app pick up a changed password is the annotation on the app's own Deployment/StatefulSet.
+  This matters from phase 4 onward, when passwords start rotating.
 - **The nested ks does not inherit `components/common`.** Its `decryption` and
   `substituteFrom` are spelled out in `ks.yaml`; `common` is applied by the umbrella
   kustomization and never sees this object. If you add a new cluster-wide substitution source,

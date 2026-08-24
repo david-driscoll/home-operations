@@ -76,6 +76,11 @@ spec:
     name: openbao-postgres-password   # kept until 2.4
 ```
 
+**It must carry `kustomize.toolkit.fluxcd.io/prune: disabled`**, like the three objects
+`components/postgres` renders. This is not defensive tidiness: the cert Secret has a controller
+`ownerReference` back to the DatabaseRole, so pruning the role garbage-collects OpenBao's only
+credential. See the hazards section below.
+
 Plus the `Database/openbao` the component used to render.
 
 > The Secret is named `<metadata.name>-client-cert` (`GetClientCertSecretName` is
@@ -179,8 +184,32 @@ The fix is already in this estate's toolkit, and it is why the certificate must 
 the mounted Secret change and rolls the three replicas one at a time. Renewal becomes one
 rolling restart roughly every 83 days, through the same mechanism a config change already uses.
 
-Verify after 2.3 that reloader actually lists the cert Secret among what it is watching — a
-mounted-but-unwatched Secret is the failure mode here, and it would stay silent for 83 days.
+This is now verified rather than assumed. Reloader's docs state that `auto` "reloads workload
+when any referenced ConfigMap or Secret changes", and that **includes volume mounts** — it is
+not limited to `env`/`envFrom`. StatefulSets are a supported workload type, and the live
+`reloader` deployment runs cluster-wide with no namespace restriction, so `kube-system` is in
+scope.
+
+Two things that follow, and both are easy to get wrong:
+
+- **`reloader.stakater.com/auto` goes on the WORKLOAD, and only there.** It is meaningless on a
+  Secret or ConfigMap; the resource-side annotations are `match` (opt-in with `search: "true"`)
+  and `ignore`. The estate puts `auto` on a lot of Secrets and ExternalSecrets where it does
+  nothing. `StatefulSet/openbao` already carries it correctly, so 2.3 needs no annotation
+  change — only the volume mount.
+- **Still verify after 2.3 that reloader has actually picked the Secret up.** A
+  mounted-but-unwatched Secret is the failure mode, and it would stay silent for 83 days.
+  Watch for a reload event, or force it:
+
+  ```bash
+  kubectl -n kube-system annotate secret openbao-client-cert reloader-probe="$(date +%s)" --overwrite
+  kubectl -n kube-system rollout status statefulset/openbao --timeout=5m
+  ```
+
+  Note the mirror hop: CNPG patches `openbao-client-cert` in `database`, reflector copies it to
+  `kube-system`, and only then does reloader see a change. Three links, and the middle one is
+  the least exercised — confirm reflector is actually re-mirroring on update, not just on
+  create.
 
 ### pgx does not check private-key file permissions
 
