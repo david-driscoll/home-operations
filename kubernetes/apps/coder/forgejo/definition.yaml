@@ -44,3 +44,22 @@ spec:
       conditions:
         - "[STATUS] == 200"
         - "[BODY].status == pass"
+    # The git SSH endpoint, checked separately because the forge can serve the
+    # web UI perfectly while `git clone` over SSH is broken -- the HTTP check
+    # above passes through Traefik's `websecure` entrypoint and an HTTPRoute,
+    # and shares none of the path this one exercises.
+    #
+    # A TCP connect is the whole check: reaching 22 proves the `gitssh`
+    # entrypoint, its Gateway listener, the TCPRoute, the Service and Forgejo's
+    # built-in Go SSH server, which binds 2222 inside the container. Anything
+    # deeper would need a key.
+    #
+    # Reaching it from the Gatus host also depends on the tailnet grant
+    # `forgejo-git-ssh` (stacks/unifi-network/acl-manager.ts), which admits
+    # tcp:22 to tag:apps for tagged devices.
+    - name: Forgejo SSH
+      group: "Applications"
+      url: "tcp://git.${ROOT_DOMAIN}:22"
+      interval: 30s
+      conditions:
+        - "[CONNECTED] == true"
