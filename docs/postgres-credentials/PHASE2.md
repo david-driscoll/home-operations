@@ -135,18 +135,12 @@ server:
   volumes:
     - name: pg-client-cert
       secret:
-        secretName: openbao-client-cert
-        defaultMode: 0400          # hardening, not required — see the spike findings
-    - name: pg-ca
-      secret:
-        secretName: postgres-ca
-        defaultMode: 0444
+        # One Secret carries tls.crt, tls.key AND ca.crt -- see 2.2.
+        secretName: openbao-pg-client-cert
+        defaultMode: 0400          # lands as 0440 via fsGroup; see the outcome below
   volumeMounts:
     - name: pg-client-cert
       mountPath: /etc/pg-certs
-      readOnly: true
-    - name: pg-ca
-      mountPath: /etc/pg-ca
       readOnly: true
 ```
 
@@ -155,7 +149,7 @@ postgres://openbao@postgres-rw.database.svc.cluster.local:5432/openbao
   ?sslmode=verify-full
   &sslcert=/etc/pg-certs/tls.crt
   &sslkey=/etc/pg-certs/tls.key
-  &sslrootcert=/etc/pg-ca/ca.crt
+  &sslrootcert=/etc/pg-certs/ca.crt
 ```
 
 `postgres-rw.database.svc.cluster.local` is already in the server certificate's
@@ -221,6 +215,56 @@ CA-driven, around **2026-11-04** (CNPG's 7-day margin), not leaf-driven in mid-N
 `clientCertSignedByCurrentCA` detects the CA change and re-issues the leaf; both Secrets are
 projected by the same ExternalSecret and mounted in the same volume, so one reloader roll should
 carry both. That is the event to watch.
+
+### 2.3b — the cutover
+
+One line, in `openbao/externalsecret.yaml`:
+
+```diff
+-        pg-connection-url: "{{ .postgres_uri }}"
++        pg-connection-url: "postgres://openbao@postgres-rw.database.svc.cluster.local:5432/openbao?sslmode=verify-full&sslcert=/etc/pg-certs/tls.crt&sslkey=/etc/pg-certs/tls.key&sslrootcert=/etc/pg-certs/ca.crt"
+```
+
+No credential in it at all.
+
+**Proven before it landed.** A throwaway pod in `kube-system`, mounting the same
+`openbao-pg-client-cert` Secret at the same path and using the same connection string:
+
+```
+CERT_AUTH_OK as openbao ssl=true tls=TLSv1.3 dn=/CN=openbao
+```
+
+So the certificate, the CA, `verify-full` against `postgres-rw.database.svc.cluster.local`, the
+`hostssl openbao openbao all cert` rule and the role mapping are all confirmed working. The only
+variable the cutover introduces is pgx reading those files instead of libpq, and OpenBao's own
+startup.
+
+> That test needed `fsGroup` on the pod to read the 0400 files — the first attempt failed with
+> `could not read root certificate file: Permission denied` as uid 26. Which is a second
+> confirmation of the mode/fsGroup finding: without `fsGroup` the files are root-owned and
+> unreadable; the real pod's `fsGroup: 1000` is what makes them readable.
+
+**The rollout is self-limiting.** The StatefulSet is `RollingUpdate` with
+`podManagementPolicy: OrderedReady` and a readiness probe of `bao status -tls-skip-verify`,
+which exits non-zero while sealed. If OpenBao cannot reach its storage it cannot unseal, the
+probe fails, the pod never goes Ready, and **the rolling update halts rather than continuing
+into the remaining replicas** — so a broken cutover costs one of three pods, not the quorum.
+
+**Rollback is that same one line.** Reverting to `{{ .postgres_uri }}` restores password auth
+with no database-side change: the `host all all all scram-sha-256` catch-all is still in place
+and the password still exists. Flux does not depend on OpenBao (it reconciles from git with
+sops), so the revert can be applied even with OpenBao degraded.
+
+Verify after:
+
+```bash
+# inside a pod: is the connection actually using the certificate?
+kubectl -n database exec postgres-1 -c postgres -- psql -U postgres -tAc \
+  "select usename, count(*), s.ssl, s.client_dn from pg_stat_activity a
+     join pg_stat_ssl s on s.pid=a.pid where a.usename='openbao' group by 1,3,4"
+```
+
+Expect `ssl=t` and `client_dn=/CN=openbao`. Before the cutover this read `ssl=f`, `dn=-`.
 
 ### 2.4 — remove the password
 
