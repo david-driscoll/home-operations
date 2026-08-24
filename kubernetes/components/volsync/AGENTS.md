@@ -13,24 +13,25 @@ this repo's root (e.g. `../kubernetes/components/volsync`). Those references are
 `git grep` inside this repo — search the cluster repos, or query the live cluster
 (`kubectl get kustomization -A -o json`), before assuming a component is unused.
 
-## Coupling with `components/volsync-restore`
+## The `ReplicationDestination` ships with this component
 
-`pvc.yaml` declares `spec.dataSourceRef` -> `ReplicationDestination/${APP}-dst`, which is
-supplied by the sibling `components/volsync-restore` component and **not** by this one. That is
-deliberate:
+`pvc.yaml` declares `spec.dataSourceRef` -> `ReplicationDestination/${APP}-dst`, and
+`replicationdestination.yaml` here supplies it. It lived in a sibling `components/volsync-restore`
+until 639a049d merged it back; **that component no longer exists**, so there is nothing to add on
+a first deploy and nothing to remove afterwards. Every app gets a destination.
 
-- `dataSourceRef` is only consulted when the PVC is first **created**. Once the PVC is `Bound`
-  the field is immutable and inert, so the `ReplicationDestination` it names does not have to
-  exist for the life of the app. Every volsync app in the estate runs this way today.
-- A **brand-new** PVC is the opposite case, and this is the trap. The VolSync volume populator
-  claims it, Longhorn stands down (`assuming an external populator will provision the volume`),
-  and the populator then waits forever for a `ReplicationDestination` that nothing creates — so
-  the PVC never binds and the pod never schedules. Symptom: PVC `Pending`, no Longhorn volume,
-  no obvious error. See equestria-cluster#2987 and stargate-command-cluster#1739.
-- So on any **first** deploy of an app — whether or not a backup exists to restore from — add
-  `components/volsync-restore` to the app's `ks.yaml` `components:` list, let the restore run
-  (with no snapshots it is a successful no-op that initializes the repo and binds an empty
-  volume), then **remove it again**.
+Why the destination has to exist at all:
+
+- `dataSourceRef` is consulted only when the PVC is first **created**. Once the PVC is `Bound`
+  the field is immutable and inert.
+- A **brand-new** PVC is the trap. The VolSync volume populator claims it, Longhorn stands down
+  (`assuming an external populator will provision the volume`), and the populator then waits
+  forever for a `ReplicationDestination` that nothing creates — so the PVC never binds and the
+  pod never schedules. Symptom: PVC `Pending`, no Longhorn volume, no obvious error. See
+  equestria-cluster#2987 and stargate-command-cluster#1739.
+
+Shipping it unconditionally is what lets a first deploy — and a forced PVC recreate, such as the
+one in the section below — bind on its own instead of hanging.
 
 Do not try to fix a stuck PVC by editing `pvc.yaml`: `dataSourceRef` is immutable, and the
 populator re-enqueues unbound PVCs, so creating the `ReplicationDestination` is sufficient. Note
@@ -40,12 +41,24 @@ and recreate the PVC, which destroys the data. Expanding `VOLSYNC_CAPACITY` is s
 storage class is not, and neither is *lowering* the capacity — see **`VOLSYNC_CAPACITY` only
 ever goes up** below.
 
-Leaving the `ReplicationDestination` bundled into this component is what caused the **2026-07
-Longhorn storage incident**: a `restore-once` trigger that had already fired kept a fully
-replicated `${APP}-dst-dest`/`${APP}-dst-cache` PVC pair on disk indefinitely, and the nightly
-`volsync-restore-cleanup` CronJob (`30 3 * * *`) reaping them fought Flux recreating them on the
-next reconcile — re-running a real restic restore every day. The cluster repos split the
-component in 2026-07; this repo carried the bundled shape until vault#120.
+### The destinations are rebuilt every night
+
+`spec.trigger.manual: restore-once` fires once per destination. The `volsync-restore-cleanup`
+CronJob (`30 3 * * *`, `apps/volsync-system/restore-cleanup`) then deletes every destination
+whose `status.lastManualSync` has caught up with that trigger, cascading to the
+`${APP}-dst-dest`/`${APP}-dst-cache` pair it provisioned. Because the destination is declared
+*here*, Flux recreates it on the next reconcile and the restore runs again. So at 04:0x every
+morning each app performs a real restic restore of its latest snapshot into a freshly
+provisioned, app-sized volume, and that volume stays bound until the next 03:30 reap.
+
+Measured 2026-08-24: **90 destination and cache volumes, 64.5 GiB restored, 124.4 GiB of Longhorn
+capacity once replicas are counted.** This is the same delete/recreate cycle the **2026-07
+Longhorn storage incident** was traced to — a `restore-once` trigger that had already fired, a
+reaper deleting it, and Flux putting it back. The estate ran a split component for a while to
+break that loop; 639a049d merged it back and records no rationale, so whether the nightly restore
+is an accepted cost of first-deploy safety or an unnoticed regression is written down nowhere.
+Treat it as unresolved, and count these volumes before blaming a morning Longhorn spike on
+something else.
 
 ## Two storage classes, not one
 
