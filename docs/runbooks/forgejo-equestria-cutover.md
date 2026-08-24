@@ -90,14 +90,17 @@ one orphans everything it encrypted or signed.
 | `token` | a 40-character lowercase hex string — `openssl rand -hex 20` |
 | `uuid` | derived from `token`, see step 4 |
 
-And the Garage cluster's own identity. These are deliberately **not** shared
-with `garage-system` — two Garage clusters must never hold the same RPC secret,
-or a node from one could join the other's mesh:
+And the Garage cluster's own identity. Filed under the **`forgejo`** app prefix
+rather than a `forgejo-garage` one, because this cluster is not a service in its
+own right — it holds one forge's objects, and its credentials belong next to
+that forge's. They are deliberately **not** shared with `garage-system`: two
+Garage clusters must never hold the same RPC secret, or a node from one could
+join the other's mesh.
 
 ```bash
-bao kv put secrets/clusters/equestria/apps/forgejo-garage/rpc-secret \
+bao kv put secrets/clusters/equestria/apps/forgejo/garage-rpc-secret \
   password="$(openssl rand -hex 32)"
-bao kv put secrets/clusters/equestria/apps/forgejo-garage/admin-token \
+bao kv put secrets/clusters/equestria/apps/forgejo/garage-admin-token \
   password="$(openssl rand -hex 32)"
 ```
 
