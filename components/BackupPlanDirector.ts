@@ -199,10 +199,27 @@ export class BackupPlanDirector extends ComponentResource {
       },
       onError: "ON_ERROR_IGNORE",
     });
+    // The failure push carries backrest's OWN error text. Without it a failing
+    // plan tells you THAT it broke and nothing about WHY: diagnosing the first
+    // two real failures (2026-08-23/24) took host SSH, a hand-run rclone
+    // reproduction, and a dead end in backrest's zstd-compressed task-log DB --
+    // while the one-line cause had been sitting in backrest the whole time. The
+    // copy jobs in docker/_common/backups/Playground.cs already send `error=`;
+    // this is the source side catching up.
+    //
+    // Mechanics, all three parts load-bearing:
+    //   {{ .ShellEscape .Error }}  backrest renders the template BEFORE the
+    //                              shell sees it, and restic errors contain
+    //                              quotes, colons and newlines -- unescaped,
+    //                              the hook itself breaks and reports nothing.
+    //   --data-urlencode           the error is a query VALUE; it routinely
+    //                              contains &, = and / (paths).
+    //   -G with -X POST            -G moves the encoded pairs into the query
+    //                              string, -X POST keeps the method Gatus wants.
     hooks.push({
       conditions: ["CONDITION_SNAPSHOT_ERROR"],
       actionCommand: {
-        command: `curl -sf -X POST -H "Authorization: Bearer ${sourceToken}" "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external?success=false" || true`,
+        command: `curl -sf -X POST -G -H "Authorization: Bearer ${sourceToken}" --data-urlencode "success=false" --data-urlencode error={{ .ShellEscape .Error }} "${uptimeUrl}/api/v1/endpoints/${sourceToken}/external" || true`,
       },
       onError: "ON_ERROR_IGNORE",
     });

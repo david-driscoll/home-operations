@@ -22,6 +22,14 @@ const dockerPath = resolve(__dirname, "../docker");
  * suppression, same host-file-wins merge. A stack this module thinks is
  * deployed but isn't produces a plan whose pre-sync pulls an empty directory
  * and whose Gatus heartbeat then goes red forever.
+ *
+ * KNOWN LIMITATION: the rule proves a stack DECLARES a stacks-data path, not
+ * that anything is ever written there. A stack that mounts one and stays empty
+ * gets a plan that fails nightly on a staging directory rclone never created
+ * (see `pecron-monitor` in BACKUP_OPT_OUT_STACKS). This runs at Pulumi time
+ * against the repo, so it cannot check the hosts; the compensating control is
+ * that such a plan fails LOUDLY and reports the reason to Gatus, rather than
+ * reporting a green backup of nothing.
  */
 export interface DockerStackBackupTarget {
   /** Stack directory name — also its `/opt/stacks-data/<stack>/` directory and the suffix of the plan id. */
@@ -50,7 +58,25 @@ export interface DockerStackBackupTarget {
  * with relative compose paths. Those are NOT restated here — restating them
  * would freeze the decision even if one later grew real state.
  */
-export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set(["backrest", "backups", "rclone-sftp"]);
+export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set([
+  "backrest",
+  "backups",
+  "rclone-sftp",
+  // Not a credential case -- an EMPTY one, and the reason this list needs a
+  // second category. pecron-monitor mounts `/opt/stacks-data/${APP}/data` and
+  // never writes to it: the source is 0 files over SFTP. `rclone sync` of an
+  // empty source creates no destination directory, so restic then fails the
+  // plan with "path /data/staging/<host>/pecron-monitor/ does not exist" --
+  // every night, forever, with a red heartbeat that looks like a broken backup
+  // rather than a stack with nothing to back up.
+  //
+  // A DECLARED MOUNT IS NOT DATA. That is the limitation of the `stacks-data`
+  // rule below, found the hard way on 2026-08-23/24. The rule reads the repo,
+  // so it cannot know what a host actually has on disk; a compose can name a
+  // path the container never populates. Remove this entry if pecron-monitor
+  // ever grows real state.
+  "pecron-monitor",
+]);
 
 /**
  * Sub-paths inside a stack that the pre-sync must not copy, rooted at that
