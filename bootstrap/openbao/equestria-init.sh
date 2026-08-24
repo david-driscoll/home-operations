@@ -183,6 +183,42 @@ path "auth/oidc/role/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
+# The PostgreSQL database secrets engine (phase 3 of
+# docs/postgres-credentials/PLAN.md), managed by stacks/system.
+#
+# Named paths, never `database/*` wholesale and never `sys/mounts/*`, for the
+# same reason as the oidc and kubernetes-sgc grants above: Pulumi may manage
+# THIS engine and may not mount arbitrary others.
+#
+# `sudo` on sys/mounts/database is unavoidable — enabling and tuning a secrets
+# engine is root-protected in OpenBao, so a plain create/update grant is
+# silently insufficient and the provider fails with permission denied on the
+# very first apply. The provider READS the mount on every refresh, so this is
+# needed for preview too, not just apply.
+#
+# What is deliberately NOT here: `database/creds/*`. This estate uses STATIC
+# roles only -- dynamic roles mint a new PostgreSQL user per lease, and every
+# object that user creates is owned by it, which does not survive lease expiry
+# when the app owns its own schema. Withholding the grant makes that a 403
+# rather than a silent design drift.
+path "sys/mounts/database" {
+  capabilities = ["create", "read", "update", "delete", "sudo"]
+}
+path "sys/mounts/database/tune" {
+  capabilities = ["read", "update", "sudo"]
+}
+path "database/config/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "database/static-roles/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+# Forcing a rotation out-of-band, e.g. the recovery loop after a restore
+# (see the split-brain note in the plan).
+path "database/rotate-role/*" {
+  capabilities = ["create", "update"]
+}
+
 # SGC's kubernetes auth mount (Phase 7), managed by
 # components/openbao/clusterAuth.ts. Same shape and same reasoning as the oidc
 # grants above: named paths, never sys/auth/* or sys/mounts/auth/*, so Pulumi

@@ -261,28 +261,56 @@ ADMIN_CERT_OK as baoadmin ssl=true dn=/CN=baoadmin superuser=true can_alter_role
 
 ### 3b — configure the engine from Pulumi
 
-`@pulumi/vault` v7 (already a dependency) against OpenBao's API:
+Lives in `stacks/system` — the stack whose whole job is estate configuration written into
+OpenBao, and which deliberately builds its own Vault provider rather than going through
+`GlobalResources`. The code is `stacks/system/postgres-rotation.ts`.
 
-```ts
-new vault.database.SecretsMount("postgres", {
-  path: "database",
-  postgresqls: [{
-    name: "postgres",
-    pluginName: "postgresql-database-plugin",
-    connectionUrl: "postgresql://baoadmin@postgres-rw.database.svc.cluster.local:5432/postgres"
-      + "?sslmode=verify-full&sslcert=/etc/pg-admin-certs/tls.crt"
-      + "&sslkey=/etc/pg-admin-certs/tls.key&sslrootcert=/etc/pg-admin-certs/ca.crt",
-    passwordAuthentication: "scram-sha-256",
-    allowedRoles: APPS,
-  }],
-}, { provider: globals.baoProvider });
-```
+**Two switches, meaning different things.**
 
-OpenBao reads `sslcert`/`sslkey`/`sslrootcert` as paths **on the OpenBao server**, which is why
-3a mounts them into the pods rather than putting them anywhere Pulumi can see.
+`ENGINE_ENABLED` decides whether the mount exists. It is **off** until the `pulumi` policy has
+been widened, because with it on and the grant missing the run 403s — and `stacks/system`
+publishes `clusters/<key>/details`, which every other stack reads. A missing grant must not be
+able to break that. With it off the module makes no API call at all.
 
-⚠️ **Do not set `selfManagedPassword`, `passwordWo` or `skipImportRotation`** — all three are
-Vault-Enterprise-only and OpenBao rejects them.
+`ROTATION_TRANCHE` decides which apps get a static role. **Creating one rotates that app's
+password immediately**, with no opt-out, so it grows a couple of apps at a time.
+
+Sequence, and the order matters:
+
+1. Merge the widened `pulumi` policy (below) — script change only, applies nothing.
+2. **Root ceremony** to apply it: `root-ceremony.sh resume`, then `equestria-init.sh`'s
+   `write_policies` with `BAO_TOKEN` set, then revoke. Note `sys/generate-root/*` is
+   standby-only, so pin a standby and use `resume`, not `run`.
+3. Flip `ENGINE_ENABLED`. The run creates the mount and, because `verifyConnection` defaults
+   true, **proves OpenBao can reach Postgres as `baoadmin` over the client certificate without
+   touching a single password.** That checkpoint is why these are two switches.
+4. Add the first app or two to `ROTATION_TRANCHE`.
+
+**The policy grant.** The `pulumi` policy has no capability on `sys/mounts/database` or
+`database/*` — its comment says so deliberately: *"No mount management — creating or moving a
+KV mount stays a bootstrap-time decision."* Phase 3b adds named grants for
+`sys/mounts/database` (+`/tune`, both needing `sudo` — enabling and tuning a secrets engine is
+root-protected, exactly like the existing oidc grants), `database/config/*`,
+`database/static-roles/*` and `database/rotate-role/*`.
+
+`database/creds/*` is deliberately withheld, so reaching for dynamic roles is a 403 rather than
+a silent design drift.
+
+**The app list is discovered, not typed.** `discoverPostgresApps()` globs
+`kubernetes/apps/**/ks.yaml` for a `ks.yaml` referencing `components/postgres`, matching the
+path exactly so the `superuser` and `client-cert` siblings are not double-counted. Verified
+against the live tree: 16 apps, with `openbao` correctly absent (carved out in 2.4a) and
+`autobrr` correctly absent (its component line is commented out). A tranche entry that is not a
+discovered app throws, rather than creating a static role for a role that does not exist.
+
+This works in-cluster because the `home-operations` GitRepository sets neither `ignore` nor
+`include`, so the Pulumi operator checks out the whole repository; `spec.fluxSource.dir` only
+selects the working directory.
+
+**Certificate paths, not inline PEM.** The provider offers `tlsCertificate`/`privateKey` fields
+that take PEM inline. Using them would put the `baoadmin` superuser private key into Pulumi
+state and therefore into the Minio backend. The `connectionUrl` form points at the files phase
+3a mounts into the OpenBao pods instead, so Pulumi only ever writes a path string.
 
 **Static roles, never dynamic.** `database/creds/<role>` mints a new PostgreSQL user per lease;
 every object that user creates is owned by it, and lease expiry either fails the `DROP ROLE` or

@@ -41,6 +41,7 @@ import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
 import * as pulumi from "@pulumi/pulumi";
 import { Provider as VaultProvider } from "@pulumi/vault";
+import { configurePostgresRotation } from "./postgres-rotation.ts";
 
 const token = process.env.BAO_TOKEN ?? "";
 const roleId = process.env.BAO_ROLE_ID ?? "";
@@ -101,3 +102,9 @@ for (const entry of CLUSTERS) {
 }
 
 export const clusters = CLUSTERS.map(c => c.key);
+
+// OpenBao's PostgreSQL database secrets engine (phase 3b of
+// docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
+// there, which must wait for the widened `pulumi` policy -- so this cannot
+// break the stack every other stack depends on.
+configurePostgresRotation(provider);
