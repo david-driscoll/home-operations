@@ -23,24 +23,26 @@ kind: Component
 patches:
   # Scoped by name so this cannot reach a Flux Kustomization emitted by some
   # other component of the same app.
+  #
+  # JSON6902 append, NOT a strategic merge setting `spec.patches`. A Flux
+  # Kustomization is a CRD with no Go schema, so kustomize applies a JSON merge
+  # patch and a list replaces rather than merges -- two sibling components each
+  # setting `spec.patches` meant the second silently won. Appending composes.
   - target:
       group: kustomize.toolkit.fluxcd.io
       kind: Kustomization
       name: .*-postgres$
     patch: |-
-      apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: not-used
-      spec:
-        patches:
-          - target:
-              group: postgresql.cnpg.io
-              kind: DatabaseRole
-            patch: |-
-              apiVersion: postgresql.cnpg.io/v1
-              kind: DatabaseRole
-              metadata:
-                name: not-used
-              spec:
-                superuser: true
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: DatabaseRole
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: DatabaseRole
+            metadata:
+              name: not-used
+            spec:
+              superuser: true
