@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app forgejo-runner
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # `forgejo` is wait: true, so the runner only starts once the forge is
+    # actually Ready -- the daemon exits if it cannot reach the instance on
+    # startup and would otherwise spend the first minutes in CrashLoopBackOff.
+    - name: forgejo
+      namespace: coder
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/coder/forgejo-runner
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # No components/volsync: everything on the runner's volume is either
+      # rebuildable (the actions cache) or a copy of what is already in the
+      # forge. Backing up CI scratch would cost a nightly restic run for data
+      # nobody would ever restore.
+      #
+      # Not Tier 1: no critical-tier priority class, no control-plane toleration,
+      # and its data volume stays on the bulk `longhorn` class. It does inherit
+      # `coder`'s kube-downscaler exclusion, because that list is namespace-wide
+      # and there is no per-workload opt back IN -- but the effect is cosmetic.
+      # With its PVC on `bulk` the runner has nowhere to schedule once the
+      # workers are down, so during Low Power it goes Pending rather than being
+      # scaled to 0. Either way CI waits out the window, which is the call
+      # docs/cluster-consolidation/24-power-states.md already records for
+      # `github-actions`.

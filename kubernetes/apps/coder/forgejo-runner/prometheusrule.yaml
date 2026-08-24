@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: forgejo-runner.rules
+      rules:
+        # kube-state-metrics, not a runner metric: forgejo-runner exports none,
+        # and neither does Forgejo (its collector has no runner series at all).
+        # A runner that has lost its registration keeps running and Forgejo
+        # keeps queueing jobs, so "the pod is not Ready" is the only signal
+        # available without polling the API.
+        - alert: ForgejoRunnerDown
+          annotations:
+            description: >-
+              No Forgejo Actions runner is ready. Workflows will queue
+              indefinitely rather than fail.
+            summary: Forgejo Actions runner is unavailable.
+          expr: |
+            kube_statefulset_status_replicas_ready{namespace="coder", statefulset="forgejo-runner"} == 0
+          for: 30m
+          labels:
+            severity: warning

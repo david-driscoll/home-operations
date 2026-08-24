@@ -147,6 +147,11 @@ spec:
       # reasoning as the Tier-0/1 entries above: it is never annotated with
       # `force-downtime`, so listing it only makes a mistyped `kubectl annotate`
       # inert.
+      # Also holds Forgejo (Tier 1) and its Actions runner. The runner is not
+      # Tier 1 and would be fine to shed, but this list is namespace-wide with
+      # no per-workload opt back in -- and it makes no practical difference,
+      # since the runner's volume is on the bulk tier and it simply goes
+      # Pending once the workers are down.
       - coder
       # `system-upgrade` holds tuppr, which drives Talos and Kubernetes node
       # upgrades. A nightly shed could stop it mid-upgrade — and tuppr does not

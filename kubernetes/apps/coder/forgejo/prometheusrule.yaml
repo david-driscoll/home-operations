@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: forgejo.rules
+      rules:
+        - alert: ForgejoAbsent
+          annotations:
+            description: >-
+              Forgejo has disappeared from Prometheus target discovery. The git
+              forge, its SSH endpoint and every Actions workflow are down with it.
+            summary: Forgejo is down.
+          expr: |
+            absent(up{job=~".*forgejo.*"} == 1)
+          for: 15m
+          labels:
+            severity: critical
+
+        # `gitea_*` is not a typo: Forgejo still exports the Gitea metric
+        # namespace (modules/metrics/collector.go, `namespace = "gitea_"`).
+        # There is deliberately no alert on runner count here -- the collector
+        # exports no runner metric at all, so that rule could never fire. The
+        # runner is watched through kube-state-metrics instead; see
+        # kubernetes/apps/coder/forgejo-runner/prometheusrule.yaml.
+        - alert: ForgejoWebhookBacklog
+          annotations:
+            description: >-
+              {{ humanize $value }} webhook deliveries are queued. Forgejo
+              Actions dispatches through the hook task queue, so a backlog that
+              does not drain means workflows are not being triggered.
+            summary: Forgejo webhook queue is not draining.
+          expr: |
+            gitea_hooktasks > 1000
+          for: 30m
+          labels:
+            severity: warning
