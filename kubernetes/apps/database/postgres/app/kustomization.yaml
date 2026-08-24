@@ -11,6 +11,50 @@ resources:
   - ./passwords.sops.yaml
   - ./users.yaml
   - ./role-broad-access.yaml
+patches:
+  # PHASE 1a of docs/postgres-credentials/PLAN.md -- TEMPORARY, removed by 1b.
+  #
+  # The `<app>-postgres` ExternalSecrets and the `<app>` Database CRs generated
+  # into users.yaml are about to change owner, from this Kustomization to the
+  # per-app `<app>-postgres` one that components/postgres emits. Flux transfers
+  # ownership via its `kustomize.toolkit.fluxcd.io/name` labels and should not
+  # prune what another Kustomization has adopted -- but this estate has already
+  # lost PVCs to a cascade of exactly this shape
+  # (docs/cluster-consolidation/27-migration-churn-failure-modes.md), so we do
+  # not rely on "should".
+  #
+  # The specific hazard is `creationPolicy: Owner`: the Secret an ExternalSecret
+  # produces carries an ownerReference back to it, so pruning the ExternalSecret
+  # garbage-collects the Secret -- which is both the app's live credential and
+  # the `*-postgres-password` input CNPG reads. `target.deletionPolicy: Retain`
+  # does NOT cover that; it governs the provider-side key vanishing, not this
+  # object being deleted.
+  #
+  # Scoped by name so the `${APP}-values` / `${APP}-backup-config` secrets in
+  # externalsecret.yaml, which are not moving, are left alone. `postgres-user`
+  # and `postgres-superuser` do not match either -- they stay in this
+  # Kustomization, so their ownership never changes.
+  - target:
+      group: external-secrets.io
+      kind: ExternalSecret
+      name: .*-postgres$
+    patch: |-
+      apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      metadata:
+        name: not-used
+        annotations:
+          kustomize.toolkit.fluxcd.io/prune: disabled
+  - target:
+      group: postgresql.cnpg.io
+      kind: Database
+    patch: |-
+      apiVersion: postgresql.cnpg.io/v1
+      kind: Database
+      metadata:
+        name: not-used
+        annotations:
+          kustomize.toolkit.fluxcd.io/prune: disabled
 configMapGenerator:
 - name: ${APP}-values
   files:
