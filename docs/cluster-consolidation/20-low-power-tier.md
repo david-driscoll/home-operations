@@ -1830,6 +1830,107 @@ Cheaper to find a broken WoL path on one node now than on three during an exit.
 > `nodeDownPoddeletionPolicy` and the `replica-replenishment-wait-interval` only fire when a
 > node goes **away**, so Stage 3 still has to actually power something off.
 
+#### Stage 3 RESULTS — run 2026-08-24, on `kerfuffle`. **PASS.**
+
+Target was `kerfuffle`, per the 2026-08-22 reconsideration — `shining-armor` stays up during a
+real window, so shutting it down would rehearse the node whose loss the design no longer plans
+for. Cordoned 12:02:51, `talosctl shutdown` at 12:03, node unreachable by 12:05:47, woken by
+WoL at 13:05:36, uncordoned 13:07:23. **One hour down, exactly as specified.**
+
+**All three of the stage's questions are answered, and a fourth was added by doing it.**
+
+##### 1. Does the 600 s replenishment put Tier-2 volumes on the trio? **No. It never moved.**
+
+The number that had to hold: **non-critical replicas resident on the trio**.
+
+| | T-0 | T+2m | T+6m | T+10m | T+13m | T+20m | T+30m | T+45m | T+60m | after return |
+|---|---|---|---|---|---|---|---|---|---|---|
+| on trio | **3** | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | **3** |
+
+Flat across the whole window, including the 600 s replenishment mark at ~12:13. This was
+**predicted before the run** and the prediction was the point: 92 of the 93 replicas on
+`kerfuffle` carry `nodeSelector: bulk`, so Longhorn was constrained to rebuild them onto the
+*other workers*. **§0.2's thermal argument is now evidence-backed rather than inferred** —
+piece 12's tagging holds under real node loss, not just in a `kustomize build`.
+
+The 93rd replica was `postgres-3` — unconstrained, but `longhorn-local`/`strict-local`, so it
+could not move either. It waited for its node, which is the designed behaviour.
+
+##### 2. Does `nodeDownPodDeletionPolicy` behave as documented? **Yes — zero stranded pods.**
+
+`delete-both-statefulset-and-deployment-pod` deleted and rescheduled cleanly. **`Terminating`
+count was 0 at every single sample.** Everything still *assigned* to `kerfuffle` was a
+DaemonSet, which is correct — DaemonSet pods are per-node and stay pinned.
+
+"Left the node" is not "recovered", so that was checked separately. Every displaced workload
+came back **fully ready** elsewhere: `openbao-1`→`shining-armor`, `helm-controller`→`hard-hat`,
+`notification-controller`→`shining-armor`, `loki-0`→**`pegasus`**, `alertmanager`/`grafana`/
+`technitium-dns`/`cloudflare-dns`/`external-secrets`→`hard-hat`, `operator`→**`othalla`**,
+`tsiam`→**`pegasus`**, `plex`→`fluttershy`.
+
+**Three of those landed on control planes** — the first unforced demonstration that #1073's
+tolerations work in production rather than in a cordon test.
+
+##### 3. Does the trio's SATA temperature move? **+1 to +3 °C, and it is attributable.**
+
+| Node | nvme0 (etcd) | sda (Transcend data) |
+|---|---|---|
+| `milky-way` | 45 → 46 | 58 → 59 |
+| `othalla` | 46 → 46 | 57 → 58 |
+| `pegasus` | 45 → 45 | **54 → 57** |
+
+`pegasus` moved most, and `pegasus` is where `loki-0` and `tsiam` landed. Since **zero** Tier-2
+rebuilds reached the trio, this is **workload heat from Tier-1 relocation, not rebuild churn** —
+a distinction that matters for Stage 4, where far more relocates at once.
+
+##### 4. Recovery, and CNPG — the part the stage did not ask about
+
+- **Degraded volumes: 44 → 44 → 36 → 26 → 16 → 0 by T+30m.** Full self-heal onto the remaining
+  workers in half an hour, with no intervention.
+- **CNPG failed over correctly.** `postgres-3` was **primary**; promotion went to `postgres-1`,
+  cluster ran 2/3 for the hour, and returned to **3/3 healthy** once `kerfuffle` was uncordoned.
+  It does **not** fail back — `postgres-1` remains primary, which is normal CNPG behaviour.
+- `postgres-3` stays `Pending` while the node is **cordoned**, even after it is Ready. That is
+  expected for a `strict-local` volume and is the same "instance-managers cannot return until
+  the node is uncordoned" rule §6.2 already carries — but it means **uncordon is part of the
+  recovery, not a tidy-up afterwards**.
+
+##### WoL works — and it is fast
+
+Magic packet to `58:47:ca:7a:07:b4` (broadcast `10.10.255.255`, ports 9 and 7) at 13:05:36:
+
+| | |
+|---|---|
+| ICMP response | **+45 s** |
+| Node `Ready` | **+57 s** |
+| `cilium` 1/1 on the node | ~+80 s |
+| `longhorn-manager` 2/2 | ~+2 min |
+
+That retires the exit scenario that needed someone physically at the machine, **for this node**.
+Stage 4 still has to prove it for `hard-hat` and `fluttershy`.
+
+> **The tooling gap that nearly stopped this, and will stop the next person.**
+> `talos/clusterconfig/talosconfig` is **25 bytes** — an empty stub — in a fresh worktree; the
+> rendered configs come from `talos:genconfig` and are gitignored. So **`talosctl` cannot reach
+> any node until you regenerate**, with `SOPS_AGE_KEY_FILE=../age.key talhelper genconfig` from
+> `talos/`. This is the same empty file that produced the bad VIP verification in §9 item 9 —
+> `talosctl … | grep -c` returned `0` because the command had *failed*. Twice now that stub has
+> produced a wrong answer rather than an error. Regenerate first, and check the byte count.
+>
+> There is no `wakeonlan` binary on the operator Mac either. A 12-line Python magic-packet
+> sender is in this session's scratchpad; the send path was **pre-tested against the running
+> node** (a magic packet to an already-on machine is a no-op), so the real attempt tested the
+> node rather than the tooling.
+
+##### What Stage 4 inherits
+
+- The replica-placement mechanism is proven; Stage 4 tests it at 3× the scale.
+- Budget ~30 min of rebuild after each node returns, based on 44 → 0 for one worker.
+- **Uncordon must be in the exit runbook**, not after it — `strict-local` workloads stay
+  `Pending` until it happens.
+- WoL confirmed on `kerfuffle` only.
+
+
 ### Stage 4 — the real thing (the gate)
 
 ~~All four workers down~~ **the three bare-metal workers down** (§6.1's 2026-08-22 correction —
