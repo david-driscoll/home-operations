@@ -2,8 +2,13 @@
 
 Moves the git forge from the Docker stack on celestia
 (`docker/celestia/forgejo`, retired in the same commit as this file) to Kubernetes
-on equestria (`kubernetes/apps/forgejo`), and stands up Forgejo Actions runners
-(`kubernetes/apps/forgejo-runner`) for the first time.
+on equestria (`kubernetes/apps/coder/forgejo`), and stands up Forgejo Actions
+runners (`kubernetes/apps/coder/forgejo-runner`) for the first time.
+
+Both land in the existing `coder` namespace rather than getting namespaces of
+their own. It is already the Low Power keep-list namespace, and it already
+carries the `local-user` middleware and the app-template `OCIRepository` they
+need.
 
 **This is a re-create, not a migration.** The celestia instance holds no
 repositories, so nothing is exported and nothing is imported — the new instance
@@ -18,9 +23,9 @@ with the merge:
 
 - **Forgejo** — chart `oci://data.forgejo.org/forgejo-helm/forgejo`, image
   `data.forgejo.org/forgejo/forgejo:16.0.3-rootless` (the same version celestia
-  ran). Its own `forgejo` namespace, Tier 1: `longhorn-critical` data volume,
-  `critical-tier` priority class, control-plane toleration, and `forgejo` added
-  to kube-downscaler's `excludedNamespaces` so Low Power cannot shed it.
+  ran). Tier 1: `longhorn-critical` data volume, `critical-tier` priority class
+  and a control-plane toleration. The `coder` namespace is already in
+  kube-downscaler's `excludedNamespaces`, so Low Power cannot shed it.
 - **The break-glass admin and the authentik auth source** — the chart's
   `configure-gitea` init container reconciles both on every start, which is
   exactly what celestia's `provision.sh` did by hand. Same auth source name
@@ -39,10 +44,14 @@ with the merge:
   `mise run update` generated into
   `kubernetes/apps/database/postgres/app/{passwords.sops.yaml,users.yaml,resources/values.yaml}`.
 - **Runner** — one `forgejo-runner` StatefulSet with a privileged `docker:dind`
-  native sidecar, in its own `forgejo-runner` namespace. Four concurrent jobs,
-  labels `ubuntu-latest` / `ubuntu-24.04` / `ubuntu-22.04` / `docker`.
-  Deliberately *not* Tier 1 and *not* downscaler-excluded — CI can wait out a
-  Low Power window, the same call already recorded for `github-actions`.
+  native sidecar. Four concurrent jobs, labels `ubuntu-latest` / `ubuntu-24.04` /
+  `ubuntu-22.04` / `docker`. Not Tier 1 — no critical-tier priority, no
+  control-plane toleration, data volume on the bulk `longhorn` class. It does
+  inherit `coder`'s downscaler exclusion, because that list is namespace-wide
+  with no per-workload opt back in; the effect is cosmetic, since a volume on
+  `bulk` leaves the runner Pending during Low Power rather than scaled to 0.
+  Either way CI waits out the window, the same call already recorded for
+  `github-actions`.
 
 ## Manual steps
 
@@ -99,7 +108,7 @@ touches nothing else, then `pulumi up`.
 
 ### 3. Merge, then run the applications stack
 
-Flux brings up the namespaces, the database role, the PVC and the Deployment. The
+Flux brings up the database role, the PVC and the Deployment. The
 pod will crash-loop until step 3b lands, because `forgejo-oauth` has no data yet
 and the `configure-gitea` init container fails without it.
 
@@ -115,8 +124,8 @@ the pod settles.
 Verify:
 
 ```bash
-kubectl -n forgejo get externalsecret
-kubectl -n forgejo logs deploy/forgejo -c configure-gitea
+kubectl -n coder get externalsecret
+kubectl -n coder logs deploy/forgejo -c configure-gitea
 ```
 
 The init container should print `...installed.` for both the admin user and the
@@ -128,7 +137,7 @@ Offline registration, so the credential is one we chose rather than one pasted
 out of the web UI. On the Forgejo pod:
 
 ```bash
-kubectl -n forgejo exec deploy/forgejo -- forgejo forgejo-cli actions register --name equestria --scope david-driscoll --secret <the token from step 1>
+kubectl -n coder exec deploy/forgejo -- forgejo forgejo-cli actions register --name equestria --scope david-driscoll --secret <the token from step 1>
 ```
 
 `--scope` is the owner whose repositories this runner serves; drop it entirely to
@@ -141,8 +150,8 @@ secret in place** instead of creating a second runner. Write the printed UUID
 into the `uuid` field of `clusters/equestria/apps/forgejo/runner`, then:
 
 ```bash
-kubectl -n forgejo-runner rollout restart statefulset/forgejo-runner
-kubectl -n forgejo-runner logs statefulset/forgejo-runner -c app
+kubectl -n coder rollout restart statefulset/forgejo-runner
+kubectl -n coder logs statefulset/forgejo-runner -c app
 ```
 
 `/admin/actions/runners` should list it as idle.
@@ -194,7 +203,7 @@ satisfied the new instance is good.
   not shed and is ready to survive", not "keeps serving with the workers off".
   `coder` has the same gap.
 - **Job container images are pinned by hand.** The `runner.labels` entries in
-  `kubernetes/apps/forgejo-runner/forgejo-runner/resources/config.yml` sit inside
+  `kubernetes/apps/coder/forgejo-runner/resources/config.yml` sit inside
   a config file rather than a Kubernetes image field, so none of the Renovate
   managers in `.github/renovate.json5` can see them.
 - **LFS and the package registry share the data volume.** Both can move to Minio

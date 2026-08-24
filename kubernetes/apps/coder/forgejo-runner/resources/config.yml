@@ -80,6 +80,6 @@ server:
       # constant poll and there is no reason to hairpin it through Traefik.
       # Workflow containers still clone over the public URL, because Forgejo
       # builds the clone URL from its own ROOT_URL rather than from this one.
-      url: http://forgejo-http.forgejo.svc.cluster.local:3000/
+      url: http://forgejo-http.coder.svc.cluster.local:3000/
       uuid: "{{ .runner_uuid }}"
       token: "{{ .runner_token }}"

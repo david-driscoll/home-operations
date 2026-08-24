@@ -4,7 +4,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app forgejo
-  namespace: &namespace forgejo
+  namespace: &namespace coder
   labels:
     app.kubernetes.io/name: *app
     driscoll.dev/name: *app
@@ -21,7 +21,7 @@ spec:
       namespace: kube-system
     - name: volsync
       namespace: volsync-system
-  path: ./kubernetes/apps/forgejo/forgejo
+  path: ./kubernetes/apps/coder/forgejo
   prune: true
   force: false
   wait: true

@@ -4,7 +4,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: &app forgejo-runner
-  namespace: &namespace forgejo-runner
+  namespace: &namespace coder
   labels:
     app.kubernetes.io/name: *app
     driscoll.dev/name: *app
@@ -19,10 +19,10 @@ spec:
     # actually Ready -- the daemon exits if it cannot reach the instance on
     # startup and would otherwise spend the first minutes in CrashLoopBackOff.
     - name: forgejo
-      namespace: forgejo
+      namespace: coder
     - name: external-secrets
       namespace: kube-system
-  path: ./kubernetes/apps/forgejo-runner/forgejo-runner
+  path: ./kubernetes/apps/coder/forgejo-runner
   prune: true
   force: false
   wait: true
@@ -44,7 +44,12 @@ spec:
       # forge. Backing up CI scratch would cost a nightly restic run for data
       # nobody would ever restore.
       #
-      # Deliberately NOT Tier 1 and NOT in kube-downscaler's excludedNamespaces:
-      # CI can wait out a Low Power window, the same call
-      # docs/cluster-consolidation/24-power-states.md records for
+      # Not Tier 1: no critical-tier priority class, no control-plane toleration,
+      # and its data volume stays on the bulk `longhorn` class. It does inherit
+      # `coder`'s kube-downscaler exclusion, because that list is namespace-wide
+      # and there is no per-workload opt back IN -- but the effect is cosmetic.
+      # With its PVC on `bulk` the runner has nowhere to schedule once the
+      # workers are down, so during Low Power it goes Pending rather than being
+      # scaled to 0. Either way CI waits out the window, which is the call
+      # docs/cluster-consolidation/24-power-states.md already records for
       # `github-actions`.

@@ -20,7 +20,7 @@ spec:
               indefinitely rather than fail.
             summary: Forgejo Actions runner is unavailable.
           expr: |
-            kube_statefulset_status_replicas_ready{namespace="forgejo-runner", statefulset="forgejo-runner"} == 0
+            kube_statefulset_status_replicas_ready{namespace="coder", statefulset="forgejo-runner"} == 0
           for: 30m
           labels:
             severity: warning

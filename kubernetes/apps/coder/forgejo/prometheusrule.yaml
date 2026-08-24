@@ -24,8 +24,8 @@ spec:
         # namespace (modules/metrics/collector.go, `namespace = "gitea_"`).
         # There is deliberately no alert on runner count here -- the collector
         # exports no runner metric at all, so that rule could never fire. The
-        # runner is watched from its own namespace instead; see
-        # kubernetes/apps/forgejo-runner/forgejo-runner/prometheusrule.yaml.
+        # runner is watched through kube-state-metrics instead; see
+        # kubernetes/apps/coder/forgejo-runner/prometheusrule.yaml.
         - alert: ForgejoWebhookBacklog
           annotations:
             description: >-
