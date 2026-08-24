@@ -80,6 +80,13 @@ spec:
     namespace: flux-system
   components:
     - ../../../components/postgres
+    # Phase 2 of docs/postgres-credentials/PLAN.md. Has CNPG issue
+    # `openbao-client-cert`, which this app will authenticate to Postgres with
+    # instead of a password. Inert until BAO_PG_CONNECTION_URL asks for SSL --
+    # the `hostssl openbao openbao all cert` rule added to the cluster's pg_hba
+    # cannot match a `sslmode=disable` connection, so the password stays live
+    # and the cutover is a one-line, database-free rollback.
+    - ../../../components/postgres/client-cert
   postBuild:
     substitute:
       APP: *app

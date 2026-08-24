@@ -55,8 +55,8 @@ silently fail to resolve.
 
 | Phase | Scope | Blast radius | Status |
 |---|---|---|---|
-| **1a** | Prune-protect the objects that are about to change owner | none | |
-| **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | |
+| **1a** | Prune-protect the objects that are about to change owner | none | **done** (#1085) |
+| **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | **done** (#1086, #1099) |
 | **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | |
 | **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | |
 | **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 16 apps, rotating credentials | |
@@ -65,6 +65,36 @@ silently fail to resolve.
 *who declares what* — not a single credential value changes.
 
 ---
+
+## Phase 1 outcome — verified 2026-08-24
+
+All four gates passed after #1099.
+
+| Gate | Result |
+| --- | --- |
+| `DatabaseRole`s applied | **14/14** `applied: true`, `observedGeneration == generation` |
+| `\du` attribute drift | none — every app role at PostgreSQL defaults; `immich` still `rolsuper=t`; `equestria` and `postgres` unchanged; windmill's own `windmill_admin`/`windmill_user` roles untouched |
+| ExternalSecret health | 21 in `database`, 0 not Ready |
+| Cluster `managedRolesStatus` | `reconciled: [equestria]` only; all 17 app roles moved to `not-managed`; `cannotReconcile` empty |
+
+**14, not 17.** Three of the `ks.yaml` files that reference `components/postgres` —
+`outline`, `retrom`, `strmgen` — are **not listed in the equestria umbrella kustomization**, so
+they have never been deployed. The old generator provisioned roles, databases and passwords for
+them anyway, because it discovered apps by scanning `ks.yaml` files on disk regardless of
+whether Flux ever applied them. The component only provisions what is actually deployed, which
+is the better behaviour but leaves three orphans behind:
+
+- Roles `outline`, `retrom`, `strmgen` (plus older leftovers `app`, `keeper`, `vikunja`) exist
+  in PostgreSQL, unmanaged and retained.
+- Their `passwords.sops.yaml` documents and `<app>-postgres` Secrets are likewise orphaned.
+
+None of it is harmful — the roles have no grants beyond their own databases — but it is dead
+weight to reap once someone confirms those three apps are not coming back.
+
+Also worth carrying forward: **`flate` cannot catch a bad `postBuild.substitute` value.** It
+renders the placeholder, not the substituted result, which is how a boolean got into a
+`map[string]string` field and stalled 17 Kustomizations (#1099). The check that works is in
+`kubernetes/components/postgres/AGENTS.md`.
 
 ## Phase 1a — prune guard
 

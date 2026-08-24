@@ -158,6 +158,28 @@ spec:
       # The transit token comes from secret.sops.yaml because nothing in the
       # cluster can produce it: it is minted against bao-transit on alpha-site.
       # SOPS is the one source guaranteed available before OpenBao is.
+      # The Postgres client certificate, mounted but not yet used -- the
+      # connection URL still says sslmode=disable. Landing the mount ahead of
+      # the cutover proves two things independently: that the ESO projection
+      # populates, and that reloader is actually watching this Secret.
+      #
+      # Mounting it as a VOLUME is load-bearing, not a style choice. pgx reads
+      # the cert into its tls.Config once, during ParseConfig at sql.Open, so a
+      # renewed certificate on disk is invisible to a running process. The
+      # StatefulSet's reloader.stakater.com/auto + RollingUpdate is what turns a
+      # renewal into a restart, and reloader only sees Secrets the pod mounts.
+      #
+      # defaultMode 0400 is hardening, not a requirement: pgx does os.ReadFile
+      # straight into tls.X509KeyPair with no permission check, unlike libpq.
+      volumes:
+        - name: pg-client-cert
+          secret:
+            secretName: openbao-pg-client-cert
+            defaultMode: 0400
+      volumeMounts:
+        - name: pg-client-cert
+          mountPath: /etc/pg-certs
+          readOnly: true
       extraSecretEnvironmentVars:
         - envName: BAO_PG_CONNECTION_URL
           secretName: openbao-storage

@@ -56,52 +56,71 @@ taken only once the cert path has soaked.
 
 ### 2.1 — issue the certificate
 
-`openbao` moves out of `components/postgres` and into a hand-written pair of resources in the
-postgres app. After this phase it needs no credential Secret at all, so the component's
-password-shaped `ExternalSecret` is dead weight for it:
+`openbao` **stays on `components/postgres`**, and gains a sibling component:
 
 ```yaml
-apiVersion: postgresql.cnpg.io/v1
-kind: DatabaseRole
-metadata:
-  name: openbao
-spec:
-  cluster: { name: postgres }
-  name: openbao
-  login: true
-  clientCertificate:
-    enabled: true          # → Secret openbao-client-cert (tls.crt, tls.key)
-  databaseRoleReclaimPolicy: retain
-  passwordSecret:
-    name: openbao-postgres-password   # kept until 2.4
+components:
+  - ../../../components/postgres
+  - ../../../components/postgres/client-cert
 ```
 
-**It must carry `kustomize.toolkit.fluxcd.io/prune: disabled`**, like the three objects
-`components/postgres` renders. This is not defensive tidiness: the cert Secret has a controller
-`ownerReference` back to the DatabaseRole, so pruning the role garbage-collects OpenBao's only
-credential. See the hazards section below.
+`client-cert` patches the nested `${APP}-postgres` Kustomization to set
+`DatabaseRole.spec.clientCertificate.enabled: true` — the same shape as `./superuser`, and for
+the same reason (a boolean cannot travel through `postBuild.substitute`). CNPG then writes
+`openbao-client-cert` into the `database` namespace and renews it on its own.
 
-Plus the `Database/openbao` the component used to render.
+An earlier draft of this file said `openbao` should be carved out of the component here, with
+hand-written `Database` and `DatabaseRole` objects. **That was wrong for this step.** The
+component also renders the `openbao-postgres` credential ExternalSecret, and `openbao-storage`
+reads that Secret for its connection URL until 2.4 — so carving out now would leave a live
+dependency undeclared, held up only by `deletionPolicy: Orphan`. The carve-out belongs in 2.4,
+where the ExternalSecret, the sops password document and the component reference all retire
+together.
 
-> The Secret is named `<metadata.name>-client-cert` (`GetClientCertSecretName` is
-> `r.Name + clientCertSecretSuffix`), but the certificate's **CN comes from `spec.name`** --
-> `issueClientCertificate` calls `generateCertificateFromCA(caSecret, role.Spec.Name, ...)`.
-> PostgreSQL `cert` auth maps CN onto the role name, so `spec.name` is the one that has to be
-> right. Confirmed against the live `postgres-replication` cert, whose subject is exactly
-> `/CN=streaming_replica`.
+The role keeps its `passwordSecret` throughout. Verified rendering for `openbao`:
 
-Drop `../../../components/postgres` from `kubernetes/apps/kube-system/openbao/ks.yaml` in the
-same change, or the component will keep rendering a competing `Database/openbao`.
+```
+DatabaseRole openbao | login=True superuser=False
+                     | clientCertificate={'enabled': True}
+                     | passwordSecret=openbao-postgres-password
+                     | prune: disabled
+```
 
-### 2.2 — mirror the cert into `kube-system`
+> The Secret is named `<metadata.name>-client-cert`, but the certificate's **CN comes from
+> `spec.name`** — `issueClientCertificate` calls
+> `generateCertificateFromCA(caSecret, role.Spec.Name, ...)`. PostgreSQL `cert` auth maps CN
+> onto the role name, so `spec.name` is the one that has to be right. Confirmed against the
+> live `postgres-replication` cert, whose subject is exactly `/CN=streaming_replica`.
 
-`openbao-client-cert` is issued in `database`; OpenBao runs in `kube-system`. Reflector is
-already deployed. Annotate the source (via `commonMetadata` on the postgres app, or directly)
-and add the pull annotations in `kube-system`. `postgres-ca` needs the same treatment for
-`sslrootcert`.
+The `DatabaseRole` already carries `kustomize.toolkit.fluxcd.io/prune: disabled` from phase 1 —
+which becomes load-bearing the moment this component is added, because the cert Secret has a
+controller `ownerReference` back to the role.
 
-CNPG renews the cert at 90 days with a 7-day margin, and reflector re-mirrors on change — well
-inside kubelet's projected-secret refresh window.
+### 2.2 — project the cert into `kube-system` (ESO, not reflector)
+
+`openbao-client-cert` is issued in `database`; OpenBao runs in `kube-system`. The original
+plan said reflector. **It cannot be reflector**, and the reason is worth recording:
+
+Both source Secrets — `openbao-client-cert` and `postgres-ca` — are created by the CNPG
+operator, not by Flux. Reflector requires `reflector.v1.k8s.emberstack.com/reflection-allowed:
+"true"` **on the source**, including in its explicit `reflects:` mode (the estate's own
+`technitium/tailscale-authkey.yaml` says as much in its comment, and its source secret carries
+the annotation). Nothing in git creates those objects, so nothing in git can annotate them.
+
+`ClusterSecretStore/database` is exactly the answer to that problem — a `kubernetes` provider
+reading the `database` namespace directly — and it is already how `openbao-storage` crosses the
+same boundary today. So one `ExternalSecret` pulls both sources into a single
+`openbao-pg-client-cert` Secret carrying `tls.crt`, `tls.key` and `ca.crt`.
+
+One Secret, deliberately: one volume to mount, and one object for reloader to watch.
+
+> This does **not** cost a new dependency. `kube-system/openbao` already reads its storage URL
+> through this same store, which is why `external-secrets` is discussed at length in
+> `openbao/externalsecret.yaml`. What it does cost is the claim in 2.4 below that OpenBao's
+> storage credential stops passing through ESO — see the correction there.
+
+Renewal timing: CNPG renews at 90 days with a 7-day margin; the ExternalSecret refreshes hourly,
+so the new material is on disk long before the old certificate expires.
 
 ### 2.3 — allow cert auth, then use it
 
@@ -158,9 +177,14 @@ document from `passwords.sops.yaml`, delete the `openbao-storage` ExternalSecret
 now-secretless `connection_url` from `extraSecretEnvironmentVars` into the HCL config in
 `helmrelease.yaml`. Optionally add `hostnossl openbao openbao all reject`.
 
-This also removes the `external-secrets` ordering dependency that
-`kubernetes/apps/kube-system/openbao/externalsecret.yaml` documents at length — after 2.4,
-OpenBao's storage credential does not pass through ESO at all.
+**Correction to an earlier claim.** This does *not* remove the `external-secrets` ordering
+dependency. 2.2 established that the client certificate has to reach `kube-system` through
+`ClusterSecretStore/database`, because the operator-created source Secrets cannot be annotated
+for reflector. So ESO stays in OpenBao's boot path either way.
+
+What 2.4 actually buys is narrower, and still worth having: no password exists for this role
+anywhere — not in sops, not in KV, not in the connection URL — and the credential renews and
+revokes itself on the cluster's own PKI.
 
 ## Findings from the spike
 
@@ -206,10 +230,9 @@ Two things that follow, and both are easy to get wrong:
   kubectl -n kube-system rollout status statefulset/openbao --timeout=5m
   ```
 
-  Note the mirror hop: CNPG patches `openbao-client-cert` in `database`, reflector copies it to
-  `kube-system`, and only then does reloader see a change. Three links, and the middle one is
-  the least exercised — confirm reflector is actually re-mirroring on update, not just on
-  create.
+  Note the hop: CNPG patches `openbao-client-cert` in `database`, ESO re-syncs it into
+  `kube-system` on its refresh interval, and only then does reloader see a change. Three links,
+  and the timing of the middle one is why the refresh interval is an hour rather than a day.
 
 ### pgx does not check private-key file permissions
 

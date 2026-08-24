@@ -108,7 +108,19 @@ cluster:
       tcp_keepalives_idle: "10"
       tcp_keepalives_interval: "10"
       tcp_keepalives_count: "3"
-    pg_hba: []
+    # Inserted between CNPG's fixed rules and its default
+    # `host all all all scram-sha-256` catch-all, so this is matched first for
+    # an SSL connection as `openbao` to the `openbao` database.
+    #
+    # This change is a NO-OP on its own, and that is the point. pg_hba matches
+    # on connection type: `hostssl` does not match a non-SSL connection, and
+    # BAO_PG_CONNECTION_URL still ends in `?sslmode=disable`. So OpenBao keeps
+    # falling through to the catch-all and keeps using its password until the
+    # URL is switched -- which makes that switch a one-line, database-free
+    # rollback. Closing the password path (`hostnossl openbao openbao all
+    # reject`) is a separate later step, after the cert path has soaked.
+    pg_hba:
+      - hostssl openbao openbao all cert
     pg_ident: []
     shared_preload_libraries: []
     ldap: {}
