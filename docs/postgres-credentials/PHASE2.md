@@ -78,9 +78,12 @@ spec:
 
 Plus the `Database/openbao` the component used to render.
 
-> The Secret is named after the **`metadata.name`** of the DatabaseRole, not `spec.name`. They
-> are equal here; keep them equal. PostgreSQL `cert` auth maps the certificate CN onto the role
-> name, so a mismatch fails at connection time, not at apply time.
+> The Secret is named `<metadata.name>-client-cert` (`GetClientCertSecretName` is
+> `r.Name + clientCertSecretSuffix`), but the certificate's **CN comes from `spec.name`** --
+> `issueClientCertificate` calls `generateCertificateFromCA(caSecret, role.Spec.Name, ...)`.
+> PostgreSQL `cert` auth maps CN onto the role name, so `spec.name` is the one that has to be
+> right. Confirmed against the live `postgres-replication` cert, whose subject is exactly
+> `/CN=streaming_replica`.
 
 Drop `../../../components/postgres` from `kubernetes/apps/kube-system/openbao/ks.yaml` in the
 same change, or the component will keep rendering a competing `Database/openbao`.
@@ -109,7 +112,7 @@ server:
     - name: pg-client-cert
       secret:
         secretName: openbao-client-cert
-        defaultMode: 0400          # see the open question below
+        defaultMode: 0400          # hardening, not required — see the spike findings
     - name: pg-ca
       secret:
         secretName: postgres-ca
@@ -134,6 +137,10 @@ postgres://openbao@postgres-rw.database.svc.cluster.local:5432/openbao
 `postgres-rw.database.svc.cluster.local` is already in the server certificate's
 `serverAltDNSNames`, so `verify-full` will pass.
 
+Mounting as a **volume** is load-bearing, not a style choice: pgx caches the certificate in
+memory at process start, so reloader watching the mounted Secret is the only thing that makes
+renewal take effect. See [the spike findings](#findings-from-the-spike) below.
+
 Note the config is delivered as a ConfigMap that OpenBao reads once at process start, and the
 StatefulSet is `updateStrategyType: RollingUpdate` with reloader watching it — so this rolls the
 three replicas one at a time on its own. Watch replica 0 come back **unsealed and joined**
@@ -150,20 +157,71 @@ This also removes the `external-secrets` ordering dependency that
 `kubernetes/apps/kube-system/openbao/externalsecret.yaml` documents at length — after 2.4,
 OpenBao's storage credential does not pass through ESO at all.
 
-## Open questions to settle before starting
+## Findings from the spike
 
-1. **Does pgx enforce private-key file permissions?** libpq refuses a group-readable `sslkey`;
-   Go's `tls.LoadX509KeyPair`, which pgx uses, is not believed to. `defaultMode: 0400` above
-   makes the question moot, but verify the mount actually lands at 0400 (a projected Secret's
-   mode interacts with `fsGroup`) rather than assuming.
-2. **Does the CNPG-issued client cert carry CN=`openbao`?** Read it off the Secret before
-   switching the URL: `openssl x509 -noout -subject`.
-3. **What happens to an in-flight connection at renewal?** pgx reads the key files at connection
-   setup, so new connections pick up the new cert and existing ones are unaffected. Confirm by
-   watching a renewal, or force one.
-4. **Break-glass.** Confirm the `postgres` superuser path still works from a debug pod before
-   closing `hostnossl`. This is the credential that recovers the estate if the cert path breaks,
-   and it must never be the thing being changed.
+Three of the four open questions are settled from source and from the live cluster. One needs a
+hands-on check.
+
+### The certificate is read once, at process start — so renewal needs a restart
+
+This is the finding that changes the design, and it is not in anyone's documentation.
+
+pgx builds the client certificate into `tlsConfig.Certificates` inside `configTLS`, which runs
+during `ParseConfig` — once, when `sql.Open("pgx", connURL)` is called. Every connection the
+pool opens afterwards reuses that in-memory `tls.Config`. **A renewed certificate on disk is
+invisible to a running OpenBao process.** Left alone, the mounted files would rotate at day 83
+while the process kept presenting the old certificate until it expired at day 90, and then new
+connections would start failing.
+
+The fix is already in this estate's toolkit, and it is why the certificate must be mounted as a
+**volume** rather than read some other way: the OpenBao StatefulSet carries
+`reloader.stakater.com/auto: "true"` and `updateStrategyType: RollingUpdate`, so reloader sees
+the mounted Secret change and rolls the three replicas one at a time. Renewal becomes one
+rolling restart roughly every 83 days, through the same mechanism a config change already uses.
+
+Verify after 2.3 that reloader actually lists the cert Secret among what it is watching — a
+mounted-but-unwatched Secret is the failure mode here, and it would stay silent for 83 days.
+
+### pgx does not check private-key file permissions
+
+`configTLS` does `os.ReadFile(sslkey)` straight into `tls.X509KeyPair` — no `os.Stat`, no mode
+check anywhere in the path. libpq's "permissions are too open" refusal has no pgx equivalent.
+`defaultMode: 0400` in 2.3 is therefore hardening, not a prerequisite, and the phase cannot fail
+on it.
+
+Two incidental constraints from the same function: `sslcert` and `sslkey` must be given
+**together** (pgx errors with `both "sslcert" and "sslkey" are required` if only one appears),
+and the key must be PEM.
+
+### The CN is right, and cert auth is already proven here
+
+`postgres-replication`, live in the `database` namespace today, has subject `/CN=streaming_replica`
+and issuer `/OU=database/CN=postgres`, valid 2026-08-13 to 2026-11-11. So CNPG's client certs
+carry the bare role name and nothing else, signed by the cluster CA — exactly what PostgreSQL
+`cert` auth maps on.
+
+### Still to check by hand
+
+**Break-glass.** Confirm the `postgres` superuser path works from a debug pod *before* adding
+`hostnossl ... reject` in the hardening step. This is the credential that recovers the estate if
+the cert path breaks, and it must never be the thing under test.
+
+## Two hazards found while reading the controller
+
+**The cert Secret is owned by the DatabaseRole.** `issueClientCertificate` sets a controller
+`ownerReference` (`ctrl.SetControllerReference(role, newSecret, r.Scheme)`), and
+`deleteOwnedCertSecret` removes the Secret outright when `clientCertificate.enabled` goes false.
+So deleting or disabling the DatabaseRole garbage-collects OpenBao's only credential. Give the
+`openbao` DatabaseRole `kustomize.toolkit.fluxcd.io/prune: disabled` for the same reason the
+credential ExternalSecret has it — and note the operator refuses to touch a same-named Secret it
+does not own, reporting the conflict in `status.clientCertificate.message` instead, so a manual
+pre-seed would silently win.
+
+**The client CA expires 2026-11-11.** `clientCertSignedByCurrentCA` detects a CA rotation and
+re-issues the leaf, so the cert side is automatic — but `sslrootcert` is the CA, and OpenBao has
+it mounted too. Both Secrets change, both are reflector-mirrored, both are reloader-watched, so
+the rotation should carry itself. It is still the first real test of this path and worth
+watching rather than assuming, given it lands ~2.5 months out.
 
 ## What this unlocks
 

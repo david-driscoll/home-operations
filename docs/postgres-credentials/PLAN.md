@@ -173,7 +173,11 @@ the two can even coexist during the revert.
 
 ## Phase 2 — OpenBao onto a client certificate
 
-See [PHASE2.md](PHASE2.md).
+See [PHASE2.md](PHASE2.md), which now carries the results of the design spike. The three
+findings that matter: pgx caches the client certificate at process start, so the Secret must be
+mounted as a volume and renewal rides on reloader rolling the StatefulSet; pgx does **not**
+enforce private-key file permissions, so that is not a blocker; and the certificate's CN comes
+from `DatabaseRole.spec.name` while the Secret is named after `metadata.name`.
 
 ## Phase 3 — the OpenBao database secrets engine
 
