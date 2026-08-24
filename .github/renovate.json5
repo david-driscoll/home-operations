@@ -14,19 +14,25 @@
   suppressNotifications: [
     "prEditedNotification",
     "prIgnoreNotification",
-    // "Excess registryUrls found for datasource lookup - using first
-    // configured only" is NOT caused by overlapping managers, as previously
-    // assumed here. The flux manager resolves a HelmRelease's sourceRef by
-    // filtering every HelmRepository in the repo on name + namespace
-    // (modules/manager/flux/extract.ts resolveHelmRepository), so two
-    // HelmRepository documents that share a name and namespace produce the
-    // same URL twice in registryUrls and trigger the warning. The fix is to
-    // dedupe the HelmRepository, not to suppress the warning — see
-    // stargate-command-cluster#1720, which collapsed two `authentik`
-    // HelmRepositories into kubernetes/flux/meta/repos/authentik.yaml.
-    // Suppression is kept only to keep unrelated lookup noise off the
-    // dashboard; it does not make a duplicate registry safe.
-    "dependencyLookupWarnings",
+    // `dependencyLookupWarnings` used to be listed here. It is NOT any more,
+    // on purpose: it suppresses EVERY per-package lookup failure, so the
+    // dashboard could only ever say "⚠️ WARN: Package lookup failures" without
+    // naming one. A permanently unnamed failure cannot be fixed.
+    //
+    // It was added for "Excess registryUrls found for datasource lookup - using
+    // first configured only", which is not caused by overlapping managers: the
+    // flux manager resolves a sourceRef by filtering every source in the repo
+    // on name + namespace (modules/manager/flux/extract.ts
+    // resolveHelmRepository), so duplicate documents put the same URL into
+    // registryUrls more than once. The fix is to dedupe the source, and both
+    // known duplicates are now gone — stargate-command-cluster#1720 collapsed
+    // the two `authentik` HelmRepositories, and `kube-prometheus-stack` moved
+    // from three copy-pasted OCIRepository documents into
+    // kubernetes/components/repos/kube-prometheus-stack.
+    //
+    // Verified at the time of removal: 25 HelmRepository, 32 OCIRepository and
+    // 2 GitRepository name/namespace pairs, zero duplicated. If the warning
+    // returns, look for a new duplicate source rather than re-adding this.
   ],
   schedule: [
     "every weekend"

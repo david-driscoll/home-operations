@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# Sources shared by more than one app in this namespace, the same shape as
+# `gha-repositories` in github-actions. Anything used by exactly one app stays
+# inline in that app's helmrelease.yaml; this exists only for the shared case.
+#
+# NOT named `observability`: a nested Kustomization sharing its namespace's
+# name collides with the umbrella pointer Kustomization and self-prunes.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app observability-repositories
+  namespace: &namespace observability
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/observability/repositories
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  wait: true
+  interval: 30m
+  retryInterval: 1m
+  timeout: 5m
