@@ -15,6 +15,21 @@ rules:
   - apiGroups: ["notification.toolkit.fluxcd.io"]
     resources: ["*"]
     verbs: ["get", "list", "watch"]
+  # stacks/applications' garageBucketBackups lists GarageBuckets at CLUSTER
+  # scope to find the ones annotated for backup. Without this the list returns
+  # 403, and `kubernetes-backups.ts` rethrows anything that is not a 404 on
+  # purpose -- a blanket catch there would turn an auth failure into "no Garage
+  # buckets found" and leave every opted-in bucket quietly unprotected. So the
+  # 403 aborts the whole applications stack, which also stops it writing the
+  # OIDC credentials every app's ExternalSecret reads.
+  #
+  # `resources: ["*"]` rather than just `garagebuckets`, matching the three
+  # groups above: the stack already reads GarageBucket and will read whatever
+  # the operator grows next, and read-only on one operator's own API group is
+  # not a boundary worth re-editing.
+  - apiGroups: ["garage.rajsingh.info"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "watch"]
