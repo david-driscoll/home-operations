@@ -39,7 +39,18 @@ spec:
       size: 10Gi
       storageClassName: longhorn-local
     data:
-      size: 250Gi
+      # 60Gi per node -> 180Gi raw, 54Gi usable after the 10% reserve and
+      # factor-3 replication. Sized for "we do not know what will use this yet"
+      # rather than for a media library.
+      #
+      # THIS NUMBER IS EASY TO RAISE AND EFFECTIVELY IMPOSSIBLE TO LOWER.
+      # Growth is in-place: bump it, and the operator expands the PVCs. A
+      # SHRINK is rejected outright -- `validateClusterQuantityGrowth` in the
+      # admission webhook returns "storage.data.size may only grow while the
+      # default StatefulSet/PVC group has live replicas", and even at zero
+      # replicas Kubernetes cannot shrink a PVC, so the only route down is
+      # deleting the claims and rebuilding the layout from empty. Start small.
+      size: 60Gi
       # longhorn-local (numberOfReplicas 1, dataLocality strict-local), NOT the
       # default `longhorn` class.
       #

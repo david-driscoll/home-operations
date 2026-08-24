@@ -21,7 +21,7 @@ Three storage nodes, replication factor 3, one per bulk worker.
 
 ```
 fluttershy ┐
-hard-hat   ├─ 3 x (10Gi metadata + 250Gi data) on longhorn-local
+hard-hat   ├─ 3 x (10Gi metadata + 60Gi data) on longhorn-local
 kerfuffle  │     one Garage StatefulSet each, enforced anti-affinity
 shining-armor ┘  (3 of the 4 workers; the scheduler picks)
 ```
@@ -249,6 +249,14 @@ backed up — check the `Backups: Celestia` group in Gatus for that.
   and drag its dependents down with it.
 - **`replication.factor` is effectively immutable.** Changing it routes through
   a destructive layout rebuild (`status.factorMigration`).
+- **`storage.data.size` grows in place but never shrinks.** Raising it expands
+  the PVCs and is safe. Lowering it is refused by the admission webhook
+  (`storage.data.size may only grow while the default StatefulSet/PVC group has
+  live replicas`), and even at zero replicas Kubernetes cannot shrink a PVC —
+  and `pvcRetentionPolicy: Retain` means the old claims survive a scale-down
+  with their original size. The only route down is deleting the claims and
+  rebuilding the layout from empty, which is only acceptable while the store
+  holds nothing. Start small and grow.
 - **`s3Api.region` is baked into every SigV4 signature.** Changing it
   invalidates every configured client at once.
 - **The Garage image is deliberately unpinned** (`spec.image` omitted). The
