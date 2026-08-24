@@ -242,15 +242,77 @@ kubectl -n coder logs statefulset/forgejo-runner -c app
 ### 5. Smoke test
 
 ```bash
-# HTTP + SSO
-open https://git.driscoll.tech
+# HTTP + SSO. /api/healthz is unauthenticated and answers even with
+# REQUIRE_SIGNIN_VIEW, so a 200 with "status": "pass" proves route, TLS,
+# Service endpoints, database and cache in one call.
+curl -s https://git.driscoll.tech/api/healthz
 
-# SSH — the port has to be spelled, it is not 22
-git clone ssh://git@git.driscoll.tech:2222/<owner>/<repo>.git
+# The object store. 403 is the HEALTHY answer -- an unsigned GET / is a
+# ListBuckets that Garage rejects. What is being tested is that the name
+# resolves and TLS verifies against the *.git.driscoll.tech SAN.
+curl -s -o /dev/null -w '%{http_code} tls=%{ssl_verify_result}\n' https://s3.git.driscoll.tech/
+
+# SSH. The port has to be spelled; it is not 22. "Permission denied
+# (publickey)" with a host key exchanged is a PASS -- it proves the gitssh
+# entrypoint, the Gateway listener, the TCPRoute and Forgejo's Go SSH server.
+ssh -p 2222 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null git@git.driscoll.tech
 ```
 
-Then push a workflow with `runs-on: ubuntu-latest` and confirm it schedules,
-pulls its image through the dind sidecar, and reports back.
+Then Actions, which is the only part that exercises the runner, the
+Docker-in-Docker sidecar and the S3 log path together:
+
+```bash
+TOK=$(kubectl -n coder exec deploy/forgejo -c forgejo -- forgejo admin user \
+  generate-access-token --username forgejo-admin --scopes write:repository --raw)
+API=https://git.driscoll.tech/api/v1
+
+curl -s -X POST "$API/user/repos" -H "Authorization: token $TOK" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"runner-smoke","private":true,"auto_init":true,"default_branch":"main"}'
+```
+
+Commit a `.forgejo/workflows/smoke.yml` with `runs-on: ubuntu-latest` and two
+steps: a plain `run:` and an `actions/checkout@v4`. Split them deliberately —
+if checkout fails while the echo passes, the fault is action resolution
+(`DEFAULT_ACTIONS_URL`), not the runner or Docker.
+
+Expect roughly 100 seconds on the first run; the `catthehacker/ubuntu` image is
+about a gigabyte and the layer cache is an `emptyDir`, so it is cold again after
+any runner restart.
+
+What a pass looks like, in the runner log:
+
+```
+runner: equestria, with version: v13.0.0, with labels: [ubuntu-latest ...]
+task 1 repo is forgejo-admin/runner-smoke https://github.com http://forgejo-http.coder.svc.cluster.local:3000/
+```
+
+The `https://github.com` in that line is `DEFAULT_ACTIONS_URL` resolving, which
+is what lets GitHub-authored workflows run unmodified.
+
+Confirm the logs actually reached S3. Ask Garage, not Kubernetes — the
+`GarageBucket` CR's `SIZE`/`OBJECTS` columns refresh on a slow cycle and read
+`0 B` long after objects have landed:
+
+```bash
+kubectl -n coder exec forgejo-garage-storage-0-0 -- garage bucket info forgejo
+```
+
+#### Cleaning up after the smoke test
+
+Delete the repository through the API, then **revoke the token by hand**:
+
+```bash
+curl -s -X DELETE "$API/repos/forgejo-admin/runner-smoke" -H "Authorization: token $TOK"
+```
+
+Forgejo deliberately refuses to let a token delete tokens — `DELETE
+/users/{user}/tokens/{id}` answers 401 when authenticated with one, and there is
+no `forgejo admin user delete-access-token` subcommand. The only routes are HTTP
+basic auth or the web UI, so finish at
+<https://git.driscoll.tech/user/settings/applications> and revoke the token
+there. Do not skip it: it is a read/write credential on the admin account, and
+nothing expires it.
 
 ### 6. Tear down celestia
 
