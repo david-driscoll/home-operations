@@ -185,9 +185,19 @@ spec:
           secret:
             secretName: openbao-pg-client-cert
             defaultMode: 0400
+        # Phase 3a: the baoadmin SUPERUSER certificate, for the database
+        # secrets engine. Separate volume, separate path -- see the comment on
+        # the ExternalSecret. Unused until the engine is configured in 3b.
+        - name: pg-admin-cert
+          secret:
+            secretName: openbao-pg-admin-cert
+            defaultMode: 0400
       volumeMounts:
         - name: pg-client-cert
           mountPath: /etc/pg-certs
+          readOnly: true
+        - name: pg-admin-cert
+          mountPath: /etc/pg-admin-certs
           readOnly: true
       extraSecretEnvironmentVars:
         - envName: VAULT_TRANSIT_SEAL_TOKEN

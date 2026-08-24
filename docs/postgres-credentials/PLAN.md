@@ -211,14 +211,36 @@ from `DatabaseRole.spec.name` while the Secret is named after `metadata.name`.
 
 ## Phase 3 — the OpenBao database secrets engine
 
-`baoadmin`: a CNPG `DatabaseRole` with `superuser: true` and
-`clientCertificate: {enabled: true}`. Superuser is not optional — **PostgreSQL 16+ restricts
-`CREATEROLE` to roles the user created or holds `ADMIN OPTION` on**, CNPG creates every role as
-`postgres`, and CNPG's `inRoles` issues a plain `GRANT` with no `ADMIN OPTION`. There is no
-declarative path to a least-privilege rotator on PG 17.
+Split the same way phase 2 was: land the Kubernetes-side scaffolding inert, then make the
+OpenBao-side change on its own.
 
-Pulumi (`@pulumi/vault` v7, already a dependency) configures the mount and one static role per
-app:
+### 3a — the rotation identity *(done)*
+
+`baoadmin`: a CNPG `DatabaseRole` with `superuser: true` and `clientCertificate: enabled`, and
+**no password at all** — no `passwordSecret`, no `disablePassword`. The certificate is the only
+way in from the moment the role exists, so there is no bootstrap password to rotate away and no
+`rotate-root` ceremony. That is the main thing choosing certificates over a root credential buys
+here.
+
+Plus `hostssl postgres baoadmin all cert` in `pg_hba` (inert — `hostssl` cannot match a non-SSL
+connection, and nothing connects as `baoadmin` yet), and the certificate projected into
+`kube-system` and mounted at `/etc/pg-admin-certs`.
+
+**Separate Secret, separate mount** from the storage certificate. `openbao-pg-client-cert` is
+the unprivileged `openbao` identity; `openbao-pg-admin-cert` is a PostgreSQL superuser. Sharing
+a directory would put a superuser key one `sslcert=` typo away from the storage connection.
+
+**Superuser is not a choice.** PostgreSQL 16+ restricts `CREATEROLE` to roles the user created
+or holds `ADMIN OPTION` on; CNPG creates every role as `postgres`, and CNPG's `inRoles` issues a
+plain `GRANT` with no `ADMIN OPTION`. A least-privilege rotator is not reachable declaratively
+on PG 17 — a `CREATEROLE`-only `baoadmin` gets `permission denied to alter role` on every
+static-role rotation. The mitigation is that it is a *second* superuser: `postgres` stays
+sops-backed and outside OpenBao's reach as break-glass, so revoking `baoadmin` is a one-line
+change that cannot lock anybody out.
+
+### 3b — configure the engine from Pulumi
+
+`@pulumi/vault` v7 (already a dependency) against OpenBao's API:
 
 ```ts
 new vault.database.SecretsMount("postgres", {
@@ -227,24 +249,25 @@ new vault.database.SecretsMount("postgres", {
     name: "postgres",
     pluginName: "postgresql-database-plugin",
     connectionUrl: "postgresql://baoadmin@postgres-rw.database.svc.cluster.local:5432/postgres"
-      + "?sslmode=verify-full&sslcert=/etc/pg-certs/tls.crt&sslkey=/etc/pg-certs/tls.key"
-      + "&sslrootcert=/etc/pg-ca/ca.crt",
+      + "?sslmode=verify-full&sslcert=/etc/pg-admin-certs/tls.crt"
+      + "&sslkey=/etc/pg-admin-certs/tls.key&sslrootcert=/etc/pg-admin-certs/ca.crt",
     passwordAuthentication: "scram-sha-256",
     allowedRoles: APPS,
   }],
 }, { provider: globals.baoProvider });
 ```
 
-**Do not set `selfManagedPassword`, `passwordWo` or `skipImportRotation`** — all three are
+OpenBao reads `sslcert`/`sslkey`/`sslrootcert` as paths **on the OpenBao server**, which is why
+3a mounts them into the pods rather than putting them anywhere Pulumi can see.
+
+⚠️ **Do not set `selfManagedPassword`, `passwordWo` or `skipImportRotation`** — all three are
 Vault-Enterprise-only and OpenBao rejects them.
 
 **Static roles, never dynamic.** `database/creds/<role>` mints a new PostgreSQL user per lease;
 every object that user creates is owned by it, and lease expiry either fails the `DROP ROLE` or
 orphans the objects. With `Database.spec.owner: ${APP}` the apps own their own schemas, so
 dynamic roles are structurally wrong here. Static roles rotate the password of an existing role
-and compose exactly with a `DatabaseRole` that declares no `passwordSecret` — verified as an
-accepted CNPG configuration, and documented as "the instance manager will not `CREATE`/`ALTER`
-the role with a password".
+and compose exactly with a `DatabaseRole` that declares no `passwordSecret`.
 
 **`APPS` should be discovered, not listed.** A hand-maintained TypeScript array is a lateral
 move from a C# generator. The Pulumi stack should glob `kubernetes/apps/**/ks.yaml` for

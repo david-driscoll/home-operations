@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+#
+# The connection OpenBao's database secrets engine will use to rotate other
+# roles' passwords. Phase 3 of docs/postgres-credentials/PLAN.md.
+#
+# INERT until the engine is configured (phase 3b, from Pulumi). This creates the
+# role and its certificate; nothing connects as it yet.
+#
+# WHY IT IS A SUPERUSER, WHICH IS NOT A CHOICE
+#
+# PostgreSQL 16+ restricts CREATEROLE: a non-superuser can only ALTER roles it
+# created, or roles granted to it WITH ADMIN OPTION. CNPG creates every role as
+# `postgres`, and CNPG's `inRoles` issues a plain GRANT with no ADMIN OPTION
+# (UpdateMembership in internal/management/controller/roles). So there is no
+# declarative path to a least-privilege password rotator on PG 17 -- a
+# CREATEROLE-only baoadmin gets "permission denied to alter role" on every
+# static-role rotation.
+#
+# Be clear-eyed about what that means: the certificate this role owns is a
+# superuser credential, and phase 3b mounts it inside the OpenBao pods. OpenBao
+# already holds the estate's secrets, so this does not widen the blast radius of
+# an OpenBao compromise much -- but it does mean `baoadmin` must never be handed
+# to anything else.
+#
+# It is DELIBERATELY NOT the `postgres` superuser. That one stays sops-backed
+# and outside OpenBao's reach as the break-glass path; see openbao-role.yaml and
+# the plan. Two separate superusers means revoking this one is a one-line change
+# that cannot lock anybody out.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: baoadmin
+  annotations:
+    # Required: with clientCertificate enabled this role owns the generated
+    # `baoadmin-client-cert` Secret through a controller ownerReference, and
+    # CNPG deletes it outright if `enabled` goes false.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  name: baoadmin
+  comment: "openbao database secrets engine -- static role rotation"
+  ensure: present
+  login: true
+  superuser: true
+  databaseRoleReclaimPolicy: retain
+  clientCertificate:
+    enabled: true
+  # No passwordSecret and no disablePassword: the role is created with no
+  # password at all, so the certificate is the only way in from the start.
+  # There is no bootstrap password to rotate away later, and no `rotate-root`
+  # ceremony -- which is the main thing choosing certificates over a root
+  # credential buys here.
