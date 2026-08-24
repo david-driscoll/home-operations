@@ -13,7 +13,27 @@ spec:
     dir: stacks/vault
   serviceAccountName: ${APP}
   stack: vault
-  resyncFrequencySeconds: 86400
+  # 30 minutes, not a day. This stack's whole job is minting credentials that
+  # expire on their own, and the shortest-lived one sets the ceiling: the GitHub
+  # App installation token from KubernetesGithubAppToken is a `ghs_` token,
+  # which GitHub caps at ONE HOUR. At 86400 it was refreshed once a day and dead
+  # for the other 23, so `github-token` -- reflected into every namespace and
+  # read as GITHUB_TOKEN by every Stack CR here -- was an expired credential
+  # nearly all the time.
+  #
+  # Nothing failed loudly, because an expired GITHUB_TOKEN does not error: the
+  # Pulumi plugin downloader just falls back to UNAUTHENTICATED GitHub API
+  # calls, which work until the shared 60-requests-per-hour-per-IP quota runs
+  # out. Then any stack that fetches a provider from github:// dies with
+  # "rate limit exceeded: 403". On 2026-08-24 that was equestria, ocracoke,
+  # unifi-network and vault itself, and it had been intermittent since the
+  # token last changed on 2026-06-07.
+  #
+  # 1800s gives two refreshes per token lifetime, so a single failed run does
+  # not expose the gap. The dynamic provider only re-mints when the stored
+  # `expiresAt` is within 5 minutes (components/GithubAppToken.ts diff), so the
+  # extra runs are cheap no-ops on this resource.
+  resyncFrequencySeconds: 1800
   retryMaxBackoffDurationSeconds: 60
   backend: s3://home-operations/vault?endpoint=truenas.driscoll.tech:9000&s3ForcePathStyle=true&disableSSL=true
   continueResyncOnCommitMatch: true
