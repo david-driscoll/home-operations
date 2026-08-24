@@ -82,48 +82,69 @@ one orphans everything it encrypted or signed.
 The OIDC path (`clusters/equestria/apps/forgejo/oidc`) is **not** hand-made — it
 is written by the `applications` Pulumi stack in step 3.
 
-### 2. Free `git.driscoll.tech` on the Pulumi side
+### 2. Merge, and watch two Pulumi stacks race external-dns
 
-`DockgeLxc` reads the `traefik.http.routers.*.rule` labels out of each compose
-file and creates a matching CNAME, so celestia owns `git.driscoll.tech ->
-celestia.driscoll.tech` today. external-dns runs `policy: sync` with a
-`txtOwnerId`, which means it will **not** adopt a record it does not own — it
-leaves the stale CNAME in place and Forgejo stays unreachable by name.
+**Neither Pulumi stack below is run by hand.** Both are `Stack` CRs driven by the
+Pulumi Operator off the `home-operations` GitRepository, which tracks `main`:
 
-So run the home stack first, and only then let Flux reconcile:
+| Stack | dir | cadence |
+| --- | --- | --- |
+| `pulumi/home-operations` | `stacks/home` | on each new commit, then daily |
+| `pulumi/equestria` | `stacks/applications` | on each new commit, then every 300s |
 
-```bash
-cd stacks/home && pulumi preview
-```
+So merging is what starts everything. Two things happen concurrently, and the
+order is not guaranteed:
 
-Confirm the plan deletes `celestia-forgejo-dns-git_driscoll_tech` (and the
-Forgejo authentik application, which step 3 recreates against equestria) and
-touches nothing else, then `pulumi up`.
+- **`stacks/home` deletes the old CNAME.** `DockgeLxc` reads the
+  `traefik.http.routers.*.rule` labels out of each compose file and creates a
+  matching record, so celestia owns `git.driscoll.tech -> celestia.driscoll.tech`
+  today. Removing `docker/celestia/forgejo/` removes that resource.
+- **Flux deploys Forgejo, and external-dns tries to claim the same name.** It
+  runs `policy: sync` with a `txtOwnerId`, so it will **not** adopt a record it
+  does not own — if it gets there first it skips the name entirely.
 
-> Read `pulumi preview` carefully rather than trusting it: on the home stack it
-> invents deletions for `StandardDns` / `TailnetKey` / `DeviceTags` resources
-> that are built inside an `apply()` with an `isDryRun` early return. Those are
-> phantoms. The Forgejo CNAME is a real, top-level resource and its deletion is
-> genuine.
-
-### 3. Merge, then run the applications stack
-
-Flux brings up the database role, the PVC and the Deployment. The
-pod will crash-loop until step 3b lands, because `forgejo-oauth` has no data yet
-and the `configure-gitea` init container fails without it.
+That resolves itself: external-dns retries on its own interval and picks the name
+up once Pulumi has removed the old record. The trap is the window in between,
+during which `git.driscoll.tech` still resolves to celestia — where the old
+Forgejo is **still running** until step 6. It is entirely possible to log into
+the old instance and conclude the new one is broken. Check what you are looking
+at before believing anything:
 
 ```bash
-cd stacks/applications && pulumi up
+kubectl -n network logs deploy/external-dns-technitium | grep git.driscoll.tech
+dig +short git.driscoll.tech
 ```
 
-This reads the `ApplicationDefinition` CR out of the live cluster, creates the
-authentik application and provider, and writes
-`clusters/equestria/apps/forgejo/oidc`. ESO picks it up within its 4m refresh and
-the pod settles.
+To stop waiting and force the home stack now:
+
+```bash
+kubectl -n pulumi annotate stack home-operations \
+  pulumi.com/reconciliation-request="$(date +%s)" --overwrite
+kubectl -n pulumi get stack home-operations -w
+```
+
+> If you do choose to run `stacks/home` from a workstation instead, read
+> `pulumi preview` carefully rather than trusting it: on this stack it invents
+> deletions for `StandardDns` / `TailnetKey` / `DeviceTags` resources that are
+> built inside an `apply()` with an `isDryRun` early return. Those are phantoms.
+> The Forgejo CNAME is a real, top-level resource and its deletion is genuine.
+
+### 3. Wait for the OIDC credential
+
+Flux brings up the database role, the PVC and the Deployment. The pod will
+crash-loop until this lands, because `forgejo-oauth` has no data yet and the
+`configure-gitea` init container fails without it.
+
+Nothing to run: `pulumi/equestria` resyncs every 300s, reads the
+`ApplicationDefinition` CR out of the live cluster, creates the authentik
+application and provider, and writes `clusters/equestria/apps/forgejo/oidc`. ESO
+picks it up within its 4m refresh and the pod settles — so allow up to ~10
+minutes end to end.
 
 Verify:
 
 ```bash
+kubectl -n pulumi get stack equestria
 kubectl -n coder get externalsecret
 kubectl -n coder logs deploy/forgejo -c configure-gitea
 ```
