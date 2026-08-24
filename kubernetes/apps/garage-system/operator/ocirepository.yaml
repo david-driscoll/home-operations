@@ -13,8 +13,32 @@ spec:
     tag: 0.7.6
     digest: sha256:8d10c7c906ef73699888099dfb2af866fae21433de8f6b0b25034efd8ddf62df
   url: oci://ghcr.io/rajsinghtech/charts/garage-operator
-  # Chart releases are keyless-signed by the project's helm.yml workflow.
-  # `provider: cosign` with no key verifies the keyless signature via Rekor,
-  # matching the app-template OCIRepository this file is modelled on.
-  verify:
-    provider: cosign
+  # NO `verify:` BLOCK, and do not add one back. There is nothing to verify.
+  #
+  # The operator's install docs show a `cosign verify` for the chart, so this
+  # shipped with `verify: { provider: cosign }`. Flux rejected it:
+  #
+  #   failed to verify the signature using provider 'cosign keyless':
+  #   no matching attestations: failed to build policy: can't verify
+  #   identities without providing at least one identity
+  #
+  # That message reads like a missing `matchOIDCIdentity`, and it is not.
+  # Inspecting what is actually published at this digest: there is no
+  # `sha256-<digest>.sig` tag, and the referrers index holds exactly one
+  # artifact --
+  #
+  #   application/vnd.dev.sigstore.bundle.v0.3+json
+  #     dev.sigstore.bundle.content:       dsse-envelope
+  #     dev.sigstore.bundle.predicateType: https://slsa.dev/provenance/v1
+  #
+  # -- a SLSA BUILD PROVENANCE ATTESTATION, not a cosign signature. Flux's
+  # cosign provider verifies signatures; it has no path to consume a SLSA
+  # attestation, so no identity regex could have made this pass.
+  #
+  # The chart is still verifiable, just not by Flux at pull time:
+  #   gh attestation verify oci://ghcr.io/rajsinghtech/charts/garage-operator@<digest> \
+  #     --repo rajsinghtech/garage-operator
+  #
+  # The digest pin above is what actually protects this pull: the tag can move,
+  # the digest cannot. Re-check for a real signature when bumping the chart --
+  # if upstream starts publishing one, `verify:` becomes worth having.
