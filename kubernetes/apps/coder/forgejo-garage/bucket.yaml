@@ -102,4 +102,4 @@ spec:
       # The endpoint the OPERATOR writes into this Secret is the in-cluster
       # Service URL, which is useless to backrest -- it runs in a container on
       # celestia, not in this cluster. Must match httproute.yaml's hostname.
-      external-endpoint: "https://s3-forgejo.${ROOT_DOMAIN}"
+      external-endpoint: "https://s3.git.${ROOT_DOMAIN}"

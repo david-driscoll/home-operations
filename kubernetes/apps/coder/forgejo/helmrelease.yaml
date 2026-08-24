@@ -313,7 +313,7 @@ spec:
         # load-bearing and still the thing a restore rebuilds the forge from.
         storage:
           STORAGE_TYPE: minio
-          # In-cluster Service, same namespace. Not s3-forgejo.${ROOT_DOMAIN} --
+          # In-cluster Service, same namespace. Not s3.git.${ROOT_DOMAIN} --
           # that hostname exists for backrest on celestia, and routing every LFS
           # object through Traefik and back would be a hairpin for nothing.
           MINIO_ENDPOINT: forgejo-garage.${NAMESPACE}.svc.cluster.local:3900

@@ -27,3 +27,15 @@ spec:
     # Coder per-workspace app subdomains (code.${ROOT_DOMAIN} itself is already
     # covered by the *.${ROOT_DOMAIN} wildcard above).
     - "*.code.${ROOT_DOMAIN}"
+    # Forgejo's object store, s3.git.${ROOT_DOMAIN}. Same reason as the Coder
+    # entry above: a wildcard matches exactly ONE label, so *.${ROOT_DOMAIN}
+    # covers git.${ROOT_DOMAIN} but not anything under it.
+    #
+    # A SAN here rather than a Certificate in the `coder` namespace. The
+    # `internal` Gateway lives in `network` and resolves `certificateRefs`
+    # against its OWN namespace, so a cert next to the app would need both a
+    # second certificateRefs entry on the listener and a ReferenceGrant in
+    # `coder` -- two extra moving parts, an edit to the shared Traefik values
+    # either way, and no isolation won: a public DNS name on a public CA is not
+    # something the app namespace needs to hold.
+    - "*.git.${ROOT_DOMAIN}"

@@ -12,7 +12,7 @@ spec:
   # No `url:` and no `authentik:` block. There is no web UI to publish, and the
   # S3 endpoint must never sit behind forward-auth -- see httproute.yaml.
   gatus:
-    - url: "https://s3-forgejo.${ROOT_DOMAIN}/"
+    - url: "https://s3.git.${ROOT_DOMAIN}/"
       method: GET
       interval: 1m
       conditions:

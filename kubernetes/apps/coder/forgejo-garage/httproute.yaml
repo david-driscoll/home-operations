@@ -31,12 +31,20 @@ spec:
       namespace: network
       kind: Gateway
   hostnames:
-    # Its own name, not a path under s3.${ROOT_DOMAIN}: that hostname routes to
-    # the garage-system cluster, and these are two independent Garage clusters
-    # with separate layouts, keys and RPC secrets. Path-style addressing only
-    # (`https://s3-forgejo.<domain>/<bucket>/<key>`) -- virtual-hosted style
-    # would need `s3Api.rootDomain` plus a wildcard hostname and cert.
-    - "s3-forgejo.${ROOT_DOMAIN}"
+    # Nested under the forge's own name rather than sharing s3.${ROOT_DOMAIN}:
+    # that hostname routes to the garage-system cluster, and these are two
+    # independent Garage clusters with separate layouts, keys and RPC secrets.
+    # Reading `s3.git` as "the S3 for git" also puts the two names in the same
+    # place a reader already looks for anything Forgejo.
+    #
+    # This is two labels deep, so *.${ROOT_DOMAIN} does NOT cover it -- a
+    # wildcard matches exactly one label. The SAN that does is
+    # `*.git.${ROOT_DOMAIN}` on the shared le-production Certificate.
+    #
+    # Path-style addressing only (`https://s3.git.<domain>/<bucket>/<key>`);
+    # virtual-hosted style would need `s3Api.rootDomain` plus a further wildcard
+    # hostname and a cert to match it.
+    - "s3.git.${ROOT_DOMAIN}"
   rules:
     - matches:
         - path:
