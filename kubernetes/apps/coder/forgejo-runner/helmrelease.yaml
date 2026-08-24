@@ -93,8 +93,17 @@ spec:
               requests:
                 cpu: 100m
                 memory: 256Mi
+                # Makes the scheduler account for the layer store instead of
+                # discovering it after the fact. Modest on purpose: this is the
+                # floor it reserves, not the ceiling it may use.
+                ephemeral-storage: 4Gi
               limits:
                 memory: 4Gi
+                # Slightly ABOVE the docker-storage sizeLimit below, so the
+                # volume's own limit is what trips first and the eviction
+                # message names the volume rather than the container. This is
+                # the backstop for the container's writable layer and logs.
+                ephemeral-storage: 64Gi
             probes:
               liveness:
                 enabled: false
@@ -149,27 +158,60 @@ spec:
               requests:
                 cpu: 100m
                 memory: 256Mi
+                ephemeral-storage: 1Gi
               limits:
                 memory: 2Gi
+                ephemeral-storage: 12Gi
             probes:
-              # The daemon serves no HTTP endpoint of its own and exports no
-              # metrics, so there is nothing to probe. It exits on a fatal
-              # error, which restartPolicy already handles.
+              # forgejo-runner serves no health endpoint and exports no metrics,
+              # so the only thing in the process that can be probed at all is
+              # the internal cache server -- which is why `cache.port` is pinned
+              # to 8088 in resources/config.yml rather than left at the default
+              # 0 (random).
+              #
+              # BE CLEAR ABOUT WHAT THIS CATCHES. A bound TCP port proves the
+              # process is alive and its listeners are up. It does NOT prove the
+              # poller is still claiming jobs, which is the failure mode that
+              # actually matters and the one Forgejo gives us no signal for. It
+              # upgrades "hung or deadlocked process" from invisible to a
+              # restart; it does not close the silent-idle gap. See the note on
+              # ForgejoRunnerDown in prometheusrule.yaml.
               liveness:
-                enabled: false
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 8088
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
               readiness:
                 enabled: false
               startup:
                 enabled: false
 
     persistence:
-      # Runner state: the actions cache and job working directories. Not backed
-      # up on purpose -- see the note in ks.yaml.
+      # Runner state: the actions cache and job working directories.
+      #
+      # emptyDir, not a PVC. Everything here is rebuildable -- the actcache
+      # directory is a cache, `/data/act` is per-job scratch, and `.runner` is
+      # never written because registration comes from `server.connections` in
+      # the config Secret. A 10Gi Longhorn volume at three replicas was 30Gi of
+      # replicated storage protecting nothing, and it made the pod wait for an
+      # RWO detach on every reschedule -- the same wait that stalled the forgejo
+      # pod for minutes during the migration. With no volume to detach the
+      # runner moves immediately.
+      #
+      # It also removes a trap: `persistence` with `type: persistentVolumeClaim`
+      # creates ONE shared PVC, and app-template 5.1.0 exposes no
+      # `volumeClaimTemplates`, so a second replica would have blocked forever on
+      # a ReadWriteOnce volume already attached elsewhere. That is now moot --
+      # though replicas must still stay 1, for the independent reason in
+      # resources/config.yml.
       data:
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        size: 10Gi
-        storageClass: longhorn
+        type: emptyDir
+        sizeLimit: 10Gi
         advancedMounts:
           *app :
             app:
@@ -178,8 +220,17 @@ spec:
       # Docker's image and layer store. emptyDir rather than a PVC: it is pure
       # cache, it churns hard enough to be unkind to Longhorn, and a cold pull
       # after a restart costs minutes, not data.
+      #
+      # sizeLimit is the real control on this app's disk appetite. Workflow code
+      # is arbitrary and `runner.capacity` lets four jobs pull and build at once,
+      # so without a bound one repository can fill a worker's ephemeral storage
+      # and take its neighbours down with it -- these nodes also carry Plex, the
+      # *arr stack and Immich, and the kubelet evicts by QoS class, not by who
+      # caused it. 60Gi is roughly an eighth of a worker's ~430Gi and far more
+      # than any honest build needs.
       docker-storage:
         type: emptyDir
+        sizeLimit: 60Gi
         advancedMounts:
           *app :
             dind:
