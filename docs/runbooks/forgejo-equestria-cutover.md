@@ -37,9 +37,20 @@ with the merge:
   `kubernetes/apps/network/traefik/values.yaml`, and a `TCPRoute` from the
   Forgejo chart. `Tailscale.ports.git` already grants `tcp:2222` to `tag:apps`,
   so the tailnet side needs no ACL change.
+- **Object storage** — a dedicated single-node Garage cluster
+  (`kubernetes/apps/coder/forgejo-garage`) backs all eight of Forgejo's object
+  subsystems via one `[storage] STORAGE_TYPE = minio` block: LFS, packages,
+  attachments, avatars, repo avatars, repo archives, Actions logs and Actions
+  artifacts. Bare git repositories are **not** among them — Forgejo always keeps
+  those on disk, so the PVC is still what a restore rebuilds the forge from.
+  `replication.factor: 1`, because a 3x-replicated store in front of an app that
+  cannot run two replicas is redundancy that can never be exercised; durability
+  comes from `longhorn-critical` underneath instead.
 - **Backups** — `components/volsync` gives the data volume a nightly restic
   `ReplicationSource` and, on first deploy, the `ReplicationDestination` that
-  lets an empty PVC bind.
+  lets an empty PVC bind. The Garage bucket is backed up separately, through the
+  `driscoll.dev/backup: "true"` annotation and its own read-only GarageKey;
+  Actions logs and artifacts are excluded as rebuildable CI output.
 - **Database** — `components/postgres` plus the `forgejo` role and password that
   `mise run update` generated into
   `kubernetes/apps/database/postgres/app/{passwords.sops.yaml,users.yaml,resources/values.yaml}`.
@@ -78,6 +89,25 @@ one orphans everything it encrypted or signed.
 | --- | --- |
 | `token` | a 40-character lowercase hex string — `openssl rand -hex 20` |
 | `uuid` | derived from `token`, see step 4 |
+
+And the Garage cluster's own identity. Filed under the **`forgejo`** app prefix
+rather than a `forgejo-garage` one, because this cluster is not a service in its
+own right — it holds one forge's objects, and its credentials belong next to
+that forge's. They are deliberately **not** shared with `garage-system`: two
+Garage clusters must never hold the same RPC secret, or a node from one could
+join the other's mesh.
+
+```bash
+bao kv put secrets/clusters/equestria/apps/forgejo/garage-rpc-secret \
+  password="$(openssl rand -hex 32)"
+bao kv put secrets/clusters/equestria/apps/forgejo/garage-admin-token \
+  password="$(openssl rand -hex 32)"
+```
+
+The RPC secret is the node's mesh identity and GarageKey material derives from
+it. Losing it after first boot means the object store cannot be reassembled from
+its PVCs — every LFS object Forgejo still has listed in its database becomes
+unreadable.
 
 The OIDC path (`clusters/equestria/apps/forgejo/oidc`) is **not** hand-made — it
 is written by the `applications` Pulumi stack in step 3.

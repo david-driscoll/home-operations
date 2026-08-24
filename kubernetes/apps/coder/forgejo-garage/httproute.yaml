@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# The S3 API, and ONLY the S3 API.
+#
+# Forgejo does NOT come through here -- it talks to
+# forgejo-garage.coder.svc.cluster.local:3900 directly, which is in the same
+# namespace and avoids a hairpin through Traefik for every LFS object. This
+# route exists for exactly one client: backrest on celestia, which cannot
+# resolve a ClusterIP.
+#
+# Deliberately NOT behind authentik forward-auth, unlike every other route in
+# this estate: S3 clients authenticate with SigV4 and cannot follow an
+# interactive redirect. A middleware here would break the backup while looking
+# like a Garage fault. Access control is the GarageKey grant.
+#
+# Deliberately NOT publishing the Admin API (3903) or RPC (3901). Admin is the
+# control plane and RPC is the mesh; both stay on the ClusterIP Service.
+#
+# `internal` gateway, so this resolves only on the LAN and the tailnet through
+# Technitium's split horizon.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}-s3
+  annotations:
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    # Nested under the forge's own name rather than sharing s3.${ROOT_DOMAIN}:
+    # that hostname routes to the garage-system cluster, and these are two
+    # independent Garage clusters with separate layouts, keys and RPC secrets.
+    # Reading `s3.git` as "the S3 for git" also puts the two names in the same
+    # place a reader already looks for anything Forgejo.
+    #
+    # This is two labels deep, so *.${ROOT_DOMAIN} does NOT cover it -- a
+    # wildcard matches exactly one label. The SAN that does is
+    # `*.git.${ROOT_DOMAIN}` on the shared le-production Certificate.
+    #
+    # Path-style addressing only (`https://s3.git.<domain>/<bucket>/<key>`);
+    # virtual-hosted style would need `s3Api.rootDomain` plus a further wildcard
+    # hostname and a cert to match it.
+    - "s3.git.${ROOT_DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        # The operator names the cluster API Service after the GarageCluster.
+        - name: ${APP}
+          port: 3900

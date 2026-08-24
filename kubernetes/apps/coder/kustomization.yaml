@@ -12,5 +12,6 @@ components:
   - ../../components/repos/app-template
 resources:
   - ./coder/ks.yaml
+  - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml

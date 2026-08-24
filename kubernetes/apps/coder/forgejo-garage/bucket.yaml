@@ -1,0 +1,105 @@
+---
+# The bucket every Forgejo subsystem writes into.
+#
+# ONE bucket, not one per subsystem: Forgejo's `[storage]` default already
+# namespaces each subsystem into its own prefix inside the bucket
+# (`lfs/`, `packages/`, `attachments/`, `actions_artifacts/`, ...), so a bucket
+# per subsystem would buy nothing but eight sets of credentials to rotate.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: forgejo
+  annotations:
+    # Opts this bucket into the estate's backup system
+    # (stacks/applications/kubernetes-backups.ts). This is NOT optional
+    # bookkeeping: moving Forgejo's storage to S3 takes LFS objects, packages
+    # and attachments OFF the volsync-backed PVC, so without this annotation
+    # they would silently stop being backed up while looking healthy.
+    driscoll.dev/backup: "true"
+    # Rebuildable CI output. Artifacts in particular are the one prefix here
+    # that grows without bound and that nobody would ever restore -- a workflow
+    # re-run regenerates them.
+    #
+    # The `/**` is load-bearing. rclone's `--exclude` matches FILES on a bare
+    # path, so `actions_artifacts/` would exclude nothing at all and quietly
+    # back the whole prefix up anyway. See the note on `exclude` in
+    # components/BackupPlanOrchestrator.ts.
+    driscoll.dev/backup-exclude: "actions_artifacts/**,actions_log/**"
+spec:
+  clusterRef:
+    name: ${APP}
+  globalAlias: forgejo
+  # Retain, not Delete. A Flux prune that removes this object must not take the
+  # objects with it -- the bucket outlives its declaration the same way the PVCs
+  # outlive the StatefulSet.
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: forgejo
+      read: true
+      write: true
+      # Owner allows delete-bucket and website configuration. Forgejo needs
+      # neither; it only puts, gets and deletes objects.
+      owner: false
+---
+# Forgejo's own S3 identity.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: forgejo
+spec:
+  clusterRef:
+    name: ${APP}
+  name: Forgejo
+  neverExpires: true
+  permissions:
+    # Forgejo's minio driver calls MakeBucket on startup and tolerates the
+    # failure when the bucket already exists (it falls back to BucketExists).
+    # The bucket above is created by the operator, so that call is expected to
+    # be denied and the denial is harmless -- there is no reason to hand the
+    # forge the ability to create buckets of its own.
+    createBucket: false
+  secretTemplate:
+    name: ${APP}-forgejo-credentials
+    includeEndpoint: true
+    includeRegion: true
+    includeBucketName: true
+---
+# The read-only S3 identity the estate's backup system uses for THIS cluster.
+#
+# `kubernetes-backups.ts` looks up backup credentials by namespace -- the
+# namespace of the bucket's `clusterRef` -- so a Garage cluster in `coder` needs
+# its own labelled Secret here. Without it the applications stack throws
+# outright rather than skipping the bucket, which is the correct behaviour: a
+# bucket that asked to be backed up and silently is not is the worst possible
+# outcome.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: ${APP}-backup
+spec:
+  clusterRef:
+    name: ${APP}
+  name: Backup (read-only)
+  # `owner: false` and no `permissions.createBucket`: this identity must never
+  # be able to write, delete, or reconfigure. A backup that can mutate its
+  # source is a backup that can destroy it.
+  allBuckets:
+    read: true
+    write: false
+    owner: false
+  neverExpires: true
+  secretTemplate:
+    name: ${APP}-backup-credentials
+    # How Pulumi FINDS this Secret -- it selects on this label rather than on
+    # the name, so the two sides are coupled by an explicit marker instead of a
+    # string convention nothing would catch if it drifted.
+    labels:
+      driscoll.dev/garage-backup-credentials: "true"
+    includeEndpoint: true
+    includeRegion: true
+    additionalData:
+      # The endpoint the OPERATOR writes into this Secret is the in-cluster
+      # Service URL, which is useless to backrest -- it runs in a container on
+      # celestia, not in this cluster. Must match httproute.yaml's hostname.
+      external-endpoint: "https://s3.git.${ROOT_DOMAIN}"

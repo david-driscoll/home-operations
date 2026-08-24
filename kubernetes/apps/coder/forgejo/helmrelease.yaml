@@ -257,6 +257,19 @@ spec:
             secretKeyRef:
               name: ${APP}-secrets
               key: jwt_secret
+        # S3 credentials for forgejo-garage, minted by the GarageKey operator.
+        # Only these two are secret -- the rest of the [storage] block is plain
+        # config below.
+        - name: FORGEJO__storage__MINIO_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-garage-forgejo-credentials
+              key: access-key-id
+        - name: FORGEJO__storage__MINIO_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-garage-forgejo-credentials
+              key: secret-access-key
 
       config:
         APP_NAME: Forgejo
@@ -285,6 +298,45 @@ spec:
         security:
           # No web installer; this instance is configured entirely from here.
           INSTALL_LOCK: true
+
+        # Every object store on S3, in one block.
+        #
+        # `[storage]` is the DEFAULT for all eight subsystems -- attachments,
+        # LFS, avatars, repo avatars, repo archives, packages, Actions logs and
+        # Actions artifacts -- each of which gets its own prefix inside the
+        # bucket automatically (`lfs/`, `packages/`, ...). Setting it here rather
+        # than per-section means there is one place to look and no subsystem can
+        # be quietly left behind on local disk.
+        #
+        # What this does NOT move: bare git repositories. Forgejo always keeps
+        # those on disk under APP_DATA_PATH, so the volsync-backed PVC is still
+        # load-bearing and still the thing a restore rebuilds the forge from.
+        storage:
+          STORAGE_TYPE: minio
+          # In-cluster Service, same namespace. Not s3.git.${ROOT_DOMAIN} --
+          # that hostname exists for backrest on celestia, and routing every LFS
+          # object through Traefik and back would be a hairpin for nothing.
+          MINIO_ENDPOINT: forgejo-garage.${NAMESPACE}.svc.cluster.local:3900
+          MINIO_BUCKET: forgejo
+          # Must equal the GarageCluster's `s3Api.region`. It is not geographic,
+          # but it is baked into every SigV4 signature -- a mismatch is a
+          # SignatureDoesNotMatch on every request, not a routing error.
+          MINIO_LOCATION: equestria
+          # Plain HTTP to a ClusterIP inside the same namespace. TLS here would
+          # mean minting a cert for a Service name to protect a hop that never
+          # leaves the pod network.
+          MINIO_USE_SSL: false
+          # `path`, not the `auto` default. Garage is only addressable
+          # path-style here -- virtual-hosted style needs `s3Api.rootDomain`
+          # plus a wildcard DNS name and cert, which this cluster does not have.
+          # On `auto` the client may probe DNS style first and fail confusingly.
+          MINIO_BUCKET_LOOKUP: path
+          # MINIO_ACCESS_KEY_ID / MINIO_SECRET_ACCESS_KEY come from
+          # additionalConfigFromEnvs above.
+          #
+          # Deliberately no MINIO_BASE_PATH: Forgejo rejects it in the
+          # `[storage]` section, because that is what each subsystem's own
+          # prefix already is.
 
         service:
           # This exact pair is the documented combination for "accounts come only

@@ -1,5 +1,11 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/cert-manager.io/certificate_v1.json
+#
+# TWIN of production.yaml -- the `dnsNames` lists must stay identical. Staging
+# exists to rehearse issuance against Let's Encrypt's staging endpoint, so a
+# name present on only one of them is a name whose issuance was never
+# rehearsed, and the first time anyone finds out is a rate-limited failure
+# against the real endpoint. Adding a SAN is a TWO-FILE change.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -27,3 +33,7 @@ spec:
     # Coder per-workspace app subdomains (code.${ROOT_DOMAIN} itself is already
     # covered by the *.${ROOT_DOMAIN} wildcard above).
     - "*.code.${ROOT_DOMAIN}"
+    # Forgejo's object store, s3.git.${ROOT_DOMAIN}. Same one-label wildcard
+    # rule as the Coder entry above; the reasoning for putting it here rather
+    # than in a per-namespace Certificate is on the production twin.
+    - "*.git.${ROOT_DOMAIN}"

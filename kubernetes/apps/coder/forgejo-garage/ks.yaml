@@ -1,0 +1,41 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app forgejo-garage
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The operator is cluster-scoped (`watchNamespaces: []`), so it reconciles
+    # this cluster from garage-system without any per-namespace wiring.
+    - name: garage-operator
+      namespace: garage-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/coder/forgejo-garage
+  prune: true
+  force: false
+  # wait: true, and forgejo dependsOn this. Forgejo's init containers reach S3
+  # on startup, so a Forgejo that comes up first just crash-loops until the
+  # bucket and key exist.
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
