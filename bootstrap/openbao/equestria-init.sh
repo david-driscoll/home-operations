@@ -302,35 +302,62 @@ EOF
 # same change that fixes the restore-test policy: a grant on an empty prefix
 # permits nothing, so removing it buys nothing and costs a second live edit.
 path "secrets/data/shared/*" {
-  capabilities = ["read"]
+  capabilities = ["read", "list"]
 }
 path "secrets/metadata/shared/*" {
   capabilities = ["read", "list"]
 }
 path "secrets/data/clusters/*" {
-  capabilities = ["read"]
+  capabilities = ["read", "list"]
 }
 path "secrets/metadata/clusters/*" {
   capabilities = ["read", "list"]
 }
 path "secrets/data/third-party-tokens/*" {
-  capabilities = ["read"]
+  capabilities = ["read", "list"]
 }
 path "secrets/metadata/third-party-tokens/*" {
   capabilities = ["read", "list"]
 }
 path "secrets/data/apps/*" {
-  capabilities = ["read"]
+  capabilities = ["read", "list"]
 }
 path "secrets/metadata/apps/*" {
   capabilities = ["read", "list"]
 }
 path "secrets/data/docker/*" {
-  capabilities = ["read"]
+  capabilities = ["read", "list"]
 }
 path "secrets/metadata/docker/*" {
   capabilities = ["read", "list"]
 }
+
+# Phase 4 of docs/postgres-credentials/PLAN.md: the rotated PostgreSQL
+# passwords OpenBao's database secrets engine owns.
+#
+# READ ONLY, and on a different mount from everything above -- \`database/\` is
+# the secrets engine, not kv-v2, so there is no data//metadata/ split and no
+# LIST. Reading a static-cred is idempotent: it returns the CURRENT password
+# and does not mint or rotate anything, unlike \`database/creds/\` which issues
+# a new lease per read.
+#
+# \`database/creds/*\` is deliberately absent here for the same reason it is
+# absent from the pulumi policy: this estate uses static roles only, and
+# withholding the grant makes reaching for dynamic roles a 403 rather than a
+# silent design drift.
+path "database/static-creds/*" {
+  capabilities = ["read"]
+}
+#
+# ⚠️ The \`secrets/data/*\` grants carry \`list\` as well as \`read\`. That is
+# redundant on paper -- in kv-v2 a LIST is served from \`metadata/\`, not
+# \`data/\` -- but it is what the LIVE policy has, applied by hand at reorg time
+# while this script lagged in another repo. The script said read-only alone, so
+# re-running it would have SILENTLY NARROWED five live grants as a side effect
+# of an unrelated change. That is the exact failure the block above describes,
+# one prefix set over. Converged up to match live: if the \`list\` really is
+# dead it should be removed deliberately, in its own change, with the
+# ExternalSecrets watched -- not dropped by a re-run.
 EOF
     ok "wrote policy eso-${cluster}"
   done
