@@ -362,11 +362,28 @@ latent startup fragility surfaces. Reloader firing correctly is necessary but no
 | 1 | `grafana` | #1127 | **verified.** 32 → 20-char password, reloader restarted the pod, 4 connections re-established. Took three attempts to get the ESO generator's identity right — a namespaced `VaultDynamicSecret` cannot resolve a cross-namespace ServiceAccount, ESO ignores `serviceAccountRef.namespace` for generators, and the SA and the OpenBao role have to be changed together. All three rendered perfectly and failed live. |
 | 2 | `freshrss` | #1138 | **verified.** 20-char password, `esReady=True`, pod restarted with 0 restarts since. Persistent connections stay at 0 because FreshRSS is PHP and connects per request — proof came from `pg_stat_database.xact_commit` advancing with `xact_rollback` flat, not from `pg_stat_activity`. |
 | 3 | `tandoor`, `crowdsec` | #1141 | **verified, with an incident.** Both went 32 → 20 chars and both ExternalSecrets synced. `crowdsec` was clean — lapi restarted once, all 7 agents stayed up untouched and registered, bouncers intact — and it is the first app proven to rotate through `valueFrom.secretKeyRef` rather than `envFrom`. `tandoor` crash-looped through 6 restarts, but **not** on the credential: every attempt logged `Database is ready` and `No migrations to apply`. Its cold boot runs `collectstatic` for ~2m40s against a 40s liveness budget with no startup probe, so the restart the rotation forced was simply the first one in days. Fixed in #1142. |
+| 4 | `coder`, `pulsarr`, `n8n` | #1146 | pending merge. Groups A and B of the sweep below — the first tranche chosen *by* the boot-budget gate rather than one that tripped over it. `coder` is the first app to take the credential as a connection **URI** rather than a bare password; safe because the component builds the same 15 keys for a rotating app as a static one, and `uri` on grafana, tandoor and crowdsec each already carries that app's rotated password. |
 
-Remaining: `coder`, `forgejo`, `autobrr`, `questarr`, `retrom`, `romm`, `n8n`, `outline`,
-`pulsarr`, `strmgen`, `pinepods`, `windmill`, `immich`. Leave `windmill` and `pinepods` late —
-windmill picks up a rotation only through a Helm re-render, which is untested — and `immich`
-last, since it composes a second sibling component.
+### Boot-budget sweep of the remaining apps
+
+Run 2026-08-25 against the live cluster, after tandoor. A rotation is a forced restart, so the
+question for each app is whether it can finish booting before something kills it.
+
+| group | apps | finding | consequence |
+|---|---|---|---|
+| **A** | `coder`, `pulsarr`, `immich` (app + ML), `windmill-extra`, `windmill-workers-*`, `forgejo-garage-storage` | **no liveness probe at all** | cannot be probe-killed mid-boot; safe from tandoor's failure mode |
+| **B** | `n8n` (~600s), `windmill-app` (~600s) | generous startup probe | protected |
+| **C** | `romm` (~30s) | startup probe present but **short** | check its real boot time before opting in |
+| **D** | `autobrr` (~110s), `forgejo-runner` (~120s), `questarr` (~180s), `pinepods` (~210s), `forgejo` (~300s) | **no startup probe**; the liveness budget shown is all the boot time they get | tandoor's exact shape — add a startup probe *before* rotating |
+| **E** | `outline`, `retrom`, `strmgen` | Postgres role exists, but **no Kustomization and no workload** | orphans; decide whether to drop the role rather than rotate a credential nothing consumes |
+
+Tandoor's cold boot measured ~2m40s, so a budget under ~180s is not obviously safe — group D is
+ordered by how little room it has.
+
+Suggested order, safest first: **A** (`coder`, `pulsarr`) → **B** (`n8n`) → **C** (`romm`, after
+timing its boot) → **D** (each preceded by a startup probe) → `windmill` (its rotation path runs
+only through a Helm re-render, still untested) → `immich` last, since it composes a second
+sibling component. Group **E** is a cleanup decision, not a tranche.
 
 ### The constraint to sit with
 
