@@ -20,12 +20,11 @@ globals.store.getKubernetesClusters().apply(clusters => {
       // The provider treats Secret data/stringData as immutable by default,
       // so every value change plans a REPLACE (pulumi-kubernetes#1568 — an
       // intentional workaround for consumers that don't watch secret
-      // updates). This stack's access token re-mints on every run, which
-      // made that a delete+recreate of tailscale-access-token per run — a
-      // window where the secret does not exist. Everything here that reads
-      // these secrets is reloader/reflector-annotated and handles in-place
-      // updates, so opt in to mutable Secrets (developer-preview flag) and
-      // rotate in place instead.
+      // updates). The authkeys re-mint whenever tailscale invalidates them
+      // (TailnetKey recreateIfInvalid: "always"), and a replace is a window
+      // where the secret does not exist. Everything reading these secrets is
+      // reloader/reflector-annotated and follows in-place updates, so opt in
+      // to mutable Secrets (developer-preview flag) and rotate in place.
       enableSecretMutable: true,
     });
     new KubernetesTailscaleAuthKeyComponent(cluster.key, {
