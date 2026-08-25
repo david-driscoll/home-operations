@@ -1,7 +1,6 @@
 import { Tailscale } from "@components/constants.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import type { KubernetesClusterDefinition } from "@components/store/interfaces.ts";
-import { TailscaleAccessToken } from "@components/TailscaleAccessToken.ts";
 import kubernetes from "@pulumi/kubernetes";
 import { ComponentResource, type ComponentResourceOptions, type Input, interpolate, output } from "@pulumi/pulumi";
 import { TailnetKey, Provider as TailscaleProvider } from "@pulumi/tailscale";
@@ -51,15 +50,6 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
         description: interpolate`${output(args.cluster).title} Cluster Management Key`,
       },
       { parent: this, dependsOn: opts?.dependsOn, provider: tailscaleProvider },
-    );
-
-    const accessToken = new TailscaleAccessToken(
-      `${name}-access-token`,
-      {
-        credential: creds.credential,
-        username: creds.username,
-      },
-      { parent: this },
     );
 
     const cro = {
@@ -125,54 +115,6 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
       {
         ...cro,
-        deleteBeforeReplace: true,
-      },
-    );
-
-    const accessTokenSecret = new kubernetes.core.v1.Secret(
-      `${name}-tailscale-access-token`,
-      {
-        metadata: {
-          name: `tailscale-access-token`,
-          namespace: "tailscale-system",
-          annotations: {
-            "reflector.v1.k8s.emberstack.com/reflection-allowed": "true",
-            "reloader.stakater.com/auto": "true",
-            // The token is an `additionalSecretOutputs` field, and a SecretPatch
-            // carrying ONLY secret fields does not reliably re-apply when those
-            // fields change: this Secret was last written by Pulumi on
-            // 2026-06-07 even though the token behind it is re-minted correctly
-            // (verified in state 2026-08-24 -- the dynamic resource had been
-            // replaced minutes earlier while the live Secret still held a
-            // June value).
-            //
-            // `expiresAt` is NOT secret and changes on every mint, so surfacing
-            // it here does two things: it makes the patch's inputs visibly
-            // different on each new token, and it forces the ordering, because
-            // the patch cannot be computed before the resource it reads from.
-            // In the broken state the patch was recorded as applied two seconds
-            // BEFORE the token it was meant to carry.
-            //
-            // Do not remove this thinking it is decorative. It is the only
-            // non-secret evidence that the value underneath changed.
-            "driscoll.dev/token-expires-at": accessToken.expiresAt,
-          },
-        },
-        // Same reasoning as the app authkey above.
-        type: "Opaque",
-        stringData: {
-          token: accessToken.token,
-        },
-      },
-      {
-        ...cro,
-        // No `import` on ANY of these three, deliberately: every import has
-        // landed (verified in state 2026-08-25 — the two authkeys carry their
-        // importIDs; this one was recreated as a plain managed resource), so
-        // a retained option's only remaining effect would be to veto any
-        // future replacement forever. Stale import options are an armed
-        // failure mode in this estate (the StandardDns imports armed live
-        // deletes) — an import option's life ends the run after it succeeds.
         deleteBeforeReplace: true,
       },
     );
