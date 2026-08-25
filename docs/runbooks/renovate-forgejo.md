@@ -310,6 +310,19 @@ repository's `Settings → Collaborators`, or in the org's `renovate` team.
 one that did not exist when the stack last ran. Organization repositories do
 not have this delay. To stop waiting, reconcile the stack (step 3).
 
+**The executor fails on every repository while discovery looks healthy.** Check
+the executor Job's log for:
+
+```
+fatal: could not read Password for 'https://**redacted**@git.driscoll.tech'
+```
+
+Renovate keys its git credential to the host of `endpoint`, which here is the
+in-cluster Service — but Forgejo advertises a public `clone_url`, so the two
+hosts differ and no credential matches. `gitUrl: 'endpoint'` in the RenovateJob
+config makes Renovate clone from the host it authenticates against. Discovery
+never notices, because it only calls the API and never clones.
+
 **Renovate runs but every lookup is `no-result`.** Almost always the github.com
 rate limit — check the run log for `Response code 403 (rate limit exceeded)`.
 That means `GITHUB_COM_TOKEN` did not reach the pod: either emberstack has not

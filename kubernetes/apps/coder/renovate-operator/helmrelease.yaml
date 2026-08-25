@@ -172,9 +172,14 @@ spec:
         #
         # The cost is confined to one thing: the operator UI links a project to
         # the endpoint it reconciles against, which is now the ClusterIP name
-        # below rather than https://git.<domain>. Cloning, the API and the
-        # webhook are all unaffected -- Renovate takes the clone URL from the
-        # repository's own `clone_url`, which Forgejo builds from ROOT_URL.
+        # below rather than https://git.<domain>.
+        #
+        # Cloning is NOT free here, contrary to what this comment first said.
+        # Renovate keys its git credential to the ENDPOINT host, so with the
+        # endpoint in-cluster it could not authenticate against the public
+        # clone URL Forgejo advertises. That is fixed in the RenovateJob with
+        # `gitUrl: 'endpoint'`; see the note there. The API and the webhook are
+        # genuinely unaffected.
         #
         # `${NAMESPACE}` resolves offline (it is in this app's
         # postBuild.substitute map, not in a Secret), so this entry renders
