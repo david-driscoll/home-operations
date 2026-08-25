@@ -36,6 +36,11 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # TRANCHE 6. Boot measured at 51s against a 180s liveness budget -- 3.5x
+    # headroom, so unlike romm and tandoor this one does not need a startup
+    # probe added first. Reads POSTGRES_PASSWORD from questarr-env via
+    # envFrom, and the annotation is on the Deployment.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
