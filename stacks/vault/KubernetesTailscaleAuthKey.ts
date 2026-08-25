@@ -67,7 +67,7 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       provider: args.kubernetes,
     };
 
-    const authKeySecret = new kubernetes.core.v1.SecretPatch(
+    const authKeySecret = new kubernetes.core.v1.Secret(
       `${name}-tailscale-app-authkey`,
       {
         metadata: {
@@ -84,6 +84,7 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
       {
         ...cro,
+        import: "tailscale-system/tailscale-authkey",
         deleteBeforeReplace: true,
         // This resource was renamed from `${name}-tailscale-authkey` when the app/dns keys
         // were split apart. The underlying Secret (tailscale-system/tailscale-authkey) never
@@ -97,7 +98,7 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
     );
 
-    const dnsAuthKeySecret = new kubernetes.core.v1.SecretPatch(
+    const dnsAuthKeySecret = new kubernetes.core.v1.Secret(
       `${name}-tailscale-dns-authkey`,
       {
         metadata: {
@@ -112,10 +113,14 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
           authkey: tailscaleDnsAuthkey.key,
         },
       },
-      { ...cro, deleteBeforeReplace: true },
+      {
+        ...cro,
+        import: "tailscale-system/tailscale-dns-authkey",
+        deleteBeforeReplace: true,
+      },
     );
 
-    const accessTokenSecret = new kubernetes.core.v1.SecretPatch(
+    const accessTokenSecret = new kubernetes.core.v1.Secret(
       `${name}-tailscale-access-token`,
       {
         metadata: {
@@ -148,7 +153,11 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
           token: accessToken.token,
         },
       },
-      { ...cro, deleteBeforeReplace: true },
+      {
+        ...cro,
+        import: "tailscale-system/tailscale-access-token",
+        deleteBeforeReplace: true,
+      },
     );
   }
 }
