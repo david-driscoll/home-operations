@@ -364,7 +364,7 @@ latent startup fragility surfaces. Reloader firing correctly is necessary but no
 | 3 | `tandoor`, `crowdsec` | #1141 | **verified, with an incident.** Both went 32 → 20 chars and both ExternalSecrets synced. `crowdsec` was clean — lapi restarted once, all 7 agents stayed up untouched and registered, bouncers intact — and it is the first app proven to rotate through `valueFrom.secretKeyRef` rather than `envFrom`. `tandoor` crash-looped through 6 restarts, but **not** on the credential: every attempt logged `Database is ready` and `No migrations to apply`. Its cold boot runs `collectstatic` for ~2m40s against a 40s liveness budget with no startup probe, so the restart the rotation forced was simply the first one in days. Fixed in #1142. |
 | 4 | `coder`, `pulsarr`, `n8n` | #1146 | **verified.** All three 32 → 20 chars, fresh pods with **0 restarts**, backends re-established (coder 4, pulsarr 2, n8n 1). The first tranche chosen *by* the boot-budget gate, and the first with no restart trouble at all. `coder` proved the connection-**URI** path: it takes `CODER_PG_CONNECTION_URL` rather than a bare password, and the rotated value arrived embedded in `uri`. Two things learned, both below: the propagation lag is real, and the cutover is not seamless for a pooled app. |
 | 5 | `romm` | #1152 | **verified.** 32 → 20 chars, pod rebuilt in **43s with 0 restarts** — matching the boot measured before rotating, so the widened probe did exactly what it was added for. **Zero** auth failures during the cutover, unlike coder: romm connects per request, so no pooled connection was holding a dead credential. Proof came from `xact_commit` advancing with `xact_rollback` flat, since `numbackends` sits at 0. |
-| 6 | `questarr`, `forgejo` | #TBD6 | pending merge. Both measured with wide headroom, so neither needed a probe widened first. `forgejo` takes the password by a new route: an initContainer bakes `forgejo-db/password` into `app.ini`, so only a pod restart delivers it. Reloader handles that — verified in its source, not assumed. |
+| 6 | `questarr`, `forgejo` | #1155 | **verified.** Both 32 → 20 chars, both pods rebuilt with **0 restarts**. `questarr` connects per request (proof via `xact_commit`); `forgejo` holds a pool and took **1** auth failure in the cutover window, none after. `forgejo` also proved the initContainer path: `init-app-ini` bakes the password into `app.ini`, and Reloader rolled the workload as its source says it would. Delayed several hours by the mount-URN incident below. |
 
 ### Two things tranche 4 measured
 
@@ -384,6 +384,34 @@ per app. Apps that open a connection per request ride it out invisibly; pooled a
 long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
 shorter `rotation_period`.
 
+### The mount-URN incident (2026-08-25)
+
+Tranche 6 merged correctly and then sat un-rotated for hours, because the Pulumi `system` stack
+could not complete. Worth recording, because the near-miss was serious and the fix is
+non-obvious.
+
+#1149 refactored this file into a `PostgresRotationComponent`. Re-parenting the
+`SecretsMount` to that component changed its URN, and Pulumi reads a changed URN as a different
+resource: **create the new one, delete the old one.** The create failed —
+
+    POST /v1/sys/mounts/database → 400: path is already in use at database/
+
+— which was the lucky outcome. Had it succeeded, the paired delete would have unmounted
+`database/` and taken every static role with it, leaving the then-eight rotating apps holding
+credentials nothing could rotate or verify. **Never resolve this class of conflict by
+unmounting the path to "clear" it.**
+
+The fix took two attempts, and the difference matters:
+
+| attempt | form | result |
+|---|---|---|
+| #1154 | `aliases: [{ noParent: true }]` | **did not work** — Pulumi still planned a create |
+| #1156 | `aliases: ["urn:pulumi:system::system::vault:database/secretsMount:SecretsMount::postgres-rotation"]` | worked |
+
+The spec form should be equivalent and is not, at least for a re-parented resource with
+children. Use the full old URN string. During the failure the state was intact throughout — the
+old unparented mount and all its static roles were still present and unmarked — so no state
+surgery was needed, and none was performed.
 ### Group E dropped (2026-08-25)
 
 `outline`, `retrom` and `strmgen` are gone: `Database` CR, database and role each removed.
