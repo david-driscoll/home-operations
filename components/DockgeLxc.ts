@@ -1102,9 +1102,14 @@ export class DockgeLxc extends ComponentResource {
    *
    * It also turns provision failure into DEPLOY failure: the container is
    * `restart: "no"`, so before this its exit code was only visible in
-   * `docker compose ps`. Following the logs until exit and then exiting with
-   * the container's own code surfaces the provision output in the Pulumi run
-   * and fails it on a bad declaration.
+   * `docker compose ps`. `docker wait` blocks until the container stops and
+   * returns its exit code — and, crucially, returns IMMEDIATELY for a
+   * container that has already exited. The first version used
+   * `docker compose logs -f` as the terminator instead, and a node with zero
+   * tenants lost that race: provision exits in milliseconds, `logs -f`
+   * attached after the fact, and compose followed the SERVICE forever
+   * waiting for a future container — skystar's first rollout hung 35+
+   * minutes exactly there. The logs are printed after the wait, non-following.
    *
    * Triggered by the compose Command resource itself: any stack-file change
    * replaces that Command (its triggers are the copy-resource ids), which
@@ -1120,7 +1125,7 @@ export class DockgeLxc extends ComponentResource {
       `${this.shortName}-postgres-provision-reconcile`,
       {
         connection: this.remoteConnection,
-        create: `set -e; cd /opt/stacks/postgres; docker compose -f compose.yaml up -d --force-recreate postgres-provision; docker compose -f compose.yaml logs -f --no-log-prefix postgres-provision; rc="$(docker inspect -f '{{.State.ExitCode}}' postgres-provision)"; echo "postgres-provision exited with code $rc"; exit "$rc"`,
+        create: `set -e; cd /opt/stacks/postgres; docker compose -f compose.yaml up -d --force-recreate postgres-provision; rc="$(docker wait postgres-provision)"; docker logs --tail 100 postgres-provision; echo "postgres-provision exited with code $rc"; exit "$rc"`,
         triggers: [dependsOn],
       },
       { parent: this.dockerParent, dependsOn },
