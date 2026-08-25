@@ -353,11 +353,15 @@ Per app: drop `passwordSecret` from the `DatabaseRole`, point the `ExternalSecre
 Rotation is irreversible per app, so this grows a couple of apps at a time and each entry
 records what was actually observed rather than what was expected.
 
+Tranche 3 added a gate the first two did not need: **check that the app can survive a cold
+boot inside its own liveness budget.** A rotation is a forced restart, and a restart is where
+latent startup fragility surfaces. Reloader firing correctly is necessary but not sufficient.
+
 | # | apps | PR | outcome |
 |---|---|---|---|
 | 1 | `grafana` | #1127 | **verified.** 32 → 20-char password, reloader restarted the pod, 4 connections re-established. Took three attempts to get the ESO generator's identity right — a namespaced `VaultDynamicSecret` cannot resolve a cross-namespace ServiceAccount, ESO ignores `serviceAccountRef.namespace` for generators, and the SA and the OpenBao role have to be changed together. All three rendered perfectly and failed live. |
 | 2 | `freshrss` | #1138 | **verified.** 20-char password, `esReady=True`, pod restarted with 0 restarts since. Persistent connections stay at 0 because FreshRSS is PHP and connects per request — proof came from `pg_stat_database.xact_commit` advancing with `xact_rollback` flat, not from `pg_stat_activity`. |
-| 3 | `tandoor`, `crowdsec` | #1141 | pending merge. First tranche with two apps, and the first where an app reads the password through `valueFrom.secretKeyRef` (crowdsec-lapi) rather than `envFrom`. |
+| 3 | `tandoor`, `crowdsec` | #1141 | **verified, with an incident.** Both went 32 → 20 chars and both ExternalSecrets synced. `crowdsec` was clean — lapi restarted once, all 7 agents stayed up untouched and registered, bouncers intact — and it is the first app proven to rotate through `valueFrom.secretKeyRef` rather than `envFrom`. `tandoor` crash-looped through 6 restarts, but **not** on the credential: every attempt logged `Database is ready` and `No migrations to apply`. Its cold boot runs `collectstatic` for ~2m40s against a 40s liveness budget with no startup probe, so the restart the rotation forced was simply the first one in days. Fixed in #1142. |
 
 Remaining: `coder`, `forgejo`, `autobrr`, `questarr`, `retrom`, `romm`, `n8n`, `outline`,
 `pulsarr`, `strmgen`, `pinepods`, `windmill`, `immich`. Leave `windmill` and `pinepods` late —
