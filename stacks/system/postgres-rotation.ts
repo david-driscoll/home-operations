@@ -46,7 +46,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Provider as VaultProvider } from "@pulumi/vault";
+import type { GlobalResources } from "@components/globals.ts";
+import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi";
 import * as vault from "@pulumi/vault";
 import { globSync } from "glob";
 import { parseAllDocuments } from "yaml";
@@ -128,72 +129,79 @@ export function discoverRotationOptIns(): string[] {
   return discoverAppsUsing("components/postgres/rotate");
 }
 
-export function configurePostgresRotation(provider: VaultProvider): void {
-  const discovered = discoverPostgresApps();
-  const tranche = discoverRotationOptIns();
+export interface PostgresRotationConfigurationArgs {
+  globals: GlobalResources;
+}
+export class PostgresRotationComponent extends ComponentResource {
+  constructor(args: PostgresRotationConfigurationArgs, opts?: ComponentResourceOptions) {
+    super("custom:postgres:rotation", "postgres-rotation", args, opts);
 
-  // ./rotate without ./postgres would create a static role for a PostgreSQL
-  // role that does not exist -- OpenBao accepts that and then fails every
-  // scheduled rotation, in a log nobody reads. Fail the run instead.
-  const unknown = tranche.filter(a => !discovered.includes(a));
-  if (unknown.length > 0) {
-    throw new Error(`components/postgres/rotate is on apps that do not use components/postgres: ${unknown.join(", ")}. ` + `Discovered: ${discovered.join(", ")}`);
-  }
+    const discovered = discoverPostgresApps();
+    const tranche = discoverRotationOptIns();
 
-  if (!ENGINE_ENABLED) return;
+    // ./rotate without ./postgres would create a static role for a PostgreSQL
+    // role that does not exist -- OpenBao accepts that and then fails every
+    // scheduled rotation, in a log nobody reads. Fail the run instead.
+    const unknown = tranche.filter(a => !discovered.includes(a));
+    if (unknown.length > 0) {
+      throw new Error(`components/postgres/rotate is on apps that do not use components/postgres: ${unknown.join(", ")}. ` + `Discovered: ${discovered.join(", ")}`);
+    }
 
-  const mount = new vault.database.SecretsMount(
-    "postgres-rotation",
-    {
-      path: "database",
-      description: "PostgreSQL static-role rotation for equestria (docs/postgres-credentials)",
-      postgresqls: [
-        {
-          name: "postgres",
-          pluginName: "postgresql-database-plugin",
-          // Certificate paths, NOT the provider's inline tlsCertificate /
-          // privateKey fields. OpenBao reads these off its own filesystem,
-          // where kubernetes/apps/kube-system/openbao mounts them -- so the
-          // baoadmin superuser key never enters Pulumi state or the Minio
-          // backend. Pulumi only ever writes a path string.
-          connectionUrl:
-            "postgresql://baoadmin@postgres-rw.database.svc.cluster.local:5432/postgres" +
-            "?sslmode=verify-full" +
-            "&sslcert=/etc/pg-admin-certs/tls.crt" +
-            "&sslkey=/etc/pg-admin-certs/tls.key" +
-            "&sslrootcert=/etc/pg-admin-certs/ca.crt",
-          // Hash passwords before they cross the wire to PostgreSQL, so a
-          // rotated password never appears in a server log.
-          passwordAuthentication: "scram-sha-256",
-          // Least privilege: the connection may only be used by roles we have
-          // deliberately opted in.
-          allowedRoles: tranche,
-          // Default, stated for the record: creating this resource opens a
-          // connection as baoadmin. That is the checkpoint -- a broken
-          // certificate fails the run rather than surfacing at first rotation.
-          verifyConnection: true,
-        },
-      ],
-    },
-    { provider },
-  );
+    if (!ENGINE_ENABLED) return;
 
-  for (const app of tranche) {
-    new vault.database.SecretBackendStaticRole(
-      `postgres-rotation-${app}`,
+    const mount = new vault.database.SecretsMount(
+      "postgres-rotation",
       {
-        backend: mount.path,
-        dbName: "postgres",
-        name: app,
-        username: app,
-        rotationPeriod: ROTATION_PERIOD_SECONDS,
-        // Do NOT add selfManagedPassword, passwordWo or skipImportRotation:
-        // all three are Vault-Enterprise-only and OpenBao rejects them. The
-        // last one is the one you will want and cannot have -- creating this
-        // resource rotates the password immediately, by design and without an
-        // opt-out (openbao#284).
+        path: "database",
+        description: "PostgreSQL static-role rotation for equestria (docs/postgres-credentials)",
+        postgresqls: [
+          {
+            name: "postgres",
+            pluginName: "postgresql-database-plugin",
+            // Certificate paths, NOT the provider's inline tlsCertificate /
+            // privateKey fields. OpenBao reads these off its own filesystem,
+            // where kubernetes/apps/kube-system/openbao mounts them -- so the
+            // baoadmin superuser key never enters Pulumi state or the Minio
+            // backend. Pulumi only ever writes a path string.
+            connectionUrl:
+              "postgresql://baoadmin@postgres-rw.database.svc.cluster.local:5432/postgres" +
+              "?sslmode=verify-full" +
+              "&sslcert=/etc/pg-admin-certs/tls.crt" +
+              "&sslkey=/etc/pg-admin-certs/tls.key" +
+              "&sslrootcert=/etc/pg-admin-certs/ca.crt",
+            // Hash passwords before they cross the wire to PostgreSQL, so a
+            // rotated password never appears in a server log.
+            passwordAuthentication: "scram-sha-256",
+            // Least privilege: the connection may only be used by roles we have
+            // deliberately opted in.
+            allowedRoles: tranche,
+            // Default, stated for the record: creating this resource opens a
+            // connection as baoadmin. That is the checkpoint -- a broken
+            // certificate fails the run rather than surfacing at first rotation.
+            verifyConnection: true,
+          },
+        ],
       },
-      { provider, parent: mount },
+      { provider: args.globals.baoProvider, parent: this },
     );
+
+    for (const app of tranche) {
+      new vault.database.SecretBackendStaticRole(
+        `postgres-rotation-${app}`,
+        {
+          backend: mount.path,
+          dbName: "postgres",
+          name: app,
+          username: app,
+          rotationPeriod: ROTATION_PERIOD_SECONDS,
+          // Do NOT add selfManagedPassword, passwordWo or skipImportRotation:
+          // all three are Vault-Enterprise-only and OpenBao rejects them. The
+          // last one is the one you will want and cannot have -- creating this
+          // resource rotates the password immediately, by design and without an
+          // opt-out (openbao#284).
+        },
+        { provider: args.globals.baoProvider, parent: mount },
+      );
+    }
   }
 }

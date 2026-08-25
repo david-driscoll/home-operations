@@ -1,0 +1,240 @@
+---
+apiVersion: renovate-operator.mogenius.com/v1alpha1
+kind: RenovateJob
+metadata:
+  name: ${APP}
+  # No `reloader` annotation, unlike every other object in this namespace:
+  # reloader only ever restarts Deployments, StatefulSets and DaemonSets, and
+  # this is neither. It does not need one either -- the credentials reach
+  # Renovate through `envFrom` on Jobs the operator creates fresh for every
+  # run, so a rotated token is picked up by the next run with nothing to
+  # restart.
+spec:
+  # 03:00 nightly. Deliberately NOT the "every weekend" schedule the GitHub
+  # side uses (.github/renovate.json5): that one is a Mend-hosted app filing
+  # against a repo with CI minutes attached, this one is a cron in the cluster
+  # whose only cost is a couple of pods.
+  schedule: "0 3 * * *"
+
+  # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+  image: ghcr.io/renovatebot/renovate:44.41.1
+
+  # No digest, on purpose. This is a CRD field, so neither the `kubernetes` nor
+  # the `helm-values` manager sees it -- it is picked up by the repo's
+  # `Process annotated dependencies` customManager, whose "full docker image
+  # reference" pattern captures `[^\s@]+` and therefore cannot round-trip a
+  # `@sha256:` suffix. Same reason forgejo's `image.fullOverride` carries a bare
+  # tag. The operator's policy.allowedImages matches the repository only and
+  # ignores the tag either way.
+
+  parallelism: 2
+
+  secretRef: ${APP}-secret
+
+  provider:
+    name: forgejo
+    # The in-cluster Service, matching what forgejo-runner already does
+    # (resources/config.yml). Renovate wants the API root, hence /api/v1 --
+    # the operator's own Forgejo client trims that suffix back off before it
+    # builds its calls, so the one value serves both.
+    #
+    # Not the public hostname: that would hairpin every API call out to
+    # Traefik and back for a Service two DNS labels away.
+    endpoint: http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000/api/v1
+    # No `publicEndpoint`, so the operator UI links projects to the endpoint
+    # above rather than to https://git.<domain>.
+    #
+    # It is omitted to keep the domain out of the manifests: the operator's
+    # policy.allowedHosts must list the host of every endpoint it is given, and
+    # allowedHosts is the one Helm value in this estate that gets schema-
+    # validated against a hostname pattern -- which an offline `flate` render
+    # cannot satisfy for a `${ROOT_DOMAIN}` that lives in a SOPS Secret. See
+    # the long note on `policy.allowedHosts` in ../renovate-operator.
+    #
+    # Nothing functional depends on it. Cloning is unaffected either way:
+    # Renovate takes the clone URL from the repository's own `clone_url`, which
+    # Forgejo builds from ROOT_URL and which already points at the public
+    # hostname.
+
+  # Cheap insurance rather than a live concern: a fork of an upstream repo
+  # would otherwise get its own nightly run and its own PRs against a tree
+  # nobody here maintains. Costs one API call per discovered repository, and
+  # fails OPEN -- a repository whose lookup errors is kept.
+  skipForks: true
+
+  # No `discoveryFilters` and no `discoverTopics`, so discovery returns every
+  # repository the bot's token can see. That is the correct gate on this
+  # instance: Forgejo is REQUIRE_SIGNIN_VIEW and the bot is an ordinary
+  # account, so "what Renovate manages" is decided by which repositories the
+  # `renovate` user is a collaborator on -- in the forge, where a repository
+  # owner can change it, rather than in this file.
+
+  webhook:
+    # Turns the Dependency Dashboard checkboxes and the per-PR "rebase" box
+    # into something that acts now instead of at 03:00 tomorrow.
+    enabled: true
+    authentication:
+      enabled: true
+      secretRef:
+        name: ${APP}-webhook
+        key: token
+    sync:
+      # The operator creates and maintains the hook on every discovered
+      # repository itself, using the platform token above -- which is why that
+      # token needs write access to repository settings and not just to code.
+      # The alternative is adding a webhook by hand to every repo, forever.
+      enabled: true
+
+  extraEnv:
+    # The github.com credential, and NOT the platform token -- the platform is
+    # Forgejo. Renovate still talks to api.github.com on every run: release
+    # notes, and every `github-releases` / `github-tags` datasource lookup.
+    # Unauthenticated that is 60 requests an hour for the whole cluster's egress
+    # IP, which this estate's manifests exhaust inside a single repository, and
+    # the run then reports `no-result` for perfectly healthy dependencies.
+    #
+    # `github-token` is the GitHub App installation token that
+    # stacks/vault/KubernetesGithubAppToken.ts mints and emberstack reflects
+    # into every namespace, this one included. Two consequences of it being an
+    # App token rather than a PAT, both benign here:
+    #
+    #   * it EXPIRES HOURLY and is re-minted. That would be a problem for a
+    #     long-lived Deployment holding it in memory; these are Jobs the
+    #     operator creates fresh per run, so each one reads whatever is current
+    #     at pod start and is finished long before it lapses.
+    #   * its rate limit is the App installation's, not a user's 5000/hour.
+    #
+    # It is read as an env var rather than through the ExternalSecret next to it
+    # for the same reason: the Secret is reflected and already current, so
+    # copying it into a second Secret would only add a staleness window.
+    - name: GITHUB_COM_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: github-token
+          key: token
+
+  renovateConfig:
+    # Mounted read-only at /etc/renovate/config.js with RENOVATE_CONFIG_FILE
+    # pointed at it. The operator writes it into a ConfigMap it owns -- so
+    # nothing secret may go here, and nothing does: platform, endpoint and
+    # token all arrive as environment variables.
+    fileName: config.js
+    inline: |
+      module.exports = {
+        // THE HOUSE CONFIG. `globalExtends` is the bot-level equivalent of
+        // `extends`: it is resolved once for the whole run and every repository
+        // inherits it, and a repository's own renovate.json still merges on
+        // top -- so this is a DEFAULT, not a policy. That is the difference
+        // from `force`, which would win over the repo and is not what is
+        // wanted here.
+        //
+        // It points at the file GitHub's Renovate already reads for this same
+        // estate, so the two bots share one set of grouping rules, semantic
+        // commit scopes and package rules instead of drifting apart.
+        //
+        // Two things it drags along that are worth knowing:
+        //
+        //   * `schedule: ["every weekend"]`. Inherited by every Forgejo
+        //     repository, so although the cron below fires nightly, PRs only
+        //     appear at weekends unless a repository overrides it. That is the
+        //     existing house default; change it in the preset, not here.
+        //   * the flux/helm-values/kubernetes/kustomize manager settings are
+        //     scoped to `kubernetes/**`, so on a repository without that tree
+        //     they are inert rather than wrong.
+        //
+        // The `.json5` extension is honoured verbatim -- Renovate only appends
+        // `.json` when the preset name has no `.json`/`.json5`/`.jsonc` suffix.
+        globalExtends: [
+          'github>david-driscoll/home-operations//.github/renovate.json5',
+        ],
+
+        // Not set here and deliberately so: `endpoint` and `token` come from
+        // RENOVATE_ENDPOINT / RENOVATE_TOKEN, which the operator sets from
+        // spec.provider and spec.secretRef. `platform` is restated below only
+        // because it is cheap to read and impossible to get wrong twice.
+        platform: 'forgejo',
+
+        // Must be an address on the bot's Forgejo account, or the forge
+        // attributes the commits to nobody and the PR author does not match
+        // the account the token belongs to. stacks/system builds the bot's
+        // email as `<login>@git.<domain>`; keep the two in step.
+        gitAuthor: 'Renovate Bot <renovate@git.${ROOT_DOMAIN}>',
+
+        // Every repository gets a dashboard issue rather than silent PRs.
+        // This is what the webhook above makes interactive.
+        dependencyDashboard: true,
+        dependencyDashboardTitle: 'Renovate Dashboard 🤖',
+
+        // INERT, and kept only so the intent is on the record: BOTH job types
+        // the operator creates pass the flag on the command line, and CLI beats
+        // the config file. The discovery job runs `renovate --autodiscover`,
+        // and each executor runs `renovate --autodiscover=false <project>` --
+        // which is exactly what keeps one executor from re-running every
+        // repository. Deleting this line changes nothing; so does setting it
+        // false.
+        autodiscover: true,
+
+        // Run against repositories that have no renovate config yet, and open
+        // an onboarding PR offering one. `requireConfig: 'optional'` is what
+        // makes the first half true -- the default ('required') would have
+        // Renovate skip an un-onboarded repository entirely, so a repo would
+        // only ever be managed after someone merged a PR they never saw.
+        onboarding: true,
+        requireConfig: 'optional',
+        onboardingConfig: {
+          // The same preset the bot already applies globally. Without this the
+          // onboarding PR would propose bare `config:recommended`, which reads
+          // as "here is the house config" while actually being a narrower one
+          // -- and merging it would pin that repository to the narrower set.
+          extends: ['github>david-driscoll/home-operations//.github/renovate.json5'],
+        },
+
+        // Implicit executions Renovate is permitted to run. The allowed values
+        // are a fixed enum (bazelModDeps, goGenerate, gradleWrapper, mise,
+        // pixi); `mise` is the one that matters here, because a repo carrying
+        // .mise.toml needs it to resolve tool versions and otherwise the
+        // update is skipped rather than failed. It is `globalOnly`, so this is
+        // the only place it can be set -- a repository cannot grant itself
+        // more.
+        allowedUnsafeExecutions: ['mise'],
+
+        // Let Forgejo do the merge itself when a rule asks for automerge,
+        // instead of Renovate polling and merging through the API. Needs
+        // Forgejo >= 10 for branch autodelete; this instance is on 16.
+        platformAutomerge: true,
+
+        // Match the commit style the estate already uses everywhere else.
+        semanticCommits: 'enabled',
+
+        // Renovate's own default is 2 PRs/hour and 20 open. The hourly limit
+        // exists to be polite to hosted platforms; the forge is in this
+        // cluster, so it only serves to spread a first run over days.
+        prHourlyLimit: 0,
+        prConcurrentLimit: 10,
+
+        // No `repositoryCache` and no `persistRepoData`. Both trade disk for
+        // speed by keeping state between runs, and there is no state to keep:
+        // the scratch volume below is an emptyDir on a Job that is deleted
+        // afterwards, so every run starts cold either way. Making them pay off
+        // means giving the operator a real cache -- `config.forwardCacheToJobs`
+        // with Valkey, or `forwardS3CacheToJobs` against the Garage cluster
+        // already in this namespace -- which is a separate change.
+      };
+
+  scratchVolume:
+    # RENOVATE_BASE_DIR. Renovate clones each repository here and runs package
+    # managers in it, so it is not incidental scratch -- a small one fails a
+    # big lockfile refresh with a confusing ENOSPC from inside npm.
+    enabled: true
+    path: /tmp
+    sizeLimit: 4Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      # Renovate is Node; lockfile maintenance on a large repo is the peak and
+      # it is memory-shaped. No CPU limit -- throttling a batch job only makes
+      # the run longer while holding the same memory.
+      memory: 2Gi

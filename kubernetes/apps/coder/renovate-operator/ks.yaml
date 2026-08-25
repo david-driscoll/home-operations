@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app renovate-operator
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The HelmRelease cannot render without the `-values` Secret (issuer and
+    # client id) and will not start without the `-oidc` one, so external-secrets
+    # has to be up first. Both of those ExternalSecrets read an OpenBao path
+    # that the `applications` Pulumi stack writes from definition.yaml -- see
+    # docs/runbooks/renovate-forgejo.md for why the FIRST reconcile of this
+    # Kustomization is expected to fail and what unblocks it.
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/coder/renovate-operator
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # No failover/fast-node-eviction: that component patches
+    # `spec.values.defaultPodOptions`, which only the app-template chart reads.
+    # This chart takes tolerations natively and the operator is deliberately
+    # NOT a low-power survivor -- see the note on `tolerations` in
+    # helmrelease.yaml.
+    - ../../../components/tailscale
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # `renovate`, not `renovate-operator`: the tailnet name is what a person
+      # types, and the "-operator" half is an implementation detail of which
+      # chart happens to serve the UI. The component builds
+      # `${TAILSCALE_HOST}.${TAILSCALE_DOMAIN}` and points it at the named
+      # Service, which `fullnameOverride` pins to `renovate-operator`.
+      TAILSCALE_HOST: renovate
+      TAILSCALE_SERVICE: renovate-operator
+      TAILSCALE_PORT: http

@@ -1,0 +1,93 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: renovate-operator.rules
+      rules:
+        # WHAT THIS GROUP IS FOR.
+        #
+        # Renovate is batch work on a nightly cadence, so nothing here is
+        # urgent -- every rule is `warning` and every `for:` is long. The
+        # failure mode worth catching is the SILENT one: the operator stops
+        # scheduling, or every run fails, and nobody notices because the only
+        # symptom is dependency PRs quietly not appearing.
+        #
+        # Every renovate_operator_* series below comes from the operator's own
+        # /metrics, scraped by the chart's ServiceMonitor. They only exist once
+        # the operator has completed a run, so a brand new install is
+        # legitimately silent here -- the Deployment rule covers that window.
+        - alert: RenovateOperatorDown
+          annotations:
+            description: >-
+              The renovate-operator Deployment has no available replica, so
+              nothing is scheduling Renovate runs. This is EXPECTED during a Low
+              Power window: the operator carries no priorityClassName and no
+              control-plane toleration, so it goes Pending with the rest of
+              Tier 2.
+            summary: Renovate operator is not running.
+          expr: |
+            kube_deployment_status_replicas_available{namespace="coder", deployment="renovate-operator"} == 0
+          for: 2h
+          labels:
+            severity: warning
+
+        # The scheduler's own liveness. `schedule_next_run_timestamp_seconds`
+        # is the operator's plan for when the cron fires next; if that moment is
+        # hours in the past, the tick that should have advanced it never
+        # happened. Catches a wedged scheduler that a Running pod and a green
+        # Deployment both hide.
+        - alert: RenovateScheduleStalled
+          annotations:
+            description: >-
+              The next planned run for {{ $labels.renovate_job }} was
+              {{ humanizeDuration $value }} ago and has not been rescheduled.
+              The operator is up but its scheduler has stopped advancing.
+            summary: Renovate schedule has stopped firing.
+          expr: |
+            time() - renovate_operator_schedule_next_run_timestamp_seconds{renovate_namespace="coder"} > 21600
+          for: 1h
+          labels:
+            severity: warning
+
+        # A repository whose last run failed. Per-project deliberately: one
+        # broken repository is the common case (a malformed renovate.json, a
+        # registry that stopped answering) and aggregating it away would hide
+        # exactly the thing that needs fixing.
+        #
+        # 12h rather than something shorter because the gauge HOLDS its value
+        # between runs -- a failure at 03:00 stays 1 until the next nightly run
+        # clears it, so anything under a day would fire on a single bad night.
+        - alert: RenovateRunFailing
+          annotations:
+            description: >-
+              The last Renovate run for {{ $labels.project }} failed. Dependency
+              updates for that repository have stopped; the run log is in the
+              operator UI.
+            summary: Renovate run failing for {{ $labels.project }}.
+          expr: |
+            renovate_operator_run_failed{renovate_namespace="coder"} == 1
+          for: 12h
+          labels:
+            severity: warning
+
+        # Discovery is upstream of everything else: if it cannot reach Forgejo
+        # there are no projects to run, the per-project rule above has nothing
+        # to fire on, and the whole group goes quiet in exactly the way a
+        # working estate does. This is the rule that tells the two apart.
+        - alert: RenovateDiscoveryFailing
+          annotations:
+            description: >-
+              {{ $value }} discovery Jobs for {{ $labels.renovate_job }} ended
+              in a non-success state in the last 24h. Renovate cannot enumerate
+              repositories -- usually an expired Forgejo token, or an endpoint
+              refused by the operator's policy.allowedHosts.
+            summary: Renovate repository discovery is failing.
+          expr: |
+            increase(renovate_operator_discovery_jobs_total{renovate_namespace="coder", status!="success"}[24h]) > 1
+          for: 1h
+          labels:
+            severity: warning

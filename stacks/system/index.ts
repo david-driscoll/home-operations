@@ -38,32 +38,12 @@
  */
 
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
+import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
-import * as pulumi from "@pulumi/pulumi";
-import { Provider as VaultProvider } from "@pulumi/vault";
-import { configurePostgresRotation } from "./postgres-rotation.ts";
+import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
+import { PostgresRotationComponent } from "./postgres-rotation.ts";
 
-const token = process.env.BAO_TOKEN ?? "";
-const roleId = process.env.BAO_ROLE_ID ?? "";
-const secretId = process.env.BAO_SECRET_ID ?? "";
-const haveApprole = roleId !== "" && secretId !== "";
-
-// This stack exists ONLY to write. A run without credentials would report
-// success having done nothing — the shape of the Phase 8a gate bug that hid
-// twelve skipped writes behind a green `pulumi up`. Preview is exempt because
-// it makes no API call.
-if (!token && !haveApprole && !pulumi.runtime.isDryRun()) {
-  throw new Error('No OpenBao credentials — this stack would write nothing while reporting success. Run it through `mise run vals-run`, `eval "$(bootstrap/openbao/pulumi-env.sh)"`, or set BAO_TOKEN.');
-}
-
-const provider = new VaultProvider("openbao", {
-  address: process.env.BAO_ADDR ?? "https://bao.equestria.driscoll.tech",
-  ...(token ? { token } : haveApprole ? { authLogin: { path: "auth/approle/login", parameters: { role_id: roleId, secret_id: pulumi.secret(secretId) } } } : { token: "" }),
-  // The `pulumi` policy has no capability on auth/token/create, so the
-  // provider's default child-token mint 403s at configure time. Same reason as
-  // components/globals.ts.
-  skipChildToken: true,
-});
+const globals = new GlobalResources({}, {});
 
 for (const entry of CLUSTERS) {
   // `sourceTitle` and `secretField` are part of what a consumer needs, not
@@ -97,7 +77,7 @@ for (const entry of CLUSTERS) {
         source_tags: "cluster-definition",
       }),
     },
-    { provider },
+    { provider: globals.baoProvider },
   );
 }
 
@@ -107,4 +87,18 @@ export const clusters = CLUSTERS.map(c => c.key);
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
 // there, which must wait for the widened `pulumi` policy -- so this cannot
 // break the stack every other stack depends on.
-configurePostgresRotation(provider);
+new PostgresRotationComponent({ globals });
+
+// The Forgejo identity Renovate runs as -- the bot account, its token, and the
+// repository grants that decide what Renovate manages. Unlike everything else
+// in this stack it talks to something other than OpenBao, which is a new way
+// for a stack every other stack reads to go red; forgejo-renovate.ts explains
+// the trade and carries its own kill switch.
+//
+// The grant lists are resolved HERE, with `await`, rather than inside the
+// component: the Team/TeamMember/Collaborator resources are built by looping
+// over them, and a resource created inside an `.apply()` does not appear in
+// `pulumi preview`. discoverForgejoTargets explains what that cost this estate
+// last time.
+const forgejoTargets = await discoverForgejoTargets(globals);
+new ForgejoConfigurationComponent({ globals, targets: forgejoTargets });

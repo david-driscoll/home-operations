@@ -35,3 +35,7 @@ packages:
     source: terraform-provider
     version: 0.14.0
     parameters: [registry.terraform.io/darkhonor/technitium, 1.2.1]
+  forgejo:
+    source: terraform-provider
+    version: 0.14.0
+    parameters: [registry.terraform.io/svalabs/forgejo, 1.6.0]
