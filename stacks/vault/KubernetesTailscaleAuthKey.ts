@@ -78,6 +78,15 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
             "reloader.stakater.com/auto": "true",
           },
         },
+        // Explicit, and load-bearing: the live Secret is type Opaque, and
+        // importing records that in state. Omitting `type` here diffs as
+        // REMOVING it — an immutable-field change, i.e. a replacement, which
+        // Pulumi refuses outright for a resource that still carries `import`
+        // ("previously-imported resources that still specify an ID may not be
+        // replaced"). Matching the live value keeps every run an in-place
+        // update. This is what wedged the stack after the SecretPatch->Secret
+        // conversion.
+        type: "Opaque",
         stringData: {
           authkey: tailscaleAppAuthkey.key,
         },
@@ -109,6 +118,8 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
             "reloader.stakater.com/auto": "true",
           },
         },
+        // Same reasoning as the app authkey above.
+        type: "Opaque",
         stringData: {
           authkey: tailscaleDnsAuthkey.key,
         },
@@ -149,13 +160,22 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
             "driscoll.dev/token-expires-at": accessToken.expiresAt,
           },
         },
+        // Same reasoning as the app authkey above.
+        type: "Opaque",
         stringData: {
           token: accessToken.token,
         },
       },
       {
         ...cro,
-        import: "tailscale-system/tailscale-access-token",
+        // No `import` here, deliberately: this one DID import (verified in
+        // state 2026-08-25 — importID tailscale-system/tailscale-access-token
+        // is recorded), so the option's only remaining effect would be to veto
+        // any future replacement forever. Stale import options are an armed
+        // failure mode in this estate (the StandardDns imports armed live
+        // deletes). The two secrets above keep theirs ONLY because their
+        // import has not landed yet — the run was failing here first; drop
+        // them the same way once a run has gone green.
         deleteBeforeReplace: true,
       },
     );
