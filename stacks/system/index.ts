@@ -13,18 +13,45 @@
  * reviewable in git, diffable in a PR — and this is the one thing that turns it
  * into something other repos can consume. One writer, many readers.
  *
- * ## It builds its own provider, and that is not an oversight
+ * ## It uses GlobalResources, and the old note here said it must not
  *
- * Every other stack reaches OpenBao through `GlobalResources`. This one must
- * not: `GlobalResources` constructs a `BaoStore`, and `BaoStore` reads cluster
- * definitions from `clusters/<key>/details` — the paths THIS stack writes. A
- * producer that reads its own output cannot bootstrap: on a fresh estate, or
- * after those paths are ever lost, the run that would recreate them fails
- * because they are missing.
+ * It did build its own provider once, for two stated reasons. The stack now
+ * reaches OpenBao through `GlobalResources` like every other one, because the
+ * Forgejo component needs `baoProvider` and `searchDomain` and duplicating
+ * those was worse than the alternative. Both original objections were real, so
+ * here is what actually became of them.
  *
- * It also has no business constructing the unifi, cloudflare, tailscale and
- * github providers `GlobalResources` builds eagerly. Publishing six
- * non-secret definitions should not require every credential in the estate.
+ * **The bootstrap circularity is LATENT, not live — and there is a rule that
+ * keeps it that way.** The old note said `GlobalResources` constructs a
+ * `BaoStore`, `BaoStore` reads `clusters/<key>/details`, and a producer that
+ * reads its own output cannot bootstrap. The first half is true: `this.store =
+ * new BaoStore()` runs in the `GlobalResources` constructor. The second half is
+ * not, as things stand. `BaoStore`'s constructor is deliberately lazy — it
+ * builds a `BaoClient` and nothing else — and `_clusterDetails` is only ever
+ * computed by `getAllClusters()` / `getCluster()`. The reads `GlobalResources`
+ * DOES make eagerly are all `getSecretByTitle` lookups for provider
+ * credentials, which touch no `clusters/` path.
+ *
+ * So the rule, and it is the whole reason this section still exists:
+ *
+ *   NEVER call `globals.store.getAllClusters()`, `getCluster()` or
+ *   `getDockerClusters()` from this stack.
+ *
+ * Any of them turns this file into a producer that reads its own output, and
+ * the failure lands on a fresh estate or after those paths are lost — the one
+ * run that would recreate them, failing because they are missing. Nothing here
+ * calls them today. `CLUSTERS` is read from the checked-in YAML instead, which
+ * is what makes that possible.
+ *
+ * **The credential surface objection is now simply true, and accepted.**
+ * `GlobalResources` eagerly constructs the cloudflare, unifi, unifi-firewall,
+ * technitium, tailscale and minio providers and reads each of their credentials
+ * from OpenBao at construction. Publishing six non-secret definitions now does
+ * require most of the credentials in the estate, exactly as the old note
+ * objected. That is a real cost and it is paid knowingly: this stack already
+ * could not run without OpenBao, and a run that cannot reach the other
+ * providers' credentials is a broken environment rather than a bootstrap
+ * deadlock.
  *
  * ## Nothing here is secret
  *
