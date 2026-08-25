@@ -73,6 +73,49 @@ spec:
                 name: pinepods
                 annotations:
                   reloader.stakater.com/auto: "true"
+          # The startup probe has to come the same way as the annotation above:
+          # this chart exposes no probe values at all, so there is nothing to set
+          # in `values`.
+          #
+          # Why it is needed. Measured boot is 144s (the pod's own
+          # Initialized -> ContainersReady). The liveness probe allows
+          # initialDelaySeconds 120 + 3 x periodSeconds 30 = 210s, so today the
+          # app finishes with about 66s to spare and succeeds on its second
+          # liveness attempt. That is the narrowest margin of any app in the
+          # boot-budget sweep, and it is about to be handed a credential that
+          # rotates on a schedule -- every rotation is a forced restart.
+          #
+          # Tandoor (#1142) is the precedent: 160s of boot against a 40s budget,
+          # killed mid-collectstatic, and because each restart began the work
+          # again it crash-looped six times rather than converging. Romm (#1148)
+          # was the same shape caught before rotating instead of after.
+          #
+          # A startup probe removes the class of failure rather than widening
+          # the margin: while it is pending, liveness and readiness do not run at
+          # all, so a slow boot simply takes longer. 600s is ~4x the measured
+          # boot. Steady-state behaviour is untouched.
+          - target:
+              version: v1
+              group: apps
+              kind: Deployment
+              name: pinepods
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: pinepods
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: pinepods
+                        startupProbe:
+                          httpGet:
+                            path: /api/pinepods_check
+                            port: http
+                          periodSeconds: 10
+                          timeoutSeconds: 5
+                          failureThreshold: 60
   values:
     backend:
       # -- Enable backend deployment
