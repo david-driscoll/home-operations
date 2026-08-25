@@ -93,7 +93,6 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
       {
         ...cro,
-        import: "tailscale-system/tailscale-authkey",
         deleteBeforeReplace: true,
         // This resource was renamed from `${name}-tailscale-authkey` when the app/dns keys
         // were split apart. The underlying Secret (tailscale-system/tailscale-authkey) never
@@ -126,7 +125,6 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
       {
         ...cro,
-        import: "tailscale-system/tailscale-dns-authkey",
         deleteBeforeReplace: true,
       },
     );
@@ -168,14 +166,13 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
       },
       {
         ...cro,
-        // No `import` here, deliberately: this one DID import (verified in
-        // state 2026-08-25 — importID tailscale-system/tailscale-access-token
-        // is recorded), so the option's only remaining effect would be to veto
-        // any future replacement forever. Stale import options are an armed
+        // No `import` on ANY of these three, deliberately: every import has
+        // landed (verified in state 2026-08-25 — the two authkeys carry their
+        // importIDs; this one was recreated as a plain managed resource), so
+        // a retained option's only remaining effect would be to veto any
+        // future replacement forever. Stale import options are an armed
         // failure mode in this estate (the StandardDns imports armed live
-        // deletes). The two secrets above keep theirs ONLY because their
-        // import has not landed yet — the run was failing here first; drop
-        // them the same way once a run has gone green.
+        // deletes) — an import option's life ends the run after it succeeds.
         deleteBeforeReplace: true,
       },
     );
