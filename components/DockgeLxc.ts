@@ -1085,6 +1085,48 @@ export class DockgeLxc extends ComponentResource {
     return { envLocal, byStack };
   }
 
+  /**
+   * Per-stack post-deploy hook for the postgres stack, invoked by
+   * createStack's `${stackName}Init` lookup with `[composeCommand]`.
+   *
+   * Guarantees the provisioner re-reads the CURRENT .env-local on every
+   * deploy of the stack. Without this, two Docker semantics have to line up
+   * implicitly: `docker compose up -d` only recreates postgres-provision
+   * when its config hash (which includes resolved env_file values) changed,
+   * and the trailing `docker compose start` re-runs a stopped one-shot with
+   * its CREATION-time environment — same-env today, but nothing enforces
+   * that, and an out-of-band `docker compose restart` (the Dockge button)
+   * never re-reads env files at all. `--force-recreate postgres-provision`
+   * makes "provision runs with the environment currently on disk" an
+   * explicit property of every deploy instead of a coincidence of hashing.
+   *
+   * It also turns provision failure into DEPLOY failure: the container is
+   * `restart: "no"`, so before this its exit code was only visible in
+   * `docker compose ps`. Following the logs until exit and then exiting with
+   * the container's own code surfaces the provision output in the Pulumi run
+   * and fails it on a bad declaration.
+   *
+   * Triggered by the compose Command resource itself: any stack-file change
+   * replaces that Command (its triggers are the copy-resource ids), which
+   * changes this command's trigger and re-runs it. A run where nothing in
+   * the stack changed re-runs neither.
+   *
+   * Public because the only caller is createStack's dynamic string lookup —
+   * `private` reads as unreachable to static analysis (biome's unsafe fix
+   * would delete the hook outright).
+   */
+  public postgresInit(dependsOn: Input<Resource>[]) {
+    return new remote.Command(
+      `${this.shortName}-postgres-provision-reconcile`,
+      {
+        connection: this.remoteConnection,
+        create: `set -e; cd /opt/stacks/postgres; docker compose -f compose.yaml up -d --force-recreate postgres-provision; docker compose -f compose.yaml logs -f --no-log-prefix postgres-provision; rc="$(docker inspect -f '{{.State.ExitCode}}' postgres-provision)"; echo "postgres-provision exited with code $rc"; exit "$rc"`,
+        triggers: [dependsOn],
+      },
+      { parent: this.dockerParent, dependsOn },
+    );
+  }
+
   private createStack(
     stackName: string,
     files: Map<string, string>,

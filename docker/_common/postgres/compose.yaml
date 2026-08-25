@@ -126,6 +126,14 @@ services:
     entrypoint: ["/bin/sh", "/provision.sh"]
     # One-shot. `no` rather than `on-failure` so a persistently broken
     # declaration is visible in `docker compose ps` instead of looping.
+    #
+    # After every deploy of this stack, DockgeLxc's postgresInit hook
+    # (components/DockgeLxc.ts) force-recreates THIS service so it re-reads
+    # the .env-local currently on disk — `docker compose start` would re-run
+    # a stopped one-shot with its creation-time environment, and a Dockge
+    # restart never re-reads env files at all — then follows its logs and
+    # exits with this container's exit code, so a failed provision fails the
+    # Pulumi deploy loudly rather than only parking an Exited(1) here.
     restart: "no"
     dns:
       - 100.100.100.100
