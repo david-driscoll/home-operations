@@ -20,13 +20,45 @@ spec:
         apiVersions: ["v1"]
         operations: ["CREATE", "UPDATE"]
         resources: ["jobs"]
+  # EVERY EXPRESSION BELOW IS GUARDED, AND THAT IS NOT DEFENSIVE STYLE.
+  #
+  # `matchConstraints` selects EVERY batch/v1 Job in the cluster, and
+  # `failurePolicy: Fail` means a matchCondition that ERRORS denies the request
+  # rather than skipping the policy. Kubernetes admission objects are
+  # unstructured maps, so reading an absent field is an error, not `null`:
+  #
+  #   object.metadata.name           absent on a `generateName` Job
+  #   object.metadata.labels         absent on a Job with no labels
+  #   object.spec.template.spec.volumes  absent on a pod spec with no volumes
+  #
+  # Unguarded, those three denied every ordinary Job in the cluster. Proven with
+  # `kubectl create --dry-run=server` on a bare Job:
+  #
+  #   policy 'volsync-mover-nfs' denied request: [expression
+  #   'object.metadata.name.startsWith("volsync-")' resulted in error:
+  #   no such key: name, ...]
+  #
+  # It went unnoticed because nothing here used `generateName` until the
+  # renovate-operator did (kubernetes/apps/coder/renovate), whose discovery and
+  # executor Jobs are created that way. The conditions are also ALL evaluated --
+  # the error above names all three -- so guarding only the first is not enough.
+  #
+  # An `objectSelector` on the binding would ALSO keep the policy off unrelated
+  # Jobs, and looks like the tidier fix. It was deliberately not used: no mover
+  # Job existed at the time to confirm volsync really stamps
+  # `app.kubernetes.io/created-by: volsync` on them, and if it does not, the
+  # selector would silently exclude every real mover -- the NFS mutation below
+  # would stop applying and backups would lose /repository with nothing failing.
+  # These guards change WHICH Jobs match not at all, so they carry no such risk.
   matchConditions:
     - name: has-volsync-job-name-prefix
       expression: >
-        object.metadata.name.startsWith("volsync-src-")
+        has(object.metadata.name) && object.metadata.name.startsWith("volsync-src-")
     - name: has-volsync-created-by-labels
       expression: >
-        object.metadata.labels["app.kubernetes.io/created-by"] == "volsync"
+        has(object.metadata.labels)
+        && "app.kubernetes.io/created-by" in object.metadata.labels
+        && object.metadata.labels["app.kubernetes.io/created-by"] == "volsync"
   failurePolicy: Fail
   reinvocationPolicy: IfNeeded
   mutations:
@@ -69,16 +101,49 @@ spec:
         apiVersions: ["v1"]
         operations: ["CREATE", "UPDATE"]
         resources: ["jobs"]
+  # EVERY EXPRESSION BELOW IS GUARDED, AND THAT IS NOT DEFENSIVE STYLE.
+  #
+  # `matchConstraints` selects EVERY batch/v1 Job in the cluster, and
+  # `failurePolicy: Fail` means a matchCondition that ERRORS denies the request
+  # rather than skipping the policy. Kubernetes admission objects are
+  # unstructured maps, so reading an absent field is an error, not `null`:
+  #
+  #   object.metadata.name           absent on a `generateName` Job
+  #   object.metadata.labels         absent on a Job with no labels
+  #   object.spec.template.spec.volumes  absent on a pod spec with no volumes
+  #
+  # Unguarded, those three denied every ordinary Job in the cluster. Proven with
+  # `kubectl create --dry-run=server` on a bare Job:
+  #
+  #   policy 'volsync-mover-nfs' denied request: [expression
+  #   'object.metadata.name.startsWith("volsync-")' resulted in error:
+  #   no such key: name, ...]
+  #
+  # It went unnoticed because nothing here used `generateName` until the
+  # renovate-operator did (kubernetes/apps/coder/renovate), whose discovery and
+  # executor Jobs are created that way. The conditions are also ALL evaluated --
+  # the error above names all three -- so guarding only the first is not enough.
+  #
+  # An `objectSelector` on the binding would ALSO keep the policy off unrelated
+  # Jobs, and looks like the tidier fix. It was deliberately not used: no mover
+  # Job existed at the time to confirm volsync really stamps
+  # `app.kubernetes.io/created-by: volsync` on them, and if it does not, the
+  # selector would silently exclude every real mover -- the NFS mutation below
+  # would stop applying and backups would lose /repository with nothing failing.
+  # These guards change WHICH Jobs match not at all, so they carry no such risk.
   matchConditions:
     - name: has-volsync-job-name-prefix
       expression: >
-        object.metadata.name.startsWith("volsync-")
+        has(object.metadata.name) && object.metadata.name.startsWith("volsync-")
     - name: has-volsync-created-by-labels
       expression: >
-        object.metadata.labels["app.kubernetes.io/created-by"] == "volsync"
+        has(object.metadata.labels)
+        && "app.kubernetes.io/created-by" in object.metadata.labels
+        && object.metadata.labels["app.kubernetes.io/created-by"] == "volsync"
     - name: repository-volume-does-not-exist
       expression: >
-        !object.spec.template.spec.volumes.exists(item, item.name == "repository")
+        !has(object.spec.template.spec.volumes)
+        || !object.spec.template.spec.volumes.exists(item, item.name == "repository")
   failurePolicy: Fail
   reinvocationPolicy: IfNeeded
   mutations:
