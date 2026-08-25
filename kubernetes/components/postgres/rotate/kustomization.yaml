@@ -82,5 +82,5 @@ patches:
                 - sourceRef:
                     generatorRef:
                       apiVersion: generators.external-secrets.io/v1alpha1
-                      kind: VaultDynamicSecret
+                      kind: ClusterGenerator
                       name: ${APP}-postgres-rotation
