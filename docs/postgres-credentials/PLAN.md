@@ -363,7 +363,8 @@ latent startup fragility surfaces. Reloader firing correctly is necessary but no
 | 2 | `freshrss` | #1138 | **verified.** 20-char password, `esReady=True`, pod restarted with 0 restarts since. Persistent connections stay at 0 because FreshRSS is PHP and connects per request — proof came from `pg_stat_database.xact_commit` advancing with `xact_rollback` flat, not from `pg_stat_activity`. |
 | 3 | `tandoor`, `crowdsec` | #1141 | **verified, with an incident.** Both went 32 → 20 chars and both ExternalSecrets synced. `crowdsec` was clean — lapi restarted once, all 7 agents stayed up untouched and registered, bouncers intact — and it is the first app proven to rotate through `valueFrom.secretKeyRef` rather than `envFrom`. `tandoor` crash-looped through 6 restarts, but **not** on the credential: every attempt logged `Database is ready` and `No migrations to apply`. Its cold boot runs `collectstatic` for ~2m40s against a 40s liveness budget with no startup probe, so the restart the rotation forced was simply the first one in days. Fixed in #1142. |
 | 4 | `coder`, `pulsarr`, `n8n` | #1146 | **verified.** All three 32 → 20 chars, fresh pods with **0 restarts**, backends re-established (coder 4, pulsarr 2, n8n 1). The first tranche chosen *by* the boot-budget gate, and the first with no restart trouble at all. `coder` proved the connection-**URI** path: it takes `CODER_PG_CONNECTION_URL` rather than a bare password, and the rotated value arrived embedded in `uri`. Two things learned, both below: the propagation lag is real, and the cutover is not seamless for a pooled app. |
-| 5 | `romm` | #1152 | pending merge. Group C, and the first app deliberately split into two PRs: the startup probe was widened first (#1148) because romm's boot did not fit its 30s budget. Measured 49s before, 43s after — and the widening rollout was itself the proof, a cold boot under the new 300s budget with 0 restarts. |
+| 5 | `romm` | #1152 | **verified.** 32 → 20 chars, pod rebuilt in **43s with 0 restarts** — matching the boot measured before rotating, so the widened probe did exactly what it was added for. **Zero** auth failures during the cutover, unlike coder: romm connects per request, so no pooled connection was holding a dead credential. Proof came from `xact_commit` advancing with `xact_rollback` flat, since `numbackends` sits at 0. |
+| 6 | `questarr`, `forgejo` | #TBD6 | pending merge. Both measured with wide headroom, so neither needed a probe widened first. `forgejo` takes the password by a new route: an initContainer bakes `forgejo-db/password` into `app.ini`, so only a pod restart delivers it. Reloader handles that — verified in its source, not assumed. |
 
 ### Two things tranche 4 measured
 
@@ -383,6 +384,32 @@ per app. Apps that open a connection per request ride it out invisibly; pooled a
 long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
 shorter `rotation_period`.
 
+### Group D, measured (2026-08-25)
+
+The sweep grouped by *probe shape*; these are the actual boots, taken from each pod's own
+`Initialized → ContainersReady`. Having no startup probe mattered far less than the ratio of
+boot to budget:
+
+| app | boot | liveness budget | margin | verdict |
+|---|---|---|---|---|
+| `pinepods` | 144s | 210s | **1.5×** | needs a startup probe first |
+| `questarr` | 51s | 180s | 3.5× | rotate directly (tranche 6) |
+| `forgejo` | 11s | 300s | 27× | rotate directly (tranche 6) |
+
+The two that actually broke or nearly did had *negative* margin: tandoor 160s against 40s,
+romm 49s against 30s.
+
+`pinepods` needs a different mechanism than tandoor and romm got. Its chart exposes no probe
+values at all — the reloader annotation already reaches it through a post-render kustomize
+patch — so a startup probe has to travel the same way.
+
+**Correction to the sweep above:** it originally listed `autobrr` and `forgejo-runner` in
+group D. Neither is a Postgres consumer. `autobrr`'s component line is commented out and
+`forgejo-runner` has no `components/postgres` at all; both were picked up by a shell `grep`
+that happily counts commented lines, where `discoverPostgresApps()` parses YAML and correctly
+excludes them. The real count is **16 consumers**, not 17. Take the app list from the
+discovery function, never from grep.
+
 ### Boot-budget sweep of the remaining apps
 
 Run 2026-08-25 against the live cluster, after tandoor. A rotation is a forced restart, so the
@@ -393,7 +420,7 @@ question for each app is whether it can finish booting before something kills it
 | **A** | `coder`, `pulsarr`, `immich` (app + ML), `windmill-extra`, `windmill-workers-*`, `forgejo-garage-storage` | **no liveness probe at all** | cannot be probe-killed mid-boot; safe from tandoor's failure mode |
 | **B** | `n8n` (~600s), `windmill-app` (~600s) | generous startup probe | protected |
 | **C** | `romm` (~30s) | startup probe present but **short** | check its real boot time before opting in |
-| **D** | `autobrr` (~110s), `forgejo-runner` (~120s), `questarr` (~180s), `pinepods` (~210s), `forgejo` (~300s) | **no startup probe**; the liveness budget shown is all the boot time they get | tandoor's exact shape — add a startup probe *before* rotating |
+| **D** | `questarr`, `pinepods`, `forgejo` | **no startup probe**; the liveness budget is all the boot time they get | see the measurements below — only `pinepods` is actually tight |
 | **E** | `outline`, `retrom`, `strmgen` | Postgres role exists, but **no Kustomization and no workload** | orphans; decide whether to drop the role rather than rotate a credential nothing consumes |
 
 Tandoor's cold boot measured ~2m40s, so a budget under ~180s is not obviously safe — group D is
