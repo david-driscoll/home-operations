@@ -254,6 +254,28 @@ path "auth/kubernetes-sgc/role/*" {
 EOF
   ok "wrote policy pulumi"
 
+  bao policy write eso-postgres-rotation - >/dev/null <<'EOF'
+# The rotation reader. Used ONLY by the ESO generator that fetches PostgreSQL
+# passwords OpenBao's database secrets engine owns
+# (docs/postgres-credentials/PLAN.md phase 4).
+#
+# Deliberately NOT eso-equestria. That role can read every secrets/ prefix in
+# the estate, and this identity needs one path. It is also bound to a
+# ServiceAccount in the `database` namespace rather than kube-system, because
+# ESO resolves a generator's serviceAccountRef against the invoking
+# ExternalSecret's namespace and ignores the namespace field -- so the identity
+# has to live next to the ExternalSecret, in a namespace whose workloads can
+# already read these passwords out of the <app>-postgres Secrets. Scoping the
+# grant this tightly is what keeps that harmless.
+#
+# Read-only, and no database/creds/* -- static roles only, same as everywhere
+# else in this plan.
+path "database/static-creds/*" {
+  capabilities = ["read"]
+}
+EOF
+  ok "wrote policy eso-postgres-rotation"
+
   local cluster
   for cluster in equestria sgc; do
     bao policy write "eso-${cluster}" - >/dev/null <<EOF
@@ -769,6 +791,19 @@ setup() {
     token_policies="eso-equestria" \
     token_ttl="1h" >/dev/null
   ok "wrote kubernetes auth role eso-equestria"
+
+  # The rotation reader's role. Bound to its own ServiceAccount in `database`
+  # (kubernetes/apps/database/postgres/app/rotation-serviceaccount.yaml), NOT to
+  # external-secrets in kube-system -- see the policy comment above for why the
+  # identity cannot live in kube-system.
+  #
+  # Same 1h ttl as eso-equestria: ESO re-authenticates per refresh.
+  bao write auth/kubernetes/role/eso-postgres-rotation \
+    bound_service_account_names="eso-postgres-rotation" \
+    bound_service_account_namespaces="database" \
+    token_policies="eso-postgres-rotation" \
+    token_ttl="1h" >/dev/null
+  ok "wrote kubernetes auth role eso-postgres-rotation"
 
   # ⚠️ ONE MOUNT PER CLUSTER. `auth/kubernetes/config` above points at
   # equestria's own API server, so it can only validate equestria
