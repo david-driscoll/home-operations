@@ -34,6 +34,16 @@ spec:
     # the app-template chart reads. The equivalent tolerations are set natively
     # under coder.tolerations in helmrelease.yaml.
     - ../../../components/postgres
+    # TRANCHE 4, group A of the boot-budget sweep: coder has no liveness
+    # probe at all, so it cannot be probe-killed mid-boot the way tandoor was.
+    #
+    # Coder is the first app to consume the credential as a CONNECTION URI
+    # (CODER_PG_CONNECTION_URL <- coder-pguser-secret/uri) rather than a bare
+    # password, so the password has to reach it already embedded in the URI.
+    # It does: the component builds the same 15 keys for a rotating app as for
+    # a static one, and `uri` on grafana, tandoor and crowdsec all carry their
+    # rotated 20-character password today.
+    - ../../../components/postgres/rotate
     - ../../../components/tailscale
   postBuild:
     substitute:

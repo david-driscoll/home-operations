@@ -36,6 +36,10 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # TRANCHE 4, group B: n8n already has a ~600s startup probe, which is the
+    # protection tandoor had to be given in #1142. Reads
+    # DB_POSTGRESDB_PASSWORD from n8n-env via envFrom.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

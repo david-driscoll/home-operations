@@ -36,6 +36,10 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # TRANCHE 4, group A: no liveness probe, so no probe-kill risk on the
+    # restart the rotation forces. Reads dbPassword from pulsarr-env via
+    # envFrom, and the Deployment carries reloader.stakater.com/auto.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
