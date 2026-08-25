@@ -1,0 +1,16 @@
+# Host-level postgres declarations for this node — the home for databases
+# whose owning stack no longer exists, since an x-postgres block needs a stack
+# to live in. Parsed by Pulumi (components/dockerStackPostgres.ts) into the
+# postgres stack's generated .env-local; entries use the same schema as a
+# stack's x-postgres block: database, ensure, passwordVersion.
+#
+# The forgejo role and database on this node are orphaned since the move to
+# equestria (PR #1078). Once you are ready to drop them, declare:
+#
+#   databases:
+#     - database: forgejo
+#       ensure: absent
+#
+# deploy, and remove the entry after the drop lands. Removal WITHOUT an
+# ensure-absent tombstone never drops anything — that is the retain default.
+databases: []

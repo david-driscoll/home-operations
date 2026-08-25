@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
-import { baoKvSecret, baoProvenance, dockgeBaoPath } from "@components/bao.ts";
+import { baoKvSecret, baoProvenance, dockgeBaoPath, postgresBaoPath } from "@components/bao.ts";
 import { Tailscale } from "@components/constants.ts";
 import { awaitOutput, copyFileToRemote, getTailscaleSection } from "@components/helpers.ts";
 import type { OPClient } from "@components/op.ts";
@@ -14,12 +14,14 @@ import type { TailscaleIp } from "@openapi/tailscale-grants.js";
 import * as authentik from "@pulumi/authentik";
 import { remote, type types } from "@pulumi/command";
 import { all, ComponentResource, type Input, interpolate, jsonStringify, log, mergeOptions, type Output, output, type Resource, type Unwrap } from "@pulumi/pulumi";
+import { RandomPassword } from "@pulumi/random";
 import * as tailscale from "@pulumi/tailscale";
 import { TailnetKey } from "@pulumi/tailscale";
 import { glob } from "glob";
 import { unique } from "moderndash";
 import * as yaml from "yaml";
 import type { AuthentikApplicationManager } from "./authentik.ts";
+import { type PostgresTenantDeclaration, type PostgresTenantResources, parseDatabasesFile, parseStackPostgresDeclaration, renderPostgresEnvLocal, validatePostgresTenants } from "./dockerStackPostgres.ts";
 import type { GlobalResources } from "./globals.ts";
 import { getContainerHostnames } from "./helpers.ts";
 import { runCommunityScriptLxc } from "./lxc.ts";
@@ -755,25 +757,50 @@ export class DockgeLxc extends ComponentResource {
       unique([...hostFiles, ...commonFiles].filter(z => z !== ".keep" && !z.startsWith("."))),
     );
 
-    const outpost = stacks
-      .apply(stacks =>
-        output(
-          stacks.map(async stackName => {
+    // Two passes, deliberately. getStackFiles runs for EVERY stack before any
+    // createStack does, because the postgres stack's generated .env-local is
+    // a function of every OTHER stack's x-postgres declaration — the tenant
+    // set must be complete before the first file renders. A stack suppressed
+    // by .ignore returns null files here and therefore contributes no
+    // declaration either, which is exactly the semantics a suppressed stack
+    // should have. The per-element closures below all await this one shared
+    // promise, keeping the array-of-promises shape output() unwraps cleanly
+    // (an async .apply returning an Output would nest Output<Output<…>> in
+    // the types and break the .filter chain downstream).
+    const prepare = (stackNames: string[]) =>
+      (async () => {
+        const entries = await Promise.all(
+          stackNames.map(async stackName => {
             const path = resolve(dockerPath, this.args.host.name, stackName);
             const files = await this.getStackFiles(stackName, resolve(dockerPath, "_common", stackName), path);
-            if (!files) {
+            return files ? { stackName, path, files } : null;
+          }),
+        );
+        const active = entries.filter(z => z !== null).map(z => z!);
+        return { active, postgres: await this.collectPostgresTenants(active) };
+      })();
+
+    const outpost = stacks
+      .apply(stackNames => {
+        const prepared = prepare(stackNames);
+        return output(
+          stackNames.map(async stackName => {
+            const { active, postgres } = await prepared;
+            const entry = active.find(e => e.stackName === stackName);
+            if (!entry) {
               return null;
             }
             return this.createStack(
-              stackName,
-              files,
-              path,
+              entry.stackName,
+              entry.files,
+              entry.path,
               replacements,
               output(args.dependsOn).apply(z => [...z, ...this.mountPoints]),
+              postgres,
             );
           }),
-        ),
-      )
+        );
+      })
       .apply(z => z.filter(z => z !== null).map(z => z!))
       .apply(z => {
         z.forEach(s => log.info(`Loaded docker stack ${s.name} from ${s.path}`), this);
@@ -934,12 +961,137 @@ export class DockgeLxc extends ComponentResource {
     return filesMap;
   }
 
+  /**
+   * Collect every stack's `x-postgres` declaration (plus host-level entries
+   * from the postgres stack's databases.yaml) before any stack renders. The
+   * postgres stack's .env-local is generated from the union — see
+   * components/dockerStackPostgres.ts for the convention and lifecycle — and
+   * each declaring stack gets its credential back for `${PGAPP_*}`
+   * substitution into its own files.
+   *
+   * Reads the RAW on-disk compose.yaml, before `${…}` substitution and before
+   * the vals resolver, so a declaration is literal values only and can never
+   * smuggle a secret reference.
+   *
+   * Rotation: RandomPassword is keyed by `keepers.version`, so bumping
+   * `passwordVersion` REPLACES the resource and mints a new value. It flows
+   * into the generated .env-local (provision.sh's unconditional ALTER ROLE
+   * applies it) and into the declaring stack's rendered files in the same
+   * run; both stacks restart via their content-hash copy triggers. The app
+   * may crash-loop for a cycle until postgres-provision has run — the same
+   * transient as a cold host boot, converged by `restart: unless-stopped`.
+   *
+   * The OpenBao record (`clusters/<key>/apps/<app>/postgres`) is written for
+   * humans, recovery, and cross-estate consumers. Nothing in THIS pipeline
+   * reads it back — that is what makes a first deploy race-free and a
+   * credential-less run non-fatal (same gate + warn shape as the dockge
+   * inventory item in the constructor). It also cures the frozen-twin state
+   * the alpha-site authentik path sat in: read by two .env files, written by
+   * nothing.
+   */
+  private async collectPostgresTenants(stacks: { stackName: string; path: string; files: Map<string, string> }[]): Promise<PostgresTenantResources> {
+    const postgresEntry = stacks.find(s => s.stackName === "postgres");
+    const declarations: PostgresTenantDeclaration[] = [];
+
+    for (const s of stacks) {
+      const composePath = s.files.get("compose.yaml");
+      if (!composePath) continue;
+      const decl = parseStackPostgresDeclaration(s.stackName, await readFile(composePath, "utf-8"));
+      if (decl) declarations.push(decl);
+    }
+
+    if (postgresEntry?.files.has(".env-local")) {
+      // The generated file and a committed one would fight over the same
+      // remotePath from two Pulumi resources. The committed era is over;
+      // say so at the point of the mistake.
+      throw new Error(
+        `${this.args.host.name}: docker/${this.args.host.name}/postgres/.env-local is committed, but that file is GENERATED now — declare tenants via x-postgres blocks (or postgres/databases.yaml) and delete the file.`,
+      );
+    }
+    const databasesPath = postgresEntry?.files.get("databases.yaml");
+    if (databasesPath) {
+      declarations.push(...parseDatabasesFile(await readFile(databasesPath, "utf-8"), `${this.args.host.name} postgres/databases.yaml`));
+    }
+
+    validatePostgresTenants(declarations, this.args.host.name);
+    if (declarations.length > 0 && !postgresEntry) {
+      throw new Error(`${this.args.host.name}: ${declarations.map(d => `'${d.database}'`).join(", ")} declared via x-postgres but the node has no active postgres stack (missing or .ignore'd).`);
+    }
+
+    const byStack = new Map<string, { database: string; password: Output<string> }>();
+    const rendered: { database: string; ensure: "present" | "absent"; password?: Output<string> }[] = [];
+
+    for (const decl of declarations) {
+      if (decl.ensure === "absent") {
+        rendered.push({ database: decl.database, ensure: "absent" });
+        continue;
+      }
+
+      const password = new RandomPassword(
+        `${this.shortName}-postgres-${decl.database}`,
+        {
+          length: 40,
+          // Alphanumeric only: the value lands in an env file and in DSNs,
+          // and renderPostgresEnvLocal asserts this so quoting never becomes
+          // load-bearing anywhere downstream.
+          special: false,
+          // The rotation handle — see the method comment.
+          keepers: { version: String(decl.passwordVersion) },
+        },
+        { parent: this.dockerParent },
+      );
+
+      if (this.args.globals.baoDualWriteEnabled) {
+        baoKvSecret(
+          `${this.shortName}-postgres-${decl.database}-bao`,
+          {
+            mount: "secrets",
+            path: this.cluster.key.apply(key => postgresBaoPath(key, decl.stack ?? decl.database)),
+            data: {
+              username: decl.database,
+              password: password.result,
+              database: decl.database,
+              host: "postgres",
+              port: "5432",
+            },
+            concealedFields: ["password"],
+            customMetadata: baoProvenance({
+              cluster: this.cluster.key,
+              stack: decl.stack ?? "databases.yaml",
+              dockge_host: this.args.host.name,
+            }),
+          },
+          { parent: this.dockerParent, provider: this.args.globals.baoProvider },
+        );
+      } else {
+        log.warn(
+          `No OpenBao credentials — skipping the OpenBao record for ${this.args.host.name}'s '${decl.database}' postgres tenant. The database still provisions (the password travels via the generated .env-local, not a bao read-back), but nothing records it for humans until a credentialed run.`,
+          this,
+        );
+      }
+
+      rendered.push({ database: decl.database, ensure: "present", password: password.result });
+      if (decl.stack) {
+        byStack.set(decl.stack, { database: decl.database, password: password.result });
+      }
+    }
+
+    const envLocal = postgresEntry
+      ? all(rendered.map(r => r.password ?? output(""))).apply(passwords =>
+          renderPostgresEnvLocal(rendered.map((r, i) => ({ database: r.database, ensure: r.ensure, password: r.ensure === "present" ? passwords[i] : undefined }))),
+        )
+      : null;
+
+    return { envLocal, byStack };
+  }
+
   private createStack(
     stackName: string,
     files: Map<string, string>,
     path: string,
     replacements: ((input: Output<string>, label: string) => Output<string>)[],
     dependsOn: Input<Resource[]>,
+    postgres: PostgresTenantResources,
   ): Output<{
     name: string;
     path: string;
@@ -964,6 +1116,19 @@ export class DockgeLxc extends ComponentResource {
     // were appended after it, op:// paths like "op://Eris/${CLUSTER_KEY}-${APP}-oidc-credentials/..."
     // would still contain "${APP}" when the resolver runs and the regex would fail to match.
     replacements = [replaceVariable(/\$\{STACK_NAME\}/g, stackName), replaceVariable(/\$\{APP\}/g, stackName), ...replacements];
+
+    // A stack that declared an x-postgres tenant gets its credential
+    // substituted straight into its own files — no OpenBao read-back, so a
+    // first deploy cannot race the secret's own write, and the app, the
+    // provisioner, and the OpenBao record all descend from the same
+    // RandomPassword. Tokens: ${PGAPP_USER}, ${PGAPP_PASSWORD},
+    // ${PGAPP_DATABASE} — user and database are the same identifier by the
+    // provision.sh convention, but spelling them separately keeps consumer
+    // env files honest about which is which.
+    const pgTenant = postgres.byStack.get(stackName);
+    if (pgTenant) {
+      replacements = [replaceVariable(/\$\{PGAPP_PASSWORD\}/g, pgTenant.password), replaceVariable(/\$\{PGAPP_USER\}/g, pgTenant.database), replaceVariable(/\$\{PGAPP_DATABASE\}/g, pgTenant.database), ...replacements];
+    }
 
     let hasCompose = false;
     let hasInit = false;
@@ -1170,6 +1335,28 @@ export class DockgeLxc extends ComponentResource {
       });
       copyFiles.push(copy);
       composeTriggers.push({ key: copyName, id: copy.id });
+    }
+
+    // The postgres stack's .env-local is GENERATED — the union of every
+    // stack's x-postgres declaration plus databases.yaml, rendered by
+    // collectPostgresTenants(). Deliberately the same resource name a disk
+    // copy of the file used to get, so history is continuous with the era
+    // when hosts committed it by hand (collectPostgresTenants errors on a
+    // committed one before this point can be reached).
+    if (stackName === "postgres" && postgres.envLocal) {
+      const envLocalName = `${this.shortName}-${stackName}-.env-local-copy-file`;
+      const envLocalCopy = copyFileToRemote(envLocalName, {
+        connection: this.remoteConnection,
+        remotePath: interpolate`/opt/stacks/${stackName}/.env-local`,
+        content: postgres.envLocal,
+        // Provenance marker, filling the slot the disk copies use for their
+        // repo-relative source path.
+        triggers: ["generated:.env-local"],
+        parent: stackParent,
+        dependsOn: dependsOn,
+      });
+      copyFiles.push(envLocalCopy);
+      composeTriggers.push({ key: envLocalName, id: envLocalCopy.id });
     }
 
     if (hasCompose) {
