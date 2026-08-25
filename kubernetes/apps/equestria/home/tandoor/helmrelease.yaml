@@ -69,9 +69,40 @@ spec:
                     port: *port
                   initialDelaySeconds: 10
                   periodSeconds: 10
-                  timeoutSeconds: 1
+                  # 1s was too tight. Django's first request after a boot can
+                  # take several seconds, and a timed-out probe is a FAILED
+                  # probe -- that is what the `499` in the access log was, and
+                  # three of them killed the container.
+                  timeoutSeconds: 5
                   failureThreshold: 3
               readiness: *probes
+              # A cold boot is nginx -> wait for DB -> migrate -> collectstatic
+              # -> gunicorn, and collectstatic re-hashes every static file on
+              # every start. Measured at ~2m40s. Liveness allows 40s, so without
+              # this the container is killed mid-collectstatic, and because the
+              # next boot starts collectstatic over again it can crash-loop
+              # rather than converge.
+              #
+              # Observed for real on 2026-08-25: the tranche-3 password rotation
+              # triggered the first restart in days and tandoor took 6 restarts
+              # to come up. The credential was never the problem -- every
+              # attempt logged `Database is ready` and `No migrations to apply`.
+              #
+              # While a startup probe is pending, liveness and readiness are
+              # both suppressed, so this only widens the boot window and leaves
+              # steady-state behaviour untouched.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  # 10 minutes, ~4x the measured cold boot.
+                  failureThreshold: 60
             securityContext:
               allowPrivilegeEscalation: true
               readOnlyRootFilesystem: false
