@@ -60,6 +60,22 @@ spec:
                   timeoutSeconds: 10
                   failureThreshold: 5
               readiness: *probes
+              # Widened from failureThreshold 3 (a 30s budget) ahead of putting
+              # romm's password on OpenBao rotation. A rotation is a forced
+              # restart, and 30s was not enough room to bet an irreversible
+              # rotation on: this pod's own conditions show Initialized ->
+              # Ready taking 49s on its last boot, which is longer than the
+              # budget the startup probe allowed it.
+              #
+              # It has survived anyway, so the exact kubelet timing is doing
+              # something more forgiving than failureThreshold x periodSeconds
+              # suggests -- but tandoor (#1142) crash-looped six times on
+              # precisely this shape, an app whose boot did not fit its probe
+              # budget, and that was discovered by rotating it rather than by
+              # measuring first. 300s is ~6x the observed boot.
+              #
+              # Startup probes suppress liveness and readiness while pending,
+              # so this only widens the boot window; steady state is unchanged.
               startup:
                 enabled: true
                 custom: true
@@ -67,7 +83,7 @@ spec:
                   httpGet:
                     path: /
                     port: *port
-                  failureThreshold: 3
+                  failureThreshold: 30
                   periodSeconds: 10
             securityContext:
               runAsNonRoot: true
