@@ -51,10 +51,9 @@ spec:
     # cannot satisfy for a `${ROOT_DOMAIN}` that lives in a SOPS Secret. See
     # the long note on `policy.allowedHosts` in ../renovate-operator.
     #
-    # Nothing functional depends on it. Cloning is unaffected either way:
-    # Renovate takes the clone URL from the repository's own `clone_url`, which
-    # Forgejo builds from ROOT_URL and which already points at the public
-    # hostname.
+    # Cloning is NOT affected by this being absent -- but it IS affected by
+    # `endpoint` above, which is a different thing and cost a failed run to
+    # learn. See `gitUrl` in the config below.
 
   # Cheap insurance rather than a live concern: a fork of an upstream repo
   # would otherwise get its own nightly run and its own PRs against a tree
@@ -147,6 +146,29 @@ spec:
         globalExtends: [
           'github>david-driscoll/home-operations//.github/renovate.json5',
         ],
+
+        // CLONE FROM THE ENDPOINT, NOT FROM `clone_url`.
+        //
+        // By default Renovate clones whatever the repository's `clone_url`
+        // says, which Forgejo builds from ROOT_URL -- so
+        // https://git.<domain>/owner/repo. But Renovate's credential is keyed
+        // to the host of `endpoint`, which is the in-cluster Service. The two
+        // hosts differ, no host rule matched, and git fell through to an
+        // interactive prompt:
+        //
+        //   fatal: could not read Password for
+        //   'https://**redacted**@git.<domain>': No such device or address
+        //
+        // The executor failed on every repository while discovery looked
+        // perfectly healthy, because discovery only calls the API and never
+        // clones.
+        //
+        // `endpoint` makes Renovate build the clone URL from the same host it
+        // authenticates against, so the token applies. The alternative is a
+        // `hostRules` entry for the public host, which would mean putting the
+        // token in this ConfigMap -- it is not a Secret, so that is not an
+        // option.
+        gitUrl: 'endpoint',
 
         // Not set here and deliberately so: `endpoint` and `token` come from
         // RENOVATE_ENDPOINT / RENOVATE_TOKEN, which the operator sets from
