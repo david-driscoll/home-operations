@@ -72,6 +72,15 @@ with the merge:
   grouping rules, semantic-commit scopes and package rules. It is a bot-level
   default, so a repository's own `renovate.json` still merges on top. The
   onboarding PR proposes the same preset rather than bare `config:recommended`.
+- **Log storage and the repository cache** — a `renovate` bucket and key on the
+  Forgejo Garage cluster already in this namespace
+  (`kubernetes/apps/coder/forgejo-garage/bucket.yaml`), serving two prefixes:
+  `renovate-logs/` keeps each project's last run readable in the UI after the
+  Job's pod is gone, and `renovate-cache/` is forwarded to every Renovate Job so
+  dependency metadata survives between runs. Deliberately a second bucket, not
+  a prefix in `forgejo` — that one is backed up nightly and everything here is
+  rebuildable. Size tracks the number of repositories, not the number of runs,
+  because both prefixes are keyed by identity and each run overwrites the last.
 - **Monitoring** — the chart's `ServiceMonitor`, a Grafana dashboard imported
   through grafana-operator, four alerts in `prometheusrule.yaml`, and a Gatus
   check on `/health`.
@@ -319,6 +328,14 @@ not reliably show that it changed.
 **Login succeeds but the UI is empty.** Authentication worked and authorization
 did not: the id token carried no `groups` claim containing `admins`. The claim
 rides on the `profile` property mapping in `definition.yaml`.
+
+**Run logs are empty in the UI after the Job is gone.** The log store could not
+write to Garage. It fails quietly — a log-store failure does not fail the
+Renovate run it was recording — so check the operator's own log for S3 errors.
+Usual causes: `s3.region` not matching the GarageCluster's `s3Api.region` (every
+request 403s with SignatureDoesNotMatch), or the
+`forgejo-garage-renovate-credentials` Secret not existing yet because
+`forgejo-garage` had not reconciled.
 
 **Sessions drop on every config change.** `session_secret` is missing from
 `clusters/equestria/apps/renovate-operator/credentials` — which means

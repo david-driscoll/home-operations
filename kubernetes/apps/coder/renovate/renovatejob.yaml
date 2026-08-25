@@ -212,13 +212,18 @@ spec:
         prHourlyLimit: 0,
         prConcurrentLimit: 10,
 
-        // No `repositoryCache` and no `persistRepoData`. Both trade disk for
-        // speed by keeping state between runs, and there is no state to keep:
-        // the scratch volume below is an emptyDir on a Job that is deleted
-        // afterwards, so every run starts cold either way. Making them pay off
-        // means giving the operator a real cache -- `config.forwardCacheToJobs`
-        // with Valkey, or `forwardS3CacheToJobs` against the Garage cluster
-        // already in this namespace -- which is a separate change.
+        // `repositoryCache` is NOT set here, and that is not the same as it
+        // being off. The operator sets `RENOVATE_REPOSITORY_CACHE=enabled` and
+        // `RENOVATE_REPOSITORY_CACHE_TYPE=s3://renovate/renovate-cache/` on
+        // every Job from `config.forwardS3CacheToJobs`, pointed at the Garage
+        // cluster in this namespace -- so dependency metadata does survive
+        // between runs. Environment beats the config file in Renovate's
+        // precedence, so setting it here would be shadowed anyway, and would
+        // give one setting two owners.
+        //
+        // `persistRepoData` stays off. That one caches the git working copy,
+        // which lands on the scratch emptyDir below and dies with the Job no
+        // matter what this says -- the S3 cache holds metadata, not clones.
       };
 
   scratchVolume:

@@ -23,6 +23,13 @@ spec:
     # Kustomization is expected to fail and what unblocks it.
     - name: external-secrets
       namespace: kube-system
+    # `wait: true` on that Kustomization, so the bucket and the
+    # `forgejo-garage-renovate-credentials` Secret exist before the operator
+    # starts. Without it the operator comes up with an empty S3 credential and
+    # every log write fails -- quietly, because a log store failure does not
+    # fail the Renovate run it was recording.
+    - name: forgejo-garage
+      namespace: coder
   path: ./kubernetes/apps/coder/renovate-operator
   prune: true
   force: false

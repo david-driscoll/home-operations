@@ -89,19 +89,60 @@ spec:
       ownNamespaceOnly: true
 
     config:
-      # `memory`, not the `disabled` default: with no log store the UI has
-      # nothing to show once a Job's pod is gone, and `kubectl logs` on a
-      # completed Job is the only fallback. In-process, so it is lost on an
-      # operator restart -- the durable options are Valkey or S3, neither of
-      # which is worth standing up for a nightly run.
+      # `s3`, against the Garage cluster already in this namespace. The other
+      # options are `disabled` (the UI has nothing to show once a Job's pod is
+      # gone), `memory` (lost on every operator restart -- and `reloader`
+      # restarts it on any credential refresh), and `valkey` (a second
+      # datastore to run). Garage costs a bucket and a key on a cluster that is
+      # already here.
       logStorage:
-        mode: memory
+        mode: s3
       # Keep the finished Jobs for a week rather than the chart's `-1`
       # (forever). The operator's own status and the log store above are what
       # the UI reads; the Job objects are only there for `kubectl`, and an
       # unbounded pile of them is a slow etcd leak.
       jobTTLSecondsAfterFinished: 604800
       deleteSuccessfulJobs: false
+      # Also forward the bucket to the Renovate Jobs as a repository cache
+      # (`RENOVATE_REPOSITORY_CACHE_TYPE=s3://...`), not just as a log store.
+      # This is the chart default, restated because it is the half that changes
+      # how RENOVATE behaves rather than how the operator does: every executor
+      # now reuses dependency metadata from the previous run instead of
+      # starting cold, which is what the scratch emptyDir cannot provide.
+      forwardS3CacheToJobs: true
+
+    s3:
+      # Bucket and key are declared in ../forgejo-garage/bucket.yaml, next to
+      # the cluster that serves them -- the same place Forgejo's own bucket
+      # lives. Deliberately NOT the `forgejo` bucket: that one is backed up
+      # nightly and everything written here is rebuildable.
+      bucket: renovate
+      # Must equal the GarageCluster's `s3Api.region`. It is not geographic,
+      # but it is baked into every SigV4 signature -- a mismatch is a
+      # SignatureDoesNotMatch on every request, not a routing error.
+      region: equestria
+      # In-cluster Service, same namespace, plain HTTP. TLS here would mean
+      # minting a cert for a Service name to protect a hop that never leaves
+      # the pod network. Not s3.git.${ROOT_DOMAIN} -- that hostname exists for
+      # backrest on celestia and would hairpin through Traefik.
+      #
+      # Setting this also flips `RENOVATE_S3_PATH_STYLE=true` on the forwarded
+      # job config automatically, which Garage requires: virtual-hosted style
+      # needs `s3Api.rootDomain` plus a wildcard DNS name and cert that this
+      # cluster does not have.
+      endpoint: http://forgejo-garage.${NAMESPACE}.svc.cluster.local:3900
+      # The operator's own client, the other half of the same requirement.
+      forcePathStyle: true
+      # Two prefixes in one bucket so the log store and the cache never
+      # collide. Both are keyed by identity rather than by time, so a run
+      # overwrites the previous one -- see the note in bucket.yaml for why that
+      # bounds the bucket's size.
+      logPrefix: renovate-logs
+      cachePrefix: renovate-cache
+      # Minted by the GarageKey operator. The chart reads `access-key-id` and
+      # `secret-access-key` from it, and passes the SECRET NAME to the Renovate
+      # Jobs so they mount the same credential rather than a copy.
+      existingSecret: forgejo-garage-renovate-credentials
 
     policy:
       # ON, despite the chart shipping it off. The whole point of the engine is
