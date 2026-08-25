@@ -58,8 +58,8 @@ silently fail to resolve.
 | **1a** | Prune-protect the objects that are about to change owner | none | **done** (#1085) |
 | **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | **done** (#1086, #1099) |
 | **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | 2.1–2.3b **done** (#1102, #1106); 2.4a here; 2.4b post-soak |
-| **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | |
-| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 16 apps, rotating credentials | |
+| **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | **done** — engine live, `ENGINE_ENABLED = true` since 2026-08-24 |
+| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 16 apps, rotating credentials | **in progress** — see the tranche log below |
 
 `passwords.sops.yaml` survives phase 1 unchanged and hand-maintained. Phase 1 is purely about
 *who declares what* — not a single credential value changes.
@@ -347,6 +347,22 @@ move from a C# generator. The Pulumi stack should glob `kubernetes/apps/**/ks.ya
 
 Per app: drop `passwordSecret` from the `DatabaseRole`, point the `ExternalSecret` at a
 `VaultDynamicSecret` generator reading `database/static-creds/<app>`, delete the sops entry.
+
+### Tranche log
+
+Rotation is irreversible per app, so this grows a couple of apps at a time and each entry
+records what was actually observed rather than what was expected.
+
+| # | apps | PR | outcome |
+|---|---|---|---|
+| 1 | `grafana` | #1127 | **verified.** 32 → 20-char password, reloader restarted the pod, 4 connections re-established. Took three attempts to get the ESO generator's identity right — a namespaced `VaultDynamicSecret` cannot resolve a cross-namespace ServiceAccount, ESO ignores `serviceAccountRef.namespace` for generators, and the SA and the OpenBao role have to be changed together. All three rendered perfectly and failed live. |
+| 2 | `freshrss` | #1138 | **verified.** 20-char password, `esReady=True`, pod restarted with 0 restarts since. Persistent connections stay at 0 because FreshRSS is PHP and connects per request — proof came from `pg_stat_database.xact_commit` advancing with `xact_rollback` flat, not from `pg_stat_activity`. |
+| 3 | `tandoor`, `crowdsec` | #1141 | pending merge. First tranche with two apps, and the first where an app reads the password through `valueFrom.secretKeyRef` (crowdsec-lapi) rather than `envFrom`. |
+
+Remaining: `coder`, `forgejo`, `autobrr`, `questarr`, `retrom`, `romm`, `n8n`, `outline`,
+`pulsarr`, `strmgen`, `pinepods`, `windmill`, `immich`. Leave `windmill` and `pinepods` late —
+windmill picks up a rotation only through a Helm re-render, which is untested — and `immich`
+last, since it composes a second sibling component.
 
 ### The constraint to sit with
 
