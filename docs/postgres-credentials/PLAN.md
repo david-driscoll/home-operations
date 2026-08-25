@@ -384,6 +384,8 @@ per app. Apps that open a connection per request ride it out invisibly; pooled a
 long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
 shorter `rotation_period`.
 | 7 | `pinepods` | #1164 | pending merge. Closes group C/D. Split in two like romm: #1161 added the startup probe first. That rollout earned its keep — the boot came back at **156s**, not the 144s measured beforehand, an 8% spread against what had been a 210s budget. The 66s margin was never real. |
+| 8 | `windmill` | #1169 | **verified.** 32 → 20 chars, all 6 pods recycled with 0 restarts, 49 backends re-established. Needed #1168 first: `DATABASE_URL` was a literal in every pod spec, so no pod referenced the Secret and Reloader had nothing to watch. Corrected a prediction — see the cutover note below. |
+| 9 | `immich` | #TBD9 | pending merge. The last live consumer, and the only app composing two siblings of `components/postgres`. |
 
 ### The mount-URN incident (2026-08-25)
 
@@ -413,6 +415,24 @@ The spec form should be equivalent and is not, at least for a re-parented resour
 children. Use the full old URN string. During the failure the state was intact throughout — the
 old unparented mount and all its static roles were still present and unmarked — so no state
 surgery was needed, and none was performed.
+### What the cutover burst actually tracks (corrected)
+
+#1147 recorded that pooled apps take a cluster of auth failures at rotation and per-request
+apps take none. Tranche 8 refined it, by contradicting a prediction made in #1169.
+
+`windmill` holds ~51 pooled connections, so the expectation was the loudest cutover of the
+migration — `coder` had logged 8 failures with only 4 backends. It logged **4, inside 3
+milliseconds**.
+
+The reason is that **PostgreSQL does not terminate existing sessions when a role's password
+changes.** Those 49 live connections went right on working; only attempts to open a *new*
+connection during the gap failed. So the burst size tracks connection **churn** in the seconds
+between rotation and the Reloader restart — not pool size. A large idle pool is quiet; a small
+busy one is not.
+
+Practical consequence: pool size is the wrong thing to look at when judging how disruptive a
+rotation will be. Reconnect rate is the right one.
+
 ### Group E dropped (2026-08-25)
 
 `outline`, `retrom` and `strmgen` are gone: `Database` CR, database and role each removed.

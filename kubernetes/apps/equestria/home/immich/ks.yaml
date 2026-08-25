@@ -45,6 +45,23 @@ spec:
     # A component, not a substitution: booleans cannot pass through
     # postBuild.substitute. See components/postgres/superuser.
     - ../../../../components/postgres/superuser
+    # TRANCHE 9, the last live consumer -- and the only app that composes
+    # two siblings of components/postgres. That composition is the whole
+    # risk here, and it is why this one went last.
+    #
+    # Both siblings patch the nested ${APP}-postgres Kustomization with
+    # JSON6902 `add /spec/patches/-`, deliberately, so they append rather
+    # than overwrite: superuser contributes one patch (superuser: true on
+    # the DatabaseRole) and rotate contributes two (drop passwordSecret,
+    # repoint the ExternalSecret at the generator). A strategic merge
+    # setting spec.patches would have let the second component silently win,
+    # which is the failure this pattern exists to avoid.
+    #
+    # The three do not collide: superuser and passwordSecret are separate
+    # fields of the DatabaseRole, and the third targets a different object
+    # entirely. Rotation preserves the superuser attribute because OpenBao
+    # issues ALTER ROLE ... PASSWORD, which touches nothing else.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
