@@ -10,7 +10,6 @@
 import { GlobalResources } from "@components/globals.ts";
 import kubernetes from "@pulumi/kubernetes";
 import { KubernetesFluxWebhooksComponent } from "./KubernetesFluxWebhooks.ts";
-import { KubernetesGithubAppTokenComponent } from "./KubernetesGithubAppToken.ts";
 import { KubernetesTailscaleAuthKeyComponent } from "./KubernetesTailscaleAuthKey.ts";
 
 const globals = new GlobalResources({}, {});
@@ -26,12 +25,13 @@ globals.store.getKubernetesClusters().apply(clusters => {
       credentials: globals.tailscaleCredential,
     });
 
-    new KubernetesGithubAppTokenComponent(`${cluster.key}-github`, {
-      cluster,
-      kubernetes: provider,
-      globals,
-      credentials: globals.githubCredential,
-    });
+    // The GitHub App installation token used to be minted here. It is now
+    // kubernetes/apps/kube-system/secrets/github-app-token: an ESO
+    // GithubAccessToken generator on a 30m refresh.
+    //
+    // An installation token lives ONE HOUR. Minting it during a Pulumi run
+    // meant it was expired between runs -- verified, the live github-token
+    // returned 401 and its Secret had last been written months earlier.
 
     if (cluster.key === "equestria") {
       new KubernetesFluxWebhooksComponent(`${cluster.key}-flux-webhooks`, {
