@@ -384,6 +384,35 @@ per app. Apps that open a connection per request ride it out invisibly; pooled a
 long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
 shorter `rotation_period`.
 
+### Group E dropped (2026-08-25)
+
+`outline`, `retrom` and `strmgen` are gone: `Database` CR, database and role each removed.
+
+They were disabled apps, not live ones. All three are commented out of their parent
+kustomization (`# - ./outline/ks.yaml` and so on), so no Flux Kustomization managed them — but
+their CNPG `Database` CRs survived anyway, because `components/postgres` sets
+`deletionPolicy: Orphan` on its nested Kustomization. **Disabling an app in the repo therefore
+leaves its database behind, silently.** That is the mechanism worth remembering; it will happen
+again for the next app that gets commented out.
+
+Verified empty before dropping anything, because `DROP DATABASE` has no undo. `n_live_tup`
+reported 0 rows for all three, but that is a stats estimate, so exact counts were taken across
+every table: `outline` had 44 tables of which only `SequelizeMeta` held rows (276 — the
+migration ledger, so it had migrated once and never been used), and `retrom` and `strmgen` were
+entirely empty. `outline`'s 10 MB was schema; the 7619 kB on the other two is PostgreSQL's
+empty-database baseline.
+
+Order matters. The CRs carry `databaseReclaimPolicy: retain`, so deleting them does **not**
+drop the database — the CRs went first (safe, nothing recreates them), then `DROP DATABASE`,
+then `DROP ROLE`. Reversed, the CNPG controller recreates the database underneath you.
+
+**`discoverPostgresApps()` still counts all three.** It globs `kubernetes/apps/**/ks.yaml` and
+parses `spec.components`; it never checks whether a parent kustomization actually includes that
+`ks.yaml`. So it reports 16 consumers when 13 are live. Harmless for the existing guard, which
+compares two lists derived the same way — but adding `./rotate` to a commented-out app would
+create a static role for a PostgreSQL role that does not exist, and every scheduled rotation
+would then fail in a log nobody reads. Worth a guard if group E ever recurs.
+
 ### Group D, measured (2026-08-25)
 
 The sweep grouped by *probe shape*; these are the actual boots, taken from each pod's own
@@ -421,7 +450,7 @@ question for each app is whether it can finish booting before something kills it
 | **B** | `n8n` (~600s), `windmill-app` (~600s) | generous startup probe | protected |
 | **C** | `romm` (~30s) | startup probe present but **short** | check its real boot time before opting in |
 | **D** | `questarr`, `pinepods`, `forgejo` | **no startup probe**; the liveness budget is all the boot time they get | see the measurements below — only `pinepods` is actually tight |
-| **E** | `outline`, `retrom`, `strmgen` | Postgres role exists, but **no Kustomization and no workload** | orphans; decide whether to drop the role rather than rotate a credential nothing consumes |
+| **E** | `outline`, `retrom`, `strmgen` | orphaned `Database` CRs, no workload | **dropped 2026-08-25** — see below |
 
 Tandoor's cold boot measured ~2m40s, so a budget under ~180s is not obviously safe — group D is
 ordered by how little room it has.
