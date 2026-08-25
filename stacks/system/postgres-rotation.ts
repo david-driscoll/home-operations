@@ -182,7 +182,39 @@ export class PostgresRotationComponent extends ComponentResource {
           },
         ],
       },
-      { provider: args.globals.baoProvider, parent: this },
+      {
+        provider: args.globals.baoProvider,
+        parent: this,
+        // THE ALIAS IS LOAD-BEARING. Before this file became a
+        // ComponentResource, the mount was created by a plain function with
+        // `{ provider }` and no parent -- so its URN was
+        // `urn:pulumi:system::system::vault:database/secretsMount:SecretsMount::postgres-rotation`,
+        // a direct child of the stack. Re-parenting it to `this` changes the
+        // URN, and Pulumi reads a changed URN as "a different resource":
+        // CREATE the new one, DELETE the old one.
+        //
+        // Both halves of that are bad, and the first one is what actually
+        // happened on 2026-08-25 --
+        //
+        //   POST /v1/sys/mounts/database
+        //   Code: 400 * path is already in use at database/
+        //
+        // -- because the mount it was "creating" is the live one. The stack
+        // failed there, which is the lucky outcome: had the create succeeded,
+        // the delete would have followed and UNMOUNTED `database/` in OpenBao,
+        // taking every static role with it and leaving eight apps
+        // (coder, crowdsec, freshrss, grafana, n8n, pulsarr, romm, tandoor)
+        // holding passwords nothing can rotate or verify.
+        //
+        // `noParent: true` says "this used to be a direct child of the stack",
+        // which is what lets Pulumi adopt the existing state entry instead.
+        // The static roles below need no alias of their own: they are
+        // `parent: mount`, and Pulumi propagates a parent's alias to its
+        // children.
+        //
+        // Do not remove this until the state no longer contains the old URN.
+        aliases: [{ noParent: true }],
+      },
     );
 
     for (const app of tranche) {
