@@ -35,6 +35,20 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # TRANCHE 7, and the close of group C/D. Second of two PRs: #1161 added
+    # the startup probe first, because pinepods had the narrowest margin in
+    # the boot-budget sweep.
+    #
+    # That rollout justified itself. The boot came in at 156s, not the 144s
+    # measured beforehand -- an 8% spread across two runs against what used
+    # to be a 210s liveness budget. The margin was never the 66s it looked
+    # like, and a slower boot under load could have crossed it. Now 600s,
+    # a 3.8x margin, 0 restarts.
+    #
+    # Other gates: reloader is on the Deployment (via post-render patch --
+    # this chart has no value for it), and the password arrives through
+    # envFrom on pinepods-env.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
