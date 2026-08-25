@@ -197,6 +197,13 @@ services:
     networks:
       - dockge_default
 
+# Declares a database + login role on this node's shared postgres
+# (docker/_common/postgres). Pulumi collects this block, mints the password,
+# stores it in OpenBao, and substitutes ${PGAPP_USER}/${PGAPP_PASSWORD}/
+# ${PGAPP_DATABASE} into this stack's files — see .env's database section.
+x-postgres:
+  database: authentik
+
 x-dockge:
   urls:
     - https://authentik.${searchDomain}

@@ -262,6 +262,19 @@ export function oidcBaoPath(clusterKey: string, appName: string): string {
 }
 
 /**
+ * Canonical OpenBao path (within the `secrets` mount) for an app's database
+ * credential on its cluster's shared Postgres —
+ * `clusters/<clusterKey>/apps/<slug(app)>/postgres`, the reorg's §A/§C shape.
+ * The dockge hosts are cluster keys too (celestia, luna, skystar, alpha-site),
+ * and the alpha-site authentik credential established this exact path before
+ * it had a Pulumi owner. Same argument shape as `oidcBaoPath`, for the same
+ * dashed-cluster-key reason.
+ */
+export function postgresBaoPath(clusterKey: string, appName: string): string {
+  return `clusters/${clusterKey}/apps/${baoSlug(appName)}/postgres`;
+}
+
+/**
  * Canonical OpenBao path (within the `secrets` mount) for a PBS credential
  * item, from its 1Password title: `hosts/pbs/<slug(title)>`.
  *
