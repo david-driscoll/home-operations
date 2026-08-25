@@ -5,12 +5,10 @@
 # stack's x-postgres block: database, ensure, passwordVersion.
 #
 # The forgejo role and database on this node are orphaned since the move to
-# equestria (PR #1078). Once you are ready to drop them, declare:
-#
-#   databases:
-#     - database: forgejo
-#       ensure: absent
-#
-# deploy, and remove the entry after the drop lands. Removal WITHOUT an
+# equestria (PR #1078, live and verified since 2026-08-22). The tombstone
+# below DROPS both on the next deploy — merging the change that armed it is
+# the consent. Remove the entry once the drop has landed; removal WITHOUT an
 # ensure-absent tombstone never drops anything — that is the retain default.
-databases: []
+databases:
+  - database: forgejo
+    ensure: absent
