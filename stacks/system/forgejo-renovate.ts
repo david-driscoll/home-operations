@@ -372,7 +372,28 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         visibility: "limited",
         deactivateOnDestroy: true,
         location: "Equestria",
-        prohibitLogin: true,
+        // FALSE, and this is not a loosening -- it is what makes the bot
+        // work at all.
+        //
+        // `prohibitLogin` reads like "this account may not sign in
+        // interactively", which is exactly what you want for a bot. Forgejo
+        // applies it to API TOKEN authentication too, so the PAT this
+        // component mints is rejected:
+        //
+        //   GET /api/v1/user -> 403
+        //   "This account is prohibited from signing in, please contact your
+        //    site administrator."
+        //
+        // Renovate surfaces that as a bare `Authentication failure` at
+        // initialization and then exits 0, so the discovery Job SUCCEEDS and
+        // reports zero repositories -- indistinguishable from a forge with
+        // nothing to manage. That is the whole reason this line is dangerous:
+        // it fails silently in the one place nobody is looking.
+        //
+        // The account is still not interactively reachable in any useful
+        // sense: it has no OIDC identity, and its password is generated,
+        // written only to OpenBao, and used by nothing.
+        prohibitLogin: false,
         allowGitHook: true,
       },
       // Same collapsing rule as the admin token above: `read:repository` and
