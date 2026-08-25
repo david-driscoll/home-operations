@@ -20,6 +20,16 @@ spec:
   path: ./kubernetes/apps/observability/grafana
   components:
     - ../../../components/postgres
+    # TRANCHE 1. Hands grafana's database password to OpenBao's database
+    # secrets engine: drops passwordSecret from the DatabaseRole so CNPG stops
+    # managing it, repoints the credential ExternalSecret at the
+    # VaultDynamicSecret generator, and makes the Pulumi system stack create a
+    # static role -- which ROTATES THE PASSWORD IMMEDIATELY.
+    #
+    # grafana first because it is Stakater-covered (the annotation is on the
+    # Deployment, checked), reads its credential from a Secret rather than a
+    # baked-in Helm value, and is not on anything else's critical path.
+    - ../../../components/postgres/rotate
   prune: true
   # See home-operations:docs/cluster-consolidation/27-migration-churn-failure-modes.md.
   deletionPolicy: Orphan
