@@ -385,7 +385,7 @@ long-connection apps will drop queries for a few seconds. Worth knowing before c
 shorter `rotation_period`.
 | 7 | `pinepods` | #1164 | pending merge. Closes group C/D. Split in two like romm: #1161 added the startup probe first. That rollout earned its keep — the boot came back at **156s**, not the 144s measured beforehand, an 8% spread against what had been a 210s budget. The 66s margin was never real. |
 | 8 | `windmill` | #1169 | **verified.** 32 → 20 chars, all 6 pods recycled with 0 restarts, 49 backends re-established. Needed #1168 first: `DATABASE_URL` was a literal in every pod spec, so no pod referenced the Secret and Reloader had nothing to watch. Corrected a prediction — see the cutover note below. |
-| 9 | `immich` | #TBD9 | pending merge. The last live consumer, and the only app composing two siblings of `components/postgres`. |
+| 9 | `immich` | #1170 | pending merge. The last live consumer, and the only app composing two siblings of `components/postgres`. |
 
 ### The mount-URN incident (2026-08-25)
 
