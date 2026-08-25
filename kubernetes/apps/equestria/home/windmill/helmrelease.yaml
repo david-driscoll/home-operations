@@ -50,7 +50,31 @@ spec:
       appReplicas: 2
       lspReplicas: 1
       multiplayerReplicas: 0
+      # Read the connection URI from the Secret at runtime instead of baking it
+      # into the rendered manifests. Three things were wrong with the old
+      # `valuesFrom -> windmill.databaseUrl` mapping, and this fixes all three:
+      #
+      #   1. DATABASE_URL landed as a LITERAL VALUE in every pod spec, so the
+      #      Postgres password was readable from `kubectl get deploy -o yaml`.
+      #   2. Because no pod referenced the Secret, Reloader had nothing to watch
+      #      -- it cannot restart on a change it cannot see.
+      #   3. A rotated password therefore only reached the app when Flux
+      #      re-rendered the HelmRelease, on its 30m interval. With the 4m
+      #      ExternalSecret refresh in front of it that is up to ~34 minutes of
+      #      running on a dead credential, every rotation.
+      #
+      # With a secretKeyRef the pod references the Secret directly, so Reloader
+      # restarts it within seconds and the URI never appears in a manifest.
+      databaseUrlSecretName: ${APP}-pguser-secret
+      databaseUrlSecretKey: uri
       app:
+        # NOTE: `app.annotations` renders onto the POD TEMPLATE, not the
+        # Deployment. Reloader only honours the annotation on the workload, so
+        # this one has never done anything -- verified live: the Deployment had
+        # no reloader annotation and the pod template had one. The working copy
+        # is applied by the post-render patch at the bottom of this file. This
+        # is left in place because it is harmless and the chart offers no
+        # `deploymentAnnotations` for the app component (worker groups do).
         annotations:
           reloader.stakater.com/auto: "true"
         volumes: &volumes
@@ -62,6 +86,11 @@ spec:
             mountPath: /media
       workerGroups:
         - name: default
+          # The chart exposes deploymentAnnotations for worker groups
+          # (but not for the app), so these land on the Deployment --
+          # the only placement Reloader acts on.
+          deploymentAnnotations:
+            reloader.stakater.com/auto: "true"
           replicas: 3
           volumes: *volumes
           volumeMounts: *volumeMounts
@@ -72,6 +101,11 @@ spec:
             limits:
               memory: 2Gi
         - name: native
+          # The chart exposes deploymentAnnotations for worker groups
+          # (but not for the app), so these land on the Deployment --
+          # the only placement Reloader acts on.
+          deploymentAnnotations:
+            reloader.stakater.com/auto: "true"
           replicas: 1
           volumes: *volumes
           volumeMounts: *volumeMounts
@@ -87,8 +121,23 @@ spec:
       enabled: false
     minio:
       enabled: false
-  valuesFrom:
-    - kind: Secret
-      name: ${APP}-pguser-secret
-      valuesKey: uri
-      targetPath: windmill.databaseUrl
+  # No valuesFrom any more. It existed only to inline the URI into
+  # windmill.databaseUrl, which is exactly the behaviour being removed above.
+  postRenderers:
+    - kustomize:
+        patches:
+          # The app component has no deploymentAnnotations value, so its
+          # Reloader annotation has to arrive by patch -- the same route
+          # network/crowdsec and equestria/pinepods already use.
+          - target:
+              version: v1
+              group: apps
+              kind: Deployment
+              name: windmill-app
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: windmill-app
+                annotations:
+                  reloader.stakater.com/auto: "true"
