@@ -151,7 +151,16 @@ async function forgejoAdminClient(globals: GlobalResources) {
 
   return createClient(
     createConfig({
-      baseURL: `https://git.${domain}`,
+      // `/api/v1` BELONGS IN THE baseURL. The generated operations contribute
+      // only the tail (`/admin/orgs`, `/repos/search`), and the SDK's own
+      // default client is `https://swagger.json/api/v1` -- so a baseURL without
+      // it sends every call to Forgejo's WEB UI instead of its API.
+      //
+      // That failure is not a 404. `/admin/orgs` is a real web route, and an
+      // Authorization header is not a web session, so Forgejo answers 200 with
+      // the login page: `throwOnError` sees success, and the first thing to
+      // touch the body dies with `.map is not a function` on a string of HTML.
+      baseURL: `https://git.${domain}/api/v1`,
       headers: {
         // `token <...>` is what an API token would use; basic auth is what
         // Forgejo requires for the admin routes this reaches.
