@@ -362,7 +362,25 @@ latent startup fragility surfaces. Reloader firing correctly is necessary but no
 | 1 | `grafana` | #1127 | **verified.** 32 → 20-char password, reloader restarted the pod, 4 connections re-established. Took three attempts to get the ESO generator's identity right — a namespaced `VaultDynamicSecret` cannot resolve a cross-namespace ServiceAccount, ESO ignores `serviceAccountRef.namespace` for generators, and the SA and the OpenBao role have to be changed together. All three rendered perfectly and failed live. |
 | 2 | `freshrss` | #1138 | **verified.** 20-char password, `esReady=True`, pod restarted with 0 restarts since. Persistent connections stay at 0 because FreshRSS is PHP and connects per request — proof came from `pg_stat_database.xact_commit` advancing with `xact_rollback` flat, not from `pg_stat_activity`. |
 | 3 | `tandoor`, `crowdsec` | #1141 | **verified, with an incident.** Both went 32 → 20 chars and both ExternalSecrets synced. `crowdsec` was clean — lapi restarted once, all 7 agents stayed up untouched and registered, bouncers intact — and it is the first app proven to rotate through `valueFrom.secretKeyRef` rather than `envFrom`. `tandoor` crash-looped through 6 restarts, but **not** on the credential: every attempt logged `Database is ready` and `No migrations to apply`. Its cold boot runs `collectstatic` for ~2m40s against a 40s liveness budget with no startup probe, so the restart the rotation forced was simply the first one in days. Fixed in #1142. |
-| 4 | `coder`, `pulsarr`, `n8n` | #1146 | pending merge. Groups A and B of the sweep below — the first tranche chosen *by* the boot-budget gate rather than one that tripped over it. `coder` is the first app to take the credential as a connection **URI** rather than a bare password; safe because the component builds the same 15 keys for a rotating app as a static one, and `uri` on grafana, tandoor and crowdsec each already carries that app's rotated password. |
+| 4 | `coder`, `pulsarr`, `n8n` | #1146 | **verified.** All three 32 → 20 chars, fresh pods with **0 restarts**, backends re-established (coder 4, pulsarr 2, n8n 1). The first tranche chosen *by* the boot-budget gate, and the first with no restart trouble at all. `coder` proved the connection-**URI** path: it takes `CODER_PG_CONNECTION_URL` rather than a bare password, and the rotated value arrived embedded in `uri`. Two things learned, both below: the propagation lag is real, and the cutover is not seamless for a pooled app. |
+
+### Two things tranche 4 measured
+
+**Propagation lag is ~3 minutes, and looks like failure while you wait.** Pulumi created the
+static roles at 13:40:17Z; the passwords were still the old 32-character values for the next
+few minutes because ESO re-invokes a generator only on its own `refreshInterval` (4m here). It
+self-heals — `pulsarr` and `n8n` rotated with no intervention. Do not diagnose inside that
+window. If a nudge is genuinely needed, `kubectl -n database annotate externalsecret
+<app>-postgres force-sync=$(date +%s) --overwrite` re-invokes the generator immediately.
+
+**The cutover is not seamless for a pooled app.** OpenBao invalidates the old password the
+instant it rotates, and the running pod keeps using it until ESO refreshes and Reloader
+restarts. `coder` logged 8 `password authentication failed` errors in an 8-second window
+(13:40:20 → 13:40:28) and none after. This is inherent to rotate-then-propagate, not a
+misconfiguration, and it will recur on **every scheduled rotation** — currently every 30 days,
+per app. Apps that open a connection per request ride it out invisibly; pooled and
+long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
+shorter `rotation_period`.
 
 ### Boot-budget sweep of the remaining apps
 
