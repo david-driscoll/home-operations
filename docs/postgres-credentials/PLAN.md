@@ -383,6 +383,7 @@ misconfiguration, and it will recur on **every scheduled rotation** — currentl
 per app. Apps that open a connection per request ride it out invisibly; pooled and
 long-connection apps will drop queries for a few seconds. Worth knowing before choosing a
 shorter `rotation_period`.
+| 7 | `pinepods` | #TBD7 | pending merge. Closes group C/D. Split in two like romm: #1161 added the startup probe first. That rollout earned its keep — the boot came back at **156s**, not the 144s measured beforehand, an 8% spread against what had been a 210s budget. The 66s margin was never real. |
 
 ### The mount-URN incident (2026-08-25)
 
