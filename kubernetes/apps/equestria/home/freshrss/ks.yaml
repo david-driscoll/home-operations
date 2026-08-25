@@ -34,6 +34,16 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/postgres
+    # TRANCHE 2. Same one-line opt-in grafana took in tranche 1: drops
+    # passwordSecret from the DatabaseRole, repoints the credential
+    # ExternalSecret at the OpenBao static-creds generator, and makes the
+    # Pulumi system stack create a static role -- which ROTATES THE PASSWORD
+    # IMMEDIATELY and puts this app on a 30-day restart cycle.
+    #
+    # Preflighted: reloader.stakater.com/auto is on the DEPLOYMENT (not the pod
+    # template), and the pod reads its credential from the freshrss-env Secret,
+    # so a rotation actually reaches it.
+    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
