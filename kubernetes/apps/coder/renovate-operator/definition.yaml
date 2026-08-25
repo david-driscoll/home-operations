@@ -1,0 +1,52 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Renovate
+  category: Applications
+  description: Dependency updates for the Forgejo forge
+  url: &url https://renovate.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/renovate.svg
+  access_policy:
+    groups:
+      # Admins only, and this is the real gate. The operator maps the same
+      # group to `authorization.defaults.adminGroups`, so anyone authentik lets
+      # in can trigger, cancel and reconfigure runs -- there is no read-only
+      # tier configured because there is no audience for one.
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # `/auth/callback` is the operator's fixed callback path.
+        #
+        # Both are registered, but only the first is ever used: the chart takes
+        # a SINGLE `auth.oidc.redirectUrl` (pinned in helmrelease.yaml), so a
+        # login started on the tailnet hostname completes on the public one.
+        # The tailnet entry is here so that a future per-host deployment does
+        # not need an authentik change to go with it.
+        - url: "https://renovate.${ROOT_DOMAIN}/auth/callback"
+        - url: "https://renovate.${TAILSCALE_DOMAIN}/auth/callback"
+      propertyMappings:
+        - email
+        - openid
+        # Carries the `groups` claim that `authorization.defaults.adminGroups`
+        # matches on -- dropping it would leave every login authenticated and
+        # unauthorised, with an empty job list and no error.
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # `/health` (no trailing z -- it is registered as `/health` in
+    # src/ui/server.go) is the operator's unauthenticated status endpoint. It is
+    # registered outside the auth subrouter, so it answers without a session and
+    # checks the process rather than authentik.
+    - name: Renovate
+      group: "Applications"
+      url: https://renovate.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

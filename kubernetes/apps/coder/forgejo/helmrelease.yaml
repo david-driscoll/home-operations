@@ -384,6 +384,27 @@ spec:
           # `[storage]` section, because that is what each subsystem's own
           # prefix already is.
 
+        webhook:
+          # Renovate support. The renovate-operator's webhook receiver is a
+          # ClusterIP two DNS labels away
+          # (kubernetes/apps/coder/renovate-operator), and Forgejo would refuse
+          # to deliver to it: ALLOWED_HOST_LIST defaults to `external`, which
+          # means "valid non-private unicast IPs only" and drops every RFC1918
+          # destination before the request leaves the pod. The rejection is
+          # logged on the Forgejo side and shows up in the repository's webhook
+          # delivery history -- the operator sees nothing at all, which makes
+          # this a slow thing to diagnose from the other end.
+          #
+          # The exact hostname rather than the `private` group. `private` would
+          # re-open webhook delivery to EVERY RFC1918 address, which turns any
+          # repository's webhook settings into an SSRF primitive against the
+          # rest of the estate. Forgejo matches this list against the host name
+          # as well as the resolved IP, so naming the Service is enough.
+          #
+          # Change this and the operator's `webhook.baseUrl` together: they are
+          # two spellings of the same destination.
+          ALLOWED_HOST_LIST: renovate-operator.${NAMESPACE}.svc.cluster.local
+
         service:
           # This exact pair is the documented combination for "accounts come only
           # from the IdP": registration stays technically enabled, but only the

@@ -1,7 +1,19 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    "local>david-driscoll/.github:renovate-config",
+    // `github>`, NOT `local>`. They are identical when Renovate runs against
+    // GitHub, because `local>` resolves against whatever platform the bot is
+    // on -- but this file is now also consumed by the self-hosted Forgejo bot
+    // through `globalExtends`
+    // (kubernetes/apps/coder/renovate/renovatejob.yaml), and there `local>`
+    // resolves to `david-driscoll/.github` ON git.driscoll.tech, which does not
+    // exist. The lookup fails the whole preset chain, so every Forgejo repo
+    // errors instead of inheriting anything.
+    //
+    // Renovate reads the platform and endpoint out of GlobalConfig for a
+    // `local>` preset (lib/config/presets/local/index.ts), so this is not
+    // configurable per-consumer -- the reference itself has to name its source.
+    "github>david-driscoll/.github:renovate-config",
     "config:recommended",
     "docker:enableMajor",
     "helpers:pinGitHubActionDigests",
@@ -430,6 +442,43 @@
     },
   ],
   customManagers: [
+    {
+      // The root Pulumi.yaml `packages:` block is the real pin for every
+      // bridged Terraform provider in sdks/. `pulumi package add` writes the
+      // version into THREE places -- this file, the SDK's package.json
+      // `version`, and a base64 blob at `pulumi.parameterization.value` -- and
+      // only this one is human-editable, so it is the only one worth matching.
+      //
+      // Which means a Renovate bump here is HALF a change, and the other half
+      // is SILENT. The base64 blob is what the bridge plugin actually resolves
+      // the provider from, and no regex can re-encode it -- so a merged bump
+      // that has not been regenerated leaves the SDK bound to the old provider
+      // while the diff reads like an upgrade. Nothing fails; `pulumi up` simply
+      // keeps running the old version.
+      //
+      // Regenerate before merging one of these:
+      //
+      //   pulumi package add terraform-provider <registry-url> <new-version>
+      //
+      // which rewrites sdks/<name>/ and the entry here. `pulumi package add`
+      // reformats `parameters` as a block sequence; put it back to the flow
+      // style the other entries use so this manager keeps matching it.
+      //
+      // Nothing tracked these versions before -- all six providers were pinned
+      // by hand and updated only when someone noticed.
+      description: "Pulumi bridged Terraform providers (root Pulumi.yaml)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)Pulumi\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "parameters:\\s*\\[\\s*(?<registryHost>registry\\.(?:terraform\\.io|opentofu\\.org))/(?<depName>[^,\\]\\s]+)\\s*,\\s*(?<currentValue>[^,\\]\\s]+)\\s*\\]",
+      ],
+      datasourceTemplate: "terraform-provider",
+      // registry.opentofu.org serves the same /v1/providers API, so terrifi
+      // resolves through the identical datasource with only the host swapped.
+      registryUrlTemplate: "https://{{{registryHost}}}",
+    },
     {
       description: "Process annotated dependencies",
       customType: "regex",

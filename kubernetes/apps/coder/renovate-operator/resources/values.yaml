@@ -1,0 +1,24 @@
+# Helm values rendered by this app's `-values` ExternalSecret.
+#
+# Only the pieces that must come out of a secret store live here. Everything
+# else is plain, reviewable YAML in helmrelease.yaml -- Flux merges this file
+# first and spec.values on top, recursively, so the two `auth` maps combine.
+#
+# Keep envsubst and Go-template syntax out of the comments in this file: both
+# Flux postBuild and the external-secrets templating engine treat a comment as
+# live text and will execute what they find there. That is what
+# scripts/eso-values-lint checks for.
+auth:
+  oidc:
+    # Neither of these is a secret, but neither is known at commit time either:
+    # authentik mints the client id, and the issuer carries the generated
+    # application slug. The chart takes both as plain Helm values (only the
+    # client secret may be an existingSecret reference), so a values fragment is
+    # the only way in.
+    #
+    # The issuer keeps its trailing slash. That is what authentik's discovery
+    # document reports as `issuer`, and the OIDC client compares the two
+    # strings exactly -- trimming it here would fail every login with
+    # "issuer did not match".
+    issuerUrl: "{{ .oidc_issuer }}"
+    clientId: "{{ .oidc_client_id }}"

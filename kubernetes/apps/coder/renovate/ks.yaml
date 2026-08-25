@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app renovate
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # Split from the operator for the same reason garage-system splits
+    # `cluster` from `operator`: this Kustomization contains nothing but a
+    # custom resource, and the CRD that admits it is installed by the
+    # operator's HelmRelease. In one Kustomization the RenovateJob would be
+    # rejected on every first apply and only settle on a retry.
+    - name: renovate-operator
+      namespace: coder
+    - name: external-secrets
+      namespace: kube-system
+    # The RenovateJob's provider endpoint is Forgejo's ClusterIP. Waiting on
+    # the forge is not strictly required -- a discovery run against a missing
+    # Service just fails and retries on the next tick -- but it keeps a fresh
+    # bootstrap from filing a spurious RenovateDiscoveryFailing.
+    - name: forgejo
+      namespace: coder
+  path: ./kubernetes/apps/coder/renovate
+  prune: true
+  force: false
+  # `true` is safe here: a RenovateJob has no readiness gate of its own, so
+  # Flux only waits for the object to be applied.
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

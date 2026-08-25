@@ -42,6 +42,69 @@ spec:
       # neither; it only puts, gets and deletes objects.
       owner: false
 ---
+# The renovate-operator's log store and Renovate's repository cache.
+#
+# A SECOND bucket rather than a prefix in `forgejo` above, for one reason that
+# matters: that bucket carries `driscoll.dev/backup: "true"`, and everything in
+# here is rebuildable. Sharing it would mean either backing up disposable data
+# nightly or maintaining another `backup-exclude` glob -- and the `/**` trap in
+# that annotation is exactly the kind of thing that fails silently.
+#
+# NOT backed up, deliberately: no `driscoll.dev/backup` annotation. The log
+# store holds the last run's output per project and the cache holds dependency
+# metadata; losing either costs one slower Renovate run.
+#
+# It does not grow without bound, which is the question worth asking of any
+# Garage bucket in this estate. Both prefixes are keyed by identity rather than
+# by time -- the log store writes
+# `renovate-logs/<namespace>/<job>/<org>/<repo>.log` and Renovate's cache is one
+# object per repository -- so each run OVERWRITES the previous one. Total size
+# tracks the number of repositories, not the number of runs.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: renovate
+spec:
+  clusterRef:
+    name: ${APP}
+  globalAlias: renovate
+  # Retain even though the contents are disposable. The hazardous operation
+  # with Garage in this estate is DELETION -- a managed object that will not
+  # finalize takes the cluster's reconcile with it -- so a Flux prune should
+  # orphan the bucket and let a human remove it, not race the operator.
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: renovate
+      read: true
+      write: true
+      # No owner: the operator puts, gets and lists. It never needs to delete
+      # the bucket or configure it as a website.
+      owner: false
+---
+# The renovate-operator's S3 identity. Read by the operator itself for the log
+# store, and forwarded verbatim to every Renovate Job for the repository cache
+# (`S3_CREDENTIALS_SECRET_NAME`), so one key serves both.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: renovate
+spec:
+  clusterRef:
+    name: ${APP}
+  name: Renovate
+  neverExpires: true
+  permissions:
+    createBucket: false
+  secretTemplate:
+    # `access-key-id` and `secret-access-key` are the key names the
+    # renovate-operator chart reads out of `s3.existingSecret`. They are what
+    # the GarageKey operator writes by default -- do not template them.
+    name: ${APP}-renovate-credentials
+    includeEndpoint: true
+    includeRegion: true
+    includeBucketName: true
+---
 # Forgejo's own S3 identity.
 apiVersion: garage.rajsingh.info/v1beta1
 kind: GarageKey

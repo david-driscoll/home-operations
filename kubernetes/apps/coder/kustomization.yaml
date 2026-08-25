@@ -15,3 +15,10 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
+  # The operator first: ./renovate/ks.yaml is nothing but a RenovateJob, and
+  # the CRD that admits it ships with the operator's chart. Flux orders on
+  # dependsOn rather than on this list, so the order here is documentation --
+  # but keeping the two adjacent and in dependency order is how a reader tells
+  # they are a pair.
+  - ./renovate-operator/ks.yaml
+  - ./renovate/ks.yaml
