@@ -60,6 +60,10 @@ spec:
       VOLSYNC_CACHE_CAPACITY: 2Gi
       VOLSYNC_PUID: "1000"
       VOLSYNC_PGID: "1000"
-    substituteFrom:
-    - kind: Secret
-      name: github-token
+    # No `substituteFrom:` here on purpose. components/common patches one onto
+    # every Kustomization in the estate, and a strategic-merge patch REPLACES a
+    # plain list rather than merging into it -- so anything listed here silently
+    # loses cluster-secrets/shared-secrets instead of adding to them. Nothing
+    # under ./dashboard needs it: the ConfigMaps holding ${GITHUB_TOKEN} are all
+    # annotated `substitute: disabled` so glance expands it at runtime from the
+    # `github-token` env var wired up in helmrelease.yaml.
