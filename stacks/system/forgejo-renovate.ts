@@ -306,7 +306,13 @@ export class ForgejoConfigurationComponent extends ComponentResource {
       {
         user: adminCredentials.data.apply(d => d.username),
         name: "Pulumi Admin Token",
-        scopes: ["read:repository", "write:repository", "read:organization", "write:organization", "read:admin", "write:admin"] as TOKEN_SCOPES[],
+        // WRITE ONLY, NO MATCHING `read:`. Forgejo collapses a scope pair on
+        // create -- ask for `read:repository` AND `write:repository` and it
+        // stores just `write:repository`. Since `scopes` is ForceNew, the
+        // program's 6 vs the API's 3 is a diff that can never converge:
+        // every run replaces the token, and a replaced PAT is a NEW token,
+        // so the estate would churn its admin credential nightly.
+        scopes: ["write:repository", "write:organization", "write:admin"] as TOKEN_SCOPES[],
       },
       { provider: this.forgejoProvider, parent: this },
     );
@@ -369,7 +375,11 @@ export class ForgejoConfigurationComponent extends ComponentResource {
         prohibitLogin: true,
         allowGitHook: true,
       },
-      ["read:repository", "write:repository", "read:user", "read:organization", "read:misc", "read:issue", "write:issue"] as TOKEN_SCOPES[],
+      // Same collapsing rule as the admin token above: `read:repository` and
+      // `read:issue` are omitted because the `write:` of each implies them,
+      // and asking for both makes `scopes` diff forever against what Forgejo
+      // stores. What remains is exactly what the API reports back.
+      ["write:repository", "read:user", "read:organization", "read:misc", "write:issue"] as TOKEN_SCOPES[],
       args.globals,
       this.forgejoProvider,
     );

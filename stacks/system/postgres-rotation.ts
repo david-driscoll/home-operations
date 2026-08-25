@@ -206,14 +206,26 @@ export class PostgresRotationComponent extends ComponentResource {
         // (coder, crowdsec, freshrss, grafana, n8n, pulsarr, romm, tandoor)
         // holding passwords nothing can rotate or verify.
         //
-        // `noParent: true` says "this used to be a direct child of the stack",
-        // which is what lets Pulumi adopt the existing state entry instead.
+        // THE FULL OLD URN, NOT `{ noParent: true }`. The spec form was tried
+        // first and did NOT match -- `pulumi preview` still planned
+        // `+ create` at the new URN alongside `- delete` of the mount and all
+        // eight static roles at the old ones. A literal URN removes every
+        // question about how the engine reconstructs one.
+        //
+        // Copied from `pulumi stack export`, so it is the exact string in
+        // state rather than a reconstruction:
+        //
+        //   pulumi stack export | grep secretsMount
+        //
         // The static roles below need no alias of their own: they are
         // `parent: mount`, and Pulumi propagates a parent's alias to its
         // children.
         //
         // Do not remove this until the state no longer contains the old URN.
-        aliases: [{ noParent: true }],
+        // VERIFY WITH A PREVIEW, never by assuming: the correct plan shows the
+        // mount as unchanged, with NO delete of
+        // `vault:database/secretBackendStaticRole` anywhere in it.
+        aliases: ["urn:pulumi:system::system::vault:database/secretsMount:SecretsMount::postgres-rotation"],
       },
     );
 
