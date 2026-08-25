@@ -13,6 +13,7 @@ resources:
   - ./openbao-role.yaml
   - ./openbao-credentials.yaml
   - ./baoadmin-role.yaml
+  - ./rotation-serviceaccount.yaml
   - ./role-broad-access.yaml
 configMapGenerator:
 - name: ${APP}-values
