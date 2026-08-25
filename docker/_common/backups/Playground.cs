@@ -176,6 +176,15 @@ static async Task Rclone(RCloneJob job)
     try
     {
         item = await Cli.Wrap(Path.Combine("/workspace", "rclone"))
+        // Load-bearing: CliWrap's DEFAULT validation THROWS on a non-zero exit,
+        // which lands in the catch below with `item` still null — and the
+        // ReportUptime call is gated on an exit code existing. Net effect: a
+        // FAILING job never reported failure at all; it just went silent until
+        // the 25h Gatus heartbeat expired, with no error text anywhere. That is
+        // exactly how sgc-volsync-authentik sat undiagnosed from 2026-08-23.
+        // With validation off, a non-zero exit flows to ReportUptime as
+        // success=false WITH rclone's own output attached.
+        .WithValidation(CommandResultValidation.None)
         .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
         .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error))
         .WithEnvironmentVariables(
