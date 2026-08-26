@@ -42,6 +42,11 @@ spec:
     # role's password changes, so the burst tracks reconnect RATE, not pool
     # size. See docs/postgres-credentials/PLAN.md.
     - ../../../../components/postgres
+    # windmill_user and windmill_admin -- the NOLOGIN row-security principals
+    # Windmill's migrations and RLS policies name. They existed in the cluster
+    # and in no manifest until this line; see
+    # kubernetes/apps/database/postgres/roles/windmill/.
+    - ../../../../components/postgres/roles
   postBuild:
     substitute:
       APP: *app

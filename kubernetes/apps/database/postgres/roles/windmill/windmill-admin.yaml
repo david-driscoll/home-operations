@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+#
+# The second of Windmill's two NOLOGIN row-security principals. See
+# ./windmill-user.yaml for why these are declared at all.
+#
+# ⚠️ TWO ATTRIBUTES HERE ARE LOAD-BEARING AND EASY TO LOSE.
+#
+# `bypassrls: true` -- this role exists specifically to see through the row
+# security policies that constrain windmill_user. Omitting it would leave the
+# CRD default (false), and a DatabaseRole forces every attribute it declares
+# AND every attribute it omits, so adopting this role without the flag would
+# silently REVOKE it from a live database. Nothing would error; Windmill's
+# admin-scoped queries would just start returning filtered rows.
+#
+# `inRoles: [windmill_user]` -- windmill_admin is a member of windmill_user,
+# WITHOUT admin option. Same hazard: omitting it revokes the membership.
+#
+# Transcribed from the live role on 2026-08-26, from the primary:
+#
+#   rolname        | super | inherit | createrole | createdb | login | repl | bypassrls | connlimit
+#   windmill_admin | f     | t       | f          | f        | f     | f    | t         | -1
+#
+#   member         | in_role       | admin_option
+#   windmill_admin | windmill_user | f
+#
+# CNPG issues a plain GRANT with no ADMIN OPTION (UpdateMembership in
+# internal/management/controller/roles), which matches `admin_option = f`
+# above -- so this reproduces the live state exactly rather than approximating
+# it.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: windmill-admin
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  name: windmill_admin
+  comment: "windmill row-security principal, sees through RLS; no login"
+  ensure: present
+  login: false
+  superuser: false
+  inherit: true
+  bypassrls: true
+  inRoles:
+    - windmill_user
+  databaseRoleReclaimPolicy: retain

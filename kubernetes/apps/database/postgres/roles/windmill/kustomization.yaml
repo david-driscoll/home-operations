@@ -1,0 +1,16 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Rendered into the `database` namespace by the `windmill-postgres-roles`
+# Kustomization that components/postgres/roles emits. Nothing else references
+# this directory.
+#
+# ORDER MATTERS: windmill_admin is a member of windmill_user, so the grant
+# fails until windmill_user exists. Kustomize applies in list order, and CNPG
+# retries either way, but listing them in dependency order means the first pass
+# succeeds instead of converging on a retry.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./windmill-user.yaml
+  - ./windmill-admin.yaml
