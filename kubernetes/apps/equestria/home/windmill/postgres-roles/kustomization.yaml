@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Rendered into the `database` namespace by the `windmill-postgres-roles`
+# Kustomization that components/postgres/roles emits -- see ../ks.yaml for the
+# wiring.
+#
+# ⚠️ DELIBERATELY NOT listed in ../kustomization.yaml. This directory sits
+# inside the app's build path, so adding it there would render both
+# DatabaseRoles a SECOND time into the `equestria` namespace, where they are
+# meaningless (CNPG resolves `spec.cluster.name` locally) and would fight the
+# real ones.
+#
+# windmill_admin is a member of windmill_user, so the GRANT cannot be made
+# until windmill_user exists. Listing them in dependency order here does NOT
+# guarantee that: kustomize sorts its output, and it emits windmill-admin
+# first regardless (verified). CNPG reconciles each DatabaseRole independently
+# and retries, so this converges on its own -- expect one transient
+# "role windmill_user does not exist" on the admin role during first apply.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./windmill-user.yaml
+  - ./windmill-admin.yaml
