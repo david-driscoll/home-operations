@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# `mcp.agents.${ROOT_DOMAIN}` -- the catalogue API.
+#
+# The backend Service is built by the operator from ../toolhive-registry's
+# MCPRegistry, named `<registry-name>-registry-api` and served on 8080
+# (RegistryAPIPort in the operator source). Like every other operator-built
+# Service in this namespace it does not exist in Git, so this route sits with an
+# unresolved backendRef until the registry reconciles.
+#
+# ../toolhive-ui does NOT reach the registry through here -- it uses the
+# in-cluster Service directly over API_BASE_URL, which avoids a pointless
+# hairpin out to Traefik and back. This route exists so the catalogue is
+# reachable by hand and by any client that wants it directly.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    reloader.stakater.com/auto: "true"
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    # Needs the `*.agents.${ROOT_DOMAIN}` SAN on le-production -- a wildcard
+    # matches exactly one label, so the estate-wide `*.${ROOT_DOMAIN}` does not
+    # cover a name two labels deep. Added alongside this in
+    # kubernetes/apps/network/certificates/{production,staging}.yaml.
+    - "mcp.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        - name: ${APP}-registry-api
+          port: 8080
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # `local-api`, not `local-user`: this serves JSON to clients, and
+            # the error-pages middleware would replace a non-200 body with HTML.
+            #
+            # AND IT IS THE ONLY ACCESS CONTROL HERE. The registry runs
+            # `auth.mode: anonymous` (see ./mcpregistry.yaml), so anything that
+            # can reach this hostname can read the whole catalogue. That is a
+            # deliberate trade rather than an oversight -- the contents are a
+            # mirror of the PUBLIC upstream ToolHive catalogue, re-synced from
+            # git every 30m, so there is nothing here that is not already
+            # public. Revisit the moment a private source is added to
+            # `sources:`.
+            name: local-api

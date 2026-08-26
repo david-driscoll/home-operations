@@ -14,7 +14,7 @@ spec:
   name: ToolHive
   category: Applications
   description: Browse and manage the MCP server catalogue
-  url: &url https://mcp.${ROOT_DOMAIN}
+  url: &url https://toolhive.agents.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:
@@ -28,7 +28,7 @@ spec:
         # src/lib/auth/constants.ts -- whose own comment warns that changing it
         # invalidates existing sessions and requires updating the redirect URI
         # in the IdP. Treat this path as fixed.
-        - url: https://mcp.${ROOT_DOMAIN}/api/auth/oauth2/callback/oidc
+        - url: https://toolhive.agents.${ROOT_DOMAIN}/api/auth/oauth2/callback/oidc
       propertyMappings:
         - email
         - openid

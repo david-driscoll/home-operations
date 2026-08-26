@@ -39,11 +39,16 @@ spec:
     registries:
       - name: default
         sources: ['toolhive']
-    # `anonymous`, and deliberately so. This API is reachable only from inside
-    # the cluster -- it has no HTTPRoute of its own, and the only client is
-    # ../toolhive-ui, which does its OWN authentik login before it ever calls
-    # here. Adding auth at this layer would mean a second credential to manage
-    # for no boundary that is not already enforced.
+    # `anonymous`, and still deliberate now that ./httproute.yaml publishes this
+    # on mcp.agents.<domain>. Two reasons, and the first is the load-bearing
+    # one: everything served here is a mirror of the PUBLIC upstream ToolHive
+    # catalogue, re-synced from git every 30m, so there is nothing to leak.
+    # Second, the only programmatic client is ../toolhive-ui, which does its own
+    # authentik login before it ever calls here.
+    #
+    # The route's `internal-network` middleware keeps it off the internet
+    # regardless. REVISIT THIS the moment a private source is added to
+    # `sources:` above -- at that point anonymous stops being free.
     auth:
       mode: anonymous
     database:

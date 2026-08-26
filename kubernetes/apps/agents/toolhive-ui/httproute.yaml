@@ -1,18 +1,20 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
 #
-# `mcp.${ROOT_DOMAIN}`, deliberately NOT under toolhive.${ROOT_DOMAIN}.
+# `toolhive.agents.${ROOT_DOMAIN}` -- the human entry point.
 #
-# The two hostnames carry different audiences and must not be confused:
+# Everything this namespace publishes now lives under one label, `agents`:
 #
-#   toolhive.<domain>   machines. The MCP endpoint and its OAuth server.
-#                       Answers JSON-RPC and 401s with WWW-Authenticate.
-#   mcp.<domain>        humans. This UI.
+#   toolhive.agents.<domain>   humans. This UI.
+#   mcp.agents.<domain>        the catalogue API the UI reads.
 #
-# Sharing one hostname would mean path-multiplexing a browser app and an MCP
-# endpoint whose own /.well-known/ and /oauth/ paths already occupy the root --
-# a collision waiting to happen for no gain, since a second single-label name
-# costs nothing under the existing wildcard certificate.
+# That grouping is what the `*.agents.${ROOT_DOMAIN}` SAN added to
+# kubernetes/apps/network/certificates/{production,staging}.yaml exists for --
+# a wildcard matches ONE label, so `*.${ROOT_DOMAIN}` cannot reach these.
+#
+# NOTE the pre-existing `toolhive.${ROOT_DOMAIN}` is a DIFFERENT service: the
+# machine-facing MCP endpoint and its OAuth server. The two are one label apart
+# and easy to confuse; see ../toolhive/httproute.yaml.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -26,7 +28,7 @@ spec:
       namespace: network
       kind: Gateway
   hostnames:
-    - "mcp.${ROOT_DOMAIN}"
+    - "toolhive.agents.${ROOT_DOMAIN}"
   rules:
     - backendRefs:
         - name: ${APP}

@@ -44,3 +44,12 @@ spec:
     # either way, and no isolation won: a public DNS name on a public CA is not
     # something the app namespace needs to hold.
     - "*.git.${ROOT_DOMAIN}"
+    # The `agents` namespace publishes two names under one label -- the MCP
+    # catalogue API (mcp.agents) and the ToolHive UI (toolhive.agents) -- and a
+    # wildcard matches exactly ONE label, so `*.${ROOT_DOMAIN}` does not reach
+    # them. Same reason `*.code.` and `*.git.` are listed above.
+    #
+    # A wildcard rather than two explicit SANs because this namespace is
+    # expected to grow more MCP surfaces, and each one would otherwise be
+    # another two-file certificate change plus an ACME re-issue.
+    - "*.agents.${ROOT_DOMAIN}"
