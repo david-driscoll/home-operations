@@ -33,18 +33,14 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # Rotating credential, and the startup probe below is a prerequisite for
+    # it: romm's boot (43-49s across two rollouts) did not fit the 30s budget
+    # it originally had, so #1148 widened it to 300s BEFORE the first rotation
+    # forced a restart. Do not narrow it back.
+    #
+    # Other gates: reloader is on the Deployment rather than its pod template,
+    # and DB_PASSWD reaches the app from romm-env via envFrom.
     - ../../../../components/postgres
-    # TRANCHE 5, group C of the boot-budget sweep. Deliberately second: the
-    # startup probe was widened first in #1148, because romm's boot (43-49s
-    # measured across two rollouts) did not fit the 30s budget it had.
-    #
-    # The rollout of that widening was the proof -- a cold boot under the
-    # new 300s budget came up in 43s with 0 restarts. Only then is the
-    # forced restart this line causes safe.
-    #
-    # Other gates: reloader is on the Deployment rather than its pod
-    # template, and DB_PASSWD reaches the app from romm-env via envFrom.
-    - ../../../../components/postgres/rotate
     - ../../../../components/volsync
   postBuild:
     substitute:

@@ -34,21 +34,16 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # Rotating credential, and the 600s startup probe below is a prerequisite:
+    # pinepods had the narrowest margin in the boot-budget sweep, and #1161
+    # widened it before the first rotation forced a restart. The boot came in
+    # at 156s, not the 144s measured beforehand -- an 8% spread across two runs
+    # against what had been a 210s budget, so that 66s margin was never real.
+    #
+    # Other gates: reloader is on the Deployment (via post-render patch -- this
+    # chart has no value for it), and the password arrives through envFrom on
+    # pinepods-env.
     - ../../../../components/postgres
-    # TRANCHE 7, and the close of group C/D. Second of two PRs: #1161 added
-    # the startup probe first, because pinepods had the narrowest margin in
-    # the boot-budget sweep.
-    #
-    # That rollout justified itself. The boot came in at 156s, not the 144s
-    # measured beforehand -- an 8% spread across two runs against what used
-    # to be a 210s liveness budget. The margin was never the 66s it looked
-    # like, and a slower boot under load could have crossed it. Now 600s,
-    # a 3.8x margin, 0 restarts.
-    #
-    # Other gates: reloader is on the Deployment (via post-render patch --
-    # this chart has no value for it), and the password arrives through
-    # envFrom on pinepods-env.
-    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

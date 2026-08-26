@@ -2,10 +2,10 @@
  * OpenBao's PostgreSQL database secrets engine — phase 3b of
  * docs/postgres-credentials/PLAN.md.
  *
- * Configures the `database` mount and one static role per opted-in app, so
- * OpenBao owns those roles' passwords and rotates them on a schedule. It lives
- * in this stack because it is estate configuration written INTO OpenBao, which
- * is exactly what this stack is for.
+ * Configures the `database` mount and one static role per app with a
+ * PostgreSQL database, so OpenBao owns those roles' passwords and rotates them
+ * on a schedule. It lives in this stack because it is estate configuration
+ * written INTO OpenBao, which is exactly what this stack is for.
  *
  * ## Two gates, and they mean different things
  *
@@ -18,24 +18,53 @@
  * matters, because every other stack reads what this one publishes.
  *
  * The tranche is not configured here at all — it is whichever apps carry
- * `components/postgres/rotate`. Adding that component ROTATES THAT APP'S
- * PASSWORD IMMEDIATELY and there is no way to ask OpenBao not to:
- * rotation_period is mandatory and openbao#284 (disable auto rotation) is
- * still open. So it grows a couple of apps at a time, not all at once.
+ * `components/postgres`. It used to be the narrower set carrying a
+ * `components/postgres/rotate` sibling: rotation is irreversible per app
+ * (rotation_period is mandatory and openbao#284 has no opt-out), so phase 4
+ * rolled it out a couple of apps at a time. That migration finished, every
+ * live consumer rotates, and `passwords.sops.yaml` no longer holds an app
+ * password to fall back to — so the sibling was folded into the base
+ * component and the two lists collapsed into one.
  *
  * ## Why the app list is discovered, not typed out
  *
  * Retiring a C# generator only to hand-maintain a TypeScript array would be a
- * lateral move. Both lists read the same signal the Kubernetes side uses — a
- * `ks.yaml` referencing `components/postgres` or its `rotate` sibling — so
- * adding a component stays the only edit, and the two halves of an opt-in
- * cannot disagree.
+ * lateral move. This list reads the same signal the Kubernetes side uses — a
+ * `ks.yaml` referencing `components/postgres` — so adding a component stays
+ * the only edit, and the two halves cannot disagree.
  *
- * That last part is the important one. The Kubernetes half drops
- * `passwordSecret` and repoints the ExternalSecret; the OpenBao half rotates
- * the password. If only one of them landed, the app would be holding a
+ * That last part is the important one. The Kubernetes half renders a
+ * `DatabaseRole` with no `passwordSecret` and an ExternalSecret pointed at the
+ * `static-creds` generator; the OpenBao half creates the static role that
+ * generator reads. If only one of them landed, the app would be holding a
  * credential it cannot use. Deriving both from one signal makes that
  * impossible rather than merely unlikely.
+ *
+ * ## THE ORDERING TRAP, and why this file does not paper over it
+ *
+ * Creating a static role immediately issues `ALTER ROLE ... PASSWORD` against
+ * PostgreSQL. If CNPG has not applied the app's `DatabaseRole` yet, this stack
+ * fails outright:
+ *
+ *     Code: 500 ... error setting credentials: failed to execute query:
+ *     ERROR: role "degoog" does not exist (SQLSTATE 42704)
+ *
+ * That only bites a BRAND-NEW app — a migrated one already had its role from
+ * the sops era. A new app ships both halves in one commit, the Pulumi operator
+ * reconciles the merge within seconds, and Flux's `cluster-apps` runs on its
+ * own interval, so Pulumi reliably wins the race and the Stack goes
+ * Stalled/UpdateFailed for a day (#1180).
+ *
+ * It is tempting to make this self-healing by skipping an app whose role does
+ * not exist yet, so the role appears on the next pass. DON'T, at least not as
+ * a live existence check. This stack holds no PostgreSQL client on purpose —
+ * baoadmin's key never enters Pulumi state — so the check would have to read
+ * the live `DatabaseRole` CR, which makes the PLAN depend on cluster state. A
+ * transient read failure would then omit an app that IS rotating, and an
+ * omitted app is not a skip: Pulumi DELETES its static role, leaving a live
+ * password nothing owns. A stalled run that a one-line annotate clears is
+ * strictly the better failure. The recovery is written up in
+ * kubernetes/components/postgres/ks.yaml.
  *
  * The Flux artifact the Pulumi operator checks out is the whole repository
  * (the `home-operations` GitRepository sets neither `ignore` nor `include`;
@@ -79,8 +108,8 @@ const ROTATION_PERIOD_SECONDS = 720 * 60 * 60; // 30 days
  * Apps referencing a given component, read off the Kubernetes tree.
  *
  * Matched by exact path suffix, so `components/postgres` does not also match
- * its `superuser`, `client-cert` and `rotate` siblings — those modify an app's
- * role, they are not apps in their own right.
+ * its `superuser` and `client-cert` siblings — those modify an app's role,
+ * they are not apps in their own right.
  */
 function discoverAppsUsing(component: string): string[] {
   const suffix = `/${component}`;
@@ -106,27 +135,25 @@ function discoverAppsUsing(component: string): string[] {
   return [...apps].sort();
 }
 
-/** Every app that gets a database from `components/postgres`. */
-export function discoverPostgresApps(): string[] {
-  return discoverAppsUsing("components/postgres");
-}
-
 /**
- * Apps whose password OpenBao owns — those carrying `components/postgres/rotate`.
+ * Every app that gets a database from `components/postgres` — which, since the
+ * `rotate` sibling was folded in, is exactly the set whose password OpenBao
+ * owns. One signal, one list.
  *
- * Discovered rather than listed here on purpose. The Kubernetes side of opting
- * in (drop `passwordSecret`, repoint the ExternalSecret at the generator) and
- * the OpenBao side (create the static role) MUST agree, and the only way to
- * guarantee that is to derive both from the same signal. A hand-maintained
- * array here could disagree with the component, and the failure mode is a
- * rotated password the app cannot read.
+ * A COMMENTED-OUT component does not count, and that matters: `autobrr` and
+ * the three group-E apps (`outline`, `retrom`, `strmgen`) still have the line
+ * in their `ks.yaml` behind a `#`. This reads parsed YAML rather than grepping
+ * text, so they are correctly absent — and they MUST be, because group E's
+ * roles and databases were dropped on 2026-08-25. Uncommenting one without
+ * letting CNPG recreate the role first fails this stack outright; see the
+ * ordering trap above.
  *
  * `openbao` can never appear: it authenticates with a client certificate and
- * its role has no password to rotate. It also left `components/postgres`
- * entirely in phase 2.4a, so it cannot carry the sibling.
+ * its role has no password to rotate. It left `components/postgres` entirely
+ * in phase 2.4a.
  */
-export function discoverRotationOptIns(): string[] {
-  return discoverAppsUsing("components/postgres/rotate");
+export function discoverPostgresApps(): string[] {
+  return discoverAppsUsing("components/postgres");
 }
 
 export interface PostgresRotationConfigurationArgs {
@@ -136,16 +163,10 @@ export class PostgresRotationComponent extends ComponentResource {
   constructor(args: PostgresRotationConfigurationArgs, opts?: ComponentResourceOptions) {
     super("custom:postgres:rotation", "postgres-rotation", args, opts);
 
-    const discovered = discoverPostgresApps();
-    const tranche = discoverRotationOptIns();
-
-    // ./rotate without ./postgres would create a static role for a PostgreSQL
-    // role that does not exist -- OpenBao accepts that and then fails every
-    // scheduled rotation, in a log nobody reads. Fail the run instead.
-    const unknown = tranche.filter(a => !discovered.includes(a));
-    if (unknown.length > 0) {
-      throw new Error(`components/postgres/rotate is on apps that do not use components/postgres: ${unknown.join(", ")}. ` + `Discovered: ${discovered.join(", ")}`);
-    }
+    // One list, because there is one signal. The cross-check that used to live
+    // here -- ./rotate present without ./postgres -- became unrepresentable
+    // when the two components merged.
+    const tranche = discoverPostgresApps();
 
     if (!ENGINE_ENABLED) return;
 

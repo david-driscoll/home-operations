@@ -145,4 +145,3 @@ export interface PersonalAccessTokenArgs {
      */
     user: pulumi.Input<string>;
 }
-

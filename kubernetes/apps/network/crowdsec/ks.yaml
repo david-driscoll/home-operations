@@ -36,14 +36,13 @@ spec:
   # ExternalSecret directly. Dropping it stops crowdsec's database being
   # declared at all.
   components:
+    # Rotating credential. lapi reads the password via
+    # `valueFrom.secretKeyRef` rather than `envFrom`, which Reloader also
+    # watches; the annotation is on the crowdsec-lapi Deployment itself, not
+    # its pod template, which is the placement that actually works. The agent
+    # DaemonSet has no annotation and needs none -- it holds a registration
+    # token and never touches Postgres.
     - ../../../components/postgres
-    # TRANCHE 3. As tandoor, with one difference worth recording: lapi reads
-    # the password via `valueFrom.secretKeyRef` rather than `envFrom`, which
-    # Reloader also watches. The annotation is on the crowdsec-lapi
-    # Deployment itself, not its pod template, which is the placement that
-    # actually works. The agent DaemonSet has no annotation and needs none --
-    # it holds a registration token and never touches Postgres.
-    - ../../../components/postgres/rotate
   prune: true
   # D5: wait: true so crowdsec-ui can dependsOn this and get a real readiness
   # signal instead of "the HelmRelease object exists".

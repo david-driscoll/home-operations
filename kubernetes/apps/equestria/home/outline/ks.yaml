@@ -27,7 +27,15 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    - ../../../../components/postgres
+    # DROPPED APP (group E, 2026-08-25). Commented out, not deleted, because
+    # this whole ks.yaml is parked -- the parent kustomization has it commented
+    # out too. The Database CR, the database and the role were all removed, so
+    # re-enabling this line does NOT just restore the old state: the Pulumi
+    # `system` stack discovers this component and creates
+    # `database/static-roles/${APP}`, which fails outright until CNPG has
+    # recreated the login role. See the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml.
+    # - ../../../../components/postgres
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

@@ -33,17 +33,14 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    - ../../../../components/postgres
-    # TRANCHE 2. Same one-line opt-in grafana took in tranche 1: drops
-    # passwordSecret from the DatabaseRole, repoints the credential
-    # ExternalSecret at the OpenBao static-creds generator, and makes the
-    # Pulumi system stack create a static role -- which ROTATES THE PASSWORD
-    # IMMEDIATELY and puts this app on a 30-day restart cycle.
+    # Preflighted in tranche 2: reloader.stakater.com/auto is on the DEPLOYMENT
+    # (not the pod template), and the pod reads its credential from the
+    # freshrss-env Secret, so the 30-day rotation actually reaches it.
     #
-    # Preflighted: reloader.stakater.com/auto is on the DEPLOYMENT (not the pod
-    # template), and the pod reads its credential from the freshrss-env Secret,
-    # so a rotation actually reaches it.
-    - ../../../../components/postgres/rotate
+    # FreshRSS is PHP and connects per request, so it holds no pooled
+    # connection to be invalidated at the cutover -- proof came from
+    # pg_stat_database.xact_commit advancing, not from pg_stat_activity.
+    - ../../../../components/postgres
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

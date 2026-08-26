@@ -33,14 +33,11 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # POSTGRES_PASSWORD is owned by OpenBao and rotates on a 30-day period.
+    # Preflighted in tranche 3: the Deployment carries
+    # reloader.stakater.com/auto and reads the password through `envFrom` on
+    # ${APP}-env, so the forced restart actually reaches the app.
     - ../../../../components/postgres
-    # TRANCHE 3. Hands POSTGRES_PASSWORD to OpenBao, which rotates it on a
-    # 30-day period. Adding this line rotates the password IMMEDIATELY --
-    # rotation_period is mandatory and openbao#284 has no opt-out -- so the
-    # app must be able to pick up a changed Secret without help. It can:
-    # the Deployment carries reloader.stakater.com/auto and reads the
-    # password through `envFrom` on ${APP}-env.
-    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

@@ -413,7 +413,7 @@ The fix took two attempts, and the difference matters:
 
 The spec form should be equivalent and is not, at least for a re-parented resource with
 children. Use the full old URN string. During the failure the state was intact throughout — the
-old unparented mount and all its static roles were still present and unmarked — so no state
+old parentless mount and all its static roles were still present and unmarked — so no state
 surgery was needed, and none was performed.
 ### passwords.sops.yaml is down to two documents (2026-08-26)
 
@@ -583,38 +583,114 @@ accordingly (720h is a reasonable start) and roll in tranches, tolerant apps fir
 
 ### How an app opts in
 
-One line in its `ks.yaml`:
+It does not — rotation is what `components/postgres` **is**, since the fold-in below. One line
+in its `ks.yaml`:
 
 ```yaml
 components:
   - ../../../components/postgres
-  - ../../../components/postgres/rotate      # <- this
 ```
 
-`components/postgres/rotate` does the two things that must happen together:
+That renders a `DatabaseRole` with no `passwordSecret` (otherwise CNPG and OpenBao fight —
+OpenBao rotates, CNPG's role sync sees the role's transaction ID move and re-applies its own
+value, OpenBao rotates again), plus a credential ExternalSecret whose password comes from the
+`VaultDynamicSecret` generator over `database/static-creds/<app>`. The same component is what
+the Pulumi stack discovers to create the static role. Both halves derive from one signal on
+purpose: the Kubernetes half makes the app able to read a rotated password, the OpenBao half
+rotates it, and if only one landed the app would hold a credential it cannot use. A
+hand-maintained list in the stack could disagree; a discovered one cannot.
 
-1. **Drops `passwordSecret` from the `DatabaseRole`.** Without it CNPG and OpenBao fight —
-   OpenBao rotates, CNPG's role sync sees the role's transaction ID move and re-applies the sops
-   password, OpenBao rotates again. With no `passwordSecret` the instance manager stops managing
-   the password at all.
-2. **Repoints the credential ExternalSecret** at the `VaultDynamicSecret` generator that
-   `database/credentials.yaml` already renders for every app, inert until referenced.
+### `rotate` folded into `postgres` (2026-08-26)
 
-The same component is what the Pulumi stack discovers to create the static role. Both halves
-derive from one signal on purpose: the Kubernetes half makes the app able to read a rotated
-password, the OpenBao half rotates it, and if only one landed the app would hold a credential it
-cannot use. A hand-maintained list in the stack could disagree; a discovered one cannot.
+`components/postgres/rotate` is gone. Its two patches were moved into the base component's
+`./database` manifests — `databaserole.yaml` simply has no `passwordSecret`, and
+`credentials.yaml` reads the generator directly — and the `rotate` line was removed from all 14
+app `ks.yaml`s.
 
-**Merge the component before the Pulumi run picks the app up** — they are different systems and
-cannot be atomic. In that order the generator reads a `static-creds` path that does not exist
-yet, ESO errors, and `deletionPolicy: Retain` keeps the existing Secret so the app rides through
-on its current password until the static role appears. The reverse order is an outage.
+The staging it provided had done its job: rotation is irreversible per app, so it was rolled out
+in nine tranches, and once all 13 live consumers plus `degoog` had migrated the sibling only
+described a set that was already universal. More to the point, **`components/postgres` alone was
+by then a broken configuration**: `passwords.sops.yaml` holds no `<app>-postgres-password`
+document any more (#1177), so the base component's `passwordSecret` pointed at a Secret that
+could not exist and its ExternalSecret extracted a key that was not there. A new app that forgot
+the `rotate` line would silently never get a role.
 
-**The sops document is still read**, for `hostname`/`port`/`database`/`username` — a
-`static-creds` response carries only `username` and `password`, and the shared
-`pgsql-user-template` ConfigMap needs the rest. The generator is listed second so its password
-wins. Retiring `passwords.sops.yaml` therefore needs those three descriptive fields sourced
-elsewhere first.
+Two things had to be handled for the fold-in to be a no-op:
+
+- **The Pulumi discovery collapsed to one function.** `discoverRotationOptIns()` is gone;
+  `discoverPostgresApps()` is the tranche. The cross-check it used to guard (`./rotate` present
+  without `./postgres`) became unrepresentable.
+- **The three group-E apps had to be disabled first.** `outline`, `retrom` and `strmgen` still
+  carried a live `components/postgres` line even though their role and database were dropped on
+  2026-08-25 — they are commented out of their parent kustomizations, which the YAML-parsing
+  discovery cannot see. Folding without touching them would have put three roles that do not
+  exist into the tranche and failed `stacks/system` on the first run with the exact 42704 error
+  below. Their component line is now commented out, matching how `autobrr` already carried one.
+
+Verified before and after: the discovered tranche is byte-identical either way —
+`coder, crowdsec, degoog, forgejo, freshrss, grafana, immich, n8n, pinepods, pulsarr, questarr,
+romm, tandoor, windmill`. No static role is created or deleted by this change.
+
+### Ordering: two constraints, opposite directions
+
+The guidance above — *merge the Kubernetes half before the Pulumi run picks the app up* — is
+correct for a **migrated** app and incomplete for a **new** one. It cost a stalled stack when
+`degoog` was deployed (#1180).
+
+| case | constraint | failure if violated |
+| --- | --- | --- |
+| migrated app | Kubernetes half **before** the Pulumi run | the reverse rotates a password the app cannot yet read: an outage |
+| **brand-new app** | the PostgreSQL login role **before** the Pulumi run | `stacks/system` fails outright |
+
+The first works because the generator reads a `static-creds` path that does not exist yet, ESO
+errors, and `deletionPolicy: Retain` keeps the existing Secret so the app rides through on its
+current password until the static role appears.
+
+The second is new, and it is not an ordering anyone gets to choose. Creating
+`database/static-roles/<app>` immediately issues `ALTER ROLE ... PASSWORD` against PostgreSQL,
+so if CNPG has not created the login role yet:
+
+```
+Code: 500 ... error setting credentials: failed to execute query:
+ERROR: role "degoog" does not exist (SQLSTATE 42704)
+```
+
+Migrated apps never hit this — their role already existed from the sops era. A new app ships
+both halves in **one commit**, the Pulumi operator reconciles that merge within seconds, and
+Flux's `cluster-apps` runs on its own interval, so **Pulumi reliably wins the race**. After 3
+failures the Stack goes `Stalled/UpdateFailed`, and with `continueResyncOnCommitMatch: false`
+and `resyncFrequencySeconds: 86400` it will not retry for a day.
+
+Recovery, in order:
+
+```bash
+flux -n flux-system reconcile ks cluster-apps
+kubectl -n database get databaserole <app> -w        # wait for status.applied
+kubectl annotate stack -n pulumi system pulumi.com/reconciliation-request=$(date +%s) --overwrite
+kubectl -n database annotate externalsecret <app>-postgres force-sync=$(date +%s) --overwrite
+```
+
+**That last step is a real third-order symptom, not belt-and-braces.** After the static role
+lands and the `database`-namespace `<app>-postgres` ExternalSecret goes `Ready=True`, the app's
+own `<app>-env` ExternalSecret can stay stuck on a cached
+`error processing spec.dataFrom[N].extract, err: Secret does not exist`, leaving the pod in
+`CreateContainerConfigError` until it is forced to re-resolve.
+
+**Why this is not made self-healing in `stacks/system`.** Skipping an app whose PostgreSQL role
+does not exist yet — so the run succeeds and the role appears on the next pass — was considered
+and rejected. The stack holds no PostgreSQL client by design (baoadmin's key never enters Pulumi
+state or the Minio backend), so the check would have to read the live CNPG `DatabaseRole` CR.
+That makes a plan currently derived from repository files depend on cluster state, and the
+failure mode inverts badly: an app omitted from the tranche is not skipped, it is **deleted** —
+Pulumi would destroy the static role of a live rotating app on any transient read failure,
+leaving a password nothing owns. Weighed against a stalled run that one `kubectl annotate`
+clears, loud-and-stuck is the better failure. If the day-long stall itself becomes the problem,
+the honest fix is on the Stack CR (`resyncFrequencySeconds` / `continueResyncOnCommitMatch`), so
+the run retries and converges — not a conditional resource.
+
+**The sops document is no longer read.** `hostname`/`port`/`database`/`username` come from
+`<app>-postgres-conn` since #1176; a `static-creds` response carries only `username` and
+`password`, and the generator is listed second so its password wins.
 
 ### Prerequisite: every consuming workload must see a rotated password
 
