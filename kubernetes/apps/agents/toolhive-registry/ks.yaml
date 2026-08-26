@@ -37,15 +37,15 @@ spec:
   components:
     # Postgres is NOT optional for the registry server -- its own docs are
     # explicit that PostgreSQL is "the only supported database option, there is
-    # no alternative non-Postgres mode". These two components give the app a
-    # database, a login role and a rotating credential with no further edits.
+    # no alternative non-Postgres mode". This one line gives the app a database,
+    # a login role and a rotating credential, with no sops document to add.
+    #
+    # There is no `postgres/rotate` sibling any more: #1188 folded it into the
+    # base once every consumer had cut over, and the directory is gone. Adding
+    # it back is not a no-op -- its patch removes `/spec/passwordSecret` from a
+    # DatabaseRole that no longer has one, which fails the whole build with
+    # "Unable to remove nonexistent key".
     - ../../../components/postgres
-    # `rotate` is what keeps this out of sops. Without it the base component's
-    # DatabaseRole wants a hand-maintained `${APP}-postgres-password` document
-    # in kubernetes/apps/database/postgres/app/passwords.sops.yaml; rotate drops
-    # `passwordSecret` from the role entirely and hands the password to
-    # OpenBao's database secrets engine instead. Same pair coder uses.
-    - ../../../components/postgres/rotate
   postBuild:
     substitute:
       APP: *app
