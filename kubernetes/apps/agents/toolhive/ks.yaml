@@ -62,10 +62,10 @@ spec:
       # list (plain-list strategic merge), which is the trap that made
       # dynacat's look like it worked.
       #
-      # Ships pointing at `.invalid` DELIBERATELY. A reserved TLD cannot
-      # resolve, so merging without this edit fails at OIDC discovery with a
-      # DNS error naming this host, rather than half-working. Find the real
-      # value with whichever is to hand:
+      # This SHIPPED pointing at `.invalid` and was merged that way -- a
+      # reserved TLD cannot resolve, so the failure was a DNS error naming the
+      # host at OIDC discovery rather than a half-working login. Filled in
+      # 2026-08-26 from `AUTHENTIK_URL`. If it ever needs re-deriving:
       #
       #   mise run vals-run -- printenv AUTHENTIK_URL     # base URL
       #   bao kv get -field=issuer secrets/clusters/equestria/apps/toolhive/oidc
@@ -74,4 +74,4 @@ spec:
       #
       # The last two only answer AFTER the `applications` stack has run once,
       # which is the chicken-and-egg this literal exists to break.
-      AUTHENTIK_ISSUER: https://authentik.invalid/application/o/toolhive/
+      AUTHENTIK_ISSUER: https://authentik.driscoll.tech/application/o/toolhive/
