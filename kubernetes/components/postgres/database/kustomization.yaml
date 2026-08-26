@@ -5,4 +5,5 @@ kind: Kustomization
 resources:
   - ./databaserole.yaml
   - ./database.yaml
+  - ./connection.yaml
   - ./credentials.yaml
