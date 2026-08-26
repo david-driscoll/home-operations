@@ -97,13 +97,20 @@ spec:
             command:
               - /bin/sh
               - -c
+              # postgresql-client-18 is COUPLED to the CNPG cluster's major:
+              # pg_dump aborts against a server newer than itself, so this pin
+              # must never lag database/postgres/app/resources/values.yaml. It
+              # may lead it -- an 18 client dumps a 17 server fine -- which is
+              # why it moved first, in the same change that prepared the 17->18
+              # upgrade. Same constraint, same reason, as the openbao-replica
+              # nightly dump in kube-system/openbao-replica.
               - >-
                 set -eux;
                 export DEBIAN_FRONTEND=noninteractive;
                 apt-get update
                 && apt install -y postgresql-common
                 && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-                && apt-get install -y --no-install-recommends postgresql-client-17
+                && apt-get install -y --no-install-recommends postgresql-client-18
                 && dotnet run /scripts/App.cs
             resources:
               requests:

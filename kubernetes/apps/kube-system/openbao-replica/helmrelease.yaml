@@ -21,7 +21,7 @@
 #
 # Both containers use the OpenBao image: the restore test needs the `bao`
 # binary anyway, the dump job gets an image the estate already pins, and the
-# missing client tools (pg_dump/psql 17, age, rclone, curl, jq) are installed
+# missing client tools (pg_dump/psql 18, age, rclone, curl, jq) are installed
 # at runtime — the same pattern as the postgres-backup cronjob in
 # database/postgres/backups.
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -125,7 +125,7 @@ spec:
               - -c
               - >-
                 set -eu;
-                apk add --no-cache bash postgresql17-client age rclone curl
+                apk add --no-cache bash postgresql18-client age rclone curl
                 && exec bash /scripts/dump.sh
             resources:
               requests:
@@ -165,7 +165,10 @@ spec:
               # a PLAIN SQL dump, which restores into any equal-or-newer major. The
               # direction that genuinely breaks is the other one — a pg_dump OLDER
               # than the server it reads — and that constraint lives on the dump
-              # side, which stays pinned to postgresql17-client against CNPG 17.5.
+              # side, which is why `postgresql18-client` above moved to 18 in the
+              # SAME change that took the CNPG cluster to 18: an 18 client reads a
+              # 17 server fine, so bumping it early is safe, whereas leaving it at
+              # 17 would abort every dump the moment the server crossed the major.
               #
               # What this job verifies is the ARTIFACT: that the nightly dump is
               # intact, decrypts, loads, and that the transit seal can unseal the

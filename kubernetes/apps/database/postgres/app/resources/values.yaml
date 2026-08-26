@@ -3,8 +3,44 @@
 nameOverride: &name "postgres"
 fullnameOverride: *name
 type: postgresql
+# STEP 1 OF THE 17 -> 18 MIGRATION. Do not skip straight to 18 from 17.5.
+#
+# `check_max_slot_wal_keep_size` in the 17.0-17.5 backend raises a hard ERROR
+# when `max_slot_wal_keep_size` is other than -1 *and* the server is started
+# in binary-upgrade mode -- which is exactly how pg_upgrade starts the OLD
+# server. We set it to 10GB below (deliberately, after the WAL-fill outage), so
+# a 17.5 -> 18 pg_upgrade cannot start the old postmaster and fails outright.
+#
+# postgres/postgres@f36e5774 removed that check_hook and was backpatched to
+# 17.6, so the fix lives in the OLD server's binaries -- meaning the source
+# cluster has to be running 17.6+ before the major upgrade is attempted. This
+# is a plain rolling minor upgrade: replicas first, then a switchover. No
+# pg_upgrade, no downtime, no data-format change.
+#
+# Bare tags now resolve to the "system" flavour on bullseye (the legacy 17.5
+# image was pgdg110 = bullseye too), so the OS distribution is unchanged --
+# which matters, because CNPG only supports a major upgrade between images
+# built on the same distro. Verified in-cluster that 17.11 carries the same
+# extension set this estate actually uses (vector, cube, earthdistance,
+# pg_trgm, unaccent, uuid-ossp, pg_stat_statements) and the same uid 26.
+#
+# TRACKING, fixed in this same change: nothing watched this image before. The
+# `helm-values` manager only recognises `image.repository`/`image.tag` pairs and
+# this chart takes a single `imageName` string, so the cluster sat on 17.5 for a
+# year while every other image in the estate moved -- that is the whole reason
+# the 17.6 fix above was missed until the 18 upgrade went looking for it.
+#
+# Both lines below now carry an annotation for the "Process annotated
+# dependencies" custom manager in .github/renovate.json5. They resolve to the
+# same depName and currentValue, so one update rewrites both, and they have to
+# move together: `version.postgresql` is what the chart derives
+# `cluster.postgresqlMajor` from.
+#
+# Majors are blocked outright by the "Never propose a Postgres major" rule
+# there -- crossing one is a written migration, never a merged tag change.
 version:
-  postgresql: "17.5"
+  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  postgresql: "17.11"
 mode: standalone
 recovery:
   method: plugin
@@ -50,7 +86,8 @@ backups:
   retentionPolicy: "30d"
 cluster:
   instances: 3
-  imageName: ghcr.io/cloudnative-pg/postgresql:17.5
+  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.11
   priorityClassName: system-node-critical
   storage:
     size: ${POSTGRES_STORAGE:=10Gi}
