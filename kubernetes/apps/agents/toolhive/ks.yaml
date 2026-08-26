@@ -43,35 +43,3 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      # THE ONE VALUE A HUMAN HAS TO SUPPLY IN THIS TREE.
-      #
-      # authentik's per-application issuer, WITH ITS TRAILING SLASH --
-      # components/authentik.ts concatenates the issuer and
-      # `.well-known/openid-configuration` with nothing between them, so
-      # dropping the slash produces a 404 that reads like a missing
-      # application. (Deliberately written without a dollar-brace: Flux
-      # envsubst rewrites comments too, and blanks names it does not know.)
-      #
-      # The last path segment is the authentik application slug, which the
-      # `applications` stack derives from ./definition.yaml's `metadata.name` --
-      # so it is `toolhive` unless that changes.
-      #
-      # It CANNOT come from the ExternalSecret next door: `issuerUrl` is a plain
-      # string on MCPExternalAuthConfig, and a per-app `postBuild.substituteFrom`
-      # is dead in this repo anyway -- cluster-apps' patch replaces the whole
-      # list (plain-list strategic merge), which is the trap that made
-      # dynacat's look like it worked.
-      #
-      # This SHIPPED pointing at `.invalid` and was merged that way -- a
-      # reserved TLD cannot resolve, so the failure was a DNS error naming the
-      # host at OIDC discovery rather than a half-working login. Filled in
-      # 2026-08-26 from `AUTHENTIK_URL`. If it ever needs re-deriving:
-      #
-      #   mise run vals-run -- printenv AUTHENTIK_URL     # base URL
-      #   bao kv get -field=issuer secrets/clusters/equestria/apps/toolhive/oidc
-      #   kubectl -n agents get secret toolhive-oidc \
-      #     -o jsonpath='{.data.issuer}' | base64 -d
-      #
-      # The last two only answer AFTER the `applications` stack has run once,
-      # which is the chicken-and-egg this literal exists to break.
-      AUTHENTIK_ISSUER: https://authentik.driscoll.tech/application/o/toolhive/

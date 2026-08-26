@@ -1,0 +1,47 @@
+# Helm values rendered by this app's `-values` ExternalSecret.
+#
+# Only the pieces that must come out of a secret store live here. Everything
+# else is plain, reviewable YAML in helmrelease.yaml -- Flux merges this file
+# first and spec.values on top, recursively.
+#
+# Keep envsubst and Go-template syntax out of the comments in this file: both
+# Flux postBuild and the external-secrets templating engine treat a comment as
+# live text and will execute what they find there. That is what
+# scripts/eso-values-lint checks for.
+#
+# WHY THE WHOLE upstreamProviders LIST IS HERE and not just the issuer: Flux
+# merges maps recursively but REPLACES lists outright, so a list that appears on
+# both sides would lose one of them. It lives wholly on this side.
+rawResources:
+  authserver:
+    manifest:
+      spec:
+        embeddedAuthServer:
+          upstreamProviders:
+            - name: authentik
+              type: oidc
+              oidcConfig:
+                # NOT known at commit time and NOT reconstructable. authentik's
+                # application slug is generated -- components/authentik.ts builds
+                # it with a RandomPet suffix -- so the issuer reads like
+                # .../application/o/equestria-agents-toolhive-jay/ and changes if
+                # the application is ever recreated. The CRD takes it as a plain
+                # string with no secret-ref form, which is why this fragment
+                # exists at all.
+                #
+                # Trailing slash preserved: this is the value authentik reports
+                # as `issuer` in its own discovery document, and an OIDC client
+                # compares the two literally.
+                issuerUrl: '{{ .oidc_issuer }}'
+                # Pinned in definition.yaml, so it IS knowable -- carried here
+                # only because it shares the list with issuerUrl.
+                clientId: '{{ .oidc_client_id }}'
+                clientSecretRef:
+                  name: toolhive-oidc
+                  key: client-secret
+                redirectUri: https://${APP}.${ROOT_DOMAIN}/oauth/callback
+                scopes:
+                  - openid
+                  - profile
+                  - email
+                  - offline_access
