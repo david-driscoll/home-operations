@@ -164,3 +164,48 @@ spec:
         operator: Exists
         effect: NoExecute
         tolerationSeconds: 60
+
+  # THE 30-DAY ROTATION WOULD OTHERWISE TAKE THIS APP DOWN.
+  #
+  # `components/postgres` means OpenBao owns this role's password and rotates it
+  # every 30 days. docs/postgres-credentials/PLAN.md makes it a prerequisite
+  # that every consuming workload can actually SEE a rotated password, and this
+  # one could not: nothing here carried a reloader annotation, no pod referenced
+  # the Secret through env, and the chart offers no Helm value for a Deployment
+  # annotation -- only `podAnnotations`, which is the placement that does NOT
+  # work (Reloader reads `metadata.annotations` on the WORKLOAD; windmill
+  # already taught the estate that, see #1168).
+  #
+  # The failure mode is worse than a plain stale env var, because of how the
+  # credential is delivered. `pgpass-init` COPIES the mounted Secret into an
+  # emptyDir and the app reads that copy. Init containers do not re-run when a
+  # container restarts, so the emptyDir is a snapshot taken at POD CREATION:
+  # kubelet updating the `pgpass-secret` mount changes nothing the app reads,
+  # and a crash-looping pod keeps re-reading the same dead password forever.
+  # Observed exactly that on 2026-08-26 -- `failed SASL auth ... password
+  # authentication failed` while the Secret and OpenBao agreed and the
+  # credential authenticated fine by hand. A fresh POD was the only fix.
+  #
+  # Reloader rolls the Deployment, which creates new pods, which re-runs
+  # pgpass-init against the current Secret. That is the whole chain, and it only
+  # works from the workload annotation below.
+  #
+  # toolhive-ui needs no equivalent: its DATABASE_URL comes through the
+  # `toolhive-ui-config` ExternalSecret, which extracts `toolhive-ui-postgres`,
+  # so ESO's own reloader annotates its pod template and rolls it. Two apps,
+  # two different mechanisms -- the PLAN's table of three is not academic.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: toolhive-registry
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: toolhive-registry
+                annotations:
+                  reloader.stakater.com/auto: "true"
