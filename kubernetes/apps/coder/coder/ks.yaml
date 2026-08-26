@@ -33,17 +33,19 @@ spec:
     # No failover/fast-node-eviction: it patches `defaultPodOptions`, which only
     # the app-template chart reads. The equivalent tolerations are set natively
     # under coder.tolerations in helmrelease.yaml.
-    - ../../../components/postgres
-    # TRANCHE 4, group A of the boot-budget sweep: coder has no liveness
-    # probe at all, so it cannot be probe-killed mid-boot the way tandoor was.
+    # Rotating credential. No liveness probe at all, so coder cannot be
+    # probe-killed mid-boot the way tandoor was.
     #
-    # Coder is the first app to consume the credential as a CONNECTION URI
+    # It consumes the credential as a CONNECTION URI
     # (CODER_PG_CONNECTION_URL <- coder-pguser-secret/uri) rather than a bare
-    # password, so the password has to reach it already embedded in the URI.
-    # It does: the component builds the same 15 keys for a rotating app as for
-    # a static one, and `uri` on grafana, tandoor and crowdsec all carry their
-    # rotated 20-character password today.
-    - ../../../components/postgres/rotate
+    # password, so the rotated value has to arrive already embedded in the URI.
+    # It does -- pgsql-user-template builds all 15 keys from whatever password
+    # the ExternalSecret resolved, whatever its source.
+    #
+    # Coder holds a pool, so it takes a short burst of auth failures at each
+    # rotation (8 over 8 seconds at cutover, none after). That is the
+    # rotate-then-propagate gap, not a fault.
+    - ../../../components/postgres
     - ../../../components/tailscale
   postBuild:
     substitute:

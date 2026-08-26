@@ -38,24 +38,17 @@ spec:
     - ../../../../components/failover/fast-node-eviction
     # DEGOOG_POSTGRES puts the indexer on Postgres instead of its bundled
     # SQLite file, which is the documented way to run a busy instance.
+    #
+    # Rotating credential, preflighted the way freshrss was:
+    # reloader.stakater.com/auto sits on the controller in helmrelease.yaml,
+    # and the pod reads its credential out of the degoog-env Secret, so the
+    # 30-day rotation actually reaches it.
+    #
+    # ⚠️ This was the app that found the new-app ordering trap in #1180 --
+    # `stacks/system` raced Flux to the merge commit and died on
+    # `role "degoog" does not exist`. Read the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml before adding this component to a NEW app.
     - ../../../../components/postgres
-    # New app, so it starts where every migrated app ended up: OpenBao owns the
-    # password. There is no sops document to skip past -- passwords.sops.yaml
-    # holds only the cluster and superuser roles since #1177 -- so this is not
-    # optional for a fresh database, it IS the credential path.
-    #
-    # ⚠️ ORDER OF OPERATIONS, per components/postgres/rotate: this must be
-    # merged BEFORE the app appears in a `stacks/system` Pulumi run. Until that
-    # run creates `database/static-roles/degoog`, the ClusterGenerator reads a
-    # path that does not exist, ESO errors, and `deletionPolicy: Retain` holds
-    # whatever Secret exists. For a brand-new app there is no prior Secret to
-    # hold, so degoog simply will not start until the Pulumi run lands -- noisy
-    # and harmless, which is the intended direction. The reverse order is not.
-    #
-    # Preflighted the way freshrss was: reloader.stakater.com/auto sits on the
-    # controller in helmrelease.yaml, and the pod reads its credential out of
-    # the degoog-env Secret, so the 30-day rotation actually reaches it.
-    - ../../../../components/postgres/rotate
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:

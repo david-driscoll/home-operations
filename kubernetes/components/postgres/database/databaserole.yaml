@@ -10,10 +10,19 @@
 # including the attributes omitted here, which are forced back to their
 # defaults. Anything set on a role out of band will be reverted.
 #
-# `passwordSecret` still points at the sops-managed `${APP}-postgres-password`,
-# exactly as `cluster.roles` did. Phase 4 of docs/postgres-credentials/PLAN.md
-# removes it entirely and hands the password to OpenBao's database secrets
-# engine; do not fold it into `${APP}-postgres` in the meantime.
+# THERE IS NO `passwordSecret`, AND THAT IS THE POINT. OpenBao's database
+# secrets engine owns this role's password -- `stacks/system` creates
+# `database/static-roles/${APP}` and rotates it on a schedule. If a
+# `passwordSecret` were set the two would fight: OpenBao rotates, CNPG's role
+# sync notices the role's transaction ID moved and re-applies its own value,
+# OpenBao rotates again. With the field absent the instance manager stops
+# managing the password entirely, which is what the CNPG docs prescribe for an
+# externally-managed credential.
+#
+# This used to be opt-in, via a `components/postgres/rotate` sibling that
+# patched the field away. That component is gone: every app carries rotation
+# now, and `passwords.sops.yaml` holds no app password to fall back to.
+# See docs/postgres-credentials/PLAN.md.
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
@@ -41,5 +50,3 @@ spec:
   superuser: false
   # Deleting this object must never drop the role -- it owns the app's data.
   databaseRoleReclaimPolicy: retain
-  passwordSecret:
-    name: ${APP}-postgres-password

@@ -21,6 +21,57 @@
 # and never passes through it. Without these, ${CLUSTER_DOMAIN} and friends
 # resolve to nothing, silently.
 #
+# ─── ORDER OF OPERATIONS ────────────────────────────────────────────────────
+#
+# This component gives the app a database, a login role AND a rotating
+# OpenBao-owned password. The password half is not optional and cannot be
+# staged separately -- the `rotate` sibling that used to make it opt-in was
+# folded in here once every app had migrated, because `passwords.sops.yaml` no
+# longer holds an app password to fall back to.
+#
+# Two systems have to converge and they cannot be atomic. Kubernetes renders
+# ./database (role, database, credential ExternalSecret); the Pulumi `system`
+# stack discovers this component in the app's ks.yaml and creates
+# `database/static-roles/${APP}` in OpenBao. There are TWO ordering
+# constraints, pointing in OPPOSITE directions:
+#
+#  1. FOR A MIGRATED APP -- merge the Kubernetes half BEFORE the Pulumi run
+#     picks it up. In that order the generator reads a `static-creds` path that
+#     does not exist yet, ESO errors, and `deletionPolicy: Retain` keeps the
+#     existing Secret so the app rides through on its current password. The
+#     reverse order rotates a password the app cannot yet read: an outage.
+#
+#  2. FOR A BRAND-NEW APP -- the login role must exist BEFORE the Pulumi run.
+#     Creating a static role immediately issues `ALTER ROLE ... PASSWORD`
+#     against PostgreSQL, so if CNPG has not applied the `DatabaseRole` yet,
+#     `stacks/system` fails outright:
+#
+#       Code: 500 ... error setting credentials: failed to execute query:
+#       ERROR: role "degoog" does not exist (SQLSTATE 42704)
+#
+#     A migrated app never hit this -- its role already existed from the sops
+#     era. A new app ships both halves in ONE commit, and the Pulumi operator
+#     reconciles that merge within seconds while Flux's `cluster-apps` runs on
+#     its own interval, so Pulumi reliably wins the race. After 3 failures the
+#     Stack goes Stalled/UpdateFailed and, with `continueResyncOnCommitMatch:
+#     false` and `resyncFrequencySeconds: 86400`, will not retry for a DAY.
+#
+# This is expected on new-app day, not a bug to debug. Recovery, in order:
+#
+#     flux -n flux-system reconcile ks cluster-apps
+#     kubectl -n database get databaserole ${APP} -w        # status.applied
+#     kubectl annotate stack -n pulumi system \
+#       pulumi.com/reconciliation-request=$(date +%s) --overwrite
+#     kubectl -n database annotate externalsecret ${APP}-postgres \
+#       force-sync=$(date +%s) --overwrite
+#
+# That last step is a real third-order symptom, not belt-and-braces: after the
+# static role lands and `${APP}-postgres` in the `database` namespace goes
+# Ready, the app's own `${APP}-env` ExternalSecret can stay stuck on a cached
+# `error processing spec.dataFrom[N].extract, err: Secret does not exist`,
+# leaving the pod in CreateContainerConfigError until it is forced to
+# re-resolve.
+#
 # See docs/postgres-credentials/PLAN.md.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -34,15 +85,17 @@ spec:
       driscoll.dev/name: ${APP}
   path: ./kubernetes/components/postgres/database
   # Empty on purpose, and load-bearing. The sibling components (./superuser,
-  # ./client-cert, ./rotate) append to this list with a JSON6902
+  # ./client-cert) append to this list with a JSON6902
   # `add /spec/patches/-`, which requires the list to already exist.
   #
   # They append rather than strategic-merge because a Flux Kustomization is a
   # CRD with no Go schema, so kustomize applies a JSON merge patch and a list
   # REPLACES rather than merges. Two components each setting `spec.patches`
   # meant the second silently won: verified with a fixture, `from-c1` vanished
-  # entirely. That would have dropped immich's superuser flag the moment it also
-  # opted into rotation, with nothing failing.
+  # entirely. That is how immich's superuser flag would have been dropped the
+  # moment a second sibling landed on it, with nothing failing. The `rotate`
+  # sibling was the one that nearly did it; it is folded into ./database now,
+  # but the hazard belongs to any future sibling, so the list stays.
   patches: []
   # The OPERATOR, not the `postgres` cluster Kustomization. There is a live
   # readiness cycle between the two: the postgres ks reads its Helm values

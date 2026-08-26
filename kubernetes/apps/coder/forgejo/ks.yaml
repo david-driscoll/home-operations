@@ -43,10 +43,9 @@ spec:
     # The forgejo chart takes tolerations natively — the equivalent pair is set
     # under `tolerations:` in helmrelease.yaml, alongside the control-plane
     # toleration Tier 1 needs.
-    - ../../../components/postgres
-    # TRANCHE 6. Boot measured at 11s against a 300s liveness budget.
+    # Rotating credential. Boot measured at 11s against a 300s liveness budget.
     #
-    # Forgejo takes the password by a route no earlier app used: the
+    # Forgejo takes the password by a route no other app uses: the
     # init-app-ini initContainer reads forgejo-db/password through a
     # secretKeyRef and bakes it into app.ini, so the credential only reaches
     # the app if the POD RESTARTS and that init runs again.
@@ -57,7 +56,7 @@ spec:
     # deliberately stamps the reload trigger on the first REGULAR container so
     # the workload rolls. The Reloader docs do not mention initContainers
     # either way, which is why this is written down.
-    - ../../../components/postgres/rotate
+    - ../../../components/postgres
     - ../../../components/tailscale
     - ../../../components/volsync
   postBuild:

@@ -31,24 +31,17 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # Rotating credential, and this app needed #1168 before it could take one:
+    # DATABASE_URL was a literal in every pod spec, so no pod referenced the
+    # Secret and Reloader had nothing to watch. It arrives by secretKeyRef now,
+    # the annotations are on the Deployments rather than the pod templates, and
+    # the boot fits easily inside the chart's 600s startup probe.
+    #
+    # Windmill holds ~51 pooled connections, but its cutover was 4 auth
+    # failures in 3ms: PostgreSQL does not terminate live sessions when a
+    # role's password changes, so the burst tracks reconnect RATE, not pool
+    # size. See docs/postgres-credentials/PLAN.md.
     - ../../../../components/postgres
-    # TRANCHE 8. Second of two PRs: #1168 had to come first, because until
-    # it landed a rotated password could not reach this app at all.
-    #
-    # DATABASE_URL used to be a literal in every pod spec, so no pod
-    # referenced the Secret and Reloader had nothing to watch; propagation
-    # depended on Flux re-rendering the HelmRelease on its 30m interval.
-    # It now arrives by secretKeyRef, the workload annotations are on the
-    # Deployments rather than the pod templates, and the boot fits easily
-    # inside the chart's 600s startup probe.
-    #
-    # Expect the loudest cutover of the migration. Windmill holds ~51
-    # pooled connections against Postgres -- coder, the previous high
-    # water mark, held 4 and logged 8 failures over 8 seconds. Every one of
-    # those dies the instant OpenBao rotates and before Reloader has
-    # restarted the pods. That is the documented rotate-then-propagate gap,
-    # not a fault, but it will be visible in the Postgres log.
-    - ../../../../components/postgres/rotate
   postBuild:
     substitute:
       APP: *app
