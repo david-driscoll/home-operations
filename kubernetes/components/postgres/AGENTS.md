@@ -217,31 +217,79 @@ along with every table in it.
 - `DROP DATABASE` cannot run inside a transaction block, so `psql -c "a; b; c"` fails. One
   `-c` per statement.
 
-### The live pins are NOT reproducible from git
+### The layout is structural, not pin-dependent
+
+**The schema topology itself now encodes each app's home**, so nothing depends on a
+`search_path` pin surviving:
+
+- An app whose home is `public` has **no schema named after its role** — the empty ones were
+  dropped on 2026-08-26 once the component stopped declaring them. `$user` has nothing to
+  resolve to and the path falls through to `public`.
+- An app whose home is its role-named schema still has that schema, holding its data. `$user`
+  resolves to it, which is correct.
+
+Verified by forcing the bare default `"$user", public` with the pins bypassed: all fifteen
+app roles resolved to their correct home. Re-run that check after any change here:
+
+```sql
+-- per database, as the app's role, with the pin deliberately ignored
+SET search_path TO "$user", public;
+SET ROLE "<app>";
+SELECT current_schemas(true);
+```
+
+### The pins are belt-and-braces, and survive more than first assumed
 
 `DatabaseRole` has no field for `ALTER ROLE ... SET`, and `Database` has no SQL hook —
 `extensions`, `fdws`, `servers` and `schemas` are the only object lists in the 1.30.0 CRDs. So
-the explicit `search_path` pins below exist **only in the live cluster**. A cluster rebuild, or
-a restore into a fresh cluster, comes back with the default `"$user", public`.
+the pins below cannot be declared from git.
+
+They are, however, **more durable than "live-only" suggests**. `pg_authid` and
+`pg_db_role_setting` are *shared* catalogs (`relisshared = t`) living in `global/`, which a
+physical base backup copies wholesale. So:
+
+| Recovery path | Pins |
+| --- | --- |
+| barman PITR / `pg_basebackup` / CNPG recovery — **the estate's actual path** | **preserved** |
+| logical rebuild (fresh `initdb` + per-database dumps) | lost unless `pg_dumpall --globals-only` is restored too |
+| brand-new cluster from scratch | absent — but no role-named schemas exist either, so new apps correctly default to `public` |
+
+An earlier revision of this file claimed a rebuild "comes back with the default" in all cases.
+That was too broad, and it argued for machinery that is not needed. **Do not build a CronJob or
+per-app Job to replay these pins.** The layout is already correct without them; the pins only
+add a second line of defence if a role-named schema ever reappears.
 
 | Pin | Roles |
 | --- | --- |
-| `public` | forgejo, immich, n8n, pinepods, romm, vikunja, windmill |
+| `public` | degoog, forgejo, immich, keeper, n8n, pinepods, questarr, romm, toolhive-registry, toolhive-ui, vikunja, windmill |
 | `<app>, public` | coder, crowdsec, freshrss, grafana, openbao, pulsarr, tandoor |
-| none yet | degoog, keeper, questarr, toolhive-registry, toolhive-ui |
+| none | `app` — the CNPG bootstrap database. It has no role-named schema, so it is safe by absence |
 
-Two of those are load-bearing, not stylistic:
+Two are load-bearing, not stylistic:
 
-- **pinepods MUST be pinned to `public`.** Its migration runner checks whether a table exists
+- **pinepods MUST resolve to `public`.** Its migration runner checks whether a table exists
   against `public` but issues an *unqualified* `CREATE TABLE`. Give it a role-schema home and
   it logs "Creating missing RssKeys table" and then dies on `relation "RssKeys" already exists`,
   on every start.
-- **immich MUST be pinned to `public`.** Its migration ledger (`kysely_migrations`) and all
-  eight extensions live there, and its 18 role-schema tables were consolidated back into
-  `public` on 2026-08-26.
+- **immich MUST resolve to `public`.** Its migration ledger (`kysely_migrations`) and all eight
+  extensions live there, and its 18 role-schema tables were consolidated back into `public` on
+  2026-08-26.
 
-Nothing has been built to make these reproducible. The options, cheapest first: one idempotent
-CronJob beside the cluster in `kubernetes/apps/database/postgres/app/` that loops every
-`Database` CR and applies the `ALTER`; a per-app Job rendered by this component (one per app,
-and Job specs are immutable so re-running needs a name-version bump); or a Pulumi PostgreSQL
-provider, which `stacks/system/postgres-rotation.ts` deliberately avoids.
+### Detecting a regression
+
+A duplicate-NAME check is **not** sufficient. immich had zero duplicated names and was still
+badly split, because its two halves held entirely different tables. Sweep by schema
+*population* instead — this returns more than one row for any database that has drifted:
+
+```sql
+SELECT n.nspname, count(*)
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname IN ('public', current_database())
+  AND c.relkind IN ('r','p','v','m','S')
+  AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')
+GROUP BY 1;
+```
+
+The `pg_depend` exclusion matters: without it, extensions installed in `public` (`vector`,
+`pg_stat_statements`, `unaccent`, …) look like app objects and every role-schema app appears
+split when it is not.
