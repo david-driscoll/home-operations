@@ -1,0 +1,68 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# ONE ApplicationDefinition for the whole ToolHive front door, not one per MCP
+# server. `metadata.name` is load-bearing well beyond the dashboard: the
+# `applications` Pulumi stack derives the authentik application slug from it,
+# and components/bao.ts derives `clusters/<cluster>/apps/<name>/oidc` from it --
+# so this name is what makes ./externalsecret.yaml's path resolve.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive
+  category: Applications
+  description: MCP servers, and the OAuth front door in front of them
+  # The endpoint an MCP client is pointed at, not a page to open in a browser --
+  # a GET here returns a JSON-RPC error, which is why the gatus check below uses
+  # /health instead.
+  url: https://${APP}.${ROOT_DOMAIN}/mcp
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    # `oauth2`, and specifically NOT `proxy`. Forward-auth would put an
+    # interactive authentik redirect in front of every JSON-RPC call, which no
+    # MCP client can follow. This provider is not consumed by a browser session
+    # either -- it is the UPSTREAM leg of ToolHive's own authorization server
+    # (./mcpexternalauthconfig.yaml), so ToolHive is the only client that ever
+    # uses it.
+    oauth2:
+      clientType: confidential
+      # PINNED rather than generated, so ./mcpexternalauthconfig.yaml can carry
+      # it as a literal -- that CRD has no secret-ref form for clientId.
+      # components/authentik.ts's `clientIdPair` prefers this over a generated
+      # value. Change it here and there in the same commit.
+      clientId: ${APP}
+      allowedRedirectUris:
+        # ONE URI, and it is ToolHive's, not a client's. Every MCP client
+        # registers its own redirect with ToolHive's embedded server via DCR;
+        # authentik never sees them.
+        - url: https://${APP}.${ROOT_DOMAIN}/oauth/callback
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      # `profile` carries `groups`, and includeClaimsInIdToken is what puts it
+      # in the token ToolHive reads -- the hook any future Cedar authorization
+      # policy would key off.
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # `/health` is the proxy runner's own endpoint and answers without a token,
+    # which is what makes it usable as a check at all -- every MCP path is
+    # authenticated now. NOT `/mcp`, which is a JSON-RPC POST target and answers
+    # a bare GET with an error.
+    #
+    # This deliberately does NOT exercise the OAuth flow. A green check here
+    # means "the hostname, the route and the proxy are up"; it does not mean
+    # authentik is reachable or that a login would succeed. The authentik outpost
+    # has its own check.
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == healthy"

@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+#
+# The 14 toolhive.stacklok.dev CRDs, split from the operator exactly the way
+# upstream ships them (two charts, CRDs first). The split is not cosmetic: it is
+# what lets ../toolhive-operator be uninstalled, rolled back or re-scoped
+# without any of that reaching the MCPServer objects, which live in etcd behind
+# these definitions.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app toolhive-operator-crds
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  # Worth knowing before raising this: Helm stores each retained revision as one
+  # Secret holding the gzipped chart AND the rendered manifest, and this chart is
+  # 1.1 MB of CRD YAML (virtualmcpservers alone is ~7700 lines). Measured at
+  # 0.44.0 that is ~450 KB stored per revision, against Kubernetes' 1 MB Secret
+  # ceiling. Three revisions is three separate Secrets, so history is not the
+  # risk -- upstream growing the definitions is. If an upgrade ever fails with a
+  # "too long"/"request entity too large" error on a `sh.helm.release.v1.*`
+  # Secret, that is this, not a cluster problem.
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    # `force: false`, unlike most releases in this estate. A forced rollback
+    # deletes and recreates the resources it cannot patch, and every resource in
+    # this release is a CRD -- deleting one takes every MCPServer with it.
+    force: false
+    cleanupOnFail: true
+    recreate: false
+  uninstall:
+    keepHistory: false
+  values:
+    crds:
+      install: true
+      # Stamps `helm.sh/resource-policy: keep` on all 14 definitions, so a Helm
+      # uninstall leaves them (and therefore every MCPServer) in place. This is
+      # the chart default; restated because it is the difference between an
+      # uninstall and losing every MCP server in the namespace.
+      #
+      # Note this chart renders the CRDs from templates/, not from a crds/
+      # directory, so they are ordinary release resources that Helm diffs and
+      # upgrades normally -- `keep` is the only thing standing between an
+      # uninstall and a cascade delete.
+      keep: true

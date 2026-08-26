@@ -1,0 +1,76 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# HAND-WRITTEN BECAUSE NEITHER TOOLHIVE CHART SHIPS ONE. Checked against
+# `helm template` at 0.44.0: toolhive-operator-crds renders 14
+# CustomResourceDefinitions and nothing else; toolhive-operator renders a
+# ServiceAccount, a ClusterRole, a RoleBinding, a leader-election Role +
+# RoleBinding and a Deployment -- no Service, no Ingress, no HTTPRoute. There is
+# no CR field that would produce one either: the MCPServer and VirtualMCPServer
+# schemas mention a gateway only in `oidcConfigRef.resourceUrl`'s prose, and the
+# operator's `gateway.networking.k8s.io` RBAC grant is get/list/watch.
+#
+# THIS ONE ROUTE CARRIES THREE DIFFERENT THINGS, all served by the same process
+# on the same port, which is why a single `/` rule is enough and why splitting
+# it would be a mistake:
+#
+#   /mcp                                      the MCP endpoint itself
+#   /.well-known/oauth-protected-resource*    RFC 9728, the resource server half
+#   /oauth/*, /.well-known/oauth-authorization-server,
+#   /.well-known/openid-configuration, /.well-known/jwks.json
+#                                             the embedded authorization server
+#
+# The backend Service does not exist in Git: the operator creates
+# `mcp-<mcpserver-name>-proxy` on `spec.proxyPort` when it reconciles
+# ../toolhive-docs/mcpserver.yaml. Until then this route sits with an
+# unresolved backendRef, which is the expected state on a first apply.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    reloader.stakater.com/auto: "true"
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    # `internal`, so this resolves only on the LAN and the tailnet through
+    # Technitium's split horizon. Kept even now that OAuth is in front of the
+    # MCP endpoint: the OAuth flow is browser-interactive and every human who
+    # would use it is already inside.
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    # One label under ${ROOT_DOMAIN}, which the `*.${ROOT_DOMAIN}` SAN on
+    # le-production already covers. This is also the auth server's `issuer`, so
+    # changing it is a three-file change (here,
+    # ./mcpexternalauthconfig.yaml, ./mcpoidcconfig.yaml) and invalidates every
+    # token and client registration in flight.
+    - "${APP}.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        # `mcp-toolhive-docs-proxy`, spelled out rather than built from ${APP}:
+        # ${APP} is `toolhive` here (the hostname), and the Service is named
+        # after the MCPServer, which is `toolhive-docs`.
+        - name: mcp-toolhive-docs-proxy
+          port: 8080
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # `local-api` (internal-network only), NOT `local-user`.
+            #
+            # local-user chains error-pages, which replaces non-200 bodies with
+            # an HTML page. That breaks three things at once here: MCP over
+            # Streamable HTTP returns JSON-RPC errors with non-200 statuses and
+            # streams SSE; RFC 9728 discovery depends on a 401 carrying an
+            # intact `WWW-Authenticate: ... resource_metadata=...` header; and
+            # the OAuth endpoints answer with redirects and JSON errors.
+            #
+            # The network guard is now defence in depth rather than the only
+            # control -- ../toolhive-docs/mcpserver.yaml sets `oidcConfigRef`,
+            # so the proxy rejects an unauthenticated request on its own. It
+            # stays because an in-cluster hairpin needs it to pass anyway (see
+            # ./mcpoidcconfig.yaml) and removing it would buy nothing.
+            name: local-api

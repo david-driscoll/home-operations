@@ -1,0 +1,28 @@
+---
+# How the MCP proxy VALIDATES the tokens the auth server next door issues.
+#
+# Two objects for what feels like one job, and the split is real:
+# MCPExternalAuthConfig is the issuing side (an authorization server), this is
+# the accepting side (a resource server). An MCPServer references both --
+# `authServerRef` and `oidcConfigRef` -- and dropping either leaves the proxy
+# either unable to mint tokens or, worse, accepting every request
+# unauthenticated.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPOIDCConfig
+metadata:
+  name: ${APP}
+spec:
+  type: inline
+  inline:
+    # The embedded auth server's own issuer, verbatim from
+    # ./mcpexternalauthconfig.yaml. NOT authentik: after federation the token
+    # the proxy sees is ToolHive's, and its `iss` is this.
+    #
+    # No `jwksUrl`: leaving it unset makes the proxy discover
+    # /.well-known/jwks.json from the issuer. That discovery is an HTTPS call
+    # to the public hostname, so it hairpins out to Traefik and back -- which
+    # works only because network/internal-network's ipAllowList admits the
+    # cluster and service CIDRs. If that middleware is ever narrowed, this is
+    # one of the things that breaks, and it will look like a JWKS fetch
+    # failure rather than a firewall change.
+    issuer: https://${APP}.${ROOT_DOMAIN}

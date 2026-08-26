@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolhive-docs
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # `toolhive`, not the operator directly -- that Kustomization already
+    # depends on the operator, and it is what creates the MCPExternalAuthConfig
+    # and MCPOIDCConfig this server references by name. Referencing either
+    # before it exists leaves the MCPServer non-Ready with a dangling-ref
+    # condition rather than falling back to unauthenticated, but the ordering
+    # saves a reconcile cycle and makes the dependency legible.
+    - name: toolhive
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/toolhive-docs
+  prune: true
+  # kstatus gates this on `status.observedGeneration` catching up to
+  # `metadata.generation` on the MCPServer, which the operator does set -- so
+  # the wait is real work rather than a formality, and a wedged MCP server
+  # surfaces as a failed Kustomization instead of a green one.
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolhive
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The operator, for two different reasons at once: it owns the CRDs these
+    # manifests instantiate, and it is what turns them into a running auth
+    # server. Not the CRDs Kustomization directly -- that is already the
+    # operator's own dependency.
+    - name: toolhive-operator
+      namespace: *namespace
+    - name: external-secrets
+      namespace: kube-system
+    # The session store, for its password Secret as much as for the server:
+    # `aclUserConfig.passwordSecretRef` in ./mcpexternalauthconfig.yaml resolves
+    # against a Secret that ../toolhive-valkey's ExternalSecret creates.
+    - name: toolhive-valkey
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/toolhive
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # THE ONE VALUE A HUMAN HAS TO SUPPLY IN THIS TREE.
+      #
+      # authentik's per-application issuer, WITH ITS TRAILING SLASH --
+      # components/authentik.ts concatenates the issuer and
+      # `.well-known/openid-configuration` with nothing between them, so
+      # dropping the slash produces a 404 that reads like a missing
+      # application. (Deliberately written without a dollar-brace: Flux
+      # envsubst rewrites comments too, and blanks names it does not know.)
+      #
+      # The last path segment is the authentik application slug, which the
+      # `applications` stack derives from ./definition.yaml's `metadata.name` --
+      # so it is `toolhive` unless that changes.
+      #
+      # It CANNOT come from the ExternalSecret next door: `issuerUrl` is a plain
+      # string on MCPExternalAuthConfig, and a per-app `postBuild.substituteFrom`
+      # is dead in this repo anyway -- cluster-apps' patch replaces the whole
+      # list (plain-list strategic merge), which is the trap that made
+      # dynacat's look like it worked.
+      #
+      # Ships pointing at `.invalid` DELIBERATELY. A reserved TLD cannot
+      # resolve, so merging without this edit fails at OIDC discovery with a
+      # DNS error naming this host, rather than half-working. Find the real
+      # value with whichever is to hand:
+      #
+      #   mise run vals-run -- printenv AUTHENTIK_URL     # base URL
+      #   bao kv get -field=issuer secrets/clusters/equestria/apps/toolhive/oidc
+      #   kubectl -n agents get secret toolhive-oidc \
+      #     -o jsonpath='{.data.issuer}' | base64 -d
+      #
+      # The last two only answer AFTER the `applications` stack has run once,
+      # which is the chicken-and-egg this literal exists to break.
+      AUTHENTIK_ISSUER: https://authentik.invalid/application/o/toolhive/

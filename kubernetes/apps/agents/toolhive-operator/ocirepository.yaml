@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: toolhive-operator
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 0.44.0
+    digest: sha256:76ee0c4e727304b621ce07a6313c5f82b21d1d1d2c255b455ee976efc51e65ba
+  url: oci://ghcr.io/stacklok/toolhive/toolhive-operator
+  # Same two facts as ../toolhive-operator-crds/ocirepository.yaml: no cosign
+  # signature exists for any chart digest, so there is no `verify:` block, and
+  # the digest pin is the real protection.
+  #
+  # KEEP THIS TAG EQUAL TO THE CRD CHART'S. Upstream publishes the pair at one
+  # version, and this chart's `operator.image` default is derived from it --
+  # so a bump here without the matching bump next door runs an operator whose
+  # controllers register kinds the installed definitions may not describe.
+  # Renovate raises them as two separate updates; merge them together.
