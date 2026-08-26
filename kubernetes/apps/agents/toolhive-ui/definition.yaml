@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# The first ToolHive component where this estate's ordinary authentik pattern
+# just works. The MCP proxy needed an embedded authorization server, anonymous
+# DCR and a private-IP exemption because MCP clients are not browsers; the UI is
+# a plain Next.js app with an interactive login, so it is an ordinary
+# confidential OIDC client like Coder or Forgejo.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive
+  category: Applications
+  description: Browse and manage the MCP server catalogue
+  url: &url https://toolhive.agents.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # `/api/auth/oauth2/callback/oidc` is NOT arbitrary. better-auth builds
+        # it from a hardcoded provider id -- `OIDC_PROVIDER_ID = "oidc"` in
+        # src/lib/auth/constants.ts -- whose own comment warns that changing it
+        # invalidates existing sessions and requires updating the redirect URI
+        # in the IdP. Treat this path as fixed.
+        - url: https://toolhive.agents.${ROOT_DOMAIN}/api/auth/oauth2/callback/oidc
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    # `/` is the app's own readiness path, and it is what the chart's probes
+    # use. An authenticated page would only prove authentik is up.
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

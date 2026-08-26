@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# `toolhive.agents.${ROOT_DOMAIN}` -- the human entry point.
+#
+# Everything this namespace publishes now lives under one label, `agents`:
+#
+#   toolhive.agents.<domain>   humans. This UI.
+#   mcp.agents.<domain>        the catalogue API the UI reads.
+#
+# That grouping is what the `*.agents.${ROOT_DOMAIN}` SAN added to
+# kubernetes/apps/network/certificates/{production,staging}.yaml exists for --
+# a wildcard matches ONE label, so `*.${ROOT_DOMAIN}` cannot reach these.
+#
+# NOTE the pre-existing `toolhive.${ROOT_DOMAIN}` is a DIFFERENT service: the
+# machine-facing MCP endpoint and its OAuth server. The two are one label apart
+# and easy to confuse; see ../toolhive/httproute.yaml.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    reloader.stakater.com/auto: "true"
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "toolhive.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        - name: ${APP}
+          port: 80
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # `local-user`, not `local-api` -- the opposite of the MCP route
+            # next door, and for the opposite reason. This app renders HTML to a
+            # browser, so the error-pages middleware in this chain is an
+            # improvement rather than a hazard. The app does its own authentik
+            # login, so no forward-auth outpost here either.
+            name: local-user

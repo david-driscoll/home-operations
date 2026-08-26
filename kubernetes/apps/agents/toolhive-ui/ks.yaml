@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolhive-ui
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # The registry, not the operator: this app is a frontend over the registry
+    # API and has nothing to show without it. That Kustomization already depends
+    # on the operator.
+    - name: toolhive-registry
+      namespace: *namespace
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
+  path: ./kubernetes/apps/agents/toolhive-ui
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # A SECOND database, separate from the registry's. better-auth stores
+    # sessions and linked accounts; the registry stores catalogue state. They
+    # have different lifecycles and no shared schema, and the component makes a
+    # database cheap -- sharing one would only couple two unrelated migrations.
+    - ../../../components/postgres
+    # See ../toolhive-registry/ks.yaml: `rotate` is what keeps the password out
+    # of sops.
+    - ../../../components/postgres/rotate
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
