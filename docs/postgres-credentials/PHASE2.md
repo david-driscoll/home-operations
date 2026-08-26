@@ -332,6 +332,10 @@ do.
 
 #### 2.4b — remove the rollback *(post-soak, separate change)*
 
+> **Done and verified, 2026-08-26 (#1172 prerequisite, #1174 the change).** Results at the end
+> of this section.
+
+
 **Prerequisite, discovered in 2.4a: move `openbao-replica` onto the certificate first.** Its
 nightly `pg_dump` authenticates with the password. `disablePassword: true` sets that password to
 NULL, so doing 2.4b without converting the CronJob first silently breaks the OpenBao backup —
@@ -351,6 +355,46 @@ claim "no password exists for this role anywhere" literally true. Do them as one
 2.4a has run long enough to be trusted — including at least one pod restart and ideally a node
 reboot, since the failure mode this protects against is "OpenBao cannot reach storage at
 startup".
+
+##### 2.4b outcome — verified 2026-08-26
+
+The prerequisite went first and was proven rather than assumed. `openbao-replica`'s nightly
+dump moved onto the same client certificate (#1172), and a manually triggered run shipped
+`openbao-20260826-034528.sql.age` **before** the password was touched. Two details that were
+not obvious going in:
+
+- The dump was authenticating with the password **and** `sslmode=disable`. Both halves of 2.4b
+  would have rejected it independently, not just the `disablePassword` half.
+- PHASE2.md's finding that pgx does not enforce private-key permissions says nothing about this
+  job: `pg_dump` is **libpq**, which does. It was checked live first. Without an `fsGroup` the
+  key lands `0400 root:root` and libpq is satisfied; the `0440` seen inside the openbao pod is
+  that StatefulSet's `fsGroup`, and the CronJob sets none.
+
+The soak gate was genuinely met, in the sense the plan intended. The certificate Secret was
+created at `18:53:59Z` and `openbao-0` started at `20:24:32Z` — 90 minutes later — so the
+replicas **cold-started** on cert auth rather than merely surviving on long-lived connections.
+That is the failure mode 2.4b removes the escape hatch for.
+
+After the change:
+
+| check | result |
+|---|---|
+| `pg_authid.rolpassword` for `openbao` | **NULL** (and `baoadmin` likewise) |
+| non-SSL connection as `openbao` | `FATAL: pg_hba.conf rejects connection … "no encryption"` |
+| certificate connection as `openbao` | works, returns `openbao` |
+| all three replicas | Running, 0 restarts, `sealed=false`, 6 storage backends |
+| nightly dump, re-run *after* the password went NULL | shipped `openbao-20260826-074734.sql.age`, 20 retained |
+
+`openbao-credentials.yaml` carried `kustomize.toolkit.fluxcd.io/prune: disabled`, so deleting
+the file did not remove the live objects. The `ExternalSecret` and its `Secret` were deleted by
+hand afterwards, deliberately in that order so the credential still existed while the change
+was being verified. Both are gone and OpenBao stayed healthy through it.
+
+**Still outstanding:** the `openbao-postgres-password` document in `passwords.sops.yaml`.
+Removing it needs the age key to re-encrypt and none was available on the machine doing this
+work. It is now a dead string rather than a usable credential — the role has no password and
+the non-SSL path is closed — so the security property holds without it, but the file should
+still be trimmed.
 
 ## Findings from the spike
 

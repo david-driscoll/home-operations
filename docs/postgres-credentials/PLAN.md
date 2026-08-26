@@ -57,7 +57,7 @@ silently fail to resolve.
 |---|---|---|---|
 | **1a** | Prune-protect the objects that are about to change owner | none | **done** (#1085) |
 | **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | **done** (#1086, #1099) |
-| **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | 2.1–2.3b **done** (#1102, #1106); 2.4a here; 2.4b post-soak |
+| **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | **done** — 2.1–2.3b (#1102, #1106), 2.4a, prerequisite (#1172), 2.4b (#1174) verified 2026-08-26 |
 | **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | **done** — engine live, `ENGINE_ENABLED = true` since 2026-08-24 |
 | **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 13 live apps, rotating credentials | **tranches done** (1–9, all 13 live consumers). `passwords.sops.yaml` **cannot yet be deleted** — see below |
 
