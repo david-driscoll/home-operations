@@ -73,12 +73,14 @@ patches:
               name: not-used
             spec:
               dataFrom:
+                # Connection metadata only -- hostname, port, database,
+                # username. The sops password extract that used to sit here is
+                # gone: static-creds supplies username and password below, and
+                # everything else is derived by ../database/connection.yaml. A
+                # rotating app therefore reads passwords.sops.yaml not at all,
+                # which is what allows its document to be deleted.
                 - extract:
-                    key: "${APP}-postgres-password"
-                  rewrite:
-                    - regexp:
-                        source: "[\\W]"
-                        target: _
+                    key: "${APP}-postgres-conn"
                 - sourceRef:
                     generatorRef:
                       apiVersion: generators.external-secrets.io/v1alpha1

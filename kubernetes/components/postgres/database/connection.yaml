@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kubernetes-secret.json
+#
+# The app's Postgres connection METADATA — hostname, port, database, username.
+# Not a credential: no password, nothing here is secret.
+#
+# WHY THIS EXISTS. These four values used to reach the ExternalSecret next door
+# from `${APP}-postgres-password` in passwords.sops.yaml, alongside the password.
+# That made the sops document load-bearing long after OpenBao took over the
+# password: `database/static-creds/<role>` returns username and password and
+# nothing else, so hostname, port and database still came from sops and nowhere
+# else. Deleting the document would have stripped the connection metadata out of
+# every app at once, which is why PLAN.md's phase 4 line "delete
+# passwords.sops.yaml" could not be taken literally.
+#
+# All four are derivable, so none of them needed to be stored:
+#
+#   hostname  the cluster's read-write Service, identical estate-wide
+#   port      5432, identical estate-wide
+#   database  ${APP}
+#   username  ${APP}
+#
+# Rendering them here makes the sops document password-only, which is what lets
+# it retire once every app is on OpenBao.
+#
+# A Secret rather than a ConfigMap purely because ClusterSecretStore/database is
+# a `kubernetes` provider scoped to Secrets in this namespace, and the
+# ExternalSecret next door reads it through that store. The contents are not
+# sensitive and are deliberately written in the clear.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${APP}-postgres-conn
+  namespace: database
+  annotations:
+    # Same reasoning as the ExternalSecret next door: this is read by an
+    # ExternalSecret rather than owned by one, and pruning it would break every
+    # app's credential at once.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+type: Opaque
+stringData:
+  hostname: postgres-rw.database.svc.cluster.local
+  port: "5432"
+  database: ${APP}
+  username: ${APP}
