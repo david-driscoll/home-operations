@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# `agents` -- home of the ToolHive control plane and the shared MCP hostname.
+#
+# NOT a boundary: the operator runs `rbac.scope: cluster`, so an MCPServer in
+# any namespace is reconciled. What lives here is the operator, its CRDs, and
+# the MCP servers that have no more specific home. A server that belongs beside
+# the thing it serves should be declared in that app's directory instead.
+#
+# Nothing registers this directory anywhere: cluster-apps points Flux at
+# ./kubernetes/apps with no kustomization.yaml of its own, so the controller
+# generates one with `kustomize create --autodetect --recursive`, which picks up
+# every subdirectory that carries a kustomization.yaml. Adding this file IS the
+# registration.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: agents
+components:
+  - ../../components/alerts
+  - ../../components/common
+  - ../../components/repos/app-template
+# The app-template OCIRepository is namespace-scoped and ./toolhive-valkey
+# refers to it by bare name, so this namespace has to bring its own copy --
+# `equestria` and `coder` do the same thing. The two ToolHive HelmReleases do
+# NOT use it (each carries its own OCIRepository), and an MCP server is not a
+# chart at all; the session store is the one consumer.
+resources:
+  # Order here is documentation only -- Flux orders on dependsOn -- but these
+  # are a chain (CRDs -> operator -> front door -> servers) and reading them in
+  # dependency order is how that shows.
+  - ./toolhive-operator-crds/ks.yaml
+  - ./toolhive-operator/ks.yaml
+  - ./toolhive-valkey/ks.yaml
+  - ./toolhive/ks.yaml
+  - ./toolhive-docs/ks.yaml

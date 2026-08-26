@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolhive-operator-crds
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/agents/toolhive-operator-crds
+  prune: true
+  # Same rule as the CNPG and Garage operators: never cascade-delete what this
+  # manages on a Kustomization ownership change. Deleting a CRD deletes every
+  # custom resource of that kind, and here that reaches the MCPServer objects
+  # and -- through the operator's ownerReferences -- the Deployments and
+  # Services it built from them. See
+  # docs/cluster-consolidation/27-migration-churn-failure-modes.md for the
+  # external-secrets cascade that made this rule.
+  deletionPolicy: Orphan
+  # `wait: true` is load-bearing here rather than routine: ../toolhive-operator
+  # dependsOn this Kustomization, and dependsOn is only satisfied when the
+  # dependency is Ready. Without the wait the operator could roll out against a
+  # cluster whose CRDs have not been established, and its manager cache would
+  # fail to start on a missing kind.
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

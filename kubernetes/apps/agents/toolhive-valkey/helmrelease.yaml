@@ -1,0 +1,150 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# ToolHive's own session store. DELIBERATELY NOT the shared valkey in
+# `database`, for two independent reasons:
+#
+#   1. It could not be used even if we wanted to. MCPExternalAuthConfig's
+#      `storage.redis` marks `aclUserConfig` REQUIRED, and that in turn requires
+#      `passwordSecretRef` -- so ToolHive cannot be pointed at a passwordless
+#      Redis at all. `database/valkey` sets no password, and adding one there
+#      would break immich, romm, dispatcharr, searxng, outline, pinepods and
+#      n8n in the same commit.
+#   2. It should not be used regardless. What lands in here is OAuth refresh
+#      tokens, authorization codes and DCR client registrations. The shared
+#      instance is an unauthenticated ClusterIP that seven media apps can read.
+#
+# What it holds is small (a few KB per registered client) but must SURVIVE a
+# restart -- lose it and every MCP client silently re-registers and every user
+# re-authorises, which on this cluster would be nightly.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ${APP}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      *app :
+        annotations:
+          # Roll the pod when the password rotates, or the running server keeps
+          # serving the old one and the auth server starts failing AUTH.
+          reloader.stakater.com/auto: "true"
+        # Recreate, not RollingUpdate: one ReadWriteOnce PVC, so a second pod
+        # could never attach it and the rollout would wedge.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              # Same pin as database/valkey -- Renovate tracks both and moves
+              # them together.
+              repository: ghcr.io/valkey-io/valkey
+              tag: 9.1-trixie@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf
+            # `command` OVERRIDES the image's ENTRYPOINT, which is
+            # docker-entrypoint.sh -- deliberately. That script re-execs as the
+            # valkey user via gosu and chowns as it goes, which fights the
+            # securityContext below; valkey-server takes a config path directly
+            # and needs none of it. Everything that matters -- requirepass,
+            # appendonly, dir -- is in the file, which comes from
+            # ./externalsecret.yaml.
+            command:
+              - valkey-server
+            args:
+              - /etc/valkey/valkey.conf
+            probes:
+              liveness: &probe
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    # `valkey-cli ping` without credentials answers NOAUTH,
+                    # which is a non-zero exit -- so the probe has to
+                    # authenticate. Reading it from the env keeps it off the
+                    # command line here too.
+                    command:
+                      - sh
+                      - -c
+                      - valkey-cli -a "$VALKEY_PASSWORD" --no-auth-warning ping
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  failureThreshold: 5
+              readiness: *probe
+            env:
+              VALKEY_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: ${APP}
+                    key: password
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 256Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+        pod:
+          securityContext:
+            # The image sets no `User` at all -- checked against its config
+            # blob -- so it would otherwise run as root. 999 is the uid the
+            # image's own `valkey` account uses (the Redis convention it
+            # inherited), but nothing here depends on that account existing:
+            # `fsGroup` chowns the PVC to the same id, so valkey-server can
+            # write /data whether or not there is a passwd entry for it.
+            # Getting this pair out of step shows up as "Can't open the
+            # append-only file: Permission denied" in a pod that otherwise
+            # looks healthy.
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+            fsGroupChangePolicy: OnRootMismatch
+
+    persistence:
+      config:
+        type: secret
+        name: ${APP}
+        globalMounts:
+          - path: /etc/valkey/valkey.conf
+            subPath: valkey.conf
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        # `longhorn`, not `longhorn-local`: the local class pins the PV to one
+        # node, so draining that node leaves the pod unschedulable. Same
+        # reasoning, and the same past outage, as database/valkey.
+        storageClass: longhorn
+        globalMounts:
+          - path: /data
+
+    service:
+      *app :
+        controller: *app
+        ports:
+          *app :
+            port: 6379

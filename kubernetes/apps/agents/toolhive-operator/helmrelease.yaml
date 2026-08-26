@@ -1,0 +1,121 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+#
+# The ToolHive operator: a controller that turns MCPServer (and friends) CRs
+# into a proxy-runner Deployment, a backend Deployment and a
+# `mcp-<name>-proxy` Service.
+#
+# The chart renders SIX objects and none of them is a Service, an Ingress or an
+# HTTPRoute -- verified against `helm template` at 0.44.0. Everything with an
+# HTTP surface in this namespace is created by the operator at runtime from a
+# CR, which is why the route and the authorization server live in ../toolhive
+# and not here.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app toolhive-operator
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: *app
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # The chart default, restated because two things depend on the name being
+    # exactly this: the PodMonitor selector next door matches
+    # `app.kubernetes.io/instance`, which is the RELEASE name, and the
+    # ServiceAccount the RoleBinding subjects is named from the fullname helper.
+    fullnameOverride: *app
+
+    operator:
+      replicaCount: 1
+
+      rbac:
+        # CLUSTER, the chart default -- the operator reconciles MCPServer CRs in
+        # EVERY namespace, not just this one. `agents` is where the operator and
+        # the shared route live; the servers themselves are meant to be able to
+        # sit next to whatever they serve.
+        #
+        # Be clear-eyed about what that grants. The ClusterRole carries
+        # create/update/delete on Deployments, StatefulSets, Services, Secrets,
+        # ConfigMaps, ServiceAccounts, Roles and RoleBindings, and it is now
+        # bound cluster-wide -- so "may create an MCPServer in namespace X" is
+        # effectively "may run a pod, and mint RBAC for it, in namespace X".
+        # That is the same bargain every cluster-scoped operator in this estate
+        # makes (CNPG, Garage, external-secrets), and it holds for the same
+        # reason: writing an MCPServer means writing to this Git repo.
+        #
+        # An `allowedNamespaces` list is NOT the lever to reach for if that ever
+        # needs narrowing -- it only takes effect under `scope: namespace`, and
+        # switching back costs the StorageVersionMigrator below. Prefer keeping
+        # the CR surface itself controlled.
+        scope: cluster
+      features:
+        # ON, the chart default, and only possible because `scope` above is
+        # `cluster` -- the chart's templates/validate-features.yaml `fail`s the
+        # render outright for any other combination, since this controller
+        # watches cluster-scoped CustomResourceDefinitions and re-stores objects
+        # across every namespace.
+        #
+        # What it buys: `status.storedVersions` on the toolhive.stacklok.dev
+        # CRDs is kept trimmed to what is actually live, so a future release
+        # that drops a deprecated API version (v1alpha1 today; v1beta1 is the
+        # storage version) cannot orphan objects still stored under the old one.
+        # Without it that cleanup is manual and has to happen BEFORE such a
+        # release lands, with nothing in-cluster warning you.
+        storageVersionMigrator: true
+
+      # No `image:`, `toolhiveRunnerImage:`, `vmcpImage:` or
+      # `registryAPI.image:` overrides, on purpose. Left unset, all four come
+      # from the chart's values at the pinned chart version, so the
+      # OCIRepository tag is the single version to bump and the operator can
+      # never drift from the proxy-runner image it injects into every workload
+      # it creates.
+
+      env:
+        # Stops the operator's periodic call-home to the ToolHive update API,
+        # and with it the usage metrics gated on the same check. A homelab
+        # cannot act on "a newer version exists" anyway -- Renovate owns that,
+        # from the chart tag next door.
+        - name: TOOLHIVE_SKIP_UPDATE_CHECK
+          value: "true"
+
+      # No `priorityClassName` and no control-plane toleration, matching
+      # renovate-operator rather than the Garage operator. MCP servers are
+      # developer tooling, not a data plane anything else depends on: during a
+      # Low Power window (docs/cluster-consolidation/24-power-states.md) the
+      # workers are off, the operator and every proxy runner it manages go
+      # Pending together, and the tools come back when the cluster does. That
+      # is the correct outcome -- spending Tier-1 control-plane budget on a
+      # controller whose entire workload is also shed would buy nothing.
+      tolerations:
+        # The fast-node-eviction pair. NOT the
+        # components/failover/fast-node-eviction component: that one patches
+        # `defaultPodOptions`, a key only the app-template chart reads, so it
+        # would render into this HelmRelease's values and be ignored.
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 60
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 60

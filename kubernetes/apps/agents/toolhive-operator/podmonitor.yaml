@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/podmonitor_v1.json
+#
+# A PodMonitor rather than a ServiceMonitor because the chart renders NO Service
+# at all -- only a Deployment, a ServiceAccount and RBAC. The metrics port is
+# declared on the container and reachable directly on the pod.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ${APP}
+spec:
+  selector:
+    matchLabels:
+      # The chart's own selectorLabels, not this Kustomization's
+      # commonMetadata: commonMetadata lands on the HelmRelease, never on the
+      # pods Helm renders from it.
+      app.kubernetes.io/name: toolhive-operator
+      app.kubernetes.io/instance: toolhive-operator
+  podMetricsEndpoints:
+    # controller-runtime's metrics server. The operator takes no
+    # `--metrics-secure` flag -- app.go binds `--metrics-bind-address` to :8080
+    # in the clear -- so this is a plain scrape with no TLS and no bearer token.
+    # `port` matches the container port NAME from the chart's operator.ports.
+    - port: metrics
+      interval: 1m
+      path: /metrics
