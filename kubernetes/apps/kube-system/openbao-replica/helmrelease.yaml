@@ -83,12 +83,31 @@ spec:
             securityContext: &rootCtx
               runAsUser: 0
               runAsGroup: 0
-            envFrom:
-              # PG_URI — the generated `openbao-postgres` uri, referenced via
-              # ClusterSecretStore/database exactly like the openbao app itself.
-              - secretRef:
-                  name: openbao-replica-db
             env:
+              # PG_URI is a LITERAL now, not an envFrom on openbao-replica-db.
+              #
+              # The nightly dump used to authenticate with the openbao role's
+              # PASSWORD, pulled out of the generated `openbao-postgres` uri --
+              # and with `sslmode=disable`, so not even over TLS. Phase 2.4b sets
+              # that password to NULL (`disablePassword: true`) and adds
+              # `hostnossl openbao openbao all reject`, either of which breaks
+              # this job silently at 03:00. Converting it first is the documented
+              # prerequisite (docs/postgres-credentials/PHASE2.md, 2.4b).
+              #
+              # A certificate URI carries no secret, so it needs no
+              # ExternalSecret: the credential is the mounted key, not the
+              # string. That is why openbao-replica-db is deleted in this change.
+              #
+              # Verified against the live cluster before writing this, with the
+              # same image, the same secret and runAsUser 0:
+              #   openbao | ssl=true | TLSv1.3 | cipher=TLS_AES_256_GCM_SHA384
+              #   pg_dump exit=0
+              # libpq enforces private-key permissions where pgx does not, so
+              # this needed checking rather than assuming from the openbao app.
+              # Without an fsGroup the key lands 0400 root:root and libpq is
+              # satisfied; the 0440 seen inside the openbao pod comes from that
+              # StatefulSet's fsGroup, and this CronJob sets none.
+              PG_URI: "postgres://openbao@postgres-rw.database.svc.cluster.local:5432/openbao?sslmode=verify-full&sslcert=/etc/pg-certs/tls.crt&sslkey=/etc/pg-certs/tls.key&sslrootcert=/etc/pg-certs/ca.crt"
               SFTP_HOST: dockge-as.${TAILSCALE_DOMAIN}
               SFTP_PORT: "2023"
               SFTP_KEY_FILE: /secrets/sftp/id_ed25519
@@ -278,6 +297,16 @@ spec:
           restore-test:
             main:
               - path: /secrets/sftp
+      # The client certificate the dump now authenticates with. Same Secret the
+      # openbao StatefulSet mounts at /etc/pg-certs; 256 is 0400 octal.
+      pg-client-cert:
+        type: secret
+        name: openbao-pg-client-cert
+        defaultMode: 256
+        advancedMounts:
+          dump:
+            main:
+              - path: /etc/pg-certs
       sops-age:
         type: secret
         name: sops-age
