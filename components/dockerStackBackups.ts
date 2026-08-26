@@ -119,6 +119,18 @@ export const BACKUP_STACK_EXCLUDES: Readonly<Record<string, string[]>> = {
   // every stack that runs the sidecar; add the same pattern per-stack if one
   // of them starts failing with an empty-string dst hash.
   technitium: ["/config/stats/**", "/tailscale/tailscaled.log*"],
+
+  // Gatus's live SQLite (data.db + -wal/-shm). Same argument as the postgres
+  // pgdata exclusion above, at smaller stakes: a file-level copy of a live
+  // SQLite database is torn, not crash-consistent — and because Gatus writes
+  // every probe cycle, the transfer also randomly loses the changed-during-
+  // transfer race and fails the presync outright (alpha-site-dockge-uptime,
+  // first lost 2026-08-26 15:24; probabilistic, unlike technitium's
+  // deterministic log race). What this backup actually protects is config/,
+  // which is Pulumi-generated anyway; the check history is a monitoring
+  // cache nobody restores. If history ever matters, the fix is a sqlite
+  // .backup dump presync — the pg_dump pattern — not removing this line.
+  uptime: ["/data/data.db*"],
 };
 
 /**
