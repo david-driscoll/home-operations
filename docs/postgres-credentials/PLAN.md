@@ -59,7 +59,7 @@ silently fail to resolve.
 | **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | **done** (#1086, #1099) |
 | **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | **done** — 2.1–2.3b (#1102, #1106), 2.4a, prerequisite (#1172), 2.4b (#1174) verified 2026-08-26 |
 | **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | **done** — engine live, `ENGINE_ENABLED = true` since 2026-08-24 |
-| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 13 live apps, rotating credentials | **tranches done** (1–9, all 13 live consumers). `passwords.sops.yaml` **cannot yet be deleted** — see below |
+| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 13 live apps, rotating credentials | **done** — tranches 1–9, and no app password remains in `passwords.sops.yaml` |
 
 `passwords.sops.yaml` survives phase 1 unchanged and hand-maintained. Phase 1 is purely about
 *who declares what* — not a single credential value changes.
@@ -415,6 +415,36 @@ The spec form should be equivalent and is not, at least for a re-parented resour
 children. Use the full old URN string. During the failure the state was intact throughout — the
 old unparented mount and all its static roles were still present and unmarked — so no state
 surgery was needed, and none was performed.
+### passwords.sops.yaml is down to two documents (2026-08-26)
+
+Every app password is out of the file. What remains is `postgres-user-password` and
+`postgres-superuser-password` — the CNPG cluster's own bootstrap and superuser credentials,
+consumed by `cluster-users.yaml` and `resources/values.yaml`. Neither is an app credential, and
+neither is rotated by OpenBao, so the file does not disappear entirely. 19 documents down to 2,
+46471 bytes down to 4943.
+
+It went in four steps rather than one, deliberately:
+
+| step | documents | why separate |
+|---|---|---|
+| `openbao` | 19 → 18 | phase 2.4b; its password was already NULL |
+| group E (`outline`, `retrom`, `strmgen`) | 18 → 15 | dropped apps; orphaned ExternalSecrets deleted first so they would not error against a vanished source |
+| **rehoming** (#1176) | — | the enabling change: `hostname`/`port`/`database`/`username` now come from `${APP}-postgres-conn`, so a rotating app reads this file not at all |
+| the 13 app documents | 15 → 2 | only safe once every app had actually repointed |
+
+That last gate mattered. Immediately after #1176 merged only **4 of 13** apps had repointed,
+and deleting the documents then would have broken the other nine. The cause was not the
+rehoming: it was 08:38, inside the `02:00-09:00` downscale window, with `garage-operator` at
+zero replicas and its `failurePolicy: Fail` PVC webhook failing every dry-run — so
+`volsync-system/volsync` was not Ready and every app that depends on it was gated. The nested
+`<app>-postgres` Kustomizations reported the current revision throughout, because they
+re-render their own path; what was stale was `spec.patches`, written by the blocked parent.
+Forcing `reconcile.fluxcd.io/requestedAt` on the parents did nothing. It resolved on its own at
+09:00.
+
+Credentials were fingerprinted before the rehoming and compared after: **13/13 byte-identical**,
+zero auth failures. Same values, different source.
+
 ### Phase 4 tranches complete — and why the last step is not a deletion
 
 All **13 live consumers** now take their password from OpenBao: `coder`, `crowdsec`, `forgejo`,
