@@ -13,6 +13,7 @@ resources:
   - ./tandoor/ks.yaml
   - ./freshrss/ks.yaml
   - ./searxng/ks.yaml
+  - ./degoog/ks.yaml
   # - ./karakeep/ks.yaml
   - ./meilisearch/ks.yaml
   - ./tududi/ks.yaml

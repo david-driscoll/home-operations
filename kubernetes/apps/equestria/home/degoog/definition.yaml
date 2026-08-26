@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: degoog
+spec:
+  name: Degoog
+  category: Applications
+  description: "Self-hosted metasearch engine that aggregates and deduplicates results"
+  url: &url https://search.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/svg/degoog.svg
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # Forward proxy, not oauth2: degoog has no OIDC support at all. Its only
+    # authentication is DEGOOG_SETTINGS_PASSWORDS, which gates the settings and
+    # extension-install panel and nothing else.
+    #
+    # Same shape as searxng next door, including the caveat: the HTTPRoute in
+    # helmrelease.yaml filters through `local-user`, which is the network gate
+    # WITHOUT the authentik outpost hop (see components/common/middleware.yaml).
+    # A search engine has to answer OpenSearch and `?q=` requests straight from
+    # the browser's address bar, and an outpost redirect breaks both.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      # /healthz, not /, so a check does not run a search. The route's own
+      # rate limiter applies to it, which is why readiness below is spaced out.
+      url: https://search.${ROOT_DOMAIN}/healthz
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
