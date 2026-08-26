@@ -437,11 +437,16 @@ None of those three are secrets. Retiring the file therefore needs the metadata 
 a ConfigMap, the CNPG-generated `<app>-app` Secret, or the component rendering them literally —
 and only then can the sops document go. Treat it as its own piece of work, not a cleanup step.
 
-**Leftovers from group E.** `outline`, `retrom` and `strmgen` still have an orphaned
-`ExternalSecret` and its generated Secret in `database`, plus an entry apiece in
-`passwords.sops.yaml`. The ExternalSecrets are unowned and nothing recreates them, so they can
-be deleted directly; the `-password` Secrets are recreated by the live `database/postgres`
-Kustomization from the sops document and can only go when that document is edited.
+**Group E is fully cleaned up (2026-08-26).** The orphaned `ExternalSecret`s for `outline`,
+`retrom` and `strmgen` were deleted directly — unowned, nothing recreated them — which
+garbage-collected their generated Secrets, and their three documents were removed from
+`passwords.sops.yaml`, so Flux prunes the `-password` Secrets too. Nothing of those three
+remains.
+
+That leaves **15 documents** in the file: the 13 rotating apps plus `postgres-user-password`
+and `postgres-superuser-password`. The 13 are **not** dead — see above; they still carry
+`hostname`, `port` and `database`, which the OpenBao generator does not supply. Retiring the
+file is still the rehoming job, not a deletion.
 
 ### What the cutover burst actually tracks (corrected)
 
