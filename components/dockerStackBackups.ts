@@ -106,7 +106,19 @@ export const BACKUP_STACK_EXCLUDES: Readonly<Record<string, string[]>> = {
   // on transfer: md5 hashes differ" — which aborts the ON_ERROR_FATAL pre-sync
   // hook and takes the plan's snapshot with it. Pure telemetry for the DNS
   // dashboards; nothing is reconstructed from it.
-  technitium: ["/config/stats/**"],
+  // Second rotation-race exclude, same failure signature as stats, different
+  // files. The tailscale sidecar's logs cycle between written and truncated
+  // to zero (tailscaled.log1/2.txt), so the sftp server hashes content and
+  // then reads an empty file. Reproduced live on skystar 2026-08-26 with the
+  // exact presync command: `corrupted on transfer: md5 hashes differ src
+  // fd44ef… vs dst d41d8cd98f00b204e9800998ecf8427e` — and that dst IS the
+  // md5 of the empty string. rclone retries 3x and loses the race 3x, the
+  // ON_ERROR_FATAL presync takes the snapshot with it. In practice only the
+  // slow off-site link loses the race (celestia's pull of skystar's
+  // technitium failed daily at 15:24 from 2026-08-24) but the race exists on
+  // every stack that runs the sidecar; add the same pattern per-stack if one
+  // of them starts failing with an empty-string dst hash.
+  technitium: ["/config/stats/**", "/tailscale/tailscaled.log*"],
 };
 
 /**
