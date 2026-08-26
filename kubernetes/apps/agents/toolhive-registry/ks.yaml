@@ -15,10 +15,9 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    # The operator owns the MCPRegistry CRD and builds the registry-api
-    # Deployment and Service from the CR.
-    - name: toolhive-operator
-      namespace: *namespace
+    # NOT toolhive-operator any more. The catalogue used to be an MCPRegistry CR
+    # the operator reconciled; it is a plain Helm chart now (see
+    # ./helmrelease.yaml for why), so the operator is not in this path at all.
     - name: external-secrets
       namespace: kube-system
     - name: postgres

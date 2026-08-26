@@ -1,0 +1,22 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: toolhive-registry-server
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 1.5.1
+    digest: sha256:4f3b645356061d1ff993803cf6e0dcf290d1be11b566479f013616e7e6c037b4
+  # A THIRD OCI path, and note it is the repository root rather than a
+  # subpath -- `stacklok/toolhive-registry-server` itself is the chart, unlike
+  # the operator (stacklok/toolhive/<chart>) and the UI
+  # (stacklok/toolhive-cloud-ui/<chart>). Its own release train too: 1.5.1 here
+  # against the operator's 0.44.0 and the UI's 0.6.2.
+  url: oci://ghcr.io/stacklok/toolhive-registry-server
+  # No `verify:` block: no cosign signature is published for these digests,
+  # same as the other ToolHive charts. The digest pin is the protection.

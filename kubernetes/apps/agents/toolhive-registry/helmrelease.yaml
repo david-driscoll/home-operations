@@ -1,0 +1,149 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+#
+# The MCP catalogue, and the backend ../toolhive-ui cannot run without.
+#
+# WHY A CHART RATHER THAN THE MCPRegistry CR. This started as an MCPRegistry,
+# which the operator turns into a registry-api Deployment. The operator itself
+# told us not to, on every reconcile:
+#
+#   MCPRegistry is deprecated and will be removed in a future release; install
+#   the ToolHive registry server via the toolhive-registry-server Helm chart
+#   instead
+#
+# So the CR is gone and the chart runs the same server directly. The operator is
+# no longer involved in the catalogue at all -- note this Kustomization no
+# longer dependsOn it.
+#
+# WHAT CHANGED FOR CONSUMERS: the Service. The operator named it
+# `<registry>-registry-api`; the chart names it after the release, so
+# `fullnameOverride` below pins it to `toolhive-registry`. ./httproute.yaml and
+# ../toolhive-ui's API_BASE_URL both point at the new name.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ${APP}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: toolhive-registry-server
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # Pins the Service name that ./httproute.yaml and ../toolhive-ui depend on.
+    # Without it the chart renders `<release>-toolhive-registry-server`.
+    fullnameOverride: *app
+
+    replicaCount: 1
+
+    # The chart's `config` block maps one-for-one onto the registry server's
+    # config.yaml -- the same content the MCPRegistry's `configYAML` string
+    # carried, now as real YAML that a schema and a diff can see, which is a
+    # small win over the opaque string the CR took.
+    config:
+      # Catalogue source: the upstream ToolHive catalogue, re-synced every 30m.
+      # A mirror, not a source of truth, so nothing here needs backing up.
+      sources:
+        - name: toolhive
+          git:
+            repository: https://github.com/stacklok/toolhive-catalog.git
+            branch: main
+            path: pkg/catalog/toolhive/data/registry-upstream.json
+          syncPolicy:
+            interval: '30m'
+      registries:
+        - name: default
+          sources: ['toolhive']
+      # `anonymous`, still deliberate now that ./httproute.yaml publishes this.
+      # Everything served is a mirror of the PUBLIC upstream catalogue, so there
+      # is nothing to leak, and the route's internal-network middleware keeps it
+      # off the internet. REVISIT if a private source is ever added above.
+      auth:
+        mode: anonymous
+      database:
+        # Literal: the CNPG read-write Service name is identical estate-wide
+        # (components/postgres/database/connection.yaml). The PASSWORD is not
+        # here -- it arrives as a pgpass file, see below.
+        host: postgres-rw.database.svc.cluster.local
+        port: 5432
+        # Both are ${APP}: the postgres component names the database and the
+        # login role after the app.
+        user: ${APP}
+        database: ${APP}
+        sslMode: require
+
+    # THE PGPASS DANCE, and every part of it is load-bearing.
+    #
+    # libpq silently IGNORES a pgpass file that is not mode 0600, and a
+    # Kubernetes Secret volume always mounts read-only with the fsGroup's mode
+    # -- so the file cannot be handed straight to the server. The chart's own
+    # documented pattern is to copy it to an emptyDir and chmod it in an init
+    # container, which is what this is. The operator used to do the equivalent
+    # behind `pgpassSecretRef`; with the chart it is explicit.
+    extraEnv:
+      - name: PGPASSFILE
+        value: /pgpass-prepared/.pgpass
+    extraVolumes:
+      - name: pgpass-secret
+        secret:
+          # `.pgpass` is the required key name -- see ./externalsecret.yaml.
+          secretName: ${APP}-postgres
+      - name: pgpass-prepared
+        emptyDir: {}
+    extraVolumeMounts:
+      - name: pgpass-prepared
+        mountPath: /pgpass-prepared
+    initContainers:
+      - name: pgpass-init
+        image: docker.io/library/busybox:1.37.0
+        command:
+          - sh
+          - -c
+          - cp /pgpass-secret/.pgpass /pgpass-prepared/.pgpass && chmod 600 /pgpass-prepared/.pgpass
+        volumeMounts:
+          - name: pgpass-secret
+            mountPath: /pgpass-secret
+            readOnly: true
+          - name: pgpass-prepared
+            mountPath: /pgpass-prepared
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+    # Sheds with the rest of the namespace during Low Power, same as every other
+    # ToolHive component here.
+    tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 60
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 60
