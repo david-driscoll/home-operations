@@ -154,8 +154,11 @@ spec:
           # container — does not stop the Job from ever completing.
           postgres:
             image:
-              # Postgres 18, deliberately NEWER than the CNPG cluster this dump
-              # comes from (17.5) — see #843. The old comment claimed the scratch
+              # Postgres 18 — see #843. This was deliberately ahead of the CNPG
+              # cluster (17.5) for a long stretch; the cluster has since caught
+              # up to 18 too, and the constraint below is what still governs the
+              # pairing, so leave this reasoning in place rather than collapsing
+              # it into "they match now". The old comment claimed the scratch
               # engine had to be the same major as CNPG "so the restored dump is
               # read by the engine version that wrote it". That rationale does not
               # survive contact with what dump.sh actually produces:
@@ -175,7 +178,8 @@ spec:
               # restored keyring. It is not a rehearsal of the production engine —
               # that is piece 03's Scenario B rehearsal, which is a separate gate.
               # So the scratch engine only has to be >= the dump's origin major,
-              # and staying current is worth more than mirroring 17.5.
+              # and staying current is worth more than mirroring whatever CNPG
+              # happens to be on.
               #
               # Getting here took a detour worth recording. Renovate crossed this
               # major on its own once, and 18 broke the job outright — the image
