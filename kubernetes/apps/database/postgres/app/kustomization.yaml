@@ -12,7 +12,6 @@ resources:
   - ./cluster-users.yaml
   - ./openbao-role.yaml
   - ./baoadmin-role.yaml
-  - ./toolhive-registry-role.yaml
   - ./rotation-serviceaccount.yaml
   - ./role-broad-access.yaml
 configMapGenerator:

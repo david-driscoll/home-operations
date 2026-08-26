@@ -36,6 +36,48 @@ Anything that is not a string is a **sibling component**, not a variable:
 | --- | --- |
 | `../../components/postgres/superuser` | `DatabaseRole.spec.superuser: true` — used by `immich` only |
 | `../../components/postgres/client-cert` | certificate auth instead of a password |
+| `../../components/postgres/roles` | extra roles beyond the app's login role, from `kubernetes/apps/database/postgres/roles/${APP}/` |
+
+### Extra roles
+
+`roles` exists because some applications' migrations reference roles they do not create —
+grant targets, RLS principals — assuming they run as something holding `CREATEROLE`. App roles
+here hold `login: true` and nothing else, deliberately, so those migrations fail:
+
+```
+ERROR:  permission denied to create role
+CONTEXT: SQL statement "CREATE ROLE toolhive_registry_server"
+```
+
+The component emits a second nested Kustomization, `${APP}-postgres-roles`, rendering
+`kubernetes/apps/database/postgres/roles/${APP}/` into the `database` namespace. `${APP}` in
+`spec.path` is substituted by the parent app Kustomization — postBuild substitution is textual
+over the whole rendered output — which is what lets one shared component point each app at its
+own directory with no extra substitution.
+
+The manifests live beside the cluster, not in `components/`, because a component should be
+app-agnostic and because every other hand-written role already lives there
+(`openbao-role.yaml`, `baoadmin-role.yaml`). Nothing else references those directories: the
+postgres app's kustomization lists `./app/ks.yaml` and `./backups/ks.yaml` only, so each object
+has exactly one owner.
+
+Consumers: `toolhive-registry` (`toolhive_registry_server`), `windmill` (`windmill_user`,
+`windmill_admin`).
+
+**⚠️ Read the live role before declaring one.** A `DatabaseRole` adopts an existing role and
+forces every attribute, including the ones you omit — and these roles are usually created by
+hand long before anyone declares them. `windmill_admin` carries `BYPASSRLS` and is a member of
+`windmill_user`; declaring it without either silently strips a privilege the application's row
+security depends on.
+
+```sql
+select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+       rolcanlogin, rolreplication, rolbypassrls, rolconnlimit
+  from pg_roles where rolname = '<role>';
+select g.rolname, m.admin_option from pg_auth_members m
+  join pg_roles r on r.oid = m.member join pg_roles g on g.oid = m.roleid
+ where r.rolname = '<role>';
+```
 
 **Why:** `postBuild.substitute` is typed `map[string]string`, and the parent resolves these
 values before the child Kustomization is applied. A boolean-valued variable therefore lands as

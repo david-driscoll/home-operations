@@ -41,6 +41,11 @@ spec:
     # database, a login role and a rotating OpenBao-owned credential with no
     # further edits and no sops document.
     - ../../../components/postgres
+    # `toolhive_registry_server` -- a NOLOGIN grant target that migration
+    # 000001 creates only if it does not already exist, and cannot create here
+    # because app roles hold no CREATEROLE. See
+    # kubernetes/apps/database/postgres/roles/toolhive-registry/.
+    - ../../../components/postgres/roles
   postBuild:
     substitute:
       APP: *app

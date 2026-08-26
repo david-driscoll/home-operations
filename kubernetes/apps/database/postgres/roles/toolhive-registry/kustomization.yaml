@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Rendered into the `database` namespace by the `${APP}-postgres-roles`
+# Kustomization that components/postgres/roles emits for toolhive-registry.
+# Nothing else references this directory -- the postgres app's own kustomization
+# lists ./app/ks.yaml and ./backups/ks.yaml only, so these objects have exactly
+# one owner.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./toolhive-registry-server.yaml

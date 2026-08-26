@@ -52,6 +52,12 @@
 # no password, so OpenBao's database secrets engine has nothing to rotate; it is
 # also not discovered by `stacks/system`, which reads app `ks.yaml` components
 # and not this file.
+#
+# HOW THIS GETS APPLIED. toolhive-registry lists
+# `components/postgres/roles` in its ks.yaml; that component emits a
+# `toolhive-registry-postgres-roles` Kustomization pointed at this directory.
+# The postgres app's own kustomization does NOT list it, so there is exactly one
+# owner.
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:

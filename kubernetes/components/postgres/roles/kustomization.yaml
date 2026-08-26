@@ -1,0 +1,44 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Extra PostgreSQL roles for an app, beyond the login role ../database already
+# renders. Add it AFTER ../../postgres:
+#
+#   components:
+#     - ../../../components/postgres
+#     - ../../../components/postgres/roles
+#
+# WHAT IT IS FOR. Some applications' migrations reference roles they do not
+# create -- grant targets, RLS principals, ownership handles. They assume the
+# migration runs as something holding CREATEROLE, which app roles here
+# deliberately are not (`login: true` and nothing else). Two apps need this:
+#
+#   toolhive-registry  toolhive_registry_server  (grant target, migration 1)
+#   windmill           windmill_user, windmill_admin  (RLS principals)
+#
+# Before this component the only options were bad ones: hand the app
+# ../superuser to work around a single statement, grant CREATEROLE so it can
+# mint roles forever, or create the roles by hand -- which is what happened to
+# windmill, and is why its two roles existed in the cluster and in no manifest.
+#
+# WHERE THE MANIFESTS LIVE. `kubernetes/apps/database/postgres/roles/${APP}/`,
+# NOT in this directory. Two reasons. A component is supposed to be
+# app-agnostic, and every other hand-written role in the estate already lives
+# beside the cluster (openbao-role.yaml, baoadmin-role.yaml) -- these are the
+# same kind of object and belong in the same place. This component is only the
+# wiring.
+#
+# HOW THE PATH RESOLVES. `${APP}` in `spec.path` is substituted by the PARENT
+# app Kustomization, exactly as `metadata.name: ${APP}-postgres` already is in
+# ../ks.yaml -- postBuild substitution is textual over the whole rendered
+# output, so it reaches `spec.path` like any other field. That is what makes
+# one shared component able to point each app at its own directory with no
+# extra substitution to declare.
+#
+# A missing directory is a hard build failure on this Kustomization, which is
+# the intended behaviour: opting in without adding manifests should say so
+# rather than silently render nothing.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ks.yaml
