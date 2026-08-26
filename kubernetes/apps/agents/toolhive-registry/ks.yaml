@@ -22,7 +22,9 @@ spec:
       namespace: kube-system
     - name: postgres
       namespace: database
-  path: ./kubernetes/apps/agents/toolhive-registry
+  # Anchored so ./postgres-roles can be reached without writing the path
+  # twice; see POSTGRES_APP_PATH below.
+  path: &path ./kubernetes/apps/agents/toolhive-registry
   prune: true
   wait: true
   force: false
@@ -40,7 +42,17 @@ spec:
     # database, a login role and a rotating OpenBao-owned credential with no
     # further edits and no sops document.
     - ../../../components/postgres
+    # `toolhive_registry_server` -- a NOLOGIN grant target that migration
+    # 000001 creates only if it does not already exist, and cannot create here
+    # because app roles hold no CREATEROLE. Manifest in ./postgres-roles/;
+    # needs POSTGRES_APP_PATH below.
+    - ../../../components/postgres/roles
   postBuild:
     substitute:
       APP: *app
+      # Where components/postgres/roles looks for this app's extra
+      # DatabaseRoles -- it appends `/postgres-roles`. The anchor means the
+      # path is written once, so moving this directory cannot leave a stale
+      # roles path behind.
+      POSTGRES_APP_PATH: *path
       NAMESPACE: *namespace

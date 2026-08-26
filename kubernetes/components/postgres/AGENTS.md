@@ -36,6 +36,68 @@ Anything that is not a string is a **sibling component**, not a variable:
 | --- | --- |
 | `../../components/postgres/superuser` | `DatabaseRole.spec.superuser: true` — used by `immich` only |
 | `../../components/postgres/client-cert` | certificate auth instead of a password |
+| `../../components/postgres/roles` | extra roles beyond the app's login role, from the app's own `postgres-roles/` |
+
+### Extra roles
+
+`roles` exists because some applications' migrations reference roles they do not create —
+grant targets, RLS principals — assuming they run as something holding `CREATEROLE`. App roles
+here hold `login: true` and nothing else, deliberately, so those migrations fail:
+
+```
+ERROR:  permission denied to create role
+CONTEXT: SQL statement "CREATE ROLE toolhive_registry_server"
+```
+
+**The manifests live next to the app**, in `<app-dir>/postgres-roles/` — they are that app's
+business, they change when its migrations change, and a reviewer looking at the app sees them
+without going anywhere else. The component emits a second nested Kustomization,
+`${APP}-postgres-roles`, that reads that directory and targets `database`, because a
+`DatabaseRole` is namespace-scoped and `spec.cluster.name` resolves locally, so the objects
+themselves must sit beside the `Cluster`.
+
+Wiring it takes two lines in the app's `ks.yaml`, because `spec.path` is repo-root-relative and
+a component has no idea where the build came from — `${APP}` is not enough either, since an
+app's directory is not derivable from its name:
+
+```yaml
+spec:
+  path: &path ./kubernetes/apps/equestria/home/windmill
+  components:
+    - ../../../../components/postgres
+    - ../../../../components/postgres/roles
+  postBuild:
+    substitute:
+      APP: *app
+      POSTGRES_APP_PATH: *path
+```
+
+Use the anchor. Writing the string once means an app that moves directories cannot end up with
+a stale roles path. The `/postgres-roles` suffix is appended by the component, not by the app.
+
+**Never list `postgres-roles/` in the app's own `kustomization.yaml`.** It sits inside the app's
+build path, so listing it renders the same roles a second time into the app's namespace, where
+they are meaningless and fight the real ones. Every app here lists resources explicitly, so an
+unreferenced subdirectory is inert. Forgetting `POSTGRES_APP_PATH` fails the Kustomization with
+a path-not-found, which is deliberate.
+
+Consumers: `toolhive-registry` (`toolhive_registry_server`), `windmill` (`windmill_user`,
+`windmill_admin`).
+
+**⚠️ Read the live role before declaring one.** A `DatabaseRole` adopts an existing role and
+forces every attribute, including the ones you omit — and these roles are usually created by
+hand long before anyone declares them. `windmill_admin` carries `BYPASSRLS` and is a member of
+`windmill_user`; declaring it without either silently strips a privilege the application's row
+security depends on.
+
+```sql
+select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+       rolcanlogin, rolreplication, rolbypassrls, rolconnlimit
+  from pg_roles where rolname = '<role>';
+select g.rolname, m.admin_option from pg_auth_members m
+  join pg_roles r on r.oid = m.member join pg_roles g on g.oid = m.roleid
+ where r.rolname = '<role>';
+```
 
 **Why:** `postBuild.substitute` is typed `map[string]string`, and the parent resolves these
 values before the child Kustomization is applied. A boolean-valued variable therefore lands as

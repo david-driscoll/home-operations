@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Extra PostgreSQL roles for an app, beyond the login role ../database already
+# renders. Add it AFTER ../../postgres:
+#
+#   spec:
+#     path: &path ./kubernetes/apps/<group>/<sub>/<app>
+#     components:
+#       - ../../../components/postgres
+#       - ../../../components/postgres/roles
+#     postBuild:
+#       substitute:
+#         APP: *app
+#         POSTGRES_APP_PATH: *path
+#
+# then put the DatabaseRole manifests in `<app-dir>/postgres-roles/`.
+#
+# WHAT IT IS FOR. Some applications' migrations reference roles they do not
+# create -- grant targets, RLS principals, ownership handles. They assume the
+# migration runs as something holding CREATEROLE, which app roles here
+# deliberately are not (`login: true` and nothing else). Two apps need this:
+#
+#   toolhive-registry  toolhive_registry_server  (grant target, migration 1)
+#   windmill           windmill_user, windmill_admin  (RLS principals)
+#
+# Before this component the only options were bad ones: hand the app
+# ../superuser to work around a single statement, grant CREATEROLE so it can
+# mint roles forever, or create the roles by hand -- which is what happened to
+# windmill, and is why its two roles existed in the cluster and in no manifest.
+#
+# WHERE THE MANIFESTS LIVE. `<app-dir>/postgres-roles/`, next to the app that
+# needs them -- these roles are that app's business, they change when its
+# migrations change, and a reviewer looking at the app should see them without
+# going anywhere else. ./ks.yaml is what gets them into the `database`
+# namespace, which is where a DatabaseRole has to be.
+#
+# WHY THE PATH HAS TO BE HANDED IN. A Flux Kustomization's `spec.path` is
+# repo-root-relative, and a component rendered into an app's build has no idea
+# where that build came from -- kustomize does not expose it. `${APP}` is not
+# enough either, because an app's directory is not derivable from its name
+# (`windmill` lives under equestria/home, `toolhive-registry` under agents).
+# So the app passes its own path down.
+#
+# USE THE ANCHOR. `path: &path ...` / `POSTGRES_APP_PATH: *path` means the
+# string is written once, so an app that moves directories cannot end up with a
+# stale roles path -- the same `&app`/`*app` idiom every ks.yaml here already
+# uses. The `/postgres-roles` suffix is appended by ./ks.yaml, not by the app.
+#
+# A missing or unwired directory is a hard build failure on this Kustomization,
+# which is the intended behaviour: opting in without adding manifests should
+# say so rather than silently render nothing.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ks.yaml

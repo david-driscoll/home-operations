@@ -14,7 +14,9 @@ spec:
     labels:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
-  path: ./kubernetes/apps/equestria/home/windmill
+  # Anchored so ./postgres-roles can be reached without writing the path
+  # twice; see POSTGRES_APP_PATH below.
+  path: &path ./kubernetes/apps/equestria/home/windmill
   prune: true
   wait: true
   interval: 1h
@@ -42,7 +44,17 @@ spec:
     # role's password changes, so the burst tracks reconnect RATE, not pool
     # size. See docs/postgres-credentials/PLAN.md.
     - ../../../../components/postgres
+    # windmill_user and windmill_admin -- the NOLOGIN row-security principals
+    # Windmill's migrations and RLS policies name. They existed in the cluster
+    # and in no manifest until this line. Manifests in ./postgres-roles/;
+    # needs POSTGRES_APP_PATH below.
+    - ../../../../components/postgres/roles
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      # Where components/postgres/roles looks for this app's extra
+      # DatabaseRoles -- it appends `/postgres-roles`. The anchor means the
+      # path is written once, so moving this directory cannot leave a stale
+      # roles path behind.
+      POSTGRES_APP_PATH: *path

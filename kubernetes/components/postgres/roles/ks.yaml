@@ -1,0 +1,103 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# Renders the app's own `postgres-roles/` directory into the `database`
+# namespace.
+#
+# The app's roles live NEXT TO THE APP -- `<app-dir>/postgres-roles/` -- because
+# they are that app's business and nothing else's. But a DatabaseRole is
+# namespace-scoped and `spec.cluster.name` is a local reference, so the objects
+# themselves have to land beside the Cluster. The app's own Kustomization
+# cannot put them there: `targetNamespace` is Kustomize's namespace
+# transformer, which OVERRIDES an explicitly-set `metadata.namespace` (verified
+# -- see ../ks.yaml). Hence this second Kustomization, which reads a directory
+# in the app's tree and targets `database`.
+#
+# The directory is NOT listed in the app's own `kustomization.yaml`, and must
+# not be: that would render the same roles a second time into the app's
+# namespace. Both apps list their resources explicitly, so an unreferenced
+# subdirectory is inert.
+#
+# See ../ks.yaml for why `decryption` and `substituteFrom` are spelled out
+# rather than inherited.
+#
+# SEPARATE FROM `${APP}-postgres`, NOT FOLDED INTO IT. The two render different
+# paths -- a Flux Kustomization has exactly one `spec.path` -- so this cannot be
+# an extra directory on the existing object. Being separate also means an app
+# with a broken extra-role manifest still gets its database, its login role and
+# its credential.
+#
+# ⚠️ A DatabaseRole ADOPTS an existing role and forces EVERY attribute to match
+# the manifest, including the ones you omit. These roles are frequently created
+# by hand before they are declared, so read the live role first and match it
+# exactly:
+#
+#   select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+#          rolcanlogin, rolreplication, rolbypassrls, rolconnlimit
+#     from pg_roles where rolname = '<role>';
+#   select g.rolname, m.admin_option from pg_auth_members m
+#     join pg_roles r on r.oid = m.member join pg_roles g on g.oid = m.roleid
+#    where r.rolname = '<role>';
+#
+# windmill_admin carries BYPASSRLS and is a member of windmill_user. Declaring
+# it without either would silently strip a privilege the application's row
+# security depends on.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${APP}-postgres-roles
+spec:
+  targetNamespace: database
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ${APP}
+      driscoll.dev/name: ${APP}
+  # ${POSTGRES_APP_PATH} is the app's OWN `spec.path`, handed down through
+  # postBuild.substitute -- see ./kustomization.yaml for the anchor idiom that
+  # avoids writing it twice. The `/postgres-roles` suffix is this component's
+  # convention, appended here so the app never spells it out.
+  #
+  # Substituted by the PARENT app Kustomization, exactly like ${APP} above:
+  # postBuild substitution is textual over the whole rendered output, so it
+  # reaches `spec.path` like any other field.
+  #
+  # Forgetting POSTGRES_APP_PATH renders `/postgres-roles`, which fails this
+  # Kustomization with a path-not-found. That is deliberate -- opting in
+  # without wiring the path should say so.
+  path: ${POSTGRES_APP_PATH}/postgres-roles
+  # The OPERATOR, not the `postgres` cluster Kustomization -- depending on the
+  # latter reintroduces the openbao/postgres readiness cycle ../ks.yaml
+  # describes.
+  dependsOn:
+    - name: postgres-operator
+      namespace: cloudnative-pg
+  prune: true
+  # Same policy as everything else this component family renders: an ownership
+  # change must never cascade-delete a role that owns grants.
+  deletionPolicy: Orphan
+  # `false`, matching ../ks.yaml: `wait: true` would make the parent app block
+  # on CNPG being healthy, which on a cold boot needs OpenBao, which needs this
+  # cluster.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substitute:
+      APP: ${APP}
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+      - name: cluster-versions
+        kind: ConfigMap
+      - name: shared-secrets
+        kind: Secret

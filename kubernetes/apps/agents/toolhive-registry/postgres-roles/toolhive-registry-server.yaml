@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+#
+# A NOLOGIN privilege-container role that exists solely so the ToolHive registry
+# server's FIRST migration can run as an unprivileged app role.
+#
+# WHY THIS EXISTS
+#
+# `thv-registry-api`'s `000001_init.up.sql` ends with:
+#
+#     DO $$
+#     BEGIN
+#         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'toolhive_registry_server') THEN
+#             CREATE ROLE toolhive_registry_server;
+#         END IF;
+#     END
+#     $$;
+#
+# followed by GRANTs and ALTER DEFAULT PRIVILEGES naming that role. It assumes
+# migrations run as something holding CREATEROLE. In this estate they do not:
+# `components/postgres` provisions app roles with `login: true` and nothing
+# else, deliberately. So migration 1 aborted with
+#
+#     ERROR: permission denied to create role
+#     DETAIL: Only roles with the CREATEROLE attribute may create roles.
+#     CONTEXT: SQL statement "CREATE ROLE toolhive_registry_server"
+#
+# golang-migrate marks the ledger dirty BEFORE running a migration, so the app
+# was left crash-looping on `Dirty database version 1. Fix and force version.`
+# with an empty database -- nothing from migration 1 had been committed.
+#
+# WHY PRE-CREATING IT IS THE RIGHT FIX
+#
+# The `IF NOT EXISTS` guard is the whole reason this works: with the role
+# already present the DO block is a no-op and the migration proceeds. Every
+# statement AFTER it is a GRANT or ALTER DEFAULT PRIVILEGES issued by the owner
+# of the objects being granted -- which the app role is -- and none of them
+# needs CREATEROLE.
+#
+# Verified rather than assumed: all 21 up-migrations from v1.3.0 were replayed
+# against this database inside a `BEGIN; SET ROLE "toolhive-registry"; ...
+# ROLLBACK;` transaction with this role pre-created. Every one applied clean.
+# Without it, migration 1 fails at the CREATE ROLE above.
+#
+# The alternatives were both worse. `components/postgres/superuser` hands the
+# app the whole server to work around one CREATE ROLE. A CREATEROLE attribute
+# is narrower but still lets the app mint roles forever, to satisfy a statement
+# that only ever runs once.
+#
+# NOLOGIN, and it stays that way. Nothing authenticates as this role -- it is a
+# grant target, and the registry server connects as `toolhive-registry`. It has
+# no password, so OpenBao's database secrets engine has nothing to rotate; it is
+# also not discovered by `stacks/system`, which reads app `ks.yaml` components
+# and not this file.
+#
+# HOW THIS GETS APPLIED. ../ks.yaml lists `components/postgres/roles` and hands
+# down its own path as POSTGRES_APP_PATH; that component emits a
+# `toolhive-registry-postgres-roles` Kustomization pointed at this directory
+# with `targetNamespace: database`. ../kustomization.yaml does NOT list this
+# directory, so there is exactly one owner -- see ./kustomization.yaml.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: toolhive-registry-server
+  annotations:
+    # Same policy as everything else here: an ownership change must never
+    # cascade-delete a role that owns grants.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  # UNDERSCORES, not hyphens. The object name above is hyphenated because
+  # Kubernetes requires it; `spec.name` is the actual PostgreSQL role and must
+  # match the literal in the migration exactly.
+  name: toolhive_registry_server
+  comment: "grant target for thv-registry-api migration 000001; no login"
+  ensure: present
+  login: false
+  superuser: false
+  databaseRoleReclaimPolicy: retain

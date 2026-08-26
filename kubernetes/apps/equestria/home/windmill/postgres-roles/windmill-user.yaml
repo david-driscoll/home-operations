@@ -1,0 +1,45 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/databaserole_v1.json
+#
+# One of the two NOLOGIN roles Windmill's own migrations expect to exist.
+# Windmill uses them as row-security principals: the application connects as
+# `windmill` (the database owner) and its RLS policies are written against
+# `windmill_user` and `windmill_admin`, so the roles are grant targets and
+# `SET ROLE` destinations, never login identities.
+#
+# THIS DECLARES A ROLE THAT ALREADY EXISTS. Both were created by hand and have
+# been live and undeclared -- the only trace of them anywhere in the repo was a
+# line in docs/postgres-credentials/PLAN.md noting the phase-4 audit left them
+# "untouched". That is drift: nothing recreates them after a restore, and
+# nothing records what they are supposed to look like.
+#
+# The attributes below are a transcription of the live role, not a design.
+# A DatabaseRole ADOPTS an existing role and forces every attribute to match
+# the manifest, so getting one wrong is a silent privilege change rather than
+# an error. Read on 2026-08-26 from the primary:
+#
+#   rolname       | super | inherit | createrole | createdb | login | repl | bypassrls | connlimit
+#   windmill_user | f     | t       | f          | f        | f     | f    | f         | -1
+#
+# and it is a member of nothing.
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: windmill-user
+  annotations:
+    # Never prune a role that owns grants -- dropping it would cascade into
+    # every RLS policy naming it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  cluster:
+    name: postgres
+  # UNDERSCORES. The object name is hyphenated because Kubernetes requires it;
+  # this is the actual PostgreSQL role and must match the literal in Windmill's
+  # migrations and RLS policies exactly.
+  name: windmill_user
+  comment: "windmill row-security principal; no login"
+  ensure: present
+  login: false
+  superuser: false
+  inherit: true
+  databaseRoleReclaimPolicy: retain
