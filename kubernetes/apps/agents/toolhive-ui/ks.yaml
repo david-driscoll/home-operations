@@ -41,9 +41,6 @@ spec:
     # have different lifecycles and no shared schema, and the component makes a
     # database cheap -- sharing one would only couple two unrelated migrations.
     - ../../../components/postgres
-    # See ../toolhive-registry/ks.yaml: `rotate` is what keeps the password out
-    # of sops.
-    - ../../../components/postgres/rotate
   postBuild:
     substitute:
       APP: *app
