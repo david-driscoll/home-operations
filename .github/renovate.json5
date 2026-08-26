@@ -207,14 +207,36 @@
       // docker.io/library/postgres matched no rule at all, and an unguarded major
       // silently broke the OpenBao break-glass restore drill, which nothing
       // noticed because that drill only runs on the 1st of the month.
-      description: "CloudNative-PG Cluster",
-      groupName: "CloudNative-PG Cluster",
-      matchPackageNames: [
-        "ghcr.io/cloudnative-pg/postgresql"
+      //
+      // Second correction, this one to the fix itself: the rule that landed here
+      // was a verbatim copy of the grouping rule above — same description, same
+      // groupName, same body, no `matchUpdateTypes`/`enabled`. So the comment
+      // described a guard that still did not exist, in a block that looked like
+      // it implemented one. This is that guard, for real.
+      //
+      // `enabled: false` DROPS the update rather than parking it on the
+      // dashboard (see the pinDigest rule below for why: matchUpdateTypes is a
+      // post-lookup matcher, so the update is generated and then filtered out).
+      // That is deliberate — a Postgres major has to be driven by a written
+      // migration, so there is nothing useful for a dashboard entry to offer.
+      //
+      // Both spellings of the library image are listed because the depName is
+      // whatever the manifest wrote: the compose files say
+      // `docker.io/library/postgres`, but a bare `postgres:` in any future
+      // Dockerfile or compose entry would extract as `postgres`.
+      description: "Never propose a Postgres major — PGDATA is bound to it",
+      matchDatasources: [
+        "docker"
       ],
-      group: {
-        commitMessageTopic: "{{{groupName}}} group",
-      },
+      matchPackageNames: [
+        "ghcr.io/cloudnative-pg/postgresql",
+        "docker.io/library/postgres",
+        "postgres"
+      ],
+      matchUpdateTypes: [
+        "major"
+      ],
+      enabled: false,
     },
     {
       description: "Spegel Group",
