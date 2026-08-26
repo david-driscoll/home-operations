@@ -24,10 +24,56 @@ spec:
   ensure: present
   allowConnections: true
   databaseReclaimPolicy: retain
+  # ONLY `public`. A new database gets no schema named after its role, so
+  # `public` is the default home -- and that is the entire fix.
+  #
+  # WHY. PostgreSQL's default `search_path` is `"$user", public`, and it has
+  # never been changed on this cluster (`pg_settings.source = default`, no
+  # `ALTER DATABASE ... SET` anywhere). The `$user` element is dormant and
+  # harmless for exactly as long as no schema matches the role name -- and it
+  # ARMS ITSELF the instant one does. Every role here is named after its
+  # database, so declaring `${APP}` made `$user` resolve for every app at once,
+  # and that schema then took precedence over `public` for every unqualified
+  # name. There is no configuration change to find and nothing in a diff to
+  # review: the trigger was schema creation, and the shadowing followed silently.
+  #
+  # WHAT IT COST. An app already running against `public` keeps its old tables
+  # there while its next migration resolves `CREATE TABLE foo` to `${APP}.foo`
+  # and builds a second, emptier copy. On equestria pinepods (13 duplicated
+  # table names), pulsarr (26) and tandoor (95) had diverged with real data on
+  # BOTH sides, surfacing as
+  #
+  #   ERROR 42703  column "episodecount" of relation "Playlists" does not exist
+  #
+  # while `public."Playlists"` had that column and the rows. immich was worse
+  # and quieter: four audit trigger functions were `CREATE OR REPLACE`d into the
+  # `immich` schema instead of replacing the `public` originals, so the triggers
+  # -- bound to `public` -- kept running pre-update bodies for about seven weeks
+  # with no error ever raised. A shadowed schema can break behaviour without
+  # failing.
+  #
+  # REMOVING AN ENTRY HERE DOES NOT DROP THE SCHEMA, and that is what makes this
+  # safe to land. CNPG's database reconciler only acts on entries it is given:
+  # `present` creates, `absent` drops, and an undeclared schema is left alone --
+  # there is no prune. Verified against a live database on 1.30.0: removing this
+  # entry reconciled to `applied: true` with the schema, and an undeclared
+  # schema beside it, both still present.
+  #
+  # So the apps that already live inside their role-named schema -- coder,
+  # crowdsec, freshrss, grafana, openbao, and now pulsarr and tandoor -- keep
+  # working untouched. They simply stop being managed from here. `ensure:
+  # absent` would be the wrong tool by a wide margin: it would DROP the schema
+  # and every table those apps own.
+  #
+  # `search_path` cannot be pinned from here as a second line of defence --
+  # `DatabaseRole` has no field for `ALTER ROLE ... SET` and `Database` has no
+  # SQL hook (extensions, fdws, servers and schemas are the only object lists in
+  # the 1.30.0 CRDs). A new database does not need one: with no schema named
+  # after the role, `$user` has nothing to resolve to and the path falls through
+  # to `public` on its own. The pins that DO exist on the live cluster are
+  # documented in ../AGENTS.md, along with the fact that they are not
+  # reproducible from git.
   schemas:
     - ensure: present
       name: public
-      owner: ${APP}
-    - ensure: present
-      name: ${APP}
       owner: ${APP}
