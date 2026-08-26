@@ -127,6 +127,18 @@ cluster:
       # configured from Pulumi. Database is `postgres`, not an app database:
       # the engine connects to the maintenance database to ALTER other roles.
       - hostssl postgres baoadmin all cert
+      # PHASE 2.4b. No longer inert: this closes the password path entirely.
+      #
+      # The rules above only ever matched SSL connections, so a NON-SSL
+      # connection as openbao still fell through to CNPG's
+      # `host all all all scram-sha-256` catch-all and authenticated with a
+      # password. With the role's password now NULL that would fail anyway --
+      # this makes it fail at the pg_hba layer instead, and makes the intent
+      # explicit rather than incidental.
+      #
+      # Ordering is safe: hostssl and hostnossl are disjoint, and both sit ahead
+      # of the catch-all.
+      - hostnossl openbao openbao all reject
     pg_ident: []
     shared_preload_libraries: []
     ldap: {}
