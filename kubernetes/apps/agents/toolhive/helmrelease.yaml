@@ -41,10 +41,31 @@ spec:
   install:
     createNamespace: true
     replace: true
+    # DO NOT REMOVE. This release renders exactly one custom resource, and Helm
+    # cannot assess it: with wait enabled it blocks until the object looks
+    # Ready, never concludes, and times out after 10m --
+    #
+    #   timeout waiting for: [MCPExternalAuthConfig/agents/toolhive
+    #                         status: 'Terminating']
+    #
+    # which is a DEADLOCK, not a slow start. The timeout fires install
+    # remediation, remediation uninstalls, the uninstall's delete is refused by
+    # the operator's finalizer because ../toolhive-docs still references the
+    # object ("Cannot delete: referenced by workloads: [{MCPServer
+    # toolhive-docs}]"), and the CR sits Terminating while Helm retries forever.
+    # Recovering needs the consumer removed by hand.
+    #
+    # Nothing is lost by not waiting. Readiness here is the ToolHive operator's
+    # business -- it publishes Valid/DeletionBlocked conditions on the CR -- and
+    # ordering is already expressed by the MCPServer's dependsOn chain.
+    disableWait: true
     remediation:
       retries: 7
   upgrade:
     cleanupOnFail: true
+    # Same reasoning as install.disableWait above; an upgrade would wedge
+    # identically.
+    disableWait: true
     remediation:
       retries: 7
       strategy: rollback
