@@ -9,8 +9,8 @@
 # live text and will execute what they find there. That is what
 # scripts/eso-values-lint checks for.
 #
-# WHY THE WHOLE upstreamProviders LIST IS HERE and not just the issuer: Flux
-# merges maps recursively but REPLACES lists outright, so a list that appears on
+# WHY THE WHOLE upstreamProviders LIST IS HERE and not just the endpoints: Flux
+# merges maps recursively but REPLACES lists outright, so a list appearing on
 # both sides would lose one of them. It lives wholly on this side.
 rawResources:
   authserver:
@@ -19,22 +19,42 @@ rawResources:
         embeddedAuthServer:
           upstreamProviders:
             - name: authentik
-              type: oidc
-              oidcConfig:
-                # NOT known at commit time and NOT reconstructable. authentik's
-                # application slug is generated -- components/authentik.ts builds
-                # it with a RandomPet suffix -- so the issuer reads like
-                # .../application/o/equestria-agents-toolhive-jay/ and changes if
-                # the application is ever recreated. The CRD takes it as a plain
-                # string with no secret-ref form, which is why this fragment
-                # exists at all.
-                #
-                # Trailing slash preserved: this is the value authentik reports
-                # as `issuer` in its own discovery document, and an OIDC client
-                # compares the two literally.
-                issuerUrl: '{{ .oidc_issuer }}'
+              # `oauth2`, NOT `oidc`, and the difference is one field:
+              # allowPrivateIPs exists on oauth2Config and has no equivalent on
+              # oidcConfig. authentik answers on authentik.<domain>, which
+              # Technitium's split horizon resolves to an RFC-1918 address from
+              # inside the cluster, and ToolHive's HTTP client refuses private
+              # targets for an upstream IdP:
+              #
+              #   failed to discover OIDC endpoints: dial tcp 10.x.x.x:443:
+              #   the provided URL redirects to a private IP address
+              #
+              # The guard is there to stop a SERVER-SUPPLIED url reaching cloud
+              # metadata endpoints. This issuer is operator-supplied and pinned
+              # below, so widening it for this one upstream is the narrow fix.
+              # The alternative, INSECURE_DISABLE_URL_VALIDATION on the proxy
+              # Deployment, drops scheme validation pod-wide and does not even
+              # cover this path -- one of the two client builders ignores it for
+              # private IPs (pkg/networking/http_client.go).
+              type: oauth2
+              oauth2Config:
+                allowPrivateIPs: true
+                # Pinned rather than discovered, which is what dropping `oidc`
+                # costs. Cheap here: unlike the issuer, authentik's authorize,
+                # token and userinfo endpoints are GLOBAL, not per-application,
+                # so they carry no generated slug and cannot drift. They still
+                # come from the store rather than being typed in, so a future
+                # authentik move needs no edit here.
+                authorizationEndpoint: '{{ .oidc_authorization_url }}'
+                tokenEndpoint: '{{ .oidc_token_url }}'
+                userInfo:
+                  # No fieldMapping: authentik emits standard OIDC claim names
+                  # (sub, name, email), which is what ToolHive assumes when this
+                  # is nil. Identity comes from this call now rather than from a
+                  # discovered id_token.
+                  endpointUrl: '{{ .oidc_userinfo_url }}'
                 # Pinned in definition.yaml, so it IS knowable -- carried here
-                # only because it shares the list with issuerUrl.
+                # only because it shares the list with the endpoints above.
                 clientId: '{{ .oidc_client_id }}'
                 clientSecretRef:
                   name: toolhive-oidc
