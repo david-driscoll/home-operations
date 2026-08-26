@@ -1,0 +1,165 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app degoog
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 5
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the controller, which is the only place it does anything -- this
+          # is what makes the 30-day OpenBao password rotation reach the pod.
+          # See components/postgres/AGENTS.md.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Single replica against one ReadWriteOnce volume: a rolling update
+        # would deadlock on the PVC.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/degoog-org/degoog
+              tag: 0.24.0@sha256:79409f76137734baa0516a58def96e4d3842f6db26d813e75365dea8a00974e9
+              pullPolicy: IfNotPresent
+            # The image's ENTRYPOINT is deliberately bypassed. entrypoint.sh
+            # runs `mkdir -p /app/data`, `chown -R $PUID:$PGID /app/data` and
+            # then `su-exec` -- all three of which need to start as root, and
+            # the image config sets no USER, so the container would run as uid
+            # 0 until su-exec dropped it.
+            #
+            # `fsGroup` below already makes the mounted PVC group-writable by
+            # 1000, so the chown has nothing left to do. Calling bun directly
+            # is the same command entrypoint.sh ends on, minus the privilege
+            # dance -- the same shape apps/agents/toolhive-valkey uses to skip
+            # its image's gosu wrapper.
+            #
+            # Safe to run without a writable HOME: the image sets
+            # BUN_RUNTIME_TRANSPILER_CACHE_PATH=0, so bun writes no cache.
+            command:
+              - bun
+              - run
+              - src/server/index.ts
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: &port 4444
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # /readyz, not /healthz: degoog answers /healthz as soon as
+                    # the HTTP server binds, and only flips /readyz once
+                    # markReady() runs at the end of boot -- which is after the
+                    # Postgres indexer adapter has connected.
+                    path: /readyz
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 12
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Extensions, engines and themes are installed by cloning into
+              # ${DEGOOG_DATA_DIR}, and git wants a writable working area
+              # outside the volume too.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          # Must agree with DEGOOG_DATA_DIR in externalsecret.yaml. Everything
+          # degoog persists -- server-settings.json (which holds the API
+          # secret and the instance identifier that namespaces the shared
+          # valkey cache), plugin settings, installed extensions, the
+          # blocklist, the indexer config -- lives under here.
+          - path: /app/data
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          # `search`, not `degoog`. TAILSCALE_HOST in ks.yaml carries the same
+          # name onto the tailnet.
+          - "search.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  # Network gate only, no authentik outpost -- see the note in
+                  # definition.yaml. A browser's address-bar search and the
+                  # OpenSearch descriptor cannot follow an auth redirect.
+                  name: local-user

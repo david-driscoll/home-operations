@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app degoog
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/degoog
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # DEGOOG_POSTGRES puts the indexer on Postgres instead of its bundled
+    # SQLite file, which is the documented way to run a busy instance.
+    - ../../../../components/postgres
+    # New app, so it starts where every migrated app ended up: OpenBao owns the
+    # password. There is no sops document to skip past -- passwords.sops.yaml
+    # holds only the cluster and superuser roles since #1177 -- so this is not
+    # optional for a fresh database, it IS the credential path.
+    #
+    # ⚠️ ORDER OF OPERATIONS, per components/postgres/rotate: this must be
+    # merged BEFORE the app appears in a `stacks/system` Pulumi run. Until that
+    # run creates `database/static-roles/degoog`, the ClusterGenerator reads a
+    # path that does not exist, ESO errors, and `deletionPolicy: Retain` holds
+    # whatever Secret exists. For a brand-new app there is no prior Secret to
+    # hold, so degoog simply will not start until the Pulumi run lands -- noisy
+    # and harmless, which is the intended direction. The reverse order is not.
+    #
+    # Preflighted the way freshrss was: reloader.stakater.com/auto sits on the
+    # controller in helmrelease.yaml, and the pod reads its credential out of
+    # the degoog-env Secret, so the 30-day rotation actually reaches it.
+    - ../../../../components/postgres/rotate
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 5Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The app is `degoog`; the address is `search`. Same split immich has
+      # between its name and `photos`. This names the tailnet device, which the
+      # component otherwise defaults to ${APP}.
+      TAILSCALE_HOST: search
