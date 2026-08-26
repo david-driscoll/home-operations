@@ -1,0 +1,128 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# ToolHive's own OAuth 2.0 authorization server, federating login to authentik.
+#
+# WHY A HELMRELEASE FOR ONE CUSTOM RESOURCE. The MCPExternalAuthConfig below was
+# a plain manifest until its `issuerUrl` turned out to be unknowable at commit
+# time: authentik's application slug is generated with a RandomPet suffix
+# (components/authentik.ts), so the issuer reads
+# `.../application/o/equestria-agents-toolhive-jay/` and moves if the
+# application is recreated. The CRD offers no secret-ref for it, and a per-app
+# `postBuild.substituteFrom` is replaced by the blanket patch rather than merged
+# -- checked by rendering it.
+#
+# app-template's `rawResources` renders an arbitrary manifest from Helm values,
+# which makes `valuesFrom` available, which is how coder/renovate-operator
+# solves the identical problem. ./resources/values.yaml holds the part that has
+# to come from the secret store; everything else stays reviewable here.
+#
+# WHY THE EMBEDDED SERVER AT ALL, rather than pointing MCP clients straight at
+# authentik. Two properties of authentik 2026.8.0, both read from its source:
+#
+#   1. DCR IS GATED. `DynamicClientRegistrationView` requires a Bearer token
+#      carrying the `goauthentik.io/oidc/dcr` scope and 401s without one. MCP
+#      clients register anonymously, so each would need pre-registering by hand.
+#   2. `aud` IS ALWAYS THE CLIENT ID. id_token.py and utils.py set
+#      `aud = provider.client_id` unconditionally, and there is no RFC 8707
+#      `resource` handling. ToolHive needs ONE static audience per server, which
+#      more than one client can never satisfy.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ${APP}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: false
+  uninstall:
+    keepHistory: false
+  valuesFrom:
+    # Merged FIRST, with spec.values layered on top recursively. The fragment
+    # carries the whole `upstreamProviders` list rather than just the issuer,
+    # because Flux replaces lists rather than merging them.
+    - kind: Secret
+      name: ${APP}-values
+      valuesKey: values.yaml
+  values:
+    # This release exists only to render the CR below. Left unset, the chart
+    # emits a default ServiceAccount named after the release, which nothing
+    # would ever mount -- an empty map suppresses it.
+    serviceAccount: {}
+    rawResources:
+      authserver:
+        # Without this the chart names the resource after the release plus the
+        # key -- `toolhive-authserver`. The MCPServer in ../toolhive-docs
+        # references this by the bare name `toolhive`.
+        forceRename: *app
+        manifest:
+          apiVersion: toolhive.stacklok.dev/v1beta1
+          kind: MCPExternalAuthConfig
+          spec:
+            type: embeddedAuthServer
+            embeddedAuthServer:
+              # Must equal the hostname clients actually reach: it goes into the
+              # `iss` claim and into every URL the discovery document
+              # advertises. No trailing slash -- the CRD pattern rejects one
+              # (RFC 8414). Unlike the UPSTREAM issuer in the values fragment,
+              # this one is ours and is therefore knowable.
+              #
+              # The auth server's routes (/oauth/*, the two .well-known
+              # discovery documents, /.well-known/jwks.json) are served by the
+              # same process and port as the MCP proxy, so ../toolhive/httproute.yaml's
+              # single `/` rule already carries them.
+              issuer: https://${APP}.${ROOT_DOMAIN}
+
+              # upstreamProviders comes from ./resources/values.yaml via
+              # valuesFrom above -- see the note there.
+
+              # Deliberately NARROW. Every client that registers through
+              # /oauth/register gains the right to request everything listed
+              # here whatever it asked for, so a privileged scope would be
+              # handed to Claude Code, Cursor and VS Code alike.
+              baselineClientScopes:
+                - openid
+                - offline_access
+
+              storage:
+                # NOT the `memory` default: in memory, DCR registrations and
+                # live sessions die with the pod, which on this cluster is every
+                # Low Power window.
+                type: redis
+                redis:
+                  # ../toolhive-valkey, this namespace's own instance -- NOT the
+                  # shared `database/valkey`. That one has no password, and
+                  # `aclUserConfig` is REQUIRED on this CRD, so it could not be
+                  # used even setting aside that seven other apps can read it.
+                  addr: toolhive-valkey.${NAMESPACE}.svc.cluster.local:6379
+                  aclUserConfig:
+                    passwordSecretRef:
+                      name: toolhive-valkey
+                      key: password
+
+              # See ./externalsecret.yaml for why neither may be omitted and for
+              # the commands that create them -- both `-pkeyopt` flags on the
+              # signing key are load-bearing.
+              signingKeySecretRefs:
+                - name: ${APP}-authserver-keys
+                  key: signing.pem
+              hmacSecretRefs:
+                - name: ${APP}-authserver-keys
+                  key: hmac
