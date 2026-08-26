@@ -16,7 +16,7 @@ namespace, where the CNPG `Cluster` lives:
 | Object | Name | Purpose |
 | --- | --- | --- |
 | `DatabaseRole` | `${APP}` | the login role (CNPG >= 1.30), with **no** `passwordSecret` |
-| `Database` | `${APP}` | the database, with `public` and `${APP}` schemas |
+| `Database` | `${APP}` | the database, with a `public` schema and **no** schema named after the role |
 | `ExternalSecret` | `${APP}-postgres` | the credential Secret apps read back |
 | `ExternalSecret` | `${APP}-postgres-conn` | connection metadata, derived not stored |
 | `ClusterGenerator` | `${APP}-postgres-rotation` | reads `database/static-creds/${APP}` from OpenBao |
@@ -173,3 +173,75 @@ single and bare all render identically.
   `substituteFrom` are spelled out in `ks.yaml`; `common` is applied by the umbrella
   kustomization and never sees this object. If you add a new cluster-wide substitution source,
   add it there too.
+
+## Schemas, `search_path`, and why `public` is the default
+
+**A new database gets `public` and nothing else.** Do not add a schema named after the role.
+
+PostgreSQL's default `search_path` is `"$user", public`, and it has never been customised on
+this cluster — `pg_settings` reports `source = default`, and there are no `ALTER DATABASE ...
+SET` overrides. The `$user` element is dormant and completely harmless for exactly as long as
+no schema matches the role name. It **arms itself the instant one exists**, and every role
+this component creates is named after its database.
+
+That is why the failure had no configuration change behind it and nothing in a diff to review.
+Declaring a `${APP}` schema made `$user` resolve for every app at once, and the schema then
+shadowed `public` for every unqualified name. An app already running against `public` kept its
+old tables there while its next migration resolved `CREATE TABLE foo` to `${APP}.foo` and built
+a second, emptier copy — so it looked like the app had lost its history, and column drift
+between the copies surfaced as things like `column "episodecount" of relation "Playlists" does
+not exist`.
+
+**It can also break behaviour without ever raising an error.** immich had four audit trigger
+functions `CREATE OR REPLACE`d into its `immich` schema instead of replacing the `public`
+originals. The triggers stayed bound to `public`, so the intended update never took effect and
+immich ran pre-update trigger bodies for roughly seven weeks, silently. Treat "no errors" as no
+evidence at all.
+
+### Removing a schema entry does not drop the schema
+
+CNPG's database reconciler only acts on the entries it is given: `present` creates, `absent`
+drops, and an **undeclared schema is left alone — there is no prune.** Verified against a live
+database on CNPG 1.30.0: removing an entry reconciled to `applied: true` with the schema, and
+an undeclared schema beside it, both still present.
+
+This is what lets `public` become the default without disturbing the apps that already live
+inside their role-named schema. `ensure: absent` is the wrong tool and would drop the schema
+along with every table in it.
+
+### Two other CNPG behaviours worth knowing
+
+- **CNPG will not recreate a database that disappears underneath it.** It gates on
+  `observedGeneration == generation` and no-ops, even though `ensure: present`. Force a
+  reconcile by bumping the generation — toggling `spec.allowConnections` false then true works.
+- `DROP DATABASE` cannot run inside a transaction block, so `psql -c "a; b; c"` fails. One
+  `-c` per statement.
+
+### The live pins are NOT reproducible from git
+
+`DatabaseRole` has no field for `ALTER ROLE ... SET`, and `Database` has no SQL hook —
+`extensions`, `fdws`, `servers` and `schemas` are the only object lists in the 1.30.0 CRDs. So
+the explicit `search_path` pins below exist **only in the live cluster**. A cluster rebuild, or
+a restore into a fresh cluster, comes back with the default `"$user", public`.
+
+| Pin | Roles |
+| --- | --- |
+| `public` | forgejo, immich, n8n, pinepods, romm, vikunja, windmill |
+| `<app>, public` | coder, crowdsec, freshrss, grafana, openbao, pulsarr, tandoor |
+| none yet | degoog, keeper, questarr, toolhive-registry, toolhive-ui |
+
+Two of those are load-bearing, not stylistic:
+
+- **pinepods MUST be pinned to `public`.** Its migration runner checks whether a table exists
+  against `public` but issues an *unqualified* `CREATE TABLE`. Give it a role-schema home and
+  it logs "Creating missing RssKeys table" and then dies on `relation "RssKeys" already exists`,
+  on every start.
+- **immich MUST be pinned to `public`.** Its migration ledger (`kysely_migrations`) and all
+  eight extensions live there, and its 18 role-schema tables were consolidated back into
+  `public` on 2026-08-26.
+
+Nothing has been built to make these reproducible. The options, cheapest first: one idempotent
+CronJob beside the cluster in `kubernetes/apps/database/postgres/app/` that loops every
+`Database` CR and applies the `ALTER`; a per-app Job rendered by this component (one per app,
+and Job specs are immutable so re-running needs a name-version bump); or a Pulumi PostgreSQL
+provider, which `stacks/system/postgres-rotation.ts` deliberately avoids.
