@@ -1,0 +1,65 @@
+---
+# No `yaml-language-server: $schema=` line: toolhive.stacklok.dev is not
+# published by CRDs-catalog or kubernetes-schemas. Same as the other CRs here.
+#
+# The MCP catalogue, and the backend ../toolhive-ui cannot run without: the UI's
+# API_BASE_URL points at the `toolhive-registry-api` Service the operator
+# creates from this object (name is `<registry>-registry-api`, port 8080).
+#
+# `configYAML` is passed through UNPARSED -- the operator makes a ConfigMap of
+# it and mounts it at /config/config.yaml; validating it is the registry
+# server's job. So a typo in here surfaces as a crash-looping registry-api pod,
+# not as a rejected CR.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRegistry
+metadata:
+  name: ${APP}
+spec:
+  displayName: ToolHive Registry
+  # The operator mounts this Secret's pgpass file for the registry-api
+  # container. It is a DEDICATED field rather than a plain volume because libpq
+  # rejects a pgpass that is not mode 0600, and a Kubernetes secret volume
+  # mounts root-owned while registry-api runs as UID 65532 -- the operator's
+  # init container copies and chmods it. The key comes from the estate's
+  # postgres component, which already emits a ready-made `pgpass`.
+  pgpassSecretRef:
+    name: ${APP}-postgres
+    key: pgpass
+  configYAML: |
+    # Catalogue source. The upstream ToolHive catalogue, re-synced every 30m --
+    # this is a mirror, not a source of truth, so nothing here needs backing up.
+    sources:
+      - name: toolhive
+        git:
+          repository: https://github.com/stacklok/toolhive-catalog.git
+          branch: main
+          path: pkg/catalog/toolhive/data/registry-upstream.json
+        syncPolicy:
+          interval: '30m'
+    registries:
+      - name: default
+        sources: ['toolhive']
+    # `anonymous`, and deliberately so. This API is reachable only from inside
+    # the cluster -- it has no HTTPRoute of its own, and the only client is
+    # ../toolhive-ui, which does its OWN authentik login before it ever calls
+    # here. Adding auth at this layer would mean a second credential to manage
+    # for no boundary that is not already enforced.
+    auth:
+      mode: anonymous
+    database:
+      # Literal, not templated: the CNPG read-write Service name is identical
+      # estate-wide (see components/postgres/database/connection.yaml), and
+      # configYAML lands in a ConfigMap where a credential must never go. The
+      # PASSWORD arrives out of band through pgpassSecretRef above -- that split
+      # is the whole reason the field exists.
+      host: postgres-rw.database.svc.cluster.local
+      port: 5432
+      # Both are `${APP}`: the postgres component names the database and the
+      # login role after the app.
+      user: ${APP}
+      database: ${APP}
+      # CNPG serves TLS on the read-write Service, and `require` is the registry
+      # server's own default -- restated because a silent downgrade to plaintext
+      # inside the cluster is exactly the kind of thing worth being explicit
+      # about.
+      sslMode: require

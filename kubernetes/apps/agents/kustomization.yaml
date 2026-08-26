@@ -34,3 +34,7 @@ resources:
   - ./toolhive-valkey/ks.yaml
   - ./toolhive/ks.yaml
   - ./toolhive-docs/ks.yaml
+  # The human-facing half: a catalogue API and the UI over it. Independent of
+  # the MCP gateway above -- nothing in the serving path depends on these.
+  - ./toolhive-registry/ks.yaml
+  - ./toolhive-ui/ks.yaml
