@@ -112,7 +112,93 @@ spec:
               limits:
                 memory: 2Gi
 
+          # A degoog TRANSPORT backend -- how the server makes an outgoing
+          # request for engines that block plain fetch. FlareSolverr runs a
+          # real Chrome and solves Cloudflare's interstitial.
+          #
+          # A sidecar rather than its own app, deliberately: degoog is the only
+          # consumer in the estate (nothing else here has ever had a
+          # FlareSolverr), and same-pod means the transport URL is
+          # `http://127.0.0.1:8191/v1` with no Service, no route and no way in
+          # from outside the pod. A container OOM restarts only this container.
+          #
+          # ⚠️ THE EXTENSION IS NOT DEPLOYED BY THIS FILE. degoog transports are
+          # Store extensions installed at runtime into ${DEGOOG_DATA_DIR}. This
+          # only provides the backend; installing "FlareSolverr" from the Store
+          # and pasting the URL above into its settings is a settings-page step.
+          flaresolverr:
+            image:
+              repository: ghcr.io/flaresolverr/flaresolverr
+              tag: v3.5.0@sha256:139dfee1c6f89249c8d665d1333a42e8ec74ec0a86bc6bb1c8461e10d3a66a47
+              pullPolicy: IfNotPresent
+            # Plain env, NOT `envFrom: degoog-env`. That Secret carries
+            # DEGOOG_POSTGRES with the database password in it, and there is no
+            # reason for a browser sandbox to hold a credential it never uses.
+            env:
+              TZ: "${TIMEZONE}"
+              LOG_LEVEL: info
+              LOG_HTML: "false"
+              HOST: "0.0.0.0"
+              # Quoted, and deliberately NOT the YAML anchor the probes below
+              # use. An env value must be a string, while `httpGet.port` is an
+              # IntOrString where a STRING means a named port -- so one shared
+              # anchor cannot be correct for both, and whichever type it took
+              # would silently break the other end.
+              PORT: "8191"
+              # Explicit. The default is already none, but a captcha solver is
+              # the one setting here that would send page content to a third
+              # party, so it is worth being unambiguous about.
+              CAPTCHA_SOLVER: none
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # No dedicated health route -- `/` is the readiness
+                    # endpoint and answers {"msg":"FlareSolverr is ready!"}.
+                    path: /
+                    port: &flaresolverr-port 8191
+                  # Chrome takes a while to come up on first start.
+                  initialDelaySeconds: 60
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *flaresolverr-port
+                  initialDelaySeconds: 20
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 12
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Chrome writes profiles and crash dumps under /app.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 50m
+                memory: 384Mi
+              limits:
+                # Chrome is the whole workload here; a challenge-solving run
+                # spikes well above idle.
+                memory: 1536Mi
+
     defaultPodOptions:
+      # 1000 suits BOTH containers, which is luck worth writing down rather
+      # than relying on: degoog's base is oven/bun (user `bun`, uid 1000) and
+      # FlareSolverr's Dockerfile runs a bare `useradd flaresolverr` on
+      # python:3.11-slim, which takes the first free id -- also 1000. The
+      # numeric value is load-bearing for a second reason: FlareSolverr's image
+      # declares USER by NAME, and with `runAsNonRoot: true` and no numeric
+      # override the kubelet refuses to start it ("has non-numeric user
+      # (flaresolverr), cannot verify user is non-root").
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -130,6 +216,27 @@ spec:
           # valkey cache), plugin settings, installed extensions, the
           # blocklist, the indexer config -- lives under here.
           - path: /app/data
+
+      # Kubernetes gives a container 64Mi of /dev/shm, and Chrome uses shared
+      # memory for its renderer surfaces. Past that it does not degrade, it
+      # crashes -- the classic mid-challenge tab death that reads as a
+      # FlareSolverr timeout rather than an out-of-space error. This is the
+      # `shm_size: 2gb` line every FlareSolverr compose file carries.
+      #
+      # 512Mi, not 2Gi: `medium: Memory` counts against the CONTAINER's memory
+      # limit, so a larger one could be filled to push flaresolverr past its
+      # 1536Mi and OOM it. 512Mi is far above what a single Chrome needs and
+      # still leaves the limit headroom.
+      dev-shm:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 512Mi
+        # advancedMounts, not globalMounts: degoog has no use for it, and a
+        # tmpfs on degoog's /dev/shm would count against ITS limit too.
+        advancedMounts:
+          degoog:
+            flaresolverr:
+              - path: /dev/shm
 
     service:
       *app :
