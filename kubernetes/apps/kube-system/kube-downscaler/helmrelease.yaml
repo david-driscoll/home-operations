@@ -116,16 +116,31 @@ spec:
       #           entries survived, `coder`/`database` untouched. Replica counts and
       #           CronJob suspend flags byte-identical before and after, cluster-wide.
       #
-      # Removing it does NOT make this controller start acting. Scope is opt-out but
-      # ACTION is inert: with no DEFAULT_UPTIME/DEFAULT_DOWNTIME set, upstream defaults
-      # are `always`/`never`, so nothing is scaled until a namespace carries
-      # `downscaler/force-downtime`. What changes is that the toggle now works -- which
-      # is the point, and is also why a mistyped `kubectl annotate` is no longer
-      # harmless. That is what `excludedNamespaces` below is for.
+      # CORRECTED 2026-08-26. This paragraph used to read "ACTION is inert: with no
+      # DEFAULT_UPTIME/DEFAULT_DOWNTIME set ... nothing is scaled until a namespace
+      # carries `downscaler/force-downtime`". That stopped being true the moment
+      # `--default-downtime` was added six lines above: it applies to EVERY namespace
+      # not in `excludedNamespaces`, annotated or not.
+      #
+      # Proof, not inference: `garage-system` carries no downscaler annotation of any
+      # kind, and its operator Deployment was still found at `replicas: 0` with
+      # `downscaler/original-replicas=1`.
+      #
+      # So `excludedNamespaces` below is NOT belt-and-braces against a mistyped
+      # `kubectl annotate`. It is the only thing standing between a namespace and a
+      # nightly seven-hour shed.
 
     # Tier 0 and Tier 1 (docs/cluster-consolidation/20-low-power-tier.md §1) can never be
-    # shed. They are never annotated with force-downtime either, so this list is
-    # belt-and-braces — its job is to make a mistyped `kubectl annotate` inert.
+    # shed. Membership here is what keeps them up -- see the corrected note above: with
+    # `--default-downtime` set, everything absent from this list is shed nightly whether
+    # or not anyone annotates it.
+    #
+    # BEFORE ADDING A NAMESPACE THAT RUNS AN OPERATOR, check whether it backs an
+    # admission webhook with `failurePolicy: Fail`. A webhook whose Service loses its
+    # endpoints does not fail soft -- it rejects every matching API call cluster-wide for
+    # the whole window. Audited 2026-08-26: cert-manager, cloudnative-pg, kube-system,
+    # longhorn-system and system-upgrade all host fail-closed webhooks and are all
+    # already listed.
     excludedNamespaces:
       - py-kube-downscaler
       - kube-downscaler
@@ -140,6 +155,26 @@ spec:
       - network
       - stargate-command
       - tailscale-system
+      # ADDED 2026-08-26, after a nightly shed of this namespace blocked PVC creation
+      # ACROSS THE WHOLE CLUSTER for seven hours.
+      #
+      # garage-operator backs 14 `failurePolicy: Fail` webhooks. Thirteen only touch
+      # Garage's own CRs, but `vmanagedpvcfinalizer.kb.io` matches
+      # `persistentvolumeclaims` at `scope: *` with an empty namespaceSelector -- so
+      # with the operator at zero replicas, EVERY PersistentVolumeClaim in the cluster
+      # fails admission:
+      #
+      #   Error saving claim: failed calling webhook "vmanagedpvcfinalizer.kb.io":
+      #   no endpoints available for service "garage-operator-webhook"
+      #
+      # It went unnoticed for ~40h because nothing else happened to create a PVC inside
+      # a Low Power window. `garage-system` was created after the two dry-run scans
+      # above, which is why it was never on this list.
+      #
+      # Excluding only the operator's namespace is deliberate: the garage-storage
+      # StatefulSets stay shed with the rest of Tier 2, since they serve data rather
+      # than admit API calls.
+      - garage-system
       # Tier 1 by 24 §1's amendment — these stay up during Battery.
       - observability
       - pulumi
