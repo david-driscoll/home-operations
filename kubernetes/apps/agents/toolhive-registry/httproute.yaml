@@ -3,11 +3,10 @@
 #
 # `mcp.agents.${ROOT_DOMAIN}` -- the catalogue API.
 #
-# The backend Service is built by the operator from ../toolhive-registry's
-# MCPRegistry, named `<registry-name>-registry-api` and served on 8080
-# (RegistryAPIPort in the operator source). Like every other operator-built
-# Service in this namespace it does not exist in Git, so this route sits with an
-# unresolved backendRef until the registry reconciles.
+# The backend Service comes from ./helmrelease.yaml now, not from the operator.
+# It was `<registry-name>-registry-api` while this was an MCPRegistry; the chart
+# names it after the release, pinned to `${APP}` by `fullnameOverride`. Unlike
+# the operator-built Services elsewhere in this namespace, this one IS in Git.
 #
 # ../toolhive-ui does NOT reach the registry through here -- it uses the
 # in-cluster Service directly over API_BASE_URL, which avoids a pointless
@@ -33,7 +32,7 @@ spec:
     - "mcp.agents.${ROOT_DOMAIN}"
   rules:
     - backendRefs:
-        - name: ${APP}-registry-api
+        - name: ${APP}
           port: 8080
       filters:
         - type: ExtensionRef
@@ -44,7 +43,7 @@ spec:
             # the error-pages middleware would replace a non-200 body with HTML.
             #
             # AND IT IS THE ONLY ACCESS CONTROL HERE. The registry runs
-            # `auth.mode: anonymous` (see ./mcpregistry.yaml), so anything that
+            # `auth.mode: anonymous` (see ./helmrelease.yaml), so anything that
             # can reach this hostname can read the whole catalogue. That is a
             # deliberate trade rather than an oversight -- the contents are a
             # mirror of the PUBLIC upstream ToolHive catalogue, re-synced from
