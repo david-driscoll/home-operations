@@ -59,16 +59,21 @@ spec:
   databaseRoleReclaimPolicy: retain
   clientCertificate:
     enabled: true
-  # NO passwordSecret, and deliberately no `disablePassword: true` either.
+  # PHASE 2.4b: the rollback is now deliberately gone.
   #
-  # Omitting passwordSecret means the instance manager stops managing this
-  # role's password — the docs are explicit that with no passwordSecret it will
-  # not CREATE/ALTER the role with one. The password already in PostgreSQL is
-  # left alone, unmanaged.
+  # Still no passwordSecret -- the instance manager does not manage this role's
+  # password. `disablePassword: true` goes further and ALTERs the password to
+  # NULL, so there is nothing to fall back to and no way back without a manual
+  # ALTER ROLE. That is the intent, not a side effect.
   #
-  # That is the rollback, and it is why `disablePassword: true` is NOT set here.
-  # Setting it would ALTER the role's password to NULL, and combined with the
-  # sops document still being in git that is the difference between "revert one
-  # line and OpenBao is back on passwords" and "no way back without a manual
-  # ALTER ROLE". It belongs in the post-soak hardening step alongside
-  # `hostnossl openbao openbao all reject`.
+  # Taken only after the cert path soaked. All three replicas have run 31h on a
+  # password-free connection_url and they STARTED on it -- the pods were created
+  # 90 minutes after the certificate Secret existed, so that is a cold-start
+  # proof rather than a long-lived connection that merely survived. Postgres
+  # reports all six openbao backends on TLSv1.3.
+  #
+  # The prerequisite is done too: openbao-replica's nightly pg_dump moved onto
+  # the same certificate, and a manually triggered run shipped
+  # openbao-20260826-034528.sql.age before this landed. Without that, NULLing
+  # the password breaks the backup at 03:00 rather than at merge.
+  disablePassword: true
