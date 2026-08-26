@@ -36,7 +36,7 @@ Anything that is not a string is a **sibling component**, not a variable:
 | --- | --- |
 | `../../components/postgres/superuser` | `DatabaseRole.spec.superuser: true` — used by `immich` only |
 | `../../components/postgres/client-cert` | certificate auth instead of a password |
-| `../../components/postgres/roles` | extra roles beyond the app's login role, from `kubernetes/apps/database/postgres/roles/${APP}/` |
+| `../../components/postgres/roles` | extra roles beyond the app's login role, from the app's own `postgres-roles/` |
 
 ### Extra roles
 
@@ -49,17 +49,37 @@ ERROR:  permission denied to create role
 CONTEXT: SQL statement "CREATE ROLE toolhive_registry_server"
 ```
 
-The component emits a second nested Kustomization, `${APP}-postgres-roles`, rendering
-`kubernetes/apps/database/postgres/roles/${APP}/` into the `database` namespace. `${APP}` in
-`spec.path` is substituted by the parent app Kustomization — postBuild substitution is textual
-over the whole rendered output — which is what lets one shared component point each app at its
-own directory with no extra substitution.
+**The manifests live next to the app**, in `<app-dir>/postgres-roles/` — they are that app's
+business, they change when its migrations change, and a reviewer looking at the app sees them
+without going anywhere else. The component emits a second nested Kustomization,
+`${APP}-postgres-roles`, that reads that directory and targets `database`, because a
+`DatabaseRole` is namespace-scoped and `spec.cluster.name` resolves locally, so the objects
+themselves must sit beside the `Cluster`.
 
-The manifests live beside the cluster, not in `components/`, because a component should be
-app-agnostic and because every other hand-written role already lives there
-(`openbao-role.yaml`, `baoadmin-role.yaml`). Nothing else references those directories: the
-postgres app's kustomization lists `./app/ks.yaml` and `./backups/ks.yaml` only, so each object
-has exactly one owner.
+Wiring it takes two lines in the app's `ks.yaml`, because `spec.path` is repo-root-relative and
+a component has no idea where the build came from — `${APP}` is not enough either, since an
+app's directory is not derivable from its name:
+
+```yaml
+spec:
+  path: &path ./kubernetes/apps/equestria/home/windmill
+  components:
+    - ../../../../components/postgres
+    - ../../../../components/postgres/roles
+  postBuild:
+    substitute:
+      APP: *app
+      POSTGRES_APP_PATH: *path
+```
+
+Use the anchor. Writing the string once means an app that moves directories cannot end up with
+a stale roles path. The `/postgres-roles` suffix is appended by the component, not by the app.
+
+**Never list `postgres-roles/` in the app's own `kustomization.yaml`.** It sits inside the app's
+build path, so listing it renders the same roles a second time into the app's namespace, where
+they are meaningless and fight the real ones. Every app here lists resources explicitly, so an
+unreferenced subdirectory is inert. Forgetting `POSTGRES_APP_PATH` fails the Kustomization with
+a path-not-found, which is deliberate.
 
 Consumers: `toolhive-registry` (`toolhive_registry_server`), `windmill` (`windmill_user`,
 `windmill_admin`).

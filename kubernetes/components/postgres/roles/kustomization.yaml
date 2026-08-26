@@ -4,9 +4,17 @@
 # Extra PostgreSQL roles for an app, beyond the login role ../database already
 # renders. Add it AFTER ../../postgres:
 #
-#   components:
-#     - ../../../components/postgres
-#     - ../../../components/postgres/roles
+#   spec:
+#     path: &path ./kubernetes/apps/<group>/<sub>/<app>
+#     components:
+#       - ../../../components/postgres
+#       - ../../../components/postgres/roles
+#     postBuild:
+#       substitute:
+#         APP: *app
+#         POSTGRES_APP_PATH: *path
+#
+# then put the DatabaseRole manifests in `<app-dir>/postgres-roles/`.
 #
 # WHAT IT IS FOR. Some applications' migrations reference roles they do not
 # create -- grant targets, RLS principals, ownership handles. They assume the
@@ -21,23 +29,27 @@
 # mint roles forever, or create the roles by hand -- which is what happened to
 # windmill, and is why its two roles existed in the cluster and in no manifest.
 #
-# WHERE THE MANIFESTS LIVE. `kubernetes/apps/database/postgres/roles/${APP}/`,
-# NOT in this directory. Two reasons. A component is supposed to be
-# app-agnostic, and every other hand-written role in the estate already lives
-# beside the cluster (openbao-role.yaml, baoadmin-role.yaml) -- these are the
-# same kind of object and belong in the same place. This component is only the
-# wiring.
+# WHERE THE MANIFESTS LIVE. `<app-dir>/postgres-roles/`, next to the app that
+# needs them -- these roles are that app's business, they change when its
+# migrations change, and a reviewer looking at the app should see them without
+# going anywhere else. ./ks.yaml is what gets them into the `database`
+# namespace, which is where a DatabaseRole has to be.
 #
-# HOW THE PATH RESOLVES. `${APP}` in `spec.path` is substituted by the PARENT
-# app Kustomization, exactly as `metadata.name: ${APP}-postgres` already is in
-# ../ks.yaml -- postBuild substitution is textual over the whole rendered
-# output, so it reaches `spec.path` like any other field. That is what makes
-# one shared component able to point each app at its own directory with no
-# extra substitution to declare.
+# WHY THE PATH HAS TO BE HANDED IN. A Flux Kustomization's `spec.path` is
+# repo-root-relative, and a component rendered into an app's build has no idea
+# where that build came from -- kustomize does not expose it. `${APP}` is not
+# enough either, because an app's directory is not derivable from its name
+# (`windmill` lives under equestria/home, `toolhive-registry` under agents).
+# So the app passes its own path down.
 #
-# A missing directory is a hard build failure on this Kustomization, which is
-# the intended behaviour: opting in without adding manifests should say so
-# rather than silently render nothing.
+# USE THE ANCHOR. `path: &path ...` / `POSTGRES_APP_PATH: *path` means the
+# string is written once, so an app that moves directories cannot end up with a
+# stale roles path -- the same `&app`/`*app` idiom every ks.yaml here already
+# uses. The `/postgres-roles` suffix is appended by ./ks.yaml, not by the app.
+#
+# A missing or unwired directory is a hard build failure on this Kustomization,
+# which is the intended behaviour: opting in without adding manifests should
+# say so rather than silently render nothing.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 resources:

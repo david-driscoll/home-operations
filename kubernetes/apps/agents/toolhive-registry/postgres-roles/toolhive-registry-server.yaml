@@ -53,11 +53,11 @@
 # also not discovered by `stacks/system`, which reads app `ks.yaml` components
 # and not this file.
 #
-# HOW THIS GETS APPLIED. toolhive-registry lists
-# `components/postgres/roles` in its ks.yaml; that component emits a
-# `toolhive-registry-postgres-roles` Kustomization pointed at this directory.
-# The postgres app's own kustomization does NOT list it, so there is exactly one
-# owner.
+# HOW THIS GETS APPLIED. ../ks.yaml lists `components/postgres/roles` and hands
+# down its own path as POSTGRES_APP_PATH; that component emits a
+# `toolhive-registry-postgres-roles` Kustomization pointed at this directory
+# with `targetNamespace: database`. ../kustomization.yaml does NOT list this
+# directory, so there is exactly one owner -- see ./kustomization.yaml.
 apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
