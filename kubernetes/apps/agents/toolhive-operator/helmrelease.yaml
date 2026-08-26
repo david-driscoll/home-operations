@@ -48,6 +48,37 @@ spec:
     operator:
       replicaCount: 1
 
+      # The chart ships 128Mi/GOMEMLIMIT=110MiB, and this operator cannot boot
+      # in that on this cluster: it OOMKilled (exit 137) 23 times in a row,
+      # sitting at 125Mi against the 128Mi wall while still registering
+      # controllers.
+      #
+      # GOMEMLIMIT is a soft ceiling on the Go HEAP only. It does not cover
+      # goroutine stacks or runtime overhead, and above all it does not cover
+      # the informer caches -- which is where the memory actually goes here,
+      # because `rbac.scope: cluster` below means every one of the ~20
+      # controllers (MCPServer, VirtualMCPServer, MCPRegistry, MCPGroup,
+      # MCPToolConfig, the StorageVersionMigrator's CRD watch, ...) caches its
+      # kind across ALL namespaces. The chart's default is sized for a small
+      # single-namespace install; cluster scope is what makes it too small.
+      #
+      # Both numbers have to move together. Raising only the container limit
+      # leaves Go targeting a 110MiB heap and collecting far too aggressively;
+      # raising only GOMEMLIMIT walks straight back into the OOM. The ratio
+      # here is the chart's own (~86% of the limit).
+      resources:
+        requests:
+          cpu: 10m
+          memory: 256Mi
+        limits:
+          # No CPU limit, per the convention in this namespace
+          # (toolhive-ui, toolhive-valkey): throttling a controller's
+          # reconcile loop is worse than letting it burst.
+          memory: 512Mi
+      gc:
+        gomemlimit: 440MiB
+        gogc: 75
+
       rbac:
         # CLUSTER, the chart default -- the operator reconciles MCPServer CRs in
         # EVERY namespace, not just this one. `agents` is where the operator and
