@@ -59,7 +59,7 @@ silently fail to resolve.
 | **1b** | Component emits `DatabaseRole`/`Database`/`ExternalSecret`; delete `Update.cs`, `users.yaml`, the 17 `values.yaml` roles | 17 apps, credential values unchanged | **done** (#1086, #1099) |
 | **2** | `openbao` role → CNPG client certificate; storage `connection_url` goes password-free | OpenBao storage — the estate's secret store | 2.1–2.3b **done** (#1102, #1106); 2.4a here; 2.4b post-soak |
 | **3** | `baoadmin` superuser role (cert-auth) + OpenBao `database` secrets engine, wired from Pulumi | new machinery, no app impact yet | **done** — engine live, `ENGINE_ENABLED = true` since 2026-08-24 |
-| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 16 apps, rotating credentials | **in progress** — see the tranche log below |
+| **4** | Move apps onto `database/static-roles/<app>`, in tranches; delete `passwords.sops.yaml` | 13 live apps, rotating credentials | **tranches done** (1–9, all 13 live consumers). `passwords.sops.yaml` **cannot yet be deleted** — see below |
 
 `passwords.sops.yaml` survives phase 1 unchanged and hand-maintained. Phase 1 is purely about
 *who declares what* — not a single credential value changes.
@@ -385,7 +385,7 @@ long-connection apps will drop queries for a few seconds. Worth knowing before c
 shorter `rotation_period`.
 | 7 | `pinepods` | #1164 | pending merge. Closes group C/D. Split in two like romm: #1161 added the startup probe first. That rollout earned its keep — the boot came back at **156s**, not the 144s measured beforehand, an 8% spread against what had been a 210s budget. The 66s margin was never real. |
 | 8 | `windmill` | #1169 | **verified.** 32 → 20 chars, all 6 pods recycled with 0 restarts, 49 backends re-established. Needed #1168 first: `DATABASE_URL` was a literal in every pod spec, so no pod referenced the Secret and Reloader had nothing to watch. Corrected a prediction — see the cutover note below. |
-| 9 | `immich` | #1170 | pending merge. The last live consumer, and the only app composing two siblings of `components/postgres`. |
+| 9 | `immich` | #1170 | **verified.** 32 → 20 chars, pod up in 9s with 0 restarts, 4 backends, 0 auth failures. `rolsuper` stayed **true** through the rotation, and all 8 extensions (including `vector`) survived — `ALTER ROLE … PASSWORD` touches nothing else, as expected. The two-sibling composition rendered exactly as designed: 3 patches appended, none overwritten. |
 
 ### The mount-URN incident (2026-08-25)
 
@@ -415,6 +415,34 @@ The spec form should be equivalent and is not, at least for a re-parented resour
 children. Use the full old URN string. During the failure the state was intact throughout — the
 old unparented mount and all its static roles were still present and unmarked — so no state
 surgery was needed, and none was performed.
+### Phase 4 tranches complete — and why the last step is not a deletion
+
+All **13 live consumers** now take their password from OpenBao: `coder`, `crowdsec`, `forgejo`,
+`freshrss`, `grafana`, `immich`, `n8n`, `pinepods`, `pulsarr`, `questarr`, `romm`, `tandoor`,
+`windmill`. Verified estate-wide: 13/13 at 20 characters, zero auth failures. The only
+`<app>-postgres` ExternalSecrets not on a generator are `openbao` (client certificate, phase 2)
+and the three dropped orphans.
+
+**`passwords.sops.yaml` is still load-bearing, so the phase 4 line "delete
+`passwords.sops.yaml`" is wrong as written.** Each `<app>-postgres-password` Secret carries
+five keys:
+
+    database, hostname, password, port, username
+
+and the OpenBao generator returns only **username and password**. `database`, `hostname` and
+`port` reach the app from the sops document and nowhere else, so deleting the file today strips
+the connection metadata out of all 13 apps at once.
+
+None of those three are secrets. Retiring the file therefore needs the metadata rehomed first —
+a ConfigMap, the CNPG-generated `<app>-app` Secret, or the component rendering them literally —
+and only then can the sops document go. Treat it as its own piece of work, not a cleanup step.
+
+**Leftovers from group E.** `outline`, `retrom` and `strmgen` still have an orphaned
+`ExternalSecret` and its generated Secret in `database`, plus an entry apiece in
+`passwords.sops.yaml`. The ExternalSecrets are unowned and nothing recreates them, so they can
+be deleted directly; the `-password` Secrets are recreated by the live `database/postgres`
+Kustomization from the sops document and can only go when that document is edited.
+
 ### What the cutover burst actually tracks (corrected)
 
 #1147 recorded that pooled apps take a cluster of auth failures at rotation and per-request
