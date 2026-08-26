@@ -1953,6 +1953,58 @@ Gate checklist before calling this mode rehearsed:
       confirmed unavailable, per node.
 - [ ] 160/160 Kustomizations `Ready` and zero degraded volumes at the end.
 
+#### Prepared and gated 2026-08-24 — **not run.** Held deliberately; here is what was learned
+
+Stage 4 was planned for 17:00 on 2026-08-24. **§6.0's nine checks all passed at 17:00** — the
+first time the full pre-flight has been green — and it was still not entered. Recording why,
+because the reasons are conditions for the *next* attempt rather than a one-off.
+
+**The pre-flight, 17:00 2026-08-24 — 9 of 9:**
+
+| # | Result |
+|---|---|
+| 1 topology | 7 Ready, none cordoned, trio tainted, workers clean |
+| 2 etcd | 3 voting members |
+| 3a degraded | 0 |
+| 3b detached under-replicated | 1 (known) |
+| 4 Tier-1 ≥2 on trio | 13 volumes, 0 failing |
+| 5 piece 12 | classes and tags correct |
+| 6 taint-toleration | `applied: true` |
+| 7 Flux reconciled | **0 not-ready** |
+| 8 DNS on a control plane | `technitium` on `pegasus` |
+| 9 alpha-site | Gatus answered |
+
+**Three reasons it was held, in descending order of weight:**
+
+1. **§6.1 is far larger than "shut down three workers", and that was nearly missed.** Entering
+   Battery suspends Flux across four namespaces plus nine `kube-system` Kustomizations, scales
+   **all** of Tier 2 to zero, **hibernates the CNPG postgres cluster** (`kubectl cnpg hibernate
+   on postgres`) and takes **OpenBao to zero replicas**. A runbook extrapolated from Stage 3
+   would have powered off three nodes without any of that. **Read §6.1, do not infer it from
+   Stage 3.**
+2. **The repo was under active development.** ~10 merges landed between 15:00 and 17:00,
+   two of them in the five minutes before the start time. Suspending Flux for 4+ hours against
+   a moving `main` means a large backlog and a reconcile storm on resume, layered on top of a
+   window already finishing near 22:30.
+3. **A soak, not a snapshot, is the right gate.** A monitor sampling every 10 minutes from
+   14:55 caught a **60-Kustomization spike at 15:45** that cleared by 15:55 — invisible to any
+   single reading. Check 7 should be green *and have held*, which is a different test.
+
+**An unmade decision §6.1 says to settle before entry:** whether to cordon `shining-armor`.
+Cordoning it consolidates Tier 1 onto the trio and is the real gate on D6's premise; leaving it
+uncordoned rides out the window with least churn but proves less. The file says "decide before
+entry, not during", and it was not decided — so it is the **first** thing the next attempt owes.
+
+**Realistic timing, measured rather than assumed.** Stage 3 took ~5 min to `Ready` but ~30 min
+to fully rebuild after one worker returned. Three nodes, one at a time with gates between, puts
+a 17:00 entry at **21:30–22:30**. §6.2's one-at-a-time rule is what prevents the zombie-node
+cascade and is not compressible.
+
+**Recommendation for the next attempt:** start early in the day, on a quiet `main`, with the
+`shining-armor` question answered in advance, and wake `kerfuffle` **first** on the exit — it
+is the only node whose WoL path is proven, so a failure on `hard-hat` or `fluttershy` is then
+discovered with a worker already back rather than none.
+
 Only after this is green should low-power be treated as validated for a real grid outage. The
 blast radius of skipping it is small — nothing here is irreversible — but the failure mode if
 it is wrong (identity dark, DNS down, wife's lights off) is exactly the one D6 exists to
@@ -2357,13 +2409,29 @@ through in place rather than moved to the resolved list above — several sectio
    packet reaches the node on the current VLAN. §8 Stage 3 now exercises one WoL power-on
    alongside the single-worker shutdown, and §8 Stage 4's checklist still records the path each
    worker actually came back by.
-6. **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
+6. ~~**`observability`'s control-plane pods have no toleration.**~~ **CLOSED 2026-08-23** by
+   [#1073](https://github.com/david-driscoll/home-operations/pull/1073), which reversed the
+   written decision in `observability/prometheus/values.yaml` that had left
+   `kube-state-metrics` and `prometheus-operator` untolerated on the grounds that they are
+   "stateless Deployments that are fine on the workers". True in Full and Low Power, false in
+   Battery, where there are **no** workers — the same reasoning §8 Stage 2 disproved by
+   leaving `home-assistant` `Pending`. The note was revised in place rather than deleted.
+   Original text follows.
+
+   **`observability`'s control-plane pods have no toleration.** [24](24-power-states.md) §1
    keeps `observability` up during Battery, but live today `kube-state-metrics`,
    `prometheus-operator` and `unpoller` run on the trio with **no** control-plane toleration.
    After the §4 flip they keep running and then cannot come back on recreate. If 24's
    amendment stands, they need the toleration in the same change as the flip — the same trap
    `postgres-3` used to be.
-7. **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
+7. ~~**`tsidp`'s `hostname NotIn [othalla]` anti-affinity**~~ **DECIDED by David, 2026-08-23:
+   the exclusion STAYS.** The investigation below could not distinguish "stale SGC-era rule"
+   from "deliberate quarantine of a node with a hot disk and NVMe media errors", and David
+   ruled it stays. `tsidp` therefore has two of three control planes available in a window,
+   not three; #1073's toleration notes that interaction inline in `tsidp.yaml` so it is not
+   rediscovered. Investigation kept below.
+
+   **`tsidp`'s `hostname NotIn [othalla]` anti-affinity** (§1) — a Tier-1 workload excluded
    from a control plane. Copied verbatim during piece 21; confirm whether the reason still
    applies before §4's required affinity is written.
 
@@ -2546,6 +2614,35 @@ through in place rather than moved to the resolved list above — several sectio
    PVC, an immutable-field edit such as a StorageClass change makes Flux delete and recreate
    it rather than fail. Any future tier change that moves an app's PVC between `longhorn` and
    `longhorn-critical` has to reckon with that first.
+   #### Re-measured 2026-08-26 — this has effectively resolved itself, and not by being worked
+
+   | | 2026-08-20 | 2026-08-23 | **2026-08-26** |
+   |---|---|---|---|
+   | volumes holding a trio replica | ~100 | 99 | **3** |
+   | non-critical replicas on the trio | — | 97 (63.7 GiB) | **3 (0.3 GiB)** |
+   | volumes with **no** `nodeSelector` | — | 81 | **9** |
+
+   All three remaining volumes are **VolSync scratch**, not application data. The estate-wide
+   selector distribution is now `bulk` 178 / `critical` 27 / none 9, of 214 volumes.
+
+   **Nobody ran the burndown.** It resolved through ordinary churn, and §8 Stage 3 is most of
+   the reason: taking `kerfuffle` down forced Longhorn to rebuild **93 replicas**, and every
+   one of them was re-placed under the `bulk` constraint it had been ignoring. A replica only
+   re-reads its volume's `nodeSelector` when it is *created*, which is exactly what a rebuild
+   does — so the node outage did in one hour what a `nodeSelector` patch alone could never do
+   (the finding [30](30-longhorn-media-tier.md) established, seen from the other side).
+
+   **The plan's own remedy would have been the expensive way to get here.** The recorded shape
+   — patch the selector, then evict one replica at a time — was correct but manual, and
+   carried the data-loss trap noted above for the 78 volumes whose only replicas were on the
+   trio. Ordinary rebuild traffic retired the item for free.
+
+   **What this does NOT retire:** the 9 selector-less volumes are still unconstrained and can
+   land anywhere, including the trio. They are a small, bounded remnant of the pre-#960 set
+   rather than a leak — every StorageClass has been correct since 2026-08-23 — but a future
+   node outage could place one on a control plane. Worth a periodic re-measure rather than a
+   project.
+
 9. **`hard-hat`'s stale talconfig `deviceSelector`** (§6.2) — names a MAC that does not
     exist on the node. Not this piece's to fix; raise against
     [19](19-rotate-equestria-control-planes.md) / talconfig.
