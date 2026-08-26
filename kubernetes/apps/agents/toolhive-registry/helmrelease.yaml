@@ -124,6 +124,23 @@ spec:
           - name: pgpass-prepared
             mountPath: /pgpass-prepared
         securityContext:
+          # runAsUser MUST match the main container's 65535, and omitting it is
+          # what broke this on first deploy. Without it the init container runs
+          # as ROOT, so `cp` + `chmod 600` leaves a file owned by root:root that
+          # the app (uid 65535) cannot read at all:
+          #
+          #   -rw------- 1 root root .pgpass    ->  NOT READABLE
+          #
+          # pgx then falls back to sending an EMPTY password, and the failure
+          # surfaces as `failed SASL auth: password authentication failed`,
+          # which reads like a wrong credential rather than an unreadable file.
+          # The password was correct the whole time.
+          #
+          # fsGroup is not the fix either: it would relax the file to 0640, and
+          # libpq silently ignores any pgpass that is not 0600. Matching the UID
+          # is the only combination that satisfies both constraints.
+          runAsUser: 65535
+          runAsNonRoot: true
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           capabilities:
