@@ -390,11 +390,21 @@ the file did not remove the live objects. The `ExternalSecret` and its `Secret` 
 hand afterwards, deliberately in that order so the credential still existed while the change
 was being verified. Both are gone and OpenBao stayed healthy through it.
 
-**Still outstanding:** the `openbao-postgres-password` document in `passwords.sops.yaml`.
-Removing it needs the age key to re-encrypt and none was available on the machine doing this
-work. It is now a dead string rather than a usable credential — the role has no password and
-the non-SSL path is closed — so the security property holds without it, but the file should
-still be trimmed.
+The `openbao-postgres-password` document is gone from `passwords.sops.yaml` too, so all four
+steps of 2.4b are done. It was briefly left behind for want of an age key on the machine doing
+the work; linking the main worktree's `age.key` resolved that.
+
+Editing that file is surgery on the estate's passwords, so it was done with proof rather than
+care alone — every document fingerprinted before and compared after:
+
+    documents: 19 -> 18
+    removed:   openbao-postgres-password
+    added:     none
+    changed in surviving docs: NONE — all 18 byte-identical
+
+sops metadata survived on all 18 (two age recipients each, MAC present, no plaintext password
+values). **"No password exists for this role anywhere" is now literally true**, not nearly
+true.
 
 ## Findings from the spike
 
