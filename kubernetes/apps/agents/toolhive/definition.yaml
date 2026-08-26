@@ -56,13 +56,66 @@ spec:
     # authenticated now. NOT `/mcp`, which is a JSON-RPC POST target and answers
     # a bare GET with an error.
     #
-    # This deliberately does NOT exercise the OAuth flow. A green check here
-    # means "the hostname, the route and the proxy are up"; it does not mean
-    # authentik is reachable or that a login would succeed. The authentik outpost
-    # has its own check.
-    - group: "Applications"
+    # This one does NOT exercise the OAuth flow -- the three below do.
+    - name: ToolHive MCP
+      group: "Applications"
       url: https://${APP}.${ROOT_DOMAIN}/health
       method: GET
       conditions:
         - "[STATUS] == 200"
         - "[BODY].status == healthy"
+
+    # THE THREE CHECKS BELOW EXIST BECAUSE OF WHAT SHIPPING THIS COST.
+    #
+    # Every failure on the way in was invisible to flate, to CRD schema
+    # validation and to CI, because all of those check SHAPE and none of them
+    # dials anything: a signing key encoded with explicit EC parameters, an
+    # issuer literal that could never be right, an SSRF guard refusing a
+    # split-horizon address, a Helm waiter deadlocking on its own CR. Each one
+    # surfaced only as a pod that would not start, hours later.
+    #
+    # /health alone would not have caught the last of them either: the proxy can
+    # serve /health perfectly while the OAuth surface behind it is broken. These
+    # assert the parts a client actually depends on.
+
+    # RFC 9728. The document an MCP client fetches FIRST, and the one that tells
+    # it where to authenticate. The `authorization_servers` assertion is the
+    # load-bearing half: if it ever points somewhere other than this host, every
+    # client silently walks off to the wrong issuer.
+    - name: ToolHive MCP protected-resource metadata
+      group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://${APP}.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://${APP}.${ROOT_DOMAIN}"
+
+    # RFC 8414, served by the embedded authorization server. `registration_endpoint`
+    # is the assertion that matters: its presence IS the anonymous-DCR capability
+    # this whole architecture exists to provide, and it is the one thing authentik
+    # could not give us. If the embedded server ever fails to start, this document
+    # disappears and the check goes red while /health stays green.
+    - name: ToolHive MCP authorization server
+      group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://${APP}.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://${APP}.${ROOT_DOMAIN}/oauth/register"
+
+    # A NEGATIVE CHECK, and the most important one here: it asserts the endpoint
+    # is still CLOSED. The CRD is explicit that an MCPServer without an
+    # `oidcConfigRef` "accepts every request that can reach its port" -- it fails
+    # OPEN, with a healthy pod and a green /health. Nothing else in this file
+    # would notice. A 200 here means authentication has silently been lost.
+    - name: ToolHive MCP rejects unauthenticated
+      group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"

@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# THIS FILE EXISTS FOR THE GATUS CHECK. The registry had no check of any kind,
+# and that gap is what let two separate failures sit undetected until someone
+# looked at a pod: a pgpass file the app could not read (which reported itself
+# as "password authentication failed", naming the wrong cause entirely) and a
+# dirty schema migration left behind by the deprecated deployment. Both times
+# the namespace looked healthy from the outside.
+#
+# NO `authentik:` BLOCK, deliberately. The registry runs `auth.mode: anonymous`
+# and has no login of its own; adding one here would make the `applications`
+# Pulumi stack mint an OIDC client that nothing would ever use. Access control
+# is the `internal-network` middleware on ./httproute.yaml.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive Registry
+  category: Applications
+  description: MCP catalogue API, mirrored from the upstream ToolHive registry
+  url: https://mcp.agents.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    # The catalogue listing, NOT a health path -- and that is the point. This one
+    # request exercises the entire chain end to end: the route and its
+    # certificate, the pgpass file being readable, the Postgres role
+    # authenticating, the migrations having completed, and the git sync having
+    # populated the tables. Any one of those failing turns it red.
+    #
+    # `/registry/default/v0.1/servers` -- `default` is the registry name from
+    # `config.registries[0].name` in ./helmrelease.yaml, and the path is what
+    # /openapi.json declares. There is no /health on the public listener; the
+    # server's own health port is 8081 and is not routed.
+    - name: ToolHive Registry
+      group: "Applications"
+      url: https://mcp.agents.${ROOT_DOMAIN}/registry/default/v0.1/servers?limit=1
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        # Non-empty, not merely well-formed. An empty catalogue is exactly what
+        # a broken git sync looks like, and it would still answer 200.
+        - "len([BODY].servers) > 0"

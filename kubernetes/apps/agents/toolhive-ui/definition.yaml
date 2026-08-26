@@ -36,10 +36,19 @@ spec:
       includeClaimsInIdToken: true
       subMode: user_email
   gatus:
-    # `/` is the app's own readiness path, and it is what the chart's probes
-    # use. An authenticated page would only prove authentik is up.
-    - group: "Applications"
-      url: *url
+    # `/signin`, NOT `/`. Verified against the live app: `/` answers 307 with a
+    # redirect to /signin, so a bare `[STATUS] == 200` on the root is wrong
+    # unless the checker happens to follow redirects -- which is a property of
+    # the client, not of the app being healthy. /signin is the page better-auth
+    # actually renders, so a 200 there means the Next.js app is serving rather
+    # than merely redirecting.
+    #
+    # Deliberately an UNAUTHENTICATED page: it proves the app is up without
+    # depending on authentik, so an authentik outage does not turn this red and
+    # mask a real UI failure. The authentik outpost has its own check.
+    - name: ToolHive UI
+      group: "Applications"
+      url: https://toolhive.agents.${ROOT_DOMAIN}/signin
       method: GET
       conditions:
         - "[STATUS] == 200"
