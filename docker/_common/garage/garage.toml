@@ -1,0 +1,57 @@
+# Garage node configuration. Rendered per host by Pulumi variable substitution
+# (components/DockgeLxc.ts) — ${tailscaleIpAddress} below becomes this dockge
+# LXC's tailnet address before the file lands in /opt/stacks/garage/.
+#
+# No secrets in this file on purpose: rpc_secret and the admin token arrive as
+# GARAGE_RPC_SECRET / GARAGE_ADMIN_TOKEN environment variables (compose.yaml),
+# minted once into OpenBao by the bootstrap ceremony in
+# docs/garage-offsite-s3.md.
+
+# LMDB on the SSD (bind-mounted from /opt/stacks-data/garage/meta), block data
+# on the ZFS array (/data/garage). See the volume notes in compose.yaml.
+metadata_dir = "/var/lib/garage/meta"
+# The capacity annotation declares this node's share of the ZFS array — 4T,
+# matching the `-c 4T` the layout ceremony assigns (docs/garage-offsite-s3.md;
+# `garage layout assign` checks against it). Know what it is NOT: a write
+# stop. Garage capacity is a placement weight, so the HARD limits are the
+# per-bucket quotas stacks/system (garage.ts) sets, which are sized to sum
+# comfortably under this. Grow all three together, deliberately.
+data_dir = [{ path = "/var/lib/garage/data", capacity = "4T" }]
+db_engine = "lmdb"
+
+# LMDB files have a tendency to corrupt on an unclean shutdown; Garage's own
+# periodic snapshot (it keeps the two most recent) is the recovery path for
+# that, and it is also why this stack needs no backrest plan for its metadata.
+metadata_auto_snapshot_interval = "6h"
+
+# Three nodes, three zones, one copy per machine. Changing this on a live
+# cluster is a layout rebuild, not an edit — treat it as immutable, the same
+# way kubernetes/apps/garage-system documents for the in-cluster GarageCluster.
+replication_factor = 3
+
+compression_level = 2
+
+# RPC binds every interface in the container (docker publishes 3901 on the
+# host); what the OTHER nodes dial is rpc_public_addr — this host's tailnet
+# address, because luna/skystar/celestia only share the tailnet. The
+# `garage-mesh` grant in stacks/unifi-network/acl-manager.ts is what lets that
+# traffic through; the shared rpc_secret is what authenticates it.
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "${tailscaleIpAddress}:3901"
+
+[s3_api]
+# Baked into every SigV4 signature; changing it invalidates every client at
+# once (same trap as s3Api.region on the in-cluster GarageCluster). Clients:
+# the barman-cloud ObjectStore values (kubernetes/apps/database/postgres),
+# garage-sync (compose.yaml), and anything reading garage.ts's OpenBao
+# records.
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+# No root_domain: every consumer uses path-style addressing, and vhost-style
+# would need wildcard DNS this estate does not carry for these hosts.
+
+[admin]
+# Control plane for stacks/system's garage.ts (bucket/key management over the
+# tailnet), the garage-webui service, and `garage` CLI ceremonies. Token comes
+# from GARAGE_ADMIN_TOKEN.
+api_bind_addr = "[::]:3903"

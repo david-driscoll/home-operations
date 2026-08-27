@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@1password/connect": "^1.4.2",
+    "@axnic/pulumi-garage": "^1.0.1",
     "@goauthentik/api": "^2026.2.3-rc1",
     "@octokit/auth-app": "^8.2.0",
     "@pulumi/cloudflare": "^6.10.0",

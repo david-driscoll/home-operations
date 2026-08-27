@@ -148,6 +148,13 @@ services:
   # artifact for Postgres. pg_dump produces one that is: each dump is a
   # consistent snapshot taken inside a single transaction, which is why dumps/
   # is the part of this directory the plan actually protects.
+  #
+  # dumps/ has a SECOND consumer on the garage hosts: the garage stack's
+  # garage-sync service (docker/_common/garage) mounts it read-only and mirrors
+  # it into the node's postgres-<cluster> bucket, so the same artifacts also
+  # exist on the geo-replicated S3 store. Renaming or moving this directory
+  # breaks that mirror silently on this side — its red Gatus heartbeat over
+  # there is the only symptom.
   postgres-backup:
     # Same major + digest as the server above — this is the one that MUST match.
     # pg_dump aborts against a newer server and backup.sh only warns, so a skew

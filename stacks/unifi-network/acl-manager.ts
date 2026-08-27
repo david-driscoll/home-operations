@@ -467,6 +467,52 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
+    // Garage replication mesh (docker/_common/garage): celestia, luna and
+    // skystar each run one node, and every node dials every other node's
+    // rpc_public_addr — its tailnet IP, port 3901. The shared rpc_secret is
+    // what authenticates the mesh; this grant is what lets the packets arrive.
+    // S3 (3900) rides along dockge→dockge for the Gatus TCP checks the garage
+    // stack definition registers (probed from dockge-as's uptime stack, which
+    // travels as tag:dockge).
+    manager.setGrant(
+      "garage-mesh",
+      {
+        src: [tag.dockge],
+        dst: [tag.dockge],
+        ip: [...ports.garageRpc, ...ports.garageS3],
+      },
+      { accept: [] },
+    );
+
+    // CNPG barman-cloud backups from equestria: the postgres ObjectStore's
+    // endpoint is http://dockge-celestia.<tailnet>:3900, reached through the
+    // tailnet-inbound ProxyGroup carrying tag:egress — the same shape and the
+    // same reasoning as the two openbao grants above. Without this the egress
+    // Service forwards 3900 and the connection dies in the ACL, which from the
+    // cluster reads as "garage is down" rather than as a policy problem.
+    manager.setGrant(
+      "garage-s3-backups",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.garageS3,
+      },
+      { accept: [] },
+    );
+
+    // Bucket and key management (stacks/system's garage.ts, run from an admin
+    // workstation) talks to the Admin API on dockge-celestia:3903. Admins get
+    // the S3 port too, for aws/rclone spot checks against the store.
+    manager.setGrant(
+      "garage-admin",
+      {
+        src: [autogroups.admin],
+        dst: [tag.dockge],
+        ip: [...ports.garageAdmin, ...ports.garageS3],
+      },
+      { accept: testData.knownAdminUsers },
+    );
+
     pulumi.output(manager.getJson()).apply(json => {
       writeFileSync("tailscale-acl.json", json);
     });

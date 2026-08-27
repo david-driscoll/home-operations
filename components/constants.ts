@@ -111,6 +111,19 @@ export const Tailscale = {
     // from dockgeManagement: the two ports serve different jobs and should be
     // grantable independently.
     baoDumps: ["tcp:2023"] as TailscaleNetworkCapability[],
+    // Garage, the geo-distributed S3 store on the celestia/luna/skystar dockge
+    // hosts (docker/_common/garage). Three ports, three audiences, kept as
+    // separate entries so each is grantable alone — the dockgeManagement
+    // lesson, again:
+    //   3901  node-to-node RPC, the replication mesh (dockge → dockge only)
+    //   3900  S3 API, the data plane (equestria's barman-cloud plugin arrives
+    //         as tag:egress; the other nodes and the uptime probes as
+    //         tag:dockge)
+    //   3903  Admin API, the control plane (stacks/system garage.ts bucket/key
+    //         management from admin workstations)
+    garageRpc: ["tcp:3901"] as TailscaleNetworkCapability[],
+    garageS3: ["tcp:3900"] as TailscaleNetworkCapability[],
+    garageAdmin: ["tcp:3903"] as TailscaleNetworkCapability[],
   } as const,
   autogroups: {
     admin: "autogroup:admin" as TailscaleAutogroups,

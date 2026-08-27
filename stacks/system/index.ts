@@ -68,6 +68,7 @@ import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
+import { configureGarage } from "./garage.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
 
 const globals = new GlobalResources({}, {});
@@ -109,6 +110,13 @@ for (const entry of CLUSTERS) {
 }
 
 export const clusters = CLUSTERS.map(c => c.key);
+
+// The geo-distributed Garage cluster's buckets, keys and credential delivery
+// (docker/_common/garage; docs/garage-offsite-s3.md). After the cluster
+// publish loop above, per the header rule: garage.ts stays within it — its
+// store reads are `hosts/dockge/*` and the admin token, never the
+// `clusters/<key>/details` paths this stack produces.
+export const garage = configureGarage(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped

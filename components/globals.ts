@@ -1,3 +1,4 @@
+import { Provider as GarageProvider } from "@axnic/pulumi-garage";
 import { Provider as CloudflareProvider } from "@pulumi/cloudflare";
 import { Provider as GithubProvider } from "@pulumi/github";
 import { Provider as MinioProvider } from "@pulumi/minio";
@@ -34,6 +35,7 @@ export class GlobalResources extends ComponentResource {
   public readonly cloudFlareAccountId: Output<string>;
   public readonly store: VaultStore;
   private _baoProvider?: VaultProvider;
+  private _garageProvider?: GarageProvider;
   private _githubCredential?: Output<GithubAppCredential>;
   private _githubProvider?: GithubProvider;
 
@@ -240,6 +242,39 @@ export class GlobalResources extends ComponentResource {
       { parent: this },
     );
     return this._baoProvider;
+  }
+
+  /**
+   * The Garage Admin API — the geo-distributed S3 store on the
+   * celestia/luna/skystar dockge hosts (docker/_common/garage), which holds
+   * the estate's second set of postgres backups.
+   *
+   * Lazy, like `baoProvider`: only stacks/system's garage.ts manages buckets and keys,
+   * and an eager construction would make the `docker/apps/garage/admin-token`
+   * path a preview-time dependency of every stack in the repo.
+   *
+   * The endpoint names dockge-celestia's tailnet address on purpose — the
+   * same resolution story as `technitiumProvider` above: MagicDNS answers it
+   * for local runs, and the tailscale-operator egress Services would answer
+   * it for workspace pods. Any of the three nodes serves the Admin API
+   * (writes replicate cluster-wide); celestia is named because it is the node
+   * equestria already egresses to for S3, so its reachability is load-bearing
+   * either way. Plain http: the hop is inside the tailnet, which is the same
+   * transport trust the RPC mesh itself runs on.
+   */
+  public get garageProvider(): GarageProvider {
+    if (this._garageProvider) return this._garageProvider;
+    this._garageProvider = new GarageProvider(
+      "garage",
+      {
+        endpoint: interpolate`http://dockge-celestia.${this.tailscaleDomain}:3903`,
+        // Minted by the bootstrap ceremony in docs/garage-offsite-s3.md; the
+        // path is marked concealed, so the store hands it back as a secret.
+        adminToken: this.store.getSecretByPath<{ password: string }>("docker/apps/garage/admin-token").password,
+      },
+      { parent: this },
+    );
+    return this._garageProvider;
   }
 
   /**

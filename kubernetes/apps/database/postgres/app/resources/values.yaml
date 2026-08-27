@@ -76,11 +76,20 @@ mode: standalone
 # nothing reads it -- until the day someone flips `mode: recovery` to rebuild
 # from the archive, which is precisely the day it has to be right.
 #
-# It pointed at `/barman/$${CLUSTER_CNAME}` until this change: the ORIGINAL
-# prefix, two generations behind what backups write. That was merely stale
-# while the cluster was on 17. After the major it is actively wrong -- a
-# rebuild would restore a PG17 archive under a PG18 image, which cannot start.
-# So it now names the same prefix backups do.
+# STILL ON MINIO, DELIBERATELY, while backups below moved to Garage. The
+# barman-cloud plugin allows exactly one backup/archive object store per
+# cluster (the sidecar resolves the store from the Cluster's plugin config;
+# a ScheduledBackup's barmanObjectName parameter is ignored -- cloudnative-pg
+# issue 7778, confirmed against the plugin source), so the cutover is a flip,
+# not an addition -- and at the moment of the flip the Garage store holds
+# NOTHING. Until a base backup lands there and is verified, the minio archive
+# is the only thing a rebuild can restore from, so recovery keeps naming it.
+#
+# FOLLOW-UP, part of the cutover runbook (docs/garage-offsite-s3.md): once the
+# first Garage base backup succeeds, repoint this block at the garage_* values
+# (same shape as backups below). Until then the minio archive is frozen --
+# nothing writes OR prunes it after the flip, so its last 30 days of history
+# stay readable indefinitely.
 #
 # `recovery.s3.path` and `backups.s3.path` are kept as two separate knobs on
 # purpose, NOT aliased to one value. They are the same only in steady state:
@@ -103,16 +112,40 @@ recovery:
     path: "/barman/${CLUSTER_CNAME}-pg18"
     accessKey: "{{ .minio_username }}"
     secretKey: "{{ .minio_password }}"
+# THE GARAGE CUTOVER (this is the estate's "second set" of postgres backups
+# becoming the barman target). This block is the ONE backup/archive object
+# store the barman-cloud plugin will serve for this cluster -- WAL archiving
+# and base backups both -- and as of this change it names the geo-distributed
+# Garage cluster on the celestia/luna/skystar dockge hosts
+# (docker/_common/garage) instead of the TrueNAS minio. Why a flip and not an
+# addition: the plugin resolves its object store from the Cluster's plugin
+# configuration only, so a second ObjectStore + ScheduledBackup pair targeting
+# it would silently back up into THIS store instead (cloudnative-pg issue
+# 7778; verified in plugin-barman-cloud internal/cnpgi/instance/backup.go).
+#
+# The garage_* values come from clusters/equestria/apps/postgres/garage-backup
+# (written by stacks/system garage.ts; see externalsecret.yaml). The endpoint inside is
+# http://dockge-celestia.<tailnet>:3900 -- pods have no route to tailnet IPs,
+# so the traffic rides the tailscale-operator egress Service for
+# dockge-celestia (port declared in tailscale-system/services/Update.cs, ACL
+# opened by the garage-s3-backups grant). Plain http is fine here: the hop is
+# WireGuard end to end.
+#
+# AFTER MERGING, TAKE A BASE BACKUP IMMEDIATELY
+# (`kubectl cnpg backup postgres --method plugin` in the database namespace):
+# from the flip until that backup succeeds, the Garage archive holds WAL with
+# no base to replay it onto, and the frozen minio archive is the only recovery
+# baseline -- which is why the recovery block above still points there.
 backups:
   enabled: true
   method: plugin
   pluginConfiguration:
     name: barman-cloud.cloudnative-pg.io
-  endpointURL: "{{ .minio_endpoint }}"
+  endpointURL: "{{ .garage_endpoint }}"
   provider: s3
   s3:
-    region: "{{ .minio_region }}"
-    bucket: "cnpg-${CLUSTER_CNAME}"
+    region: "{{ .garage_region }}"
+    bucket: "{{ .garage_bucket }}"
     # The `-pg18` suffix is REQUIRED BY the major upgrade, not cosmetic.
     #
     # pg_upgrade gives the cluster a new system identifier and resets the
@@ -122,17 +155,14 @@ backups:
     # the 30d retention would then age out a mixed-major archive. That destroys
     # the only rollback path that exists once the upgrade Job has succeeded.
     #
-    # Keeping the old prefix intact leaves the PG17 archive readable for as
-    # long as the bucket holds it. Note it is only usable to restore a *17*
-    # cluster: PITR across a major boundary is not a thing, so the pre-upgrade
-    # backups can never roll forward into the 18 cluster.
-    #
-    # The previous `-20260813` suffix came from the ownership-cascade rebuild;
-    # this one is named for the major deliberately, because that is what the
-    # split actually tracks.
+    # The Garage bucket starts empty, so nothing collides with this prefix
+    # today -- but the suffix stays, because the NEXT major will need the same
+    # split inside this bucket and the convention should already be standing.
+    # (On minio the pre-flip PG18 archive lives under this same prefix; that
+    # copy is frozen history now, reachable through the recovery block.)
     path: "/barman/${CLUSTER_CNAME}-pg18"
-    accessKey: "{{ .minio_username }}"
-    secretKey: "{{ .minio_password }}"
+    accessKey: "{{ .garage_username }}"
+    secretKey: "{{ .garage_password }}"
   wal:
     compression: gzip
     encryption: ''

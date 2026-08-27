@@ -128,10 +128,23 @@ var extraPorts = new Dictionary<string, Dictionary<ServiceKind, PortDef[]>>
       new("tts", 10200, false, null),
     ]
   },
-  // celestia hosts llama-agent (gemma-4-E4B, Hermes' backend) on 8081
+  // celestia hosts llama-agent (gemma-4-E4B, Hermes' backend) on 8081.
+  //
+  // 3900 is the Garage S3 API (docker/_common/garage): the database/postgres
+  // barman-cloud ObjectStore writes WAL archives and base backups to
+  // http://dockge-celestia.<tailnet>:3900 through this egress service — pods
+  // have no route to tailnet IPs, so without this port declared every CNPG
+  // backup and WAL archive fails. No probe: the S3 root answers SigV4 errors,
+  // not a 2xx, and liveness is already covered by the garage stack's Gatus
+  // TCP checks. See also the `garage-s3-backups` grant in
+  // stacks/unifi-network/acl-manager.ts — the port must be open in BOTH
+  // places or the failure reads as "garage is down" from the cluster.
   ["celestia"] = new()
   {
-    [ServiceKind.Dockge] = [new("llm-agent", 8081, false, null)]
+    [ServiceKind.Dockge] = [
+      new("llm-agent", 8081, false, null),
+      new("garage-s3", 3900, false, null),
+    ]
   },
 };
 
