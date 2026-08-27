@@ -52,6 +52,7 @@ local excludes =
     "sdks/**/*",
     ".vs/**/*",
     ".vscode/**/*",
+    "graphify-out/**/*",
     ".idea/**/*",
     ".claude/**/*",
     ".agents/**/*",

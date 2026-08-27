@@ -1,0 +1,23 @@
+{
+  "0": "What You Must Do When Invoked",
+  "1": "authentik/bin/package.json",
+  "2": "authentik/package.json",
+  "3": "forgejo/package.json",
+  "4": "pbs/bin/package.json",
+  "5": "pbs/package.json",
+  "6": "tailscale/package.json",
+  "7": "technitium/package.json",
+  "8": "terrifi/package.json",
+  "9": "unifi/bin/package.json",
+  "10": "unifi/package.json",
+  "11": "CLAUDE.md",
+  "12": "graphify reference: extra exports and benchmark",
+  "13": "graphify reference: query, path, explain",
+  "14": "graphify reference: add a URL and watch a folder",
+  "15": "graphify reference: commit hook and native CLAUDE.md integration",
+  "16": "graphify reference: incremental update and cluster-only",
+  "17": "graphify reference: GitHub clone and cross-repo merge",
+  "18": "graphify reference: transcribe video and audio",
+  "19": "graphify",
+  "20": "extraction-spec.md"
+}
