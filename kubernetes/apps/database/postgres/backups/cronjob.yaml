@@ -33,9 +33,9 @@ spec:
     - name: external-secrets
       namespace: kube-system
   values:
-    # Reads the per-database credential Secrets in this namespace directly.
-    # `get` only, and only in this namespace: the CronJob never lists Secrets,
-    # so a Role beats a ClusterRole and a name-scoped read beats a wildcard.
+    # Reads the `Database` resources in this namespace to decide WHAT to back up
+    # and with WHICH credential, then reads those credential Secrets directly.
+    # Both are namespaced, so a Role beats a ClusterRole.
     serviceAccount:
       *app : {}
 
@@ -44,9 +44,18 @@ spec:
         *app :
           type: Role
           rules:
+            # `get` only, and only in this namespace: the CronJob resolves each
+            # Secret by name off a `Database` annotation and never lists them,
+            # so a name-scoped read beats a wildcard.
             - apiGroups: [""]
               resources: ["secrets"]
               verbs: ["get"]
+            # `list` is unavoidable here -- the register IS the set of Database
+            # objects, so the job cannot know their names in advance. Read-only,
+            # one namespace, one resource; a Database carries no secret material.
+            - apiGroups: ["postgresql.cnpg.io"]
+              resources: ["databases"]
+              verbs: ["get", "list"]
       bindings:
         *app :
           type: RoleBinding
@@ -87,12 +96,20 @@ spec:
                   fieldRef:
                     fieldPath: metadata.namespace
               # Databases still in postgres whose application has been removed.
-              # They have no credential Secret, so they are named here rather
-              # than being skipped by a "no Secret? never mind" rule -- a
-              # missing Secret on a LIVE database must stay a hard failure.
+              # They have no `Database` resource -- that is what decommissioned
+              # means here -- so they are named rather than being skipped by a
+              # "no resource? never mind" rule: an unrepresented LIVE database
+              # must stay a hard failure.
               # Their existing dumps are left untouched; nothing is deleted.
               #   keeper   -- app removed 2026-03-26 (6a2139535)
               #   vikunja  -- app removed 2026-07-27 (0b289652f)
+              #
+              # This is the ONE thing the annotations did not absorb, and there
+              # is nowhere for it to go: an entry exists here precisely because
+              # the database has no Kubernetes object to annotate. A live
+              # database that DOES have one is excluded with
+              # `driscoll.dev/backup: "false"` on that resource instead, and the
+              # job says so if it finds a name in both places.
               DECOMMISSIONED_DATABASES: "keeper,vikunja"
             command:
               - /bin/sh

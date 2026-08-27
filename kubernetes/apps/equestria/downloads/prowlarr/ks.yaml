@@ -17,11 +17,15 @@ spec:
   dependsOn:
     - name: truenas-volumes
       namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
     - name: volsync
       namespace: volsync-system
     - name: tailscale-operator
       namespace: tailscale-system
-  path: ./kubernetes/apps/equestria/downloads/prowlarr
+  path: &path ./kubernetes/apps/equestria/downloads/prowlarr
   prune: true
   wait: true
   interval: 1h
@@ -33,9 +37,28 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
+    # Rotating credential. The Deployment reads PROWLARR__POSTGRES__PASSWORD
+    # out of the prowlarr-env Secret via envFrom and carries
+    # reloader.stakater.com/auto, so the 30-day rotation restarts it. The
+    # startup probe in helmrelease.yaml is what makes that restart survivable:
+    # without it the liveness budget is ~110s, and a cold boot that has to
+    # replay the migration chain can exceed it.
+    # See docs/runbooks/media-stack-postgres-migration.md.
+    - ../../../../components/postgres
+    # prowlarr-log, the second half of the <app>-main/<app>-log pair the
+    # Servarr wiki documents. Required from the moment
+    # PROWLARR__LOG__DBENABLED is "True": the app connects to
+    # PostgresLogDb at startup and will not create it. Manifest in
+    # ./postgres-databases/; needs POSTGRES_APP_PATH below.
+    - ../../../../components/postgres/databases
     - ../../../../components/tailscale
     - ../../../../components/volsync
   postBuild:
     substitute:
       APP: *app
+      # Where components/postgres/databases looks for this app's extra
+      # Database manifests -- it appends `/postgres-databases`. The anchor
+      # means the path is written once, so moving this directory cannot
+      # leave a stale path behind.
+      POSTGRES_APP_PATH: *path
       NAMESPACE: *namespace

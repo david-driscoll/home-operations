@@ -1,0 +1,127 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Extra PostgreSQL databases for an app, beyond the one ../database already
+# renders. The sibling of ../roles, wired the same way -- add it AFTER
+# ../../postgres:
+#
+#   spec:
+#     path: &path ./kubernetes/apps/<group>/<sub>/<app>
+#     components:
+#       - ../../../components/postgres
+#       - ../../../components/postgres/databases
+#     postBuild:
+#       substitute:
+#         APP: *app
+#         POSTGRES_APP_PATH: *path
+#
+# then put the manifests in `<app-dir>/postgres-databases/`. `POSTGRES_APP_PATH`
+# is the same variable ../roles reads, so an app using both siblings passes it
+# once.
+#
+# WHAT IT IS FOR. `components/postgres` renders exactly ONE `Database`, named
+# after the app, and that is right for almost everything here. Some
+# applications want a second: a log or cache database whose retention and vacuum
+# profile has nothing to do with the primary one, or a vendor that hard-codes
+# two connection strings.
+#
+# Consumers: sonarr, radarr, lidarr, prowlarr (`<app>-log`). Every Servarr wiki
+# page documents an `<app>-main`/`<app>-log` pair, the app opens both at startup
+# and creates neither, and the estate ran with `LOG__DBENABLED: "False"` --
+# no log database at all -- until this component existed to declare the second
+# one. See docs/runbooks/media-stack-postgres-migration.md §1.1.
+#
+# Before this component the options were all bad: give the app ../superuser so
+# it can `CREATE DATABASE` itself, create the database by hand and leave it
+# undeclared, or fold a second `Database` into ../database where every app would
+# get one.
+#
+# WHERE THE MANIFESTS LIVE. `<app-dir>/postgres-databases/`, next to the app
+# that needs them -- same argument as ../roles. ./ks.yaml is what gets them into
+# the `database` namespace, which is where a `Database` has to be.
+#
+# USE THE ANCHOR. `path: &path ...` / `POSTGRES_APP_PATH: *path` means the
+# string is written once, so an app that moves directories cannot end up with a
+# stale path. A missing or unwired directory is a hard build failure on the
+# nested Kustomization, which is intended: opting in without adding manifests
+# should say so rather than silently render nothing.
+#
+# ─── THE TEMPLATE ────────────────────────────────────────────────────────────
+#
+# One `Database`, and one annotation on it. For an app `foo` adding `foo-cache`:
+#
+#   # <app-dir>/postgres-databases/kustomization.yaml
+#   apiVersion: kustomize.config.k8s.io/v1beta1
+#   kind: Kustomization
+#   resources:
+#     - ./foo-cache.yaml
+#
+#   # <app-dir>/postgres-databases/foo-cache.yaml
+#   apiVersion: postgresql.cnpg.io/v1
+#   kind: Database
+#   metadata:
+#     name: foo-cache
+#     annotations:
+#       kustomize.toolkit.fluxcd.io/prune: disabled
+#       # ⚠️ NOT OPTIONAL. The postgres-backup CronJob enumerates these objects
+#       # and, for each, reads the credential Secret this annotation names --
+#       # defaulting to `<database>-postgres`, which for an extra database does
+#       # not exist. Without this the nightly run fails on `foo-cache-postgres`,
+#       # and one failed database exits the whole job non-zero.
+#       #
+#       # `foo-postgres` is the app's OWN credential: one role, one OpenBao
+#       # static role, one rotating password, two databases. The app's login
+#       # role owns this database (spec.owner below), so it can dump it.
+#       driscoll.dev/backup-credentials: foo-postgres
+#   spec:
+#     cluster:
+#       name: postgres
+#     name: foo-cache
+#     # The app's own login role. It already exists (../database renders it) and
+#     # it is the role the app authenticates as, so it must own this database
+#     # too -- there is no second credential anywhere in this flow.
+#     owner: ${APP}
+#     ensure: present
+#     allowConnections: true
+#     databaseReclaimPolicy: retain
+#     # ONLY `public`, for the reason spelled out at length in
+#     # ../database/database.yaml: a schema named after the role arms the
+#     # dormant `$user` element of the default search_path and shadows public.
+#     schemas:
+#       - ensure: present
+#         name: public
+#         owner: ${APP}
+#
+# This used to be three documents -- the `Database`, a `<db>-postgres-conn`
+# Secret and a `<db>-postgres` ExternalSecret duplicating the app's own
+# credential -- because the backup job derived the Secret name from the database
+# name and there was no way to tell it otherwise. `driscoll.dev/backup-credentials`
+# says the same thing in one line, where the database is declared.
+#
+# ─── THINGS THAT WILL BITE YOU ───────────────────────────────────────────────
+#
+# - **The app still has to be TOLD the extra database's name.** Nothing here
+#   reaches the workload. The app's env comes from its own ExternalSecret, and
+#   the extra name is a literal there (`SONARR__POSTGRES__LOGDB: sonarr-log`).
+#   There is no `<db>-postgres` Secret to read it out of, by design -- the
+#   credential is the app's own.
+# - **Nothing here is ever pruned**, matching the rest of this component family:
+#   the nested ks is `deletionPolicy: Orphan`, and the `Database` carries both
+#   `databaseReclaimPolicy: retain` and
+#   `kustomize.toolkit.fluxcd.io/prune: disabled`. Removing a file leaves the
+#   live database alone. Cleaning up for real is a manual job.
+# - **`ensure: absent` DROPS the database and everything in it.** Deleting the
+#   manifest is the safe way to stop managing one; `absent` is not a synonym.
+# - **CNPG will not recreate a database that disappears underneath it.** It
+#   gates on `observedGeneration == generation` and no-ops even with
+#   `ensure: present`. Force a reconcile by bumping the generation -- toggling
+#   `spec.allowConnections` false then true works.
+# - **This component is invisible to the Pulumi rotation discovery, and must
+#   stay that way.** `stacks/system/postgres-rotation.ts` matches
+#   `components/postgres` by exact path suffix, so `components/postgres/
+#   databases` does not match -- same as ./superuser and ./client-cert. An extra
+#   database needs no static role; it reuses the app's.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ks.yaml

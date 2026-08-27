@@ -17,6 +17,10 @@ spec:
   dependsOn:
     - name: truenas-volumes
       namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
     - name: volsync
       namespace: volsync-system
     - name: tailscale-operator
@@ -32,6 +36,12 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
+    # Rotating credential. The Deployment reads POSTGRES_PASSWORD out of the
+    # bazarr-env Secret via envFrom and carries reloader.stakater.com/auto,
+    # so the 30-day rotation restarts it. The startup probe in
+    # helmrelease.yaml is what makes that restart survivable.
+    # See docs/runbooks/media-stack-postgres-migration.md.
+    - ../../../../components/postgres
     - ../../../../components/tailscale
     - ../../../../components/volsync
     - ../../../../components/failover/fast-node-eviction

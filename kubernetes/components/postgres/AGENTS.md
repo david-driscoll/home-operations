@@ -37,6 +37,7 @@ Anything that is not a string is a **sibling component**, not a variable:
 | `../../components/postgres/superuser` | `DatabaseRole.spec.superuser: true` — used by `immich` only |
 | `../../components/postgres/client-cert` | certificate auth instead of a password |
 | `../../components/postgres/roles` | extra roles beyond the app's login role, from the app's own `postgres-roles/` |
+| `../../components/postgres/databases` | extra databases beyond the app's own, from the app's own `postgres-databases/` |
 
 ### Extra roles
 
@@ -110,6 +111,88 @@ spec.postBuild.substitute.POSTGRES_SUPERUSER: Invalid value: "boolean": must be 
 Quoting the source does not help — kustomize re-emits `"${X:=false}"` as bare `${X:=false}`,
 because at build time that scalar is an ordinary string needing no quotes. Verified: double,
 single and bare all render identically.
+
+### Extra databases
+
+`databases` is the same shape as `roles`, one level over: the app writes manifests in
+`<app-dir>/postgres-databases/` and the component emits a `${APP}-postgres-databases`
+Kustomization that renders them into `database`. It reads the **same** `POSTGRES_APP_PATH`, so
+an app using both siblings passes the path once.
+
+```yaml
+spec:
+  path: &path ./kubernetes/apps/equestria/media/sonarr
+  components:
+    - ../../../../components/postgres
+    - ../../../../components/postgres/databases
+  postBuild:
+    substitute:
+      APP: *app
+      POSTGRES_APP_PATH: *path
+```
+
+It exists because `components/postgres` renders exactly one `Database`, which is right for
+almost everything here — but not for an app that wants a second one for a different retention or
+vacuum profile, or a vendor that hard-codes two connection strings.
+
+Consumers: `sonarr`, `radarr`, `lidarr`, `prowlarr` (`<app>-log`). Every Servarr wiki page
+documents an `<app>-main`/`<app>-log` pair, the app opens both at startup and **creates
+neither**, and the estate ran with `LOG__DBENABLED: "False"` — no log database at all — until
+this component existed to declare the second one. See
+[`docs/runbooks/media-stack-postgres-migration.md`](../../../docs/runbooks/media-stack-postgres-migration.md) §1.1.
+
+**⚠️ An extra database must name its credential.** `kubernetes/apps/database/postgres/backups`
+enumerates the `Database` resources in the `database` namespace and, for each, reads the Secret
+its `driscoll.dev/backup-credentials` annotation names — defaulting to `<database>-postgres`,
+which for an extra database does not exist. So the manifest carries one annotation pointing at
+the app's own credential:
+
+```yaml
+metadata:
+  annotations:
+    driscoll.dev/backup-credentials: foo-postgres
+spec:
+  name: foo-cache
+  owner: ${APP}
+```
+
+**One role, one OpenBao static role, one rotating password, two databases.** The app's login
+role owns the extra database, so it can dump it; no second static role is created, and
+`stacks/system/postgres-rotation.ts` never sees this component because it matches
+`components/postgres` by exact path suffix.
+
+The full copy-paste template, with every field annotated, is the header of
+[`databases/kustomization.yaml`](databases/kustomization.yaml). Two more things it repeats and
+this file will not: `ensure: absent` **drops** the database and everything in it, so deleting the
+manifest is the safe way to stop managing one; and the app is still not told the extra database's
+name by any of this — that stays a literal in the app's own ExternalSecret
+(`SONARR__POSTGRES__LOGDB: sonarr-log`).
+
+### The backup's annotation contract
+
+Three annotations, all optional, all read off the `Database` resource. They are the whole
+interface between this component family and the nightly `pg_dump`:
+
+| Annotation | Effect |
+| --- | --- |
+| `driscoll.dev/backup` | `"false"` excludes the database; absent or anything else backs it up |
+| `driscoll.dev/backup-credentials` | Secret to authenticate with; defaults to `<database>-postgres` |
+| `driscoll.dev/backup-reason` | why it is excluded, printed on every run |
+
+**The polarity is the opposite of a Garage bucket**, where `driscoll.dev/backup: "true"` opts one
+*in* (`kubernetes/apps/coder/forgejo-garage/bucket.yaml`). Forgetting the annotation on a bucket
+wastes space; forgetting it on a database loses data, so a database is backed up unless it says
+otherwise.
+
+Two kinds of exclusion live in git. `openbao`, because its role authenticates with a client
+certificate, has no password anywhere since phase 2.4b, and is dumped separately by
+`kube-system/openbao-replica`. And the four Servarr `<app>-log` databases, because they hold
+nothing but application log entries that the app itself trims — those also keep a
+`backup-credentials` annotation, so flipping the exclusion off cannot break the nightly job.
+The two decommissioned databases (`keeper`, `vikunja`) stay in the CronJob's
+`DECOMMISSIONED_DATABASES` env var — they have no Kubernetes object to annotate, which is exactly
+what makes them decommissioned. A live database with **neither** a `Database` resource nor an
+entry there is a hard failure, and that guard is the reason this job can be trusted.
 
 ## Things that will bite you
 

@@ -20,6 +20,24 @@ metadata:
   name: openbao
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    # NOT backed up by the postgres-backup CronJob, and this annotation is what
+    # stops it trying. That job enumerates `Database` resources and reads a
+    # credential Secret for each; openbao's role authenticates with a client
+    # certificate and, since phase 2.4b below, has `disablePassword: true` and a
+    # `hostnossl openbao openbao all reject` rule -- there is no password
+    # anywhere and `openbao-postgres` was deleted with the sops document.
+    #
+    # ⚠️ Without this the job fails NIGHTLY on a Secret that is deliberately
+    # absent, and one failed database exits the whole run non-zero. It is
+    # opt-OUT here (unlike a Garage bucket, where the same annotation opts one
+    # IN) because forgetting it on a database loses data.
+    #
+    # openbao IS backed up -- kube-system/openbao-replica runs its own nightly
+    # pg_dump over the same client certificate, which is exactly why the
+    # password could be removed. See resources/App.cs.
+    driscoll.dev/backup: "false"
+    driscoll.dev/backup-reason: >-
+      client-certificate auth, no password; dumped nightly by openbao-replica
 spec:
   cluster:
     name: postgres
