@@ -2,26 +2,47 @@
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# These CRDs are applied by hand, not by Helm: the traefik HelmRelease sets
+# `crds: Skip` on both install and upgrade, so whatever this kustomization
+# points at IS the CRD version running in the cluster. It therefore has to move
+# with kubernetes/apps/network/traefik/helmrelease.yaml `spec.chart.spec.version`.
+#
+# It did not, for a long time, because the annotations below said
+# `datasource=helm depName=traefik registryUrl=...` and the repo's
+# `Process annotated dependencies` customManager captures the registry as
+# `repository=`, never `registryUrl=`. Renovate's URL pattern additionally
+# requires the annotation line to end right after depName. So every one of
+# these ten annotations matched nothing at all -- silently, since an annotation
+# that extracts zero deps is not an error anywhere -- and the CRDs sat on
+# v40.2.0 while the chart moved on to 41.3.0, a full major apart.
+#
+# `github-tags` rather than `helm` on purpose. The path segment here is the git
+# TAG (`v40.2.0`), not the chart version (`40.2.0`); resolving this against the
+# Helm repository would write the unprefixed number into the URL and 404 every
+# CRD. traefik/traefik-helm-chart tags each chart release as `v<chart version>`,
+# so the two stay in step, and the `Traefik` packageRule in
+# .github/renovate.json5 groups `traefik/*` with `traefik*` -- chart and CRDs
+# land in one branch.
 resources:
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
   - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/experimental-install.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_ingressroutes.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_ingressroutetcps.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_ingressrouteudps.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_middlewares.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_middlewaretcps.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_serverstransports.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_serverstransporttcps.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_tlsoptions.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_tlsstores.yaml
-  # renovate: datasource=helm depName=traefik registryUrl=https://traefik.github.io/charts
+  # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.2.0/traefik/crds/traefik.io_traefikservices.yaml

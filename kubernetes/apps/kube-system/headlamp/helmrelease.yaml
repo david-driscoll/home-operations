@@ -16,7 +16,13 @@ metadata:
   name: &app headlamp
   namespace: &namespace kube-system
   annotations:
-    # renovate: datasource=helm depName=headlamp registryUrl=https://kubernetes-sigs.github.io/headlamp
+    # No `# renovate:` comment here. There used to be one -- `datasource=helm
+    # depName=headlamp registryUrl=...` -- and it never matched anything: the
+    # repo's customManager reads the registry as `repository=`, not
+    # `registryUrl=`, and the value below is the chart NAME, not a version, so
+    # even a matching pattern would have extracted `headlamp` as the version.
+    # `spec.chart.spec.version` is already tracked by the flux manager, which is
+    # the whole reason the HelmRepository above carries an explicit namespace.
     renovate.flux.cluster.local/chart: headlamp
 spec:
   chart:
