@@ -55,3 +55,18 @@ talosconfig
 # edit it, and leaves it behind if the editor dies. Bare pattern, so it matches
 # at any depth; the trailing glob covers .sops.json/.sops.env twins too.
 .decrypted~*
+
+# graphify build artifacts that must not be shared between machines.
+#
+# `.graphify_python` and `.graphify_root` are written by the skill with absolute
+# paths — the interpreter under ~/.cache/uv and the scan root, which on a
+# worktree run is the worktree, not the repo. Committed, they point every other
+# clone at a path that does not exist there. The skill rewrites both on each run,
+# so losing them costs nothing.
+#
+# `cache/` is the AST extraction cache, keyed by content hash. It is derived
+# entirely from tracked source and rebuilds in seconds, but a full run churns
+# thousands of files and several MB into a public repo for no benefit.
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/cache/
