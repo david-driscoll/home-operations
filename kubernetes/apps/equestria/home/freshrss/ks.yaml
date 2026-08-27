@@ -33,9 +33,20 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    # Preflighted in tranche 2: reloader.stakater.com/auto is on the DEPLOYMENT
-    # (not the pod template), and the pod reads its credential from the
-    # freshrss-env Secret, so the 30-day rotation actually reaches it.
+    # CORRECTION (2026-08-27): the preflight note that used to sit here said the
+    # pod "reads its credential from the freshrss-env Secret, so the 30-day
+    # rotation actually reaches it". That was wrong, and it is why this app was
+    # cleared as rotation-safe. FreshRSS reads DB_PASSWORD from the environment
+    # exactly once -- at first install, when it writes data/config.php onto the
+    # PVC. After that the PVC copy is authoritative. The rotation reached the
+    # Secret and the pod's env and stopped there; FreshRSS served HTTP 500s
+    # ("password authentication failed for user freshrss") for hours while the
+    # pod sat 1/1 Ready with both probes green and Gatus passing on a 401 that
+    # Traefik produces at the edge without ever reaching the pod.
+    #
+    # It is true NOW, for a different reason: the system config is rendered from
+    # git by the ExternalSecret and copied onto the PVC by the sync-config
+    # initContainer on every start. See resources/config.php.
     #
     # FreshRSS is PHP and connects per request, so it holds no pooled
     # connection to be invalidated at the cutover -- proof came from
