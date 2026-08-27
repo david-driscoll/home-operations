@@ -39,7 +39,16 @@ spec:
     - ../../../../components/tailscale
     - ../../../../components/volsync
     - ../../../../components/failover/fast-node-eviction
-    # - ../../../../components/postgres
+    # Enabled 2026-08-26. autobrr has had first-class Postgres since v0.20.0;
+    # this line and the block in externalsecret.yaml were imported commented-out
+    # in 91760f82 and never turned on. `dependsOn: postgres` was already here.
+    #
+    # ⚠️ autobrr has NO database or role in this cluster, so this is the
+    # BRAND-NEW-APP case: `stacks/system` will create the OpenBao static role
+    # before CNPG has applied the DatabaseRole and stall on
+    # `role "autobrr" does not exist`. Expected; recovery is in
+    # components/postgres/ks.yaml and in the runbook.
+    - ../../../../components/postgres
   postBuild:
     substitute:
       APP: *app

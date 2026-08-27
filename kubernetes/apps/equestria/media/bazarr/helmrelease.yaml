@@ -50,6 +50,15 @@ spec:
               PGID: ${PGID}
               UMASK: 002
               TZ: ${TIMEZONE}
+            # The database connection, from the ExternalSecret next door.
+            # envFrom rather than discrete secretKeyRefs so the whole
+            # connection moves as one unit, and because the password
+            # rotates: the Secret changes under a running pod and
+            # reloader.stakater.com/auto on the controller turns that into
+            # a restart.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
             probes:
               liveness: &probes
                 enabled: true
@@ -63,11 +72,24 @@ spec:
                   timeoutSeconds: 10
                   failureThreshold: 5
               readiness: *probes
-              # startup:
-              #   enabled: true
-              #   spec:
-              #     failureThreshold: 5
-              #     periodSeconds: 10
+              # First boot against an EMPTY Postgres database runs the whole
+              # migration chain, and every 30-day password rotation forces a cold
+              # start. Without a startup probe the liveness budget is
+              # initialDelay + failureThreshold x period = ~110s; the kubelet kills
+              # the pod mid-migration and the restart replays it from the top. A
+              # startup probe suspends liveness AND readiness until it passes, so
+              # 60 x 10s buys ten minutes and costs nothing on a normal boot.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ping
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 60
             securityContext:
               runAsNonRoot: true
               runAsUser: 568

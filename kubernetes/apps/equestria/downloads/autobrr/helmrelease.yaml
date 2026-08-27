@@ -68,6 +68,24 @@ spec:
                   timeoutSeconds: 10
                   failureThreshold: 5
               readiness: *probes
+              # First boot against an EMPTY Postgres database runs the whole
+              # migration chain, and every 30-day password rotation forces a cold
+              # start. Without a startup probe the liveness budget is
+              # initialDelay + failureThreshold x period = ~110s; the kubelet kills
+              # the pod mid-migration and the restart replays it from the top. A
+              # startup probe suspends liveness AND readiness until it passes, so
+              # 60 x 10s buys ten minutes and costs nothing on a normal boot.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/healthz/liveness
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 60
             securityContext:
               runAsNonRoot: true
               runAsUser: 568
