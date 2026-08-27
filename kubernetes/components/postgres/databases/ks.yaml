@@ -1,0 +1,92 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# Renders the app's own `postgres-databases/` directory into the `database`
+# namespace.
+#
+# Structurally identical to ../roles/ks.yaml, and for the same reason: a
+# `Database` is namespace-scoped and `spec.cluster.name` is a local reference,
+# so the object has to land beside the Cluster. The app's own Kustomization
+# cannot put it there -- `targetNamespace` is Kustomize's namespace
+# transformer, which OVERRIDES an explicitly-set `metadata.namespace` (verified;
+# see ../ks.yaml). Hence this second Kustomization, reading a directory in the
+# app's tree and targeting `database`.
+#
+# The directory is NOT listed in the app's own `kustomization.yaml`, and must
+# not be: that would render the same objects a second time into the app's
+# namespace. Every app here lists its resources explicitly, so an unreferenced
+# subdirectory is inert.
+#
+# See ../ks.yaml for why `decryption` and `substituteFrom` are spelled out
+# rather than inherited.
+#
+# SEPARATE FROM `${APP}-postgres` AND FROM `${APP}-postgres-roles`. A Flux
+# Kustomization has exactly one `spec.path`, so three directories need three
+# objects. Being separate also means a broken extra-database manifest still
+# leaves the app its own database, login role and credential.
+#
+# ⚠️ AN EXTRA DATABASE MUST NAME ITS CREDENTIAL. The postgres-backup CronJob
+# enumerates the `Database` resources in THIS namespace and, for each, reads the
+# Secret `driscoll.dev/backup-credentials` names -- defaulting to
+# `<database>-postgres`, which for an extra database does not exist. Without the
+# annotation the nightly run fails on a Secret that was never going to be there,
+# and one failed database exits the whole job non-zero. The failure is loud, but
+# it is loud at 02:00 the following morning, which is not when you want to find
+# out. The template in ./kustomization.yaml has the annotation on it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${APP}-postgres-databases
+spec:
+  targetNamespace: database
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ${APP}
+      driscoll.dev/name: ${APP}
+  # ${POSTGRES_APP_PATH} is the app's OWN `spec.path`, handed down through
+  # postBuild.substitute -- see ./kustomization.yaml for the anchor idiom that
+  # avoids writing it twice. The `/postgres-databases` suffix is this
+  # component's convention, appended here so the app never spells it out.
+  #
+  # The SAME variable ../roles reads. An app using both siblings passes it once.
+  #
+  # Forgetting POSTGRES_APP_PATH renders `/postgres-databases`, which fails this
+  # Kustomization with a path-not-found. That is deliberate -- opting in
+  # without wiring the path should say so.
+  path: ${POSTGRES_APP_PATH}/postgres-databases
+  # The OPERATOR, not the `postgres` cluster Kustomization -- depending on the
+  # latter reintroduces the openbao/postgres readiness cycle ../ks.yaml
+  # describes.
+  dependsOn:
+    - name: postgres-operator
+      namespace: cloudnative-pg
+  prune: true
+  # Same policy as everything else this component family renders: an ownership
+  # change must never cascade-delete a database.
+  deletionPolicy: Orphan
+  # `false`, matching ../ks.yaml: `wait: true` would make the parent app block
+  # on CNPG being healthy, which on a cold boot needs OpenBao, which needs this
+  # cluster.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substitute:
+      APP: ${APP}
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+      - name: cluster-versions
+        kind: ConfigMap
+      - name: shared-secrets
+        kind: Secret
