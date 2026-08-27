@@ -50,7 +50,7 @@ spec:
 
         containers:
           *app :
-            image:
+            image: &image
               repository: freshrss/freshrss
               tag: 1.29.1@sha256:ab6b363102ccdbc39f6a62db926f567c61a5289bf25ba460f1c34423d8cc1a4d
             env:
@@ -127,6 +127,38 @@ spec:
                 drop:
                   - ALL
 
+        # Copy the ESO-rendered system config onto the PVC before Apache starts.
+        #
+        # It is a COPY rather than a subPath mount on purpose. FreshRSS's
+        # Minz_Configuration::save() writes config.php.tmp.php and then
+        # rename()s it over config.php -- and that rename is error-suppressed
+        # (@rename) with save() returning true regardless. Over a read-only
+        # bind-mount the rename fails EBUSY, so the admin "System configuration"
+        # page would report success while changing nothing and leaving a stray
+        # .tmp.php behind. Copying keeps config.php a real writable file, so
+        # FreshRSS behaves normally; git still wins, because this overwrites the
+        # file on every start.
+        #
+        # Reuses the app image via the &image anchor so there is exactly one
+        # digest pin for Renovate to bump, and no second image to pull.
+        initContainers:
+          sync-config:
+            image: *image
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -eu
+                mkdir -p /var/www/FreshRSS/data
+                cp /config-src/config.php /var/www/FreshRSS/data/config.php
+                chmod 0664 /var/www/FreshRSS/data/config.php
+                echo "sync-config: config.php written from freshrss-env"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+
     defaultPodOptions:
       securityContext:
         fsGroupChangePolicy: OnRootMismatch
@@ -146,6 +178,16 @@ spec:
         type: emptyDir
         globalMounts:
           - path: /var/www/FreshRSS/extensions
+      # Mounted ONLY into the initContainer. The app container gets its
+      # credentials through envFrom and must not also see the rendered config.
+      config-src:
+        type: secret
+        name: ${APP}-env
+        advancedMounts:
+          *app :
+            sync-config:
+              - path: /config-src
+                readOnly: true
 
     service:
       app:
