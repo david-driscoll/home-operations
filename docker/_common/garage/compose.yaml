@@ -2,6 +2,8 @@ x-dockge:
   urls:
     - https://garage.${CLUSTER_DOMAIN}
     - https://garage-${host}.${tailscaleDomain}
+    - https://garage-s3.${tailscaleDomain}
+    - https://garage-admin.${tailscaleDomain}
 
 services:
   # Garage (garagehq.deuxfleurs.fr) — one node of the estate's geo-distributed
@@ -72,6 +74,42 @@ services:
       - "3900:3900"
       - "3901:3901"
       - "3903:3903"
+    # SHARED tailnet services — the same two names on ALL THREE nodes, which is
+    # the point: `svc:garage-s3` and `svc:garage-admin` are Tailscale VIP
+    # services that every garage host advertises, so a client resolves one name
+    # and reaches whichever node is up. That is what retires the single-endpoint
+    # limitation the old `dockge-celestia:3900` endpoint carried — celestia
+    # going down stops being an outage for equestria's backups.
+    #
+    # DELIBERATELY NOT `-${host}` suffixed, unlike garage-webui's route below.
+    # Those per-host names are distinct services; these two are one service with
+    # three advertisers. components/DockgeLxc.ts knows the difference through
+    # SHARED_TAILSCALE_SERVICES — it must NOT create the Service object once per
+    # site stack, because all three would own the same global object and fight
+    # over it (`deleteBeforeReplace` + `replaceOnChanges: ["*"]` would flap it).
+    # stacks/system/garage.ts creates them once; the hosts only advertise.
+    #
+    # No authentik forward-auth on either, and that is not an oversight: S3
+    # clients authenticate with SigV4 and the admin API with a bearer token, and
+    # neither can follow an interactive redirect — a middleware here would break
+    # every client at once while looking like a Garage fault. Same reasoning as
+    # kubernetes/apps/coder/forgejo-garage/httproute.yaml. Access control is the
+    # tailnet ACL plus the credential itself.
+    #
+    # Routed through traefik rather than straight from `tailscale serve` to the
+    # port, because traefik passes the original Host header through and SigV4
+    # signs it — terminating at tailscaled and proxying to 127.0.0.1:3900 would
+    # rewrite Host and every signature would fail as SignatureDoesNotMatch.
+    labels:
+      traefik.enable: true
+      traefik.http.routers.garage-s3.rule: Host(`garage-s3.${tailscaleDomain}`)
+      traefik.http.routers.garage-s3.entrypoints: tailscale
+      traefik.http.routers.garage-s3.service: garage-s3
+      traefik.http.services.garage-s3.loadbalancer.server.port: 3900
+      traefik.http.routers.garage-admin.rule: Host(`garage-admin.${tailscaleDomain}`)
+      traefik.http.routers.garage-admin.entrypoints: tailscale
+      traefik.http.routers.garage-admin.service: garage-admin
+      traefik.http.services.garage-admin.loadbalancer.server.port: 3903
     # The scratch image has no shell; the garage binary doubles as the CLI and
     # `status` exits non-zero when the local daemon does not answer RPC. A node
     # that has not been assigned a layout role yet still answers, so this stays

@@ -25,11 +25,13 @@
  */
 import * as garage from "@axnic/pulumi-garage";
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
+import { Tailscale } from "@components/constants.ts";
 import type { GlobalResources } from "@components/globals.ts";
 import { copyFileToRemote } from "@components/helpers.ts";
 import type { DockgeLxcDefinition } from "@components/store/index.ts";
 import { remote } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
+import * as tailscale from "@pulumi/tailscale";
 
 // The garage cluster membership. A layout fact, not a derivable one: every
 // dockge host EXCEPT alpha-site runs a node (docker/alpha-site/garage/.ignore
@@ -61,6 +63,40 @@ const MIRROR_BUCKET_QUOTA = 2048 * GiB;
  */
 export function configureGarage(globals: GlobalResources) {
   const provider = globals.garageProvider;
+
+  // The two SHARED tailnet services, created here and here only.
+  //
+  // Every garage host advertises both (the `Host(...)` labels in
+  // docker/_common/garage/compose.yaml, turned into `tailscale serve` by
+  // components/DockgeLxc.ts), which makes them VIP services: one name, three
+  // advertisers, and the client reaches whichever node is up. That is what
+  // takes celestia off the critical path for equestria's backups — the old
+  // `dockge-celestia:3900` endpoint made one host a single point of failure for
+  // the whole archive.
+  //
+  // They live in THIS stack rather than in DockgeLxc because a
+  // `tailscale.Service` is one global object and DockgeLxc runs once per site
+  // stack; three owners would fight over it. `SHARED_TAILSCALE_SERVICES` in
+  // that file is the other half of this arrangement — the two lists must agree.
+  //
+  // NOT `deleteBeforeReplace`, unlike the per-host services: deleting a service
+  // three hosts are actively advertising drops the endpoint for every consumer
+  // at once, and the CNPG archive is one of them.
+  for (const [name, description] of [
+    ["garage-s3", "Garage S3 API (geo-replicated across celestia/luna/skystar)"],
+    ["garage-admin", "Garage Admin API (bucket/key management)"],
+  ] as const) {
+    new tailscale.Service(
+      `shared-tailscale-service-${name}`,
+      {
+        name: `svc:${name}`,
+        ports: ["tcp:443"],
+        tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
+        comment: description,
+      },
+      { provider: globals.tailscaleProvider },
+    );
+  }
 
   // What equestria reaches the S3 API through: the tailscale-operator egress
   // Service for dockge-celestia (kubernetes/apps/tailscale-system/services,
