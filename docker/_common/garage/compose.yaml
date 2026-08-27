@@ -1,7 +1,10 @@
 x-dockge:
   urls:
+    # This node: the webui, and its own S3 endpoint.
     - https://garage.${CLUSTER_DOMAIN}
+    - https://s3.${CLUSTER_DOMAIN}
     - https://garage-${host}.${tailscaleDomain}
+    # The cluster: whichever node is up.
     - https://garage-s3.${tailscaleDomain}
     - https://garage-admin.${tailscaleDomain}
 
@@ -100,11 +103,39 @@ services:
     # port, because traefik passes the original Host header through and SigV4
     # signs it — terminating at tailscaled and proxying to 127.0.0.1:3900 would
     # rewrite Host and every signature would fail as SignatureDoesNotMatch.
+    # PER-INSTANCE names sit alongside the shared ones, and the distinction is
+    # the whole point of having both:
+    #
+    #   garage-s3.${tailscaleDomain}     any node — whichever is up (VIP)
+    #   s3.${CLUSTER_DOMAIN}             THIS node, specifically
+    #
+    # The VIP is what production consumers should use; the per-instance name is
+    # for the times you need to know WHICH node answered — verifying a node
+    # actually holds an object, checking one node's view after a partition,
+    # or ruling a single node in or out during an incident. Ask the VIP those
+    # questions and the answer is unfalsifiable, because any of the three may
+    # have served it.
+    #
+    # `${CLUSTER_DOMAIN}` is per-cluster (celestia/luna/skystar.driscoll.tech),
+    # so this one label yields three distinct names. DockgeLxc creates the
+    # CNAME for each automatically from the Host rule. Note the near-neighbour:
+    # `s3.${ROOT_DOMAIN}` (no cluster segment) is the IN-CLUSTER Garage on
+    # equestria, an entirely different store — see docs/kubernetes/garage-s3.md.
+    #
+    # The admin API gets no per-instance name on purpose. It is a control plane
+    # reached programmatically through the VIP, and every node's admin API acts
+    # on the same cluster state, so a per-node name would offer no answer the
+    # VIP does not already give. `garage.${CLUSTER_DOMAIN}` (the webui, on the
+    # garage-webui container below) is the per-instance human entry point.
     labels:
       traefik.enable: true
       traefik.http.routers.garage-s3.rule: Host(`garage-s3.${tailscaleDomain}`)
       traefik.http.routers.garage-s3.entrypoints: tailscale
       traefik.http.routers.garage-s3.service: garage-s3
+      traefik.http.routers.garage-s3-local.rule: Host(`s3.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.garage-s3-local.entrypoints: websecure
+      traefik.http.routers.garage-s3-local.tls.certresolver: le
+      traefik.http.routers.garage-s3-local.service: garage-s3
       traefik.http.services.garage-s3.loadbalancer.server.port: 3900
       traefik.http.routers.garage-admin.rule: Host(`garage-admin.${tailscaleDomain}`)
       traefik.http.routers.garage-admin.entrypoints: tailscale
