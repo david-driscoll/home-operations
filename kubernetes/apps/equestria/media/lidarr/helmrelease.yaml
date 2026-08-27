@@ -59,9 +59,24 @@ spec:
                   secretKeyRef:
                     name: spike-management-credentials
                     key: lidarr_apikey
-              LIDARR__LOG__DBENABLED: "False"
+              # "True" since the log database exists: see
+              # ./postgres-databases/. This is what puts System > Logs back
+              # in the UI. It is also what makes that database REQUIRED at
+              # startup -- the app connects to PostgresLogDb and will not
+              # create it, so flipping this back to "False" is the rollback
+              # if the database is ever missing.
+              LIDARR__LOG__DBENABLED: "True"
               LIDARR__LOG__LEVEL: info
               LIDARR__PORT: &port 8686
+            # LIDARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB}, from the
+            # ExternalSecret next door. envFrom rather than five secretKeyRefs
+            # so the whole connection moves as one unit, and because the
+            # password rotates: the Secret changes under a running pod and
+            # reloader.stakater.com/auto on the controller above is what turns
+            # that into a restart.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
             probes:
               liveness: &probes
                 enabled: true
@@ -74,13 +89,18 @@ spec:
                   periodSeconds: 20
                   timeoutSeconds: 10
                   failureThreshold: 5
+              # Was failureThreshold: 3 -- 30s of grace. First boot against an
+              # EMPTY Postgres database replays the entire migration chain, and
+              # every 30-day password rotation forces a cold start, so this is
+              # widened to ten minutes. A startup probe suspends liveness AND
+              # readiness until it passes, and costs nothing on a normal boot.
               startup:
                 <<: *probes
                 spec:
                   <<: *spec
-                  initialDelaySeconds: 60
+                  initialDelaySeconds: 30
                   periodSeconds: 10
-                  failureThreshold: 3
+                  failureThreshold: 60
               readiness: *probes
             securityContext:
               runAsNonRoot: true

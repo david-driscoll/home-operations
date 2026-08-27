@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/database_v1.json
+#
+# Radarr's log database -- the second half of the `<app>-main`/`<app>-log` pair
+# every Servarr wiki page documents.
+#
+# It exists because `RADARR__LOG__DBENABLED` is now `"True"`. With it off,
+# `NzbDrone.Host/Bootstrap.cs` calls `AddDummyLogDatabase()` and no log
+# connection is ever opened; with it on the app connects to `PostgresLogDb` at
+# startup and **Radarr will not create it** -- the wiki is explicit about that.
+# So this has to exist before the pod does. See
+# docs/runbooks/media-stack-postgres-migration.md.
+#
+# It uses the app's own role and the app's own credential: `PostgresUser` and
+# `PostgresPassword` are shared by both connections and only the database name
+# differs (NzbDrone.Core/Datastore/ConnectionStringFactory.cs). There is no
+# second role, no second OpenBao static role, and no second password.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: ${APP}-log
+  annotations:
+    # Nothing in this component family is ever pruned; see
+    # kubernetes/components/postgres/AGENTS.md.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    # NOT backed up. This database holds nothing but the app's own log entries,
+    # which Radarr trims on a schedule of its own (TrimLogDatabase) and which
+    # nobody would restore. Excluding it keeps four pointless dumps out of the
+    # nightly run.
+    #
+    # ⚠️ Opt-OUT, unlike a Garage bucket where this same annotation opts one IN.
+    # The defaults differ because the stakes do -- see
+    # kubernetes/apps/database/postgres/backups/resources/App.cs.
+    driscoll.dev/backup: "false"
+    driscoll.dev/backup-reason: >-
+      transient application log, trimmed by Radarr's own housekeeping
+    # Belt and braces, and the reason is one line long: flipping the annotation
+    # above to "true" would otherwise send the backup looking for
+    # `${APP}-log-postgres`, which does not exist and never will, and one
+    # failed database exits the whole nightly job non-zero.
+    driscoll.dev/backup-credentials: ${APP}-postgres
+spec:
+  cluster:
+    name: postgres
+  name: ${APP}-log
+  # The app's own login role -- it already exists, ../database renders it.
+  owner: ${APP}
+  ensure: present
+  allowConnections: true
+  # ⚠️ `ensure: absent` DROPS the database. Deleting this file is the safe way
+  # to stop managing it; the reclaim policy then leaves the live database alone.
+  databaseReclaimPolicy: retain
+  # ONLY `public`, for the reason spelled out at length in
+  # kubernetes/components/postgres/database/database.yaml: a schema named after
+  # the role arms the dormant `$user` element of the default search_path and
+  # shadows public.
+  schemas:
+    - ensure: present
+      name: public
+      owner: ${APP}
