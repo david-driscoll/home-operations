@@ -149,8 +149,19 @@ spec:
               - |
                 set -eu
                 mkdir -p /var/www/FreshRSS/data
-                cp /config-src/config.php /var/www/FreshRSS/data/config.php
-                chmod 0664 /var/www/FreshRSS/data/config.php
+                # Write THROUGH the existing file rather than replacing it, and do
+                # not chmod. The PVC copy is owned by uid 568 (FreshRSS's own
+                # install wrote it) while this container runs as uid 0 with
+                # `capabilities: drop: ALL`. Dropping ALL removes CAP_FOWNER, and
+                # chmod on a file you do not own needs CAP_FOWNER -- so `chmod`
+                # here fails with EPERM even as root, and under `set -e` that
+                # crash-loops the pod in Init. Redirection only needs write
+                # permission, which we have because the file is mode 0664 with
+                # group root and our gid is 0; it also preserves the owner and
+                # mode instead of fighting them. On a first install the file does
+                # not exist yet and is created 0644 root:root, which is equally
+                # fine because every process in this pod runs as root.
+                cat /config-src/config.php > /var/www/FreshRSS/data/config.php
                 echo "sync-config: config.php written from freshrss-env"
             securityContext:
               allowPrivilegeEscalation: false
