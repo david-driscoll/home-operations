@@ -25,6 +25,9 @@ spec:
     - name: garage-s3
       port: 3900
       targetPort: 3900
+    - name: garage-admin
+      port: 3903
+      targetPort: 3903
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe
