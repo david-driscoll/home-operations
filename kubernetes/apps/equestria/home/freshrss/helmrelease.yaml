@@ -65,18 +65,61 @@ spec:
               limits:
                 memory: 1024Mi
             probes:
-              liveness: &probes
+              # Neither probe may target `/`. FreshRSS serves `/` from p/index.php,
+              # which 302s to `/i/?rid=...`, and the image's own Apache config puts
+              # `/i/` behind mod_auth_openidc (`<Directory /var/www/FreshRSS/p/i>`
+              # with `AuthType openid-connect` inside `<IfDefine OIDC_ENABLED>`, and
+              # the container does run with `-D OIDC_ENABLED`), so hop 2 redirects to
+              # authentik.driscoll.tech. The kubelet follows same-host redirects but
+              # returns the last response on a cross-host one, so it lands on that
+              # 3xx: the probe PASSES but emits `ProbeWarning: Probe terminated
+              # redirects` every cycle, and drives ~1080 mod_auth_openidc warnings
+              # per 5 minutes into the pod log (requests arriving through Traefik
+              # produce none, because they carry X-Forwarded-*).
+              #
+              # Liveness and readiness deliberately do NOT share a path. They answer
+              # different questions, so they used to share an anchor and should not.
+              liveness:
                 enabled: true
                 custom: true
                 spec:
                   httpGet:
-                    path: /
+                    # greader.php short-circuits on `exit('OK')` BEFORE
+                    # initSystem(), so it proves Apache + mod_php + the autoloader
+                    # and deliberately nothing else. That is exactly what liveness
+                    # should assert: restarting is the right remedy for a wedged
+                    # PHP, and the wrong remedy for a bad config or a down database.
+                    # The path must stay exactly this -- `/api/greader.php/` with a
+                    # trailing slash returns 400, which at failureThreshold 3 would
+                    # put the pod into CrashLoopBackOff.
+                    path: /api/greader.php
                     port: &port 80
                   initialDelaySeconds: 30
                   periodSeconds: 10
                   timeoutSeconds: 1
                   failureThreshold: 3
-              readiness: *probes
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # p/api/index.php DOES call initSystem() and returns 500
+                    # "Invalid system init!" if data/config.php cannot be read, so
+                    # readiness keeps proving the Longhorn PVC is mounted and
+                    # readable -- coverage `/` used to provide and that greader.php
+                    # does not. Kept on readiness only: on liveness a bad config
+                    # would become a restart loop instead of an unready pod.
+                    #
+                    # NOTE: neither path can detect a database failure. There is no
+                    # unauthenticated FreshRSS endpoint that opens a connection, so
+                    # a DB outage leaves the pod Ready and serving 500s. That needs
+                    # a log-based alert, not a probe.
+                    path: /api/
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 3
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
