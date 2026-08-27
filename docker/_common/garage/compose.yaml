@@ -1,7 +1,12 @@
 x-dockge:
   urls:
+    # This node: the webui, and its own S3 endpoint.
     - https://garage.${CLUSTER_DOMAIN}
+    - https://s3.${CLUSTER_DOMAIN}
     - https://garage-${host}.${tailscaleDomain}
+    # The cluster: whichever node is up.
+    - https://garage-s3.${tailscaleDomain}
+    - https://garage-admin.${tailscaleDomain}
 
 services:
   # Garage (garagehq.deuxfleurs.fr) — one node of the estate's geo-distributed
@@ -72,6 +77,70 @@ services:
       - "3900:3900"
       - "3901:3901"
       - "3903:3903"
+    # SHARED tailnet services — the same two names on ALL THREE nodes, which is
+    # the point: `svc:garage-s3` and `svc:garage-admin` are Tailscale VIP
+    # services that every garage host advertises, so a client resolves one name
+    # and reaches whichever node is up. That is what retires the single-endpoint
+    # limitation the old `dockge-celestia:3900` endpoint carried — celestia
+    # going down stops being an outage for equestria's backups.
+    #
+    # DELIBERATELY NOT `-${host}` suffixed, unlike garage-webui's route below.
+    # Those per-host names are distinct services; these two are one service with
+    # three advertisers. components/DockgeLxc.ts knows the difference through
+    # SHARED_TAILSCALE_SERVICES — it must NOT create the Service object once per
+    # site stack, because all three would own the same global object and fight
+    # over it (`deleteBeforeReplace` + `replaceOnChanges: ["*"]` would flap it).
+    # stacks/system/garage.ts creates them once; the hosts only advertise.
+    #
+    # No authentik forward-auth on either, and that is not an oversight: S3
+    # clients authenticate with SigV4 and the admin API with a bearer token, and
+    # neither can follow an interactive redirect — a middleware here would break
+    # every client at once while looking like a Garage fault. Same reasoning as
+    # kubernetes/apps/coder/forgejo-garage/httproute.yaml. Access control is the
+    # tailnet ACL plus the credential itself.
+    #
+    # Routed through traefik rather than straight from `tailscale serve` to the
+    # port, because traefik passes the original Host header through and SigV4
+    # signs it — terminating at tailscaled and proxying to 127.0.0.1:3900 would
+    # rewrite Host and every signature would fail as SignatureDoesNotMatch.
+    # PER-INSTANCE names sit alongside the shared ones, and the distinction is
+    # the whole point of having both:
+    #
+    #   garage-s3.${tailscaleDomain}     any node — whichever is up (VIP)
+    #   s3.${CLUSTER_DOMAIN}             THIS node, specifically
+    #
+    # The VIP is what production consumers should use; the per-instance name is
+    # for the times you need to know WHICH node answered — verifying a node
+    # actually holds an object, checking one node's view after a partition,
+    # or ruling a single node in or out during an incident. Ask the VIP those
+    # questions and the answer is unfalsifiable, because any of the three may
+    # have served it.
+    #
+    # `${CLUSTER_DOMAIN}` is per-cluster (celestia/luna/skystar.driscoll.tech),
+    # so this one label yields three distinct names. DockgeLxc creates the
+    # CNAME for each automatically from the Host rule. Note the near-neighbour:
+    # `s3.${ROOT_DOMAIN}` (no cluster segment) is the IN-CLUSTER Garage on
+    # equestria, an entirely different store — see docs/kubernetes/garage-s3.md.
+    #
+    # The admin API gets no per-instance name on purpose. It is a control plane
+    # reached programmatically through the VIP, and every node's admin API acts
+    # on the same cluster state, so a per-node name would offer no answer the
+    # VIP does not already give. `garage.${CLUSTER_DOMAIN}` (the webui, on the
+    # garage-webui container below) is the per-instance human entry point.
+    labels:
+      traefik.enable: true
+      traefik.http.routers.garage-s3.rule: Host(`garage-s3.${tailscaleDomain}`)
+      traefik.http.routers.garage-s3.entrypoints: tailscale
+      traefik.http.routers.garage-s3.service: garage-s3
+      traefik.http.routers.garage-s3-local.rule: Host(`s3.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.garage-s3-local.entrypoints: websecure
+      traefik.http.routers.garage-s3-local.tls.certresolver: le
+      traefik.http.routers.garage-s3-local.service: garage-s3
+      traefik.http.services.garage-s3.loadbalancer.server.port: 3900
+      traefik.http.routers.garage-admin.rule: Host(`garage-admin.${tailscaleDomain}`)
+      traefik.http.routers.garage-admin.entrypoints: tailscale
+      traefik.http.routers.garage-admin.service: garage-admin
+      traefik.http.services.garage-admin.loadbalancer.server.port: 3903
     # The scratch image has no shell; the garage binary doubles as the CLI and
     # `status` exits non-zero when the local daemon does not answer RPC. A node
     # that has not been assigned a layout role yet still answers, so this stays

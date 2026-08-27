@@ -33,6 +33,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dockerPath = resolve(__dirname, "../docker");
 
+/**
+ * Tailnet service names that several hosts advertise under ONE name — Tailscale
+ * VIP services, where a client resolves the name and reaches whichever
+ * advertiser is up.
+ *
+ * `createStack` derives a service from every `Host(...)` rule pointing at the
+ * tailnet domain and normally creates the `tailscale.Service` object alongside
+ * the `tailscale serve` that advertises it. That is right for a per-host name
+ * (`backrest-celestia`), and wrong for a shared one: the object is global to
+ * the tailnet while the code runs once per site stack, so all three would own
+ * it and flap it. Names listed here are created ONCE by
+ * stacks/system/garage.ts; hosts only advertise them.
+ *
+ * Add a name here in the SAME change that adds its `Host(...)` label, or the
+ * first two site stacks to run will race for the object.
+ */
+const SHARED_TAILSCALE_SERVICES: ReadonlySet<string> = new Set(["garage-s3", "garage-admin"]);
+
 type ApplicationReturn = Unwrap<ReturnType<AuthentikApplicationManager["createApplication"]>>;
 export type OPClientItem = Unwrap<ReturnType<OPClient["mapItem"]>>;
 
@@ -1293,24 +1311,45 @@ export class DockgeLxc extends ComponentResource {
               const service = host.replace(`.${tailscaleDomain}`, "");
               log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
-              copyFiles.push(
-                new tailscale.Service(
-                  `${stackName}-tailscale-service-${service}`,
-                  {
-                    name: `svc:${service}`,
-                    ports: ["tcp:443"],
-                    tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
-                    comment: `External service for ${service} (${host})`,
-                  },
-                  {
-                    parent: this,
-                    dependsOn: tailscaleServices,
-                    deleteBeforeReplace: true,
-                    provider: this.args.globals.tailscaleProvider,
-                    replaceOnChanges: ["*"],
-                  },
-                ),
-              );
+              // A SHARED service is advertised by several hosts under ONE name
+              // (docker/_common/garage's `garage-s3` / `garage-admin`), which
+              // makes it a Tailscale VIP: one name, whichever advertiser is up.
+              //
+              // The `tailscale.Service` object is global to the tailnet, but
+              // this code runs once per SITE STACK — so creating it here would
+              // have three stacks (home, gulf-of-mexico, ocracoke) each own the
+              // same object. With `deleteBeforeReplace` and
+              // `replaceOnChanges: ["*"]` below, they would take turns deleting
+              // and recreating it, tearing down the other hosts' advertisement
+              // every time any site stack ran. That is the same armed-delete
+              // shape that took DNS out twice (components/StandardDns.ts).
+              //
+              // So for these, ONE owner creates the object —
+              // stacks/system/garage.ts — and every host still runs
+              // `tailscale serve` below to advertise it. Ordering: the system
+              // stack must have created the service before a host can advertise
+              // it; a site stack that runs first fails on that command and
+              // converges on the next pass.
+              if (!SHARED_TAILSCALE_SERVICES.has(service)) {
+                copyFiles.push(
+                  new tailscale.Service(
+                    `${stackName}-tailscale-service-${service}`,
+                    {
+                      name: `svc:${service}`,
+                      ports: ["tcp:443"],
+                      tags: [Tailscale.tag.dockge, Tailscale.tag.apps],
+                      comment: `External service for ${service} (${host})`,
+                    },
+                    {
+                      parent: this,
+                      dependsOn: tailscaleServices,
+                      deleteBeforeReplace: true,
+                      provider: this.args.globals.tailscaleProvider,
+                      replaceOnChanges: ["*"],
+                    },
+                  ),
+                );
+              }
 
               const tailscaleServe = new remote.Command(
                 `${stackName}-tailscale-serve-${service}`,

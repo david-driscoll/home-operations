@@ -26,6 +26,17 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
+    # This node's own S3 endpoint, through traefik with its LE cert. The
+    # request is deliberately unsigned, so Garage answers an S3 error — which
+    # is a PASS here. The assertion is only that something behind traefik
+    # answered as Garage: a 502/504 means the route or the container is broken,
+    # and a TLS failure fails the check outright. Pinning an exact 4xx would
+    # couple this to Garage's choice of error code for an unsigned ListBuckets.
+    - name: garage-s3
+      url: https://s3.${CLUSTER_DOMAIN}
+      method: GET
+      conditions:
+        - "[STATUS] < 500"
     # Liveness of the two listeners that matter to consumers: S3 for the
     # backup writers, RPC for the mesh. Probed over the tailnet from the
     # uptime stack on dockge-as, which travels as tag:dockge — the garage-mesh
