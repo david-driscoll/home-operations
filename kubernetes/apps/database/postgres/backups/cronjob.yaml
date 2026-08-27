@@ -66,8 +66,28 @@ spec:
 
     controllers:
       *app :
-        annotations:
-          reloader.stakater.com/auto: "true"
+        # Deliberately NO `reloader.stakater.com/auto`. This pod template
+        # references exactly one ConfigMap -- postgres-backup-script, generated
+        # from resources/App.cs with disableNameSuffixHash so it mutates in place
+        # -- and zero Secrets: the per-database credentials are read at runtime
+        # through the API server under this job's own Role, so Reloader could
+        # never observe a rotation here even in principle. What the annotation
+        # actually meant was "re-dump all 24 databases the moment someone edits
+        # App.cs".
+        #
+        # On 2026-08-27 that fired: PR #1230 rewrote App.cs, kustomize-controller
+        # applied the new ConfigMap at 02:01:41Z, and Reloader POSTed a manual Job
+        # (generateName postgres-backup-, `cronjob.kubernetes.io/instantiate:
+        # manual`) on top of the 02:00:00Z scheduled run that was still going.
+        # `concurrencyPolicy: Forbid` below does NOT protect against this -- Forbid
+        # is only enforced by the CronJob controller when IT schedules a run; a Job
+        # POSTed straight at the API bypasses the check entirely. The two runs then
+        # collided on immich's shared staging file (see the staging-file note in
+        # resources/App.cs, which is the defect that made the collision destructive
+        # rather than merely wasteful).
+        #
+        # Trade-off, stated plainly: a change to App.cs now waits for the next
+        # 02:00 run rather than taking effect immediately.
         cronjob:
           backoffLimit: 6
           concurrencyPolicy: Forbid

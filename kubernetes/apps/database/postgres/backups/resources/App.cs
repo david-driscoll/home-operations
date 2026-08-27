@@ -225,7 +225,21 @@ foreach (var db in live)
   // Dump to a sibling temp file and only replace the existing backup once pg_dump
   // has exited 0. Writing straight to backupFile truncates the last known-good
   // dump before the new one is known to be valid.
-  var stagingFile = $"{backupFile}.tmp";
+  //
+  // The staging name carries the pod name so two concurrent runs can never share
+  // it. They could before: the name was a bare "{db}.sql.gz.tmp", and the finally
+  // block below deletes stagingFile unconditionally -- including on the path where
+  // THIS run failed because the other run already had the file open. On 2026-08-27
+  // that is exactly what happened to immich: one pod logged "The process cannot
+  // access the file ... because it is being used by another process", deleted the
+  // other pod's in-flight dump on its way out, and the winning pod then died on
+  // "Could not find file '/backups/immich.sql.gz.tmp'". Both runs lost the
+  // database. Note the mutual exclusion that produced that error is node-local
+  // flock -- both pods happened to land on the same node -- so two overlapping
+  // runs on DIFFERENT nodes over this NFS mount may not be serialized at all.
+  // HOSTNAME is the pod name, which is unique per attempt.
+  var runId = Environment.GetEnvironmentVariable("HOSTNAME") is { Length: > 0 } h ? h : Guid.NewGuid().ToString("N");
+  var stagingFile = $"{backupFile}.{runId}.tmp";
   try
   {
     var secretName = entry.CredentialsSecret;
