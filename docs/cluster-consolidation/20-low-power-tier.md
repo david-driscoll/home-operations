@@ -1065,6 +1065,20 @@ nightly by py-kube-downscaler (#1046) — so that specific objection no longer h
 > never safe under any of 30's shapes anyway, since `hard-hat` goes down in a Battery event.
 > That has not changed and is not affected by the revert.
 
+> **Before check 1 — the window itself, added 2026-08-26.** This is not a ninth-and-a-half check
+> so much as a precondition on *when* you run the nine: **the window must clear 02:00–09:00 ET at
+> both ends.** py-kube-downscaler runs `--default-downtime=Mon-Sun 02:00-09:00 America/New_York`
+> (verified live), and inside it `garage-operator` sits at zero replicas while its fail-closed
+> `vmanagedpvcfinalizer` webhook fails every PVC dry-run — which stalls Flux on exactly the
+> resume §6.2 step 4 depends on. An entry that finishes near 02:00 puts the exit rebuild storm
+> inside that window. Combined with §8's measured merge volume, the slot this points at is a
+> **Sunday morning from ~09:15**.
+>
+> And run the nine as a **soak, not a snapshot** — every 10 min for ≥ 1 h, checks 3a and 7 flat
+> across all samples. A single green reading missed a 60-Kustomization spike on 08-24, and on
+> 08-26 a Renovate merge train took check 3a from 0 to 9 degraded `critical` volumes in five
+> minutes and back down again without either endpoint being visible from one reading.
+
 ```bash
 # 1. Topology: 3 control-plane + 4 <none>, all Ready, none cordoned.
 #    Since 2026-08-21 the trio MUST show node-role.kubernetes.io/control-plane:NoSchedule
@@ -1195,8 +1209,35 @@ instead of consolidating onto the trio. Cordon it anyway if the point of the win
 the trio can carry Tier 1; leave it uncordoned if the point is to ride out a real outage with the
 least churn. Decide before entry, not during.
 
+> **DECIDED 2026-08-26 — `shining-armor` is left UNCORDONED.** David's call, answering the
+> question §8's 2026-08-24 hold left open. The window is being run as the outage posture, not
+> as a proof that the trio alone carries Tier 1. Three things follow, and the first is a live
+> trap in the command block below rather than a matter of framing:
+>
+> 1. **The wait condition below changes.** Tier-1 workloads carry a *toleration* for
+>    `node-role.kubernetes.io/control-plane:NoSchedule` and **`affinity: null`** — verified live
+>    2026-08-26 on `home-assistant`. A toleration lets a pod onto the trio; it does not pull it
+>    there. With `shining-armor` uncordoned and untainted, it is a fully eligible target, so the
+>    original "wait for each to be `Running` **on a control plane**" is a condition several
+>    Tier-1 pods will never satisfy — and the runbook says to wait before continuing. Under this
+>    decision the condition is **"on the trio *or* `shining-armor`"**, i.e. off
+>    `hard-hat`/`fluttershy`/`kerfuffle`. Corrected in place below.
+> 2. **Expect most of Tier 1 to land on `shining-armor`, not the trio.** Measured live
+>    2026-08-26: `shining-armor` is 20 cores / 47 GiB at 34 % CPU / 28 % memory requested, leaving
+>    **~13 cores and ~33 GiB free on one node** — against **~7.6 cores and ~33 GiB free across all
+>    three control planes combined**. So it beats the whole trio on CPU headroom outright and ties
+>    it on memory, while being the only one of the four the control-plane taint does not repel.
+>    This is the decision working as intended, not a fault, but it means the trio will be carrying
+>    roughly what it carries today.
+> 3. **Read the gate accordingly.** D6's premise — the trio alone sustains Tier 1 for 3–4 h —
+>    is *not* under test in this run and stays unproven; §8's checklist is annotated to say so.
+>    For the window's duration `shining-armor` is a single point of failure for Tier 1, which
+>    puts its Proxmox host `twilight-sparkle` on the critical path — the one claim §6.1's
+>    2026-08-22 correction flagged as derived rather than confirmed.
+
 ```bash
-kubectl cordon hard-hat fluttershy kerfuffle shining-armor
+# `shining-armor` is NOT in this list — DECIDED 2026-08-26, see above.
+kubectl cordon hard-hat fluttershy kerfuffle
 kubectl -n stargate-command delete pod -l app.kubernetes.io/name=home-assistant
 kubectl -n stargate-command rollout restart statefulset mosquitto
 kubectl -n stargate-command delete pod -l app.kubernetes.io/name=chrony
@@ -1207,9 +1248,24 @@ kubectl -n network rollout restart deployment traefik k8s-gateway error-pages \
                                               cloudflare-dns cloudflare-tunnel unifi-dns
 ```
 
-Wait for each to be `Running` on a control plane and for its Longhorn volume to re-attach
-there before continuing. A Tier-1 volume with only one trio replica (§5) re-attaches from that
-single replica — confirm `robustness` before proceeding, not after.
+Wait for each to be `Running` **on the trio or `shining-armor`** — i.e. off the three nodes
+about to lose power — and for its Longhorn volume to re-attach there before continuing.
+(Pre-2026-08-26 this line read "on a control plane"; that was correct only under the cordoned
+choice, which was not the one taken. See the decision note above.) A Tier-1 volume with only one
+trio replica (§5) re-attaches from that single replica — confirm `robustness` before proceeding,
+not after.
+
+```bash
+# The wait condition, as a check rather than a squint. Must print nothing.
+for t in stargate-command:app.kubernetes.io/name=home-assistant \
+         stargate-command:app.kubernetes.io/name=mosquitto \
+         stargate-command:app.kubernetes.io/name=chrony \
+         tailscale-system:app.kubernetes.io/name=tsidp; do
+  kubectl -n "${t%%:*}" get pods -l "${t##*:}" \
+    -o custom-columns=N:.metadata.name,NODE:.spec.nodeName --no-headers 2>/dev/null \
+    | grep -E 'hard-hat|fluttershy|kerfuffle'
+done
+```
 
 **Step 4 — power off the workers, one at a time.**
 
@@ -1622,6 +1678,11 @@ settles it. Pack voltage 53.1–53.6 V, current −0.2 to −0.3 A (float), temp
 
 Cordon the four workers, do **not** shut them down, and observe where the Tier-1 set would go:
 
+> **This block cordons four nodes and §6.1's now cordons three — the difference is deliberate,
+> not drift.** Stage 2 exists to prove Tier 1 *can* schedule on the trio, which requires closing
+> `shining-armor` off. Stage 4 runs the outage posture David chose on 2026-08-26, which leaves it
+> open. They look nearly identical; do not copy this one into a Stage 4 run.
+
 ```bash
 kubectl cordon hard-hat fluttershy kerfuffle shining-armor
 kubectl -n stargate-command delete pod -l app.kubernetes.io/name=home-assistant
@@ -1938,9 +1999,10 @@ Stage 4 still has to prove it for `hard-hat` and `fluttershy`.
 
 Gate checklist before calling this mode rehearsed:
 
-- [ ] §6.0's nine pre-flight checks all green before entry.
+- [ ] §6.0's nine pre-flight checks all green before entry — **and green on a soak, not a single
+      reading**: sampled every 10 min for ≥ 1 h, with checks 3a and 7 flat across every sample.
 - [ ] `hard-hat`, `fluttershy` and `kerfuffle` cordoned and shut down with no `kubectl drain`
-      and no hang; `shining-armor` left running, cordoned or not per §6.1 Step 3's choice.
+      and no hang; `shining-armor` left running **and uncordoned** (decided 2026-08-26, §6.1).
 - [ ] Zero Tier-1 volumes degraded below 2 replicas for the full window.
 - [ ] DNS, NTP, MQTT, Home Assistant, Traefik and forward-auth (against alpha-site) verified
       reachable at the **1 h, 2 h and 3–4 h** marks, not just at entry.
@@ -1952,6 +2014,15 @@ Gate checklist before calling this mode rehearsed:
 - [ ] Every worker came back by its documented power-on path (§6.2 table) — WoL confirmed or
       confirmed unavailable, per node.
 - [ ] 160/160 Kustomizations `Ready` and zero degraded volumes at the end.
+
+**What this run will and will not prove, given the uncordoned choice.** It gates the *outage
+posture*: three bare-metal workers off, the estate carried by the trio plus `shining-armor`, for
+3–4 h on the Pecron. It does **not** gate D6's stronger premise that the trio alone sustains
+Tier 1 — with `shining-armor` untainted and holding more free capacity than all three control
+planes combined, most of Tier 1 is expected to land there (§6.1). Stage 2 already proved Tier 1
+can *schedule* on the trio; what stays unproven after this run is that it can *run there under
+load for hours*. Closing that needs either a later cordoned window or Path A's required affinity.
+Record the result as "Battery rehearsed, outage posture" rather than "D6 validated."
 
 #### Prepared and gated 2026-08-24 — **not run.** Held deliberately; here is what was learned
 
@@ -2009,6 +2080,54 @@ Only after this is green should low-power be treated as validated for a real gri
 blast radius of skipping it is small — nothing here is irreversible — but the failure mode if
 it is wrong (identity dark, DNS down, wife's lights off) is exactly the one D6 exists to
 prevent.
+
+#### Scheduled 2026-08-26 for a Sunday morning — and the merge-volume question, measured
+
+Both things the 08-24 hold left open are now answered. **`shining-armor` stays uncordoned**
+(§6.1, with the runbook consequences corrected in place there), and the run is **scheduled for a
+Sunday morning** — the next being **2026-08-30**, entering ~09:15.
+
+An attempt was *not* made on the evening of 08-26, for the same reason as 08-24 and one more:
+
+- **The pre-flight was red, and freshly so.** At 19:42 — nine minutes after a **26-commit
+  Renovate train landed at 19:33–19:34** — check 3a read 8 degraded volumes and climbing
+  (5 → 6 → 8 → 9 across five minutes), *all of them `critical`-tier*: `home-assistant`,
+  both `mosquitto`, `tsidp`, `tsiam`, `technitium`. `technitium` itself was `Pending` on
+  `FailedAttachVolume`, which is pre-flight check 8's own subject. 21 pods were
+  `ContainerCreating`/`Init` estate-wide. Every bit of it was the merge train rolling through,
+  and it behaved like the cascade §9 warns about — `technitium` was `Running` again three
+  minutes later, and check 7 had already self-cleared from 2 not-ready to 0.
+- **The clock.** A 20:15 entry finishes 00:45–01:45 on the doc's own measured budget. Any slip
+  puts the exit rebuild storm inside py-kube-downscaler's window — verified live as
+  `--default-downtime=Mon-Sun 02:00-09:00 America/New_York` — where `garage-operator` goes to
+  zero and its fail-closed `vmanagedpvcfinalizer` webhook fails every PVC dry-run, stalling
+  Flux on precisely the resume the exit depends on. **Any Stage 4 window must clear 02:00–09:00
+  ET at both ends.** That is a hard scheduling constraint and it was not previously written down.
+
+**On "is the weekend quieter?" — the config says one thing and the history says another, and
+the history wins.** `.github/renovate.json5` sets `schedule: ["every weekend"]`, from which it is
+natural (and wrong) to conclude the weekend is the *worst* time. Measured across the three
+Saturdays and three Sundays to 2026-08-26:
+
+| Day | Merges (3 occurrences) | Per day | 08:00–15:00, per day |
+|---|---|---|---|
+| Mon | 131 | 44 | — |
+| Tue | 87 | 29 | — |
+| Wed | 129 | 43 | — |
+| Thu | 125 | 42 | — |
+| Fri | 66 | 22 | — |
+| **Sat** | **134** | **45** — the busiest day of the week | **≈ 15** |
+| **Sun** | **51** | **17** — the quietest day of the week | **≈ 5** |
+
+So the weekend is not one thing. **Saturday is the worst day in the week** to hold a Battery
+window (and carries a 22-merge spike in its 02:00 hour and 27 in its 16:00); **Sunday is the
+best**, and Sunday 08:00–15:00 runs about **0.6 merges/hour** against a weekday morning's ~4.
+Sunday morning is both the quietest window available and clear of the downscaler at both ends.
+**Pick Sunday, not "the weekend."**
+
+The remaining lever, if a run ever needs a genuinely frozen `main`, is to pause Renovate for the
+window rather than to hunt for a quiet hour — but at ~0.6 merges/hour Sunday morning does not
+appear to need it.
 
 ---
 
