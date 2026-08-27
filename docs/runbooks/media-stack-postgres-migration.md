@@ -14,7 +14,7 @@ the per-app differences are in §9.
 | `prowlarr` | Servarr | `prowlarr`, `prowlarr-log` | pgloader | " |
 | `bazarr` | Servarr-adjacent | `bazarr` | pgloader | derived `--cast` list; one config.yaml edit |
 | `seerr` | Overseerr family | `seerr` | pgloader (`ralgar` build, digest-pinned) | §9.3 |
-| `jellyseerr` | Overseerr family | `jellyseerr` | pgloader (`ralgar` build, digest-pinned) | §9.3 |
+| `jellyseerr` | Overseerr family | `jellyseerr` | pgloader (`ralgar` build, digest-pinned) | §9.3, §9.3b |
 | `autobrr` | — | `autobrr` | **`autobrrctl db:convert`** | first-party tool; skips §5.2, §5.5 |
 
 **Four applications were checked and are out of scope**, because they have no relational
@@ -993,8 +993,74 @@ data-only load inserts explicit ids without advancing the sequences, and neither
 mention it — the first new request after cutover fails on a duplicate key. The generic
 `pg_get_serial_sequence` block covers it.
 
-`jellyseerr` 2.7.3 exposes no pool control (`DB_POOL_SIZE` is a 3.x feature), so it runs node-pg's
-default of 10 connections. `seerr` 3.4.1 accepts `DB_POOL_SIZE`; the manifest leaves it unset.
+Both now run `ghcr.io/seerr-team/seerr:v3.4.1` — jellyseerr moved to the successor project on
+2026-08-27 — so `DB_POOL_SIZE` is available to both and the manifests leave it unset. Anything
+below that references jellyseerr at 2.7.3 is historical: the 2.7.3 pool was node-pg's fixed
+default of 10.
+
+### 9.3b Version skew — when the app was upgraded before the data was loaded
+
+**The case:** the app is already running on Postgres at a newer version, and the SQLite file you
+still want to load is frozen at the version it was last opened with. §5.4's parity check catches
+it; a data-only load past it does not just lose rows, it fails on tables that were renamed.
+
+Real instance, 2026-08-27. `jellyseerr` was brought up clean on Postgres (§9.3's skip option),
+then upgraded from `fallenbagel/jellyseerr:2.7.3` to `ghcr.io/seerr-team/seerr:v3.4.1` — the
+project's succession, not a point release. That left:
+
+| | SQLite (2.7.3) | Postgres (v3.4.1) |
+| --- | --- | --- |
+| migration ledger | 44 | 19 (the Postgres set) |
+| the table | **`blacklist`** | **`blocklist`** |
+
+A `--with "data only"` load would have failed on `blacklist` outright.
+
+**The fix is to migrate the SQLite COPY forward first**, using the app itself. Every one of these
+projects ships both migration chains, so the new image will upgrade an old SQLite file in place —
+which is exactly what it would have done had the app never left SQLite:
+
+```bash
+# a pod on the NEW image, PVC mounted, plus a scratch dir
+kubectl -n equestria exec "${app}-fwdmigrate" -- sh -c \
+  'mkdir -p /work/db && cp -v /pvc/db/db.sqlite3* /work/db/ && cp /pvc/settings.json /work/'
+
+# run it in SQLite mode: CONFIG_DIRECTORY at the scratch dir, and NO DB_TYPE
+kubectl -n equestria exec "${app}-fwdmigrate" -- sh -c \
+  'cd /app && NODE_ENV=production CONFIG_DIRECTORY=/work nohup node dist/index.js > /work/migrate.log 2>&1 &
+   until grep -q "Server ready" /work/migrate.log; do sleep 3; done'
+```
+
+Then copy **all three** files out and verify against the Postgres side before loading anything:
+
+```bash
+for f in db.sqlite3 db.sqlite3-wal db.sqlite3-shm; do
+  kubectl -n equestria cp "${app}-fwdmigrate:/work/db/$f" "./jsr/$f"
+done
+sqlite3 ./jsr/db.sqlite3 'SELECT count(*) FROM migrations;'     # must now match the new version
+sqlite3 ./jsr/db.sqlite3 "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+```
+
+Verified end-to-end: 44 → **53** migrations, `blacklist` → `blocklist`, table set identical to
+Postgres, and every row preserved (76 requests, 3,882 media, 6 users, 113 season requests). The
+load that followed moved 5,695 rows with one expected error on `migrations`, 16 foreign keys
+recreated and validated.
+
+**Four traps, all of which cost time here:**
+
+- **Copy the `-wal`, always.** The migrations land in the write-ahead log, not the main file. A
+  first attempt copied `db.sqlite3` alone and reported 44 migrations and `blacklist` — the
+  migration had run perfectly and the evidence was in the WAL.
+- **This image ignores SIGTERM *and* SIGKILL from `kubectl exec`.** Do not build the procedure
+  around a clean shutdown. Copy all three files and let SQLite replay the WAL, which is what it
+  is for.
+- **`pkill -f "dist/index.js"` matches its own shell** and kills the exec instead of the app
+  (exit 143). Use `pkill -x node`, or skip stopping it at all per the point above.
+- **Opening the copy locally with `sqlite3` checkpoints the WAL into the main file** — 975 KB
+  becomes 1.4 MB and the `-wal` goes to zero. That is a convenient way to hand pgloader a single
+  consolidated file, and it is why the verification step doubles as preparation.
+
+The original on the PVC is never opened by any of this — confirmed byte-identical afterwards — so
+§7's rollback survives intact.
 
 ### 9.4 autobrr — a different, better procedure
 
