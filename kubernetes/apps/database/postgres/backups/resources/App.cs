@@ -116,7 +116,7 @@ async Task<IDictionary<string, byte[]>> GetSecret(string name)
     // to hide behind a stale copy. If the Secret is deliberately absent -- a
     // certificate-authenticated role, say -- the fix is
     // `driscoll.dev/backup: "false"` on the Database CR, not a silent skip here.
-    throw new InvalidOperationException($"secret {secretNamespace}/{name} does not exist -- the database has no credential Secret in this cluster", ex);
+    throw new MissingCredentialSecretException($"secret {secretNamespace}/{name} does not exist -- the database has no credential Secret in this cluster", ex);
   }
 }
 
@@ -191,8 +191,18 @@ foreach (var name in decommissioned.Order(StringComparer.Ordinal))
 }
 
 // Create individual database dumps
+// How long a newly-created Database CR may go without its credential Secret
+// before this job treats it as a real failure. The observed gap on 2026-08-27
+// was 8.5 minutes; 30 gives generous headroom for a slow ESO refresh or a
+// OpenBao blip without letting a genuinely credential-less database hide for
+// long -- at worst one nightly run is skipped and the next one fails loudly.
+var CredentialGrace = TimeSpan.FromMinutes(30);
 var failed = new List<string>();
 var skipped = new List<string>();
+// Databases whose credential Secret has not appeared YET. Distinct from failed:
+// see the CredentialGrace note below -- a brand-new Database CR is allowed to be
+// briefly credential-less without failing the whole run.
+var deferred = new List<string>();
 foreach (var db in live)
 {
   if (!declared.TryGetValue(db, out var entry))
@@ -265,6 +275,26 @@ foreach (var db in live)
       failed.Add(db);
     }
   }
+  // A Database CR and its credential Secret are created by two different
+  // controllers and do not land together. On 2026-08-27 the eight media
+  // databases from #1230 were applied at 02:02:34Z while their `<app>-postgres`
+  // Secrets did not exist until 02:11:05Z -- an 8.5 minute window in which this
+  // job, running its 02:00 schedule, hard-failed on every one of them. That was
+  // most of that night's failed pods, and it recurs on any new-app deploy that
+  // lands near 02:00.
+  //
+  // The window is keyed on the Database CR's OWN creationTimestamp, not on a
+  // blanket retry, because the hard failure is deliberate and worth keeping:
+  // a database that has existed for days with no credential Secret is a real
+  // problem, and the comment on MissingCredentialSecretException says so. Only
+  // a CR young enough to still be mid-deploy earns the benefit of the doubt.
+  // Anything older than CredentialGrace fails exactly as it did before.
+  catch (MissingCredentialSecretException ex) when (entry.CreatedAt is { } created && DateTime.UtcNow - created < CredentialGrace)
+  {
+    var age = DateTime.UtcNow - created;
+    Console.WriteLine($"DEFERRING {db}: {ex.Message}. Database/{entry.ObjectName} is only {age.TotalMinutes:F1} minutes old, so its Secret is probably still syncing; it will be picked up by the next run. Failing after {CredentialGrace.TotalMinutes:F0} minutes.");
+    deferred.Add(db);
+  }
   catch (Exception ex)
   {
     Console.Error.WriteLine($"Error backing up database {db}: {ex.Message}");
@@ -278,11 +308,15 @@ foreach (var db in live)
 
 if (failed.Count > 0)
 {
-  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: {failed.Count} of {live.Count - skipped.Count} database(s) were not backed up: {string.Join(", ", failed)}");
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: {failed.Count} of {live.Count - skipped.Count} database(s) were not backed up: {string.Join(", ", failed)}{(deferred.Count > 0 ? $" (and {deferred.Count} deferred: {string.Join(", ", deferred)})" : "")}");
   return 1;
 }
 
-Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count} databases{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")})");
+// Deferred does not fail the run, but it is never silent: the count and the
+// names go in the success line so a database that is deferred every night --
+// which would mean its Secret never arrived and the grace window is masking a
+// real problem -- is visible without reading the whole log.
+Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count - deferred.Count} databases{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")}{(deferred.Count > 0 ? $", {deferred.Count} deferred until their credential Secret syncs: {string.Join(", ", deferred)}" : "")})");
 return 0;
 
 // Helper methods
@@ -332,7 +366,10 @@ async Task<Dictionary<string, DeclaredDatabase>> GetDeclaredDatabases()
       throw new InvalidOperationException($"Database/{objectName} and Database/{existing.ObjectName} both declare the database {database}");
     }
 
-    declared[database] = new DeclaredDatabase(database, objectName, enabled, secret, reason);
+    // CreationTimestamp is what the credential grace window is measured from.
+    // Null only if the API server omitted it, in which case the grace cannot
+    // apply and the old hard-failure behaviour stands -- fail closed.
+    declared[database] = new DeclaredDatabase(database, objectName, enabled, secret, reason, item.Metadata?.CreationTimestamp?.ToUniversalTime());
   }
 
   return declared;
@@ -395,13 +432,22 @@ async Task CreateDatabaseDump(IDictionary<string, byte[]> postgres, string secre
   }
 }
 
+/// <summary>
+/// Thrown when a database's credential Secret is absent. Distinct from every
+/// other failure so the deploy-ordering race can be told apart from a database
+/// that genuinely has no credential -- see the catch in the backup loop.
+/// </summary>
+sealed class MissingCredentialSecretException(string message, Exception? inner = null)
+  : InvalidOperationException(message, inner);
+
 /// <summary>One `Database` resource, reduced to what this job needs.</summary>
 sealed record DeclaredDatabase(
   string Database,
   string ObjectName,
   bool Enabled,
   string CredentialsSecret,
-  string? Reason)
+  string? Reason,
+  DateTime? CreatedAt)
 {
   /// <summary>`name` for the common case, `name (details)` when it is not.</summary>
   public string Describe()
