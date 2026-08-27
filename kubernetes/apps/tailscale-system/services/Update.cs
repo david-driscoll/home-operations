@@ -139,11 +139,23 @@ var extraPorts = new Dictionary<string, Dictionary<ServiceKind, PortDef[]>>
   // TCP checks. See also the `garage-s3-backups` grant in
   // stacks/unifi-network/acl-manager.ts — the port must be open in BOTH
   // places or the failure reads as "garage is down" from the cluster.
+  // 3903 is the Garage Admin API. It is here for ONE consumer: the in-cluster
+  // Pulumi operator. stacks/system's garage.ts manages buckets and keys
+  // through that API, and its workspace pods have no tailnet route — they
+  // egress through this Service exactly like the OpenBao seal traffic does.
+  // Without the port declared, `pulumi up` fails with
+  // `dial tcp <clusterIP>:3903: i/o timeout` against CreateKey, which reads
+  // like Garage being down rather than a missing port. Paired with the
+  // `garage-admin-pulumi` grant in stacks/unifi-network/acl-manager.ts — the
+  // port must be open in BOTH places. No probe: the admin API answers 401
+  // without a bearer token, and the node's health is already covered by the
+  // garage stack's Gatus TCP checks.
   ["celestia"] = new()
   {
     [ServiceKind.Dockge] = [
       new("llm-agent", 8081, false, null),
       new("garage-s3", 3900, false, null),
+      new("garage-admin", 3903, false, null),
     ]
   },
 };

@@ -500,9 +500,9 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
-    // Bucket and key management (stacks/system's garage.ts, run from an admin
-    // workstation) talks to the Admin API on dockge-celestia:3903. Admins get
-    // the S3 port too, for aws/rclone spot checks against the store.
+    // Bucket and key management (stacks/system's garage.ts) talks to the Admin
+    // API on dockge-celestia:3903. Admins get the S3 port too, for aws/rclone
+    // spot checks against the store.
     manager.setGrant(
       "garage-admin",
       {
@@ -511,6 +511,25 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
         ip: [...ports.garageAdmin, ...ports.garageS3],
       },
       { accept: testData.knownAdminUsers },
+    );
+
+    // The same Admin API, reached the way it is ACTUALLY reached in practice:
+    // Pulumi runs in-cluster via the operator, and its workspace pods have no
+    // tailnet route, so garage.ts's provider egresses through the
+    // tailnet-inbound ProxyGroup carrying tag:egress — the openbao-unseal
+    // shape again. The grant above covers a human at a workstation and does
+    // NOT cover the operator; assuming it did is what made the first step-4
+    // run fail with `dial tcp <clusterIP>:3903: i/o timeout` on CreateKey.
+    // Paired with the `garage-admin` port on the dockge-celestia egress
+    // Service (tailscale-system/services/Update.cs) — both are required.
+    manager.setGrant(
+      "garage-admin-pulumi",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.garageAdmin,
+      },
+      { accept: [] },
     );
 
     pulumi.output(manager.getJson()).apply(json => {
