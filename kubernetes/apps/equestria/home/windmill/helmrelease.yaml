@@ -48,8 +48,36 @@ spec:
       baseDomain: ${APP}.${ROOT_DOMAIN}
       baseProtocol: https
       appReplicas: 2
-      lspReplicas: 1
+      # `lspReplicas` was here until 2026-08-26 and is a DEAD KEY -- it appears
+      # nowhere in the chart at 4.0.231, 4.0.246 or 4.0.249 (grepped, all three).
+      # The windmill-extra Deployment reads `windmill.extraReplicas`, which
+      # defaults to 1, so the behaviour was accidentally right and nothing ever
+      # surfaced the mistake. Named correctly now so intent matches what renders.
+      extraReplicas: 1
       multiplayerReplicas: 0
+      windmillExtra:
+        # PIN, NOT A PREFERENCE -- and the fix for a defect that has now broken
+        # this app three times (1.782.0, then 1.795.0/1.796.0).
+        #
+        # windmill-extra.yaml renders its image as
+        #   {{ default "ghcr.io/windmill-labs/windmill-extra" .image }}:{{ default .Chart.AppVersion .tag }}
+        # so with `tag` empty the extra image tag is ASSUMED equal to the chart's
+        # appVersion. Upstream does not honour that assumption: they ship
+        # windmill-labs/windmill at every release but publish windmill-extra only
+        # sometimes. Verified live 2026-08-26 against ghcr.io --
+        #   windmill:1.796.0        200      windmill-extra:1.796.0   404
+        #   windmill:1.794.0        200      windmill-extra:1.795.0   404
+        #                                    windmill-extra:1.794.0   200  <- newest published
+        # So chart 4.0.247/4.0.249 (appVersion 1.796.0) can never pull, exactly as
+        # 4.0.232/4.0.233 could not at 1.782.0.
+        #
+        # Pinning `tag` replaces that assumption with a value validated against the
+        # registry, which is why this is the durable fix rather than another chart
+        # pin: a future chart bump now moves the app image only, and the extra image
+        # stays on a tag that provably exists. Raise this when -- and only when --
+        # a newer windmill-extra tag actually returns 200.
+        # renovate: datasource=docker depName=ghcr.io/windmill-labs/windmill-extra
+        tag: "1.794.0"
       # Read the connection URI from the Secret at runtime instead of baking it
       # into the rendered manifests. Three things were wrong with the old
       # `valuesFrom -> windmill.databaseUrl` mapping, and this fixes all three:
