@@ -93,11 +93,40 @@ instance:
       target:
         kind: Deployment
         name: kustomize-controller
-    - # Enable Helm repositories caching
+    - # Enable Helm repositories caching.
+      #
+      # --helm-cache-max-size is a COUNT of cached repo indexes, not a byte budget
+      # ("The maximum size of the cache in number of indexes."), and the cache has
+      # NO eviction: source-controller's Set() returns "Cache is full" rather than
+      # evicting anything. The first N keys to land therefore hold their slots and
+      # every other repo is starved permanently. The estate has 24 HelmRepositories
+      # (all spec.type default, all referenced by the 29 HelmCharts); at 10 that
+      # left TEN of them at a 0% hit rate -- openebs, external-dns, longhorn,
+      # k8s-gateway, coder-v2, cloudnative-pg, node-feature-discovery, cloudflare,
+      # authentik, tailscale -- logging CacheOperationFailed ~450x/day for an
+      # overall hit rate of 41.3%. Nothing was broken by this; on a full cache the
+      # index is simply re-read and re-parsed from disk.
+      #
+      # 100 is a ceiling, not an allocation: occupancy is bounded by the number of
+      # live index revisions, and the entire 24-index corpus is 6.6 MiB serialized
+      # against a 1Gi limit the pod currently sits at ~80Mi of. It is deliberately
+      # far above the ~48 worst case (24 repos x a superseded revision) because the
+      # only signal that this cap is too small is the "Cache is full" line that this
+      # change exists to remove -- nobody would be watching for its return.
+      #
+      # Do NOT raise --helm-cache-ttl to "give entries more margin". The TTL is
+      # SLIDING: helmchart_controller.go:618 calls SetExpiration on every hit, so a
+      # key that is being read never expires. Measured under the current 60m, repos
+      # whose HelmCharts are on a 1h interval sit at 98-100% (amd-device-plugin
+      # 178/0, csi-driver-nfs 178/0, jetstack 177/0 hits/misses), while windmill at
+      # a 30m interval -- well inside the TTL -- sits at 9.2%. Reconcile interval
+      # does not predict hit rate; slot availability does. Expiry is also the ONLY
+      # mechanism that ever frees a slot here, so a longer TTL makes superseded keys
+      # squat and erodes the headroom this cap is buying.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --helm-cache-max-size=10
+          value: --helm-cache-max-size=100
         - op: add
           path: /spec/template/spec/containers/0/args/-
           value: --helm-cache-ttl=60m
