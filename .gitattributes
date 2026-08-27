@@ -5,3 +5,4 @@
 .crew/orchestration-log/** merge=union
 .crew/rai/audit-trail.md merge=union
 .crew/fact-checker/audit-trail.md merge=union
+graphify-out/graph.json merge=graphify
