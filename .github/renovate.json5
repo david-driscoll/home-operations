@@ -52,6 +52,24 @@
   ignorePaths: [
     "**/*.sops.*"
   ],
+  // Off entirely. The shared preset (github>david-driscoll/.github:renovate-config)
+  // points the cake manager at `.cs` -- a copy-paste of the `nuget` block right
+  // above it there. Cake scripts are `.cake`; a C# file-based app is not one.
+  // `managerFilePatterns` is ADDITIVE (verified: renovate 44.48.1 logs both
+  // `/\.cake$/` and `/\.cs$/` for manager cake), so it cannot be narrowed from
+  // here -- only the manager as a whole can be switched off, and there are no
+  // `.cake` files in this repo to lose.
+  //
+  // Cost of leaving it on: 7 package files, 0 deps. The cake extractor only
+  // understands `#addin`/`#tool nuget:?package=...`, never `#:package Foo@1.2.3`,
+  // so every one of those files parses to nothing -- while still being listed
+  // under "cake (7)" on the dashboard and pushing the real dependencies into
+  // the truncated remainder. The `#:package` directives ARE picked up, by the
+  // nuget manager (extract/single-csharp-file.ts), which the same preset
+  // correctly points at `.cs`.
+  cake: {
+    enabled: false,
+  },
   flux: {
     managerFilePatterns: [
       "/(^|/)kubernetes/.+\\.ya?ml$/"
@@ -509,8 +527,63 @@
         "/(^|/).+\\.sh$/",
         "/(^|/).+\\.ya?ml$/",
       ],
+      // `matchStringsStrategy` defaults to "any", and "any" does NOT mean
+      // "the first pattern that matches". Every matchString is run over the
+      // whole file and EVERY match becomes its own dependency
+      // (lib/modules/manager/custom/regex/strategies.ts, handleAny), so these
+      // four patterns have to be mutually exclusive or one annotation yields
+      // two deps.
+      //
+      // They were not. The bare-value pattern used to end in
+      // `(?<currentValue>\\S+)`, which swallowed the two shapes patterns 3 and
+      // 4 exist to parse properly: a quoted scalar (currentValue `"18.6"`,
+      // quotes and all) and a whole image reference (currentValue
+      // `ghcr.io/pulumi/pulumi-nodejs:3.259.0`). Each such annotation produced
+      // the correct dep AND a junk twin whose currentValue is not a version.
+      // Measured on renovate 44.48.1 against this repo: 71 deps from this
+      // manager, of which 24 were junk twins of the other 47 --
+      //
+      //   data.forgejo.org/forgejo/forgejo, ghcr.io/renovatebot/renovate,
+      //   ghcr.io/cloudnative-pg/postgresql (x2), ghcr.io/windmill-labs/windmill-extra,
+      //   ghcr.io/pulumi/pulumi-nodejs (x8), jdxcode/mise (x8), minio/mc
+      //
+      // What that cost, verified rather than assumed: 94 malformed registry
+      // requests per run, of the form
+      //
+      //   HEAD https://ghcr.io/v2/pulumi/pulumi-nodejs/manifests/ghcr.io/pulumi/pulumi-nodejs:3.259.0
+      //
+      // -- the whole reference pasted in where the tag goes. They all 404,
+      // including three against data.forgejo.org, which the Mend-hosted bot is
+      // separately failing to reach at the network level (issue #11: "Error
+      // obtaining docker token" plus a no-result on all three of its images,
+      // none of which reproduce locally).
+      //
+      // What it did NOT cost, so nobody re-derives it the hard way: no extra
+      // PRs. A junk twin carries the same depName and the same pinDigest
+      // target as its good sibling, so branchify collapses the two -- the
+      // branch set is byte-identical before and after this fix (162 branch
+      // entries, 77 of them renovate/pin-dependencies). The standing
+      // "pin dependencies" dashboard item is `docker:pinDigests` doing its job
+      // on the real deps, not this bug.
+      //
+      // The reason to fix it anyway is that which twin wins the branch is
+      // arbitrary, and the loser's `replaceString` spans the wrong text. A
+      // pinDigest applied through the postgres twin rewrites `postgresql:
+      // "18.6"` by substituting `"18.6"` INCLUDING the quotes.
+      //
+      // The fix is the character class: a bare value may contain neither `/`
+      // nor `"`, and must be followed by whitespace or end of input. Two
+      // things constrain how that trailing condition can be written. Renovate
+      // compiles these with RE2, which has no lookahead at all -- a `(?=...)`
+      // here does not merely misbehave, it fails config validation and takes
+      // the whole run down with "Invalid regExp for customManagers". And the
+      // custom manager passes the 'g' flag but NOT 'm' (strategies.ts), so a
+      // bare `$` means end of FILE, not end of line. `(?:\\s|$)` satisfies
+      // both; it consumes the newline into `replaceString`, which is harmless.
       matchStrings: [
-        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n.+(:\\s|=)(&\\S+\\s)?(?<currentValue>\\S+)",
+        // Bare values: KEY=v1.2.3 / key: v1.2.3 / key: &anchor 1.2.3
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n.+(:\\s|=)(&\\S+\\s)?(?<currentValue>[^\\s/\"]+)(?:\\s|$)",
+        // Versioned path segment inside a URL: .../v1.2.3/...
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n.+/(?<currentValue>(v|\\d)[^/]+)",
         // Quoted YAML string values: key: "1.2.3"
         "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( repository=(?<registryUrl>\\S+))?\\n[^:]+:\\s\"(?<currentValue>[^\"]+)\"",

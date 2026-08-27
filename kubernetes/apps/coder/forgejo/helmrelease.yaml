@@ -75,6 +75,17 @@ spec:
       # Renovate-managed via the repo's `Process annotated dependencies`
       # customManager (.github/renovate.json5).
       rootless: true
+      #
+      # Renovate will not actually move this on its own right now, and the
+      # dependency dashboard (issue #11) says so every run: "Error obtaining
+      # docker token" / "No docker auth found - returning", then a no-result on
+      # all three data.forgejo.org images this repo uses (forgejo/forgejo,
+      # forgejo/runner, oci/docker). That message is the catch-all branch of
+      # getAuthHeaders -- a network-level throw, not a 401/403/404 -- and it is
+      # specific to the Mend-hosted bot's egress. The exact same renovate
+      # 44.48.1 and the exact same config, run locally, resolve all three
+      # anonymously with zero warnings. Nothing in this repo fixes that; bump
+      # the tag by hand until Mend can reach the host.
       # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
       fullOverride: data.forgejo.org/forgejo/forgejo:16.0.3-rootless
       pullPolicy: IfNotPresent
