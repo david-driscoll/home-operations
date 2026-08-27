@@ -87,11 +87,29 @@ Garage base backup is verified.
 
 ## Bootstrap ceremony — one time, in this order
 
-Everything below is idempotent to re-run except the layout steps, which are
-one-shot by design (the Pulumi provider deliberately does not manage layout).
+Run this from a workstation, not from an agent session: step 1 needs an
+OpenBao login, and the estate's SSH grant to `tag:dockge` is `action: "check"`,
+so the first connection wants an interactive Tailscale re-auth. Everything
+below is idempotent to re-run **except** the layout steps, which are one-shot
+by design (the Pulumi provider deliberately does not manage layout).
 
-**1. Mint the cluster identity** (before any deploy; the stack's `.env`
-references fail the whole site run if these paths are missing):
+**0. Precheck — the ZFS mount.** `init.sh` hard-fails the stack if `/data` is
+missing, and 4T of capacity is about to be declared against it, so look before
+deploying:
+
+```bash
+for h in celestia luna skystar; do
+  echo "== $h"; ssh root@dockge-$h 'df -h /data | tail -1'
+done
+```
+
+Every host must show a real `/data` filesystem with room to grow into. If one
+is missing the mount, stop: its site stack (`addHostMount("/data")`) has not
+run, and deploying garage there will crash-loop on `init.sh`.
+
+**1. Mint the cluster identity** — before any deploy. The stack's `.env`
+carries `ref+openbao://` references to both paths, and an unresolvable
+reference fails the **entire** site run, not just this stack:
 
 ```bash
 bao kv put secrets/docker/apps/garage/rpc-secret  password="$(openssl rand -hex 32)"
@@ -101,42 +119,70 @@ bao kv put secrets/docker/apps/garage/admin-token password="$(openssl rand -hex 
 The rpc secret IS the mesh membership credential — one value, all three nodes.
 Losing it loses no data, but no node can rejoin its own cluster without it.
 
-**2. Deploy the three sites** so the nodes come up (order among them does not
-matter):
+**2. Deploy the three sites** so the nodes come up. Order among them does not
+matter. Preview first, per the estate rule for every stack:
 
 ```bash
-cd stacks/home && mise run vals-run pulumi up          # celestia
-cd stacks/gulf-of-mexico && mise run vals-run pulumi up # luna
-cd stacks/ocracoke && mise run vals-run pulumi up       # skystar
+cd stacks/home            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # celestia
+cd ../gulf-of-mexico      && mise run vals-run pulumi preview && mise run vals-run pulumi up   # luna
+cd ../ocracoke            && mise run vals-run pulumi preview && mise run vals-run pulumi up   # skystar
 ```
 
-Expected degraded state at this point: every `garage-sync` container is
-running with a red heartbeat ("rclone.env does not exist"), and `garage
-status` on any node shows only itself.
-
-**3. Connect the mesh and apply the layout** (from any one node; celestia
-shown). Get each node's id first — `garage node id` **on that node** prints
-`<id>@<rpc_public_addr>`:
+Checkpoint — expected, correct, degraded state:
 
 ```bash
-ssh root@dockge-celestia "docker exec garage /garage node id -q"
-ssh root@dockge-luna     "docker exec garage /garage node id -q"
-ssh root@dockge-skystar  "docker exec garage /garage node id -q"
+for h in celestia luna skystar; do
+  echo "== $h"; ssh root@dockge-$h 'docker ps --format "{{.Names}} {{.Status}}" | grep garage'
+done
+```
 
-# then, on celestia:
-docker exec garage /garage node connect <luna-id>@<luna-tailnet-ip>:3901
-docker exec garage /garage node connect <skystar-id>@<skystar-tailnet-ip>:3901
+`garage` and `garage-webui` healthy; `garage-sync` (and `garage-mirror` on
+celestia) running but **unhealthy** — they are waiting on the credential files
+step 4 delivers, and say so in their logs. `garage status` shows each node
+alone. Nothing is wrong yet.
 
+**3. Connect the mesh and apply the layout.** Capture the ids into shell
+variables rather than copying hex by hand — `garage node id -q` prints
+`<id>@<rpc_public_addr>`, which is exactly what `node connect` wants:
+
+```bash
+CELESTIA=$(ssh root@dockge-celestia 'docker exec garage /garage node id -q')
+LUNA=$(ssh root@dockge-luna         'docker exec garage /garage node id -q')
+SKYSTAR=$(ssh root@dockge-skystar   'docker exec garage /garage node id -q')
+printf '%s\n' "$CELESTIA" "$LUNA" "$SKYSTAR"   # three distinct <id>@<tailnet-ip>:3901
+```
+
+Connect the other two to celestia, then confirm the mesh before touching the
+layout:
+
+```bash
+ssh root@dockge-celestia "docker exec garage /garage node connect $LUNA"
+ssh root@dockge-celestia "docker exec garage /garage node connect $SKYSTAR"
+ssh root@dockge-celestia 'docker exec garage /garage status'
+```
+
+**Do not proceed until `status` lists all three nodes.** A layout assigned
+against a partial mesh is the one thing here that is painful to undo.
+
+```bash
 # One zone per machine; with replication_factor 3 every node holds everything,
 # so capacity only shapes *balance*. 4T matches the data_dir capacity declared
 # in garage.toml — `layout assign` checks against it — and the per-bucket
 # quotas are what actually enforce a ceiling (see "The 4T budget" above).
-docker exec garage /garage layout assign <celestia-id> -z celestia -c 4T
-docker exec garage /garage layout assign <luna-id>     -z luna     -c 4T
-docker exec garage /garage layout assign <skystar-id>  -z skystar  -c 4T
+# ${VAR%%@*} strips the @address, leaving the bare node id `assign` expects.
+ssh root@dockge-celestia "docker exec garage /garage layout assign ${CELESTIA%%@*} -z celestia -c 4T"
+ssh root@dockge-celestia "docker exec garage /garage layout assign ${LUNA%%@*}     -z luna     -c 4T"
+ssh root@dockge-celestia "docker exec garage /garage layout assign ${SKYSTAR%%@*}  -z skystar  -c 4T"
 
-docker exec garage /garage layout show
-docker exec garage /garage layout apply --version 1
+ssh root@dockge-celestia 'docker exec garage /garage layout show'
+```
+
+`layout show` prints the version the pending change will become — pass **that**
+number, which is `1` on a fresh cluster:
+
+```bash
+ssh root@dockge-celestia 'docker exec garage /garage layout apply --version 1'
+ssh root@dockge-celestia 'docker exec garage /garage status'
 ```
 
 Peer addresses persist in the metadata dir; `node connect` is not needed again.
@@ -145,8 +191,7 @@ Peer addresses persist in the metadata dir; `node connect` is not needed again.
 `system` stack, which owns the garage module (`stacks/system/garage.ts`):
 
 ```bash
-cd stacks/system
-mise run vals-run pulumi up
+cd stacks/system && mise run vals-run pulumi preview && mise run vals-run pulumi up
 ```
 
 This creates `cnpg-equestria`, `postgres-{celestia,luna,skystar}` and
@@ -154,34 +199,65 @@ This creates `cnpg-equestria`, `postgres-{celestia,luna,skystar}` and
 (`clusters/equestria/apps/postgres/garage-backup`,
 `clusters/<key>/apps/postgres/garage`, `clusters/celestia/apps/garage/mirror`),
 and writes each node's `/opt/stacks-data/garage/rclone.env` plus celestia's
-`mirror.env`. The loops pick the files up on their next cycle — no restart —
-and their heartbeats go green.
+`mirror.env`. The loops pick the files up on their next cycle — no restart.
 
-**5. Cut equestria over.** Merging the `kubernetes/apps/database/postgres`
-half of this change is safe in any order relative to steps 1–4: until the
-`garage-backup` path exists, the `${APP}-values` ExternalSecret stops
-refreshing and the cluster keeps archiving to minio (degraded, not
-destructive). Once ESO picks up the Garage values:
+Checkpoint — within one cycle the sync containers should go healthy:
 
 ```bash
-# The flip leaves the Garage archive base-less until this succeeds — take it
-# immediately, do not wait for the 16:00 UTC schedule:
-kubectl cnpg backup postgres --method plugin -n database
-# note the fully-qualified resource: bare `kubectl get backup` resolves to
-# LONGHORN's Backup CRD, not CNPG's
-kubectl -n database get backups.postgresql.cnpg.io --sort-by=.metadata.creationTimestamp | tail -3
+for h in celestia luna skystar; do
+  echo "== $h"; ssh root@dockge-$h 'cat /opt/stacks-data/garage/sync-state/.last-run 2>/dev/null || echo "no cycle yet"'
+done
 ```
 
-Verify WAL archiving is flowing (`kubectl cnpg status postgres -n database`
-shows the archive as healthy), then **repoint the `recovery:` block in
-`app/resources/values.yaml` at the garage_* values** — until you do, a rebuild
-restores from the frozen minio archive, which stops being current at the flip.
+**5. Only now, cut equestria over.** This is a separate PR and it must not be
+merged before step 4 has run — that ordering is not a nicety. The
+`garage-backup` extract makes the `${APP}-values` ExternalSecret fail as a
+whole while the path is absent; the postgres Kustomization sets `wait: true`;
+and 23 Kustomizations `dependsOn` it. Merging early froze the estate's
+reconciliation for 50 minutes on 2026-08-27 (#1233, reverted by #1235) while
+postgres itself stayed perfectly healthy — which is exactly what made it easy
+to talk myself into. Re-land both halves together:
+
+- the `garage-backup` extract in `app/externalsecret.yaml`
+- the `backups:` block in `app/resources/values.yaml` flipped to `garage_*`
+
+Then, immediately — the Garage archive holds WAL with no base to replay onto
+until a base backup lands, so do not wait for the 16:00 UTC schedule:
+
+```bash
+kubectl cnpg backup postgres --method plugin -n database
+# fully-qualified on purpose: bare `kubectl get backup` resolves to LONGHORN's CRD
+kubectl -n database get backups.postgresql.cnpg.io --sort-by=.metadata.creationTimestamp | tail -3
+kubectl cnpg status postgres -n database | grep -iE 'archiving|backup'
+```
+
+**The `recovery:` block is dead configuration under `mode: standalone`** — the
+chart renders only the `postgres-backups` ObjectStore (confirm with
+`helm get hooks postgres -n database`), so editing `recovery:` changes nothing
+live and there is no post-flip action to take there. It is rendered from
+whatever the values say at the moment someone sets `mode: recovery`, which is
+the moment it starts mattering. See the note in the Restore section.
 
 ## Restore notes
 
-- **equestria, cluster gone**: `mode: recovery` with the recovery ObjectStore —
-  garage once repointed, minio for pre-flip history. PITR window is the 30d
+- **equestria, cluster gone**: set `mode: recovery` and make sure the
+  `recovery:` block names the store you actually want *at that moment* —
+  garage after the cutover, minio for pre-flip history. PITR window is the 30d
   `retentionPolicy`, enforced by the plugin against the *active* store only.
+
+  **Know how that block behaves before you rely on it.** Both ObjectStores are
+  Helm *hooks* (`helm.sh/hook: pre-install,pre-upgrade,pre-rollback`), and the
+  chart renders only `postgres-backups` under `mode: standalone` — verified
+  with `helm get hooks postgres -n database`. So the `recovery:` block is inert
+  in steady state: edits to it change nothing live, and it takes effect only on
+  the upgrade that flips `mode`. A `postgres-recovery` ObjectStore may still be
+  sitting in the namespace from an earlier restore (one has been there since
+  2026-08-13, frozen at `s3://cnpg-equestria/barman/equestria`, two prefixes
+  stale). It is an orphan, not configuration — nothing reads it, and Helm's
+  default `hook-delete-policy: before-hook-creation` should replace it when the
+  mode flips. Confirm that in a restore drill rather than trusting it on the
+  day: check the live CR's `destinationPath` after the flip, before starting a
+  restore against it.
 - **a dockge database**: the bucket mirror is the same artifact set as the
   host's `dumps/` — `rclone copy garage:postgres-<cluster>/dumps ...` from any
   surviving node (all three hold it), then `pg_restore` per database plus the
