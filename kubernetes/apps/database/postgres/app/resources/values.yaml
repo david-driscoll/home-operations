@@ -71,10 +71,21 @@ version:
   # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
   postgresql: "18.6"
 mode: standalone
-# DORMANT BUT NOT DECORATIVE. `mode: standalone` means this cluster bootstraps
-# with initdb, so the chart renders the `postgres-recovery` ObjectStore and
-# nothing reads it -- until the day someone flips `mode: recovery` to rebuild
-# from the archive, which is precisely the day it has to be right.
+# DORMANT, AND NOT RENDERED AT ALL. `mode: standalone` means this cluster
+# bootstraps with initdb, and under that mode the chart emits only the
+# `postgres-backups` ObjectStore -- verified with
+# `helm get hooks postgres -n database`, which lists exactly one ObjectStore.
+# So this block is INERT: editing it changes nothing in the cluster. It is
+# rendered from whatever these values say at the moment someone flips
+# `mode: recovery` to rebuild from the archive, which is precisely the day it
+# has to be right.
+#
+# (An earlier version of this note claimed the chart renders it under
+# standalone and it merely goes unread. That was wrong, and it matters: it
+# invites "fix the recovery path" changes that appear to land and do nothing.
+# A `postgres-recovery` CR in the namespace is an ORPHAN from a past restore --
+# both ObjectStores are Helm hooks, which Helm does not prune -- not evidence
+# that this block is live. See the Restore notes in docs/garage-offsite-s3.md.)
 #
 # STILL ON MINIO, DELIBERATELY, while backups below moved to Garage. The
 # barman-cloud plugin allows exactly one backup/archive object store per
