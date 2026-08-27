@@ -15,12 +15,12 @@ zfs_data=/data/garage
 
 # uid 3900 is the garage service account (compose.yaml `user:`). It exists
 # nowhere in /etc/passwd and does not need to.
-mkdir -p "$ssd_root/meta" "$ssd_root/sync-state"
-chown 3900:3900 "$ssd_root/meta"
+mkdir -p "$ssd_root/meta" "$ssd_root/sync-state" "$ssd_root/mirror-state"
+chown 3900:3900 "$ssd_root/meta" "$ssd_root/mirror-state"
 # gid 70 (postgres): garage-sync runs 3900:70 and writes its cycle marker here.
 chown 3900:70 "$ssd_root/sync-state"
 chmod 700 "$ssd_root/meta"
-chmod 770 "$ssd_root/sync-state"
+chmod 770 "$ssd_root/sync-state" "$ssd_root/mirror-state"
 
 # Block data on the ZFS array. /data is the host mount every garage node's
 # LXC carries (addHostMount("/data") in the site stacks); if it is missing this

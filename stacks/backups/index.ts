@@ -19,6 +19,15 @@ const DOCKGE_POSTGRES_DUMP_GROUP = "Dockge Postgres Dumps";
 // either side orphans every push and the endpoints go permanently red.
 const DOCKGE_GARAGE_SYNC_GROUP = "Dockge Garage Postgres Sync";
 
+// Gatus group for the garage-mirror loop that copies /data/staging/garage/
+// (the backrest pre-sync tree for every annotated in-cluster GarageBucket —
+// garage-system AND forgejo-garage) into the geo cluster's garage-mirror
+// bucket. Same token contract (GARAGE_MIRROR_UPTIME_TOKEN in the garage
+// stack's .env); registered for celestia alone because the service idles by
+// design everywhere else — see the garage-mirror comment in
+// docker/_common/garage/compose.yaml.
+const DOCKGE_GARAGE_MIRROR_GROUP = "Dockge Garage Bucket Mirror";
+
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
 
@@ -150,6 +159,41 @@ addUptimeGatus("dockge-garage-sync", globals, {
             // drift is the page threshold. A FAILING cycle still pushes
             // (success=false) and alerts immediately — this window only covers
             // the loop being dead or the host being gone.
+            heartbeat: { interval: "13h" },
+            alerts: [
+              {
+                type: "pushover",
+                enabled: true,
+                "success-threshold": 1,
+                "failure-threshold": 1,
+                "minimum-reminder-interval": "24h",
+              },
+            ],
+          }) as ExternalEndpoint,
+      ),
+  ),
+});
+
+// The in-cluster-Garage mirror heartbeat. One endpoint, celestia only: the
+// mirror is live exactly where stacks/system delivers mirror.env, which is
+// exactly where backrest's staging tree lives. The other nodes' mirror
+// containers idle healthy and never push, so an endpoint for them would be
+// red by construction.
+addUptimeGatus("dockge-garage-mirror", globals, {
+  endpoints: [],
+  "external-endpoints": dockgeDetails.apply(details =>
+    details
+      .filter(detail => detail.name === "celestia-dockge" && hostHasActiveStack(dockerHostDirectory(detail.name), "garage"))
+      .map(
+        detail =>
+          ({
+            enabled: true,
+            name: detail.name,
+            token: toGatusKey(DOCKGE_GARAGE_MIRROR_GROUP, detail.name),
+            group: DOCKGE_GARAGE_MIRROR_GROUP,
+            // Same cadence and reasoning as the sync group above: 6h cycles,
+            // two missed cycles plus drift before the dead-man pages, failed
+            // cycles push success=false and alert immediately regardless.
             heartbeat: { interval: "13h" },
             alerts: [
               {

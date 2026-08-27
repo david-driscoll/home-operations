@@ -1,3 +1,8 @@
+x-dockge:
+  urls:
+    - https://garage.${CLUSTER_DOMAIN}
+    - https://garage-${host}.${tailscaleDomain}
+
 services:
   # Garage (garagehq.deuxfleurs.fr) — one node of the estate's geo-distributed
   # S3 store. The cluster is celestia + luna + skystar, replication_factor 3,
@@ -5,13 +10,15 @@ services:
   # garage.toml). alpha-site deliberately runs no node —
   # docker/alpha-site/garage/.ignore suppresses this stack there.
   #
-  # What lives in it: postgres backups, and only postgres backups. The
-  # equestria CNPG cluster's barman-cloud WAL archive + base backups land in
-  # `cnpg-equestria` (kubernetes/apps/database/postgres), and each dockge
-  # host's nightly pg_dump set is mirrored into `postgres-<cluster>` by the
-  # garage-sync service below. Buckets and keys are MANAGED BY PULUMI
-  # (stacks/garage) through the Admin API — never hand-create them with the
-  # CLI, or the next `pulumi up` will not know they exist.
+  # What lives in it: backups, and only backups. The equestria CNPG cluster's
+  # barman-cloud WAL archive + base backups land in `cnpg-equestria`
+  # (kubernetes/apps/database/postgres), each dockge host's nightly pg_dump
+  # set is mirrored into `postgres-<cluster>` by the garage-sync service
+  # below, and the in-cluster Garage instances' opted-in buckets are mirrored
+  # into `garage-mirror` by the garage-mirror service (celestia only). Buckets
+  # and keys are MANAGED BY PULUMI (stacks/system — garage.ts) through the
+  # Admin API — never hand-create them with the CLI, or the next `pulumi up`
+  # will not know they exist.
   #
   # This stack is in BACKUP_OPT_OUT_STACKS (components/dockerStackBackups.ts):
   # its contents ARE backups and are already held three times, and a file-level
@@ -20,7 +27,7 @@ services:
   garage:
     # v1 -> v2 style major bumps are NOT plain image bumps: Garage majors carry
     # on-disk format migrations and their own upgrade procedure. Minors are
-    # rolling-safe. The admin API is v2 (stacks/garage's provider speaks it),
+    # rolling-safe. The admin API is v2 (garage.ts's provider speaks it),
     # so never roll this below v2.0.0.
     image: dxflrs/garage:v2.3.0@sha256:866bd13ed2038ba7e7190e840482bc27234c4afaf77be8cfa439ae088c1e4690
     container_name: garage
@@ -85,6 +92,61 @@ services:
     networks:
       - dockge_default
 
+  # The admin UI (khairul169/garage-webui) over the Admin API. Published the
+  # backrest way: authentik forward-auth in front on BOTH routers, because the
+  # UI holds the admin token and its own auth is disabled (no AUTH_USER_PASS —
+  # a second login page behind forward-auth would be theatre). The
+  # `garage-${host}` tailscale hostname is per-node on purpose: a tailscale
+  # service name is tailnet-global, so a shared `garage` name would collide
+  # across the three hosts' site stacks.
+  garage-webui:
+    image: khairul169/garage-webui:1.1.0@sha256:17c793551873155065bf9a022dabcde874de808a1f26e648d4b82e168806439c
+    container_name: garage-webui
+    depends_on:
+      garage:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      # It parses garage.toml for topology, but the admin token is NOT in that
+      # file (see the no-secrets note there), so it arrives by env like the
+      # node's own.
+      CONFIG_PATH: /etc/garage.toml
+      API_BASE_URL: http://garage:3903
+      API_ADMIN_KEY: ${GARAGE_ADMIN_TOKEN}
+      S3_ENDPOINT_URL: http://garage:3900
+      S3_REGION: garage
+    user: "3900:3900"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+    labels:
+      traefik.enable: true
+      traefik.http.routers.garage.rule: Host(`garage.${CLUSTER_DOMAIN}`)
+      traefik.http.routers.garage.middlewares: authentik-outpost@docker
+      traefik.http.routers.garage.entrypoints: websecure
+      traefik.http.routers.garage.service: garage
+      traefik.http.routers.garage.tls.certresolver: le
+      traefik.http.routers.garage-tailscale.rule: Host(`garage-${host}.${tailscaleDomain}`)
+      traefik.http.routers.garage-tailscale.middlewares: authentik-outpost@docker
+      traefik.http.routers.garage-tailscale.entrypoints: tailscale
+      traefik.http.routers.garage-tailscale.service: garage
+      traefik.http.services.garage.loadbalancer.server.port: 3909
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    mem_limit: 256m
+    cpus: 1
+    networks:
+      - dockge_default
+
   # Mirrors this node's pg_dump output (docker/_common/postgres backup.sh,
   # /opt/stacks-data/postgres/dumps) into the postgres-${CLUSTER_KEY} bucket —
   # through THIS node's S3 API, so luna and skystar upload locally and Garage's
@@ -93,11 +155,11 @@ services:
   #
   # Credentials are NOT a ref+openbao reference in .env, unlike every other
   # secret here, and the reason is a bootstrap cycle: the S3 key is minted by
-  # stacks/garage against the Admin API of the very cluster this stack starts,
-  # so at first-deploy time the OpenBao path cannot exist yet — and an
-  # unresolvable reference fails the whole site deploy by design. Instead
-  # stacks/garage writes /opt/stacks-data/garage/rclone.env (mode 600) onto
-  # each node — the same delivery shape as backrest's garage.conf — and
+  # stacks/system (garage.ts) against the Admin API of the very cluster this
+  # stack starts, so at first-deploy time the OpenBao path cannot exist yet —
+  # and an unresolvable reference fails the whole site deploy by design.
+  # Instead that stack writes /opt/stacks-data/garage/rclone.env (mode 600)
+  # onto each node — the same delivery shape as backrest's garage.conf — and
   # sync.sh re-reads it every cycle, so the first sync succeeds on the cycle
   # after the ceremony finishes and a key rotation converges with no restart.
   garage-sync:
@@ -130,7 +192,7 @@ services:
       # The source, read-only: a backup mover that can write its source is a
       # backup mover that can destroy it.
       - /opt/stacks-data/postgres/dumps:/dumps:ro
-      # rclone.env (written by stacks/garage) + sync-state/.last-run.
+      # rclone.env / mirror.env (written by stacks/system) + the state dirs.
       - /opt/stacks-data/garage:/gstate
     entrypoint: ["/bin/sh", "/sync.sh"]
     # Same shape as postgres-backup's healthcheck: sync.sh writes
@@ -144,6 +206,72 @@ services:
           set -- $$(cat /gstate/sync-state/.last-run 2>/dev/null);
           [ "$${2:-}" = ok ] || exit 1;
           [ $$(( $$(date +%s) - $${1:-0} )) -lt $$(( $${GARAGE_SYNC_INTERVAL_SECONDS:-21600} + 10800 )) ]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      start_period: 15m
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    mem_limit: 256m
+    cpus: 1
+    networks:
+      - dockge_default
+
+  # Mirrors the IN-CLUSTER Garage instances' backed-up buckets into the
+  # `garage-mirror` bucket here — both of them: garage-system's shared cluster
+  # and coder/forgejo-garage. It does not talk to either directly; the source
+  # is /data/staging/garage/, the local tree backrest's pre-sync hooks already
+  # maintain for every GarageBucket annotated `driscoll.dev/backup: "true"`
+  # (stacks/applications/kubernetes-backups.ts). Riding that tree inherits the
+  # estate's opt-in contract, its exclusion rules, and its freshness (nightly)
+  # — and needs no new key against the k8s clusters at all.
+  #
+  # Deployed on every node because this stack is _common, but ACTIVE only
+  # where /gstate/mirror.env exists — stacks/system writes it to celestia
+  # alone, because that is where backrest's staging lives. On luna/skystar the
+  # loop idles healthy and pushes no heartbeat; the Gatus endpoint
+  # (stacks/backups) is registered for celestia only.
+  garage-mirror:
+    image: rclone/rclone:1.75.0@sha256:b06aed988cf5967de7c25be5925240983981c757f4ed1ac9d2fa659d51d60548
+    container_name: garage-mirror
+    depends_on:
+      garage:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      RCLONE_CONFIG_GARAGE_TYPE: s3
+      RCLONE_CONFIG_GARAGE_PROVIDER: Other
+      RCLONE_CONFIG_GARAGE_ENDPOINT: http://garage:3900
+      RCLONE_CONFIG_GARAGE_REGION: garage
+    user: "3900:3900"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./mirror.sh:/mirror.sh:ro
+      # Read-only for the same reason sync.sh's source is: a mirror that can
+      # write its source can destroy it. Docker auto-creates this bind empty
+      # on luna/skystar; mirror.sh never reads it there (no mirror.env).
+      - /data/staging/garage:/staging:ro
+      - /opt/stacks-data/garage:/gstate
+    entrypoint: ["/bin/sh", "/mirror.sh"]
+    # Same shape as garage-sync's: mirror.sh writes "<epoch> ok|failed" after
+    # every cycle — including an "ok" from a deliberate idle cycle on the
+    # non-mirror nodes, so this check is meaningful on all three hosts.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          set -- $$(cat /gstate/mirror-state/.last-run 2>/dev/null);
+          [ "$${2:-}" = ok ] || exit 1;
+          [ $$(( $$(date +%s) - $${1:-0} )) -lt $$(( $${GARAGE_MIRROR_INTERVAL_SECONDS:-21600} + 10800 )) ]
       interval: 5m
       timeout: 10s
       retries: 2

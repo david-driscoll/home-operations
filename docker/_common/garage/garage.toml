@@ -10,7 +10,13 @@
 # LMDB on the SSD (bind-mounted from /opt/stacks-data/garage/meta), block data
 # on the ZFS array (/data/garage). See the volume notes in compose.yaml.
 metadata_dir = "/var/lib/garage/meta"
-data_dir = "/var/lib/garage/data"
+# The capacity annotation declares this node's share of the ZFS array — 4T,
+# matching the `-c 4T` the layout ceremony assigns (docs/garage-offsite-s3.md;
+# `garage layout assign` checks against it). Know what it is NOT: a write
+# stop. Garage capacity is a placement weight, so the HARD limits are the
+# per-bucket quotas stacks/system (garage.ts) sets, which are sized to sum
+# comfortably under this. Grow all three together, deliberately.
+data_dir = [{ path = "/var/lib/garage/data", capacity = "4T" }]
 db_engine = "lmdb"
 
 # LMDB files have a tendency to corrupt on an unclean shutdown; Garage's own
@@ -37,7 +43,7 @@ rpc_public_addr = "${tailscaleIpAddress}:3901"
 # Baked into every SigV4 signature; changing it invalidates every client at
 # once (same trap as s3Api.region on the in-cluster GarageCluster). Clients:
 # the barman-cloud ObjectStore values (kubernetes/apps/database/postgres),
-# garage-sync (compose.yaml), and anything reading stacks/garage's OpenBao
+# garage-sync (compose.yaml), and anything reading garage.ts's OpenBao
 # records.
 s3_region = "garage"
 api_bind_addr = "[::]:3900"
@@ -45,6 +51,7 @@ api_bind_addr = "[::]:3900"
 # would need wildcard DNS this estate does not carry for these hosts.
 
 [admin]
-# Control plane for stacks/garage (bucket/key management over the tailnet) and
-# for `garage` CLI ceremonies. Token comes from GARAGE_ADMIN_TOKEN.
+# Control plane for stacks/system's garage.ts (bucket/key management over the
+# tailnet), the garage-webui service, and `garage` CLI ceremonies. Token comes
+# from GARAGE_ADMIN_TOKEN.
 api_bind_addr = "[::]:3903"

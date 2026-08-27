@@ -124,7 +124,7 @@ recovery:
 # 7778; verified in plugin-barman-cloud internal/cnpgi/instance/backup.go).
 #
 # The garage_* values come from clusters/equestria/apps/postgres/garage-backup
-# (written by stacks/garage; see externalsecret.yaml). The endpoint inside is
+# (written by stacks/system garage.ts; see externalsecret.yaml). The endpoint inside is
 # http://dockge-celestia.<tailnet>:3900 -- pods have no route to tailnet IPs,
 # so the traffic rides the tailscale-operator egress Service for
 # dockge-celestia (port declared in tailscale-system/services/Update.cs, ACL

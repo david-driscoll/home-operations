@@ -249,7 +249,7 @@ export class GlobalResources extends ComponentResource {
    * celestia/luna/skystar dockge hosts (docker/_common/garage), which holds
    * the estate's second set of postgres backups.
    *
-   * Lazy, like `baoProvider`: only stacks/garage manages buckets and keys,
+   * Lazy, like `baoProvider`: only stacks/system's garage.ts manages buckets and keys,
    * and an eager construction would make the `docker/apps/garage/admin-token`
    * path a preview-time dependency of every stack in the repo.
    *

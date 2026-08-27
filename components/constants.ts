@@ -119,7 +119,7 @@ export const Tailscale = {
     //   3900  S3 API, the data plane (equestria's barman-cloud plugin arrives
     //         as tag:egress; the other nodes and the uptime probes as
     //         tag:dockge)
-    //   3903  Admin API, the control plane (stacks/garage bucket/key
+    //   3903  Admin API, the control plane (stacks/system garage.ts bucket/key
     //         management from admin workstations)
     garageRpc: ["tcp:3901"] as TailscaleNetworkCapability[],
     garageS3: ["tcp:3900"] as TailscaleNetworkCapability[],

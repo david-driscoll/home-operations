@@ -500,7 +500,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
-    // Bucket and key management (stacks/garage, run from an admin
+    // Bucket and key management (stacks/system's garage.ts, run from an admin
     // workstation) talks to the Admin API on dockge-celestia:3903. Admins get
     // the S3 port too, for aws/rclone spot checks against the store.
     manager.setGrant(

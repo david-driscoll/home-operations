@@ -17,20 +17,21 @@ This is a distinct system from `kubernetes/apps/garage-system` (the in-cluster
 Garage on equestria, operator-managed). That one lives *inside* the cluster it
 would be needed to repair, which is why CNPG backups were never allowed to move
 there; this one is outside every failure domain it protects except celestia's
-own S3 endpoint.
+own S3 endpoint. The in-cluster instances' backed-up buckets land HERE too —
+the `garage-mirror` service below.
 
 ## What is where
 
 | Path | What it is |
 | --- | --- |
-| `docker/_common/garage/` | The stack: node (`garage.toml`, ports 3900/3901/3903), `garage-sync` dump mirror |
+| `docker/_common/garage/` | The stack: node (`garage.toml`, ports 3900/3901/3903), `garage-webui` admin UI, `garage-sync` dump mirror, `garage-mirror` in-cluster-bucket mirror |
 | `docker/alpha-site/garage/.ignore` | alpha-site runs no node — membership is exactly the three hosts |
-| `stacks/garage/` | Pulumi: buckets, keys, OpenBao records, per-host `rclone.env` delivery |
+| `stacks/system/garage.ts` | Pulumi: buckets + quotas, keys, OpenBao records, per-host credential-file delivery |
 | `components/globals.ts` (`garageProvider`) | Admin API provider — `http://dockge-celestia.<tailnet>:3903` |
 | `kubernetes/apps/database/postgres/app/` | The barman-cloud `backups:` block now targets this cluster |
 | `kubernetes/apps/tailscale-system/services/Update.cs` | Port 3900 on the `dockge-celestia` egress Service |
 | `stacks/unifi-network/acl-manager.ts` | `garage-mesh`, `garage-s3-backups`, `garage-admin` grants |
-| `stacks/backups/index.ts` | "Dockge Garage Postgres Sync" Gatus heartbeat group |
+| `stacks/backups/index.ts` | The Gatus heartbeat groups for the sync + mirror loops |
 
 Storage split per node, per the Garage real-world cookbook: LMDB metadata on
 the SSD (`/opt/stacks-data/garage/meta`), block data on the ZFS array
@@ -38,6 +39,39 @@ the SSD (`/opt/stacks-data/garage/meta`), block data on the ZFS array
 metadata-corruption recovery path, and the reason this stack needs no backrest
 plan (it is also in `BACKUP_OPT_OUT_STACKS` — its contents *are* backups,
 already held three times).
+
+**The 4T budget.** Each node declares a 4T share of its ZFS array
+(`data_dir` capacity in `garage.toml`, matched by `-c 4T` in the layout
+ceremony below). Garage treats capacity as a placement *weight*, not a stop,
+so the hard enforcement is the per-bucket quotas `stacks/system` sets
+(512 GiB cnpg, 128 GiB per dump bucket, 2 TiB mirror — summing well under the
+share). Hitting a quota means retention broke, not that the estate grew; grow
+all three knobs together, deliberately. A ZFS dataset quota on `/data/garage`
+is a reasonable host-side belt on top; that lives on the Proxmox host, not in
+this repo.
+
+## The admin UI
+
+`garage-webui` runs next to each node and is published the backrest way:
+`https://garage.<cluster>.driscoll.tech` (traefik, LE) and
+`https://garage-<host>.<tailnet>` (tailscale service), **both behind authentik
+forward-auth** — the UI holds the admin token and its own login is disabled,
+so the proxy is the login. The per-host tailscale hostname is deliberate: a
+tailscale service name is tailnet-global and a shared `garage` name would
+collide across the three site stacks.
+
+## The in-cluster Garage mirror
+
+The `garage-mirror` service (active on **celestia only** — the other nodes
+idle) syncs `/data/staging/garage/` into the `garage-mirror` bucket every 6h.
+That staging tree is the one backrest's pre-sync hooks already maintain for
+every `GarageBucket` annotated `driscoll.dev/backup: "true"`, across **both**
+in-cluster instances (garage-system's shared cluster and coder/forgejo-garage;
+the scan is `stacks/applications/kubernetes-backups.ts`). Riding it means the
+mirror inherits the estate's opt-in contract, exclusion rules, and freshness
+(nightly) — and needs no credentials against the k8s clusters at all. The
+service refuses to sync an empty staging tree: a mirror of nothing would be a
+delete of everything.
 
 ## One barman store per cluster — why the minio flip
 
@@ -93,13 +127,13 @@ ssh root@dockge-skystar  "docker exec garage /garage node id -q"
 docker exec garage /garage node connect <luna-id>@<luna-tailnet-ip>:3901
 docker exec garage /garage node connect <skystar-id>@<skystar-tailnet-ip>:3901
 
-# one zone per machine; with replication_factor 3 every node holds everything,
-# so capacity only shapes *balance* — size it to the /data space you are
-# willing to give Garage on each host, and remember it can grow but the
-# usable total is bounded by the smallest node.
-docker exec garage /garage layout assign <celestia-id> -z celestia -c 500G
-docker exec garage /garage layout assign <luna-id>     -z luna     -c 500G
-docker exec garage /garage layout assign <skystar-id>  -z skystar  -c 500G
+# One zone per machine; with replication_factor 3 every node holds everything,
+# so capacity only shapes *balance*. 4T matches the data_dir capacity declared
+# in garage.toml — `layout assign` checks against it — and the per-bucket
+# quotas are what actually enforce a ceiling (see "The 4T budget" above).
+docker exec garage /garage layout assign <celestia-id> -z celestia -c 4T
+docker exec garage /garage layout assign <luna-id>     -z luna     -c 4T
+docker exec garage /garage layout assign <skystar-id>  -z skystar  -c 4T
 
 docker exec garage /garage layout show
 docker exec garage /garage layout apply --version 1
@@ -107,20 +141,21 @@ docker exec garage /garage layout apply --version 1
 
 Peer addresses persist in the metadata dir; `node connect` is not needed again.
 
-**4. Create buckets and keys, and deliver credentials:**
+**4. Create buckets and keys, and deliver credentials** — a run of the
+`system` stack, which owns the garage module (`stacks/system/garage.ts`):
 
 ```bash
-cd stacks/garage
-pulumi stack init garage   # first time only
+cd stacks/system
 mise run vals-run pulumi up
 ```
 
-This creates `cnpg-equestria` + `postgres-{celestia,luna,skystar}` with one
-rw key each, records them in OpenBao
+This creates `cnpg-equestria`, `postgres-{celestia,luna,skystar}` and
+`garage-mirror` (each with a quota and one rw key), records them in OpenBao
 (`clusters/equestria/apps/postgres/garage-backup`,
-`clusters/<key>/apps/postgres/garage`), and writes each node's
-`/opt/stacks-data/garage/rclone.env`. The sync loops pick the file up on their
-next cycle — no restart — and their heartbeats go green.
+`clusters/<key>/apps/postgres/garage`, `clusters/celestia/apps/garage/mirror`),
+and writes each node's `/opt/stacks-data/garage/rclone.env` plus celestia's
+`mirror.env`. The loops pick the files up on their next cycle — no restart —
+and their heartbeats go green.
 
 **5. Cut equestria over.** Merging the `kubernetes/apps/database/postgres`
 half of this change is safe in any order relative to steps 1–4: until the
@@ -162,7 +197,8 @@ restores from the frozen minio archive, which stops being current at the flip.
 - **`replication_factor` and `s3_region` are effectively immutable** — layout
   rebuild and SigV4 invalidation respectively, same as the in-cluster Garage.
 - **Buckets and keys are Pulumi state.** Hand-created ones collide with
-  `stacks/garage` later; hand-deleted ones break consumers it thinks are fed.
+  `stacks/system` later; hand-deleted ones break consumers it thinks are fed.
+  The webui makes hand-creating them one click — resist it.
 - **Do not add this stack to backrest.** `BACKUP_OPT_OUT_STACKS` documents why;
   restating it here because the symptom of forgetting is silent triple-storage
   of the estate's largest dataset, not an error.

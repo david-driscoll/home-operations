@@ -7,12 +7,25 @@ metadata:
 spec:
   name: Garage (${CLUSTER_TITLE})
   category: Infrastructure
-  description: Geo-replicated S3 node — postgres backup store (celestia/luna/skystar)
+  description: Geo-replicated S3 node — backup store (celestia/luna/skystar)
+  url: &url https://garage.${CLUSTER_DOMAIN}
   icon: https://garagehq.deuxfleurs.fr/images/garage-logo.svg
   access_policy:
     groups:
       - admins
+  # The admin UI (garage-webui) sits behind authentik forward-auth on both of
+  # its routers — its own auth is off and it holds the admin token, so the
+  # proxy IS the login. Same shape as backrest.
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
   gatus:
+    # The UI through the whole chain: traefik -> forward-auth -> webui.
+    - url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
     # Liveness of the two listeners that matter to consumers: S3 for the
     # backup writers, RPC for the mesh. Probed over the tailnet from the
     # uptime stack on dockge-as, which travels as tag:dockge — the garage-mesh

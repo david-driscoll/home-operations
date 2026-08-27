@@ -9,11 +9,12 @@
 # other two machines — so luna and skystar never push their dumps over the WAN
 # themselves.
 #
-# CREDENTIALS ARE READ EVERY CYCLE from /gstate/rclone.env, which stacks/garage
-# writes onto the host (see the garage-sync service comment in compose.yaml for
-# why this is a file and not a ref+openbao reference). A cycle before that file
-# exists reports failure and tries again — bootstrap converges without a
-# container restart, and so does a key rotation.
+# CREDENTIALS ARE READ EVERY CYCLE from /gstate/rclone.env, which
+# stacks/system (garage.ts) writes onto the host (see the garage-sync service
+# comment in compose.yaml for why this is a file and not a ref+openbao
+# reference). A cycle before that file exists reports failure and tries again
+# — bootstrap converges without a container restart, and so does a key
+# rotation.
 #
 # WHY IT REPORTS: same dead-man's-switch shape as backup.sh next door. restic
 # and Garage both happily hold a stale mirror forever; the Gatus heartbeat
@@ -61,9 +62,9 @@ while true; do
   ok=true
 
   if [ ! -f "$creds_file" ]; then
-    # First-deploy state: the cluster is up but stacks/garage has not minted
+    # First-deploy state: the cluster is up but stacks/system has not minted
     # and delivered this node's key yet. Say exactly what is missing.
-    echo "[sync] ERROR: ${creds_file} does not exist — run stacks/garage (it writes this node's S3 key); see docs/garage-offsite-s3.md" >&2
+    echo "[sync] ERROR: ${creds_file} does not exist — run stacks/system (garage.ts writes this node's S3 key); see docs/garage-offsite-s3.md" >&2
     ok=false
   else
     # set -a exports everything the file assigns, so the rclone invocation
