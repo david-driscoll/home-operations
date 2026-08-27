@@ -1,0 +1,96 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# ============================================================================
+# The gap this exists to close.
+#
+# On 2026-08-27 FreshRSS served HTTP 500s to the browser for hours while every
+# signal the estate had said it was fine:
+#
+#   * the pod was 1/1 Ready with 0 restarts, because its liveness and readiness
+#     probes only prove Apache and PHP are up -- no unauthenticated FreshRSS
+#     endpoint opens a database connection, so no kubelet probe can ever see a
+#     credential failure (see the note in that app's resources/config.php);
+#   * KubePodNotReady and friends key off readiness, which was passing;
+#   * the Gatus check asserts `[STATUS] == 401`, and that 401 is produced by the
+#     Traefik `local-user` middleware chain AT THE EDGE -- the request never
+#     reaches the pod, so Gatus stayed green throughout.
+#
+# The class is "app is Ready and answering, but answering wrong". Nothing that
+# probes liveness, readiness, or an edge-terminated status code can see it. What
+# CAN see it is the proxy actually carrying user traffic, which is why this rule
+# lives with Traefik rather than with any one app: it covers every service
+# behind the gateway automatically, including ones added later.
+#
+# ---------------------------------------------------------------------------
+# Reading `traefik_service_requests_total` correctly.
+#
+# GROUP BY `exported_service`, NOT `service`. Traefik's own `service` label
+# collides with the label the ServiceMonitor attaches, so Prometheus renames
+# Traefik's to `exported_service` and `service` becomes the constant
+# "traefik-metrics" for every series. Grouping by `service` therefore silently
+# collapses the entire estate into one meaningless bucket -- it evaluates fine
+# and tells you nothing, the same shape of bug as the dead longhorn rules in
+# longhorn-system/longhorn/rules/pvc-usage-rules.yaml.
+#
+# `exported_service` values look like
+#   httproute-<ns>-<app>-gw-network-internal-ep-websecure-0-<hash>-svc-<ns>-<app>-0@kubernetesgateway
+# which is ugly but is the only per-app identity available on this metric.
+#
+# ---------------------------------------------------------------------------
+# Threshold, and why it is this low.
+#
+# 0.005 req/s is about one 5xx every 200 seconds. That sounds absurdly
+# sensitive until you look at what the incident actually produced: a single
+# browser tab retrying every ~40s, which peaked at 0.027 req/s over a 15m
+# window. A "reasonable-looking" threshold like 1 req/s would have sat silent
+# through the entire outage. The point of this alert is not volume, it is
+# PERSISTENCE -- a healthy service sits at exactly zero.
+#
+# `for: 30m` is what makes that safe. A rollout, a node drain or a brief
+# upstream blip produces a burst that decays out of the 15m rate window well
+# inside 30 minutes. Only a service that keeps failing survives to fire.
+#
+# Verified against live data before this was committed, rather than assumed:
+#   * the FreshRSS outage window peaks at 0.0270 req/s -- comfortably over.
+#   * evaluated over the preceding 24h it selects 9 services, and evaluated
+#     instantaneously it selects 4 (jellyseerr, identifiarr, seerr,
+#     toolhive-ui) -- all sustained 502s against pods that are 1/1 Running and
+#     that Gatus reports as 200. Those are real, pre-existing, and were
+#     invisible until this rule was written.
+# ============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: traefik-silent-failure-rules
+spec:
+  groups:
+    - name: traefik.silent-failure.rules
+      rules:
+        - alert: ServiceSustained5xx
+          annotations:
+            description: >-
+              Traefik service {{$labels.exported_service}} has returned 5xx continuously for
+              30 minutes ({{$value | printf "%.3f"}} req/s). The backend pod is probably Ready
+              and passing its probes -- this alert exists because that is not evidence the app
+              works. Check the pod's own logs, not its probe status.
+            summary: A service behind Traefik is persistently returning 5xx.
+          expr: |
+            sum by (exported_service) (
+              rate(
+                traefik_service_requests_total{
+                  code=~"5..",
+                  exported_service!="",
+                  exported_service!~".*error-pages.*"
+                }[15m]
+              )
+            ) > 0.005
+          for: 30m
+          labels:
+            issue: Traefik service {{$labels.exported_service}} is persistently serving 5xx while its pod looks healthy.
+            severity: warning
+        # error-pages is excluded above rather than filtered here: it is the
+        # service Traefik forwards to IN ORDER TO render an error, so it serves
+        # 5xx by design and runs two orders of magnitude hotter than anything
+        # real (0.645 req/s over the last 24h). Left in, it would fire forever
+        # and train the alert to be ignored.
