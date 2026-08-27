@@ -76,6 +76,15 @@ export const BACKUP_OPT_OUT_STACKS: ReadonlySet<string> = new Set([
   // path the container never populates. Remove this entry if pecron-monitor
   // ever grows real state.
   "pecron-monitor",
+  // Third category: contents that are already backups. The garage stack IS the
+  // offsite postgres backup store — every object in it exists on three hosts
+  // by replication_factor, and the dumps it mirrors are also restic-snapshotted
+  // from each host's postgres stack plan. Backing it up again would triple the
+  // estate's largest dataset for no additional restore path. Its stacks-data
+  // footprint is the LMDB metadata directory, whose file-level copy is torn
+  // anyway; metadata_auto_snapshot_interval in garage.toml is the local
+  // recovery mechanism for that (docs/garage-offsite-s3.md).
+  "garage",
 ]);
 
 /**
@@ -155,6 +164,21 @@ export function dockerHostDirectory(dockgeName: string): string {
     );
   }
   return hostDir;
+}
+
+/**
+ * Whether `hostDir` actually deploys `stack`, by the same resolution DockgeLxc
+ * uses: present in `_common/` or the host directory, and not suppressed by an
+ * `.ignore` in either. stacks/backups uses this to register the garage-sync
+ * heartbeats only for the hosts that run a garage node — alpha-site carries
+ * docker/alpha-site/garage/.ignore, and an endpoint registered for a host
+ * that never pushes would be permanently red by construction.
+ */
+export function hostHasActiveStack(hostDir: string, stack: string): boolean {
+  const commonStack = resolve(dockerPath, "_common", stack);
+  const hostStack = resolve(dockerPath, hostDir, stack);
+  if (!existsSync(commonStack) && !existsSync(hostStack)) return false;
+  return !existsSync(resolve(commonStack, ".ignore")) && !existsSync(resolve(hostStack, ".ignore"));
 }
 
 /** Every stack on `hostDir` that qualifies for its own backup plan, sorted by stack name. */

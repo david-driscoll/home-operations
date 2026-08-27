@@ -22,6 +22,9 @@ spec:
     - name: llm-agent
       port: 8081
       targetPort: 8081
+    - name: garage-s3
+      port: 3900
+      targetPort: 3900
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Probe

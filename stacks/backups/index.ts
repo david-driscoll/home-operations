@@ -1,5 +1,5 @@
 import { BackupPlanOrchestrator } from "@components/BackupPlanOrchestrator.ts";
-import { dockerHostDirectory, listStackBackupTargets } from "@components/dockerStackBackups.ts";
+import { dockerHostDirectory, hostHasActiveStack, listStackBackupTargets } from "@components/dockerStackBackups.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { addUptimeGatus, toGatusKey } from "@components/helpers.ts";
 import type { ExternalEndpoint } from "@openapi/application-definition.js";
@@ -11,6 +11,13 @@ import * as pulumi from "@pulumi/pulumi";
 // string and `detail.name` below are load-bearing on both sides -- changing
 // either orphans every push and every endpoint goes permanently red.
 const DOCKGE_POSTGRES_DUMP_GROUP = "Dockge Postgres Dumps";
+
+// Gatus group for the garage-sync loops (docker/_common/garage) that mirror
+// each node's dumps into its postgres-<cluster> bucket. Same load-bearing
+// token contract as the group above: docker/_common/garage/.env restates
+// toGatusKey(this, <dockge name>) as GARAGE_SYNC_UPTIME_TOKEN, so changing
+// either side orphans every push and the endpoints go permanently red.
+const DOCKGE_GARAGE_SYNC_GROUP = "Dockge Garage Postgres Sync";
 
 const globals = new GlobalResources({}, {});
 const dockgeDetails = globals.store.getDockgeInstances();
@@ -117,6 +124,44 @@ addUptimeGatus("dockge-postgres-dumps", globals, {
           ],
         }) as ExternalEndpoint,
     ),
+  ),
+});
+
+// The garage-sync heartbeats. A green backrest snapshot of a dumps directory
+// says nothing about whether the GARAGE mirror of it is still being taken —
+// exactly the blind spot the postgres-dump group closes for restic — so the
+// sync loop reports each cycle here and Gatus pages when nothing arrives. Only
+// hosts that actually deploy the garage stack are registered: an endpoint for
+// alpha-site (docker/alpha-site/garage/.ignore) would be red by construction.
+addUptimeGatus("dockge-garage-sync", globals, {
+  endpoints: [],
+  "external-endpoints": dockgeDetails.apply(details =>
+    details
+      .filter(detail => hostHasActiveStack(dockerHostDirectory(detail.name), "garage"))
+      .map(
+        detail =>
+          ({
+            enabled: true,
+            name: detail.name,
+            token: toGatusKey(DOCKGE_GARAGE_SYNC_GROUP, detail.name),
+            group: DOCKGE_GARAGE_SYNC_GROUP,
+            // Cycles run every GARAGE_SYNC_INTERVAL_SECONDS (6h), clock
+            // starting at container start; two missed cycles plus an hour of
+            // drift is the page threshold. A FAILING cycle still pushes
+            // (success=false) and alerts immediately — this window only covers
+            // the loop being dead or the host being gone.
+            heartbeat: { interval: "13h" },
+            alerts: [
+              {
+                type: "pushover",
+                enabled: true,
+                "success-threshold": 1,
+                "failure-threshold": 1,
+                "minimum-reminder-interval": "24h",
+              },
+            ],
+          }) as ExternalEndpoint,
+      ),
   ),
 });
 

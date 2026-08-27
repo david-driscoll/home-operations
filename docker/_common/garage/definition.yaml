@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: garage
+spec:
+  name: Garage (${CLUSTER_TITLE})
+  category: Infrastructure
+  description: Geo-replicated S3 node — postgres backup store (celestia/luna/skystar)
+  icon: https://garagehq.deuxfleurs.fr/images/garage-logo.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    # Liveness of the two listeners that matter to consumers: S3 for the
+    # backup writers, RPC for the mesh. Probed over the tailnet from the
+    # uptime stack on dockge-as, which travels as tag:dockge — the garage-mesh
+    # grant in stacks/unifi-network/acl-manager.ts is what admits it. Whether
+    # the dumps actually LAND is the "Dockge Garage Postgres Sync" heartbeat
+    # group (stacks/backups), not these.
+    - name: garage-s3
+      url: "tcp://${tailscaleIpAddress}:3900"
+      interval: 5m
+      conditions:
+        - "[CONNECTED] == true"
+    - name: garage-rpc
+      url: "tcp://${tailscaleIpAddress}:3901"
+      interval: 5m
+      conditions:
+        - "[CONNECTED] == true"

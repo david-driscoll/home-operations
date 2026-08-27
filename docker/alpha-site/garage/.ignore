@@ -1,0 +1,5 @@
+# alpha-site runs no Garage node: the geo-distributed cluster is exactly
+# celestia + luna + skystar (replication_factor 3, one copy per machine), and
+# this host has neither a /data ZFS array mount nor a postgres consumer that
+# needs the mirror. Deleting this file would deploy a fourth node with no
+# layout role and a failing init.sh. See docker/_common/garage/compose.yaml.

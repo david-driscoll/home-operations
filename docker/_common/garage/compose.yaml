@@ -1,0 +1,161 @@
+services:
+  # Garage (garagehq.deuxfleurs.fr) — one node of the estate's geo-distributed
+  # S3 store. The cluster is celestia + luna + skystar, replication_factor 3,
+  # meshed over the tailnet (rpc_public_addr is this host's tailscale IP; see
+  # garage.toml). alpha-site deliberately runs no node —
+  # docker/alpha-site/garage/.ignore suppresses this stack there.
+  #
+  # What lives in it: postgres backups, and only postgres backups. The
+  # equestria CNPG cluster's barman-cloud WAL archive + base backups land in
+  # `cnpg-equestria` (kubernetes/apps/database/postgres), and each dockge
+  # host's nightly pg_dump set is mirrored into `postgres-<cluster>` by the
+  # garage-sync service below. Buckets and keys are MANAGED BY PULUMI
+  # (stacks/garage) through the Admin API — never hand-create them with the
+  # CLI, or the next `pulumi up` will not know they exist.
+  #
+  # This stack is in BACKUP_OPT_OUT_STACKS (components/dockerStackBackups.ts):
+  # its contents ARE backups and are already held three times, and a file-level
+  # copy of a live LMDB metadata database is torn anyway. Garage's own
+  # metadata_auto_snapshot_interval covers local metadata recovery.
+  garage:
+    # v1 -> v2 style major bumps are NOT plain image bumps: Garage majors carry
+    # on-disk format migrations and their own upgrade procedure. Minors are
+    # rolling-safe. The admin API is v2 (stacks/garage's provider speaks it),
+    # so never roll this below v2.0.0.
+    image: dxflrs/garage:v2.3.0@sha256:866bd13ed2038ba7e7190e840482bc27234c4afaf77be8cfa439ae088c1e4690
+    container_name: garage
+    hostname: garage
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      # Mesh identity and control-plane bearer token, resolved from OpenBao at
+      # render time (see .env). Env vars rather than garage.toml keys so the
+      # config file carries no secret and Garage's world-readable-secret check
+      # never enters the picture.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    # A dedicated uid. The image is scratch + a static binary and runs as
+    # whatever uid it is given; init.sh pre-creates the two data directories
+    # with this ownership, because with cap_drop ALL the container cannot chown
+    # anything itself (same reasoning as the postgres stack).
+    user: "3900:3900"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      # Metadata (LMDB) on the SSD; block data on the ZFS array. That split is
+      # the real-world-deployment guidance from the Garage cookbook — metadata
+      # is small and IOPS-bound, data is big and sequential. /data is the ZFS
+      # array every garage host's LXC mounts (addHostMount("/data") in
+      # stacks/{home,gulf-of-mexico,ocracoke}); /opt/stacks-data is the SSD.
+      - /opt/stacks-data/garage/meta:/var/lib/garage/meta
+      - /data/garage:/var/lib/garage/data
+    ports:
+      # Published on the host so the other nodes (tailnet) and equestria's
+      # egress proxy can reach them; the tailnet side is gated by the
+      # garage-mesh / garage-s3-backups / garage-admin grants in
+      # stacks/unifi-network/acl-manager.ts.
+      #   3900 S3 API, 3901 cluster RPC, 3903 Admin API
+      - "3900:3900"
+      - "3901:3901"
+      - "3903:3903"
+    # The scratch image has no shell; the garage binary doubles as the CLI and
+    # `status` exits non-zero when the local daemon does not answer RPC. A node
+    # that has not been assigned a layout role yet still answers, so this stays
+    # healthy during the one-time bootstrap ceremony (docs/garage-offsite-s3.md).
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 1m
+    # Garage flushes and closes LMDB on SIGTERM; give a busy node room for it.
+    stop_grace_period: 1m
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    mem_limit: 1g
+    cpus: 2
+    networks:
+      - dockge_default
+
+  # Mirrors this node's pg_dump output (docker/_common/postgres backup.sh,
+  # /opt/stacks-data/postgres/dumps) into the postgres-${CLUSTER_KEY} bucket —
+  # through THIS node's S3 API, so luna and skystar upload locally and Garage's
+  # replication carries the bytes across sites, instead of every host pushing
+  # over the WAN twice.
+  #
+  # Credentials are NOT a ref+openbao reference in .env, unlike every other
+  # secret here, and the reason is a bootstrap cycle: the S3 key is minted by
+  # stacks/garage against the Admin API of the very cluster this stack starts,
+  # so at first-deploy time the OpenBao path cannot exist yet — and an
+  # unresolvable reference fails the whole site deploy by design. Instead
+  # stacks/garage writes /opt/stacks-data/garage/rclone.env (mode 600) onto
+  # each node — the same delivery shape as backrest's garage.conf — and
+  # sync.sh re-reads it every cycle, so the first sync succeeds on the cycle
+  # after the ceremony finishes and a key rotation converges with no restart.
+  garage-sync:
+    image: rclone/rclone:1.75.0@sha256:b06aed988cf5967de7c25be5925240983981c757f4ed1ac9d2fa659d51d60548
+    container_name: garage-sync
+    depends_on:
+      garage:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: true
+      - path: .env-local
+        required: false
+    environment:
+      TZ: ${TIMEZONE}
+      RCLONE_CONFIG_GARAGE_TYPE: s3
+      RCLONE_CONFIG_GARAGE_PROVIDER: Other
+      RCLONE_CONFIG_GARAGE_ENDPOINT: http://garage:3900
+      RCLONE_CONFIG_GARAGE_REGION: garage
+    # uid 3900 like the node above, but gid 70 (postgres): the dumps directory
+    # is 70:70 mode 750, and group membership is how this container earns read
+    # on it without running as the database's uid or as root.
+    user: "3900:70"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./sync.sh:/sync.sh:ro
+      # The source, read-only: a backup mover that can write its source is a
+      # backup mover that can destroy it.
+      - /opt/stacks-data/postgres/dumps:/dumps:ro
+      # rclone.env (written by stacks/garage) + sync-state/.last-run.
+      - /opt/stacks-data/garage:/gstate
+    entrypoint: ["/bin/sh", "/sync.sh"]
+    # Same shape as postgres-backup's healthcheck: sync.sh writes
+    # "<epoch> ok|failed" after every cycle, and this turns a stalled or
+    # failing loop into container health. The paging signal is the Gatus
+    # heartbeat (GARAGE_SYNC_UPTIME_TOKEN in .env), not this.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          set -- $$(cat /gstate/sync-state/.last-run 2>/dev/null);
+          [ "$${2:-}" = ok ] || exit 1;
+          [ $$(( $$(date +%s) - $${1:-0} )) -lt $$(( $${GARAGE_SYNC_INTERVAL_SECONDS:-21600} + 10800 )) ]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      start_period: 15m
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    mem_limit: 256m
+    cpus: 1
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true
