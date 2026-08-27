@@ -8,10 +8,58 @@
 #:package Npgsql@*
 #:property JsonSerializerIsReflectionEnabledByDefault=true
 
-// Postgres backup. Credentials come from the Kubernetes Secrets in THIS
-// namespace -- the same `<app>-postgres` objects the ExternalSecret in
-// kubernetes/components/postgres/database/credentials.yaml renders, once per
-// app, from the sops-held per-app passwords.
+// Postgres backup.
+//
+// ─── WHAT DECIDES THE BACKUP SET ────────────────────────────────────────────
+//
+// The `Database` CRs in THIS namespace. Each one names a database in
+// `spec.name` and carries, in its annotations, everything this job needs to
+// know about how to back it up:
+//
+//   driscoll.dev/backup              "false" to exclude; anything else, or
+//                                    absent, means back it up
+//   driscoll.dev/backup-credentials  the Secret to authenticate with;
+//                                    defaults to `<database>-postgres`
+//   driscoll.dev/backup-reason       why it is excluded, printed every run
+//
+// ⚠️ THE POLARITY IS THE OPPOSITE OF A GARAGE BUCKET, where
+// `driscoll.dev/backup: "true"` opts a bucket IN
+// (kubernetes/apps/coder/forgejo-garage/bucket.yaml). It differs because the
+// defaults differ: forgetting the annotation on a bucket wastes space,
+// forgetting it on a database loses data. So a database is backed up unless it
+// says otherwise, and the annotation only ever opts one OUT.
+//
+// This replaced a pure `pg_database` enumeration that then GUESSED the
+// credential Secret from the database name -- `<db>-postgres`, always. Two
+// things were wrong with that. A database whose credential lives under some
+// other name could not be expressed at all, which is what put openbao (client
+// certificate, no password anywhere since phase 2.4b) into a state where this
+// job would fail on it nightly. And an app with a SECOND database
+// (components/postgres/databases) had to grow a whole extra credential Secret
+// that duplicated its first one, purely so a name lookup here would resolve.
+// An annotation says the same thing in one line and says it where the database
+// is declared.
+//
+// ─── AND WHAT STILL AUDITS IT ───────────────────────────────────────────────
+//
+// `pg_database` is still read, but only as the cross-check. A database that is
+// live and has no `Database` CR is a HARD FAILURE, allowlisted by
+// DECOMMISSIONED_DATABASES and by nothing else. That property is the whole
+// reason this job is trustworthy and predates this change: a database dropping
+// out of the backup set must never be silent. Deleting a `Database` CR does not
+// drop the database -- everything in components/postgres is
+// `deletionPolicy: Orphan` with `retain` reclaim policies -- so without the
+// cross-check, removing a manifest would quietly stop backing up live data.
+//
+// DECOMMISSIONED_DATABASES stays an env var rather than becoming another
+// annotation, and that is not an oversight: its entries are databases with no
+// Kubernetes object at all, which is precisely what makes them decommissioned.
+// There is nothing to annotate.
+//
+// ─── CREDENTIALS ────────────────────────────────────────────────────────────
+//
+// Read from the Kubernetes Secrets in THIS namespace -- the `<app>-postgres`
+// objects kubernetes/components/postgres/database/credentials.yaml renders.
 //
 // This used to read them back out of 1Password, where a PushSecret had pushed
 // these very Secrets 24h earlier (Phase 10 of the 1Password->OpenBao
@@ -26,15 +74,30 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json.Serialization;
 using k8s;
+using k8s.Models;
 using Npgsql;
 using File = System.IO.File;
+
+// The annotation contract, in one place because three files reference it: this
+// script, kubernetes/components/postgres/database/database.yaml and
+// kubernetes/components/postgres/databases/kustomization.yaml.
+const string BackupAnnotation = "driscoll.dev/backup";
+const string CredentialsAnnotation = "driscoll.dev/backup-credentials";
+const string ReasonAnnotation = "driscoll.dev/backup-reason";
+
+// Never backed up by name, and neither is a mistake. `postgres` is the
+// maintenance database; `app` is the CNPG cluster's own bootstrap database,
+// which no application uses and which has no `Database` CR by construction.
+var neverBackedUp = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "postgres", "app" };
 
 var config = KubernetesClientConfiguration.InClusterConfig();
 using var kubernetes = new Kubernetes(config);
 
-// The Secrets live alongside this CronJob. Downward-API first so the value is
-// explicit in the manifest; the service-account namespace file is the fallback.
+// The Secrets and the Database CRs live alongside this CronJob. Downward-API
+// first so the value is explicit in the manifest; the service-account namespace
+// file is the fallback.
 var secretNamespace = Environment.GetEnvironmentVariable("POD_NAMESPACE")
   ?? config.Namespace
   ?? throw new InvalidOperationException("POD_NAMESPACE is not set and no in-cluster namespace could be determined");
@@ -48,9 +111,11 @@ async Task<IDictionary<string, byte[]>> GetSecret(string name)
   }
   catch (k8s.Autorest.HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.NotFound)
   {
-    // Named explicitly: this is what a database with no matching credential
-    // Secret looks like, and it is the case the 1Password round trip used to
-    // hide behind a stale copy.
+    // Named explicitly: this is what a database whose credential Secret has
+    // gone missing looks like, and it is the case the 1Password round trip used
+    // to hide behind a stale copy. If the Secret is deliberately absent -- a
+    // certificate-authenticated role, say -- the fix is
+    // `driscoll.dev/backup: "false"` on the Database CR, not a silent skip here.
     throw new InvalidOperationException($"secret {secretNamespace}/{name} does not exist -- the database has no credential Secret in this cluster", ex);
   }
 }
@@ -61,13 +126,14 @@ static string GetField(IDictionary<string, byte[]> secret, string name, string k
     : throw new InvalidOperationException($"{key} key not found in secret {name}");
 
 // Databases whose application has been decommissioned but whose data is still
-// in postgres. They have no credential Secret, so without this they would fail
-// the run. The list is per-cluster config, set in cronjob.yaml, where each name
-// carries the date its application was removed.
+// in postgres. They have no `Database` CR -- that is what decommissioned means
+// here -- so without this they would fail the cross-check below. The list is
+// per-cluster config, set in cronjob.yaml, where each name carries the date its
+// application was removed.
 //
-// Deliberately an explicit allowlist and never a "skip anything with no Secret"
-// fallback: a missing Secret is exactly how a LIVE database silently drops out
-// of the backup set, and making that loud is the point of this phase.
+// Deliberately an explicit allowlist and never a "no CR? never mind" fallback:
+// an unrepresented database is exactly how LIVE data silently drops out of the
+// backup set, and making that loud is the point.
 var decommissioned = (Environment.GetEnvironmentVariable("DECOMMISSIONED_DATABASES") ?? "")
   .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
   .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -79,38 +145,78 @@ Console.WriteLine($"Starting PostgreSQL backup at {DateTime.UtcNow}");
 // Create backup directory
 Directory.CreateDirectory(backupDir);
 
-List<string> databases;
+// THE REGISTER: what this cluster says should be backed up, and how.
+Console.WriteLine($"Reading Database resources in {secretNamespace}...");
+var declared = await GetDeclaredDatabases();
+Console.WriteLine($"Declared by Database resources: {string.Join(", ", declared.Values.Select(d => d.Describe()).Order())}");
+
+// THE AUDIT: what actually exists. Only ever used to catch a live database the
+// register does not know about.
+List<string> live;
 {
-  // Get list of databases
   var postgres = await GetSecret("postgres-user");
   // NEVER log this -- the connection string embeds the plaintext password and
   // pod stdout is shipped to Loki.
   var connectionString = GetField(postgres, "postgres-user", "connection-string");
   Console.WriteLine("Fetching list of databases...");
   await using var dataSource = NpgsqlDataSource.Create(connectionString);
-  databases = await GetDatabases(dataSource);
-  Console.WriteLine($"Found databases: {string.Join(", ", databases)}");
+  live = await GetLiveDatabases(dataSource);
+  Console.WriteLine($"Found databases: {string.Join(", ", live)}");
+}
+
+// A declared database that does not exist yet is not a backup problem -- CNPG
+// may not have applied it, or it may be `ensure: absent`. Say so and carry on.
+foreach (var entry in declared.Values.OrderBy(d => d.Database, StringComparer.Ordinal))
+{
+  if (!live.Contains(entry.Database, StringComparer.OrdinalIgnoreCase))
+  {
+    Console.WriteLine($"Note: Database/{entry.ObjectName} declares {entry.Database}, which does not exist in postgres -- CNPG has not applied it yet, or it is `ensure: absent`");
+  }
 }
 
 // A listed database that no longer exists means the entry outlived its
 // database -- harmless, but it rots, so say so rather than letting the list
-// grow stale silently.
-var staleEntries = decommissioned.Except(databases, StringComparer.OrdinalIgnoreCase).ToList();
-if (staleEntries.Count > 0)
+// grow stale silently. A listed database that has since acquired a CR is worse:
+// two mechanisms now disagree about it, and the annotation is the one to keep.
+foreach (var name in decommissioned.Order(StringComparer.Ordinal))
 {
-  Console.WriteLine($"Note: DECOMMISSIONED_DATABASES lists {string.Join(", ", staleEntries)}, which no longer exist in postgres -- remove the entries");
+  if (!live.Contains(name, StringComparer.OrdinalIgnoreCase))
+  {
+    Console.WriteLine($"Note: DECOMMISSIONED_DATABASES lists {name}, which no longer exists in postgres -- remove the entry");
+  }
+  else if (declared.ContainsKey(name))
+  {
+    Console.WriteLine($"Note: DECOMMISSIONED_DATABASES lists {name}, which now has a Database resource -- remove the entry and use `{BackupAnnotation}: \"false\"` instead");
+  }
 }
 
 // Create individual database dumps
 var failed = new List<string>();
 var skipped = new List<string>();
-foreach (var db in databases)
+foreach (var db in live)
 {
-  if (decommissioned.Contains(db))
+  if (!declared.TryGetValue(db, out var entry))
   {
-    // Printed every run, by name: a database leaving the backup set should be
-    // visible in the log of the job that stopped backing it up.
-    Console.WriteLine($"SKIPPING {db}: decommissioned, not backed up (DECOMMISSIONED_DATABASES)");
+    if (decommissioned.Contains(db))
+    {
+      // Printed every run, by name: a database leaving the backup set should be
+      // visible in the log of the job that stopped backing it up.
+      Console.WriteLine($"SKIPPING {db}: decommissioned, not backed up (DECOMMISSIONED_DATABASES)");
+      skipped.Add(db);
+      continue;
+    }
+
+    // The cross-check. Refusing to guess is the entire point: this job cannot
+    // tell a database that should be backed up from one that should not, and a
+    // wrong guess in either direction is invisible.
+    Console.Error.WriteLine($"Error backing up database {db}: live in postgres with no Database resource in {secretNamespace} and no DECOMMISSIONED_DATABASES entry -- declare it, or add it to that list");
+    failed.Add(db);
+    continue;
+  }
+
+  if (!entry.Enabled)
+  {
+    Console.WriteLine($"SKIPPING {db}: Database/{entry.ObjectName} sets {BackupAnnotation}=\"false\"{(entry.Reason is { Length: > 0 } r ? $" -- {r}" : "")}");
     skipped.Add(db);
     continue;
   }
@@ -122,11 +228,14 @@ foreach (var db in databases)
   var stagingFile = $"{backupFile}.tmp";
   try
   {
-    var secretName = $"{db}-postgres";
+    var secretName = entry.CredentialsSecret;
     var postgres = await GetSecret(secretName);
 
     // Host/port/user only -- never the password or the full connection string.
-    Console.WriteLine($"Backing up database: {db} ({GetField(postgres, secretName, "username")}@{GetField(postgres, secretName, "hostname")}:{GetField(postgres, secretName, "port")})");
+    // The Secret NAME is logged too: with the credential now annotation-driven
+    // rather than derived from the database name, which Secret was used is no
+    // longer inferable from this line.
+    Console.WriteLine($"Backing up database: {db} ({GetField(postgres, secretName, "username")}@{GetField(postgres, secretName, "hostname")}:{GetField(postgres, secretName, "port")} via {secretName})");
     Directory.CreateDirectory(Path.GetDirectoryName(backupFile) ?? throw new InvalidOperationException("Failed to get directory name for backup file"));
 
     await CreateDatabaseDump(postgres, secretName, db, stagingFile);
@@ -155,15 +264,67 @@ foreach (var db in databases)
 
 if (failed.Count > 0)
 {
-  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: {failed.Count} of {databases.Count - skipped.Count} database(s) were not backed up: {string.Join(", ", failed)}");
+  Console.Error.WriteLine($"PostgreSQL backup FAILED at {DateTime.UtcNow}: {failed.Count} of {live.Count - skipped.Count} database(s) were not backed up: {string.Join(", ", failed)}");
   return 1;
 }
 
-Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({databases.Count - skipped.Count} databases{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")})");
+Console.WriteLine($"PostgreSQL backup completed successfully at {DateTime.UtcNow} ({live.Count - skipped.Count} databases{(skipped.Count > 0 ? $", {skipped.Count} skipped: {string.Join(", ", skipped)}" : "")})");
 return 0;
 
 // Helper methods
-async Task<List<string>> GetDatabases(NpgsqlDataSource dataSource)
+
+// The `Database` CRs in this namespace, keyed by the database they name.
+//
+// GenericClient rather than kubernetes.CustomObjects: the latter returns a bare
+// `object` that has to be round-tripped through JSON to be read, while this
+// deserialises straight into the shape declared at the bottom of this file.
+//
+// NOT disposed. GenericClient owns the IKubernetes it is handed, and disposing
+// it here would take the client every other call in this script uses with it.
+async Task<Dictionary<string, DeclaredDatabase>> GetDeclaredDatabases()
+{
+  var client = new GenericClient(kubernetes, "postgresql.cnpg.io", "v1", "databases");
+  var list = await client.ListNamespacedAsync<CnpgDatabaseList>(secretNamespace);
+
+  var declared = new Dictionary<string, DeclaredDatabase>(StringComparer.OrdinalIgnoreCase);
+  foreach (var item in list.Items ?? [])
+  {
+    // `spec.name` is what PostgreSQL sees. It is required by the CRD, but the
+    // object name is a safe fallback and the two match for every database here.
+    var database = item.Spec?.Name is { Length: > 0 } specName ? specName : item.Metadata?.Name;
+    if (database is not { Length: > 0 })
+    {
+      throw new InvalidOperationException($"a Database resource in {secretNamespace} has neither spec.name nor metadata.name");
+    }
+
+    var objectName = item.Metadata?.Name ?? database;
+    var annotations = item.Metadata?.Annotations ?? new Dictionary<string, string>();
+    annotations.TryGetValue(BackupAnnotation, out var backup);
+    annotations.TryGetValue(CredentialsAnnotation, out var credentials);
+    annotations.TryGetValue(ReasonAnnotation, out var reason);
+
+    // Opt-OUT: only the exact string "false" excludes a database. Anything
+    // else, including a typo, backs it up -- erring toward a redundant dump
+    // rather than a missing one.
+    var enabled = !string.Equals(backup?.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+
+    // The historical convention is the default, so the fifteen databases that
+    // components/postgres renders need no annotation and nothing changed for
+    // them when this stopped being a hard-coded rule.
+    var secret = credentials is { Length: > 0 } ? credentials.Trim() : $"{database}-postgres";
+
+    if (declared.TryGetValue(database, out var existing))
+    {
+      throw new InvalidOperationException($"Database/{objectName} and Database/{existing.ObjectName} both declare the database {database}");
+    }
+
+    declared[database] = new DeclaredDatabase(database, objectName, enabled, secret, reason);
+  }
+
+  return declared;
+}
+
+async Task<List<string>> GetLiveDatabases(NpgsqlDataSource dataSource)
 {
   var databases = new List<string>();
   await using var connection = await dataSource.OpenConnectionAsync();
@@ -172,7 +333,7 @@ async Task<List<string>> GetDatabases(NpgsqlDataSource dataSource)
   await using var reader = await command.ExecuteReaderAsync();
   while (await reader.ReadAsync())
   {
-    if (reader.GetString(0) is "postgres" or "app") continue;
+    if (neverBackedUp.Contains(reader.GetString(0))) continue;
     databases.Add(reader.GetString(0));
   }
 
@@ -218,4 +379,74 @@ async Task CreateDatabaseDump(IDictionary<string, byte[]> postgres, string secre
   {
     throw new InvalidOperationException($"pg_dump failed: {error}");
   }
+}
+
+/// <summary>One `Database` resource, reduced to what this job needs.</summary>
+sealed record DeclaredDatabase(
+  string Database,
+  string ObjectName,
+  bool Enabled,
+  string CredentialsSecret,
+  string? Reason)
+{
+  /// <summary>`name` for the common case, `name (details)` when it is not.</summary>
+  public string Describe()
+  {
+    var notes = new List<string>();
+    if (!Enabled) notes.Add("excluded");
+    if (!string.Equals(CredentialsSecret, $"{Database}-postgres", StringComparison.Ordinal)) notes.Add($"via {CredentialsSecret}");
+    return notes.Count == 0 ? Database : $"{Database} ({string.Join(", ", notes)})";
+  }
+}
+
+/// <summary>
+/// Only the fields this job reads. A CRD needs no more than that, and spelling
+/// out the whole CNPG schema here would be a second copy of it to keep in step.
+/// </summary>
+sealed class CnpgDatabaseSpec
+{
+  [JsonPropertyName("name")]
+  public string? Name { get; set; }
+
+  [JsonPropertyName("owner")]
+  public string? Owner { get; set; }
+
+  [JsonPropertyName("ensure")]
+  public string? Ensure { get; set; }
+}
+
+sealed class CnpgDatabase : IKubernetesObject<V1ObjectMeta>
+{
+  [JsonPropertyName("apiVersion")]
+  public string ApiVersion { get; set; } = "postgresql.cnpg.io/v1";
+
+  [JsonPropertyName("kind")]
+  public string Kind { get; set; } = "Database";
+
+  [JsonPropertyName("metadata")]
+  public V1ObjectMeta Metadata { get; set; } = new();
+
+  [JsonPropertyName("spec")]
+  public CnpgDatabaseSpec? Spec { get; set; }
+}
+
+/// <summary>
+/// The list wrapper `GenericClient.ListNamespacedAsync` deserialises into.
+/// Declared here because KubernetesClient 19 ships no generic
+/// `CustomResourceList&lt;T&gt;` -- `IItems&lt;T&gt;` plus
+/// `IKubernetesObject&lt;V1ListMeta&gt;` is the whole contract it needs.
+/// </summary>
+sealed class CnpgDatabaseList : IKubernetesObject<V1ListMeta>, IItems<CnpgDatabase>
+{
+  [JsonPropertyName("apiVersion")]
+  public string ApiVersion { get; set; } = "postgresql.cnpg.io/v1";
+
+  [JsonPropertyName("kind")]
+  public string Kind { get; set; } = "DatabaseList";
+
+  [JsonPropertyName("metadata")]
+  public V1ListMeta Metadata { get; set; } = new();
+
+  [JsonPropertyName("items")]
+  public IList<CnpgDatabase> Items { get; set; } = [];
 }

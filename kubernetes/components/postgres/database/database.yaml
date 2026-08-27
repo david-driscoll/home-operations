@@ -16,6 +16,23 @@ metadata:
     # through a controller ownerReference, so pruning the role garbage-collects
     # the credential. Do not enable client certificates on an unguarded role.
     kustomize.toolkit.fluxcd.io/prune: disabled
+    #
+    # NO `driscoll.dev/backup` ANNOTATION, DELIBERATELY. The postgres-backup
+    # CronJob enumerates these objects and backs up everything it finds unless
+    # it says otherwise, so the default is correct here and an annotation would
+    # only be noise on fifteen databases. It reads three, all optional:
+    #
+    #   driscoll.dev/backup              "false" excludes this database
+    #   driscoll.dev/backup-credentials  Secret to authenticate with; defaults
+    #                                    to `<database>-postgres`, which is what
+    #                                    ../credentials.yaml renders
+    #   driscoll.dev/backup-reason       why it is excluded, logged every run
+    #
+    # The polarity is the OPPOSITE of a Garage bucket, where
+    # `driscoll.dev/backup: "true"` opts one IN -- forgetting it on a bucket
+    # wastes space, forgetting it on a database loses data. See
+    # kubernetes/apps/database/postgres/backups/resources/App.cs, and
+    # ../databases/ for the sibling that uses the credentials annotation.
 spec:
   cluster:
     name: postgres
