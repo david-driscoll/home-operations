@@ -232,9 +232,27 @@ Suspending is what keeps §5 the only moment an app's data source changes.
 ```bash
 ALL="prowlarr lidarr sonarr radarr bazarr seerr jellyseerr autobrr"
 for app in $ALL; do flux -n equestria suspend hr "$app"; done
+for app in $ALL; do kubectl -n equestria scale deploy "$app" --replicas=0; done
 ```
 
 All eight live in the `equestria` namespace; only their directories differ.
+
+**⚠️ SUSPENDING THE HELMRELEASE IS NOT ENOUGH — SCALE TO ZERO IN THE SAME BREATH.**
+Suspension stops *Flux*. It does not stop **reloader**, which watches the credential Secret and
+patches the pod template the moment `${APP}-env` first syncs — rolling the Deployment onto an
+EMPTY Postgres database with no data in it, past a suspended HelmRelease.
+
+This is not hypothetical. On 2026-08-27 the merge landed before the suspend, seven apps took the
+new `envFrom` and stopped with `CreateContainerConfigError` (the safe failure — no Secret yet, so
+no pod started). `autobrr` was the one left running, because it reuses its existing
+`autobrr-oidc` Secret; when that Secret gained the Postgres keys, reloader restarted it and it
+came up on an empty database and applied its own base schema. Recoverable — its SQLite file was
+untouched and `db:convert` re-ran cleanly after truncating — but it is a real trap, and
+scale-to-zero is the only thing that closes it.
+
+**If the merge already happened**, do this immediately, in this order: suspend, then scale every
+app to zero, *then* work §4.1. Anything already stopped is fine; anything still running is the
+one at risk.
 
 Merge the PR, then:
 
@@ -354,8 +372,12 @@ interactive poking, this for scripted SQL.
 
 ### 5.1 Stop the app
 
-The HelmRelease is already suspended from §4, and that matters: `driftDetection: mode: enabled`
-would otherwise scale the Deployment straight back up.
+Already done in §4 for all eight — both halves of it. Re-check rather than assume, because a
+running pod here means something restarted it:
+
+```bash
+kubectl -n equestria get deploy "$app" -o jsonpath='{.spec.replicas}'   # must be 0
+```
 
 ```bash
 kubectl -n equestria scale deploy "$app" --replicas=0
@@ -618,9 +640,15 @@ Everything unusual in that Job is there because the alternative goes wrong:
 - **The app's config PVC is Longhorn RWO.** The Job can only attach it because §5.1 scaled the
   app to zero.
 
-Then fix the sequences. pgloader loads explicit `Id` values and never advances the sequences
-behind them, so without this the app's very next insert collides. This replaces the wiki's
-per-app `setval` list — see §1.4:
+Then fix the sequences. This replaces the wiki's per-app `setval` list — see §1.4.
+
+**Observed 2026-08-27:** pgloader's sqlite→pgsql path *does* reset sequences on its own — it
+reported `Reset Sequences 19` (prowlarr), `14` (bazarr) and `14` (seerr). So this block is
+belt-and-braces rather than the sole guard. Run it anyway: it is idempotent, it covers anything
+pgloader skipped, and the failure it prevents is silent until the first insert. Confirmed working
+afterwards on prowlarr (`History_Id_seq.last_value` = `max("Id")` = 506836), and proven in
+production when prowlarr and radarr wrote new history rows minutes later with no duplicate-key
+error.
 
 ```bash
 kubectl -n database exec -i "$primary" -c postgres -- psql -v ON_ERROR_STOP=1 -d "$app" <<'SQL'
@@ -652,9 +680,16 @@ kubectl -n equestria delete secret "${app}-pgloader"
 
 ```bash
 flux -n equestria resume hr "$app"
+kubectl -n equestria scale deploy "$app" --replicas=1
 kubectl -n equestria rollout status deploy "$app" --timeout=10m
 kubectl -n equestria logs -l "app.kubernetes.io/name=$app" -c app --tail=100
 ```
+
+**⚠️ THE SCALE-UP IS NOT REDUNDANT.** `flux resume` does not restore the replica count: the
+app-template chart only renders `replicas` when it is configured, and none of these apps
+configure it — so Helm does not own that field and the scale-to-zero from §5.1 survives the
+resume untouched. `rollout status` then reports "successfully rolled out" against zero replicas
+and you will believe the app is up. Verified on prowlarr, where exactly that happened.
 
 Confirm it is actually on Postgres and not quietly back on SQLite:
 
@@ -863,15 +898,26 @@ the release, and 1.6.0 moved subtitles into new `table_episodes_subtitles` /
 rather than trusting the page:
 
 ```bash
-kubectl -n database exec -i "$primary" -c postgres -- psql -At -d bazarr <<'SQL' \
-  | sed 's/^/--cast "column /; s/$/ to timestamp"/' | tr '\n' ' '
-SELECT table_name || '.' || column_name
-  FROM information_schema.columns
- WHERE table_schema = 'public'
-   AND data_type LIKE 'timestamp%'
+kubectl -n database exec -i "$primary" -c postgres -- psql -At -d bazarr <<'SQL'
+SELECT c.relname || '.' || a.attname
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+  JOIN pg_type t ON t.oid = a.atttypid
+ WHERE n.nspname = 'public' AND c.relkind = 'r'
+   AND t.typname LIKE 'timestamp%'
+   AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')
  ORDER BY 1;
 SQL
 ```
+
+**The `pg_depend` exclusion and `relkind = 'r'` are both load-bearing.** The obvious
+`information_schema.columns` version of this query also returns `pg_stat_statements` and
+`pg_stat_statements_info` — extension *views* living in `public` — and casting those breaks the
+run. Filtering to ordinary tables and excluding extension-owned objects returns exactly the 11
+bazarr columns. Verified 2026-08-27: 11 real columns against the wiki's documented 4, and the
+load then carried `table_episodes_subtitles` (17,916 rows) and `table_movies_subtitles` (2,723) —
+the 1.6.0 tables the wiki page predates.
 
 Paste the result into the pgloader `args` in §5.6. If you would rather not: bazarr is the one app
 here where starting fresh is genuinely cheap — point it at an empty database, let it re-sync from
@@ -930,6 +976,17 @@ for any other app in this runbook. `settings.json` lives on the config PVC and i
 migration, so the API key and every service pairing survive regardless. Point the app at an empty
 database, let it build the schema, and the media/season tables rebuild on the next full scan.
 What you actually lose is request history, issues, comments, blocklist entries and watchlists.
+
+**Keep the `migrations` table when you truncate, and expect pgloader to error on it.** The
+TypeORM ledger is populated by the app's own migration run (19 rows for seerr at v3.4.1) and must
+survive — SQLite's ledger is a different, larger set (53 rows) and loading it would corrupt the
+version state. So truncate every table *except* `migrations`, and pgloader will then report
+exactly one error, on `migrations`, which is the desired outcome rather than a problem.
+
+**Run 2026-08-27 (seerr):** 32,283 rows moved with that single expected error — media 15,204,
+season 17,011, media_request 20, user 7, season_request 17, session 12, discover_slider 12. All
+16 foreign keys were dropped and recreated **validated**, and the ledger came out holding the 19
+Postgres migration names. Exact parity against the SQLite source on every table checked.
 
 Whichever you pick, **§5.6's sequence fix is mandatory here.** Every primary key is `SERIAL`, a
 data-only load inserts explicit ids without advancing the sequences, and neither project's docs
@@ -1012,5 +1069,26 @@ Three consequences of moving autobrr to Postgres, none of them failures:
   there is no Postgres equivalent, so `AUTOBRR__DATABASE_MAX_BACKUPS` becomes a no-op and backup
   responsibility moves entirely to the CNPG nightly dump.
 - **API keys carry over**, so nothing that talks to autobrr needs re-pairing.
+
+**Foreign-key violations are dropped and reported, not fatal — and they are usually pre-existing
+orphans, so verify before calling it data loss.** Run 2026-08-27 moved 18,258 rows (9,082
+release_action_status, 9,062 release, plus filters, indexers, clients and actions) and rejected
+two `filter_indexer` rows on `filter_indexer_indexer_id_fkey`. Both referenced `indexer_id = 2`,
+which does not exist — the `indexer` table holds one row. SQLite does not enforce foreign keys by
+default, so those mappings had been dangling for as long as that indexer had been deleted;
+Postgres correctly refused them and nothing real was lost. Check the source before assuming
+otherwise:
+
+```sql
+-- against the SQLite copy
+SELECT fi.filter_id, fi.indexer_id,
+       CASE WHEN i.id IS NULL THEN 'ORPHAN' ELSE 'ok' END
+  FROM filter_indexer fi LEFT JOIN indexer i ON i.id = fi.indexer_id;
+```
+
+**If autobrr has already restarted onto an empty Postgres database** — the reloader trap in §4 —
+do not drop the database. Scale to zero, truncate every table **except `schema_migrations`**, and
+run the converter: its migrator sees the ledger already at the current version, no-ops, and
+copies into the empty tables. That is exactly how the 2026-08-27 run recovered.
 
 The SQLite file is left untouched by the converter, so §7's rollback applies unchanged.
