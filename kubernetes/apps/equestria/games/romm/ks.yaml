@@ -74,3 +74,34 @@ spec:
       # trigger was the Longhorn attach/detach race, and the stale lock is the
       # ordinary consequence the component already describes.
       VOLSYNC_UNLOCK: 2026-08-27-romm-lock-stranded-by-longhorn-attach-race
+      # There is deliberately NO VOLSYNC_CACHE_CAPACITY override here, and that
+      # is worth stating because the second half of this incident looked exactly
+      # like one was needed. Once the lock above blocked `forget`, romm failed on
+      # its cache instead:
+      #
+      #   Fatal: unable to save snapshot: Copy: write /cache/.../tmp-...:
+      #     no space left on device
+      #
+      # A full disk reads as "2Gi was always too small". It was not. The mover
+      # retries every ~2 minutes and each retry SAVED a full 4.555 GiB snapshot
+      # before dying on forget, so the snapshot count is a function of downtime,
+      # not of the dataset:
+      #
+      #   2026-05-31 .. 08-26   1 per day     (normal)
+      #   2026-08-27          154            (lock stranded)
+      #   2026-08-28           96            (until 06:31, when the cache filled)
+      #
+      # 262 snapshots against a retention policy that lands every other app on
+      # 12-13, on a repository that is not even large -- jellyfin is 7x its size
+      # on a third of the cache. The index grew with the snapshot count until
+      # restic's metadata cache outgrew 2Gi, at which point the BACKUP failed
+      # outright and `forget` could never run to undo it.
+      #
+      # Fixed on 2026-08-28 by repairing the state rather than raising the
+      # ceiling: `restic forget --prune` at the policy above took it 262 -> 16
+      # snapshots and 5.1G -> 2.2G, reclaiming 2.574 GiB; the bloated
+      # `volsync-src-romm-cache` PVC was deleted so the mover rebuilds it empty;
+      # `restic check` found no errors. 2Gi held for the three months before the
+      # incident and romm's own ReplicationDestination needs only 358 MiB for a
+      # full restore, so the default is right. If this recurs, look for a blocked
+      # `forget` -- count snapshots, not bytes -- rather than adding capacity.
