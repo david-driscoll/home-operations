@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/ingress.json
+#
+# The app's tailnet front door, rendered into `network` by ../ks.yaml.
+#
+# The Tailscale operator turns this into a VIP service on the tailnet-outbound
+# ProxyGroup, terminates TLS with the tailnet cert, and reverse-proxies cleartext
+# to the backend. The backend is TRAEFIK, which then dispatches on the Host header
+# (tailscaled preserves it) to the app's own IngressRoute in ../ingressroute.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${APP}-tailscale-ingress
+  annotations:
+    tailscale.com/proxy-group: tailnet-outbound
+    tailscale.com/experimental-forward-cluster-traffic-via-ingress: "true"
+    tailscale.com/tags: "tag:apps"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      # Traefik's real Service, which is why this whole manifest has to be
+      # rendered into `network` -- see ../ks.yaml for what happened when it was
+      # not.
+      name: traefik
+      port:
+        name: tailscale
+  tls:
+    - hosts:
+        - ${TAILSCALE_HOST}

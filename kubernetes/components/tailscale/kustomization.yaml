@@ -6,5 +6,8 @@ commonLabels:
   app.kubernetes.io/name: "${APP}"
   driscoll.dev/name: "${APP}"
 resources:
-  - ./ingress.yaml
+  # The Traefik router, in the app's own namespace.
   - ./ingressroute.yaml
+  # The tailnet Ingress. NOT a plain resource: it has to land in `network`,
+  # which only a nested Kustomization can do. See ./ks.yaml.
+  - ./ks.yaml

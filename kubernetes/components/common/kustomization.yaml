@@ -7,7 +7,6 @@ resources:
   - ./service-account.yaml
   - ./middleware.yaml
   - ./limit-range.yaml
-  - ./traefik-tailnet.yaml
   - ./templates
 # Generates the `cluster-versions` ConfigMap in every namespace, from the
 # repo-root versions.env. Both substituteFrom lists below reference it, as does
