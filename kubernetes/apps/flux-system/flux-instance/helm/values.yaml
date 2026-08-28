@@ -89,31 +89,35 @@ instance:
     - # Enable in-memory kustomize builds, and raise kustomize-controller
       # concurrency (overrides the `--concurrent=10` set above for all three).
       #
-      # THIS VALUE IS A DEADLOCK BOUND, NOT A THROUGHPUT KNOB. An app component can
-      # emit a nested Kustomization (../../../components/tailscale/ks.yaml and the
-      # ../../../components/postgres/ family both do), and a parent app ks with
-      # `wait: true` health-checks that child Kustomization object -- holding a
-      # worker for up to its `timeout`, which is 10m for most apps. The child needs
-      # a worker of its own to make progress. So once the number of parents waiting
-      # on a child reaches `--concurrent`, every worker is held by a waiter, no
-      # child can run, and the pool is deadlocked. Each parent times out and
-      # immediately requeues, so it never drains on its own.
+      # 20, and DO NOT RAISE IT WITHOUT RAISING THE MEMORY LIMIT ABOVE IN THE SAME
+      # CHANGE. It was briefly 64 on 2026-08-28 and that OOMKilled the controller
+      # into CrashLoopBackOff within two minutes of merging, stopping GitOps
+      # cluster-wide (exit 137, 7 restarts, 217 Kustomizations frozen).
       #
-      # That is not theoretical: on 2026-08-28 it took the cluster to 131 of 247
-      # Kustomizations not-Ready with `active_workers` 20/20 and `workqueue_depth`
-      # 112, and needed a human to suspend a parent to free one worker. The trigger
-      # was a `dependsOn` that has since been removed, but the SHAPE survives any
-      # such fix, so the bound is kept here as well.
+      # The reason is the `medium: Memory` volume in this same patch: /tmp is a
+      # tmpfs, and tmpfs pages count against the container's memory limit. So
+      # concurrency and memory are COUPLED here -- `--concurrent` is the number of
+      # kustomize build trees held in RAM at once, on top of the controller's own
+      # heap. ~127Mi steady state at 20 concurrent while idle says nothing about
+      # 64 concurrent during a full 247-Kustomization reconcile wave, which is
+      # exactly the mistake that was made.
       #
-      # 64 exceeds the 54 apps that currently use the tailscale component, which is
-      # the largest single fan-out of parents that can wait at once. Raise it if
-      # that number grows. Memory is not the constraint at this size: steady state
-      # is ~127Mi against the 1Gi limit set above, and the in-memory build trees
-      # this also enables are a few hundred KB each.
+      # The reason someone will want to raise it: a parent app ks with `wait: true`
+      # health-checks any nested Kustomization it applies, holding a worker for up
+      # to its 10m timeout, while that child needs a worker of its own to progress.
+      # Once the number of waiting parents reaches `--concurrent`, every worker is
+      # held by a waiter and the pool deadlocks. That is real -- it took the cluster
+      # to 131 of 247 not-Ready on 2026-08-28 -- but the fix that actually holds is
+      # not to outrun it here. It is to keep nested-ks `dependsOn` pointed only at
+      # things that do not flap, which is the rule ../../../components/postgres/ks.yaml
+      # states and which components/tailscale/ks.yaml now follows.
+      #
+      # If a raise is genuinely needed, size the memory limit against
+      # `--concurrent` x build-tree size first and verify under a full wave.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --concurrent=64
+          value: --concurrent=20
         - op: replace
           path: /spec/template/spec/volumes/0
           value:
