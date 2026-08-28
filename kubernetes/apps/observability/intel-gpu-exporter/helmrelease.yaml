@@ -95,21 +95,45 @@ spec:
                 # Grants /dev/dri access via the Intel device plugin, which runs
                 # with -enable-monitoring. This resource hands the pod EVERY GPU
                 # on the node and — unlike `gpu.intel.com/i915` — does not consume
-                # one of the shared transcode slots (5 per node on equestria,
-                # 2 on sgc) that plex/jellyfin/tdarr/stremio/dispatcharr contend
-                # for.
+                # one of the shared transcode slots (2 per control plane, 3 per
+                # worker) that plex/jellyfin/tdarr/stremio/dispatcharr contend
+                # for. That separation is structural, not a quirk of the
+                # numbers: the plugin builds a distinct kubelet endpoint per
+                # resource type, and registers the monitoring device once
+                # OUTSIDE the sharedDevNum loop.
                 #
-                # DEPRECATION: upstream now prefers a unified
-                # `gpu.intel.com/monitoring` covering all KMD types. The deployed
-                # plugin still advertises i915_monitoring (confirmed in node
-                # allocatable on all 5 Intel nodes), so use what is advertised.
-                # Revisit when Renovate bumps intel-device-plugins.
-                gpu.intel.com/i915_monitoring: 1
+                # NAME CHANGED at intel-device-plugins 0.36.0, which this repo
+                # now pins. The old `gpu.intel.com/i915_monitoring` was derived
+                # from the KMD; 0.36.0 defaults to a single combined
+                # `gpu.intel.com/monitoring` covering i915 and xe alike, and
+                # marks the per-KMD names Deprecated. The two device plugin
+                # releases are pinned to `monitoringMode: single` to match —
+                # see kube-system/features/intel-gpu/helmrelease.yaml.
+                #
+                # This edit and that version bump MUST ship together. On 0.36.0
+                # nothing advertises i915_monitoring, so keeping the old name
+                # here leaves these pods Pending on all five Intel nodes; on
+                # 0.34.1 nothing advertises the combined name, so making this
+                # edit alone does the same. Neither half is safe to land first.
+                #
+                # Capacity is exactly 1 per node — the plugin registers the
+                # monitoring device once with id "all", regardless of card count
+                # or sharedDevNum. So this pod is the ONLY GPU-telemetry
+                # workload that can run per node; a second one requesting it
+                # (an XPU Manager daemonset, say) would sit Pending forever
+                # rather than sharing.
+                gpu.intel.com/monitoring: 1
     defaultPodOptions:
-      # Only the Intel Quick Sync nodes (equestria: fluttershy, kerfuffle;
-      # sgc: milky-way, othalla, pegasus). The label is published by the Intel
-      # GPU plugin's NFD rules — verified present on exactly those five nodes
-      # and on neither AMD node.
+      # Only the Intel Quick Sync nodes. All five are equestria nodes: the
+      # workers fluttershy and kerfuffle (0x46a6 Alder Lake-P) and the control
+      # planes milky-way, othalla and pegasus (0x46d4 Alder Lake-N). The label
+      # is published by the Intel GPU plugin's NFD rules — verified present on
+      # exactly those five and on neither AMD node (hard-hat, shining-armor).
+      #
+      # This previously read "equestria: ... ; sgc: ...", which described a
+      # split that does not exist — equestria is the only Kubernetes cluster in
+      # the estate (clusters/*.yaml: the other four are Dockge/Docker), and
+      # "stargate-command" is a NAMESPACE in this same cluster, not a cluster.
       nodeSelector:
         intel.feature.node.kubernetes.io/gpu: "true"
       # The nodeSelector above already confines this to the Intel Quick Sync
@@ -123,11 +147,26 @@ spec:
       # hostPID is deliberately NOT set, though upstream's README uses it.
       # It is only needed for the per-client breakdown (intel_gpu_top reads
       # /proc/*/fdinfo to attribute usage to processes), which powers
-      # gpumon_clients_count. Engine busyness, frequency, power and IMC
-      # bandwidth all come from the PMU and need no host PID namespace.
-      # gpumon_clients_count will therefore report 0 with an empty `name`
-      # label; that is an accepted trade for not exposing the host process
-      # table to this pod.
+      # gpumon_clients_count. Engine busyness and frequency come from the i915
+      # PMU and need no host PID namespace, so the trade is one cosmetic
+      # breakdown against not exposing the host process table to a pod that
+      # already runs as uid 0 with CAP_PERFMON. Worth it.
+      #
+      # Correction to what this note used to claim, both halves measured:
+      #   * gpumon_clients_count is not merely 0 — the exporter does not emit
+      #     the series AT ALL without hostPID. The Grafana panel that queried
+      #     it has been removed rather than left permanently blank.
+      #   * IMC bandwidth does NOT come from the i915 PMU and is not obtained
+      #     here either. gpumon_imc_read/write read flat 0 on all five nodes
+      #     across 20d, including windows where engine busyness hit 70%. Alder
+      #     Lake client exposes uncore_imc_0 / uncore_imc_1 /
+      #     uncore_imc_free_running_0/1, and igt looks up a plain `uncore_imc`
+      #     event source that does not exist here. Not fixable from this repo.
+      #
+      # What this pod actually produces on this silicon: gpumon_engine_usage
+      # (12 series), gpumon_frequency (2) and gpumon_power (2, sourced from
+      # RAPL under /sys/class/powercap — the i915 PMU exposes no energy-* event
+      # on an integrated part).
     service:
       metrics:
         controller: *app

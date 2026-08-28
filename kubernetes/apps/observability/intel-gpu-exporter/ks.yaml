@@ -18,6 +18,33 @@ spec:
   dependsOn:
     - name: prometheus
       namespace: observability
+    # Not decorative — this pod cannot be scheduled at all until the Intel
+    # device plugin advertises `gpu.intel.com/monitoring` in node allocatable,
+    # because helmrelease.yaml requests one of them. Without this edge the two
+    # Kustomizations reconcile in arbitrary order, and the 0.34.1 -> 0.36.0
+    # migration (which RENAMES that resource from i915_monitoring) would race:
+    # if this one lands first, five DaemonSet pods sit Pending until the plugin
+    # catches up.
+    #
+    # What this actually waits for is worth stating precisely, because the
+    # obvious reading is wrong. intel-device-plugin-gpu/ks.yaml carries a
+    # healthCheckExpr on the GpuDevicePlugin CR, but that expression is INERT:
+    # Flux evaluates health only over a Kustomization's own inventory, and that
+    # inventory holds just the two HelmReleases and the OCIRepository — the CR
+    # itself is created by Helm, so nothing ever matches the expression.
+    #
+    # The waiting that does happen is on the two HelmReleases, and those became
+    # a real serving signal only because `healthCheckExprs` was added to the
+    # HelmReleases themselves in features/intel-gpu/helmrelease.yaml. Without
+    # that, they report Ready the moment the CR is written — long before the
+    # operator has built a DaemonSet or kubelet has advertised the resource —
+    # and this dependency would unblock the exporter inside exactly the window
+    # it exists to exclude.
+    #
+    # The coupling is real and worth accepting: an unhealthy device plugin
+    # means this exporter has nothing to export from either way.
+    - name: intel-device-plugin-gpu
+      namespace: kube-system
   prune: true
   wait: true
   force: false

@@ -8,35 +8,120 @@ spec:
   groups:
     - name: intel-gpu-exporter.rules
       rules:
-        # Absence, not threshold. There is no baseline for what normal
-        # engine utilisation looks like on either silicon generation
-        # (0x46a6 Alder Lake-P on equestria, 0x46d4 Alder Lake-N on sgc),
-        # so any threshold picked today would be a guess. This needs no
-        # baseline: the correct value is "not empty".
+        # Absence, not threshold. There is no baseline for what normal engine
+        # utilisation looks like on either silicon generation (0x46a6 Alder
+        # Lake-P on the workers, 0x46d4 Alder Lake-N on the control planes), so
+        # any threshold picked today would be a guess. This needs no baseline:
+        # the correct value is "not empty".
         #
-        # The failure it catches is the nasty one and is NOT covered by
-        # `up`: the pod is Running and being scraped successfully, but
+        # The failure it catches is the nasty one and is NOT covered by `up`:
+        # the pod is Running and being scraped successfully, but
         # perf_event_open has started returning EPERM — a Talos upgrade
-        # tightening kernel.perf_event_paranoid, a containerd seccomp
-        # profile change, or an Intel device-plugin bump renaming the
-        # i915_monitoring resource. In every one of those cases the
-        # exporter serves /metrics happily and exports nothing.
+        # tightening kernel.perf_event_paranoid, a containerd seccomp profile
+        # change, or an Intel device-plugin bump renaming the monitoring
+        # resource. In every one of those cases the exporter serves /metrics
+        # happily and exports nothing from the PMU.
         #
-        # `up == 0` is deliberately NOT duplicated here — the standard
-        # ServiceMonitor machinery already pages for a dead target, and
-        # two alerts for one event is how alert fatigue starts.
+        # ---------------------------------------------------------------
+        # WHY THE WITNESS IS gpumon_frequency AND NOT gpumon_engine_usage
+        # ---------------------------------------------------------------
+        # This is the whole design of the rule, and it is measured, not
+        # reasoned. The exporter emits gpumon_engine_usage only when
+        # intel_gpu_top produced at least one sample inside the scrape window,
+        # so a 60s scrape landing on an empty window legitimately serves zero
+        # engine series while still serving frequency and power. On healthy,
+        # idle hardware that happens constantly.
+        #
+        # Measured over 13 days through Thanos at 5m resolution, counting how
+        # many buckets each candidate expression would have been TRUE:
+        #
+        #   witness = gpumon_engine_usage -> 2306 buckets  (~192 hours)
+        #     fluttershy 38 · kerfuffle 54 · milky-way 704 · othalla 611
+        #     · pegasus 899   — every node, not one bad node
+        #   witness = gpumon_frequency   ->    0 buckets
+        #   witness = gpumon_power       ->    0 buckets
+        #
+        # So keying on engine usage would page roughly twice a day forever
+        # (Alertmanager's root receiver is pushover with repeatInterval 12h,
+        # and severity: warning is NOT filtered by any route here). That is the
+        # "cries every night, gets muted" failure mode, and it is why the
+        # earlier `absent(gpumon_engine_usage)` form must not simply be made
+        # per-node — the series is legitimately intermittent.
+        #
+        # gpumon_power is equally quiet but is the WRONG witness: intel_gpu_top
+        # sources power from RAPL under /sys/class/powercap, not from the i915
+        # PMU (the PMU exposes no energy-* event on an integrated part). It
+        # would survive exactly the PMU revocation this rule exists to catch.
+        #
+        # gpumon_frequency is the right one on both counts: it is derived from
+        # the i915 PMU's actual-frequency / requested-frequency events, so it
+        # dies with the PMU, and it is emitted on every scrape rather than only
+        # when a sample landed in the window. Zero false positives in 13 days.
+        #
+        # `up == 0` is deliberately NOT duplicated here — TargetDown already
+        # covers a scraped-but-failing target, and two alerts for one event is
+        # how alert fatigue starts.
         - alert: IntelGpuMetricsAbsent
           annotations:
-            summary: Intel GPU engine metrics have disappeared from this cluster.
+            summary: >-
+              Intel GPU PMU metrics have disappeared from {{ $labels.node }}.
             description: >-
-              intel-gpu-exporter is not producing gpumon_engine_usage. If the
-              DaemonSet pods are Running and `up` is healthy, the i915 PMU is
-              refusing perf_event_open — check CAP_PERFMON, the seccomp
-              profile, kernel.perf_event_paranoid, and that
-              gpu.intel.com/i915_monitoring is still advertised by the
-              Intel device plugin.
-          expr: absent(gpumon_engine_usage)
+              intel-gpu-exporter on {{ $labels.node }} is being scraped
+              successfully but is producing no gpumon_frequency series, so the
+              i915 PMU is refusing perf_event_open — check CAP_PERFMON, the
+              seccomp profile, kernel.perf_event_paranoid, and that
+              gpu.intel.com/monitoring is still advertised by the Intel device
+              plugin.
+          expr: >-
+            count by (node) (up{job="intel-gpu-exporter"} == 1)
+            unless
+            count by (node) (gpumon_frequency)
+          # 30m is comfortable rather than tight: the witness has zero absent
+          # buckets in 13 days, so this only has to outlast a DaemonSet rollout
+          # (a fresh pod answers /metrics before intel_gpu_top's first sample).
           for: 30m
+          labels:
+            severity: warning
+
+        # The companion to the rule above, and NOT redundant with it.
+        #
+        # IntelGpuMetricsAbsent is gated on `up == 1`, so it can only speak
+        # about nodes that already have a live target. If the job has NO
+        # targets at all, `up{job=...}` is empty, `empty unless anything` is
+        # empty, and it is structurally silent — including in the case its own
+        # description tells you to investigate, the monitoring resource no
+        # longer being advertised. That gap is what the old cluster-wide
+        # `absent()` form did cover, and dropping it entirely would have traded
+        # one blind spot for another.
+        #
+        # Nothing else catches it either, which is the point:
+        #   * TargetDown is `count(up == 0) / count(up)` grouped by job — a
+        #     division whose denominator is empty when no target exists, so it
+        #     produces no result rather than firing.
+        #   * KubeDaemonSetNotScheduled is `desired - current > 0`, which is 0
+        #     when the nodeSelector matches nothing. If NFD ever stopped
+        #     publishing intel.feature.node.kubernetes.io/gpu — a label emitted
+        #     by the very NodeFeatureRules the GPU plugin owns — desired drops
+        #     to 0 and the DaemonSet looks perfectly healthy at 0/0.
+        #   * KubePodNotReady does cover pods stuck Pending (e.g. requesting a
+        #     monitoring resource that no longer exists), so that path is not
+        #     the gap; the 0/0 and deleted/unselected paths are.
+        #
+        # Bare `absent(up{...})` deliberately, NOT `absent(up{...} == 1)`: the
+        # latter also fires when every target is scraping-but-down, which is
+        # precisely TargetDown's job.
+        - alert: IntelGpuExporterAbsent
+          annotations:
+            summary: intel-gpu-exporter has no targets in Prometheus at all.
+            description: >-
+              No intel-gpu-exporter target exists, so IntelGpuMetricsAbsent
+              cannot evaluate and the GPU fleet is unmonitored silently. Check
+              the DaemonSet in observability, that
+              intel.feature.node.kubernetes.io/gpu is still published on the
+              five Intel nodes, and that the pods are not Pending on
+              gpu.intel.com/monitoring.
+          expr: absent(up{job="intel-gpu-exporter"})
+          for: 1h
           labels:
             severity: warning
 
@@ -48,3 +133,13 @@ spec:
 # same soak window vault#84 needs for the capacity report, so it costs
 # nothing on the critical path. The label join it depends on is already
 # proven: see the `node` relabeling in servicemonitor.yaml.
+#
+# Also NOT here: any rule with a lookback longer than a few hours. This
+# PrometheusRule is evaluated by the LOCAL Prometheus, whose retention is 1d
+# (prometheus/values.yaml `retention: 1d`). A `max_over_time(...[7d])` here
+# would not error — it would silently evaluate against a 1d window and
+# return 0, which reads exactly like "no GPU activity". Long-lookback GPU
+# rules belong in thanos-ruler. This is also why neither rule above uses a
+# *_over_time smoothing window to tame gpumon_engine_usage's intermittency:
+# the benign gaps reach ~18h, which does not fit under 1d retention with any
+# margin. Changing the witness metric solves it without needing one.

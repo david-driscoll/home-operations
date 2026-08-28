@@ -9,14 +9,44 @@
 # the metric names stay pinned to the exporter versions actually deployed.
 # The Intel one is adapted from the exporter's own grafana-operator export
 # (assets/dashboard/dashboards.yaml, v0.7.1): datasource swapped to the
-# estate's $${DS_PROMETHEUS} input, a `cluster` variable added so it renders
-# equestria and sgc together through Thanos, and the aggregations changed to
-# keep `node` so selecting multiple nodes stops averaging five different GPUs
-# into a single line.
+# estate's $${DS_PROMETHEUS} input, a `cluster` variable added, and the
+# aggregations changed to keep `node` so selecting multiple nodes stops
+# averaging five different GPUs into a single line.
+#
+# The `cluster` variable is forward-looking, not multi-cluster today: equestria
+# is the estate's only Kubernetes cluster (clusters/*.yaml — the other four are
+# Dockge/Docker hosts). The label does not exist on the raw series at all; it is
+# stamped by Prometheus `external_labels` and only materialises through Thanos,
+# which is why the variable resolves in Grafana (whose default datasource is
+# thanos-query) and would be empty against the local Prometheus.
 #
 # NOT used: grafana.com dashboard #23251 ("Intel GPU Metrics"). It targets
 # onedr0p/intel-gpu-exporter, which is archived, and its metric names do not
 # match clambin's gpumon_*.
+#
+# REMOVED from the Intel dashboard — three panels that could never render on
+# this hardware. They came across in the upstream export and were carried
+# unexamined; each was verified dead against 20 days of Thanos history before
+# being dropped, so this is removing blank rectangles, not hiding a fault.
+#
+#   * "clients" (gpumon_clients_count) — the exporter does not emit this
+#     series at all today. Per-client attribution makes intel_gpu_top read
+#     /proc/<pid>/fdinfo, which needs the host PID namespace; helmrelease.yaml
+#     deliberately does NOT set hostPID, and granting it to a pod already
+#     running as root with CAP_PERFMON is a real widening of blast radius for
+#     one cosmetic panel. The panel goes, the security posture stays.
+#
+#   * "IMC bandwidth" x2 (gpumon_imc_read / gpumon_imc_write, one bargauge and
+#     one timeseries) — flat zero on all five nodes across the full 20d
+#     window, INCLUDING the windows where engine busyness peaked at 70%. That
+#     rules out "idle". The cause is the uncore PMU naming on Alder Lake
+#     client: the nodes expose uncore_imc_0, uncore_imc_1 and
+#     uncore_imc_free_running_0/1, but igt looks up a plain `uncore_imc`
+#     event source, finds nothing, and reports 0 forever. Not fixable from
+#     this repo — it needs an igt-gpu-tools change, not a config change.
+#
+# The two surviving top-row panels (Frequency, Power) were widened from w=8 to
+# w=12 to close the gap the "clients" panel left behind.
 #
 # Datasource placeholders below are written `$${DS_PROMETHEUS}`, matching
 # flux.yaml. Inlined JSON is visible to Flux's post-build substitution, which
@@ -109,7 +139,7 @@ spec:
           },
           "gridPos": {
             "h": 8,
-            "w": 8,
+            "w": 12,
             "x": 0,
             "y": 0
           },
@@ -178,8 +208,8 @@ spec:
           },
           "gridPos": {
             "h": 8,
-            "w": 8,
-            "x": 8,
+            "w": 12,
+            "x": 12,
             "y": 0
           },
           "id": 8,
@@ -216,75 +246,6 @@ spec:
             }
           ],
           "title": "Power",
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$${DS_PROMETHEUS}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 16,
-            "y": 0
-          },
-          "id": 6,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "area",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "percentChangeColorMode": "standard",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showPercentChange": false,
-            "textMode": "auto",
-            "wideLayout": true
-          },
-          "pluginVersion": "12.3.1",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "expr": "sum (gpumon_clients_count{cluster=~\"$cluster\", node=~\"^$node$\"}) by (cluster, node, name)",
-              "instant": false,
-              "legendFormat": "{{node}} \u00b7 {{name}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "clients",
           "type": "stat"
         },
         {
@@ -469,206 +430,6 @@ spec:
             }
           ],
           "title": "Load",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$${DS_PROMETHEUS}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "percentage",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "MiBs"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 0,
-            "y": 16
-          },
-          "id": 7,
-          "options": {
-            "displayMode": "lcd",
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": false
-            },
-            "maxVizHeight": 300,
-            "minVizHeight": 16,
-            "minVizWidth": 8,
-            "namePlacement": "auto",
-            "orientation": "horizontal",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "showUnfilled": true,
-            "sizing": "auto",
-            "valueMode": "color"
-          },
-          "pluginVersion": "12.3.1",
-          "targets": [
-            {
-              "editorMode": "code",
-              "exemplar": false,
-              "expr": "avg (gpumon_imc_read{cluster=~\"$cluster\", node=~\"^$node$\"}) by (cluster, node)",
-              "instant": true,
-              "legendFormat": "{{node}} read",
-              "range": false,
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "exemplar": false,
-              "expr": "avg (gpumon_imc_write{cluster=~\"$cluster\", node=~\"^$node$\"}) by (cluster, node)",
-              "hide": false,
-              "instant": true,
-              "legendFormat": "{{node}} write",
-              "range": false,
-              "refId": "B"
-            }
-          ],
-          "title": "IMC bandwidth",
-          "type": "bargauge"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$${DS_PROMETHEUS}"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "barWidthFactor": 0.6,
-                "drawStyle": "line",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "showValues": false,
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "percentage",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": 0
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "MiBs"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 16
-          },
-          "id": 9,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "hideZeros": false,
-              "mode": "single",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "12.3.1",
-          "targets": [
-            {
-              "editorMode": "code",
-              "exemplar": false,
-              "expr": "avg (gpumon_imc_read{cluster=~\"$cluster\", node=~\"^$node$\"}) by (cluster, node)",
-              "instant": false,
-              "legendFormat": "{{node}} read",
-              "range": true,
-              "refId": "A"
-            },
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$${DS_PROMETHEUS}"
-              },
-              "editorMode": "code",
-              "exemplar": false,
-              "expr": "avg (gpumon_imc_write{cluster=~\"$cluster\", node=~\"^$node$\"}) by (cluster, node)",
-              "hide": false,
-              "instant": false,
-              "legendFormat": "{{node}} write",
-              "range": true,
-              "refId": "B"
-            }
-          ],
-          "title": "IMC bandwidth",
           "type": "timeseries"
         }
       ],
