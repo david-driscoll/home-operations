@@ -76,11 +76,19 @@ spec:
                   secretKeyRef:
                     name: *app
                     key: anthropic-api-key
+              # `github-token`, the estate's own GitHub App installation
+              # token -- see ./externalsecret.yaml's header for why nothing
+              # here mints a second one. Fine as a plain env var for `gh`
+              # and any tool that just reads $GITHUB_TOKEN once per
+              # invocation; it goes stale after ~60m like every other
+              # env-var consumer of this Secret in this repo. `git` itself
+              # does NOT use this var -- see ./resources/entrypoint.sh's
+              # credential.helper, which reads the mount below fresh instead.
               GITHUB_TOKEN:
                 valueFrom:
                   secretKeyRef:
-                    name: *app
-                    key: github-token
+                    name: github-token
+                    key: token
               # The `pulumi` MCP server (../toolhive-pulumi) and any `pulumi`
               # the agent runs directly from its own tmux pane both need this
               # whole bundle -- same env var names the `pulumi` namespace's
@@ -177,6 +185,19 @@ spec:
               # persistent home-dir PVC.
               - path: /opt/agentboard/entrypoint.sh
                 subPath: entrypoint.sh
+                readOnly: true
+      github-token:
+        type: secret
+        # NOT `${APP}` -- the real, estate-wide Secret name, reflected into
+        # this namespace automatically. See ./externalsecret.yaml's header
+        # and ./resources/entrypoint.sh's credential.helper comment for why
+        # this is a volume mount (live-updating as the token rotates) rather
+        # than the env var most other consumers of this Secret use.
+        name: github-token
+        advancedMounts:
+          *app :
+            *app :
+              - path: /var/run/secrets/github-token
                 readOnly: true
 
     service:

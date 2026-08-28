@@ -24,6 +24,31 @@ if ! command -v mise >/dev/null 2>&1; then
   curl -fsSL https://mise.run | sh
 fi
 
+echo "==> configuring git"
+# Authored as David, not a separate bot identity -- this repo's own
+# convention (see CLAUDE.md's "Agent comment signing" rule): Claude-driven
+# changes are attributed via a `Co-Authored-By: Claude Sonnet 5` trailer on
+# the commit, same as every other Claude Code session against this repo, not
+# via a distinct git identity.
+git config --global user.name "David Driscoll"
+git config --global user.email "david.driscoll@gmail.com"
+# Auth: `github-token`, the estate's own GitHub App installation token
+# (kubernetes/apps/kube-system/secrets/github-app-token/), mounted below by
+# ../helmrelease.yaml at /var/run/secrets/github-token/token -- as a VOLUME,
+# deliberately, not the plain env var most other consumers in this repo use.
+# That token is re-minted every 30m against a 60m life; an env var sourced
+# via `secretKeyRef` is resolved ONCE at pod start and never updates without
+# a pod restart, which is fine for the short-lived Jobs that pattern usually
+# feeds (../../coder/renovate/renovatejob.yaml explains why there) and wrong
+# here -- this pod's tmux/Claude Code session is meant to run for days. A
+# volume mount updates its file content in place as the Secret rotates, so
+# reading it fresh on every `git` invocation, rather than once, is what
+# keeps `git push` working three days into an agent session instead of one
+# hour into it. `x-access-token` is GitHub's own fixed username for App
+# installation tokens over HTTPS -- not a placeholder.
+git config --global credential."https://github.com".helper \
+  '!f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f'
+
 # `locked = true` in ../resources/mise.toml means this resolves ONLY through
 # ../resources/mise.lock's pinned checksums/URLs -- see that file's header
 # for how to regenerate it after a version bump.

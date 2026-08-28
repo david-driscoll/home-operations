@@ -30,6 +30,22 @@ spec:
           envFrom:
             - secretRef:
                 name: ${APP}
+          env:
+            # `github-token`, the estate's own GitHub App installation
+            # token, reflected into this namespace automatically -- see
+            # ../agentboard/externalsecret.yaml's header. A NAMED mapping,
+            # not envFrom: that Secret's own keys are `token`/`access_token`,
+            # not `GITHUB_TOKEN`. Goes stale after ~60m like every other
+            # env-var consumer of this Secret (kubernetes/apps/coder/renovate/renovatejob.yaml
+            # explains why that's an accepted tradeoff elsewhere in this
+            # repo) -- fine here too: an MCP tool call is seconds, not the
+            # days-long session ../agentboard's own credential.helper exists
+            # for.
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-token
+                  key: token
 
   authServerRef:
     kind: MCPExternalAuthConfig
