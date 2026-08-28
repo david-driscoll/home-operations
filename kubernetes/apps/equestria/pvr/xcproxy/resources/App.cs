@@ -6,9 +6,9 @@
 #:package System.Text.Json@10.0.11
 #:package System.Text.RegularExpressions@4.3.1
 #:package Xtream.Client@1.0.7
-#:package ZiggyCreatures.FusionCache@2.7.1
+#:package ZiggyCreatures.FusionCache@2.7.2
 #:package NeoSmart.Caching.Sqlite.AspNetCore@9.0.3
-#:package ZiggyCreatures.FusionCache.Serialization.SystemTextJson@2.7.0
+#:package ZiggyCreatures.FusionCache.Serialization.SystemTextJson@2.7.2
 #:package TMDbLib@3.0.0
 #:package System.Reactive@7.0.0
 #:package System.Linq.Async@7.0.1
