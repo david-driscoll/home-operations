@@ -54,19 +54,63 @@ spec:
       app.kubernetes.io/name: ${APP}
       driscoll.dev/name: ${APP}
   path: ./kubernetes/components/tailscale/ingress
-  # Both are about the BACKEND existing before the operator tries to resolve it.
-  # It fails silently when it cannot -- a warning event, `"Handlers": null` in the
-  # proxy's serve config, and a 404 on the tailnet while `kubectl get ingress`
-  # looks perfectly healthy.
+  # About the BACKEND existing before the operator tries to resolve it. It fails
+  # silently when it cannot -- a warning event, `"Handlers": null` in the proxy's
+  # serve config, and a 404 on the tailnet while `kubectl get ingress` looks
+  # perfectly healthy.
+  #
+  # `network/traefik` USED TO BE LISTED HERE TOO. It is not, and must not be,
+  # for the reason ../postgres/ks.yaml gives for depending on `postgres-operator`
+  # rather than on the `postgres` cluster: a dependency named on a ks that an app
+  # component emits is a dependency of EVERY APP that uses the component, added
+  # through the back door. Most app ks set `wait: true`, which health-checks every
+  # applied resource INCLUDING this Kustomization object, and a Kustomization is
+  # only Ready once its own `dependsOn` are satisfied. So `wait: false` below does
+  # NOT contain the blast radius -- it governs this ks's own resources, not the
+  # parent's assessment of this ks.
+  #
+  # `network/traefik` is exactly the kind of dependency that rule excludes. It sets
+  # `wait: true` on the Traefik HelmRelease with a 10m timeout, so it goes
+  # not-Ready on any release that is slow to roll -- a routine image bump is
+  # enough. That is not merely slow; it DEADLOCKS kustomize-controller, and the
+  # deadlock does not self-heal:
+  #
+  #   - traefik's ks goes not-Ready, so all 37 rendered children go
+  #     DependencyNotReady.
+  #   - Each of the 37 parents then holds a worker for a full 10m health check,
+  #     waiting on its child.
+  #   - 37 waiting parents > `--concurrent`, so EVERY worker is held by a parent
+  #     waiting on a child that needs a worker to re-evaluate the dependency.
+  #   - Each parent times out at 10m and immediately requeues, so it repeats.
+  #
+  # Observed 2026-08-28: 131 of 247 Kustomizations not-Ready,
+  # `controller_runtime_active_workers` pinned at 20/20 and `workqueue_depth` 112.
+  # Traefik had recovered three seconds after the children's last dependency check
+  # and nothing was ever able to notice. Clearing it needed a human to suspend a
+  # parent by hand and free one worker.
+  #
+  # Dropping it costs nothing that was real. What the operator needs is Traefik's
+  # SERVICE, and a HelmRelease upgrade does not delete the Service -- so the ks's
+  # Ready condition was never a sound proxy for the thing being depended on. It
+  # only ever ordered the FIRST creation on a cold bootstrap, and it bought that
+  # by making Traefik a hard readiness dependency of all 54 apps that use this
+  # component, forever after. If a cold bootstrap ever does race, the symptom is
+  # the `"Handlers": null` one described above; re-applying the Ingress once
+  # Traefik is up resolves it.
   dependsOn:
-    - name: traefik
-      namespace: network
     - name: tailscale-operator
       namespace: tailscale-system
   prune: true
   # `false`: most app ks set `wait: true`, and gating an app's readiness on a
-  # tailnet VIP would make Traefik and the Tailscale operator hard dependencies
-  # of every app that publishes one.
+  # tailnet VIP reaching `LoadBalancer` would make the Tailscale operator's
+  # progress a hard dependency of every app that publishes one.
+  #
+  # Note what this does NOT do, because the first version of this comment claimed
+  # it did: it does not stop the PARENT from waiting on this Kustomization. The
+  # parent's `wait: true` health-checks this object, and this object is Ready only
+  # once `dependsOn` above is satisfied. `wait: false` scopes what THIS ks waits
+  # for; the parent's exposure is controlled by `dependsOn` alone. That is the
+  # whole reason the `network/traefik` entry had to go.
   wait: false
   force: false
   interval: 1h

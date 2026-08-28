@@ -51,7 +51,14 @@ instance:
       target:
         kind: Deployment
         name: (kustomize-controller|helm-controller|source-controller|notification-controller)
-    - # Increase the number of workers
+    - # Increase the number of workers.
+      #
+      # kustomize-controller does NOT end up on 10: the "Raise kustomize-controller
+      # concurrency" patch further down appends a second `--concurrent` for it, and
+      # the last occurrence wins. Both are left in place rather than folded together
+      # because this patch targets three controllers and that one targets only
+      # kustomize-controller. If you are reading a live `args` array and seeing two
+      # `--concurrent` values, that is why, and the SECOND one is in effect.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
@@ -79,11 +86,34 @@ instance:
       target:
         kind: Deployment
         name: (kustomize-controller|helm-controller|source-controller)
-    - # Enable in-memory kustomize builds
+    - # Enable in-memory kustomize builds, and raise kustomize-controller
+      # concurrency (overrides the `--concurrent=10` set above for all three).
+      #
+      # THIS VALUE IS A DEADLOCK BOUND, NOT A THROUGHPUT KNOB. An app component can
+      # emit a nested Kustomization (../../../components/tailscale/ks.yaml and the
+      # ../../../components/postgres/ family both do), and a parent app ks with
+      # `wait: true` health-checks that child Kustomization object -- holding a
+      # worker for up to its `timeout`, which is 10m for most apps. The child needs
+      # a worker of its own to make progress. So once the number of parents waiting
+      # on a child reaches `--concurrent`, every worker is held by a waiter, no
+      # child can run, and the pool is deadlocked. Each parent times out and
+      # immediately requeues, so it never drains on its own.
+      #
+      # That is not theoretical: on 2026-08-28 it took the cluster to 131 of 247
+      # Kustomizations not-Ready with `active_workers` 20/20 and `workqueue_depth`
+      # 112, and needed a human to suspend a parent to free one worker. The trigger
+      # was a `dependsOn` that has since been removed, but the SHAPE survives any
+      # such fix, so the bound is kept here as well.
+      #
+      # 64 exceeds the 54 apps that currently use the tailscale component, which is
+      # the largest single fan-out of parents that can wait at once. Raise it if
+      # that number grows. Memory is not the constraint at this size: steady state
+      # is ~127Mi against the 1Gi limit set above, and the in-memory build trees
+      # this also enables are a few hundred KB each.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
-          value: --concurrent=20
+          value: --concurrent=64
         - op: replace
           path: /spec/template/spec/volumes/0
           value:
