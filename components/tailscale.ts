@@ -502,3 +502,73 @@ export function createPeerRelayRule(fwdIp: pulumi.Input<string>, globals: Global
     return relayPort;
   });
 }
+
+export interface ManagedAuthKeyArgs {
+  /** Becomes `${appName}-authkey`'s Pulumi resource name and the OpenBao path's slug. */
+  appName: string;
+  /** `clusters/<clusterKey>/apps/<appName>/tailscale-authkey` -- same shape as `oidcBaoPath`/`postgresBaoPath` in components/bao.ts. */
+  clusterKey: string;
+  /** ACL tags the resulting node registers under. Must already exist in the tailnet policy (sdks/tailscale/acl.ts) -- an unknown tag fails the key creation outright. */
+  tags: pulumi.Input<string>[];
+  description: string;
+  /** Default true: a `tailscale/tailscale` sidecar with `TS_AUTH_ONCE=true` re-registers the same node on restart rather than minting a new one, so the key needs to survive being used more than once. */
+  reusable?: boolean;
+  /** Default false -- an ephemeral node is removed from the tailnet as soon as it disconnects, which is wrong for anything meant to be reachable (`ssh <name>`) between restarts. */
+  ephemeral?: boolean;
+}
+
+/**
+ * Mints a Tailscale auth key via the Pulumi `tailscale` provider and writes
+ * it into OpenBao at the path an app's own `ExternalSecret` reads --
+ * `clusters/<clusterKey>/apps/<appName>/tailscale-authkey`, key `key`. The
+ * "helper" `stacks/system/tailscale-authkeys.ts` calls this once per
+ * consumer; add a new one there, not by hand-writing a `TailnetKey` at the
+ * call site.
+ *
+ * Deliberately narrow: this is for the "a pod IS a tailnet node" shape
+ * (agentboard's SSH sidecar, technitium's, ...), where the key is consumed
+ * once at container start and never rotates on its own. It is NOT the
+ * `installTailscaleLxc` pattern above (a Proxmox host tailscale bootstraps
+ * over `pct exec`, not a Kubernetes Secret) and NOT a substitute for
+ * `GlobalResources.tailscaleProvider`'s own OAuth client credential, which
+ * this reuses rather than replaces.
+ *
+ * Guarded the same way `TailscaleMonitor.export`'s inventory dual-write is:
+ * a run with no OpenBao credentials (BAO_TOKEN, or BAO_ROLE_ID +
+ * BAO_SECRET_ID -- see `GlobalResources.baoDualWriteEnabled`) skips the
+ * write and warns rather than failing the whole stack, because a plan
+ * preview should not require write access to succeed.
+ */
+export function createManagedAuthKey(globals: GlobalResources, args: ManagedAuthKeyArgs, opts: pulumi.CustomResourceOptions = {}) {
+  const key = new TailnetKey(
+    `${args.appName}-authkey`,
+    {
+      reusable: args.reusable ?? true,
+      preauthorized: true,
+      ephemeral: args.ephemeral ?? false,
+      recreateIfInvalid: "always",
+      tags: args.tags,
+      description: args.description,
+    },
+    pulumi.mergeOptions(opts, { provider: globals.tailscaleProvider }),
+  );
+
+  if (!globals.baoDualWriteEnabled) {
+    pulumi.log.warn(`No OpenBao credentials -- skipping the tailscale-authkey write for ${args.appName}. The Secret at its existing OpenBao path (if any) is left untouched.`);
+    return key;
+  }
+
+  baoKvSecret(
+    `${args.appName}-authkey-bao`,
+    {
+      mount: "secrets",
+      path: `clusters/${args.clusterKey}/apps/${baoSlug(args.appName)}/tailscale-authkey`,
+      data: { key: key.key },
+      concealedFields: ["key"],
+      customMetadata: baoProvenance({ source: "createManagedAuthKey" }),
+    },
+    pulumi.mergeOptions(opts, { provider: globals.baoProvider, dependsOn: [key] }) as pulumi.CustomResourceOptions,
+  );
+
+  return key;
+}
