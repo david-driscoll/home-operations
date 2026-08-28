@@ -23,5 +23,13 @@ configMapGenerator:
       - config.toml=./resources/mise.toml
       - mise.lock=./resources/mise.lock
       - entrypoint.sh=./resources/entrypoint.sh
+      # Claude Code's own MCP client config -- mounted at /root/.mcp.json,
+      # picked up automatically since the tmux session in
+      # ./resources/entrypoint.sh starts `claude` from $HOME. ${ROOT_DOMAIN}
+      # inside it is substituted the same as anywhere else in this
+      # Kustomization (components/common's substituteFrom patch, not
+      # ./ks.yaml's own postBuild.substitute -- that one only carries
+      # APP/NAMESPACE).
+      - mcp.json=./resources/mcp.json
     options:
       disableNameSuffixHash: true

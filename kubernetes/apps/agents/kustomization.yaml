@@ -51,6 +51,15 @@ resources:
   - ./toolhive-unifi-network/ks.yaml
   - ./toolhive-unifi-protect/ks.yaml
   - ./toolhive-unifi-access/ks.yaml
+  - ./toolhive-github/ks.yaml
+  - ./toolhive-context7/ks.yaml
+  - ./toolhive-degoog/ks.yaml
+  - ./toolhive-nuget/ks.yaml
+  # MCPRemoteProxy, not MCPServer -- these two proxy EXISTING remote MCP
+  # HTTP servers rather than running a container. See
+  # ./toolhive-microsoft-docs/mcpremoteproxy.yaml's header.
+  - ./toolhive-microsoft-docs/ks.yaml
+  - ./toolhive-home-assistant/ks.yaml
   # The agent runner. Depends only on external-secrets, not on ToolHive --
   # it's an MCP CLIENT of the servers above, reached over plain HTTP+OAuth,
   # not a build-time dependency of them.

@@ -1,17 +1,17 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/serviceaccount.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/clusterrolebinding.json
 #
 # cluster-admin, deliberately -- David's own call (full read-write from the
 # start), matching the posture given to ../toolhive-kubernetes's MCP server.
-# Both this SA (mounted into the agentboard pod for in-session `kubectl`) and
-# that one (mounted into its own MCPServer pod) end up equally privileged;
-# they are separate SAs so either can be scoped down independently later
-# without touching the other.
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ${APP}
----
+#
+# NO ServiceAccount object here -- an earlier draft created one directly,
+# which collided with ./helmrelease.yaml's own `values.serviceAccount.${APP}`
+# (app-template creates it; the chart's schema rejects
+# `controllers.*.pod.serviceAccountName`, which is what referencing an
+# externally-created one would have needed). A binding's `subjects[].name`
+# does not require the ServiceAccount to exist yet -- Kubernetes just leaves
+# the binding inert until it does -- so there is no ordering hazard from the
+# two halves living in different objects.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

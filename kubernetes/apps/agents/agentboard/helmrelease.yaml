@@ -44,6 +44,14 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    # Referenced below by controllers.agentboard.serviceAccount.identifier --
+    # app-template's own object, not ./rbac.yaml's ClusterRoleBinding subject
+    # by coincidence: `pod.serviceAccountName` (an earlier draft's field name)
+    # is not in this chart's schema at all --
+    # kubernetes/apps/volsync-system/restore-cleanup/helmrelease.yaml has the
+    # working pattern this now matches.
+    serviceAccount:
+      *app : {}
     controllers:
       *app :
         annotations:
@@ -52,8 +60,9 @@ spec:
         # history, agentboard's sqlite db, the Claude Code session and the
         # working checkout) -- a second pod could never attach it.
         strategy: Recreate
+        serviceAccount:
+          identifier: *app
         pod:
-          serviceAccountName: *app
           securityContext:
             # mise, tmux and a `git`-driven working checkout all expect to
             # write into $HOME freely; running as root here is the same
@@ -111,6 +120,20 @@ spec:
               # sourced from the SAME OpenBao paths via ./externalsecret.yaml.
               AWS_REGION:
                 value: home
+              # Points `sops`/`age` (../resources/mise.toml) at the estate's
+              # own identity, mounted below -- the SAME `sops-age` Secret
+              # Flux itself uses to decrypt every *.sops.yaml in this repo
+              # (kubernetes/flux/meta/sops-age.sops.yaml is what CREATES it;
+              # this is not a new grant this PR introduces -- that Secret
+              # already carries `reflection-auto-enabled: true` and is
+              # already mirrored into every namespace, this one included).
+              # This is the estate's single most sensitive credential
+              # (bootstrap/INVENTORY.md: "Not in any repo, not in OpenBao,
+              # not recoverable. Losing it means re-keying the estate from
+              # the surviving plaintext.") -- giving an agent session decrypt
+              # access to it is a deliberate, explicit call, not a default.
+              SOPS_AGE_KEY_FILE:
+                value: /var/run/secrets/sops-age/age.agekey
             envFrom:
               - secretRef:
                   name: ${APP}-pulumi
@@ -159,6 +182,13 @@ spec:
               - path: /opt/agentboard/entrypoint.sh
                 subPath: entrypoint.sh
                 readOnly: true
+              # ./resources/mcp.json -- see ./kustomization.yaml's comment.
+              # /root, not /opt, because Claude Code only auto-loads
+              # .mcp.json from a session's working directory, and $HOME is
+              # where entrypoint.sh's tmux session starts one.
+              - path: /root/.mcp.json
+                subPath: mcp.json
+                readOnly: true
       github-token:
         type: secret
         # NOT `${APP}` -- the real, estate-wide Secret name, reflected into
@@ -171,6 +201,17 @@ spec:
           *app :
             *app :
               - path: /var/run/secrets/github-token
+                readOnly: true
+      sops-age:
+        type: secret
+        # Same shape as `github-token` above -- NOT `${APP}`, the real,
+        # already-estate-wide-reflected Secret name. See the `env` block's
+        # SOPS_AGE_KEY_FILE comment for what this actually grants.
+        name: sops-age
+        advancedMounts:
+          *app :
+            *app :
+              - path: /var/run/secrets/sops-age
                 readOnly: true
 
     service:
