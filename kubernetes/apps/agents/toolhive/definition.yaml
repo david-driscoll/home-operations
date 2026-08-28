@@ -41,6 +41,14 @@ spec:
         # registers its own redirect with ToolHive's embedded server via DCR;
         # authentik never sees them.
         - url: https://${APP}.${ROOT_DOMAIN}/oauth/callback
+        # On the tailnet this service is `mcp`, not `toolhive` -- the flat
+        # namespace is the chance to name the two apps for what they are, and
+        # the human-facing UI next door takes the plain `toolhive` name there.
+        # Deliberately NOT ${APP}: the ${ROOT_DOMAIN} hostname above is also this
+        # server's OAuth `issuer` (see ./mcpoidcconfig.yaml) and renaming it
+        # would invalidate every token and client registration in flight, so the
+        # driscoll.tech side stays exactly as it is.
+        - url: https://mcp.${TAILSCALE_DOMAIN}/oauth/callback
       propertyMappings:
         - email
         - openid

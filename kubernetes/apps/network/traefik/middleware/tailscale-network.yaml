@@ -8,3 +8,19 @@ spec:
   ipAllowList:
     sourceRange:
       - 100.64.0.0/10
+    # REQUIRED on the `tailscale` entrypoint, not a tuning knob. Traffic reaches
+    # Traefik from the tailnet-outbound ProxyGroup POD, so the remote address is
+    # a cluster IP and a default (remote-address) ipAllowList would reject 100%
+    # of tailnet requests. The client's real 100.64.0.0/10 address is in
+    # X-Forwarded-For, which tailscaled SETS -- not appends -- to exactly one
+    # entry (`r.Out.Header.Set("X-Forwarded-For", c.SrcAddr...)` in
+    # ipn/ipnlocal/serve.go), so depth 1 is that entry.
+    #
+    # The same shape holds on the Dockge hosts, where `tailscale serve` runs on
+    # the host and proxies to 127.0.0.1:8443 -- their Traefik logs every tailnet
+    # request as 172.18.0.1, the docker bridge gateway.
+    #
+    # Depends on the entrypoint trusting the header; see `forwardedHeaders` on
+    # ports.tailscale in ../values.yaml. Both are needed or this fails closed.
+    ipStrategy:
+      depth: 1

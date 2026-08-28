@@ -830,7 +830,14 @@ export class DockgeLxc extends ComponentResource {
 
   private async createOutpost(depends: ApplicationReturn[]) {
     const applicationManager = this.args.host.applicationManager;
-    const proxyProviders = depends.filter(z => z.isProxy).map(z => z.provider);
+    // Both hostnames' providers. A tailnet twin that is not attached to the
+    // outpost is a provider the outpost will not answer for, which is exactly the
+    // 400 "no app for hostname" this pair exists to fix -- so it has to be
+    // collected here and not just created.
+    const proxyProviders = depends
+      .filter(z => z.isProxy)
+      .flatMap(z => [z.provider, z.tailnetProvider])
+      .filter(p => p !== undefined);
 
     if (proxyProviders.length === 0) {
       return;

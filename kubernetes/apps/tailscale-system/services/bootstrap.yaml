@@ -1,0 +1,171 @@
+---
+# HAND-MAINTAINED. Do not fold these into stacks/unifi-network's generated set.
+#
+# Every other tailnet egress Service in this directory is built by
+# stacks/unifi-network/tailnet-egress.ts. These two are not, and the reason is
+# circular: unifi-network is run by the IN-CLUSTER Pulumi operator
+# (kubernetes/apps/pulumi/unifi-network/stack.yaml), and these carry the traffic
+# that operator needs in order to run at all.
+#
+#   dockge-as        bao:8200           equestria's OpenBao auto-unseals against
+#                                       bao-transit through this Service. Pods
+#                                       have no route to tailnet IPs, so without
+#                                       it OpenBao can never unseal.
+#                    bao-dumps:2023     the nightly age-encrypted pg_dump receiver
+#                                       (openbao-replica CronJobs in kube-system).
+#   dockge-celestia  garage-admin:3903  stacks/system's garage.ts manages buckets
+#                                       and keys through the Garage Admin API from
+#                                       operator workspace pods.
+#                    garage-s3:3900     CNPG barman-cloud WAL archives and base
+#                                       backups.
+#
+# If Pulumi owned these and they went missing, the recovery path would be: OpenBao
+# cannot unseal -> external-secrets stops -> the operator's AppRole secret cannot
+# refresh -> the stack cannot run to put them back. Kept in git, a bare-metal
+# recovery needs nothing but SOPS and an age key.
+#
+# The split is per SERVICE, not per port: Flux and Pulumi cannot both own
+# `spec.ports` on one object. So the whole of dockge-as and dockge-celestia lives
+# here, including the ports that are not themselves bootstrap-critical.
+# proxmox-celestia, pbs-celestia and dns-celestia are separate objects and are
+# generated normally.
+#
+# Adding a port here also needs a matching grant in
+# stacks/unifi-network/acl-manager.ts -- the generated half asserts that pairing
+# automatically (`grantedPort`), this half cannot, so check it by hand. Without
+# the grant the connection is forwarded and then dies in the ACL, which from
+# inside the cluster reads as the far end being down.
+#
+# See also bootstrap/RUNBOOK.md and stacks/unifi-network/tailnet-egress.ts.
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/service.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: dockge-as
+  annotations:
+    tailscale.com/tailnet-fqdn: "dockge-as.${TAILSCALE_DOMAIN}"
+    tailscale.com/proxy-group: tailnet-inbound
+spec:
+  type: ExternalName
+  externalName: dockge-as
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+    - name: ssh
+      port: 22
+      targetPort: 22
+    # A primary AdGuard host.
+    - name: adguard
+      port: 4000
+      targetPort: 4000
+    # bao-transit, the estate's seal root. No probe: the probe helper always
+    # builds an https:// URL and bao-transit runs tls_disable, so a probe here
+    # would report a false failure. Liveness is the Gatus check in the
+    # bao-transit stack definition.
+    - name: bao
+      port: 8200
+      targetPort: 8200
+    # The bao-standby dump receiver (rclone serve sftp). No probe, same reasoning
+    # as 8200: plain TCP, not https.
+    - name: bao-dumps
+      port: 2023
+      targetPort: 2023
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dockge-as-ssh
+spec:
+  interval: 2m
+  module: ssh_banner
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - dockge-as.${TAILSCALE_DOMAIN}:22
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dockge-as-alerts
+spec:
+  groups:
+    - name: dockge-as
+      rules:
+        - alert: DockgeSSHConnectivityLost
+          annotations:
+            description: "SSH connectivity to Dockge on as has been lost."
+            summary: "Dockge as SSH lost"
+          expr: |
+            probe_success{probe="dockge-as-ssh"} < 1
+          for: 10m
+          labels:
+            severity: warning
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/service.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: dockge-celestia
+  annotations:
+    tailscale.com/tailnet-fqdn: "dockge-celestia.${TAILSCALE_DOMAIN}"
+    tailscale.com/proxy-group: tailnet-inbound
+spec:
+  type: ExternalName
+  externalName: dockge-celestia
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+    - name: ssh
+      port: 22
+      targetPort: 22
+    # llama-agent (gemma-4-E4B), Hermes' backend.
+    - name: llm-agent
+      port: 8081
+      targetPort: 8081
+    # The Garage S3 data plane. No probe: the S3 root answers SigV4 errors, not a
+    # 2xx, and the garage stack's Gatus TCP checks already cover liveness.
+    # Paired with the `garage-s3-backups` grant.
+    - name: garage-s3
+      port: 3900
+      targetPort: 3900
+    # The Garage Admin API. No probe: it answers 401 without a bearer token.
+    # Paired with the `garage-admin-pulumi` grant.
+    - name: garage-admin
+      port: 3903
+      targetPort: 3903
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dockge-celestia-ssh
+spec:
+  interval: 2m
+  module: ssh_banner
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - dockge-celestia.${TAILSCALE_DOMAIN}:22
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dockge-celestia-alerts
+spec:
+  groups:
+    - name: dockge-celestia
+      rules:
+        - alert: DockgeSSHConnectivityLost
+          annotations:
+            description: "SSH connectivity to Dockge on celestia has been lost."
+            summary: "Dockge celestia SSH lost"
+          expr: |
+            probe_success{probe="dockge-celestia-ssh"} < 1
+          for: 10m
+          labels:
+            severity: warning

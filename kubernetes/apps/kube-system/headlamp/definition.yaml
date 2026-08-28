@@ -15,6 +15,9 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://${APP}.${CLUSTER_DOMAIN}/oidc-callback"
+      # MagicDNS is flat: the tailnet name is `${APP}`, with no per-cluster
+      # label the way ${CLUSTER_DOMAIN} has one.
+      - url: "https://${APP}.${TAILSCALE_DOMAIN}/oidc-callback"
       propertyMappings:
         - email
         - openid

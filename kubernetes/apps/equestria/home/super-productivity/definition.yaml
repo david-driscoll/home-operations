@@ -9,6 +9,12 @@ spec:
   category: Applications
   description: "Advanced todo list app with timeboxing, time tracking, and integrations for Jira, GitHub, GitLab and more"
   url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name. authentik's ProxyProvider.external_host
+  # holds ONE hostname, so without this the outpost has no application for
+  # ${APP}.${TAILSCALE_DOMAIN} and answers 400 "no app for hostname" -- which is
+  # what the Dockge hosts' authentik-gated tailnet routes did until now. Paired
+  # with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml; the two go together.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/super-productivity.png
   access_policy:
     groups:

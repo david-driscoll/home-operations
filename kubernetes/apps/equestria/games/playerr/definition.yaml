@@ -9,6 +9,12 @@ spec:
   category: Applications
   description: Playerr is a self-hosted game library manager and PVR for gaming collections
   url: &url https://${APP}.${ROOT_DOMAIN}
+  # The same app under its tailnet name. authentik's ProxyProvider.external_host
+  # holds ONE hostname, so without this the outpost has no application for
+  # ${APP}.${TAILSCALE_DOMAIN} and answers 400 "no app for hostname" -- which is
+  # what the Dockge hosts' authentik-gated tailnet routes did until now. Paired
+  # with TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml; the two go together.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
   icon: https://raw.githubusercontent.com/Maikboarder/Playerr/master/frontend/src/assets/app_logo.png
   access_policy:
     groups:

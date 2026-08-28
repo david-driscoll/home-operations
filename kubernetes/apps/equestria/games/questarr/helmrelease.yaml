@@ -121,6 +121,13 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
+          # HAND-WRITTEN, and deliberately NOT components/route/api-key.
+          #
+          # That component matches `X-Api-Key` OR `?apikey`, which is right for the
+          # Servarr apps that accept a key both ways. questarr takes the HEADER
+          # only, so adopting the component would widen the carve-out: a request
+          # with `?apikey=` would start skipping authentik for a key questarr does
+          # not even read. Narrower is the whole point of leaving this here.
           - matches:
               - headers:
                   - name: X-Api-Key

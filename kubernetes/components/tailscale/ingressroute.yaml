@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# The Traefik half of the tailnet path: ./ingress.yaml lands the request on the
+# `tailscale` entrypoint, this dispatches it to the app. The k8s analogue of the
+# `traefik.http.routers.<app>-tailscale.*` labels the Dockge stacks carry (see
+# docker/_common/backrest/compose.yaml).
+#
+# An IngressRoute rather than an HTTPRoute on purpose: Gateway API's
+# `backendRefs[].port` is a PortNumber and cannot take a port NAME, which would
+# have forced every app to restate its port as an integer. Traefik's own CRD
+# accepts either, so the existing `${TAILSCALE_PORT}` convention survives
+# untouched. It also lets the middleware be named with an explicit namespace --
+# an HTTPRoute ExtensionRef resolves only in the route's own namespace, which is
+# the trap documented at length in components/common/middleware.yaml.
+#
+# ONE rule. An app that also needs the API-key carve-out the *arr apps run on
+# their internal HTTPRoute adds ./api-key on top; see that component.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-tailnet
+  annotations:
+    # providers.kubernetesCRD.ingressClass is set to `internal` in
+    # apps/network/traefik/values.yaml, so Traefik only picks up CRs carrying
+    # this annotation -- the same one apps/network/traefik's dashboard route has.
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - tailscale
+  routes:
+    - kind: Rule
+      # Explicit, and lower than ./api-key's 20. Traefik orders routers by rule
+      # LENGTH when priority is unset, which would silently decide which of the
+      # two matched first -- not a property to leave to chance across two
+      # separate CRs.
+      priority: 10
+      match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`)
+      middlewares:
+        # Mirrors whatever the app's own internal HTTPRoute uses:
+        # `tailscale-local` is the counterpart of `local-user`/`local-api`
+        # (network gate, no SSO) and is the default because that is what most
+        # apps use internally; `tailscale-user` is the counterpart of
+        # `authenticated-user` and adds the authentik outpost hop.
+        #
+        # An app whose definition has no authentik `proxy:` block MUST NOT use
+        # `tailscale-user` -- the outpost has no application for that hostname
+        # and answers 400 "no app for hostname".
+        #
+        # Cross-namespace is allowed: providers.kubernetesCRD.allowCrossNamespace.
+        - name: ${TAILSCALE_MIDDLEWARE:=tailscale-local}
+          namespace: network
+      services:
+        - name: ${TAILSCALE_SERVICE:=${APP}}
+          port: ${TAILSCALE_PORT:=http}

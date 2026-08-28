@@ -9,6 +9,15 @@ spec:
   category: Infrastructure
   description: Geo-replicated S3 node — backup store (celestia/luna/skystar)
   url: &url https://garage.${CLUSTER_DOMAIN}
+  # The same app under its per-host tailnet name, which is what the
+  # `<app>-tailscale` router in compose.yaml matches. authentik's
+  # ProxyProvider.external_host holds ONE hostname, so without this the outpost
+  # has no application for it and answers
+  #   400 {"message":"no app for hostname","host":"garage-celestia.opossum-yo.ts.net"}
+  # -- verified against celestia, luna and skystar. Lowercase ${host} and
+  # ${tailscaleDomain}: the Dockge substitution table (components/DockgeLxc.ts)
+  # has no ${TAILSCALE_DOMAIN}.
+  tailnetUrl: https://garage-${host}.${tailscaleDomain}
   icon: https://garagehq.deuxfleurs.fr/images/garage-logo.svg
   access_policy:
     groups:

@@ -19,6 +19,9 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://arcane.${ROOT_DOMAIN}/auth/oidc/callback"
+      # arcane.${tailscaleDomain} is a real router (compose.yaml), so a login
+      # started at the tailnet name comes back to the tailnet callback.
+      - url: "https://arcane.${tailscaleDomain}/auth/oidc/callback"
       - url: 'arcane-mobile://oidc-callback'
       propertyMappings:
         - email

@@ -29,6 +29,16 @@ spec:
         # invalidates existing sessions and requires updating the redirect URI
         # in the IdP. Treat this path as fixed.
         - url: https://toolhive.agents.${ROOT_DOMAIN}/api/auth/oauth2/callback/oidc
+        # On the tailnet this app is the plain `toolhive` -- NOT ${APP}
+        # (`toolhive-ui`) and not the dotted name above, which MagicDNS's flat
+        # namespace cannot express anyway. Being the human entry point, it takes
+        # the short name there; the machine-facing MCP endpoint in ../toolhive is
+        # `mcp` on the tailnet for the same reason.
+        #
+        # The ${ROOT_DOMAIN} hostname is deliberately left alone: moving it would
+        # also mean moving BETTER_AUTH_URL (./externalsecret.yaml), which
+        # better-auth bakes into its callbacks.
+        - url: https://toolhive.${TAILSCALE_DOMAIN}/api/auth/oauth2/callback/oidc
       propertyMappings:
         - email
         - openid

@@ -36,6 +36,14 @@ spec:
                   type: string
                 url:
                   type: string
+                # The app's tailnet URL, when it has one. MUST stay in step with
+                # schemas/definition.schema.json: this is a structural schema, so
+                # a field the CRD does not declare is PRUNED by the API server
+                # rather than rejected -- the definition would apply cleanly, the
+                # field would silently vanish, and stacks/applications would build
+                # no tailnet provider while everything looked healthy.
+                tailnetUrl:
+                  type: string
                 access_policy:
                   type: object
                   properties:

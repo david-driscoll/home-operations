@@ -19,6 +19,7 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://${APP}.${ROOT_DOMAIN}/login/generic_oauth"
+      - url: "https://${APP}.${TAILSCALE_DOMAIN}/login/generic_oauth"
       propertyMappings:
         - email
         - openid

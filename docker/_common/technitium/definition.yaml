@@ -18,6 +18,10 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://${CLUSTER_KEY}.dns.${ROOT_DOMAIN}:53443/sso/callback"
+      # This stack runs its own tailscale sidecar, so it joins the tailnet as
+      # `dns-<server>` in its own right -- lowercase ${tailscaleDomain}, since
+      # the Dockge substitution table has no ${TAILSCALE_DOMAIN}.
+      - url: "https://dns-${CLUSTER_KEY}.${tailscaleDomain}:53443/sso/callback"
       propertyMappings:
         - email
         - openid

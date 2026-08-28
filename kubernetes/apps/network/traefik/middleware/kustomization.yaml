@@ -10,6 +10,7 @@ resources:
   - ./github-hook-ips.yaml
   - ./authenticated-user.yaml
   - ./tailscale-user.yaml
+  - ./tailscale-local.yaml
   - ./strip-query-string.yaml
   - ./host-header.yaml
   - ./error-pages.yaml

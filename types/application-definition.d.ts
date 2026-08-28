@@ -43,6 +43,10 @@ export interface ApplicationDefinitionSchema {
     slug?: string;
     icon?: string;
     url?: string;
+    /**
+     * The application's URL on the tailnet, when it has one. authentik's ProxyProvider.external_host is a SINGLE string, so an app reached at both https://<app>.${ROOT_DOMAIN} and https://<app>.${TAILSCALE_DOMAIN} needs a second provider for the tailnet name -- without it the outpost answers 400 'no app for hostname' and the tailnet route is dead. Setting this makes components/authentik emit that twin provider and application. It cannot be derived from `url`: immich is `photos`, and a Dockge app is `<app>-<host>`. Kubernetes definitions write https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}; Dockge definitions write https://<app>-${host}.${tailscaleDomain} -- lowercase, because the Dockge substitution table has no ${TAILSCALE_DOMAIN}.
+     */
+    tailnetUrl?: string;
     description?: string;
     category: string;
     access_policy?: {

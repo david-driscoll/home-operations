@@ -31,7 +31,21 @@ spec:
       namespace: observability
   components:
     - ../../../components/failover/fast-node-eviction
+    # Replaces a hand-written ./ingress.yaml that NOTHING reconciled: it carried
+    # `ingressClassName: internal` (Traefik) together with tailscale.com/*
+    # annotations, so the Tailscale operator ignored it for having the wrong
+    # class and Traefik ignored the annotations. No `svc:thanos` was ever
+    # created and https://thanos.${TAILSCALE_DOMAIN} did not resolve at all,
+    # while `kubectl get ingress` showed it bound to the Traefik LB IP and
+    # looking healthy.
+    - ../../../components/tailscale
   postBuild:
     substitute:
       APP: thanos
       NAMESPACE: observability
+      TAILSCALE_SERVICE: thanos-query-frontend
+      TAILSCALE_PORT: http
+      # thanos.driscoll.tech is `local-user` (network gate, no SSO) on the
+      # internal route, and Thanos is queried by Grafana and by the Dockge
+      # hosts' remote-write agents, not only by browsers.
+      TAILSCALE_MIDDLEWARE: tailscale-local

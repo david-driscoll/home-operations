@@ -25,6 +25,14 @@ accessLog:
 
 # Entry points configuration
 entryPoints:
+  # `web` and `websecure` deliberately have NO `forwardedHeaders`. Unlike the
+  # cluster -- where all external traffic arrives through in-cluster cloudflared
+  # pods and the header is the only way to see a real client -- nothing in front of
+  # these two sets X-Forwarded-For on a Dockge host. Trusting it would therefore
+  # buy nothing and cost something: the userland proxy makes every connection look
+  # like the bridge gateway, so a trust rule here would let ANY client assert its
+  # own address. See the `tailscale` entrypoint below, which is loopback-bound and
+  # therefore can trust it.
   web:
     address: ":80"
     http:
@@ -43,8 +51,36 @@ entryPoints:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # The tailnet entrypoint. `tailscale serve --https=443 127.0.0.1:8443` terminates
+  # the tailnet cert and reverse-proxies cleartext here; Traefik routes on the Host
+  # header, which tailscaled preserves (`r.Out.Host = r.In.Host`, ipn/ipnlocal/serve.go).
+  #
+  # compose.yaml binds this to 127.0.0.1 ONLY, and that is what makes the
+  # `forwardedHeaders` trust below sound rather than a blanket "believe anyone".
+  # This host runs docker with EnableUserlandProxy: true, so every published-port
+  # connection is SNAT'd to the bridge gateway and Traefik logs 172.18.0.1 for
+  # LAN, tailnet and host-local traffic alike -- it cannot tell them apart by
+  # source address. Loopback-binding restores the distinction the userland proxy
+  # erases: after it, the only thing that can open a connection here is a
+  # host-local process, i.e. tailscaled.
   tailscale:
     address: ":8443"
+    # tailscaled sets X-Forwarded-For to the CLIENT's tailnet address, and Traefik
+    # discards an inbound X-Forwarded-* header unless it arrives from a trusted
+    # source -- so without this every tailnet request reaches the authentik outpost
+    # and the apps as 172.18.0.1, and the real user is unrecoverable.
+    #
+    # Note the NESTING: `forwardedHeaders` is a direct child of the entryPoint,
+    # a sibling of `address`/`http`/`transport`. Putting it under `http:` renders
+    # nothing -- that mistake is exactly what left the Kubernetes Traefik's
+    # equivalent block dead (see kubernetes/apps/network/traefik/values.yaml).
+    #
+    # The range is the docker bridge, wide because the subnet is assigned per host
+    # (172.18.0.0/16 on celestia, but Docker picks from a pool). Safe only in
+    # combination with the loopback bind above.
+    forwardedHeaders:
+      trustedIPs:
+        - 172.16.0.0/12
     http:
       middlewares:
         - compress@file

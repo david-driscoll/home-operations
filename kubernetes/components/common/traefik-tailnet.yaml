@@ -1,0 +1,55 @@
+---
+# The in-namespace handle on Traefik's `tailscale` entrypoint, so a tailnet
+# Ingress can name it as its backend.
+#
+# The Tailscale operator resolves an Ingress backend to `<ClusterIP>:<port>` and
+# rejects anything without one -- `if svc.Spec.ClusterIP == "" || ... == "None"`
+# in cmd/k8s-operator/ingress.go records a warning event and DROPS the backend,
+# leaving `"Handlers": null` in the proxy's serve config and a 404 on the tailnet
+# with nothing wrong-looking in `kubectl get ingress`. An ExternalName Service is
+# explicitly rejected by that check, which is why this is a selectorless
+# ClusterIP Service with a hand-written EndpointSlice rather than a CNAME to
+# traefik.network.svc.cluster.local.
+#
+# It lives in components/common rather than components/tailscale because common
+# is applied ONCE PER NAMESPACE (from kubernetes/apps/<ns>/kustomization.yaml,
+# which sets `namespace:`), whereas components/tailscale is applied once per APP
+# -- 44 Kustomizations would each claim this same object and fight over it.
+#
+# ${INTERNAL_IP} is Traefik's pinned LoadBalancer address, the same value that
+# apps/network/traefik/values.yaml hands Cilium as `io.cilium/lb-ipam-ips`. It is
+# a cluster-secrets key and cluster-apps substitutes it (flux/cluster/ks.yaml).
+# A pod dialling it hairpins back through Cilium's LB to the Traefik pods; the
+# Traefik POD ips are deliberately not used here, since they churn on every
+# rollout and nothing would rewrite this slice.
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-tailnet
+  labels:
+    app.kubernetes.io/name: traefik-tailnet
+spec:
+  type: ClusterIP
+  ports:
+    - name: tailscale
+      port: 8443
+      targetPort: 8443
+      protocol: TCP
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: traefik-tailnet
+  labels:
+    kubernetes.io/service-name: traefik-tailnet
+    app.kubernetes.io/name: traefik-tailnet
+addressType: IPv4
+ports:
+  - name: tailscale
+    port: 8443
+    protocol: TCP
+endpoints:
+  - addresses:
+      - "${INTERNAL_IP}"
+    conditions:
+      ready: true

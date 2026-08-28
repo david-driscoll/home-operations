@@ -1,15 +1,22 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# The per-device egress Services (proxmox-*, pbs-*, dns-*, dockge-luna,
+# dockge-skystar, ...) are NOT here any more. They are created by
+# stacks/unifi-network/tailnet-egress.ts, from the same Tailscale device list and
+# the same `Tailscale.ports.*` constants that build the ACL, so a forwarded port
+# and its grant cannot drift apart.
+#
+# What stays is what a bare-metal recovery must not need Pulumi for, plus the
+# static rules:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  # Hand-written tailnet services (tsidp).
   - ./tailscale.yaml
+  # Generic blackbox recording rules and alerts. Not device-derived.
   - ./prometheusrule.yaml
-  - ./alpha-site.yaml
-  - ./as.yaml
-  - ./celestia.yaml
-  - ./equestria.yaml
-  - ./luna.yaml
-  - ./skystar.yaml
-  - ./twilight-sparkle.yaml
+  # The seal path: dockge-as and dockge-celestia. See the file header.
+  - ./bootstrap.yaml
+  # The kube-apiserver hop the Pulumi operator itself dials. See the file header.
   - ./equestria-kubeproxy.yaml

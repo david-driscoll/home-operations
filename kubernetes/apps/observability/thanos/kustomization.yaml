@@ -6,7 +6,6 @@ resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
   - ./definition.yaml
-  - ./ingress.yaml
 configMapGenerator:
 - name: thanos-ruler
   files:

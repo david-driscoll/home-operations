@@ -48,6 +48,10 @@ spec:
     - ../../../../components/volsync
   postBuild:
     substitute:
+      # pinepods' Service port is UNNAMED, so the component's `http` default
+      # matched nothing and the tailnet name 404'd -- the same silent failure
+      # dynacat hit, by a different route. Ports may be given by number.
+      TAILSCALE_PORT: "8040"
       APP: *app
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 10Gi

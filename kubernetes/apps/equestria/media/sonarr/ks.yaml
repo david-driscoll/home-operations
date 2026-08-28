@@ -51,10 +51,20 @@ spec:
     # ./postgres-databases/; needs POSTGRES_APP_PATH below.
     - ../../../../components/postgres/databases
     - ../../../../components/tailscale
+    - ../../../../components/tailscale/api-key
+    # The same carve-out on the LAN route. See that component: the rule the
+    # app used to hand-write in helmrelease.yaml lives there now.
+    - ../../../../components/route/api-key
     - ../../../../components/volsync
     - ../../../../components/failover/fast-node-eviction
   postBuild:
     substitute:
+      # Browsers take the authentik chain, mirroring this app's internal
+      # HTTPRoute. Requests carrying X-Api-Key/?apikey skip it via the
+      # components/tailscale/api-key component above -- the same carve-out the
+      # internal route makes, so API clients (nzb360, LunaSea, scripts) keep
+      # working over the tailnet.
+      TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       # Where components/postgres/databases looks for this app's extra
       # Database manifests -- it appends `/postgres-databases`. The anchor

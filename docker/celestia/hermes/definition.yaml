@@ -25,6 +25,9 @@ spec:
         # Any other path fails fast at login with a confusing error, so this
         # value is not free-form.
         - url: "https://hermes.${searchDomain}/auth/callback"
+        # Same path constraint as above, under the tailnet name that
+        # compose.yaml's hermes-tailscale router serves.
+        - url: "https://hermes.${tailscaleDomain}/auth/callback"
       propertyMappings:
         - email
         - openid

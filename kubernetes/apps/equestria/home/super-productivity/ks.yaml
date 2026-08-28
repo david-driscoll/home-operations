@@ -29,5 +29,9 @@ spec:
     - ../../../../components/tailscale
   postBuild:
     substitute:
+      # Mirrors this app's internal HTTPRoute, which gates every path behind
+      # authentik with no API carve-out -- so this app deliberately does NOT add
+      # components/tailscale/api-key.
+      TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace

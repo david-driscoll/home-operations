@@ -74,32 +74,96 @@ ports:
   traefik:
     expose:
       default: true
+  # ---- forwardedHeaders / proxyProtocol: FIXED, see below -----------------
+  #
+  # Both used to sit under `http:` on `web` and `websecure`. The chart reads
+  # `ports.<name>.forwardedHeaders` and `ports.<name>.proxyProtocol` ONE LEVEL UP
+  # -- traefik/templates/_podtemplate.tpl renders `$config.forwardedHeaders`, not
+  # `$config.http.forwardedHeaders` -- so neither had ever reached Traefik.
+  # Rendering the chart and dumping the container args showed ZERO
+  # `--entryPoints.*.forwardedHeaders.*` and ZERO `--entryPoints.*.proxyProtocol.*`.
+  # Same silently-dead shape as the `deployment.tolerations` note at the top.
+  #
+  # What that cost: with no trusted proxy, Traefik STRIPS an inbound
+  # X-Forwarded-For and rewrites it from the connection. Every external request
+  # arrives through the in-cluster cloudflare-tunnel pods, so the "client" seen
+  # downstream was a pod IP -- which is precisely the failure the crowdsec plugin's
+  # `forwardedHeadersTrustedIPs` block says it exists to prevent
+  # (middleware/crowdsec.yaml). Real client attribution for external traffic has
+  # therefore been broken for as long as this has been mis-nested.
+  #
+  # `insecure: true` is NOT carried over. It means "believe a forwarded header from
+  # ANY source", and crowdsec's `clientTrustedIPs` skips the bouncer entirely for
+  # 10.0.0.0/8 -- so an external client that could forge `X-Forwarded-For: 10.x`
+  # would opt itself out of CrowdSec. The trusted set is instead the only things
+  # that are actually proxies here: the cluster's own pod and service networks,
+  # which is where cloudflared runs (verified: 10.206.1.88 / 10.206.3.218).
+  # Narrowing from "trust nobody" to "trust the cluster" is monotonic -- no request
+  # that works today can start failing.
+  #
+  # proxyProtocol is DELETED rather than relocated. Nothing in the estate speaks
+  # it -- the only mention anywhere was this file -- and turning it on when no
+  # upstream sends a PROXY header changes how the connection itself is framed and
+  # takes the ingress down. Dead config that is dangerous to revive is better
+  # removed than moved.
   web:
     port: 80
     exposedPort: 80
+    forwardedHeaders: &forwarded-headers
+      trustedIPs:
+        - "${CLUSTER_NETWORK}"
+        - "${SERVICE_NETWORK}"
     http:
       redirections:
         entryPoint:
           to: websecure
           scheme: https
           permanent: true
-      forwardedHeaders: &protocol-settings
-        insecure: true
-        trustedIPs:
-          - "${CLUSTER_NETWORK}"
-          - "${SERVICE_NETWORK}"
-          - 10.0.0.0/8
-          - 192.168.0.0/16
-          - 100.64.0.0/10
-      proxyProtocol: *protocol-settings
   websecure:
     port: 443
     exposedPort: 443
+    forwardedHeaders: *forwarded-headers
     http:
       tls:
         enabled: true
-      forwardedHeaders: *protocol-settings
-      proxyProtocol: *protocol-settings
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
+  # The tailnet entrypoint. Every name under the tailnet domain lands here, so that
+  # tailnet traffic gets the same Traefik treatment as everything else instead of
+  # being proxied straight at a pod. Modelled on the `tailscale` entrypoint in
+  # docker/_common/traefik/config.yaml, which has been carrying the Dockge hosts'
+  # tailnet routes on this same port for months.
+  #
+  # PLAIN HTTP ON PURPOSE -- no `http.tls` and no `redirections`. tailscaled owns
+  # the TLS: `tailscale serve --https=443` terminates with the tailnet cert and
+  # reverse-proxies cleartext here. Adding the websecure-style redirect would send
+  # the client back to https://<same-host>, which tailscaled serves, which proxies
+  # here again -- an infinite loop rather than a broken page.
+  #
+  # `expose.default: true` is load-bearing: the Tailscale operator resolves an
+  # Ingress backend to `<ClusterIP>:<port>` and rejects a Service that does not
+  # carry the port (cmd/k8s-operator/ingress.go), and the per-namespace
+  # `traefik-tailnet` EndpointSlice in components/common targets this port on the
+  # LoadBalancer address pinned by `service.annotations` above. Reaching it from
+  # the LAN is the same posture as :443 -- every router on this entrypoint carries
+  # the tailscale-user or tailscale-local chain.
+  tailscale:
+    port: 8443
+    exposedPort: 8443
+    protocol: TCP
+    expose:
+      default: true
+    # Same key and same trusted set as web/websecure above, and load-bearing here:
+    # tailscaled sets X-Forwarded-For to the CLIENT's tailnet address
+    # (ipn/ipnlocal/serve.go), and network/tailscale-network reads it at
+    # ipStrategy.depth 1 to assert the request came off the tailnet. Traefik only
+    # preserves an inbound X-Forwarded-* header from a trusted source, so without
+    # this the header is dropped and that middleware fails closed on every request.
+    #
+    # The tailnet-outbound proxy pods sit in the cluster pod network, so the
+    # shared anchor already covers them exactly.
+    forwardedHeaders: *forwarded-headers
     transport:
       respondingTimeouts:
         readTimeout: "0s"
