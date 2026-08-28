@@ -47,3 +47,30 @@ spec:
       APP: *app
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 12Gi
+      # Per-app unlock, which is what ../../../../components/volsync/replicationsource.yaml
+      # says to use for a single repository ("to do one app only, set
+      # VOLSYNC_UNLOCK in that app's ks.yaml"). romm was the ONLY repository
+      # holding a stranded lock, so the estate-wide default is deliberately left
+      # where it is rather than bumped for one app.
+      #
+      # What happened, from the mover's own event stream on 2026-08-27:
+      #
+      #   14:03:40  SuccessfulAttachVolume   (after FailedAttachVolume x8)
+      #   14:04:24  Started: container restic
+      #   14:04:25  Killing: Stopping container restic
+      #   14:04:25  FailedAttachVolume: Waiting for detach for volume ...
+      #
+      # restic came up on kerfuffle after a long attach thrash, took the
+      # repository lock, and was killed ONE SECOND later while the volume was
+      # still being fought over. Every run since then backed up correctly --
+      # `snapshot ... saved` -- and then failed on `forget`, so this was never a
+      # backup outage, it was a RETENTION outage with the mover pod in Error on a
+      # ~2 minute loop for 13 hours.
+      #
+      # Note it is not the prune being too slow, even though the run that died
+      # was the 14-day prune (lastPruned 2026-08-13T14:04:24Z + 14d lands within
+      # two seconds of the lock). The kill came one second in, before any prune
+      # work happened. There is no 14-day recurrence to design around; the
+      # trigger was the Longhorn attach/detach race, and the stale lock is the
+      # ordinary consequence the component already describes.
+      VOLSYNC_UNLOCK: 2026-08-27-romm-lock-stranded-by-longhorn-attach-race
