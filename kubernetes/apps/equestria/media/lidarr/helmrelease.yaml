@@ -157,24 +157,6 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
-          - matches:
-              - headers:
-                  - name: X-Api-Key
-                    value: ".*"
-                    type: RegularExpression
-              - queryParams:
-                  - name: apikey
-                    value: ".*"
-                    type: RegularExpression
-            backendRefs:
-              - identifier: app
-                port: *port
-            filters:
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: local-user
           - backendRefs:
               - identifier: app
                 port: *port

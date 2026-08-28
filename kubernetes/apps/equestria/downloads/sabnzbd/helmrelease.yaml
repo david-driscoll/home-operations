@@ -116,6 +116,12 @@ spec:
           - "${APP}.${ROOT_DOMAIN}"
         kind: HTTPRoute
         rules:
+          # HAND-WRITTEN, and deliberately NOT components/route/api-key.
+          #
+          # That component matches `X-Api-Key` OR `?apikey`. sabnzbd's API takes
+          # the QUERY PARAM only, so adopting it would widen the carve-out: a
+          # request carrying an `X-Api-Key` header would start skipping authentik
+          # for a header sabnzbd does not read. Narrower is the point.
           - matches:
               - queryParams:
                   - name: apikey

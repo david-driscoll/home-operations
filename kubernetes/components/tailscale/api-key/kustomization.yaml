@@ -15,6 +15,14 @@
 # path identical to the LAN path, which is the property the whole tailnet
 # component set is built around.
 #
+# The LAN-side twin is ../../route/api-key, and the two matchers are NOT quite
+# identical for two apps. This one matches `X-Api-Key` OR `?apikey`; questarr
+# (header only) and sabnzbd (query only) keep NARROWER hand-written rules on their
+# internal HTTPRoute. Leaving them on the union here is deliberate and safe in a
+# way it would not be on the LAN: the extra condition only skips the authentik hop
+# for a key the app does not read and will reject itself, and the tailnet path had
+# no gate at all before this branch -- so it is still strictly tighter than it was.
+#
 # Pointless on an app whose base route is already `tailscale-local`: the carve-out
 # would route to the same middleware the catch-all does. It is only meaningful
 # alongside `TAILSCALE_MIDDLEWARE: tailscale-user`.

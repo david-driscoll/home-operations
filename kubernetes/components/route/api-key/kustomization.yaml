@@ -1,0 +1,72 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Let API clients reach an app on its INTERNAL route without the authentik hop.
+# The LAN-side twin of ../../tailscale/api-key, which does the same thing for the
+# tailnet route. Add it to the app's `spec.components`:
+#
+#   components:
+#     - ../../../../components/route/api-key
+#
+# It prepends one rule to `spec.values.route.internal.rules`: a request carrying
+# `X-Api-Key` or `?apikey` is an API request and takes `local-user` (network gate,
+# no SSO), because the app authenticates the key itself and no API client can
+# follow a login redirect. Everything else falls through to whatever rules the app
+# already declares -- normally a catch-all on `authenticated-user`.
+#
+# The app therefore only writes its own catch-all. Six apps (radarr, sonarr,
+# lidarr, mylar, questarr, sabnzbd) each hand-wrote this same 20-line rule.
+#
+# PREPENDED, not appended: Gateway API rule order decides which filter chain
+# runs, and the carve-out has to be evaluated before the catch-all or it never
+# matches. `path: .../rules/0` is what puts it first.
+#
+# JSON6902, NOT a strategic merge setting `route.internal.rules`. A HelmRelease is
+# a CRD with no Go schema, so kustomize applies a JSON MERGE patch and a list
+# REPLACES rather than merges -- a merge patch here would silently delete the
+# app's own catch-all and leave every path ungated. Same trap, same reasoning as
+# ../../postgres/superuser.
+#
+# Two things it deliberately does NOT specify, both resolved by the chart
+# (app-template 5.1.0, charts/common/templates/classes/_route.tpl):
+#   * the backend PORT -- omitted, so it falls back to the Service's primary port
+#     ("Default to the Service primary port if no port has been specified"). That
+#     keeps the per-app port out of this file entirely.
+#   * the middleware NAMESPACE -- an HTTPRoute ExtensionRef resolves in the
+#     ROUTE's own namespace, which is exactly why components/common/middleware.yaml
+#     puts a `local-user` alias in every namespace.
+#
+# Assumes the app has a `route.internal` with a `rules` list and a service
+# identified as `app`. If it does not, kustomize fails loudly with "no matches
+# for path" rather than silently skipping -- which is the behaviour we want.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+    patch: |-
+      - op: add
+        path: /spec/values/route/internal/rules/0
+        value:
+          matches:
+            # Two match entries, not one with two conditions: entries in
+            # `matches` are OR'd, conditions WITHIN an entry are AND'd. The *arr
+            # apps accept the key either way round, so this has to be an OR.
+            - headers:
+                - name: X-Api-Key
+                  value: ".*"
+                  type: RegularExpression
+            - queryParams:
+                - name: apikey
+                  value: ".*"
+                  type: RegularExpression
+          backendRefs:
+            - identifier: app
+          filters:
+            - type: ExtensionRef
+              extensionRef:
+                group: traefik.io
+                kind: Middleware
+                name: local-user

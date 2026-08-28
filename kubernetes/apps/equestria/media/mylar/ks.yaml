@@ -34,6 +34,9 @@ spec:
   components:
     - ../../../../components/tailscale
     - ../../../../components/tailscale/api-key
+    # The same carve-out on the LAN route. See that component: the rule the
+    # app used to hand-write in helmrelease.yaml lives there now.
+    - ../../../../components/route/api-key
     - ../../../../components/volsync
     - ../../../../components/failover/fast-node-eviction
   postBuild:
