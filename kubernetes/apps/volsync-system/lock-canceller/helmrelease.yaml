@@ -82,17 +82,12 @@ spec:
                   name: lock-canceller-restic-secret
             command:
               - /bin/sh
-              # The script is a ConfigMap, not an inline `args` block, and that
-              # is load-bearing: Flux postBuild envsubst runs over every manifest
-              # in this Kustomization, so an inline `${STALE_MINUTES}` is read as a
-              # substitution variable and fails the whole build in strict mode.
-              # ../../pulumi/lock-canceller solves the same problem by stamping
-              # `kustomize.toolkit.fluxcd.io/substitute: disabled` on its CronJob;
-              # that annotation is per-resource and all-or-nothing, so it cannot go
-              # here -- the persistence block below genuinely needs ${SPIKE_IP} and
-              # ${CLUSTER_CNAME} substituted. Splitting the script into its own
-              # annotated ConfigMap keeps both halves working, and keeps future
-              # edits to the shell out of the substitution path for good.
+              # ./unlock-stale-locks.sh, reaching the pod through the
+              # configMapGenerator in kustomization.yaml. It is NOT an inline
+              # `args` block, and that is load-bearing rather than tidiness --
+              # Flux envsubst would read the script's shell parameter
+              # expansions as substitution variables and fail the build. See the generator's
+              # `options` for the full reasoning; do not inline it back.
               - /script/unlock-stale-locks.sh
             resources:
               requests:
