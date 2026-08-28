@@ -1,0 +1,95 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The app's tailnet Ingress, rendered into the `network` namespace where Traefik's
+# Service lives.
+#
+# WHY A NESTED KUSTOMIZATION AND NOT A PLAIN RESOURCE IN THIS COMPONENT:
+# exactly the reason ../postgres/ks.yaml gives. The Tailscale operator resolves an
+# Ingress backend to `<ClusterIP>:<port>` and requires that Service in the
+# INGRESS's own namespace -- an ExternalName is rejected outright
+# (cmd/k8s-operator/ingress.go). Traefik's Service is in `network`, and a
+# component rendered into the app's build cannot put anything there: Flux's
+# `targetNamespace` is Kustomize's namespace transformer and OVERRIDES an
+# explicitly-set `metadata.namespace`. So the component emits this Kustomization
+# instead -- the object lands in the app's namespace, and `spec.targetNamespace`
+# below puts the Ingress in `network`.
+#
+# WHAT THE FIRST ATTEMPT DID INSTEAD, AND WHY IT FAILED:
+# it kept the Ingress in the app's namespace and gave every namespace a
+# selectorless `traefik-tailnet` Service whose EndpointSlice pointed at Traefik's
+# LoadBalancer IP. That rendered cleanly, reported `ready: true`, and routed
+# nothing -- all 37 tailnet hosts were dead. Measured from the tailnet-outbound
+# proxy pod:
+#
+#   traefik ClusterIP  10.196.124.201:8443   -> 404 from Traefik  (reachable)
+#   traefik POD IP     10.206.0.164:8443     -> 404 from Traefik  (reachable)
+#   LoadBalancer IP    10.10.206.101:8443    -> 404 from Traefik  (reachable)
+#   stub -> EndpointSlice(LoadBalancer IP)   -> TIMEOUT
+#   stub -> EndpointSlice(traefik ClusterIP) -> TIMEOUT
+#   stub -> EndpointSlice(traefik POD IP)    -> 404 from Traefik  (works)
+#
+# Cilium will not chain one service VIP as the backend of another. Both VIPs are
+# reachable DIRECTLY from a pod and neither works as a Service BACKEND; only real
+# pod IPs do, and those churn on every Traefik rollout with nothing to maintain
+# them. Naming Traefik's real Service is the only stable answer, and this is how
+# an app-scoped component gets to do that.
+#
+# `decryption` and `substituteFrom` are spelled out rather than inherited, for the
+# same reason ../postgres/ks.yaml spells them out: `components/common` patches
+# every Kustomization with them, but it is applied by the UMBRELLA kustomization
+# (kubernetes/apps/<group>/kustomization.yaml), and a Kustomization emitted by a
+# component of an APP never passes through it. Without them ${TAILSCALE_DOMAIN}
+# and friends resolve to nothing, silently.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  # NOT named after the target namespace. A nested ks named `${APP}-network`
+  # would self-prune; see the estate note on child-ks naming.
+  name: ${APP}-tailnet-ingress
+spec:
+  targetNamespace: network
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ${APP}
+      driscoll.dev/name: ${APP}
+  path: ./kubernetes/components/tailscale/ingress
+  # Both are about the BACKEND existing before the operator tries to resolve it.
+  # It fails silently when it cannot -- a warning event, `"Handlers": null` in the
+  # proxy's serve config, and a 404 on the tailnet while `kubectl get ingress`
+  # looks perfectly healthy.
+  dependsOn:
+    - name: traefik
+      namespace: network
+    - name: tailscale-operator
+      namespace: tailscale-system
+  prune: true
+  # `false`: most app ks set `wait: true`, and gating an app's readiness on a
+  # tailnet VIP would make Traefik and the Tailscale operator hard dependencies
+  # of every app that publishes one.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substitute:
+      APP: ${APP}
+      # Resolved by the PARENT before this document is applied, so the `:=`
+      # default is evaluated there and this always carries a literal host.
+      TAILSCALE_HOST: ${TAILSCALE_HOST:=${APP}}
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+      - name: cluster-versions
+        kind: ConfigMap
+      - name: shared-secrets
+        kind: Secret
