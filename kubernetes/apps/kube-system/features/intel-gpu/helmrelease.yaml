@@ -10,8 +10,18 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.34.1
-  url: oci://ghcr.io/home-operations/charts-mirror/intel-device-plugins-gpu
+    tag: 0.36.0
+  # Repointed off ghcr.io/home-operations/charts-mirror for the same reason as
+  # the operator — see the long note in ../intel/helmrelease.yaml. Short version:
+  # home-operations deleted both intel charts from the mirror on 2025-12-11
+  # ("Official OCI chart exists upstream"), the mirror tops out at 0.34.1, and
+  # its prune window for the surviving tags is already overdue.
+  #
+  # 0.34.1 was also outside its supported Kubernetes window: upstream maps
+  # release-0.34 to k8s 1.33-1.34, release-0.36 to 1.36, and this cluster runs
+  # v1.36.4 (versions.env). So this is a support-alignment fix as much as a
+  # feature bump.
+  url: oci://ghcr.io/intel/helm-charts/intel-device-plugins-gpu
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
 #
@@ -50,6 +60,42 @@ spec:
   maxHistory: 3
   interval: 1h
   timeout: 10m
+  # The real "is the plugin serving?" gate. It has to live HERE, not on
+  # features/intel-gpu/ks.yaml, and the distinction is not academic.
+  #
+  # Flux evaluates a Kustomization's `wait` / `healthCheckExprs` only over the
+  # objects in its own inventory. That inventory is exactly three entries --
+  # these two HelmReleases and the OCIRepository (verified against the live
+  # Kustomization status). The GpuDevicePlugin CR is rendered by HELM, so the
+  # CEL expression in ks.yaml never matches anything and is silently inert.
+  #
+  # Falling back to HelmRelease readiness does not help either: this chart's
+  # only object IS the GpuDevicePlugin CR, and Helm's ReadyChecker has no
+  # waiter for an unknown custom kind, so the release reports Ready the instant
+  # the CR is written -- before the operator has turned it into a DaemonSet,
+  # before the pods roll onto the new image, and before kubelet has swapped the
+  # advertised monitoring resource. Consumers gated on that would be released
+  # into exactly the window they were gated to avoid.
+  #
+  # `inProgress` rather than the `failed:` form used in ks.yaml: for a
+  # HelmRelease, `desiredNumberScheduled != numberReady` is true during any
+  # normal rolling update, so as a failure condition it would abort the wait
+  # immediately instead of waiting it out. The has() guard covers the first
+  # create, when the status subresource is still empty.
+  #
+  # Residual race, accepted: GpuDevicePlugin status carries no
+  # observedGeneration, so in the instant after the operator sees a patched CR
+  # but before it patches the DaemonSet, status still reports N/N from the OLD
+  # pods. This closes most of the window, not all of it.
+  healthCheckExprs:
+    - apiVersion: deviceplugin.intel.com/v1
+      kind: GpuDevicePlugin
+      current: >-
+        has(status.numberReady) && status.desiredNumberScheduled > 0
+        && status.desiredNumberScheduled == status.numberReady
+      inProgress: >-
+        !has(status.numberReady)
+        || status.desiredNumberScheduled != status.numberReady
   install:
     createNamespace: true
     replace: true
@@ -71,6 +117,35 @@ spec:
     name: intel-gpu-plugin
     # This release owns the cluster's NodeFeatureRules -- see the block above.
     nodeFeatureRule: true
+    # THE BREAKING CHANGE IN 0.36.0, made explicit.
+    #
+    # 0.36.0 replaces the per-KMD monitoring resources with a single combined
+    # one (upstream PR #2244). `single` advertises `gpu.intel.com/monitoring`;
+    # `split` restores `gpu.intel.com/i915_monitoring` + `.../xe_monitoring`,
+    # which the 0.36.0 README now marks Deprecated.
+    #
+    # `single` is already the chart default, so this line changes nothing
+    # functionally -- it is written out because the alternative is a silent,
+    # invisible dependency. Nothing in a one-line OCIRepository tag bump hints
+    # that a pod in a DIFFERENT directory
+    # (observability/intel-gpu-exporter/helmrelease.yaml) loses the resource it
+    # requests and goes Pending on all five Intel nodes. Naming the mode here
+    # puts the cause next to something greppable.
+    #
+    # `split` was the tempting choice -- zero change to the exporter -- and is
+    # deliberately NOT taken. It is deprecated upstream, so it only defers this
+    # migration, and it re-pins the estate to the i915 KMD: the split names are
+    # derived from the driver, so an i915 -> xe switch silently renames the
+    # resource to `xe_monitoring` and breaks the exporter exactly the same way.
+    # The combined name is KMD-independent and survives that.
+    #
+    # Values are case-sensitive and validated in the plugin's checkBasics():
+    # anything other than `split` or `single` is a klog.Fatal, i.e. a
+    # CrashLoopBackOff of the DaemonSet that advertises GPUs cluster-wide, not a
+    # soft fallback. Do not set it to "" either -- the CRD enum has no empty
+    # member and the chart interpolates unquoted, so it renders as null and the
+    # API server rejects it. Omit the key or give it a real value.
+    monitoringMode: single
     # Two containers per GPU across three control planes, so six slots.
     #
     # Three claims have to fit here when the media workers are shed overnight:
@@ -127,6 +202,42 @@ spec:
   maxHistory: 3
   interval: 1h
   timeout: 10m
+  # The real "is the plugin serving?" gate. It has to live HERE, not on
+  # features/intel-gpu/ks.yaml, and the distinction is not academic.
+  #
+  # Flux evaluates a Kustomization's `wait` / `healthCheckExprs` only over the
+  # objects in its own inventory. That inventory is exactly three entries --
+  # these two HelmReleases and the OCIRepository (verified against the live
+  # Kustomization status). The GpuDevicePlugin CR is rendered by HELM, so the
+  # CEL expression in ks.yaml never matches anything and is silently inert.
+  #
+  # Falling back to HelmRelease readiness does not help either: this chart's
+  # only object IS the GpuDevicePlugin CR, and Helm's ReadyChecker has no
+  # waiter for an unknown custom kind, so the release reports Ready the instant
+  # the CR is written -- before the operator has turned it into a DaemonSet,
+  # before the pods roll onto the new image, and before kubelet has swapped the
+  # advertised monitoring resource. Consumers gated on that would be released
+  # into exactly the window they were gated to avoid.
+  #
+  # `inProgress` rather than the `failed:` form used in ks.yaml: for a
+  # HelmRelease, `desiredNumberScheduled != numberReady` is true during any
+  # normal rolling update, so as a failure condition it would abort the wait
+  # immediately instead of waiting it out. The has() guard covers the first
+  # create, when the status subresource is still empty.
+  #
+  # Residual race, accepted: GpuDevicePlugin status carries no
+  # observedGeneration, so in the instant after the operator sees a patched CR
+  # but before it patches the DaemonSet, status still reports N/N from the OLD
+  # pods. This closes most of the window, not all of it.
+  healthCheckExprs:
+    - apiVersion: deviceplugin.intel.com/v1
+      kind: GpuDevicePlugin
+      current: >-
+        has(status.numberReady) && status.desiredNumberScheduled > 0
+        && status.desiredNumberScheduled == status.numberReady
+      inProgress: >-
+        !has(status.numberReady)
+        || status.desiredNumberScheduled != status.numberReady
   install:
     createNamespace: true
     replace: true
@@ -150,6 +261,14 @@ spec:
     # release above; setting this true would make two releases fight over the
     # same two fixed-name cluster-scoped objects.
     nodeFeatureRule: false
+    # MUST match the control-plane release above. The monitoring resource is
+    # advertised per node by whichever DaemonSet owns that node, and these two
+    # releases own disjoint halves of the fleet (46d4 control planes, 46a6
+    # workers). Setting this on only one release would leave the other half
+    # advertising the other resource name -- so the exporter would schedule on
+    # two or three nodes and sit Pending on the rest. See the full rationale on
+    # the control-plane release above.
+    monitoringMode: single
     # Three containers per GPU. Currently claimed on these nodes: jellyfin and
     # dispatcharr on fluttershy, plex on kerfuffle.
     sharedDevNum: 3

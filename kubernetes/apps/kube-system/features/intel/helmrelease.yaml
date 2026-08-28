@@ -10,10 +10,51 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 0.34.1
-  url: oci://ghcr.io/home-operations/charts-mirror/intel-device-plugins-operator
+    tag: 0.36.0
+  # REPOINTED off ghcr.io/home-operations/charts-mirror, which no longer carries
+  # this chart. home-operations deprecated and DELETED both intel-device-plugins
+  # charts on 2025-12-11 (charts-mirror PRs #358/#359) with the reason "Official
+  # OCI chart exists upstream", and the mirror is an opt-in allowlist — no
+  # apps/intel-*/metadata.yaml means it will never be republished. Its tag list
+  # stops at 0.34.1, so Renovate has had nothing to offer here for months and
+  # the pin was quietly frozen rather than current.
+  #
+  # This is also why the move is not optional: the mirror's post-deprecation
+  # prune window closed around 2026-06-11 and is overdue, so the 0.34.1 tag this
+  # repo pinned can be deleted at any time — that would break the EXISTING
+  # deployment, not just a future bump.
+  #
+  # Upstream publishes the identical artifact (same config/layer mediaTypes, so
+  # the layerSelector above needs no change) and the 0.34.1 tarballs are
+  # byte-identical in content between mirror and upstream — a URL-only swap is a
+  # provable no-op. No digest pin: .github/renovate.json5 disables pinDigest for
+  # the flux manager, so a hand-written digest would go stale unmaintained.
+  url: oci://ghcr.io/intel/helm-charts/intel-device-plugins-operator
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+#
+# VERSION LOCKSTEP WITH THE GPU PLUGIN — do not bump this file alone.
+#
+# The operator carries an ImageMinVersion that tracks its own release (0.34.0 at
+# operator 0.34.1, 0.36.0 at operator 0.36.0) and enforces it through the
+# `vgpudeviceplugin.kb.io` validating webhook, which has failurePolicy: Fail.
+# Bumping the operator while features/intel-gpu still renders the 0.34.1 plugin
+# image gets the GpuDevicePlugin CR write REJECTED with `version "0.34.1" is too
+# low`, and both GPU HelmReleases fail into remediation/rollback.
+#
+# The reverse skew fails silently, which is worse: bumping features/intel-gpu
+# alone leaves the 0.34.1 CRD in place, and a structural CRD PRUNES the unknown
+# `spec.monitoringMode` field without any error. Helm and Flux both report
+# success and the setting simply never takes effect.
+#
+# This release is the one that actually updates the CRD: the operator chart
+# ships all ten CRDs under `crds/`, which is what Flux's `upgrade.crds:
+# CreateReplace` acts on. The gpu chart ships none, so the same setting over
+# there is dead config.
+#
+# Ordering between the two is already correct and does not rely on luck:
+# features/intel-gpu/ks.yaml has `dependsOn: intel-device-plugin-operator`.
+#
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
