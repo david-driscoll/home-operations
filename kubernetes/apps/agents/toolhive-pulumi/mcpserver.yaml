@@ -13,6 +13,9 @@
 # stacks/applications, ...) -- the MCP tool surface itself takes a
 # stack/working-directory argument per call rather than this server being
 # scoped to one, same as running `pulumi` by hand from any stacks/* dir.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../toolhive-agent-tools's MCPGroup instead.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
@@ -22,6 +25,8 @@ spec:
   transport: stdio
   proxyPort: 8080
   proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
 
   podTemplateSpec:
     spec:
@@ -46,16 +51,6 @@ spec:
                 secretKeyRef:
                   name: github-token
                   key: token
-
-  authServerRef:
-    kind: MCPExternalAuthConfig
-    name: toolhive
-  oidcConfigRef:
-    name: ${APP}
-    audience: https://pulumi-mcp.agents.${ROOT_DOMAIN}/mcp
-    resourceUrl: https://pulumi-mcp.agents.${ROOT_DOMAIN}/mcp
-
-  trustProxyHeaders: true
 
   resources:
     requests:

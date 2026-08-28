@@ -1,9 +1,0 @@
----
-apiVersion: toolhive.stacklok.dev/v1beta1
-kind: MCPOIDCConfig
-metadata:
-  name: ${APP}
-spec:
-  type: inline
-  inline:
-    issuer: https://toolhive.${ROOT_DOMAIN}

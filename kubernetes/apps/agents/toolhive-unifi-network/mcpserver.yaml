@@ -15,6 +15,9 @@
 # `transport: stdio` because the package itself speaks stdio (see this repo's
 # own .mcp.json, which runs it as `uvx unifi-network-mcp` today) -- the
 # operator's proxy-runner is what turns that into Streamable HTTP.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../toolhive-agent-tools's MCPGroup instead.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
@@ -24,6 +27,8 @@ spec:
   transport: stdio
   proxyPort: 8080
   proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
 
   env:
     - name: UNIFI_NETWORK_HOST
@@ -56,16 +61,6 @@ spec:
           volumeMounts:
             - name: uv-cache
               mountPath: /tmp
-
-  authServerRef:
-    kind: MCPExternalAuthConfig
-    name: toolhive
-  oidcConfigRef:
-    name: ${APP}
-    audience: https://unifi-network-mcp.agents.${ROOT_DOMAIN}/mcp
-    resourceUrl: https://unifi-network-mcp.agents.${ROOT_DOMAIN}/mcp
-
-  trustProxyHeaders: true
 
   resources:
     requests:

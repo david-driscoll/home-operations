@@ -15,9 +15,10 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    # `toolhive`, for the shared MCPExternalAuthConfig this server's
-    # authServerRef points at -- same reasoning as ../toolhive-docs/ks.yaml.
-    - name: toolhive
+    # `toolhive-agent-tools`, for the MCPGroup this server's `groupRef`
+    # names. Not `toolhive` directly -- this server carries no
+    # authServerRef/oidcConfigRef of its own any more (see mcpserver.yaml).
+    - name: toolhive-agent-tools
       namespace: *namespace
   path: ./kubernetes/apps/agents/toolhive-kubernetes
   prune: true

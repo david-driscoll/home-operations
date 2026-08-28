@@ -1,7 +1,10 @@
 ---
 # No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
 # Same shape as ../toolhive-unifi-network/mcpserver.yaml -- see that file's
-# header for the `uv` image / podTemplateSpec-command reasoning.
+# header for the `uv` image / podTemplateSpec-command reasoning, and
+# ../toolhive-kubernetes/mcpserver.yaml's for why there is no
+# oidcConfigRef/authServerRef (this server joins ../toolhive-agent-tools's
+# MCPGroup instead).
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
@@ -11,6 +14,8 @@ spec:
   transport: stdio
   proxyPort: 8080
   proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
 
   env:
     - name: UNIFI_PROTECT_HOST
@@ -38,16 +43,6 @@ spec:
           volumeMounts:
             - name: uv-cache
               mountPath: /tmp
-
-  authServerRef:
-    kind: MCPExternalAuthConfig
-    name: toolhive
-  oidcConfigRef:
-    name: ${APP}
-    audience: https://unifi-protect-mcp.agents.${ROOT_DOMAIN}/mcp
-    resourceUrl: https://unifi-protect-mcp.agents.${ROOT_DOMAIN}/mcp
-
-  trustProxyHeaders: true
 
   resources:
     requests:

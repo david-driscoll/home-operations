@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# Gatus only, no `authentik:` block -- same reasoning as
+# ../toolhive-registry/definition.yaml: this endpoint authenticates through
+# the SHARED embedded auth server (./virtualmcpserver.yaml's
+# incomingAuth.oidcConfigRef), so a block here would mint a second, unused
+# authentik OIDC client.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive Agent Tools MCP
+  category: Applications
+  description: Kubernetes, Pulumi and UniFi MCP access for agents, via ToolHive
+  url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    - name: ToolHive Agent Tools MCP rejects unauthenticated
+      group: "Applications"
+      url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"

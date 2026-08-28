@@ -15,7 +15,9 @@ spec:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
   dependsOn:
-    - name: toolhive
+    # `toolhive-agent-tools`, for the MCPGroup this server's `groupRef`
+    # names -- see ../toolhive-kubernetes/ks.yaml's comment.
+    - name: toolhive-agent-tools
       namespace: *namespace
     - name: external-secrets
       namespace: kube-system

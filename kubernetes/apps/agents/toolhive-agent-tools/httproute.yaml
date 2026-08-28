@@ -1,12 +1,15 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
 #
-# Own hostname rather than a path nested under ../toolhive/httproute.yaml --
-# see this app's plan for why: path-multiplexing several MCP servers behind
-# one host needs URLRewrite filters for both the MCP endpoint and its RFC
-# 9728/8414 `.well-known` discovery paths, which is exactly the kind of thing
-# that file's own comments warn has broken before. One hostname per server
-# sidesteps that at the cost of one more DNS label.
+# ONE route for the whole group -- see ./virtualmcpserver.yaml's header.
+#
+# Backend Service name/port: `vmcp-<VirtualMCPServer-name>`, port 4483.
+# Not documented in the CRD schema itself (verified there is no user-facing
+# port field on VirtualMCPServer at all -- the operator picks it), so this
+# is confirmed from Stacklok's own worked kubectl example
+# (`kubectl port-forward service/vmcp-optimizer-vmcp ... 4483:4483` for a
+# VirtualMCPServer named `optimizer-vmcp`) rather than the CRD reference.
+# Verify `kubectl -n agents get svc vmcp-agent-tools` once this reconciles.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -20,14 +23,11 @@ spec:
       namespace: network
       kind: Gateway
   hostnames:
-    - "kubernetes-mcp.agents.${ROOT_DOMAIN}"
+    - "agent-tools-mcp.agents.${ROOT_DOMAIN}"
   rules:
     - backendRefs:
-        # Named after the MCPServer, which is `${APP}` here -- the operator's
-        # fixed `mcp-<mcpserver-name>-proxy` pattern (verified against
-        # ../toolhive-docs/httproute.yaml's `mcp-toolhive-docs-proxy`).
-        - name: mcp-${APP}-proxy
-          port: 8080
+        - name: vmcp-agent-tools
+          port: 4483
       filters:
         - type: ExtensionRef
           extensionRef:
