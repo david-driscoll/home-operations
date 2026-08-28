@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./httproute.yaml
+  - ./rbac.yaml
+# Everything ./helmrelease.yaml's `command` needs and cannot get from a
+# Dockerfile, because there isn't one -- see ./resources/entrypoint.sh's
+# header. `mise.lock`, NOT `config.lock`: mise special-cases the global
+# config path (`~/.config/mise/config.toml`, which is where this mounts --
+# see ./resources/mise.lock's header) and always names ITS lockfile
+# `mise.lock` regardless of the config file's own basename; that
+# basename-pairing rule only holds for non-global project configs.
+# disableNameSuffixHash because ./helmrelease.yaml mounts these by literal
+# name.
+configMapGenerator:
+  - name: ${APP}-mise-config
+    files:
+      - config.toml=./resources/mise.toml
+      - mise.lock=./resources/mise.lock
+      - entrypoint.sh=./resources/entrypoint.sh
+    options:
+      disableNameSuffixHash: true

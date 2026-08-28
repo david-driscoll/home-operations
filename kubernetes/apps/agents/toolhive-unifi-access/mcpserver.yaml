@@ -1,0 +1,57 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
+# Same shape as ../toolhive-unifi-network/mcpserver.yaml -- see that file's
+# header for the `uv` image / podTemplateSpec-command reasoning.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+
+  env:
+    - name: UNIFI_ACCESS_HOST
+      value: unifi.driscoll.tech
+    - name: UNIFI_ACCESS_PORT
+      value: "443"
+    - name: UNIFI_ACCESS_VERIFY_SSL
+      value: "false"
+
+  podTemplateSpec:
+    spec:
+      volumes:
+        - name: uv-cache
+          emptyDir: {}
+      containers:
+        - name: mcp
+          command: ["/usr/local/bin/uv"]
+          args: ["tool", "run", "unifi-access-mcp"]
+          env:
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: ${APP}
+          volumeMounts:
+            - name: uv-cache
+              mountPath: /tmp
+
+  authServerRef:
+    kind: MCPExternalAuthConfig
+    name: toolhive
+  oidcConfigRef:
+    name: ${APP}
+    audience: https://unifi-access-mcp.agents.${ROOT_DOMAIN}/mcp
+    resourceUrl: https://unifi-access-mcp.agents.${ROOT_DOMAIN}/mcp
+
+  trustProxyHeaders: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

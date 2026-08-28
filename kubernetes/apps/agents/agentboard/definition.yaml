@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# agentboard has NO login of its own -- its own docs say plainly that anyone
+# who can reach it has full access to every terminal session it shows. This
+# follows the Longhorn pattern (kubernetes/apps/longhorn-system/longhorn/definition.yaml),
+# not the toolhive-ui one: `authentik.proxy.mode: forward_single` puts an
+# authentik outpost in front of it, so the app itself never has to know it is
+# being protected. See ./httproute.yaml for the middleware that wires the
+# outpost in.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Agentboard
+  category: Applications
+  description: Browser/mobile terminal over the in-cluster Claude Code agent runner
+  url: &url https://${APP}.agents.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/terminal.svg
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - name: Agentboard
+      group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

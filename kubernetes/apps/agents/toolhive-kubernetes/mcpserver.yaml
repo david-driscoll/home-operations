@@ -1,0 +1,45 @@
+---
+# No `yaml-language-server: $schema=` line -- same reason as
+# ../toolhive-docs/mcpserver.yaml: toolhive.stacklok.dev publishes no schema
+# either the CRDs-catalog or kubernetes-schemas can resolve.
+#
+# Stacklok's own cataloged Kubernetes MCP server ("mkp"), NOT a hand-wrapped
+# `npx kubernetes-mcp-server` -- it speaks Streamable HTTP directly, same as
+# ../toolhive-docs's image, so no stdio-proxy plumbing is needed here. Image
+# tag/digest per https://docs.stacklok.com/toolhive/guides-mcp/k8s -- verify
+# against the live registry before merging, that doc example was current as
+# of the research for this PR, not guaranteed current at merge time.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: ghcr.io/stackloklabs/mkp/server:0.4.3
+  transport: streamable-http
+  proxyPort: 8080
+  mcpPort: 8080
+  serviceAccount: ${APP}
+  args:
+    # Full read-write, per the estate decision this whole rollout was built
+    # around -- default is read-only. RBAC enforcement is ./rbac.yaml's
+    # cluster-admin binding on the SA above, this flag just stops the server
+    # refusing writes it otherwise has permission to make.
+    - "--read-write=true"
+
+  authServerRef:
+    kind: MCPExternalAuthConfig
+    name: toolhive
+  oidcConfigRef:
+    name: ${APP}
+    # Own hostname -> own audience, same rule as every other server here.
+    audience: https://kubernetes-mcp.agents.${ROOT_DOMAIN}/mcp
+    resourceUrl: https://kubernetes-mcp.agents.${ROOT_DOMAIN}/mcp
+
+  trustProxyHeaders: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

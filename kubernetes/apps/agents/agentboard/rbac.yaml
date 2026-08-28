@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/serviceaccount.json
+#
+# cluster-admin, deliberately -- David's own call (full read-write from the
+# start), matching the posture given to ../toolhive-kubernetes's MCP server.
+# Both this SA (mounted into the agentboard pod for in-session `kubectl`) and
+# that one (mounted into its own MCPServer pod) end up equally privileged;
+# they are separate SAs so either can be scoped down independently later
+# without touching the other.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${APP}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${APP}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: ${APP}
+    namespace: ${NAMESPACE}

@@ -38,3 +38,15 @@ resources:
   # the MCP gateway above -- nothing in the serving path depends on these.
   - ./toolhive-registry/ks.yaml
   - ./toolhive-ui/ks.yaml
+  # More MCP servers behind the same front door, each on its own hostname --
+  # see each directory's mcpserver.yaml for why they are not nested under
+  # ./toolhive-docs's single-hostname pattern.
+  - ./toolhive-kubernetes/ks.yaml
+  - ./toolhive-pulumi/ks.yaml
+  - ./toolhive-unifi-network/ks.yaml
+  - ./toolhive-unifi-protect/ks.yaml
+  - ./toolhive-unifi-access/ks.yaml
+  # The agent runner. Depends only on external-secrets, not on ToolHive --
+  # it's an MCP CLIENT of the servers above, reached over plain HTTP+OAuth,
+  # not a build-time dependency of them.
+  - ./agentboard/ks.yaml

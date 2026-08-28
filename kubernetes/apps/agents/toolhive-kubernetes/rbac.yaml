@@ -1,0 +1,24 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/serviceaccount.json
+#
+# cluster-admin, matching the ../agentboard SA and the "full read-write from
+# the start" call this whole rollout was built around. `--read-write=true`
+# on ./mcpserver.yaml is the OTHER half of that -- the image defaults to
+# read-only regardless of what this SA can do.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${APP}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${APP}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: ${APP}
+    namespace: ${NAMESPACE}

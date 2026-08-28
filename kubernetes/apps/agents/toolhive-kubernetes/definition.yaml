@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# Gatus only, no `authentik:` block -- same reasoning as
+# ../toolhive-registry/definition.yaml: this server authenticates through the
+# SHARED embedded auth server (./mcpoidcconfig.yaml), so a block here would
+# mint a second, unused authentik OIDC client.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive Kubernetes MCP
+  category: Applications
+  description: Cluster-admin Kubernetes access for agents, via ToolHive
+  url: https://kubernetes-mcp.agents.${ROOT_DOMAIN}/mcp
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/kubernetes.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    - name: ToolHive Kubernetes MCP rejects unauthenticated
+      group: "Applications"
+      url: https://kubernetes-mcp.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"

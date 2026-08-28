@@ -1,0 +1,187 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app ${APP}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    remediation:
+      retries: 7
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    # NOT recreate -- see the Recreate strategy note below: a rolling update
+    # would try to run two pods against the same ReadWriteOnce PVC.
+    recreate: false
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # One ReadWriteOnce PVC carries the whole home directory (tmux
+        # history, agentboard's sqlite db, the Claude Code session and the
+        # working checkout) -- a second pod could never attach it.
+        strategy: Recreate
+        pod:
+          serviceAccountName: *app
+          securityContext:
+            # mise, tmux and a `git`-driven working checkout all expect to
+            # write into $HOME freely; running as root here is the same
+            # trade-off ../coder/coder's workspaces make, not a new one.
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+        containers:
+          *app :
+            image:
+              # STOCK Debian, not an agentboard-specific build -- there is no
+              # Dockerfile or CI pipeline for this app (see
+              # ./resources/entrypoint.sh's header). `command`/`args` below
+              # install mise, tmux and everything else at pod start instead.
+              repository: debian
+              tag: 13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+            # Overrides the image's own bash-shell default CMD. The script
+            # is the ConfigMap ../kustomization.yaml generates from
+            # ./resources/entrypoint.sh, mounted below -- run via `bash
+            # <path>` rather than relying on the mount's executable bit,
+            # which a ConfigMap volume does not reliably carry.
+            command: ["/bin/bash", "/opt/agentboard/entrypoint.sh"]
+            env:
+              MISE_DATA_DIR: /root/.local/share/mise
+              MISE_CONFIG_DIR: /root/.config/mise
+              MISE_CACHE_DIR: /root/.cache/mise
+              MISE_INSTALL_PATH: /usr/local/bin/mise
+              # Debian's stock default PATH, with the mise shims dir
+              # prepended -- env: REPLACES the image's PATH rather than
+              # extending it, so the standard entries have to be spelled out
+              # here too or nothing on the base image resolves any more.
+              PATH: /root/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              ANTHROPIC_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: *app
+                    key: anthropic-api-key
+              GITHUB_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: *app
+                    key: github-token
+              # The `pulumi` MCP server (../toolhive-pulumi) and any `pulumi`
+              # the agent runs directly from its own tmux pane both need this
+              # whole bundle -- same env var names the `pulumi` namespace's
+              # own workspace pods use (kubernetes/apps/pulumi/*/stack.yaml),
+              # sourced from the SAME OpenBao paths via ./externalsecret.yaml.
+              AWS_REGION:
+                value: home
+            envFrom:
+              - secretRef:
+                  name: ${APP}-pulumi
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 4Gi
+          tailscale:
+            # Same shape as
+            # kubernetes/apps/equestria/dns/technitium/helmrelease.yaml's
+            # sidecar: the pod IS the tailnet node `agentboard`, sharing the
+            # main container's network namespace, so `ssh agentboard` reaches
+            # this pod directly rather than through the tailscale-operator's
+            # ProxyGroup ingress (which has no SSH story).
+            image:
+              repository: tailscale/tailscale
+              tag: v1.102.3@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
+            env:
+              TS_STATE_DIR: /var/lib/tailscale
+              TS_KUBE_SECRET: ""
+              TS_USERSPACE: "false"
+              TS_AUTH_ONCE: "true"
+              TS_ACCEPT_DNS: "false"
+              TS_HOSTNAME: agentboard
+              # Tailscale SSH -- tailscaled's own SSH server, keyed to tailnet
+              # identity, not a separate sshd in this image.
+              TS_EXTRA_ARGS: "--ssh"
+              TS_AUTHKEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: *app
+                    key: tailscale-authkey
+            securityContext:
+              privileged: true
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+
+    persistence:
+      # $HOME for the main container: agentboard's sqlite db
+      # (~/.agentboard), the Claude Code session/config (~/.claude), the mise
+      # install this pod provisions at start, and the working checkout the
+      # agent operates against.
+      home:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 20Gi
+        storageClass: longhorn
+        globalMounts:
+          - path: /root
+      tailscale-state:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        size: 128Mi
+        storageClass: longhorn
+        advancedMounts:
+          *app :
+            tailscale:
+              - path: /var/lib/tailscale
+      mise-config:
+        type: configMap
+        name: ${APP}-mise-config
+        advancedMounts:
+          *app :
+            *app :
+              - path: /root/.config/mise/config.toml
+                subPath: config.toml
+                readOnly: true
+              # `mise install` resolves through this at strict-lockfile
+              # confidence rather than a live "latest" lookup. Named
+              # `mise.lock`, NOT paired to `config.toml`'s own basename --
+              # see ./resources/mise.lock's header for why: this path is
+              # mise's special-cased GLOBAL config location, and the global
+              # lockfile is always `mise.lock` regardless of the config
+              # file's name.
+              - path: /root/.config/mise/mise.lock
+                subPath: mise.lock
+                readOnly: true
+              # ./resources/entrypoint.sh -- see ./helmrelease.yaml's
+              # `command` above. Deliberately NOT under /root: it is
+              # image/config, not state, and has no business on the
+              # persistent home-dir PVC.
+              - path: /opt/agentboard/entrypoint.sh
+                subPath: entrypoint.sh
+                readOnly: true
+
+    service:
+      *app :
+        controller: *app
+        ports:
+          http:
+            port: 4040

@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# Own hostname rather than a path nested under ../toolhive/httproute.yaml --
+# see this app's plan for why: path-multiplexing several MCP servers behind
+# one host needs URLRewrite filters for both the MCP endpoint and its RFC
+# 9728/8414 `.well-known` discovery paths, which is exactly the kind of thing
+# that file's own comments warn has broken before. One hostname per server
+# sidesteps that at the cost of one more DNS label.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    reloader.stakater.com/auto: "true"
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "kubernetes-mcp.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        # Named after the MCPServer, which is `${APP}` here -- the operator's
+        # fixed `mcp-<mcpserver-name>-proxy` pattern (verified against
+        # ../toolhive-docs/httproute.yaml's `mcp-toolhive-docs-proxy`).
+        - name: mcp-${APP}-proxy
+          port: 8080
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # `local-api`, not `local-user` -- MCP clients, not browsers; see
+            # ../toolhive/httproute.yaml's note on why error-pages would
+            # break both the JSON-RPC and OAuth surfaces here.
+            name: local-api

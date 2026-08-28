@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: ToolHive UniFi Access MCP
+  category: Applications
+  description: UniFi Access door-controller access for agents, via ToolHive
+  url: https://unifi-access-mcp.agents.${ROOT_DOMAIN}/mcp
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg
+  access_policy:
+    groups:
+      - admins
+  gatus:
+    - name: ToolHive UniFi Access MCP rejects unauthenticated
+      group: "Applications"
+      url: https://unifi-access-mcp.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"

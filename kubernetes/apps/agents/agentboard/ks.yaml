@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app agentboard
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # For ./externalsecret.yaml's Secrets and ./rbac.yaml's ServiceAccount --
+    # agentboard is a consumer of the ToolHive MCP servers over plain HTTP+
+    # OAuth like any other MCP client, so it has no build-time dependency on
+    # the toolhive/toolhive-operator Kustomizations themselves.
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/agents/agentboard
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

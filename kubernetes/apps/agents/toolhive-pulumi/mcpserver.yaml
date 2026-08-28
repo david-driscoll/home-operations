@@ -1,0 +1,49 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
+#
+# Docker's own curated MCP-server image, NOT a hand-wrapped
+# `npx @pulumi/mcp-server stdio` -- verify at merge time that it accepts the
+# same PULUMI_BACKEND_URL / AWS_* / PULUMI_CONFIG_PASSPHRASE env this repo's
+# other Pulumi consumers use (kubernetes/apps/pulumi/*/stack.yaml) rather than
+# expecting Pulumi Cloud credentials; if it does not, this becomes a
+# hand-built image wrapping the npx invocation instead, same shape as the
+# unifi-* servers next door.
+#
+# NOT PINNED TO ONE STACK. This repo has many (stacks/home, stacks/authentik,
+# stacks/applications, ...) -- the MCP tool surface itself takes a
+# stack/working-directory argument per call rather than this server being
+# scoped to one, same as running `pulumi` by hand from any stacks/* dir.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: docker.io/mcp/pulumi:latest
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: ${APP}
+
+  authServerRef:
+    kind: MCPExternalAuthConfig
+    name: toolhive
+  oidcConfigRef:
+    name: ${APP}
+    audience: https://pulumi-mcp.agents.${ROOT_DOMAIN}/mcp
+    resourceUrl: https://pulumi-mcp.agents.${ROOT_DOMAIN}/mcp
+
+  trustProxyHeaders: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 1Gi

@@ -1,0 +1,14 @@
+---
+# Same shared embedded auth server as ../toolhive/mcpoidcconfig.yaml -- ONE
+# login/DCR flow for every MCP server in this namespace, federated to
+# authentik exactly once. Only the audience differs per server (see
+# ./mcpserver.yaml), which is what stops a token minted here being replayed
+# against a different server.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPOIDCConfig
+metadata:
+  name: ${APP}
+spec:
+  type: inline
+  inline:
+    issuer: https://toolhive.${ROOT_DOMAIN}

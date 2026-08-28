@@ -1,0 +1,45 @@
+# Toolchain for the agentboard pod, installed by `mise install` at container
+# start (./entrypoint.sh, run as `command` against a stock debian:13-slim
+# image -- see ../helmrelease.yaml, there is no agentboard-specific
+# Dockerfile). Keep versions in step with .config/mise.toml where the same
+# tool appears there; Renovate tracks both independently, so drift is
+# possible and is a bug when it happens, not a feature.
+#
+# `lockfile = true` pairs this file with ./mise.lock. `locked = true`
+# (verified against the mise 2026.7.7 CLI -- the docs also mention a
+# `[tool_config] locked = true` form, but that table is rejected as an
+# "unknown field" by this version) is what makes that lockfile load-bearing
+# rather than advisory: every install below resolves ONLY through
+# ./mise.lock's pinned URLs/checksums, and mise refuses to fall back to a
+# live registry lookup if an entry for the pod's platform is missing.
+#
+# Regenerate ./mise.lock with `mise install && mise lock -g` after bumping
+# anything below -- see that file's header for why the `-g`/`--global` flag
+# is required here specifically, and why leaving it off silently no-ops. A
+# version pinned here with no matching lockfile entry is a hard install
+# failure under `locked = true`, not a silent live-resolve.
+[tools]
+node = "24.20.0"
+gh = "2.98.0"
+kubectl = "1.37.0"
+pulumi = "3.259.0"
+jq = "1.8.2"
+yq = "4.53.6"
+# bun is NOT what runs agentboard below (mise's npm backend always shells out
+# through node/npm) -- it's here only because upstream's own dev instructions
+# call for Bun 1.3.14+, in case the published npm package's bin script still
+# shebangs `#!/usr/bin/env bun`. Drop it if that turns out not to be true.
+bun = "1.3.14"
+# The agent CLI. Package name per the `claude-api` skill / @anthropic-ai's
+# published CLI.
+"npm:@anthropic-ai/claude-code" = "2.1.251"
+# https://github.com/gbasin/agentboard -- no Docker image of its own, so it
+# is installed the same way as every other tool here rather than
+# `bun install -g` at image-build time (there is no image-build time).
+"npm:@gbasin/agentboard" = "0.4.23"
+
+[settings]
+experimental = true
+activate_aggressive = true
+lockfile = true
+locked = true
