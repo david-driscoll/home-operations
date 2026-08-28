@@ -125,11 +125,24 @@ spec:
                 #      stale. `--remove-all` is what ignores that judgement, and
                 #      it is deliberately NOT used here (it is also commented out
                 #      in VolSync's own mover-restic/entry.sh).
+                #
+                # Every `${...}` below is doubled to `$$ {...}` (no space --
+                # written apart here only so this comment doesn't itself get
+                # eaten). This whole block is envsubst'd by this Kustomization's
+                # postBuild.substitute before it ever reaches the shell -- and
+                # strict mode fails the ENTIRE build the moment it hits a brace
+                # name substitute/substituteFrom doesn't know, e.g.
+                # `${STALE_MINUTES}` reads exactly like a Flux template variable.
+                # `$$` is Flux's own escape for a literal `$`, so `$${VAR}`
+                # survives postBuild as `${VAR}` for the shell to expand at
+                # runtime. `${SPIKE_IP}` / `${CLUSTER_CNAME}` further down in
+                # `persistence.repository` are the opposite case -- genuine Flux
+                # substitutions -- and stay single-escaped.
                 STALE_MINUTES=360
 
                 stamp() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 
-                echo "$(stamp) scanning /repository for restic locks older than ${STALE_MINUTES}m"
+                echo "$(stamp) scanning /repository for restic locks older than $${STALE_MINUTES}m"
 
                 scanned=0
                 stranded=0
@@ -139,23 +152,23 @@ spec:
                   # An unmatched glob stays literal; -f rejects it. This also
                   # skips any directory that is not an initialised repository.
                   [ -f "$config" ] || continue
-                  repo=${config%/config}
-                  name=${repo##*/}
+                  repo=$${config%/config}
+                  name=$${repo##*/}
                   scanned=$((scanned + 1))
 
                   [ -d "$repo/locks" ] || continue
-                  locks=$(find "$repo/locks" -maxdepth 1 -type f -mmin "+${STALE_MINUTES}")
+                  locks=$(find "$repo/locks" -maxdepth 1 -type f -mmin "+$${STALE_MINUTES}")
                   [ -n "$locks" ] || continue
 
                   stranded=$((stranded + 1))
-                  echo "${name}: lock(s) held longer than ${STALE_MINUTES}m:"
+                  echo "$${name}: lock(s) held longer than $${STALE_MINUTES}m:"
                   echo "$locks" | while read -r lock; do ls -l "$lock"; done
 
                   if restic --repo "$repo" --no-cache unlock; then
                     # `tr -d` because busybox `wc -l` right-aligns its count.
                     remaining=$(find "$repo/locks" -maxdepth 1 -type f | wc -l | tr -d "[:space:]")
                     cleared=$((cleared + 1))
-                    echo "  unlocked ${name}; ${remaining} lock(s) remain"
+                    echo "  unlocked $${name}; $${remaining} lock(s) remain"
                   else
                     # Two causes, and they are worth telling apart by hand: a
                     # repository keyed on some other credential, or a lock restic
@@ -166,11 +179,11 @@ spec:
                     # `talos-etcd-restic-keys` -- so in practice this branch means
                     # the second cause. Neither fails the job; the remaining
                     # repositories still get scanned.
-                    echo "  WARNING: could not unlock ${name} (different repository password, or restic does not judge the lock stale)"
+                    echo "  WARNING: could not unlock $${name} (different repository password, or restic does not judge the lock stale)"
                   fi
                 done
 
-                echo "$(stamp) scanned ${scanned} repositories; ${stranded} had stale locks; ${cleared} unlocked"
+                echo "$(stamp) scanned $${scanned} repositories; $${stranded} had stale locks; $${cleared} unlocked"
             resources:
               requests:
                 cpu: 10m
