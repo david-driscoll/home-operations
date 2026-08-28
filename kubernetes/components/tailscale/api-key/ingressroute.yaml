@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# The API-key carve-out, as a SECOND router in front of ../ingressroute.yaml.
+#
+# A separate IngressRoute rather than a patch appending to the base route list:
+# Traefik builds one router per route entry and orders them globally per
+# entrypoint, so two CRs compose exactly as two entries in one CR would -- and a
+# JSON6902 append into a CRD list is the fragile shape components/postgres/superuser
+# documents at length.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-tailnet-api
+  annotations:
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - tailscale
+  routes:
+    - kind: Rule
+      # Above the base route's 10, so this is evaluated first.
+      priority: 20
+      match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`) && (HeaderRegexp(`X-Api-Key`, `.+`) || QueryRegexp(`apikey`, `.+`))
+      middlewares:
+        # Always the network-only chain -- that is the whole point. An API client
+        # cannot follow an authentik redirect, and the app authenticates the key
+        # itself, so the tailnet gate is the only one that makes sense here.
+        # Not a variable: an app that wants its API gated behind SSO simply does
+        # not add this component.
+        - name: tailscale-local
+          namespace: network
+      services:
+        - name: ${TAILSCALE_SERVICE:=${APP}}
+          port: ${TAILSCALE_PORT:=http}

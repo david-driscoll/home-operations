@@ -33,15 +33,16 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/tailscale
+    - ../../../../components/tailscale/api-key
     - ../../../../components/volsync
     - ../../../../components/failover/fast-node-eviction
   postBuild:
     substitute:
-      # Mirrors this app's internal HTTPRoute: browsers take the authentik
-      # chain, and requests carrying X-Api-Key/?apikey fall through to
-      # TAILSCALE_API_MIDDLEWARE's `tailscale-local` default -- the same
-      # carve-out the internal route makes, so API clients (nzb360, LunaSea,
-      # scripts) keep working over the tailnet.
+      # Browsers take the authentik chain, mirroring this app's internal
+      # HTTPRoute. Requests carrying X-Api-Key/?apikey skip it via the
+      # components/tailscale/api-key component above -- the same carve-out the
+      # internal route makes, so API clients (nzb360, LunaSea, scripts) keep
+      # working over the tailnet.
       TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace

@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Let API clients reach an app over the tailnet without the authentik hop. Add it
+# AFTER ../../tailscale in the app's `spec.components`:
+#
+#   components:
+#     - ../../../../components/tailscale
+#     - ../../../../components/tailscale/api-key
+#
+# ONLY for an app that already makes the same carve-out on its INTERNAL
+# HTTPRoute -- the *arr apps match `X-Api-Key`/`?apikey` to `local-user` and
+# everything else to `authenticated-user` (see
+# apps/equestria/media/radarr/helmrelease.yaml). Adding it here keeps the tailnet
+# path identical to the LAN path, which is the property the whole tailnet
+# component set is built around.
+#
+# Pointless on an app whose base route is already `tailscale-local`: the carve-out
+# would route to the same middleware the catch-all does. It is only meaningful
+# alongside `TAILSCALE_MIDDLEWARE: tailscale-user`.
+#
+# NOT the default. It used to be a second rule in ../ingressroute.yaml gated by a
+# `TAILSCALE_API_MIDDLEWARE` variable, which meant all 37 tailnet apps carried a
+# duplicate inert rule so that six could have a real one, and the six that had to
+# SUPPRESS it did so by setting the variable to the same value as the catch-all --
+# an opt-out spelled as a value. Opt-in is the honest shape.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+commonLabels:
+  app.kubernetes.io/name: "${APP}"
+  driscoll.dev/name: "${APP}"
+resources:
+  - ./ingressroute.yaml

@@ -14,17 +14,8 @@
 # an HTTPRoute ExtensionRef resolves only in the route's own namespace, which is
 # the trap documented at length in components/common/middleware.yaml.
 #
-# TWO RULES, mirroring the shape the *arr apps already use on their internal
-# HTTPRoute (see apps/equestria/media/radarr/helmrelease.yaml): a request that
-# carries an API key is an API request and is gated by the network only, since
-# the app authenticates the key itself and no API client can follow an SSO
-# redirect. Everything else is a browser and takes the app's normal chain.
-#
-# The point of the split is that an app behaves the SAME on the tailnet as it
-# does on the LAN. Both variables default to `tailscale-local`, so by default
-# the two rules are identical and the split is inert; an app opts up by naming
-# `tailscale-user` for the browser path, and keeps the carve-out by leaving
-# TAILSCALE_API_MIDDLEWARE alone.
+# ONE rule. An app that also needs the API-key carve-out the *arr apps run on
+# their internal HTTPRoute adds ./api-key on top; see that component.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -38,20 +29,11 @@ spec:
   entryPoints:
     - tailscale
   routes:
-    # API clients. Higher priority so it is evaluated before the catch-all below;
-    # Traefik would otherwise order these two by rule length, which is not a
-    # property worth depending on.
     - kind: Rule
-      priority: 20
-      match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`) && (HeaderRegexp(`X-Api-Key`, `.+`) || QueryRegexp(`apikey`, `.+`))
-      middlewares:
-        - name: ${TAILSCALE_API_MIDDLEWARE:=tailscale-local}
-          namespace: network
-      services:
-        - name: ${TAILSCALE_SERVICE:=${APP}}
-          port: ${TAILSCALE_PORT:=http}
-    # Browsers.
-    - kind: Rule
+      # Explicit, and lower than ./api-key's 20. Traefik orders routers by rule
+      # LENGTH when priority is unset, which would silently decide which of the
+      # two matched first -- not a property to leave to chance across two
+      # separate CRs.
       priority: 10
       match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`)
       middlewares:

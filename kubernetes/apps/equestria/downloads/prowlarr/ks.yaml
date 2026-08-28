@@ -56,11 +56,9 @@ spec:
   postBuild:
     substitute:
       # Mirrors this app's internal HTTPRoute, which gates every path behind
-      # authentik with no API carve-out -- so the tailnet path does the same and
-      # TAILSCALE_API_MIDDLEWARE is pinned rather than left at its
-      # `tailscale-local` default.
+      # authentik with no API carve-out -- so this app deliberately does NOT add
+      # components/tailscale/api-key.
       TAILSCALE_MIDDLEWARE: tailscale-user
-      TAILSCALE_API_MIDDLEWARE: tailscale-user
       APP: *app
       # Where components/postgres/databases looks for this app's extra
       # Database manifests -- it appends `/postgres-databases`. The anchor
