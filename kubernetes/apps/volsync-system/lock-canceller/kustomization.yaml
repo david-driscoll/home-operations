@@ -5,3 +5,39 @@ kind: Kustomization
 resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
+configMapGenerator:
+  # The script lives in a real ./unlock-stale-locks.sh rather than inline YAML so
+  # shellcheck, editors and `sh -n` can all see it -- hk's shellcheck step picks
+  # it up from the `**/*.sh` glob for free.
+  - name: lock-canceller-script
+    files:
+      - ./unlock-stale-locks.sh
+    options:
+      # BOTH of these are required, for different reasons.
+      #
+      # disableNameSuffixHash: helmrelease.yaml mounts this ConfigMap by its
+      # literal name, so a content-hash suffix would leave it pointing at a
+      # ConfigMap that does not exist. Same constraint, same reason, as
+      # `cluster-versions` in components/common/kustomization.yaml.
+      #
+      # annotations: Flux postBuild envsubst runs over every manifest in this
+      # Kustomization, and the script is full of shell `${...}` that envsubst
+      # reads as substitution variables -- unset ones fail the whole build in
+      # strict mode. That is exactly what broke #1279 on merge:
+      #
+      #   post build failed for 'HelmRelease.../lock-canceller': envsubst error:
+      #   variable substitution failed: variable not set (strict mode):
+      #   "STALE_MINUTES"
+      #
+      # ../../pulumi/lock-canceller carries the same annotation on its CronJob.
+      # It cannot go on the HelmRelease here: it is per-resource and
+      # all-or-nothing, and the persistence block there genuinely needs
+      # ${SPIKE_IP} and ${CLUSTER_CNAME} substituted -- hence the split.
+      #
+      # flate does NOT catch this. It renders best-effort under
+      # --allow-missing-secrets and reports unresolved values as placeholders
+      # rather than failing, so a missing annotation passes lint and breaks on
+      # the cluster.
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
