@@ -10,8 +10,8 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 1.5.1
-    digest: sha256:4f3b645356061d1ff993803cf6e0dcf290d1be11b566479f013616e7e6c037b4
+    tag: 1.5.2
+    digest: sha256:3c199d30328874f452c0350ee7767c44453ef9c1efc6e5d923c35cc3ad378ca4
   # A THIRD OCI path, and note it is the repository root rather than a
   # subpath -- `stacklok/toolhive-registry-server` itself is the chart, unlike
   # the operator (stacklok/toolhive/<chart>) and the UI
