@@ -454,9 +454,16 @@ export class ForgejoConfigurationComponent extends ComponentResource {
     // created later -- a new user repository is picked up by the next
     // `stacks/system` run, which the Stack CR does daily.
     //
-    // `write`, not `admin`: branch, open a PR, and manage the repository's
-    // webhooks (which is what lets the operator sync its own hook). Changing
-    // repository settings is not part of the job.
+    // `admin`, not `write`. This used to be `write` on the theory that the
+    // `write:repository` TOKEN SCOPE covers webhooks (see the file header) --
+    // it does not, for the COLLABORATOR PERMISSION checked here. Forgejo's
+    // webhook-management route requires the caller be the repository owner or
+    // a collaborator with `admin`-level access; `write` collaborators get a
+    // 403 (`"user should be an owner or a collaborator with admin write of a
+    // repository"`) the moment `spec.webhook.sync` tries to create/update the
+    // hook, which is exactly what broke RenovateDiscoveryFailing for
+    // home-operations/canary. `admin` here is still just repo-admin for THIS
+    // one grant, not instance-admin -- it does not touch org/site settings.
     for (const repository of args.targets.userRepositories) {
       new forgejo.Collaborator(
         `forgejo-renovate-collaborator-${repository.fullName.replace("/", "-")}`,
@@ -467,7 +474,7 @@ export class ForgejoConfigurationComponent extends ComponentResource {
           // pointing at a repository that moved.
           repositoryId: repository.id,
           user: this.renovateBot.user.login,
-          permission: "write",
+          permission: "admin",
         },
         { provider: this.forgejoProvider, parent: this },
       );
