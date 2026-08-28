@@ -53,6 +53,14 @@ spec:
     # Bumped estate-wide rather than per-app on purpose: a node roll is not
     # selective, and a repository whose next sync has not run yet looks healthy
     # until it does. The pass is a no-op wherever there is no stale lock.
+    #
+    # 2026-08-28: this field is no longer the only fix. `volsync-lock-canceller`
+    # (kubernetes/apps/volsync-system/lock-canceller) now scans /repository
+    # hourly and runs `restic unlock` on any repository holding a lock older than
+    # six hours, so an ordinary stranded lock clears itself without a commit.
+    # This field stays the documented MANUAL override -- reach for it when you
+    # want the unlock to happen on the app's next sync rather than waiting for
+    # the scan, or when the canceller reports it could not open the repository.
     unlock: "${VOLSYNC_UNLOCK:=2026-08-21-locks-stranded-by-k8s-node-roll}"
     volumeSnapshotClassName: "${VOLSYNC_SNAPSHOTCLASS:=longhorn-snapclass}"
     cacheCapacity: "${VOLSYNC_CACHE_CAPACITY:=2Gi}"

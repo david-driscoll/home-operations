@@ -1,0 +1,192 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app lock-canceller
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+  values:
+    controllers:
+      # NOT named `volsync-lock-canceller`. The `volsync-mover-nfs` and
+      # `volsync-mover-jitter` MutatingAdmissionPolicies in ../volsync match
+      # every batch/v1 Job in the cluster and then filter on a `volsync-` name
+      # prefix; they also require `app.kubernetes.io/created-by: volsync`, which
+      # this Job does not carry, so a prefixed name would not actually match --
+      # but keeping the prefix off removes the question entirely, and matches the
+      # sibling `restore-cleanup` CronJob.
+      *app :
+        type: cronjob
+        pod:
+          # No API access is needed -- this talks to the restic repository on
+          # NFS, not to Kubernetes.
+          automountServiceAccountToken: false
+          securityContext:
+            # Mandatory, not hygiene. Each repository's `config` and lock files
+            # are mode 0400 owned by 568:568, so any other uid cannot even open
+            # the repository, let alone remove a lock. (The `locks/` directory
+            # itself is 0777, so deletion would succeed -- it is the read of
+            # `config` that fails first.)
+            runAsUser: 568
+            runAsGroup: 568
+            fsGroup: 568
+            runAsNonRoot: true
+        cronjob:
+          # Hourly, against a 6h threshold -- so a stranded lock is cleared
+          # within 7h of the mover dying rather than sitting until someone
+          # notices. Offset off the hour to stay clear of the 14:00 backup
+          # window's own start.
+          schedule: "25 * * * *"
+          concurrencyPolicy: Forbid
+          backoffLimit: 1
+          activeDeadlineSeconds: 600
+          successfulJobsHistory: 3
+          failedJobsHistory: 3
+        containers:
+          main:
+            image:
+              # Same pin as kubernetes/apps/kube-system/etcd/helmrelease.yaml,
+              # deliberately -- one restic version in the repo for Renovate to
+              # move. Newer than the mover's own 0.18.1, which is fine: `unlock`
+              # only removes lock files and never rewrites the repository.
+              repository: docker.io/restic/restic
+              tag: 0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: lock-canceller-restic-secret
+            command:
+              - /bin/sh
+              - -c
+            args:
+              # A mover that dies mid-`forget` leaves its restic lock behind, and
+              # the lock outlives the pod. Every later run then backs up fine and
+              # fails on the forget/prune step:
+              #
+              #   === Starting forget ===
+              #   unable to create lock in backend: repository is already locked
+              #     by PID 41 on volsync-src-romm-gs6q4
+              #
+              # So the failure is RETENTION, not backup -- and because the
+              # snapshot is already saved by then, it can run for days looking
+              # like broken backups while the data is fine. It also freezes node
+              # upgrades: tuppr's TalosUpgrade healthChecks gate on
+              # ReplicationSource `Synchronizing == False`.
+              #
+              # ../../../components/volsync/replicationsource.yaml already has a
+              # fix for this -- `spec.restic.unlock`, bumped to a new token. That
+              # is a MANUAL fix and stays the documented one; this CronJob is the
+              # unattended backstop, and it deliberately does NOT touch the
+              # ReplicationSource. Patching `spec.restic.unlock` in place would be
+              # reverted by Flux on the next reconcile, leaving spec and
+              # `status.restic.lastUnlocked` permanently mismatched -- which makes
+              # the operator run an unlock on EVERY sync, forever. Going straight
+              # at the repository has none of that, clears the lock immediately
+              # instead of waiting for the next nightly sync, and reaches
+              # repositories no ReplicationSource points at any more (there is an
+              # eight-month-old pair on /repository/plex-copy as of 2026-08-28).
+              - |
+                set -eu
+
+                # Locks younger than this are assumed to belong to a live mover.
+                # Two independent things already make that true, so 6h is the
+                # third and loosest guard, not the only one:
+                #
+                #   1. restic REFRESHES its lock every 5 minutes while running,
+                #      writing a new lock file and removing the old one -- so a
+                #      live mover's lock is never more than minutes old on disk,
+                #      however long the run takes.
+                #   2. `restic unlock` removes only locks restic itself judges
+                #      stale. `--remove-all` is what ignores that judgement, and
+                #      it is deliberately NOT used here (it is also commented out
+                #      in VolSync's own mover-restic/entry.sh).
+                STALE_MINUTES=360
+
+                stamp() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
+
+                echo "$(stamp) scanning /repository for restic locks older than ${STALE_MINUTES}m"
+
+                scanned=0
+                stranded=0
+                cleared=0
+
+                for config in /repository/*/config; do
+                  # An unmatched glob stays literal; -f rejects it. This also
+                  # skips any directory that is not an initialised repository.
+                  [ -f "$config" ] || continue
+                  repo=${config%/config}
+                  name=${repo##*/}
+                  scanned=$((scanned + 1))
+
+                  [ -d "$repo/locks" ] || continue
+                  locks=$(find "$repo/locks" -maxdepth 1 -type f -mmin "+${STALE_MINUTES}")
+                  [ -n "$locks" ] || continue
+
+                  stranded=$((stranded + 1))
+                  echo "${name}: lock(s) held longer than ${STALE_MINUTES}m:"
+                  echo "$locks" | while read -r lock; do ls -l "$lock"; done
+
+                  if restic --repo "$repo" --no-cache unlock; then
+                    # `tr -d` because busybox `wc -l` right-aligns its count.
+                    remaining=$(find "$repo/locks" -maxdepth 1 -type f | wc -l | tr -d "[:space:]")
+                    cleared=$((cleared + 1))
+                    echo "  unlocked ${name}; ${remaining} lock(s) remain"
+                  else
+                    # Two causes, and they are worth telling apart by hand: a
+                    # repository keyed on some other credential, or a lock restic
+                    # does not judge stale. Every repository under /repository is
+                    # on the shared `apps/volsync/password` today -- including
+                    # /repository/etcd, which only LOOKS like an exception because
+                    # it reaches restic through a secret named
+                    # `talos-etcd-restic-keys` -- so in practice this branch means
+                    # the second cause. Neither fails the job; the remaining
+                    # repositories still get scanned.
+                    echo "  WARNING: could not unlock ${name} (different repository password, or restic does not judge the lock stale)"
+                  fi
+                done
+
+                echo "$(stamp) scanned ${scanned} repositories; ${stranded} had stale locks; ${cleared} unlocked"
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+    persistence:
+      repository:
+        # The mover's own repository root, mounted the same way the
+        # `volsync-mover-nfs` MutatingAdmissionPolicy mounts it into every mover
+        # Job -- same server, same per-cluster path, same /repository mountpoint.
+        # Note this is NOT the `volsync` PV in ../volsync/volume.yaml, which
+        # points one level up at /mnt/stash/backup/volsync and holds no
+        # repositories.
+        type: nfs
+        server: "${SPIKE_IP}"
+        path: "/mnt/stash/backup/${CLUSTER_CNAME}/volsync"
+        globalMounts:
+          - path: /repository
