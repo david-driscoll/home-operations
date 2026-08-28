@@ -70,7 +70,6 @@ import { CLUSTERS } from "@components/store/clusters.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
-import { configureTailscaleAuthKeys } from "./tailscale-authkeys.ts";
 
 const globals = new GlobalResources({}, {});
 
@@ -124,10 +123,6 @@ export const garage = configureGarage(globals);
 // there, which must wait for the widened `pulumi` policy -- so this cannot
 // break the stack every other stack depends on.
 new PostgresRotationComponent({ globals });
-
-// Tailscale auth keys for pods that are tailnet nodes in their own right --
-// see stacks/system/tailscale-authkeys.ts's header.
-configureTailscaleAuthKeys(globals);
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the
 // repository grants that decide what Renovate manages. Unlike everything else

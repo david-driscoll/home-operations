@@ -1,5 +1,20 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# NO Tailscale sidecar here, despite an earlier draft carrying one -- this
+# pod does not need to BE a tailnet node. It already lives inside the
+# cluster, and kubernetes/apps/tailscale-system/resources/connector.yaml
+# already advertises the cluster's service CIDR as a subnet route (`tag:
+# ${CLUSTER_CNAME}`, `tag:exit-node`), so any tailnet device already has a
+# route IN, and this pod already has a route OUT to anything the estate
+# serves over `*.driscoll.tech` (Technitium's split-horizon DNS resolves the
+# same for LAN/tailnet/cluster origins alike -- see the
+# `technitium-split-horizon-standarddns` note). "Join the tailnet directly"
+# would have been a second, redundant way to get access this pod already
+# has through the Connector. Terminal-from-a-machine is `kubectl exec`
+# only, per ./definition.yaml's Gatus URL and the app's own front door --
+# both already reachable from the tailnet the same way every other
+# `agents`-namespace app is.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -105,39 +120,6 @@ spec:
                 memory: 512Mi
               limits:
                 memory: 4Gi
-          tailscale:
-            # Same shape as
-            # kubernetes/apps/equestria/dns/technitium/helmrelease.yaml's
-            # sidecar: the pod IS the tailnet node `agentboard`, sharing the
-            # main container's network namespace, so `ssh agentboard` reaches
-            # this pod directly rather than through the tailscale-operator's
-            # ProxyGroup ingress (which has no SSH story).
-            image:
-              repository: tailscale/tailscale
-              tag: v1.102.3@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
-            env:
-              TS_STATE_DIR: /var/lib/tailscale
-              TS_KUBE_SECRET: ""
-              TS_USERSPACE: "false"
-              TS_AUTH_ONCE: "true"
-              TS_ACCEPT_DNS: "false"
-              TS_HOSTNAME: agentboard
-              # Tailscale SSH -- tailscaled's own SSH server, keyed to tailnet
-              # identity, not a separate sshd in this image.
-              TS_EXTRA_ARGS: "--ssh"
-              TS_AUTHKEY:
-                valueFrom:
-                  secretKeyRef:
-                    name: *app
-                    key: tailscale-authkey
-            securityContext:
-              privileged: true
-            resources:
-              requests:
-                cpu: 10m
-                memory: 64Mi
-              limits:
-                memory: 256Mi
 
     persistence:
       # $HOME for the main container: agentboard's sqlite db
@@ -151,15 +133,6 @@ spec:
         storageClass: longhorn
         globalMounts:
           - path: /root
-      tailscale-state:
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        size: 128Mi
-        storageClass: longhorn
-        advancedMounts:
-          *app :
-            tailscale:
-              - path: /var/lib/tailscale
       mise-config:
         type: configMap
         name: ${APP}-mise-config
