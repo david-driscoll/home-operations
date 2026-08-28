@@ -132,7 +132,16 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
     kubeconfig: outpostCredential,
     verifySsl: true,
   });
-  const proxyProviders = createdApplications.apply(apps => apps.filter(z => z.isProxy).map(z => z.provider));
+  // Both hostnames' providers. A tailnet twin that is not attached to the
+  // outpost is a provider the outpost will not answer for, which is exactly the
+  // 400 "no app for hostname" this pair exists to fix -- so it has to be
+  // collected here and not just created.
+  const proxyProviders = createdApplications.apply(apps =>
+    apps
+      .filter(z => z.isProxy)
+      .flatMap(z => [z.provider, z.tailnetProvider])
+      .filter(p => p !== undefined),
+  );
 
   const _outpost = new authentik.Outpost(
     clusterDefinition.key,

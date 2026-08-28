@@ -18,6 +18,7 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://pdm.${searchDomain}/oidc-callback"
+      - url: "https://pdm.${tailscaleDomain}/oidc-callback"
       propertyMappings:
         - email
         - openid

@@ -18,6 +18,10 @@ spec:
       clientType: confidential
       allowedRedirectUris:
       - url: "https://${CLUSTER_KEY}.dns.${ROOT_DOMAIN}:53443/sso/callback"
+      # The tailnet name is `dns-<server>` -- flat, and NOT the split-horizon
+      # `<server>.dns.${ROOT_DOMAIN}` above. 53443 is the admin/API port, which
+      # the egress Service already declares (tailscale-system/services).
+      - url: "https://dns-${CLUSTER_KEY}.${TAILSCALE_DOMAIN}:53443/sso/callback"
       propertyMappings:
         - email
         - openid

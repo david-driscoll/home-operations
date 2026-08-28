@@ -21,6 +21,8 @@ spec:
         # The UI login callback. The path segment appears twice by design:
         # /auth/<mount-path>/oidc/callback with the default mount path "oidc".
         - url: "https://bao.${CLUSTER_DOMAIN}/ui/vault/auth/oidc/oidc/callback"
+        # Same callback under the flat tailnet name.
+        - url: "https://bao.${TAILSCALE_DOMAIN}/ui/vault/auth/oidc/oidc/callback"
         # `bao login -method=oidc` runs a local listener on 8250 for the CLI flow.
         - url: "http://localhost:8250/oidc/callback"
       propertyMappings:

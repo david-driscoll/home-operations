@@ -29,6 +29,12 @@ spec:
         # invalidates existing sessions and requires updating the redirect URI
         # in the IdP. Treat this path as fixed.
         - url: https://toolhive.agents.${ROOT_DOMAIN}/api/auth/oauth2/callback/oidc
+        # `toolhive-ui`, not `toolhive`: MagicDNS is flat, so the dotted
+        # `toolhive.agents.${ROOT_DOMAIN}` has no direct tailnet equivalent, and the
+        # bare `toolhive` name is already spoken for by the MCP front door in
+        # ../toolhive (whose own redirect URI uses it). ${APP} keeps the two apart
+        # the same way every other definition does.
+        - url: https://${APP}.${TAILSCALE_DOMAIN}/api/auth/oauth2/callback/oidc
       propertyMappings:
         - email
         - openid

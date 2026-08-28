@@ -47,6 +47,14 @@ spec:
     - ../kubernetes/components/volsync
   postBuild:
     substitute:
+      # The chart names its Service `dynacat-app`, not `dynacat`. Without this the
+      # Tailscale operator could not resolve the Ingress backend, recorded a
+      # warning event, and left `"Handlers": null` in the proxy's serve config --
+      # `https://dynacat.opossum-yo.ts.net` answered 404 while `kubectl get
+      # ingress` looked perfectly healthy. Now that the Ingress points at Traefik
+      # this names the backend on the IngressRoute instead, but it is still the
+      # difference between the app answering and a 404.
+      TAILSCALE_SERVICE: dynacat-app
       APP: *app
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 5Gi

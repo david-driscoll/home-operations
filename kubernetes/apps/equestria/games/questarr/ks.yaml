@@ -44,6 +44,12 @@ spec:
     - ../../../../components/volsync
   postBuild:
     substitute:
+      # Mirrors this app's internal HTTPRoute: browsers take the authentik
+      # chain, and requests carrying X-Api-Key/?apikey fall through to
+      # TAILSCALE_API_MIDDLEWARE's `tailscale-local` default -- the same
+      # carve-out the internal route makes, so API clients (nzb360, LunaSea,
+      # scripts) keep working over the tailnet.
+      TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 10Gi

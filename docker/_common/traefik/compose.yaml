@@ -48,7 +48,21 @@ services:
       - 80:80
       - 443:443
       - 5443:5443
-      - 8443:8443
+      # LOOPBACK ONLY. `tailscale serve --service=svc:<x> --yes --https=443
+      # 127.0.0.1:8443` runs on the HOST and dials this over loopback
+      # (components/DockgeLxc.ts), so binding it to 0.0.0.0 published an
+      # unauthenticated plain-HTTP copy of every tailnet router to the LAN and the
+      # tailnet -- `curl -H 'Host: internal-celestia.<tailnet>' http://<host>:8443/`
+      # answered 302 with the Traefik dashboard, and `Tailscale.ports.web` grants
+      # tcp:8443 to tag:dockge, so any tailnet member could reach it.
+      #
+      # It also makes the `forwardedHeaders` trust on the `tailscale` entrypoint
+      # (config.yaml) sound: this host runs docker with EnableUserlandProxy: true,
+      # which SNATs every published-port connection to the bridge gateway, so
+      # Traefik cannot tell a LAN client from tailscaled by source address.
+      # Loopback-binding is what restores that distinction -- afterwards the only
+      # thing that can reach the entrypoint is a host-local process.
+      - 127.0.0.1:8443:8443
       - 2022:2022/tcp
       - 7687:7687
       - 8082:8082/tcp

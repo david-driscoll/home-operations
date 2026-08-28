@@ -23,6 +23,12 @@ services:
       traefik.http.routers.alloy.rule: Host(`alloy.${CLUSTER_DOMAIN}`)
       traefik.http.routers.alloy.entrypoints: websecure
       traefik.http.routers.alloy.tls.certresolver: le
+
+      # Same gap as prometheus above: x-dockge advertises
+      # https://alloy-${host}.${tailscaleDomain} and nothing served it.
+      traefik.http.routers.alloy-tailscale.rule: Host(`alloy-${host}.${tailscaleDomain}`)
+      traefik.http.routers.alloy-tailscale.entrypoints: tailscale
+      traefik.http.routers.alloy-tailscale.service: alloy
       traefik.http.services.alloy.loadbalancer.server.port: 12345
     volumes:
       - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
@@ -46,9 +52,22 @@ services:
       autoheal: true
       traefik.enable: true
       traefik.http.routers.prometheus.rule: Host(`prometheus.${CLUSTER_DOMAIN}`)
-      traefik.http.routers.prometheus.entrypoints: websecure,tailscale
+      traefik.http.routers.prometheus.entrypoints: websecure
       traefik.http.routers.prometheus.tls.certresolver: le
       traefik.http.routers.prometheus.service: prometheus
+
+      # A SEPARATE router, not a second entrypoint on the one above. Adding
+      # `tailscale` to that router's entrypoints -- which is what this was --
+      # changes nothing useful: the rule still only matches
+      # prometheus.${CLUSTER_DOMAIN}, so a request for the tailnet name has no
+      # route. Worse, DockgeLxc discovers tailnet services by scanning the
+      # compose file for Host(`...${tailscaleDomain}`), finds none, and never
+      # creates the `svc:prometheus-<host>` VIP -- while x-dockge below has been
+      # advertising that URL the whole time. It answered nothing (connection
+      # refused), verified against celestia, luna and skystar.
+      traefik.http.routers.prometheus-tailscale.rule: Host(`prometheus-${host}.${tailscaleDomain}`)
+      traefik.http.routers.prometheus-tailscale.entrypoints: tailscale
+      traefik.http.routers.prometheus-tailscale.service: prometheus
       traefik.http.services.prometheus.loadbalancer.server.port: 9090
     extra_hosts:
       - "node-exporter:host-gateway"

@@ -7,3 +7,4 @@ commonLabels:
   driscoll.dev/name: "${APP}"
 resources:
   - ./ingress.yaml
+  - ./ingressroute.yaml

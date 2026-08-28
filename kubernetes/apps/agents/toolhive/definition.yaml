@@ -41,6 +41,7 @@ spec:
         # registers its own redirect with ToolHive's embedded server via DCR;
         # authentik never sees them.
         - url: https://${APP}.${ROOT_DOMAIN}/oauth/callback
+        - url: https://${APP}.${TAILSCALE_DOMAIN}/oauth/callback
       propertyMappings:
         - email
         - openid

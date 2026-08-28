@@ -147,12 +147,20 @@ recovery:
 #      cost (#1233 -> #1235: a 23-Kustomization reconciliation freeze).
 #
 # When flipping: endpointURL/region/bucket/accessKey/secretKey become the
-# garage_* values, whose endpoint is http://dockge-celestia.<tailnet>:3900 --
-# pods have no route to tailnet IPs, so the traffic rides the
-# tailscale-operator egress Service for dockge-celestia (port declared in
-# tailscale-system/services/Update.cs, ACL opened by the garage-s3-backups
-# grant; both already merged and inert). Plain http is fine: WireGuard end to
-# end. Then TAKE A BASE BACKUP IMMEDIATELY
+# garage_* values, and the endpoint should be http://garage-s3.<tailnet>:3900 --
+# the Tailscale VIP, NOT http://dockge-celestia.<tailnet>:3900. Both work; the
+# VIP is advertised by all three Garage nodes and answers from whichever is up,
+# whereas the per-node name pins every backup to celestia. This is the OFF-SITE
+# copy, so the node most likely to be unreachable is precisely the one it would
+# otherwise be pinned to.
+#
+# Pods have no route to tailnet IPs either way, so the traffic rides a
+# tailscale-operator egress Service. Both are declared and inert:
+# `garage-s3` (the VIP) in stacks/unifi-network/tailnet-egress.ts, and
+# `dockge-celestia` in tailscale-system/services/bootstrap.yaml. The ACL is
+# opened by the `garage-s3-backups` grant, which covers the VIP too -- Tailscale
+# evaluates VIP traffic against the advertising node's tag:dockge. Plain http is
+# fine: WireGuard end to end. Then TAKE A BASE BACKUP IMMEDIATELY
 # (`kubectl cnpg backup postgres --method plugin -n database`): until one
 # succeeds the Garage archive holds WAL with no base to replay it onto, which
 # is also why the recovery block above stays on minio until it is verified.

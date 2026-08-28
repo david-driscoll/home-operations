@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+# The tailnet counterpart of `local-user` (components/common/middleware.yaml):
+# the same chain as `tailscale-user` minus the authentik outpost hop.
+#
+# For apps that must NOT get forward-auth on the tailnet path:
+#   - apps that do their own OIDC against authentik (immich, outline, karakeep,
+#     ...) -- an outpost in front would gate the app's own callback;
+#   - apps with no authentik provider at all, which are reached by native or API
+#     clients (plex, jellyfin, emby, obsidian-sync's CouchDB replication,
+#     meilisearch) where a browser redirect is not something the client can follow.
+#
+# Selected per app with `TAILSCALE_MIDDLEWARE: tailscale-local` in the app's
+# ks.yaml; components/tailscale defaults to `tailscale-user` so a new app is
+# gated unless it opts out.
+metadata:
+  name: tailscale-local
+spec:
+  chain:
+    middlewares:
+      - name: error-pages
+        namespace: network
+      - name: tailscale-network
+        namespace: network

@@ -9,6 +9,15 @@ spec:
   category: ${CLUSTER_TITLE}
   description: Backrest is a self-hosted backup UI for Restic repositories and schedules.
   url: &url https://backrest.${CLUSTER_DOMAIN}
+  # The same app under its per-host tailnet name, which is what the
+  # `<app>-tailscale` router in compose.yaml matches. authentik's
+  # ProxyProvider.external_host holds ONE hostname, so without this the outpost
+  # has no application for it and answers
+  #   400 {"message":"no app for hostname","host":"backrest-celestia.opossum-yo.ts.net"}
+  # -- verified against celestia, luna and skystar. Lowercase ${host} and
+  # ${tailscaleDomain}: the Dockge substitution table (components/DockgeLxc.ts)
+  # has no ${TAILSCALE_DOMAIN}.
+  tailnetUrl: https://backrest-${host}.${tailscaleDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/backrest.svg
   access_policy:
     groups:

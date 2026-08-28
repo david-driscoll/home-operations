@@ -44,6 +44,11 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     ((
       | {
           provider: ProviderProxy;
+          // The twin registered against spec.tailnetUrl. Present only for a
+          // proxy app that declares one. It has to travel alongside `provider`
+          // because the outpost is built from this list -- a provider the
+          // outpost does not carry is a provider that answers nothing.
+          tailnetProvider?: ProviderProxy;
           isProxy: true;
           config?: undefined;
           oidcCredentials?: undefined;
@@ -110,6 +115,14 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
+        // A ProxyProvider is only reachable through an Application -- the outpost
+        // resolves an incoming host to a provider by way of the application bound
+        // to it, so the tailnet twin needs its own or it is inert and the tailnet
+        // host still answers "no app for hostname". Same access_policy bindings,
+        // because createAuthentikApplication reads them off the same definition.
+        if ("tailnetProvider" in result && result.tailnetProvider) {
+          this.createAuthentikApplication(application, result.tailnetProvider, "tailnet");
+        }
         const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply(defs => {
           const r = Object.assign(result, {
             definition: application,
@@ -138,33 +151,52 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
 
     // Proxy Provider
     if (authentikDefinition.proxy) {
+      const proxy = authentikDefinition.proxy;
+      // Everything except the hostname. The tailnet twin below has to be
+      // configured IDENTICALLY -- same flows, same mode, same skipPathRegex --
+      // or the two hostnames enforce different policy, so the shared shape is
+      // built once rather than restated.
+      const proxyArgs = (externalHost: pulumi.Input<string>) =>
+        ({
+          // name: providerName,
+          authorizationFlow: proxy.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
+          authenticationFlow: proxy.authenticationFlow ?? this.authentik.flows.authenticationFlow,
+          invalidationFlow: proxy.invalidationFlow ?? this.authentik.flows.providerLogoutFlow,
+          externalHost,
+          accessTokenValidity: proxy.accessTokenValidity,
+          refreshTokenValidity: proxy.refreshTokenValidity,
+          basicAuthEnabled: proxy.basicAuthEnabled,
+          basicAuthPasswordAttribute: proxy.basicAuthPasswordAttribute,
+          basicAuthUsernameAttribute: proxy.basicAuthUsernameAttribute,
+          cookieDomain: proxy.cookieDomain,
+          interceptHeaderAuth: proxy.interceptHeaderAuth,
+          internalHost: proxy.internalHost,
+          internalHostSslValidation: proxy.internalHostSslValidation,
+          jwksSources: proxy.jwksSources,
+          jwtFederationProviders: proxy.jwtFederationProviders,
+          jwtFederationSources: proxy.jwtFederationSources,
+          mode: proxy.mode,
+          skipPathRegex: proxy.skipPathRegex,
+          propertyMappings: this.resolvePropertyMappings(proxy.propertyMappings),
+        }) satisfies authentik.ProviderProxyArgs;
+
+      // authentik's ProxyProvider.external_host is a SINGLE string -- there is no
+      // list form -- so one provider can only ever answer for one hostname. An app
+      // published on both `<app>.${ROOT_DOMAIN}` and its tailnet name therefore
+      // needs two, or the outpost rejects the second with
+      //   400 {"message":"no app for hostname"}
+      // which is what every authentik-gated tailnet route on the Dockge hosts
+      // (backrest-*, garage-*) answered before this existed.
+      //
+      // A twin rather than a `forward_domain` provider: forward_domain protects a
+      // whole cookie domain with one policy, and these apps each carry their own
+      // spec.access_policy groups. Splitting per app is the only shape that keeps
+      // those distinct.
+      const tailnetProvider = definition.spec.tailnetUrl ? new authentik.ProviderProxy(`${resourceName}-tailnet`, proxyArgs(definition.spec.tailnetUrl), opts) : undefined;
+
       return {
-        provider: new authentik.ProviderProxy(
-          resourceName,
-          {
-            // name: providerName,
-            authorizationFlow: authentikDefinition.proxy.authorizationFlow ?? this.authentik.flows.implicitConsentFlow,
-            authenticationFlow: authentikDefinition.proxy.authenticationFlow ?? this.authentik.flows.authenticationFlow,
-            invalidationFlow: authentikDefinition.proxy.invalidationFlow ?? this.authentik.flows.providerLogoutFlow,
-            externalHost: authentikDefinition.proxy.externalHost,
-            accessTokenValidity: authentikDefinition.proxy.accessTokenValidity,
-            refreshTokenValidity: authentikDefinition.proxy.refreshTokenValidity,
-            basicAuthEnabled: authentikDefinition.proxy.basicAuthEnabled,
-            basicAuthPasswordAttribute: authentikDefinition.proxy.basicAuthPasswordAttribute,
-            basicAuthUsernameAttribute: authentikDefinition.proxy.basicAuthUsernameAttribute,
-            cookieDomain: authentikDefinition.proxy.cookieDomain,
-            interceptHeaderAuth: authentikDefinition.proxy.interceptHeaderAuth,
-            internalHost: authentikDefinition.proxy.internalHost,
-            internalHostSslValidation: authentikDefinition.proxy.internalHostSslValidation,
-            jwksSources: authentikDefinition.proxy.jwksSources,
-            jwtFederationProviders: authentikDefinition.proxy.jwtFederationProviders,
-            jwtFederationSources: authentikDefinition.proxy.jwtFederationSources,
-            mode: authentikDefinition.proxy.mode,
-            skipPathRegex: authentikDefinition.proxy.skipPathRegex,
-            propertyMappings: this.resolvePropertyMappings(authentikDefinition.proxy.propertyMappings),
-          },
-          opts,
-        ),
+        tailnetProvider,
+        provider: new authentik.ProviderProxy(resourceName, proxyArgs(proxy.externalHost), opts),
         isProxy: true as const,
       };
     }
@@ -481,16 +513,24 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
     return undefined;
   }
 
-  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
-    const resourceName = this.resolveResourceName(definition);
+  /**
+   * @param variant Set for the tailnet twin. It keys the Pulumi resource name and
+   *   the authentik slug apart from the primary application -- both are unique per
+   *   authentik instance, so reusing them would have the two fight over one object.
+   *   It also renames the app in the portal and points its launch URL at the tailnet
+   *   name, so the two entries are tellable apart by a human choosing between them.
+   */
+  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource, variant?: "tailnet") {
+    const baseName = this.resolveResourceName(definition);
+    const resourceName = variant ? `${baseName}-${variant}` : baseName;
     const args: authentik.ApplicationArgs = {
-      name: definition.spec.name,
+      name: variant === "tailnet" ? `${definition.spec.name} (Tailnet)` : definition.spec.name,
       slug: new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
       group: this.cluster.apply(cluster => (definition.spec.category === "System" || cluster.title === definition.spec.category ? `System: ${cluster.title}` : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
-      metaLaunchUrl: this.resolveLaunchUrl(definition),
+      metaLaunchUrl: variant === "tailnet" ? definition.spec.tailnetUrl : this.resolveLaunchUrl(definition),
       openInNewTab: true,
     };
 
