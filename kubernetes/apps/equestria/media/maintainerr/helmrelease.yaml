@@ -1,0 +1,169 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app maintainerr
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/maintainerr/maintainerr
+              tag: 3.25.0@sha256:f96e37e04a5e2da56edc39d96774102599de7d7617e2cc00a49a1581b01be136
+            # -- All variables from
+            # https://docs.maintainerr.info/installation/#environment-variables.
+            # Everything Maintainerr actually needs to talk to Plex, Sonarr,
+            # Radarr, and Overseerr/Jellyseerr is configured later, by hand,
+            # through its own web UI -- none of that is env-var driven.
+            env:
+              TZ: ${TIMEZONE}
+              # Chart/image default already; spelled out so the listen address
+              # lives in one visible place. Set to "::" on an IPv6-only cluster.
+              UI_HOSTNAME: 0.0.0.0
+              UI_PORT: &port 6246
+              LOG_LEVEL: info
+              # Only needed when reverse-proxying Maintainerr from a subfolder
+              # (must be "/subfolder", no trailing slash). This app gets its own
+              # hostname, so it stays unset.
+              # BASE_PATH: /maintainerr
+              # Raises Maintainerr's GitHub API rate limit. `github-token` is the
+              # GitHub App installation token minted in kube-system
+              # (apps/kube-system/secrets/github-app-token) and reflected into
+              # every namespace by emberstack, equestria included -- same secret
+              # renovate and dynacat read, no ExternalSecret needed here.
+              GITHUB_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: github-token
+                    key: token
+              # Only for a separate front end on a different origin calling the
+              # API cross-origin -- the bundled UI (incl. via localhost) never
+              # needs this.
+              # CORS_ALLOWED_ORIGINS: https://${APP}.${ROOT_DOMAIN}
+              # Uncomment to opt out of Maintainerr's anonymous weekly usage report.
+              # TELEMETRY: "off"
+            probes:
+              # https://docs.maintainerr.info/installation/#health-checks
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health/live
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health/ready
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 100Mi
+              limits:
+                memory: 2Gi
+
+    defaultPodOptions:
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+        # Read/write access to the truenas-media shares below, same list as
+        # radarr/sonarr -- leftover-folder cleanup needs to actually delete
+        # from those paths, not just read them.
+        supplementalGroups: [0, 1, 44, 109, 303, 568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+
+    persistence:
+      config:
+        existingClaim: *app
+        globalMounts:
+          - path: /opt/data
+      # Optional per Maintainerr's docs: only needed for its leftover-folder
+      # cleanup rules. Same claim radarr/sonarr use, mounted at the same
+      # container paths their root folders report -- Maintainerr matches
+      # leftovers by path, so the paths have to line up across all three apps.
+      media:
+        existingClaim: truenas-media
+        globalMounts:
+          - path: /media/movies
+            subPath: movies
+          - path: /media/tv
+            subPath: tv
+          - path: /media/music
+            subPath: music
