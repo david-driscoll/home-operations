@@ -14,6 +14,14 @@
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead.
+#
+# GITHUB_PERSONAL_ACCESS_TOKEN lives under podTemplateSpec, not the
+# top-level `spec.env` -- confirmed live via `kubectl explain
+# mcpserver.spec.env`: that field is `{name, value}` only, a literal
+# string, with NO `valueFrom` in the CRD schema at all. An earlier draft
+# of this file put it there and it dry-run failed on every apply
+# (".spec.env[...].valueFrom: field not declared in schema"), which
+# blocked this whole MCPGroup's Kustomization from ever going Ready.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
@@ -28,16 +36,25 @@ spec:
   args:
     - stdio
 
-  env:
-    # `github-token`, the estate's own GitHub App installation token,
-    # reflected into this namespace automatically -- see
-    # ../agentboard/externalsecret.yaml's header. Takes precedence over
-    # OAuth per the image's own docs, so this alone is sufficient.
-    - name: GITHUB_PERSONAL_ACCESS_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: github-token
-          key: token
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          # `github-token`, the estate's own GitHub App installation
+          # token, reflected into this namespace automatically -- see
+          # ../agentboard/externalsecret.yaml's header. Takes precedence
+          # over OAuth per the image's own docs, so this alone is
+          # sufficient.
+          env:
+            - name: GITHUB_PERSONAL_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-token
+                  key: token
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
 
   resources:
     requests:
