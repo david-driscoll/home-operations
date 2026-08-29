@@ -20,6 +20,10 @@ spec:
     # authServerRef/oidcConfigRef of its own any more (see mcpserver.yaml).
     - name: toolhive-agent-tools
       namespace: *namespace
+    # ../rbac's ClusterRole, which ./rbac.yaml's own ClusterRoleBinding
+    # references by name.
+    - name: agent-rbac
+      namespace: agents
   path: ./kubernetes/apps/agents/toolhive-kubernetes
   prune: true
   wait: true

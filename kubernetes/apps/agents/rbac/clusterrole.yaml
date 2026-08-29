@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/clusterrole.json
+#
+# Replaces the `cluster-admin` binding both ../agentboard/rbac.yaml and
+# ../toolhive-kubernetes/rbac.yaml carried when this rollout was first built
+# (David's own call, "full read-write from the start" -- narrowed once the
+# actual shape of "enough to debug with" was worked out).
+#
+# Two rules, deliberately asymmetric:
+#
+#   READ is broad on purpose. `apiGroups: ["*"], resources: ["*"]` covers
+#   every CRD in this cluster (toolhive.stacklok.dev, external-secrets.io,
+#   cert-manager.io, source/kustomize/helm/notification/image.toolkit.fluxcd.io,
+#   pulumi.com, longhorn.io, cnpg.io, gateway.networking.k8s.io, traefik.io,
+#   ...) without hand-maintaining a list that goes stale the day a new
+#   operator lands. RBAC has no negation, so this ALSO grants read on
+#   Secrets and every other core resource -- there is no rule that can carve
+#   Secrets back out of a wildcard `resources: ["*"]` match. That is
+#   accepted here, not overlooked: this SA already holds one of the most
+#   sensitive credentials in the estate directly (../agentboard's own
+#   sops-age mount), and "why is this pod's env wrong" is a routine
+#   diagnostic question that needs to read the Secret it comes from.
+#
+#   WRITE is narrow and explicit -- everything the "debugging and
+#   diagnostics" brief actually asked for, and nothing past it:
+#     - pods: create/delete (spin up a one-off debug pod; delete a stuck one
+#       so its controller recreates it)
+#     - pods/exec: a live shell inside a running container. This is the
+#       single most powerful grant in this file -- functionally equivalent
+#       to code execution as whatever that container runs as. Included
+#       because "diagnostics" without it means read-only observation, not
+#       actual debugging.
+#     - pods/log, pods/portforward: lower-risk diagnostic companions to exec.
+#     - deployments/scale, statefulsets/scale, replicasets/scale: resize a
+#       workload without being able to touch its pod spec/image/env at all
+#       (that would need `deployments`, not `deployments/scale`).
+#
+#   Deliberately NOT granted: write on anything else -- no Secret/ConfigMap
+#   writes, no RBAC objects, no Nodes, no Namespaces, no CRDs themselves, no
+#   full `deployments`/`statefulsets` update (only their `/scale`
+#   subresource). Restarting a workload is `pods` delete (the controller
+#   recreates it), not a Deployment rollout-restart patch.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-debug
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/exec", "pods/portforward"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
+    verbs: ["get", "update", "patch"]

@@ -29,6 +29,11 @@ resources:
   # Order here is documentation only -- Flux orders on dependsOn -- but these
   # are a chain (CRDs -> operator -> front door -> servers) and reading them in
   # dependency order is how that shows.
+  #
+  # The shared `agent-debug` ClusterRole ../agentboard and ../toolhive-kubernetes
+  # both bind to -- ahead of everything else since nothing here depends ON
+  # it in the CRD-install sense, but several things depend on it existing.
+  - ./rbac/ks.yaml
   - ./toolhive-operator-crds/ks.yaml
   - ./toolhive-operator/ks.yaml
   - ./toolhive-valkey/ks.yaml

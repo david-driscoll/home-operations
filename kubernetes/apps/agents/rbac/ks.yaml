@@ -3,7 +3,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: &app agentboard
+  name: &app agent-rbac
   namespace: &namespace agents
   labels:
     app.kubernetes.io/name: *app
@@ -14,18 +14,7 @@ spec:
     labels:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
-  dependsOn:
-    # For ./externalsecret.yaml's Secrets and ./rbac.yaml's ServiceAccount --
-    # agentboard is a consumer of the ToolHive MCP servers over plain HTTP+
-    # OAuth like any other MCP client, so it has no build-time dependency on
-    # the toolhive/toolhive-operator Kustomizations themselves.
-    - name: external-secrets
-      namespace: kube-system
-    # ../rbac's ClusterRole, which ./rbac.yaml's own ClusterRoleBinding
-    # references by name.
-    - name: agent-rbac
-      namespace: agents
-  path: ./kubernetes/apps/agents/agentboard
+  path: ./kubernetes/apps/agents/rbac
   prune: true
   wait: true
   force: false
