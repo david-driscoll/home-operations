@@ -2,25 +2,23 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
 #
 # tailscale-mcp-server (github.com/HexSleeves/tailscale-mcp,
-# @hexsleeves/tailscale-mcp-server on npm) authenticates with a STATIC
-# `TAILSCALE_API_KEY` -- confirmed live via its own README, which documents
-# no OAuth-client-credentials support at all.
+# @hexsleeves/tailscale-mcp-server on npm) authenticates with a STATIC-
+# looking `TAILSCALE_API_KEY` -- confirmed live via its own README, which
+# documents no OAuth-client-credentials support of its own.
 #
-# That is NOT the credential this estate already has. The one Tailscale
-# credential in OpenBao today (third-party-tokens/tailscale/pulumi-oauth,
-# used by components/tailscale.ts against
-# https://api.tailscale.com/api/v2/oauth/token) is an OAuth CLIENT
-# ID/SECRET pair, a materially different credential type from a
-# `tskey-api-...` API key -- Tailscale has no API to self-mint the latter
-# (that would be circular), it has to be created once by hand in the
-# admin console (Settings -> Keys -> Generate API access token).
-#
-#   bao kv put secrets/third-party-tokens/tailscale/api-key key="tskey-api-..."
-#
-# Same "input, not output, created once by hand" idiom as
-# ../agentboard/externalsecret.yaml's anthropic_key. Flagged the same way
-# ./home-assistant.yaml flags its own outgoing-auth
-# gap -- this server has NO working credential until that manual step runs.
+# No manual step: stacks/unifi-network/tailscale-api-token.ts mints one
+# automatically, every run of that stack (every 5 minutes --
+# kubernetes/apps/pulumi/unifi-network/stack.yaml's
+# resyncFrequencySeconds), by exchanging this estate's existing Tailscale
+# OAuth client credential (third-party-tokens/tailscale/pulumi-oauth) for a
+# short-lived access token and writing it to THIS path
+# (third-party-tokens/tailscale/api-key). Tailscale's REST API accepts an
+# OAuth-exchanged access token as a Bearer credential exactly like a
+# `tskey-api-...` key, so the swap is transparent to this MCP server --
+# see that file's header for why it lives in stacks/unifi-network
+# specifically (its 5-minute cadence is what keeps this inside the
+# token's ~1h lifetime; stacks/vault's 30 min and stacks/system's 24h
+# were both considered and rejected).
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -64,9 +62,9 @@ spec:
 # but npx-on-node matches this rollout's existing convention for npm-native
 # MCP packages better than pulling a second, less-established image.
 #
-# See ./externalsecret.yaml's header: TAILSCALE_API_KEY has NO working value
-# until a credential is created by hand and put into OpenBao. This server
-# will not authenticate against Tailscale's API until that manual step runs.
+# See this file's own ExternalSecret header (above): TAILSCALE_API_KEY is
+# auto-minted by stacks/unifi-network/tailscale-api-token.ts, no manual
+# step required.
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead.
