@@ -36,6 +36,20 @@ rules:
   - apiGroups: [""]
     resources: ["secrets", "configmaps"]
     verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
+  # stacks/unifi-network/tailnet-egress.ts creates and owns the per-device
+  # egress Services in tailscale-system (dns-*, dockge-*, proxmox-*, pbs-*,
+  # the garage-s3 VIP) plus a blackbox Probe and a PrometheusRule alongside
+  # each one -- a ONE-TIME CUTOVER (see that file's header) from these being
+  # hand-written Flux YAML, which never needed Pulumi write access to any of
+  # the three kinds. Without this, `services is forbidden` fails Service
+  # creation outright; Probe/PrometheusRule are children of the Service in
+  # that module's resource graph, so they never even get attempted.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["probes", "prometheusrules"]
+    verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
