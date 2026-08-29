@@ -1,0 +1,64 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
+#
+# openbao-mcp (knuckles-team.github.io/openbao-mcp,
+# github.com/Knuckles-Team/openbao-mcp) -- typed OpenBao secrets/system/
+# auth/ssh tools. Image confirmed live via web search of the project's own
+# docs: `knucklessg1/openbao-mcp:mcp` is the slim MCP-only image (`:latest`
+# bundles a Pydantic-AI agent and epistemic-graph engine this rollout has
+# no use for) -- no digest pin yet, add one before merging.
+#
+# David's explicit scope answer: "Secrets only, read+write" ->
+# SECRETSTOOL=True, everything else off. Confirmed exact env var names
+# live via web search of the project's own docs.
+#
+# OPENBAO_URL/OPENBAO_TOKEN come from ./externalsecret.yaml, which mints a
+# live, auto-renewing token via ./vaultdynamicsecret.yaml rather than a
+# static one this package has no way to refresh itself -- see that file's
+# header, and stacks/system/openbao-mcp.ts's, for the full design. Until
+# that Pulumi code's own root ceremony lands (openbao-mcp.ts's ENABLED
+# gate), OPENBAO_TOKEN will be empty and this server will not
+# authenticate.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../toolhive-agent-tools's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: knucklessg1/openbao-mcp:mcp
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: SECRETSTOOL
+      value: "True"
+    - name: SYSTOOL
+      value: "False"
+    - name: AUTHTOOL
+      value: "False"
+    - name: SSHTOOL
+      value: "False"
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: ${APP}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

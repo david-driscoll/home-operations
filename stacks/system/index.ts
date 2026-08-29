@@ -69,6 +69,7 @@ import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
+import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
 import { PostgresRotationComponent } from "./postgres-rotation.ts";
 
 const globals = new GlobalResources({}, {});
@@ -123,6 +124,12 @@ export const garage = configureGarage(globals);
 // there, which must wait for the widened `pulumi` policy -- so this cannot
 // break the stack every other stack depends on.
 new PostgresRotationComponent({ globals });
+
+// OpenBao Kubernetes-auth Role + Policy for the toolhive-openbao MCP server
+// (kubernetes/apps/agents/toolhive-openbao/). Same kind of no-op-until-flipped
+// gate as PostgresRotationComponent above, pending its own smaller root
+// ceremony -- see openbao-mcp.ts's header.
+new OpenBaoMcpComponent({ globals });
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the
 // repository grants that decide what Renovate manages. Unlike everything else
