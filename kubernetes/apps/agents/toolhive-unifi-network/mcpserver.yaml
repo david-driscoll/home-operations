@@ -61,6 +61,17 @@ spec:
           volumeMounts:
             - name: uv-cache
               mountPath: /tmp
+          # Flagged by Codacy (real finding -- see
+          # ../toolhive-context7/mcpserver.yaml's comment). Explicit rather
+          # than relying on the operator's own default (which the comment
+          # above already claims is read-only) -- readOnlyRootFilesystem is
+          # safe here specifically because uv-cache above gives `uv`/HOME
+          # somewhere writable.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
 
   resources:
     requests:

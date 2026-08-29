@@ -51,6 +51,14 @@ spec:
                 secretKeyRef:
                   name: github-token
                   key: token
+          # Flagged by Codacy (real finding -- see
+          # ../toolhive-context7/mcpserver.yaml's comment). No
+          # readOnlyRootFilesystem: `pulumi` writes plugin/state caches under
+          # its own home dir, with no emptyDir set up for that here.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
 
   resources:
     requests:

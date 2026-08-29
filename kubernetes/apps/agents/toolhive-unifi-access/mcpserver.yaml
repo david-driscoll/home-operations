@@ -43,6 +43,13 @@ spec:
           volumeMounts:
             - name: uv-cache
               mountPath: /tmp
+          # Flagged by Codacy -- see ../toolhive-unifi-network/mcpserver.yaml's
+          # comment.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
 
   resources:
     requests:

@@ -38,6 +38,17 @@ spec:
         - name: mcp
           command: ["npx"]
           args: ["-y", "@upstash/context7-mcp"]
+          # Flagged by Codacy (real finding, unlike the httproute.yaml "id
+          # field" noise elsewhere in this PR -- a podTemplateSpec container
+          # override like this one can silently drop whatever hardening the
+          # operator's own default pod spec would otherwise apply).
+          # readOnlyRootFilesystem is NOT set here -- npx needs to write its
+          # own cache/extract dir and this image has no emptyDir set up for
+          # that the way the uv-based servers next door do.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
 
   resources:
     requests:
