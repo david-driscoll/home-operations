@@ -1298,7 +1298,28 @@ export class DockgeLxc extends ComponentResource {
         const hostRegex = /Host\(`(.*?)`\)/g;
 
         all([replacedContent, tailscaleDomain]).apply(([content, tailscaleDomain]) => {
-          const hosts = new Set<string>(Array.from(content.matchAll(hostRegex)).map(z => z[1]));
+          // Traefik rules are scraped out of the RAW compose text, so a `#` comment
+          // that merely MENTIONS a Host(`...`) rule is indistinguishable from a real
+          // label. docker/_common/prometheus/compose.yaml does exactly that: its
+          // comment explains this very scan and writes ``Host(`...${tailscaleDomain}`)``
+          // as prose, where `...` is an English ellipsis. That got scraped as a literal
+          // hostname, and stripping the domain off `...<domain>` left `..`, which the
+          // tailnet rejects at create time:
+          //
+          //   error: Failed to create Service: ".." is not a valid DNS label (400)
+          //
+          // It failed home-operations, ocracoke AND gulf-of-mexico -- every stack with a
+          // dockge host -- because the offending file is in _common and ships to all of
+          // them. Drop whole-line comments before scanning.
+          //
+          // Deliberately only whole-line comments. A trailing `#` cannot be cut blindly:
+          // the Host() sits ahead of it in the value, and `#` is legal inside a Traefik
+          // rule string, so cutting at the first `#` would corrupt real labels.
+          const scannable = content
+            .split("\n")
+            .filter(line => !/^\s*#/.test(line))
+            .join("\n");
+          const hosts = new Set<string>(Array.from(scannable.matchAll(hostRegex)).map(z => z[1]));
 
           // A stack running its own tailscale sidecar (network_mode: service:tailscale) joins
           // the tailnet under a dedicated identity, not the DockgeLxc host's own address — the
@@ -1316,6 +1337,23 @@ export class DockgeLxc extends ComponentResource {
             if (host.indexOf(tailscaleDomain) > -1) {
               // this is a service domain
               const service = host.replace(`.${tailscaleDomain}`, "");
+
+              // Belt to the comment-stripping brace above. A `${VAR}` that renders
+              // EMPTY in a Host() rule collapses to a bare dot, and every such name
+              // survives all the way to the Tailscale API before being rejected --
+              // which fails the entire stack, not just the one bad service. Catch it
+              // here so a single malformed rule cannot take out every other service on
+              // the host, and say so loudly rather than skipping in silence: an empty
+              // variable is a real bug in the compose file, just not one worth halting
+              // a deploy over.
+              if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(service)) {
+                log.warn(
+                  `Skipping tailnet service for Host(\`${host}\`): the derived name "${service}" is not a valid DNS label, so Tailscale would reject it (400) and fail this whole stack. Look for a \${VAR} that rendered empty in that rule.`,
+                  this,
+                );
+                continue;
+              }
+
               log.info(`Creating Tailscale DNS entry for service ${service}`, this);
 
               // A SHARED service is advertised by several hosts under ONE name
