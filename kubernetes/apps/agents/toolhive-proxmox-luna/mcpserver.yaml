@@ -1,0 +1,68 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
+#
+# ProxmoxMCP-Plus (github.com/RekklesNA/ProxmoxMCP-Plus), against the
+# luna hypervisor. Published image confirmed live:
+# ghcr.io/rekklesna/proxmoxmcp-plus:latest -- no digest pin yet, add one
+# before merging. Three transport modes exist (stdio via PyPI, native MCP
+# HTTP via `PROXMOX_MCP_MODE=mcp-http` on :8000, or an OpenAPI bridge on
+# :8811 by default); this uses the native HTTP mode, same
+# no-stdio-wrapper shape as ../toolhive-degoog/mcpserver.yaml -- see its
+# header for why that needs no podTemplateSpec command override.
+#
+# David's explicit scope answer: "Full VM/LXC lifecycle". The project has
+# no built-in read-only/write-toggle flag of its own (checked its docs) --
+# write scope is controlled entirely by what the underlying Proxmox API
+# token itself permits, which is whatever `mainProxmoxCredentials`/
+# `alphaSiteProxmoxCredentials` (components/ProxmoxHost.ts) were already
+# granted on the Proxmox side. Nothing here narrows that further.
+#
+# PROXMOX_HOST is luna's tailscale address (100.111.10.104) --
+# this host has no internal/LAN IP recorded in Pulumi (stacks/gulf-of-mexico or stacks/ocracoke), only a tailscale one -- using it directly.
+# Reachable the same way ../toolhive-docker-luna/mcpserver.yaml assumes
+# its DNS name is (via the cluster's Tailscale Connector LAN-subnet route).
+# PROXMOX_VERIFY_SSL=false -- Proxmox's default self-signed cert, not
+# live-verified this host uses anything else.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../toolhive-agent-tools's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: ghcr.io/rekklesna/proxmoxmcp-plus:latest
+  transport: streamable-http
+  proxyPort: 8000
+  mcpPort: 8000
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: PROXMOX_MCP_MODE
+      value: mcp-http
+    - name: PROXMOX_HOST
+      value: "100.111.10.104"
+    - name: PROXMOX_PORT
+      value: "8006"
+    - name: PROXMOX_VERIFY_SSL
+      value: "false"
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: ${APP}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

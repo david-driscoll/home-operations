@@ -1,0 +1,50 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../toolhive-docs/mcpserver.yaml.
+#
+# tailscale-mcp-server (github.com/HexSleeves/tailscale-mcp) -- list/manage
+# tailnet devices, ACLs, routes. npm package
+# `@hexsleeves/tailscale-mcp-server`, run via `npx`, same shape as
+# ../toolhive-context7/mcpserver.yaml (stock `node` image, no custom
+# Dockerfile). Docker images also exist
+# (hexsleeves/tailscale-mcp-server, ghcr.io/hexsleeves/tailscale-mcp-server)
+# but npx-on-node matches this rollout's existing convention for npm-native
+# MCP packages better than pulling a second, less-established image.
+#
+# See ./externalsecret.yaml's header: TAILSCALE_API_KEY has NO working value
+# until a credential is created by hand and put into OpenBao. This server
+# will not authenticate against Tailscale's API until that manual step runs.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../toolhive-agent-tools's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: node:22-alpine
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          command: ["npx"]
+          args: ["-y", "@hexsleeves/tailscale-mcp-server"]
+          envFrom:
+            - secretRef:
+                name: ${APP}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

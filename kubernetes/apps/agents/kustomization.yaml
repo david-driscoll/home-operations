@@ -60,6 +60,35 @@ resources:
   - ./toolhive-context7/ks.yaml
   - ./toolhive-degoog/ks.yaml
   - ./toolhive-nuget/ks.yaml
+  # One MCPServer per Dockge host, all pointed at that host's existing
+  # docker-socket-proxy:2375 -- see any one of these dirs'
+  # mcpserver.yaml for why (inherits the proxy's own existing,
+  # unauthenticated scope; no new credential).
+  - ./toolhive-docker-celestia/ks.yaml
+  - ./toolhive-docker-luna/ks.yaml
+  - ./toolhive-docker-skystar/ks.yaml
+  - ./toolhive-docker-alpha-site/ks.yaml
+  # One MCPServer per Proxmox hypervisor, reusing the existing
+  # ProxmoxHost Pulumi component's own API tokens -- see any one of these
+  # dirs' externalsecret.yaml for the credential-splitting details.
+  - ./toolhive-proxmox-twilight-sparkle/ks.yaml
+  - ./toolhive-proxmox-celestia/ks.yaml
+  - ./toolhive-proxmox-luna/ks.yaml
+  - ./toolhive-proxmox-skystar/ks.yaml
+  - ./toolhive-proxmox-alpha-site/ks.yaml
+  # OpenBao secrets access -- see ./toolhive-openbao/mcpserver.yaml and
+  # stacks/system/openbao-mcp.ts. Its OPENBAO_TOKEN stays empty (server
+  # cannot authenticate) until that Pulumi code's own root-ceremony gate
+  # is lifted.
+  - ./toolhive-openbao/ks.yaml
+  # The estate's one shared CNPG Postgres cluster, via its existing
+  # superuser credential (reflected in, not re-minted) -- see
+  # ./toolhive-postgres/secret.yaml.
+  - ./toolhive-postgres/ks.yaml
+  # Tailscale tailnet management. Its credential stays empty (no working
+  # auth) until a static API key is created by hand -- see
+  # ./toolhive-tailscale/externalsecret.yaml.
+  - ./toolhive-tailscale/ks.yaml
   # MCPRemoteProxy, not MCPServer -- these two proxy EXISTING remote MCP
   # HTTP servers rather than running a container. See
   # ./toolhive-microsoft-docs/mcpremoteproxy.yaml's header.
