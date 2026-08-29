@@ -34,7 +34,7 @@ services:
   # that headroom to actually exist (see the LXC memory sizing note in the PR
   # that added this stack).
   llama-agent:
-    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:71da21f3ca71dba2150c729b98cdf76a827747221af65ac36219d35ab7cb6ab7
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:6157177921e5ba459c1200000a164dd2054af311ba9baf261c215ee91170f0b7
     container_name: llama-agent
     restart: unless-stopped
     ports:
