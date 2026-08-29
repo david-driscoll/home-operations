@@ -135,6 +135,22 @@ instance:
       # and source-controller stay at the shared 1Gi: neither carries the
       # concurrent-build-trees-in-tmpfs coupling that makes kustomize-controller
       # the one that needs headroom sized against estate growth.
+      #
+      # A THIRD instance, 2026-08-29, minutes after the 2Gi fix above merged
+      # (#1316) -- 2Gi was not enough either. Same fast signature as the
+      # first incident this time, not the slow one: 3 restarts in under 3
+      # minutes, exit 137 every time, ~37s from container start to kill
+      # (23:18:18 -> 23:18:55), caught mid-build of `cluster-apps` (the
+      # single Kustomization covering the whole `./kubernetes/apps` tree)
+      # while merging #1317, which froze reconciliation cluster-wide before
+      # `cluster-apps` itself could ever record a Ready/False status. Node
+      # (fluttershy) had 62GB allocatable at 20% used, so this is a
+      # container-limit problem, not a capacity one. Raising to 4Gi rather
+      # than re-deriving a tighter number: estate growth has now blown
+      # through two successive "should be enough" limits inside 24h, and
+      # `--concurrent` was left untouched both times, so there is no
+      # cheaper knob to turn here without reopening the worker-starvation
+      # deadlock the comment above already warns off.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
@@ -147,7 +163,7 @@ instance:
               medium: Memory
         - op: replace
           path: /spec/template/spec/containers/0/resources/limits/memory
-          value: 2Gi
+          value: 4Gi
       target:
         kind: Deployment
         name: kustomize-controller
