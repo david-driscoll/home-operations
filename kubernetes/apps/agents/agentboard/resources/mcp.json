@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agent-tools": {
+      "type": "http",
+      "url": "https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp"
+    }
+  }
+}

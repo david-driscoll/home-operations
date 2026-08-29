@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  # target.name deliberately omitted -- kustomize treats it as a REGEX and
+  # a literal `${APP}`-style target would never match (`$` anchors
+  # end-of-string) -- verified live via `kustomize build`. Every overlay
+  # here matches by `kind` alone instead: exactly one MCPServer/
+  # ExternalSecret per overlay, so it is unambiguous without a name
+  # selector.
+  #
+  # ../base's `metadata.name`/`secretRef.name`/`target.name` are all the
+  # literal placeholder `REPLACE-ME-name` -- there is no longer a
+  # per-Kustomization `${APP}` Flux substitution to rely on now that all
+  # instances share ONE ../../ks.yaml (agent-tools-servers), so each
+  # overlay patches the per-host value AND every one of those three name
+  # references explicitly (they all have to agree: the MCPServer's
+  # envFrom.secretRef.name must match the ExternalSecret's own name).
+  - target:
+      kind: MCPServer
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: toolhive-proxmox-twilight-sparkle
+      - op: replace
+        path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
+        value: toolhive-proxmox-twilight-sparkle
+      - op: replace
+        path: /spec/env/1/value
+        value: "10.10.10.100"
+  - target:
+      kind: ExternalSecret
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: toolhive-proxmox-twilight-sparkle
+      - op: replace
+        path: /spec/target/name
+        value: toolhive-proxmox-twilight-sparkle

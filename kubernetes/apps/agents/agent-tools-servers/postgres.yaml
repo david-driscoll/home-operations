@@ -1,0 +1,88 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/secret.json
+#
+# Mirrored from the `database` namespace by emberstack reflector -- the
+# source Secret (kubernetes/apps/database/postgres/app/cluster-users.yaml's
+# `postgres-superuser` ExternalSecret) already carries
+# `reflection-allowed: "true"`, so no change to that file was needed, only
+# this pull-side stub. Same pattern as
+# kubernetes/apps/equestria/dns/technitium/tailscale-authkey.yaml.
+#
+# This is the cluster's shared-superuser credential for the estate's one
+# CNPG Postgres cluster -- every app's database lives under this one
+# instance. Reusing it here (rather than minting a narrower role) means
+# postgres-mcp below can read/write/drop ANY app's database, not just
+# diagnose one. Granted with eyes open, matching ./agent-debug-rbac.yaml's
+# own tone for its highest-risk grants -- David may want to narrow this to
+# a purpose-built role on review.
+#
+# Key name is `uri` (kubernetes/apps/database/postgres/app/user-template.yaml),
+# a full connection-string value -- exactly what postgres-mcp's DATABASE_URI
+# wants.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-superuser
+  annotations:
+    reflector.v1.k8s.emberstack.com/reflects: database/postgres-superuser
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# Postgres MCP Pro (github.com/crystaldba/postgres-mcp) -- query analysis,
+# index tuning, health checks, and (in unrestricted mode) direct SQL
+# execution against the estate's one shared CNPG Postgres cluster. Official
+# image `crystaldba/postgres-mcp`, confirmed live via its own README --
+# no digest pin yet, add one before merging.
+#
+# stdio is the package's default transport (`--transport=sse` is the only
+# documented alternative, not used here) -- the operator's proxy-runner
+# turns it into Streamable HTTP, same as every other stdio-wrapped server
+# here. No podTemplateSpec command override needed: the image's own
+# ENTRYPOINT already speaks stdio MCP, same shape as
+# ./kubernetes.yaml's bare image+args.
+#
+# --access-mode=unrestricted (full read-write, including arbitrary SQL) --
+# matches this rollout's established "full read-write from day one" default
+# for agent tooling (kubernetes MCP, pulumi MCP). See ./secret.yaml's header
+# for the blast-radius caveat this carries: the credential behind
+# DATABASE_URI is the cluster's shared superuser, not a scoped role.
+# --access-mode=restricted (read-only, enforces query time limits) is the
+# safer alternative if this needs narrowing later.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-postgres
+spec:
+  image: crystaldba/postgres-mcp:latest
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+  args: ["--access-mode=unrestricted"]
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          env:
+            - name: DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-superuser
+                  key: uri
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

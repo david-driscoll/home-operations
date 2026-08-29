@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Every MCP server (and MCPRemoteProxy), plus the shared `agent-debug`
+# ClusterRole and the one pre-agent-tools server (docs.yaml), installed by
+# ONE Flux Kustomization (./ks.yaml) instead of one per server. Each entry
+# below used to be its own directory with its own `ks.yaml` -- collapsed
+# once the roster made two dozen near-identical Flux Kustomizations more
+# noise than the ordering guarantees were worth; nothing here has an
+# inter-dependency Flux itself needs to sequence (`groupRef`/`envFrom`/
+# `dependsOn`-style references resolve at the Kubernetes API level, not at
+# apply time), so one Kustomization applying all of them together is
+# equivalent in practice.
+#
+# agent-debug-rbac.yaml is the ONE resource here with no per-instance `${APP}` naming
+# concern (its ClusterRole `agent-debug` has always had a fixed literal
+# name) -- everything else had its own `metadata.name: ${APP}` templating
+# from its individual `ks.yaml`, now hardcoded to a literal per file since
+# there is only one Flux Kustomization (and one `${APP}` value) left to
+# substitute with.
+#
+# docker/ and proxmox/ are NOT flat files like the rest -- they are
+# base+overlay kustomize directories (one MCPServer definition parameterized
+# per host via a JSON6902 patch), because collapsing FIVE near-identical
+# ProxmoxMCP-Plus definitions (or four Docker ones) into flat copies would
+# have reintroduced the exact duplication kustomize patches exist to avoid.
+# See docker/base/mcpserver.yaml and proxmox/base/{mcpserver,externalsecret}.yaml
+# for why each overlay also has to patch its own `/metadata/name` now (same
+# reasoning as every flat file above -- no more per-instance `${APP}`).
+resources:
+  - ./agent-debug-rbac.yaml
+  - ./docs.yaml
+  - ./kubernetes.yaml
+  - ./pulumi.yaml
+  - ./unifi-network.yaml
+  - ./unifi-protect.yaml
+  - ./unifi-access.yaml
+  - ./github.yaml
+  - ./context7.yaml
+  - ./degoog.yaml
+  - ./nuget.yaml
+  - ./docker/celestia
+  - ./docker/luna
+  - ./docker/skystar
+  - ./docker/alpha-site
+  - ./proxmox/twilight-sparkle
+  - ./proxmox/celestia
+  - ./proxmox/luna
+  - ./proxmox/skystar
+  - ./proxmox/alpha-site
+  - ./openbao.yaml
+  - ./postgres.yaml
+  - ./tailscale.yaml
+  - ./microsoft-docs.yaml
+  - ./home-assistant.yaml

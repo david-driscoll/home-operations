@@ -1,0 +1,147 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# openbao-mcp (knuckles-team.github.io/openbao-mcp,
+# github.com/Knuckles-Team/openbao-mcp) -- typed OpenBao secrets/system/
+# auth/ssh tools. Image confirmed live via web search of the project's own
+# docs: `knucklessg1/openbao-mcp:mcp` is the slim MCP-only image (`:latest`
+# bundles a Pydantic-AI agent and epistemic-graph engine this rollout has
+# no use for) -- no digest pin yet, add one before merging.
+#
+# David's explicit scope answer: "Secrets only, read+write" ->
+# SECRETSTOOL=True, everything else off. Confirmed exact env var names
+# live via web search of the project's own docs.
+#
+# OPENBAO_URL/OPENBAO_TOKEN come from ./externalsecret.yaml, which mints a
+# live, auto-renewing token via ./vaultdynamicsecret.yaml rather than a
+# static one this package has no way to refresh itself -- see that file's
+# header, and stacks/system/openbao-mcp.ts's, for the full design. Until
+# that Pulumi code's own root ceremony lands (openbao-mcp.ts's ENABLED
+# gate), OPENBAO_TOKEN will be empty and this server will not
+# authenticate.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-openbao
+spec:
+  image: knucklessg1/openbao-mcp:mcp
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: SECRETSTOOL
+      value: "True"
+    - name: SYSTOOL
+      value: "False"
+    - name: AUTHTOOL
+      value: "False"
+    - name: SSHTOOL
+      value: "False"
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: toolhive-openbao
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/generators.external-secrets.io/vaultdynamicsecret_v1alpha1.json
+#
+# Mints a fresh, short-lived OpenBao token for openbao-mcp instead of a
+# static one it could never renew on its own -- see
+# stacks/system/openbao-mcp.ts's header for the full design (why
+# this authenticates AS `external-secrets`/`kube-system`, and why there
+# are two hops: a Kubernetes-auth login, then a separate `auth/token/create`
+# call to mint the token this ExternalSecret actually hands to the pod).
+#
+# Field shapes ARE live-verified against this cluster's actual
+# VaultDynamicSecret CRD (`kubectl explain vaultdynamicsecret.spec` /
+# `.spec.provider.auth.kubernetes`) -- the specific COMBINATION of
+# `path: auth/token/create` + `resultType: Auth` to mint a plain token
+# (rather than read a database/pki/aws-style dynamic secret) is NOT
+# live-exercised, only reasoned from OpenBao/Vault's own documented
+# pattern for this exact scenario. Verify the rendered ExternalSecret
+# actually produces a non-empty OPENBAO_TOKEN before trusting it.
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: VaultDynamicSecret
+metadata:
+  name: toolhive-openbao
+spec:
+  path: auth/token/create
+  method: POST
+  resultType: Auth
+  parameters:
+    policies:
+      - agent-openbao-mcp
+    ttl: 1h
+    no_default_policy: true
+  provider:
+    server: http://openbao-active.kube-system.svc.cluster.local:8200
+    path: secrets
+    version: v2
+    auth:
+      kubernetes:
+        mountPath: kubernetes
+        role: agent-openbao-mcp
+        serviceAccountRef:
+          name: external-secrets
+          namespace: kube-system
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# Sources from ./vaultdynamicsecret.yaml's Generator, not a plain OpenBao
+# path -- see that file's header. `refreshInterval` here is what actually
+# keeps OPENBAO_TOKEN alive: the generator mints a 1h token
+# (./vaultdynamicsecret.yaml's `ttl: 1h`), so this refreshes well inside
+# that window and `reloader.stakater.com/auto` rolls the pod on each
+# change, same mechanism every other reloader-annotated Secret in this
+# rollout already relies on.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-openbao
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  refreshPolicy: Periodic
+  refreshInterval: 20m
+  target:
+    name: toolhive-openbao
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        OPENBAO_URL: http://openbao-active.kube-system.svc.cluster.local:8200
+        OPENBAO_TOKEN: "{{ .token }}"
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: VaultDynamicSecret
+          name: toolhive-openbao
+      rewrite:
+        - regexp:
+            source: "^client_token$"
+            target: token

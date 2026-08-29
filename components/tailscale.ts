@@ -35,10 +35,19 @@ export interface TailscaleNodeExport {
   nodes: TailscaleNodeState[];
 }
 
-export async function getTailscaleClient(globals: GlobalResources): Promise<Client<paths>> {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-
+/**
+ * Just the OAuth client_credentials exchange, no API client built on top --
+ * for callers that want the raw access token itself (e.g. to hand it to a
+ * workload that speaks to Tailscale's REST API directly, rather than
+ * through this repo's own openapi-fetch client). Same credential
+ * (`Tailscale Terraform OAuth Client`) getTailscaleClient uses.
+ *
+ * The returned token is short-lived (standard OAuth2 access-token TTL,
+ * on the order of an hour) -- callers minting this into a Secret need a
+ * refresh cadence well inside that window. See
+ * stacks/unifi-network/tailscale-api-token.ts for the one that does.
+ */
+export async function getTailscaleAccessToken(globals: GlobalResources) {
   const tailscaleCredential = await awaitOutput(globals.store.getSecretByTitle<{ username: string; credential: string }>("Tailscale Terraform OAuth Client"));
   const oauth = new ClientCredentials({
     client: {
@@ -52,9 +61,17 @@ export async function getTailscaleClient(globals: GlobalResources): Promise<Clie
   });
 
   const token = await oauth.getToken({});
+  return token.token;
+}
+
+export async function getTailscaleClient(globals: GlobalResources): Promise<Client<paths>> {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
+  const token = await getTailscaleAccessToken(globals);
   const client = createClient<paths>({
     baseUrl: "https://api.tailscale.com/api/v2/",
-    headers: { Authorization: `Bearer ${token.token.access_token}` },
+    headers: { Authorization: `Bearer ${token.access_token}` },
   });
 
   return client;

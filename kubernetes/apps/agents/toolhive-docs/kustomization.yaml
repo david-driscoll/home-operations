@@ -1,9 +1,0 @@
----
-# yaml-language-server: $schema=https://json.schemastore.org/kustomization
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-# Just the one CR. The hostname, the route, the authorization server and the
-# ApplicationDefinition all live in ../toolhive -- they are shared by every MCP
-# server behind that name, and this directory is only one of them.
-resources:
-  - ./mcpserver.yaml
