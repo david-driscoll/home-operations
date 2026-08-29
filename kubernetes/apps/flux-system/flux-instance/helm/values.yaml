@@ -135,6 +135,29 @@ instance:
       # and source-controller stay at the shared 1Gi: neither carries the
       # concurrent-build-trees-in-tmpfs coupling that makes kustomize-controller
       # the one that needs headroom sized against estate growth.
+      #
+      # 2Gi was the first live attempt and was NOT enough -- verified: still
+      # OOMKilling (exit 137) 7 restarts into a 15-minute observation window,
+      # backlog still growing (53 -> 64 stuck Kustomizations), not draining.
+      # The catch-up spike after 27h down is a full-estate reconcile wave at
+      # `--concurrent=20` simultaneously, not steady-state load; 2Gi covers
+      # steady-state fine but not that. 4Gi was applied live next -- the
+      # node this pod lands on has 65GB total at ~20% steady utilization, so
+      # headroom was never the constraint, the limit was; whether 4Gi is
+      # itself enough to fully drain the backlog was still being confirmed
+      # live as of this commit.
+      #
+      # Applied live before this merged, straight to the `FluxInstance`
+      # object's own spec (not the Deployment -- flux-operator reconciles
+      # Deployments FROM the FluxInstance continuously, so a Deployment-level
+      # patch gets reverted back to whatever the FluxInstance still says
+      # within seconds; confirmed live, that is exactly what happened to the
+      # first attempt). The FluxInstance itself isn't gated behind
+      # kustomize-controller, so patching it directly is what actually
+      # stuck. Left as a permanent record here: if kustomize-controller ever
+      # needs debugging again, `kubectl get fluxinstance flux -n flux-system`
+      # is the live source of truth for its Deployment spec, not this file,
+      # until this PR reconciles.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
@@ -147,7 +170,7 @@ instance:
               medium: Memory
         - op: replace
           path: /spec/template/spec/containers/0/resources/limits/memory
-          value: 2Gi
+          value: 4Gi
       target:
         kind: Deployment
         name: kustomize-controller
