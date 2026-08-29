@@ -83,10 +83,7 @@ spec:
         cpu: 10m
         memory: 128Mi
       limits:
-        # The chart's own note: 128Mi OOMs during certificate generation and
-        # when many resources are in flight. Left at the chart default rather
-        # than trimmed.
-        memory: 256Mi
+        memory: 1Gi
 
     # The operator is a controller, not a data plane -- it belongs with the
     # rest of the control plane so it survives Low Power mode (D6) and can keep
