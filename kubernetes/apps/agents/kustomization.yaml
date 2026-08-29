@@ -37,12 +37,12 @@ resources:
   # the MCP gateway above -- nothing in the serving path depends on these.
   - ./toolhive-registry/ks.yaml
   - ./toolhive-ui/ks.yaml
-  # Everything else related to MCP serving lives under ./agent-mcp-tools/ --
-  # see that directory's own README for the two-piece split (agent-tools-mcp,
-  # the front door/MCPGroup; agent-tools-servers, every actual server plus
-  # the shared agent-debug ClusterRole and toolhive-docs).
-  - ./agent-mcp-tools/agent-tools-mcp/ks.yaml
-  - ./agent-mcp-tools/agent-tools-servers/ks.yaml
+  # The rest of MCP serving, two pieces: ./agent-tools-mcp/ is the front
+  # door/MCPGroup, ./agent-tools-servers/ is every actual server plus the
+  # shared agent-debug ClusterRole and toolhive-docs -- see that
+  # directory's own ks.yaml/kustomization.yaml headers.
+  - ./agent-tools-mcp/ks.yaml
+  - ./agent-tools-servers/ks.yaml
   # The agent runner. Depends only on external-secrets and
   # agent-tools-servers (for its agent-debug ClusterRole), not on ToolHive's
   # own MCPGroup -- it's an MCP CLIENT of the servers above, reached over

@@ -113,7 +113,7 @@ spec:
                   secretKeyRef:
                     name: github-token
                     key: token
-              # The `pulumi` MCP server (../agent-mcp-tools/agent-tools-servers/pulumi.yaml) and any `pulumi`
+              # The `pulumi` MCP server (../agent-tools-servers/pulumi.yaml) and any `pulumi`
               # the agent runs directly from its own tmux pane both need this
               # whole bundle -- same env var names the `pulumi` namespace's
               # own workspace pods use (kubernetes/apps/pulumi/*/stack.yaml),

@@ -1,0 +1,76 @@
+---
+# No `yaml-language-server: $schema=` line -- same reason as
+# ./docs.yaml: toolhive.stacklok.dev publishes no schema
+# either the CRDs-catalog or kubernetes-schemas can resolve.
+#
+# Stacklok's own cataloged Kubernetes MCP server ("mkp"), NOT a hand-wrapped
+# `npx kubernetes-mcp-server` -- it speaks Streamable HTTP directly, same as
+# ./docs.yaml's image, so no stdio-proxy plumbing is needed here. Image
+# tag/digest per https://docs.stacklok.com/toolhive/guides-mcp/k8s -- verify
+# against the live registry before merging, that doc example was current as
+# of the research for this PR, not guaranteed current at merge time.
+#
+# NO oidcConfigRef/authServerRef here -- this server is no longer exposed on
+# its own. It joins ../agent-tools-mcp's MCPGroup instead, and that
+# group's VirtualMCPServer holds the ONE external hostname and ONE auth
+# surface for every backend in it (see that directory's virtualmcpserver.yaml
+# for why). A dangling `groupRef` before the MCPGroup exists is the same
+# non-fatal "dangling-ref condition" toolhive-docs's own authServerRef
+# comment describes -- ../agent-tools-mcp/ks.yaml's dependsOn just
+# avoids that reconcile cycle.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-kubernetes
+spec:
+  image: ghcr.io/stackloklabs/mkp/server:0.4.3
+  transport: streamable-http
+  proxyPort: 8080
+  mcpPort: 8080
+  serviceAccount: toolhive-kubernetes
+  groupRef:
+    name: agent-tools
+  args:
+    # Full read-write, per the estate decision this whole rollout was built
+    # around -- default is read-only. RBAC enforcement is ./agent-debug-rbac.yaml's
+    # cluster-admin binding on the SA above, this flag just stops the server
+    # refusing writes it otherwise has permission to make.
+    - "--read-write=true"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/serviceaccount.json
+#
+# `agent-debug` (./agent-debug-rbac.yaml), NOT `cluster-admin` -- David's
+# own call, narrowed once it was clear what "enough to debug with" actually
+# needs; see that file's header for exactly what this grants and why. Same
+# role ../agentboard's own SA binds, deliberately -- one written security
+# posture, not two that could quietly drift apart.
+#
+# `--read-write=true` on ./mcpserver.yaml is still set: it is the MCP
+# server's own advertised-capability flag, separate from what this SA can
+# actually do -- RBAC is what enforces the boundary now, the flag just
+# decides whether the tool surface offers write calls at all.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: toolhive-kubernetes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: toolhive-kubernetes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agent-debug
+subjects:
+  - kind: ServiceAccount
+    name: toolhive-kubernetes
+    namespace: ${NAMESPACE}

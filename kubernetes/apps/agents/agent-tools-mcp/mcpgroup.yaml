@@ -1,0 +1,20 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../agent-tools-servers/docs.yaml.
+#
+# `spec` is genuinely this small -- verified against the live CRD
+# (toolhive-operator-crds 0.46.0, already deployed): MCPGroupSpec has exactly
+# one field, `description`. Membership is declared from the MEMBER side --
+# each backend MCPServer in ../agent-tools-servers/{kubernetes,pulumi,unifi-*} carries
+# `spec.groupRef.name: agent-tools`, not the other way around. The
+# controller populates `status.servers` by watching for that.
+#
+# Named `agent-tools` (a literal, not ${APP}) because five OTHER
+# Kustomizations reference it by name in their own `groupRef` -- a templated
+# name here would need to match a value substituted somewhere else, which is
+# more moving parts than a stable literal buys.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPGroup
+metadata:
+  name: agent-tools
+spec:
+  description: Kubernetes, Pulumi and UniFi MCP servers for in-cluster agents (agentboard)

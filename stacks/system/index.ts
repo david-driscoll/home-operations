@@ -126,7 +126,7 @@ export const garage = configureGarage(globals);
 new PostgresRotationComponent({ globals });
 
 // OpenBao Kubernetes-auth Role + Policy for the toolhive-openbao MCP server
-// (kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/openbao.yaml). Same kind of no-op-until-flipped
+// (kubernetes/apps/agents/agent-tools-servers/openbao.yaml). Same kind of no-op-until-flipped
 // gate as PostgresRotationComponent above, pending its own smaller root
 // ceremony -- see openbao-mcp.ts's header.
 new OpenBaoMcpComponent({ globals });
