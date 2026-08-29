@@ -33,6 +33,8 @@ globals.store.getKubernetesClusters().apply(clusters => {
     const provider = new k8s.Provider(`${cluster.key}-tailscale-authkey-provider`, {
       kubeconfig: cluster.kubeConfig,
       enableSecretMutable: true,
+      enableConfigMapMutable: true,
+      upsertExistingObjects: true,
     });
     new KubernetesTailscaleAuthKeyComponent(cluster.key, {
       cluster,
