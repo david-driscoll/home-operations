@@ -4566,9 +4566,9 @@
     "semantic_hash": "450f7b2d91a2c8192319c03e5fb7abec"
   },
   "stacks/system/index.ts": {
-    "mtime": 1787973330.5325937,
-    "seen": 1787973381.082349,
-    "ast_hash": "8c02c456b358ca1449637452e3366bdb",
+    "mtime": 1787974159.7540326,
+    "seen": 1787974214.5108402,
+    "ast_hash": "4c8570337e75ac9214b8729e7cb1f292",
     "semantic_hash": ""
   },
   "stacks/system/package.json": {
@@ -5508,28 +5508,10 @@
     "semantic_hash": "6d024785eabe56c27a8fb11dea3261de"
   },
   "kubernetes/apps/agents/kustomization.yaml": {
-    "mtime": 1787973097.9552376,
-    "seen": 1787973381.085421,
-    "ast_hash": "d2b91a5aee1136a51491b7d929a19935",
+    "mtime": 1787974087.8552074,
+    "seen": 1787974214.537334,
+    "ast_hash": "6239f8efbc0df439b1d7484995ca2efa",
     "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-docs/ks.yaml": {
-    "mtime": 1787805435.212156,
-    "seen": 1787839137.816479,
-    "ast_hash": "0e7831efa09339659ed6c1b04bfa8d44",
-    "semantic_hash": "0e7831efa09339659ed6c1b04bfa8d44"
-  },
-  "kubernetes/apps/agents/toolhive-docs/kustomization.yaml": {
-    "mtime": 1787805435.2122319,
-    "seen": 1787973381.085449,
-    "ast_hash": "e3ab3a8381c6907bce159ec53d00b2b7",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-docs/mcpserver.yaml": {
-    "mtime": 1787805435.21231,
-    "seen": 1787839137.81648,
-    "ast_hash": "f66897c80d5bf9f07f9b733721e015e1",
-    "semantic_hash": "f66897c80d5bf9f07f9b733721e015e1"
   },
   "kubernetes/apps/agents/toolhive-operator-crds/helmrelease.yaml": {
     "mtime": 1787805435.2124126,
@@ -12252,9 +12234,9 @@
     "semantic_hash": ""
   },
   "stacks/system/openbao-mcp.ts": {
-    "mtime": 1787973330.532184,
-    "seen": 1787973381.08235,
-    "ast_hash": "2d61fc7c5fea66f091b3d3189d2ce1d6",
+    "mtime": 1787974230.8384674,
+    "seen": 1787974258.2754052,
+    "ast_hash": "56796445c4ce11264722b8029b908527",
     "semantic_hash": ""
   },
   "stacks/unifi-network/tailnet-egress.ts": {
@@ -19260,447 +19242,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-mcp-tools/README.md": {
-    "mtime": 1787973112.5132356,
-    "seen": 1787973381.085386,
-    "ast_hash": "414e68651b3871b2b994bfce4978bb10",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-context7/ks.yaml": {
-    "mtime": 1787972909.964051,
-    "seen": 1787973381.085386,
-    "ast_hash": "7626b6ccaf52c17f5d3b8fff0e72a5b0",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-context7/kustomization.yaml": {
-    "mtime": 1787959674.5433042,
-    "seen": 1787973381.085387,
-    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-context7/mcpserver.yaml": {
-    "mtime": 1787973077.7912416,
-    "seen": 1787973381.085388,
-    "ast_hash": "f2673adf0aaa8d2dbf7d69a63f86cdbd",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-degoog/ks.yaml": {
-    "mtime": 1787972909.965758,
-    "seen": 1787973381.085388,
-    "ast_hash": "5620c1fbee823d7c23b93fa21c2d4758",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-degoog/kustomization.yaml": {
-    "mtime": 1787960727.0183976,
-    "seen": 1787973381.085388,
-    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-degoog/mcpserver.yaml": {
-    "mtime": 1787973077.7935226,
-    "seen": 1787973381.0853891,
-    "ast_hash": "e2edd9124a1121c6c56dac106e8f792e",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/alpha-site/ks.yaml": {
-    "mtime": 1787972943.122937,
-    "seen": 1787973381.0853891,
-    "ast_hash": "bbaae243bf6b9d83578e19393a656508",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/alpha-site/kustomization.yaml": {
-    "mtime": 1787973284.507764,
-    "seen": 1787973381.08539,
-    "ast_hash": "33a1ad14f2fd8b253cbdceb6f895c017",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/base/kustomization.yaml": {
-    "mtime": 1787972933.4797373,
-    "seen": 1787973381.08539,
-    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/base/mcpserver.yaml": {
-    "mtime": 1787972932.9008763,
-    "seen": 1787973381.085391,
-    "ast_hash": "967630578d3c3660b78eb00da6b82e2d",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/celestia/ks.yaml": {
-    "mtime": 1787972943.1044056,
-    "seen": 1787973381.085391,
-    "ast_hash": "99a0bac75a92ac4a78097aa7dd5b53f3",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/celestia/kustomization.yaml": {
-    "mtime": 1787973277.8815095,
-    "seen": 1787973381.0853918,
-    "ast_hash": "fa9f7c14b07eab8e513381505f385e32",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/luna/ks.yaml": {
-    "mtime": 1787972943.1105638,
-    "seen": 1787973381.0853918,
-    "ast_hash": "32ea923fb7da3a1f229b4b15487527d3",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/luna/kustomization.yaml": {
-    "mtime": 1787973281.1000223,
-    "seen": 1787973381.0853918,
-    "ast_hash": "20681d5825b5a865f9713cdae275d8e0",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/skystar/ks.yaml": {
-    "mtime": 1787972943.116918,
-    "seen": 1787973381.085393,
-    "ast_hash": "5ddf3337efc01ee0108a1041b2ea2f54",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-docker/skystar/kustomization.yaml": {
-    "mtime": 1787973282.730848,
-    "seen": 1787973381.085393,
-    "ast_hash": "72a66c0e0f0064fb2f49e61ed83d3627",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-github/ks.yaml": {
-    "mtime": 1787972909.9623308,
-    "seen": 1787973381.085394,
-    "ast_hash": "d2d3704d1745078737be120575d0341b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-github/kustomization.yaml": {
-    "mtime": 1787959658.4120378,
-    "seen": 1787973381.085394,
-    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-github/mcpserver.yaml": {
-    "mtime": 1787973077.795708,
-    "seen": 1787973381.0853949,
-    "ast_hash": "5a4b03c9fe5a893d2ce03a558ad3656b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-home-assistant/ks.yaml": {
-    "mtime": 1787972909.970996,
-    "seen": 1787973381.0853949,
-    "ast_hash": "54de9ef54879eb4977b9ec9b086ff198",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-home-assistant/kustomization.yaml": {
-    "mtime": 1787960764.3512852,
-    "seen": 1787973381.085396,
-    "ast_hash": "7dc6194283addeede7d1efc2790c00ce",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-home-assistant/mcpremoteproxy.yaml": {
-    "mtime": 1787973077.8133395,
-    "seen": 1787973381.085396,
-    "ast_hash": "29e381df93f854027d0bb8f83f094fd4",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-kubernetes/ks.yaml": {
-    "mtime": 1787972909.9529698,
-    "seen": 1787973381.085396,
-    "ast_hash": "3d50540d88e6b4bad6586bbf66128b4c",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-kubernetes/kustomization.yaml": {
-    "mtime": 1787958905.6873724,
-    "seen": 1787973381.085397,
-    "ast_hash": "dfcef2b20cf692b5dedc4efa3eb948e2",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-kubernetes/mcpserver.yaml": {
-    "mtime": 1787973077.8023124,
-    "seen": 1787973381.085397,
-    "ast_hash": "7636e8bcf1ef2da59614438568944044",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-kubernetes/rbac.yaml": {
-    "mtime": 1787973077.8042758,
-    "seen": 1787973381.085398,
-    "ast_hash": "f9ca012ad591a1fbf1376b176471f8e6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-microsoft-docs/ks.yaml": {
-    "mtime": 1787972909.969264,
-    "seen": 1787973381.085398,
-    "ast_hash": "e6c953e8b6764f5b6b18358b4391a047",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-microsoft-docs/kustomization.yaml": {
-    "mtime": 1787960746.3321111,
-    "seen": 1787973381.0853992,
-    "ast_hash": "7dc6194283addeede7d1efc2790c00ce",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-microsoft-docs/mcpremoteproxy.yaml": {
-    "mtime": 1787973077.797769,
-    "seen": 1787973381.0853992,
-    "ast_hash": "c8da7a4dea5c65cf2b82925fe8a2dada",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-nuget/ks.yaml": {
-    "mtime": 1787972909.967273,
-    "seen": 1787973381.0853992,
-    "ast_hash": "5427cb5d83fd190cc60b00694118e85a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-nuget/kustomization.yaml": {
-    "mtime": 1787961342.0318418,
-    "seen": 1787973381.0854,
-    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-nuget/mcpserver.yaml": {
-    "mtime": 1787973077.8181906,
-    "seen": 1787973381.0854,
-    "ast_hash": "4b8ef72f61dbc52dfdcea911b80675b1",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/externalsecret.yaml": {
-    "mtime": 1787968985.3055449,
-    "seen": 1787973381.085401,
-    "ast_hash": "4fe0e4d28b2dd7f9af8fa14462b45ae1",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/ks.yaml": {
-    "mtime": 1787972909.972889,
-    "seen": 1787973381.085401,
-    "ast_hash": "c37aa12be86f8ca09d6d11eed9515e17",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/kustomization.yaml": {
-    "mtime": 1787968998.5700333,
-    "seen": 1787973381.085402,
-    "ast_hash": "b62d72ff027ecfc6e78c217471626648",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/mcpserver.yaml": {
-    "mtime": 1787973077.8000953,
-    "seen": 1787973381.085402,
-    "ast_hash": "bcedf8bbfecc5d3c6f67cc745f43bf2e",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/vaultdynamicsecret.yaml": {
-    "mtime": 1787968979.8508914,
-    "seen": 1787973381.085403,
-    "ast_hash": "bd05ec28f54bfa6b02b842ae9962a80a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-postgres/ks.yaml": {
-    "mtime": 1787972909.9749117,
-    "seen": 1787973381.085403,
-    "ast_hash": "9bc70612d79a9d36c344fd53aae71668",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-postgres/kustomization.yaml": {
-    "mtime": 1787968789.6800103,
-    "seen": 1787973381.085403,
-    "ast_hash": "81a6277eaa5f8fdc739a0590b9a3a213",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-postgres/mcpserver.yaml": {
-    "mtime": 1787973077.8065693,
-    "seen": 1787973381.085404,
-    "ast_hash": "ed4144bef92ca953857d475d00cba9e8",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/alpha-site/ks.yaml": {
-    "mtime": 1787972996.844314,
-    "seen": 1787973381.085404,
-    "ast_hash": "89aa7f2c6b4380a13b9dd69d7d598604",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/alpha-site/kustomization.yaml": {
-    "mtime": 1787973297.419362,
-    "seen": 1787973381.0854049,
-    "ast_hash": "81446659e6dc11edfa127abc6c95b5a4",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/base/externalsecret.yaml": {
-    "mtime": 1787972974.5721877,
-    "seen": 1787973381.0854049,
-    "ast_hash": "68bd34a8df899b16b80fca183c1cc42f",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/base/kustomization.yaml": {
-    "mtime": 1787972985.4302497,
-    "seen": 1787973381.0854049,
-    "ast_hash": "c59d12011f29812b630076a342f9c88b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/base/mcpserver.yaml": {
-    "mtime": 1787972984.40153,
-    "seen": 1787973381.085406,
-    "ast_hash": "9d37265175f69dcf6c879bc7adff9ee3",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/celestia/ks.yaml": {
-    "mtime": 1787972996.826041,
-    "seen": 1787973381.085406,
-    "ast_hash": "0977d641c725fadf0c211e1716bd8749",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/celestia/kustomization.yaml": {
-    "mtime": 1787973290.8999598,
-    "seen": 1787973381.085407,
-    "ast_hash": "1b01e789c3a1be9337bc3874bbe0998a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/luna/ks.yaml": {
-    "mtime": 1787972996.8324423,
-    "seen": 1787973381.085407,
-    "ast_hash": "7a4d94543cebe6c8d2402a37332ee8da",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/luna/kustomization.yaml": {
-    "mtime": 1787973293.0220802,
-    "seen": 1787973381.085408,
-    "ast_hash": "efb0115a6de5cd6d80bf648e8d1c1fa6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/skystar/ks.yaml": {
-    "mtime": 1787972996.8385985,
-    "seen": 1787973381.085408,
-    "ast_hash": "4a07ec58797996d2d33708fdfa707eab",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/skystar/kustomization.yaml": {
-    "mtime": 1787973294.68267,
-    "seen": 1787973381.085408,
-    "ast_hash": "93ed07d1e810b98949a4e6f4e45cfbae",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/twilight-sparkle/ks.yaml": {
-    "mtime": 1787972996.8190203,
-    "seen": 1787973381.085409,
-    "ast_hash": "4d744d034942a4492b0268364278fc9b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-proxmox/twilight-sparkle/kustomization.yaml": {
-    "mtime": 1787973289.2009468,
-    "seen": 1787973381.085409,
-    "ast_hash": "3ed30e183881335bfd5c45c892bacdac",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-pulumi/externalsecret.yaml": {
-    "mtime": 1787973077.783045,
-    "seen": 1787973381.08541,
-    "ast_hash": "651bc6485c1dbc99bc6fd8a0219810a9",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-pulumi/ks.yaml": {
-    "mtime": 1787972909.9550812,
-    "seen": 1787973381.08541,
-    "ast_hash": "362e0497642cacd6548f7f5a079a22d7",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-pulumi/kustomization.yaml": {
-    "mtime": 1787958925.0398684,
-    "seen": 1787973381.085411,
-    "ast_hash": "2bc68cd023326a0def0c27fbd38b818a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-pulumi/mcpserver.yaml": {
-    "mtime": 1787973077.7809017,
-    "seen": 1787973381.085411,
-    "ast_hash": "adb776409f3fe6781333f6b68677a4ca",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-tailscale/externalsecret.yaml": {
-    "mtime": 1787973077.8158712,
-    "seen": 1787973381.085412,
-    "ast_hash": "d5c2bdb065d4f4f140c9b0993dc11604",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-tailscale/ks.yaml": {
-    "mtime": 1787972909.9768376,
-    "seen": 1787973381.085412,
-    "ast_hash": "d6222015d78c2808d917fea932db414e",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-tailscale/kustomization.yaml": {
-    "mtime": 1787968823.0180745,
-    "seen": 1787973381.085412,
-    "ast_hash": "c59d12011f29812b630076a342f9c88b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-tailscale/mcpserver.yaml": {
-    "mtime": 1787973077.8107893,
-    "seen": 1787973381.0854132,
-    "ast_hash": "479f1e4f625b81c9582ac7330de4eb76",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-access/externalsecret.yaml": {
-    "mtime": 1787972288.2549648,
-    "seen": 1787973381.0854132,
-    "ast_hash": "9f97824826af951ebb780825f79cfd45",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-access/ks.yaml": {
-    "mtime": 1787972909.9607213,
-    "seen": 1787973381.085414,
-    "ast_hash": "8e51d36e57ba9932b4c6cbee63691400",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-access/kustomization.yaml": {
-    "mtime": 1787958990.345452,
-    "seen": 1787973381.085414,
-    "ast_hash": "2bc68cd023326a0def0c27fbd38b818a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-access/mcpserver.yaml": {
-    "mtime": 1787973077.7892294,
-    "seen": 1787973381.085414,
-    "ast_hash": "9e81cac1d6c6233934c5502363d266c1",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-network/externalsecret.yaml": {
-    "mtime": 1787972300.0134401,
-    "seen": 1787973381.085415,
-    "ast_hash": "751cc4aef6b5957f4688c3ba0b3f14c5",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-network/ks.yaml": {
-    "mtime": 1787972909.9571853,
-    "seen": 1787973381.085415,
-    "ast_hash": "64461942ca8dbd8a3722dc2b4df847c9",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-network/kustomization.yaml": {
-    "mtime": 1787958950.9854348,
-    "seen": 1787973381.0854158,
-    "ast_hash": "2bc68cd023326a0def0c27fbd38b818a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-network/mcpserver.yaml": {
-    "mtime": 1787973077.7873104,
-    "seen": 1787973381.0854158,
-    "ast_hash": "da1b1ed02ea4134e81c7222c10103eec",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-protect/externalsecret.yaml": {
-    "mtime": 1787972310.4959269,
-    "seen": 1787973381.0854158,
-    "ast_hash": "feddfb8e228645075aa5557b294553d2",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-protect/ks.yaml": {
-    "mtime": 1787972909.9589531,
-    "seen": 1787973381.085417,
-    "ast_hash": "c1d8f9b2ecaceb7e4fd6bf0ed470683b",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-protect/kustomization.yaml": {
-    "mtime": 1787958970.7884617,
-    "seen": 1787973381.085417,
-    "ast_hash": "2bc68cd023326a0def0c27fbd38b818a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/agent-mcp-tools/toolhive-unifi-protect/mcpserver.yaml": {
-    "mtime": 1787973077.7851956,
-    "seen": 1787973381.085418,
-    "ast_hash": "bb62a3ec4ed277f35cdc69b3f66c9cd8",
+    "mtime": 1787974096.7711768,
+    "seen": 1787974214.537215,
+    "ast_hash": "98e8716e3918e9d206b8053e764cda5c",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/definition.yaml": {
@@ -19716,9 +19260,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/helmrelease.yaml": {
-    "mtime": 1787973097.9478104,
-    "seen": 1787973381.085419,
-    "ast_hash": "53d962e4628ef3bc090c706a029a9318",
+    "mtime": 1787974074.3645167,
+    "seen": 1787974214.5372858,
+    "ast_hash": "573a7bfcd2c4dae897de7a48e8533a11",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/httproute.yaml": {
@@ -19728,9 +19272,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/ks.yaml": {
-    "mtime": 1787961993.81061,
-    "seen": 1787973381.0854201,
-    "ast_hash": "35cd659f915759e33310866b6fd9c20f",
+    "mtime": 1787974065.6712468,
+    "seen": 1787974214.53731,
+    "ast_hash": "33afb8926b4fe05660d4e6bb878b0935",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/kustomization.yaml": {
@@ -19740,63 +19284,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agentboard/rbac.yaml": {
-    "mtime": 1787973097.9528997,
-    "seen": 1787973381.085421,
-    "ast_hash": "7cecef76f2acc922c5cd1247b76b7c0a",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/rbac/clusterrole.yaml": {
-    "mtime": 1787973097.9502363,
-    "seen": 1787973381.085422,
-    "ast_hash": "8f312ebe2fb56b626b08a9ccb07b6fe9",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/rbac/ks.yaml": {
-    "mtime": 1787961962.457621,
-    "seen": 1787973381.085422,
-    "ast_hash": "ec0ba936f9751958f5c27667993de2b7",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/rbac/kustomization.yaml": {
-    "mtime": 1787961965.45696,
-    "seen": 1787973381.085423,
-    "ast_hash": "bc022b573fd9928d64b3663ab0cc1c3c",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/definition.yaml": {
-    "mtime": 1787959074.1227384,
-    "seen": 1787973381.085423,
-    "ast_hash": "67fba0feebbc1713ed63be1be63f59f6",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/httproute.yaml": {
-    "mtime": 1787959067.41924,
-    "seen": 1787973381.085423,
-    "ast_hash": "f1c066c76e09422128120b717a890fac",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/ks.yaml": {
-    "mtime": 1787959022.8582277,
-    "seen": 1787973381.0854242,
-    "ast_hash": "669b46d25f0c499e502d6556d8466eac",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/kustomization.yaml": {
-    "mtime": 1787959025.7948363,
-    "seen": 1787973381.0854242,
-    "ast_hash": "29d129aa5559f28793f205a904e664ba",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/mcpgroup.yaml": {
-    "mtime": 1787959032.1056736,
-    "seen": 1787973381.085425,
-    "ast_hash": "e804216f1ecef1467d0b4577130a15fa",
-    "semantic_hash": ""
-  },
-  "kubernetes/apps/agents/toolhive-agent-tools/virtualmcpserver.yaml": {
-    "mtime": 1787959132.346944,
-    "seen": 1787973381.085425,
-    "ast_hash": "81f00c0c6345bbf2e85e9b00bc04a9a0",
+    "mtime": 1787974074.3623025,
+    "seen": 1787974214.537334,
+    "ast_hash": "bd075bcae558dac6665783d7cf1322af",
     "semantic_hash": ""
   },
   "kubernetes/apps/network/traefik/middleware/tailscale-local.yaml": {
@@ -19959,6 +19449,234 @@
     "mtime": 1787803676.316556,
     "seen": 1787973381.103657,
     "ast_hash": "58c8e3cafc4f96ba12ac14972f734f8b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/definition.yaml": {
+    "mtime": 1787959074.1227384,
+    "seen": 1787974214.537216,
+    "ast_hash": "67fba0feebbc1713ed63be1be63f59f6",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/httproute.yaml": {
+    "mtime": 1787959067.41924,
+    "seen": 1787974214.5372171,
+    "ast_hash": "f1c066c76e09422128120b717a890fac",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/ks.yaml": {
+    "mtime": 1787973924.7343736,
+    "seen": 1787974214.537218,
+    "ast_hash": "e53d8c06f175e1581765c503bc0a1399",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/kustomization.yaml": {
+    "mtime": 1787959025.7948363,
+    "seen": 1787974214.537219,
+    "ast_hash": "29d129aa5559f28793f205a904e664ba",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/mcpgroup.yaml": {
+    "mtime": 1787959032.1056736,
+    "seen": 1787974214.537219,
+    "ast_hash": "e804216f1ecef1467d0b4577130a15fa",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp/virtualmcpserver.yaml": {
+    "mtime": 1787959132.346944,
+    "seen": 1787974214.53722,
+    "ast_hash": "81f00c0c6345bbf2e85e9b00bc04a9a0",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/context7.yaml": {
+    "mtime": 1787973984.8001432,
+    "seen": 1787974214.53722,
+    "ast_hash": "9f28ec00e8cd8117d98c241f83e92bc2",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/degoog.yaml": {
+    "mtime": 1787973984.8064878,
+    "seen": 1787974214.5372212,
+    "ast_hash": "401a6444f6fb3b481dd8b8cb3ab2214c",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/alpha-site/kustomization.yaml": {
+    "mtime": 1787973784.7827644,
+    "seen": 1787974214.5372212,
+    "ast_hash": "de28cf718da2b8dc38105de7375920d4",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/base/kustomization.yaml": {
+    "mtime": 1787972933.4797373,
+    "seen": 1787974214.537222,
+    "ast_hash": "82e7a1a8c08b6964be219026fdb6dcc6",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/base/mcpserver.yaml": {
+    "mtime": 1787974051.8180988,
+    "seen": 1787974214.5372229,
+    "ast_hash": "39a0b1288ff0477b278c47913c4bd326",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/celestia/kustomization.yaml": {
+    "mtime": 1787973778.6447558,
+    "seen": 1787974214.5372229,
+    "ast_hash": "08a6226f8cb4199724dbd03235574c91",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/luna/kustomization.yaml": {
+    "mtime": 1787973780.8324604,
+    "seen": 1787974214.537224,
+    "ast_hash": "2500b61ba626dc832842dd05ec46466c",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docker/skystar/kustomization.yaml": {
+    "mtime": 1787973783.0113053,
+    "seen": 1787974214.537225,
+    "ast_hash": "db51fdb0030a898ace3c125b6fcc9bdc",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/docs.yaml": {
+    "mtime": 1787973998.8746336,
+    "seen": 1787974214.537226,
+    "ast_hash": "a16eb5949106a21f5cbe4119da84481b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/github.yaml": {
+    "mtime": 1787973984.818544,
+    "seen": 1787974214.537227,
+    "ast_hash": "88ce5913110fbc990ca5b29e01053c5d",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/home-assistant.yaml": {
+    "mtime": 1787973984.8241057,
+    "seen": 1787974214.537227,
+    "ast_hash": "02d4c67c7b01eccfd5d89a0a62ec0049",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/ks.yaml": {
+    "mtime": 1787973917.0459268,
+    "seen": 1787974214.537228,
+    "ast_hash": "a4f2fd19457cac77ab9f0d2fdc66a3db",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/kubernetes.yaml": {
+    "mtime": 1787974230.8430746,
+    "seen": 1787974258.3024771,
+    "ast_hash": "4d708e71630eb17b325e3e74b6653aa9",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/kustomization.yaml": {
+    "mtime": 1787974236.3348286,
+    "seen": 1787974258.302478,
+    "ast_hash": "cece7db52988d4a7462c45231bf3226e",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/microsoft-docs.yaml": {
+    "mtime": 1787973984.838264,
+    "seen": 1787974214.537229,
+    "ast_hash": "b1f1741c8a13fdfbc3edfe2b516a74f4",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/nuget.yaml": {
+    "mtime": 1787973984.8430243,
+    "seen": 1787974214.53723,
+    "ast_hash": "a5613583661e81d166a890c394061bb6",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/openbao.yaml": {
+    "mtime": 1787973998.876837,
+    "seen": 1787974214.5372312,
+    "ast_hash": "9704bf04d70b0f1f091bb8d74268eb75",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/postgres.yaml": {
+    "mtime": 1787974230.8410082,
+    "seen": 1787974258.302548,
+    "ast_hash": "8a5e2772133328f93a3fc6ea01c1683a",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/alpha-site/kustomization.yaml": {
+    "mtime": 1787973810.8740573,
+    "seen": 1787974214.5372312,
+    "ast_hash": "2061c315835cf971a061fc364f11f500",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/base/externalsecret.yaml": {
+    "mtime": 1787974024.6438375,
+    "seen": 1787974214.537232,
+    "ast_hash": "f12ccd4888343a3acbf9c10542663b8f",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/base/kustomization.yaml": {
+    "mtime": 1787972985.4302497,
+    "seen": 1787974214.537232,
+    "ast_hash": "c59d12011f29812b630076a342f9c88b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/base/mcpserver.yaml": {
+    "mtime": 1787974051.8184156,
+    "seen": 1787974214.5372329,
+    "ast_hash": "75c7ab670b7c76e2ef21fc33e43677fd",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/celestia/kustomization.yaml": {
+    "mtime": 1787973800.9307375,
+    "seen": 1787974214.5372329,
+    "ast_hash": "db4146398e6613d5368f5ea34d894a68",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/luna/kustomization.yaml": {
+    "mtime": 1787973804.2074838,
+    "seen": 1787974214.537236,
+    "ast_hash": "9cebb5cc74b72f246c2cf57e62be6666",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/skystar/kustomization.yaml": {
+    "mtime": 1787973806.935133,
+    "seen": 1787974214.537237,
+    "ast_hash": "d0a1994c6ad8f2d888dbc1e7eed2129d",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/proxmox/twilight-sparkle/kustomization.yaml": {
+    "mtime": 1787973797.6432104,
+    "seen": 1787974214.5372381,
+    "ast_hash": "10863426e132cec012e3b10c15d8ea25",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/pulumi.yaml": {
+    "mtime": 1787973984.8582902,
+    "seen": 1787974214.5372381,
+    "ast_hash": "8748141d4868ec262f8be52fc2330126",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/tailscale.yaml": {
+    "mtime": 1787973984.8677807,
+    "seen": 1787974214.537239,
+    "ast_hash": "78b905b69fcb8402b26ad22a789c9a5b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/unifi-access.yaml": {
+    "mtime": 1787973984.872249,
+    "seen": 1787974214.53724,
+    "ast_hash": "52f89eaf887e40fdae6df013e45cbb82",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/unifi-network.yaml": {
+    "mtime": 1787973984.876861,
+    "seen": 1787974214.53724,
+    "ast_hash": "517e106cb26a4f0c7b6712f8e06ff141",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/unifi-protect.yaml": {
+    "mtime": 1787973984.8814404,
+    "seen": 1787974214.53724,
+    "ast_hash": "daf7707fa41cb1ae26036fa97f6222d4",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/agent-debug-rbac.yaml": {
+    "mtime": 1787973994.070001,
+    "seen": 1787974258.3021839,
+    "ast_hash": "954ad916a64ffd4883b44f7ed9d8155d",
     "semantic_hash": ""
   }
 }

@@ -1,0 +1,134 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# Docker's own curated MCP-server image, NOT a hand-wrapped
+# `npx @pulumi/mcp-server stdio` -- verify at merge time that it accepts the
+# same PULUMI_BACKEND_URL / AWS_* / PULUMI_CONFIG_PASSPHRASE env this repo's
+# other Pulumi consumers use (kubernetes/apps/pulumi/*/stack.yaml) rather than
+# expecting Pulumi Cloud credentials; if it does not, this becomes a
+# hand-built image wrapping the npx invocation instead, same shape as the
+# unifi-* servers next door.
+#
+# NOT PINNED TO ONE STACK. This repo has many (stacks/home, stacks/authentik,
+# stacks/applications, ...) -- the MCP tool surface itself takes a
+# stack/working-directory argument per call rather than this server being
+# scoped to one, same as running `pulumi` by hand from any stacks/* dir.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-pulumi
+spec:
+  image: docker.io/mcp/pulumi:latest
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: mcp
+          envFrom:
+            - secretRef:
+                name: toolhive-pulumi
+          env:
+            # `github-token`, the estate's own GitHub App installation
+            # token, reflected into this namespace automatically -- see
+            # ../../agentboard/externalsecret.yaml's header. A NAMED mapping,
+            # not envFrom: that Secret's own keys are `token`/`access_token`,
+            # not `GITHUB_TOKEN`. Goes stale after ~60m like every other
+            # env-var consumer of this Secret (kubernetes/apps/coder/renovate/renovatejob.yaml
+            # explains why that's an accepted tradeoff elsewhere in this
+            # repo) -- fine here too: an MCP tool call is seconds, not the
+            # days-long session ../../agentboard's own credential.helper exists
+            # for.
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-token
+                  key: token
+          # Flagged by Codacy (real finding -- see
+          # ./context7.yaml's comment). No
+          # readOnlyRootFilesystem: `pulumi` writes plugin/state caches under
+          # its own home dir, with no emptyDir set up for that here.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 1Gi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The SAME Pulumi credential bundle ../../agentboard/externalsecret.yaml pulls,
+# from the SAME OpenBao paths the `pulumi` namespace's own workspace pods use
+# (kubernetes/apps/pulumi/secrets/, kubernetes/apps/pulumi/*/stack.yaml) --
+# deliberately not re-minted, so rotating one Pulumi credential rotates it
+# for every consumer at once.
+#
+# NO GitHub token here -- see ../../agentboard/externalsecret.yaml's header:
+# `github-token`, the estate's own GitHub App installation token, is already
+# reflected into this namespace automatically. ./pulumi.yaml reads it
+# directly, by its real name.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-pulumi
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-pulumi
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        AWS_ACCESS_KEY_ID: "{{ .minio_username }}"
+        AWS_SECRET_ACCESS_KEY: "{{ .minio_password }}"
+        AWS_REGION: "home"
+        PULUMI_CONFIG_PASSPHRASE: "{{ .pulumi_passphrase }}"
+        CONNECT_TOKEN: "{{ .connect_token }}"
+        AUTHENTIK_TOKEN: "{{ .authentik_token }}"
+        AUTHENTIK_URL: "{{ .authentik_url }}"
+  data:
+    - secretKey: minio_username
+      remoteRef:
+        key: apps/minio/root
+        property: username
+    - secretKey: minio_password
+      remoteRef:
+        key: apps/minio/root
+        property: password
+    - secretKey: pulumi_passphrase
+      remoteRef:
+        key: apps/pulumi/passphrase
+        property: password
+    - secretKey: connect_token
+      remoteRef:
+        key: third-party-tokens/onepassword/eris-connect
+        property: credential
+    - secretKey: authentik_token
+      remoteRef:
+        key: clusters/alpha-site/apps/authentik/token
+        property: credential
+    - secretKey: authentik_url
+      remoteRef:
+        key: clusters/alpha-site/apps/authentik/token
+        property: url

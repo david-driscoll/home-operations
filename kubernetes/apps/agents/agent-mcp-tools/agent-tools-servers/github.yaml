@@ -1,0 +1,47 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# GitHub's own official server, NOT a third-party wrapper --
+# ghcr.io/github/github-mcp-server. No digest pin yet -- add one before
+# merging.
+#
+# `args: ["stdio"]` because the image's own documented invocation is
+# `docker run ... ghcr.io/github/github-mcp-server stdio` -- the top-level
+# `args` field appends to whatever the image's own entrypoint already runs
+# (confirmed working for ./kubernetes.yaml's `--read-write=true` the
+# same way), so no podTemplateSpec command override is needed here, unlike
+# the uv-based servers next door.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-github
+spec:
+  image: ghcr.io/github/github-mcp-server:latest
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+  args:
+    - stdio
+
+  env:
+    # `github-token`, the estate's own GitHub App installation token,
+    # reflected into this namespace automatically -- see
+    # ../../agentboard/externalsecret.yaml's header. Takes precedence over
+    # OAuth per the image's own docs, so this alone is sufficient.
+    - name: GITHUB_PERSONAL_ACCESS_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: github-token
+          key: token
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

@@ -1,0 +1,39 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# ONE route for the whole group -- see ./virtualmcpserver.yaml's header.
+#
+# Backend Service name/port: `vmcp-<VirtualMCPServer-name>`, port 4483.
+# Not documented in the CRD schema itself (verified there is no user-facing
+# port field on VirtualMCPServer at all -- the operator picks it), so this
+# is confirmed from Stacklok's own worked kubectl example
+# (`kubectl port-forward service/vmcp-optimizer-vmcp ... 4483:4483` for a
+# VirtualMCPServer named `optimizer-vmcp`) rather than the CRD reference.
+# Verify `kubectl -n agents get svc vmcp-agent-tools` once this reconciles.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    reloader.stakater.com/auto: "true"
+    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "agent-tools-mcp.agents.${ROOT_DOMAIN}"
+  rules:
+    - backendRefs:
+        - name: vmcp-agent-tools
+          port: 4483
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            # `local-api`, not `local-user` -- MCP clients, not browsers; see
+            # ../toolhive/httproute.yaml's note on why error-pages would
+            # break both the JSON-RPC and OAuth surfaces here.
+            name: local-api

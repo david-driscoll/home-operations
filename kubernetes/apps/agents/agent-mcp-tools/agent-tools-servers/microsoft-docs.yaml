@@ -1,0 +1,35 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `MCPRemoteProxy`, not `MCPServer` -- this proxies an EXISTING remote MCP
+# HTTP server (Microsoft's own hosted https://learn.microsoft.com/api/mcp)
+# rather than running a container ToolHive manages itself. Confirmed live
+# against this cluster (toolhive-operator-crds 0.46.0):
+# `mcpremoteproxies.toolhive.stacklok.dev` exists, and its `remoteUrl` field
+# is exactly this. An earlier draft of this rollout wrongly concluded
+# ToolHive had no remote-passthrough story at all and left Microsoft Docs
+# out of ../agent-tools-mcp's MCPGroup entirely, wiring it directly
+# into ../../agentboard/resources/mcp.json instead -- that direct entry is
+# gone now that this exists.
+#
+# No externalAuthConfigRef, no oidcConfigRef -- Microsoft Learn's endpoint
+# needs no credential at all (verified against its own docs: no API key,
+# no OAuth), and incoming auth is centralized at
+# ../agent-tools-mcp/virtualmcpserver.yaml the same way every other
+# group member's is.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolhive-microsoft-docs
+spec:
+  remoteUrl: https://learn.microsoft.com/api/mcp
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

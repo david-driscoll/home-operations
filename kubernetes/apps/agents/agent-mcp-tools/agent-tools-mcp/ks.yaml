@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app agent-tools-mcp
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # `toolhive`, for the shared MCPExternalAuthConfig/MCPOIDCConfig this
+    # group's VirtualMCPServer federates through -- same embedded auth
+    # server every other MCP endpoint in this namespace already uses.
+    - name: toolhive
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/agent-mcp-tools/agent-tools-mcp
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

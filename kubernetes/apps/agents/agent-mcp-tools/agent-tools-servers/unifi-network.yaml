@@ -1,0 +1,127 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# unifi-network-mcp (PyPI) has no prebuilt container of its own and is not in
+# ToolHive's own catalog (unlike ./kubernetes.yaml's cataloged image),
+# so this runs it on Astral's official `uv` image rather than adding a
+# from-scratch Dockerfile+CI pair for three near-identical packages.
+# `ghcr.io/astral-sh/uv` ships `ENTRYPOINT []` / `CMD ["/usr/local/bin/uv"]`
+# (verified against its published image config), so the top-level MCPServer
+# `image`+`args` fields cannot be relied on to produce `uv tool run ...` --
+# podTemplateSpec below sets the container's `command`/`args` explicitly
+# instead, the same escape hatch ./docs.yaml uses for its
+# /tmp emptyDir.
+#
+# `transport: stdio` because the package itself speaks stdio (see this repo's
+# own .mcp.json, which runs it as `uvx unifi-network-mcp` today) -- the
+# operator's proxy-runner is what turns that into Streamable HTTP.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-unifi-network
+spec:
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: UNIFI_NETWORK_HOST
+      value: unifi.driscoll.tech
+    - name: UNIFI_NETWORK_PORT
+      value: "443"
+    - name: UNIFI_NETWORK_SITE
+      value: default
+    - name: UNIFI_NETWORK_VERIFY_SSL
+      value: "false"
+
+  podTemplateSpec:
+    spec:
+      volumes:
+        # `uv tool run` (uvx) resolves and caches the package under
+        # $HOME/.cache/uv on first call; the operator runs this pod with a
+        # read-only root filesystem, same as ./docs.yaml.
+        - name: uv-cache
+          emptyDir: {}
+      containers:
+        - name: mcp
+          command: ["/usr/local/bin/uv"]
+          args: ["tool", "run", "unifi-network-mcp"]
+          env:
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: toolhive-unifi-network
+          volumeMounts:
+            - name: uv-cache
+              mountPath: /tmp
+          # Flagged by Codacy (real finding -- see
+          # ./context7.yaml's comment). Explicit rather
+          # than relying on the operator's own default (which the comment
+          # above already claims is read-only) -- readOnlyRootFilesystem is
+          # safe here specifically because uv-cache above gives `uv`/HOME
+          # somewhere writable.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The SAME `Eris/unifipoller` credential the repo's own .mcp.json already
+# authenticates all three unifi-*-mcp servers with locally (`op run --
+# uvx unifi-network-mcp`, etc.) -- copied once into OpenBao rather than
+# re-derived, so this and every other consumer rotate together:
+#
+#   bao kv put secrets/clusters/${CLUSTER_CNAME}/apps/toolhive-unifi-network/credentials \
+#     username="..." password="..."
+#
+# Reusing that account is the pragmatic default, not a forced one -- a
+# dedicated cluster-only UniFi credential is a reasonable follow-up if the
+# blast radius of extending it here is unwelcome.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-unifi-network
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-unifi-network
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        UNIFI_NETWORK_USERNAME: "{{ .username }}"
+        UNIFI_NETWORK_PASSWORD: "{{ .password }}"
+  data:
+    - secretKey: username
+      remoteRef:
+        key: third-party-tokens/unifi/unifipoller
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: third-party-tokens/unifi/unifipoller
+        property: password

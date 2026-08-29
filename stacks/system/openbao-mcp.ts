@@ -1,6 +1,6 @@
 /**
  * OpenBao access for the `toolhive-openbao` MCP server
- * (kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/) -- David's own scope answer for
+ * (kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/openbao.yaml) -- David's own scope answer for
  * it was "Secrets only, read+write", and "Pulumi code in stack/system" for
  * where the auth setup lives (an explicit correction over an earlier draft
  * that proposed `stacks/vault` instead).
@@ -91,7 +91,7 @@ export class OpenBaoMcpComponent extends ComponentResource {
     // Broad on purpose: David's scope answer was unqualified "secrets
     // only, read+write" with no narrower prefix requested, so this covers
     // the ENTIRE `secrets/` KV mount -- the same breadth
-    // ../../kubernetes/apps/agents/rbac/clusterrole.yaml's own header
+    // kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/agent-debug-rbac.yaml's own header
     // documents for its highest-risk grants, same tone here. Explicitly
     // NOT `sys/*`, NOT `auth/*`, NOT `delete`/`sudo` on anything -- an
     // agent that can read/write any app's stored credential still cannot
@@ -127,7 +127,7 @@ path "secrets/metadata/*" {
         // this file's header.
         tokenPolicies: [policy.name],
         // Short-lived on purpose -- ESO's VaultDynamicSecret refresh
-        // (kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/externalsecret.yaml,
+        // (kubernetes/apps/agents/agent-mcp-tools/agent-tools-servers/openbao.yaml,
         // refreshInterval) re-mints well before this expires.
         tokenTtl: 3600,
         tokenMaxTtl: 3600,

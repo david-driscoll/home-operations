@@ -29,84 +29,22 @@ resources:
   # Order here is documentation only -- Flux orders on dependsOn -- but these
   # are a chain (CRDs -> operator -> front door -> servers) and reading them in
   # dependency order is how that shows.
-  #
-  # The shared `agent-debug` ClusterRole ../agentboard and ./agent-mcp-tools/toolhive-kubernetes
-  # both bind to -- ahead of everything else since nothing here depends ON
-  # it in the CRD-install sense, but several things depend on it existing.
-  - ./rbac/ks.yaml
   - ./toolhive-operator-crds/ks.yaml
   - ./toolhive-operator/ks.yaml
   - ./toolhive-valkey/ks.yaml
   - ./toolhive/ks.yaml
-  - ./toolhive-docs/ks.yaml
   # The human-facing half: a catalogue API and the UI over it. Independent of
   # the MCP gateway above -- nothing in the serving path depends on these.
   - ./toolhive-registry/ks.yaml
   - ./toolhive-ui/ks.yaml
-  # More MCP servers behind the same front door, aggregated behind ONE
-  # endpoint via a ToolHive VirtualMCPServer -- see
-  # ./toolhive-agent-tools/virtualmcpserver.yaml for why (not one hostname
-  # per server, unlike ./toolhive-docs's nested-under-one-hostname pattern
-  # or the per-server-hostname pattern an earlier draft of this rollout
-  # used instead). toolhive-agent-tools first: it creates the MCPGroup every
-  # server below joins via `groupRef`. toolhive-agent-tools stays HERE, not
-  # under ./agent-mcp-tools/ -- it is the group/front-door, not a server
-  # itself, same category as toolhive-operator/toolhive-valkey/toolhive-docs
-  # above.
-  - ./toolhive-agent-tools/ks.yaml
-  # Every actual MCP server (and MCPRemoteProxy) that joins that group lives
-  # under ./agent-mcp-tools/ -- see that directory's own header. Grouped
-  # there once the roster grew past what fit comfortably as flat siblings
-  # of the ToolHive control-plane pieces above.
-  - ./agent-mcp-tools/toolhive-kubernetes/ks.yaml
-  - ./agent-mcp-tools/toolhive-pulumi/ks.yaml
-  - ./agent-mcp-tools/toolhive-unifi-network/ks.yaml
-  - ./agent-mcp-tools/toolhive-unifi-protect/ks.yaml
-  - ./agent-mcp-tools/toolhive-unifi-access/ks.yaml
-  - ./agent-mcp-tools/toolhive-github/ks.yaml
-  - ./agent-mcp-tools/toolhive-context7/ks.yaml
-  - ./agent-mcp-tools/toolhive-degoog/ks.yaml
-  - ./agent-mcp-tools/toolhive-nuget/ks.yaml
-  # One MCPServer per Dockge host, all pointed at that host's existing
-  # docker-socket-proxy:2375 -- one kustomize base
-  # (./agent-mcp-tools/toolhive-docker/base) plus a per-host overlay that
-  # patches just DOCKER_HOST. See the base's mcpserver.yaml for why
-  # (inherits the proxy's own existing, unauthenticated scope; no new
-  # credential).
-  - ./agent-mcp-tools/toolhive-docker/celestia/ks.yaml
-  - ./agent-mcp-tools/toolhive-docker/luna/ks.yaml
-  - ./agent-mcp-tools/toolhive-docker/skystar/ks.yaml
-  - ./agent-mcp-tools/toolhive-docker/alpha-site/ks.yaml
-  # One MCPServer per Proxmox hypervisor, reusing the existing ProxmoxHost
-  # Pulumi component's own API tokens -- same base+overlay shape as Docker
-  # above (./agent-mcp-tools/toolhive-proxmox/base), each overlay patching
-  # PROXMOX_HOST; ./alpha-site also patches the ExternalSecret's OpenBao
-  # path, the one host on a separate credential. See the base's
-  # externalsecret.yaml for the credential-splitting details.
-  - ./agent-mcp-tools/toolhive-proxmox/twilight-sparkle/ks.yaml
-  - ./agent-mcp-tools/toolhive-proxmox/celestia/ks.yaml
-  - ./agent-mcp-tools/toolhive-proxmox/luna/ks.yaml
-  - ./agent-mcp-tools/toolhive-proxmox/skystar/ks.yaml
-  - ./agent-mcp-tools/toolhive-proxmox/alpha-site/ks.yaml
-  # OpenBao secrets access -- see ./agent-mcp-tools/toolhive-openbao/mcpserver.yaml
-  # and stacks/system/openbao-mcp.ts. Its OPENBAO_TOKEN stays empty (server
-  # cannot authenticate) until that Pulumi code's own root-ceremony gate
-  # is lifted.
-  - ./agent-mcp-tools/toolhive-openbao/ks.yaml
-  # The estate's one shared CNPG Postgres cluster, via its existing
-  # superuser credential (reflected in, not re-minted) -- see
-  # ./agent-mcp-tools/toolhive-postgres/secret.yaml.
-  - ./agent-mcp-tools/toolhive-postgres/ks.yaml
-  # Tailscale tailnet management. Its credential stays empty (no working
-  # auth) until a static API key is created by hand -- see
-  # ./agent-mcp-tools/toolhive-tailscale/externalsecret.yaml.
-  - ./agent-mcp-tools/toolhive-tailscale/ks.yaml
-  # MCPRemoteProxy, not MCPServer -- these two proxy EXISTING remote MCP
-  # HTTP servers rather than running a container. See
-  # ./agent-mcp-tools/toolhive-microsoft-docs/mcpremoteproxy.yaml's header.
-  - ./agent-mcp-tools/toolhive-microsoft-docs/ks.yaml
-  - ./agent-mcp-tools/toolhive-home-assistant/ks.yaml
-  # The agent runner. Depends only on external-secrets, not on ToolHive --
-  # it's an MCP CLIENT of the servers above, reached over plain HTTP+OAuth,
-  # not a build-time dependency of them.
+  # Everything else related to MCP serving lives under ./agent-mcp-tools/ --
+  # see that directory's own README for the two-piece split (agent-tools-mcp,
+  # the front door/MCPGroup; agent-tools-servers, every actual server plus
+  # the shared agent-debug ClusterRole and toolhive-docs).
+  - ./agent-mcp-tools/agent-tools-mcp/ks.yaml
+  - ./agent-mcp-tools/agent-tools-servers/ks.yaml
+  # The agent runner. Depends only on external-secrets and
+  # agent-tools-servers (for its agent-debug ClusterRole), not on ToolHive's
+  # own MCPGroup -- it's an MCP CLIENT of the servers above, reached over
+  # plain HTTP+OAuth, not a build-time dependency of them.
   - ./agentboard/ks.yaml

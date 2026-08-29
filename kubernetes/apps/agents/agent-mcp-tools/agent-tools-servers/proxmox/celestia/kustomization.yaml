@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  # See ../twilight-sparkle/kustomization.yaml's comment for why
+  # target.name is omitted and why every name reference is patched
+  # explicitly.
+  - target:
+      kind: MCPServer
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: toolhive-proxmox-celestia
+      - op: replace
+        path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
+        value: toolhive-proxmox-celestia
+      - op: replace
+        path: /spec/env/1/value
+        value: "10.10.10.103"
+  - target:
+      kind: ExternalSecret
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: toolhive-proxmox-celestia
+      - op: replace
+        path: /spec/target/name
+        value: toolhive-proxmox-celestia

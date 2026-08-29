@@ -1,0 +1,101 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+# Same shape as ./unifi-network.yaml -- see that file's
+# header for the `uv` image / podTemplateSpec-command reasoning, and
+# ./kubernetes.yaml's for why there is no
+# oidcConfigRef/authServerRef (this server joins ../agent-tools-mcp's
+# MCPGroup instead).
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-unifi-access
+spec:
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+  transport: stdio
+  proxyPort: 8080
+  proxyMode: streamable-http
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: UNIFI_ACCESS_HOST
+      value: unifi.driscoll.tech
+    - name: UNIFI_ACCESS_PORT
+      value: "443"
+    - name: UNIFI_ACCESS_VERIFY_SSL
+      value: "false"
+
+  podTemplateSpec:
+    spec:
+      volumes:
+        - name: uv-cache
+          emptyDir: {}
+      containers:
+        - name: mcp
+          command: ["/usr/local/bin/uv"]
+          args: ["tool", "run", "unifi-access-mcp"]
+          env:
+            - name: HOME
+              value: /tmp
+          envFrom:
+            - secretRef:
+                name: toolhive-unifi-access
+          volumeMounts:
+            - name: uv-cache
+              mountPath: /tmp
+          # Flagged by Codacy -- see ./unifi-network.yaml's
+          # comment.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# Same `Eris/unifipoller` credential as ./unifi-network.yaml
+# -- see that file's header for the full reasoning and the `bao kv put` this
+# needs run once by hand at its own path before this ExternalSecret goes
+# Ready:
+#
+#   bao kv put secrets/clusters/${CLUSTER_CNAME}/apps/toolhive-unifi-access/credentials \
+#     username="..." password="..."
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-unifi-access
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-unifi-access
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        UNIFI_ACCESS_USERNAME: "{{ .username }}"
+        UNIFI_ACCESS_PASSWORD: "{{ .password }}"
+  data:
+    - secretKey: username
+      remoteRef:
+        key: third-party-tokens/unifi/unifipoller
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: third-party-tokens/unifi/unifipoller
+        property: password

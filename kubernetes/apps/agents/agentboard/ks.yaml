@@ -21,9 +21,12 @@ spec:
     # the toolhive/toolhive-operator Kustomizations themselves.
     - name: external-secrets
       namespace: kube-system
-    # ../rbac's ClusterRole, which ./rbac.yaml's own ClusterRoleBinding
-    # references by name.
-    - name: agent-rbac
+    # The `agent-debug` ClusterRole, which ./rbac.yaml's own
+    # ClusterRoleBinding references by name -- lives in
+    # ../agent-mcp-tools/agent-tools-servers/rbac.yaml now (it used to be
+    # its own separate `agent-rbac` Flux Kustomization before every MCP
+    # server got consolidated into one).
+    - name: agent-tools-servers
       namespace: agents
   path: ./kubernetes/apps/agents/agentboard
   prune: true
