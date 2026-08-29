@@ -126,9 +126,8 @@ export const garage = configureGarage(globals);
 new PostgresRotationComponent({ globals });
 
 // OpenBao Kubernetes-auth Role + Policy for the toolhive-openbao MCP server
-// (kubernetes/apps/agents/agent-tools-servers/openbao.yaml). Same kind of no-op-until-flipped
-// gate as PostgresRotationComponent above, pending its own smaller root
-// ceremony -- see openbao-mcp.ts's header.
+// (kubernetes/apps/agents/agent-tools-servers/openbao.yaml). ENABLED --
+// the `pulumi` policy grant it needs is live -- see openbao-mcp.ts's header.
 new OpenBaoMcpComponent({ globals });
 
 // The Forgejo identity Renovate runs as -- the bot account, its token, and the

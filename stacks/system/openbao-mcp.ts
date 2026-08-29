@@ -47,21 +47,12 @@ import { ComponentResource, type ComponentResourceOptions } from "@pulumi/pulumi
 import * as vault from "@pulumi/vault";
 
 /**
- * OFF until a root ceremony widens the `pulumi` OpenBao policy. Verified
- * against bootstrap/openbao/equestria-init.sh's current grants (~line
- * 151-245): `pulumi` only holds capabilities on explicitly NAMED paths
- * (`sys/auth/kubernetes-sgc`, `sys/mounts/database`,
- * `sys/policies/acl/viewer`, ...) -- never a wildcard `sys/policies/acl/*`
- * or `auth/kubernetes/role/*`. Creating `agent-openbao-mcp` as a brand-new
- * Policy + Kubernetes auth Role will 403 against the live `pulumi` policy
- * exactly as the `database/` mount did before ENGINE_ENABLED's own root
- * ceremony in postgres-rotation.ts.
- *
- * This is a SMALLER ask than that one -- the `kubernetes` auth mount
- * already exists and is already configured
- * (bao write auth/kubernetes/config, equestria-init.sh:773), so this needs
- * only two new named-path grants added to the `pulumi` policy, same shape
- * as the existing `sys/auth/kubernetes-sgc` block:
+ * ON since the `pulumi` OpenBao policy was widened by hand via the OIDC
+ * `admin` login (bootstrap/openbao/equestria-init.sh's `admins` group ->
+ * `admin` policy path -- no root ceremony needed for this one, it's a
+ * normal admin-group action, not break-glass) rather than the root
+ * ceremony this file originally called for. Both named-path grants below
+ * were added to `pulumi`'s live policy:
  *
  *   path "sys/policies/acl/agent-openbao-mcp" {
  *     capabilities = ["create", "read", "update", "delete"]
@@ -70,10 +61,12 @@ import * as vault from "@pulumi/vault";
  *     capabilities = ["create", "read", "update", "delete"]
  *   }
  *
- * Apply those to the `pulumi` policy by hand (`bao policy read pulumi` +
- * append + `bao policy write pulumi -`), THEN flip this to `true`.
+ * Turning this on creates the Policy and the Kubernetes auth Role below,
+ * neither of which existed before -- both resource types are upsert-shaped
+ * at the OpenBao API level (a `create` is just a write), so this converges
+ * cleanly even though nothing here was previously under Pulumi's state.
  */
-const ENABLED = false;
+const ENABLED = true;
 
 /** Vault/OpenBao Kubernetes auth backend mount path -- see openbao-store.yaml. */
 const KUBERNETES_AUTH_MOUNT = "kubernetes";
