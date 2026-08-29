@@ -4,9 +4,41 @@ kind: ProxyClass
 metadata:
   name: default
 spec:
-  statefulSet:
-    annotations:
-      reloader.stakater.com/auto: "true"
+  # NO `reloader.stakater.com/auto` here, deliberately.
+  #
+  # This ProxyClass stamps its annotations onto the StatefulSet the tailscale
+  # operator generates for every ProxyGroup -- tailnet-inbound and
+  # tailnet-outbound. The operator also owns a `<proxygroup>-egress-config`
+  # ConfigMap holding the egress Service->tailnet mappings, and it REWRITES that
+  # ConfigMap every time an egress Service is added or removed. tailscaled
+  # re-reads it in place; the operator does not restart the pod for it, on
+  # purpose.
+  #
+  # Reloader does not know that. `auto: true` saw each rewrite and killed the
+  # StatefulSet:
+  #
+  #   Reloaded  statefulset/tailnet-inbound  Changes detected in
+  #   'tailnet-inbound-egress-config' of type 'CONFIGMAP'
+  #
+  # The ProxyGroup runs a single replica, so each of those was a total outage of
+  # EVERY tailnet egress path in the cluster, not a rolling one.
+  #
+  # That turned stacks/unifi-network's tailnet-egress.ts into a loop that eats
+  # itself: it creates the egress Services, and it reaches the API server
+  # THROUGH this same ProxyGroup (equestria-kubeproxy). Each Service it created
+  # rewrote the ConfigMap, Reloader dropped the proxy, and the run died on
+  #
+  #   dial tcp <proxy>:443: connect: connection refused
+  #
+  # mid-create -- then retried and did it again. services/equestria-kubeproxy.yaml
+  # is carved out of that stack precisely so it cannot delete its own socket, but
+  # the carve-out cannot help here: the POD is shared, so touching any other
+  # egress Service on this ProxyGroup takes the carved-out one down too.
+  #
+  # The operator already rolls these pods itself when something genuinely needs
+  # it (it edits the StatefulSet spec, which is a normal rolling update), so
+  # Reloader was never load-bearing here -- only harmful.
+  statefulSet: {}
   metrics:
     enable: true
     serviceMonitor:
@@ -27,10 +59,13 @@ spec:
   # pod MAY schedule; it does not pin anything to the control planes.
   # See docs/cluster-consolidation/20-low-power-tier.md §4.
   #
-  # Kept separate from `default` rather than folded into it: `default` also
-  # carries a reloader annotation, and its members (tailnet-inbound/-outbound)
-  # are not Tier 1. Metrics match `default` deliberately -- a Tier-1 proxy that
-  # has to survive a low-power window is the last one that should go unscraped.
+  # Kept separate from `default` rather than folded into it: `default`'s members
+  # (tailnet-inbound/-outbound) are not Tier 1, so they should not get a
+  # control-plane toleration just to give it to the ones that are. (`default`
+  # also used to carry a reloader annotation, which was the other reason to keep
+  # these apart; see the block above for why that is gone.) Metrics match
+  # `default` deliberately -- a Tier-1 proxy that has to survive a low-power
+  # window is the last one that should go unscraped.
   metrics:
     enable: true
     serviceMonitor:
