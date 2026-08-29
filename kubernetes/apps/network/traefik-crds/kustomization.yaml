@@ -27,22 +27,22 @@ resources:
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
   - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/experimental-install.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_ingressroutes.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_ingressroutes.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_ingressroutetcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_ingressroutetcps.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_ingressrouteudps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_ingressrouteudps.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_middlewares.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_middlewares.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_middlewaretcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_middlewaretcps.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_serverstransports.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_serverstransports.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_serverstransporttcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_serverstransporttcps.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_tlsoptions.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_tlsoptions.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_tlsstores.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_tlsstores.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v40.3.0/traefik/crds/traefik.io_traefikservices.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_traefikservices.yaml
