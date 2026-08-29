@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  # See ../celestia/kustomization.yaml's comment for why target.name is
+  # deliberately omitted here.
+  - target:
+      kind: MCPServer
+    patch: |-
+      - op: replace
+        path: /spec/env/0/value
+        value: tcp://as.driscoll.tech:2375

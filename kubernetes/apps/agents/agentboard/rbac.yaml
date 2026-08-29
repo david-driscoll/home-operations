@@ -4,7 +4,7 @@
 # `agent-debug` (../rbac/clusterrole.yaml), NOT `cluster-admin` -- David's
 # own call, narrowed once it was clear what "enough to debug with" actually
 # needs; see that file's header for exactly what this grants and why. Same
-# role ../toolhive-kubernetes's own SA binds, deliberately -- one written
+# role ../agent-mcp-tools/toolhive-kubernetes's own SA binds, deliberately -- one written
 # security posture, not two that could quietly drift apart.
 #
 # NO ServiceAccount object here -- an earlier draft created one directly,

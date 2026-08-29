@@ -1,0 +1,46 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../../toolhive-docs/mcpserver.yaml.
+#
+# In-cluster search, via degoog's OWN official MCP sidecar
+# (github.com/degoog-org/mcp, ghcr.io/degoog-org/mcp) -- NOT the
+# searxng-mcp wrapper an earlier draft of this file pointed at searxng
+# instead. degoog's own docs (checked at the time) didn't publish a JSON
+# API to wrap; its purpose-built MCP server makes that moot -- it speaks
+# Streamable HTTP natively at /mcp, so like ../../toolhive-docs's image this
+# needs no stdio-proxy plumbing (podTemplateSpec command override, uv/npx,
+# ...) at all.
+#
+# DEGOOG_MCP_DEGOOG_URL is the in-cluster ClusterIP address of
+# kubernetes/apps/equestria/home/degoog, not the public
+# https://search.${ROOT_DOMAIN} -- same reasoning as every other in-cluster
+# backend here: this traffic never leaves the cluster network.
+#
+# No DEGOOG_MCP_DEGOOG_API_KEY -- optional per the sidecar's own docs, and
+# degoog's own ExternalSecret (kubernetes/apps/equestria/home/degoog/externalsecret.yaml)
+# configures no API key for its search surface, only DEGOOG_SETTINGS_PASSWORDS
+# for its admin panel, which is a different thing entirely.
+#
+# NO oidcConfigRef/authServerRef -- see ../toolhive-kubernetes/mcpserver.yaml's
+# header. This server joins ../../toolhive-agent-tools's MCPGroup instead.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: ${APP}
+spec:
+  image: ghcr.io/degoog-org/mcp:latest
+  transport: streamable-http
+  proxyPort: 4443
+  mcpPort: 4443
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: DEGOOG_MCP_DEGOOG_URL
+      value: http://degoog.equestria.svc.cluster.local:4444
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

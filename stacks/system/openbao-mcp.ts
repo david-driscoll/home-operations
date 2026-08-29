@@ -1,6 +1,6 @@
 /**
  * OpenBao access for the `toolhive-openbao` MCP server
- * (kubernetes/apps/agents/toolhive-openbao/) -- David's own scope answer for
+ * (kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/) -- David's own scope answer for
  * it was "Secrets only, read+write", and "Pulumi code in stack/system" for
  * where the auth setup lives (an explicit correction over an earlier draft
  * that proposed `stacks/vault` instead).
@@ -127,7 +127,7 @@ path "secrets/metadata/*" {
         // this file's header.
         tokenPolicies: [policy.name],
         // Short-lived on purpose -- ESO's VaultDynamicSecret refresh
-        // (kubernetes/apps/agents/toolhive-openbao/externalsecret.yaml,
+        // (kubernetes/apps/agents/agent-mcp-tools/toolhive-openbao/externalsecret.yaml,
         // refreshInterval) re-mints well before this expires.
         tokenTtl: 3600,
         tokenMaxTtl: 3600,

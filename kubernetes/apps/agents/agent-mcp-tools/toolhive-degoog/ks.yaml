@@ -1,0 +1,40 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolhive-degoog
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # `toolhive-agent-tools`, for the MCPGroup this server's `groupRef`
+    # names -- see ../toolhive-kubernetes/ks.yaml's comment. NOT
+    # ../../equestria/home/degoog -- different namespace's dependency
+    # graph, and this server degrades to connection-refused rather than
+    # failing to reconcile if degoog itself is not up yet, same reasoning
+    # as toolhive-searxng gave before it was replaced by this file.
+    - name: toolhive-agent-tools
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/agent-mcp-tools/toolhive-degoog
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

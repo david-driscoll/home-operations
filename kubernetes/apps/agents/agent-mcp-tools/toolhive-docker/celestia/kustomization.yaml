@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  # target.name deliberately omitted -- kustomize treats it as a REGEX, and
+  # the base's literal `${APP}` name breaks that (`$` anchors end-of-string
+  # in regex, so a literal `${APP}` target NEVER matches, and the patch
+  # silently no-ops -- verified live via `kustomize build`, which is why
+  # every overlay here matches by `kind` alone instead: exactly one
+  # MCPServer per overlay, so it is unambiguous without a name selector.
+  - target:
+      kind: MCPServer
+    patch: |-
+      - op: replace
+        path: /spec/env/0/value
+        value: tcp://celestia.driscoll.tech:2375

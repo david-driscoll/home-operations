@@ -2,7 +2,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/clusterrole.json
 #
 # Replaces the `cluster-admin` binding both ../agentboard/rbac.yaml and
-# ../toolhive-kubernetes/rbac.yaml carried when this rollout was first built
+# ../agent-mcp-tools/toolhive-kubernetes/rbac.yaml carried when this rollout was first built
 # (David's own call, "full read-write from the start" -- narrowed once the
 # actual shape of "enough to debug with" was worked out, then widened once
 # more through a deliberate item-by-item Q&A on what else that actually

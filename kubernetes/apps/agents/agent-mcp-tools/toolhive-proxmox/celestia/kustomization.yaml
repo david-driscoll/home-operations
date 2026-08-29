@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  # See ../twilight-sparkle/kustomization.yaml's comment for why
+  # target.name is deliberately omitted here.
+  - target:
+      kind: MCPServer
+    patch: |-
+      - op: replace
+        path: /spec/env/1/value
+        value: "10.10.10.103"
