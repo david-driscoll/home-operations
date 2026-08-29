@@ -128,7 +128,7 @@ spec:
     sidecar:
       image:
         repository: ghcr.io/kiwigrid/k8s-sidecar
-        tag: "2.10.1@sha256:440db6dcf9a724fa2c167612e147ad8839e75104732dc7ec89783e73199837f0"
+        tag: "2.10.3@sha256:f6aca05f29eb9a8a2438ebe5ad7f8cc4e5ccffbc2720ed3da66ae4b601b81cb2"
       enableUniqueFilenames: true
       rules:
         searchNamespace: ALL
