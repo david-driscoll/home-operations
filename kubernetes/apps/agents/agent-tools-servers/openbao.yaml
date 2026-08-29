@@ -15,10 +15,9 @@
 # OPENBAO_URL/OPENBAO_TOKEN come from ./externalsecret.yaml, which mints a
 # live, auto-renewing token via ./vaultdynamicsecret.yaml rather than a
 # static one this package has no way to refresh itself -- see that file's
-# header, and stacks/system/openbao-mcp.ts's, for the full design. Until
-# that Pulumi code's own root ceremony lands (openbao-mcp.ts's ENABLED
-# gate), OPENBAO_TOKEN will be empty and this server will not
-# authenticate.
+# header, and stacks/system/openbao-mcp.ts's, for the full design.
+# stacks/system/openbao-mcp.ts's ENABLED gate is on -- the Kubernetes-auth
+# Role + Policy it needs exist once that stack next applies.
 #
 # NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
 # header. This server joins ../agent-tools-mcp's MCPGroup instead.
