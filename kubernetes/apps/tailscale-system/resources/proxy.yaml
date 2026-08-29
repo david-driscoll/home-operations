@@ -38,7 +38,17 @@ spec:
   # The operator already rolls these pods itself when something genuinely needs
   # it (it edits the StatefulSet spec, which is a normal rolling update), so
   # Reloader was never load-bearing here -- only harmful.
-  statefulSet: {}
+  #
+  # The key is OMITTED rather than left as an empty `statefulSet: {}`. Kustomize
+  # renders an empty map as `null`, and the CRD rejects that outright:
+  #
+  #   ProxyClass.tailscale.com "default" is invalid: spec.statefulSet:
+  #   Invalid value: "null": spec.statefulSet in body must be of type object
+  #
+  # which fails the whole tailscale-resources Kustomization, not just this
+  # object. `kubectl apply --dry-run=server` does NOT catch it -- that sends a
+  # real empty object and passes. Validate this file with `kustomize build`,
+  # which is what Flux actually applies.
   metrics:
     enable: true
     serviceMonitor:
