@@ -32,6 +32,17 @@
  *                      bao-dumps:2023     the nightly replication receiver
  *     dockge-celestia  garage-admin:3903  the operator's route to the Garage Admin API
  *
+ *     dns-celestia     admin:53443        the Technitium admin API. components/globals.ts
+ *                                         builds ONE technitiumProvider against
+ *                                         `dns-celestia.<tailnet>` and PINGS it while
+ *                                         constructing GlobalResources -- which every
+ *                                         stack does before it creates anything. So if
+ *                                         this Service is missing, no stack can run,
+ *                                         including the one that would recreate it.
+ *                                         That is not hypothetical: it is exactly what
+ *                                         happened when the cutover below pruned it, and
+ *                                         only a hand-applied Service broke the deadlock.
+ *
  *   services/equestria-kubeproxy.yaml
  *     equestria-kubeproxy https:443       the operator's route to the API SERVER.
  *       `generateTailscaleKubeConfig` (components/store/index.ts) points every
@@ -47,8 +58,9 @@
  *
  * The carve-out is per SERVICE, not per port: a Service cannot be half-owned by
  * Flux and half by Pulumi without the two fighting over `spec.ports`.
- * `proxmox-celestia`, `pbs-celestia` and `dns-celestia` are separate objects and
- * are managed here as normal.
+ * `proxmox-celestia` and `pbs-celestia` are separate objects and are managed here
+ * as normal. `dns-celestia` used to be too, and that was the bug -- see its entry
+ * above.
  *
  * ONE-TIME CUTOVER
  * ----------------
@@ -183,7 +195,7 @@ const remoteServers = new Set(["skystar"]);
 
 /** Services this stack must NOT create. Written as the service NAME so a rename
  *  cannot silently un-carve one. See the header for why each is here. */
-const carvedOutServices = new Set(["dockge-as", "dockge-celestia"]);
+const carvedOutServices = new Set(["dockge-as", "dockge-celestia", "dns-celestia"]);
 
 /**
  * Egress to a Tailscale VIP SERVICE rather than to one machine.

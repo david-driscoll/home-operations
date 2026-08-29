@@ -2,7 +2,7 @@
 # HAND-MAINTAINED. Do not fold these into stacks/unifi-network's generated set.
 #
 # Every other tailnet egress Service in this directory is built by
-# stacks/unifi-network/tailnet-egress.ts. These two are not, and the reason is
+# stacks/unifi-network/tailnet-egress.ts. These three are not, and the reason is
 # circular: unifi-network is run by the IN-CLUSTER Pulumi operator
 # (kubernetes/apps/pulumi/unifi-network/stack.yaml), and these carry the traffic
 # that operator needs in order to run at all.
@@ -18,6 +18,12 @@
 #                                       operator workspace pods.
 #                    garage-s3:3900     CNPG barman-cloud WAL archives and base
 #                                       backups.
+#   dns-celestia     admin:53443        the Technitium admin API.
+#                                       components/globals.ts builds ONE
+#                                       technitiumProvider against
+#                                       dns-celestia.<tailnet> and PINGS it while
+#                                       constructing GlobalResources -- which EVERY
+#                                       stack does before it creates anything.
 #
 # If Pulumi owned these and they went missing, the recovery path would be: OpenBao
 # cannot unseal -> external-secrets stops -> the operator's AppRole secret cannot
@@ -25,10 +31,20 @@
 # recovery needs nothing but SOPS and an age key.
 #
 # The split is per SERVICE, not per port: Flux and Pulumi cannot both own
-# `spec.ports` on one object. So the whole of dockge-as and dockge-celestia lives
-# here, including the ports that are not themselves bootstrap-critical.
-# proxmox-celestia, pbs-celestia and dns-celestia are separate objects and are
-# generated normally.
+# `spec.ports` on one object. So the whole of dockge-as, dockge-celestia and
+# dns-celestia lives here, including the ports that are not themselves
+# bootstrap-critical. proxmox-celestia and pbs-celestia are separate objects and
+# are still generated normally.
+#
+# dns-celestia was in that "generated normally" list until 2026-08-29, and this
+# file said so. It was wrong, and the failure was estate-wide rather than local:
+# unifi-network's one-time cutover pruned the hand-written Service, after which
+# NOTHING could resolve dns-celestia.<tailnet>, so every stack died constructing
+# GlobalResources -- including unifi-network itself, the only thing that could
+# put the Service back. Four stacks sat failed until a Service was applied by
+# hand to break the cycle. The eager ping in components/globals.ts is what makes
+# this Service bootstrap-critical rather than merely useful, exactly like
+# dockge-as's bao:8200 above.
 #
 # Adding a port here also needs a matching grant in
 # stacks/unifi-network/acl-manager.ts -- the generated half asserts that pairing
@@ -169,3 +185,107 @@ spec:
           for: 10m
           labels:
             severity: warning
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/service.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-celestia
+  annotations:
+    tailscale.com/tailnet-fqdn: "dns-celestia.${TAILSCALE_DOMAIN}"
+    tailscale.com/proxy-group: tailnet-inbound
+spec:
+  type: ExternalName
+  externalName: dns-celestia
+  ports:
+    # Ports and names mirror `defaultPorts.dns` in
+    # stacks/unifi-network/tailnet-egress.ts exactly, so this object and the
+    # generated dns-* Services stay interchangeable. Do53 (53), DoT (853),
+    # DoQ (853/udp), DoH (443), admin/API (53443).
+    - name: dns-tcp
+      port: 53
+      targetPort: 53
+    - name: dns-udp
+      port: 53
+      targetPort: 53
+      protocol: UDP
+    - name: dot
+      port: 853
+      targetPort: 853
+    - name: doq
+      port: 853
+      targetPort: 853
+      protocol: UDP
+    - name: doh
+      port: 443
+      targetPort: 443
+    # The reason this whole Service is carved out. See the file header.
+    - name: admin
+      port: 53443
+      targetPort: 53443
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-celestia
+spec:
+  interval: 2m
+  module: dns_soa
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - dns-celestia.${TAILSCALE_DOMAIN}:53
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-celestia-dot
+spec:
+  interval: 2m
+  module: tcp_connect
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        - dns-celestia.${TAILSCALE_DOMAIN}:853
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-celestia-doh
+spec:
+  interval: 2m
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.observability.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        # NOT the tailnet name, and not a substitution either. Technitium serves a
+        # certificate whose only SAN is `<server>.dns.driscoll.tech`, so probing
+        # the tailnet name fails TLS verification -- this mirrors `probeDomain`
+        # in tailnet-egress.ts. The domain is a literal because no substitution
+        # var holds a bare `driscoll.tech`: EXTERNAL_DOMAIN is
+        # `castle-of-friendship.driscoll.tech`.
+        - https://celestia.dns.driscoll.tech
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dns-celestia-alerts
+spec:
+  groups:
+    - name: dns-celestia
+      rules:
+        - alert: TechnitiumDnsUnhealthy
+          annotations:
+            description: "Technitium DNS on celestia is not answering SOA queries."
+            summary: "Technitium DNS celestia unhealthy"
+          expr: |
+            probe_success{probe="dns-celestia"} < 1
+          for: 10m
+          labels:
+            severity: critical
