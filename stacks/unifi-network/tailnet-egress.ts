@@ -378,7 +378,32 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
             ports: ports.map(p => ({ name: p.name, port: p.port, targetPort: p.port, ...(p.protocol ? { protocol: p.protocol } : {}) })),
           },
         },
-        opts,
+        // `spec.externalName` is OURS to seed and the OPERATOR'S to keep.
+        //
+        // An ExternalName Service must carry one to pass API validation, so the
+        // tailnet name above is what we create it with -- but the moment the
+        // tailscale operator adopts the Service it rewrites the field to point at
+        // the proxy Service it generates for it
+        // (`ts-<name>-<hash>.tailscale-system.svc.cluster.local`). That is not
+        // drift, it is the whole mechanism: that rewrite is what makes the egress
+        // work.
+        //
+        // Under server-side apply both managers then claim the field, and every
+        // later run died on it -- not at create, but in the await-live step, so the
+        // Services really did exist while the stack still reported failure:
+        //
+        //   "tailscale-system/dockge-skystar" failed to fully initialize or become
+        //   live: server-side apply field conflict detected
+        //   Apply failed with 1 conflict: conflict with "operator" using v1:
+        //     .spec.externalName
+        //
+        // `ignoreChanges` is what Pulumi's own SSA guide prescribes for a field
+        // another controller legitimately owns. `pulumi.com/patchForce` is the
+        // other lever and is the WRONG one here -- the same guide warns it "is
+        // likely to cause further conflicts if the operator expects to manage these
+        // fields", which it does: forcing our value back would just be undone on
+        // the next operator sync, every run, forever.
+        { ...opts, ignoreChanges: ["spec.externalName"] },
       );
       created.push(service);
 
@@ -457,7 +482,9 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
             ports: vip.ports.map(p => ({ name: p.name, port: p.port, targetPort: p.port, ...(p.protocol ? { protocol: p.protocol } : {}) })),
           },
         },
-        opts,
+        // Same operator rewrite as the per-device Services above -- a VIP-backed
+        // egress is the same object shape, so it hits the same SSA conflict.
+        { ...opts, ignoreChanges: ["spec.externalName"] },
       ),
     );
   }
