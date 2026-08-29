@@ -61,13 +61,9 @@ spec:
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
 #
-# Same `Eris/unifipoller` credential as ./unifi-network.yaml
-# -- see that file's header for the full reasoning and the `bao kv put` this
-# needs run once by hand at its own path before this ExternalSecret goes
-# Ready:
-#
-#   bao kv put secrets/clusters/${CLUSTER_CNAME}/apps/toolhive-unifi-access/credentials \
-#     username="..." password="..."
+# Same `Eris/unifipoller` credential, same shared OpenBao path, as
+# ./unifi-network.yaml -- see that file's header for the full reasoning and
+# the one `bao kv put` all three of these servers read from.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:

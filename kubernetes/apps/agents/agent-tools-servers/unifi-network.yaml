@@ -85,10 +85,11 @@ spec:
 #
 # The SAME `Eris/unifipoller` credential the repo's own .mcp.json already
 # authenticates all three unifi-*-mcp servers with locally (`op run --
-# uvx unifi-network-mcp`, etc.) -- copied once into OpenBao rather than
-# re-derived, so this and every other consumer rotate together:
+# uvx unifi-network-mcp`, etc.) -- copied ONCE into OpenBao at a single
+# shared path, not one copy per server, so this and every other consumer
+# (./unifi-protect.yaml, ./unifi-access.yaml) rotate together:
 #
-#   bao kv put secrets/clusters/${CLUSTER_CNAME}/apps/toolhive-unifi-network/credentials \
+#   bao kv put secrets/third-party-tokens/unifi/unifipoller \
 #     username="..." password="..."
 #
 # Reusing that account is the pragmatic default, not a forced one -- a
