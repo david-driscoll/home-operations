@@ -114,6 +114,27 @@ instance:
       #
       # If a raise is genuinely needed, size the memory limit against
       # `--concurrent` x build-tree size first and verify under a full wave.
+      #
+      # A SECOND, slower-motion instance of the same failure hit on
+      # 2026-08-29, at this same `--concurrent=20` / 1Gi pairing that
+      # supposedly-safe combination -- no concurrency change this time, just
+      # estate growth (this rollout alone added ~30 new Kustomizations under
+      # kubernetes/apps/agents/). 129 restarts over 27h (not 7 over 2m: this
+      # one starved slowly enough to go unnoticed rather than paging), 28
+      # Kustomizations frozen across nine namespaces (not 217: caught before
+      # cluster-apps itself fell over). Exit 137 every time, ~38s after
+      # start -- each restart re-processes a backlog that only grows while
+      # the pod is down, so the memory pressure gets WORSE with time, not
+      # better; it does not self-heal.
+      #
+      # Fixed here by raising ONLY kustomize-controller's own memory limit
+      # (this patch, layered on top of the shared 1Gi "all" patch above --
+      # this is a LATER entry in kustomize.patches, so it wins for this one
+      # controller, same "last occurrence wins" rule as --concurrent's own
+      # comment states), not by touching --concurrent again. helm-controller
+      # and source-controller stay at the shared 1Gi: neither carries the
+      # concurrent-build-trees-in-tmpfs coupling that makes kustomize-controller
+      # the one that needs headroom sized against estate growth.
       patch: |
         - op: add
           path: /spec/template/spec/containers/0/args/-
@@ -124,6 +145,9 @@ instance:
             name: temp
             emptyDir:
               medium: Memory
+        - op: replace
+          path: /spec/template/spec/containers/0/resources/limits/memory
+          value: 2Gi
       target:
         kind: Deployment
         name: kustomize-controller
