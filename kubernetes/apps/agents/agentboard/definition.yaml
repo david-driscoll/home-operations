@@ -4,10 +4,10 @@
 # agentboard has NO login of its own -- its own docs say plainly that anyone
 # who can reach it has full access to every terminal session it shows. This
 # follows the Longhorn pattern (kubernetes/apps/longhorn-system/longhorn/definition.yaml),
-# not the toolhive-ui one: `authentik.proxy.mode: forward_single` puts an
-# authentik outpost in front of it, so the app itself never has to know it is
-# being protected. See ./httproute.yaml for the middleware that wires the
-# outpost in.
+# not an ordinary interactive-login `authentik:oauth2:` client:
+# `authentik.proxy.mode: forward_single` puts an authentik outpost in front of
+# it, so the app itself never has to know it is being protected. See
+# ./httproute.yaml for the middleware that wires the outpost in.
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:

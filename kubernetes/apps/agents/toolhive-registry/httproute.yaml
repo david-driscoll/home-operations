@@ -8,10 +8,21 @@
 # names it after the release, pinned to `${APP}` by `fullnameOverride`. Unlike
 # the operator-built Services elsewhere in this namespace, this one IS in Git.
 #
-# ../toolhive-ui does NOT reach the registry through here -- it uses the
-# in-cluster Service directly over API_BASE_URL, which avoids a pointless
-# hairpin out to Traefik and back. This route exists so the catalogue is
-# reachable by hand and by any client that wants it directly.
+# This route is the ONLY way anything reaches the registry now -- there is no
+# in-cluster consumer left. (There used to be: a Cloud UI, toolhive-ui, read it
+# over the in-cluster Service via API_BASE_URL. Retired 2026-08-29; its
+# upstream chart was archived and never shipped a way to create better-auth's
+# Postgres schema on Kubernetes.) The actual consumers today are `thv` CLI and
+# ToolHive Desktop, pointed here with:
+#
+#   thv config set-registry https://mcp.agents.${ROOT_DOMAIN}/registry/default \
+#     --allow-private-ip
+#
+# `--allow-private-ip` is required, not optional: this hostname only resolves
+# on the LAN/tailnet (Technitium split-horizon), so it always answers a private
+# IP and thv refuses that by default. Desktop shares the same on-disk config
+# store as the CLI (~/Library/Application Support/ToolHive on macOS), so
+# setting it once covers both.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

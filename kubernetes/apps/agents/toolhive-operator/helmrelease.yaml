@@ -72,8 +72,8 @@ spec:
           memory: 256Mi
         limits:
           # No CPU limit, per the convention in this namespace
-          # (toolhive-ui, toolhive-valkey): throttling a controller's
-          # reconcile loop is worse than letting it burst.
+          # (toolhive-valkey): throttling a controller's reconcile loop is
+          # worse than letting it burst.
           memory: 512Mi
       gc:
         gomemlimit: 440MiB

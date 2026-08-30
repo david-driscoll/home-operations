@@ -1,7 +1,14 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
 #
-# The MCP catalogue, and the backend ../toolhive-ui cannot run without.
+# The MCP catalogue. Read directly by `thv` CLI / ToolHive Desktop via
+# `thv config set-registry https://mcp.agents.${ROOT_DOMAIN}/registry/default
+# --allow-private-ip` (the flag is required -- this hostname only resolves
+# on the LAN/tailnet, so it always answers a private IP) -- see
+# ./httproute.yaml. There used to be a Cloud UI (toolhive-ui) in front of this
+# too; it was retired 2026-08-29 after its upstream chart turned out to be
+# archived and to have never shipped a Kubernetes migration path for
+# better-auth's Postgres schema.
 #
 # WHY A CHART RATHER THAN THE MCPRegistry CR. This started as an MCPRegistry,
 # which the operator turns into a registry-api Deployment. The operator itself
@@ -17,8 +24,7 @@
 #
 # WHAT CHANGED FOR CONSUMERS: the Service. The operator named it
 # `<registry>-registry-api`; the chart names it after the release, so
-# `fullnameOverride` below pins it to `toolhive-registry`. ./httproute.yaml and
-# ../toolhive-ui's API_BASE_URL both point at the new name.
+# `fullnameOverride` below pins it to `toolhive-registry`.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
