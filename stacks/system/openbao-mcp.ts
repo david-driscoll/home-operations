@@ -100,6 +100,19 @@ path "secrets/data/*" {
 path "secrets/metadata/*" {
   capabilities = ["read", "list"]
 }
+# Confirmed live 2026-08-30: without this, the login token minted by the
+# Kubernetes-auth role below (which carries exactly this policy) gets a
+# 403 calling openbao.yaml's own auth/token/create -- holding a policy
+# and having the CAPABILITY to call token/create to hand that policy to a
+# child token are two different grants. Vault/OpenBao's built-in
+# \`default\` policy (auto-attached to every token unless
+# token_no_default_policy is set, which this role does not set) covers
+# lookup-self/renew-self/revoke-self, NOT token/create -- this is the
+# missing piece the file header's "NOT live-verified end to end" caveat
+# was waiting to catch.
+path "auth/token/create" {
+  capabilities = ["create", "update"]
+}
 `,
       },
       { provider: args.globals.baoProvider, parent: this },
