@@ -132,9 +132,12 @@ instance:
       # this is a LATER entry in kustomize.patches, so it wins for this one
       # controller, same "last occurrence wins" rule as --concurrent's own
       # comment states), not by touching --concurrent again. helm-controller
-      # and source-controller stay at the shared 1Gi: neither carries the
-      # concurrent-build-trees-in-tmpfs coupling that makes kustomize-controller
-      # the one that needs headroom sized against estate growth.
+      # stays at the shared 1Gi: it does not carry the concurrent-build-trees-
+      # in-tmpfs coupling that makes kustomize-controller the one that needs
+      # headroom sized against estate growth. source-controller was reasoned
+      # the same way here, and that reasoning held for two days -- see the
+      # bottom of this file's patches list for why it stopped holding
+      # (2026-08-30, source-controller's own memory raise).
       #
       # A THIRD instance, 2026-08-29, minutes after the 2Gi fix above merged
       # (#1316) -- 2Gi was not enough either. Same fast signature as the
@@ -256,3 +259,31 @@ instance:
       target:
         kind: Deployment
         name: kustomize-controller
+    - # source-controller OOMKilled live on 2026-08-30, ~2d21h into its own
+      # pod's life (created 2026-08-27T05:02:14Z), 22 restarts by the time it
+      # was caught -- not the fast single-incident signature
+      # kustomize-controller's own comment above describes, but the same
+      # slow-motion one: exitCode 137, container Running one moment and
+      # CrashLoopBackOff the next, no single triggering event found. The
+      # symptom that actually surfaced it: the Service had ZERO endpoints,
+      # so every consumer of a flux artifact -- not just this cluster's own
+      # Kustomizations, but every pulumi-kubernetes-operator Workspace pod's
+      # `fetch` init container too (`dial tcp ...:80: connect: connection
+      # refused`) -- started failing at once. unifi-network's own Stack had
+      # been separately failing on an unrelated, already-fixed DNS issue,
+      # which is what surfaced this: its retry after that fix landed hung
+      # for 28+ minutes at idle CPU instead of failing fast, because `fetch`
+      # itself was the thing now broken, not the Pulumi program.
+      #
+      # Raised to 2Gi, not re-deriving a number from measured usage first --
+      # this reasoning was explicitly "helm-controller and source-controller
+      # stay at the shared 1Gi" above and it held for two days before this,
+      # so treat this the same as kustomize-controller's own history: verify
+      # under real load rather than assume 2Gi is now enough forever.
+      patch: |
+        - op: replace
+          path: /spec/template/spec/containers/0/resources/limits/memory
+          value: 2Gi
+      target:
+        kind: Deployment
+        name: source-controller
