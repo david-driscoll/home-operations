@@ -1,11 +1,13 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/clusterrolebinding.json
 #
-# `agent-debug` (../rbac/clusterrole.yaml), NOT `cluster-admin` -- David's
-# own call, narrowed once it was clear what "enough to debug with" actually
-# needs; see that file's header for exactly what this grants and why. Same
-# role ../agent-tools-servers/kubernetes.yaml's own SA binds, deliberately -- one written
-# security posture, not two that could quietly drift apart.
+# `agent-debug` (../agent-debug-rbac/clusterrole.yaml), NOT `cluster-admin`
+# -- David's own call, narrowed once it was clear what "enough to debug
+# with" actually needs; see that file's header for exactly what this grants
+# and why, and for why the ClusterRole itself lives in its own Kustomization
+# rather than ../agent-tools-servers. Same role
+# ../agent-tools-servers/kubernetes.yaml's own SA binds, deliberately -- one
+# written security posture, not two that could quietly drift apart.
 #
 # NO ServiceAccount object here -- an earlier draft created one directly,
 # which collided with ./helmrelease.yaml's own `values.serviceAccount.${APP}`

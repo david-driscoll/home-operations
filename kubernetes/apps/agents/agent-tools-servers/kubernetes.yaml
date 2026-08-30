@@ -32,7 +32,7 @@ spec:
     name: agent-tools
   args:
     # Full read-write, per the estate decision this whole rollout was built
-    # around -- default is read-only. RBAC enforcement is ./agent-debug-rbac.yaml's
+    # around -- default is read-only. RBAC enforcement is ../agent-debug-rbac/clusterrole.yaml's
     # cluster-admin binding on the SA above, this flag just stops the server
     # refusing writes it otherwise has permission to make.
     - "--read-write=true"
@@ -47,7 +47,7 @@ spec:
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/serviceaccount.json
 #
-# `agent-debug` (./agent-debug-rbac.yaml), NOT `cluster-admin` -- David's
+# `agent-debug` (../agent-debug-rbac/clusterrole.yaml), NOT `cluster-admin` -- David's
 # own call, narrowed once it was clear what "enough to debug with" actually
 # needs; see that file's header for exactly what this grants and why. Same
 # role ../agentboard's own SA binds, deliberately -- one written security

@@ -12,7 +12,7 @@
 # CNPG Postgres cluster -- every app's database lives under this one
 # instance. Reusing it here (rather than minting a narrower role) means
 # postgres-mcp below can read/write/drop ANY app's database, not just
-# diagnose one. Granted with eyes open, matching ./agent-debug-rbac.yaml's
+# diagnose one. Granted with eyes open, matching ../agent-debug-rbac/clusterrole.yaml's
 # own tone for its highest-risk grants -- David may want to narrow this to
 # a purpose-built role on review.
 #

@@ -1,11 +1,27 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.2/clusterrole.json
 #
+# ITS OWN KUSTOMIZATION, moved out of ../agent-tools-servers 2026-08-30 --
+# it used to be one resource bundled in there alongside every MCPServer. The
+# problem that caused: ../agent-tools-servers's Kustomization is `wait:
+# true`, which health-checks its ENTIRE inventory, so one perpetually
+# crash-looping MCPServer (of two dozen -- a bad DNS name, an invalid config
+# literal, a missing upstream credential, any one of them) kept the whole
+# Kustomization from ever reporting Ready. ../agentboard depends on it
+# SOLELY for this ClusterRole existing, so that one flaky backend was
+# silently blocking agentboard from ever deploying at all -- confirmed live,
+# for hours, alongside the near-identical ../agent-tools-mcp/ks.yaml
+# `healthCheckExprs` fix landed in the same change. Splitting this out means
+# agentboard's dependency is on an object that only two possible things can
+# ever make unhealthy: a real RBAC schema problem, or the Kustomization
+# controller itself -- not the operational health of every MCP server in
+# the namespace.
+#
 # Replaces the `cluster-admin` binding both ../agentboard/rbac.yaml and
-# ./kubernetes.yaml carried when this rollout was first built
-# (David's own call, "full read-write from the start" -- narrowed once the
-# actual shape of "enough to debug with" was worked out, then widened once
-# more through a deliberate item-by-item Q&A on what else that actually
+# ../agent-tools-servers/kubernetes.yaml carried when this rollout was first
+# built (David's own call, "full read-write from the start" -- narrowed once
+# the actual shape of "enough to debug with" was worked out, then widened
+# once more through a deliberate item-by-item Q&A on what else that actually
 # needs to cover -- see each rule below for what it's for).
 #
 # Two categories, deliberately asymmetric:

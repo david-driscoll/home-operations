@@ -31,6 +31,38 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
+  # WITHOUT THIS, ONE FLAKY BACKEND WEDGES EVERY DOWNSTREAM MCP DEPLOY,
+  # PERMANENTLY. `wait: true` health-checks every object in this
+  # Kustomization's inventory, including ./virtualmcpserver.yaml -- and its
+  # CRD's own `status.phase` enum (kubectl explain
+  # virtualmcpservers.status.phase) is `Pending|Ready|Degraded|Failed`.
+  # `Degraded` is a DELIBERATE, ORDINARY steady state for this CRD -- "still
+  # serving what's healthy" when some subset of ./mcpgroup.yaml's ~20+
+  # backends is down -- not a transient step on the way to Ready.
+  #
+  # Flux has no built-in understanding of this CRD, so its default kstatus
+  # fallback can only recognize a literal `Ready`-shaped status; `Degraded`
+  # reads as neither Current nor Failed, so it sits reported as "InProgress"
+  # and the health check just times out and retries every 10m, FOREVER --
+  # confirmed live: this Kustomization was stuck exactly that way for hours
+  # (`timeout waiting for: [VirtualMCPServer/agents/agent-tools status:
+  # 'InProgress']`) while every individual backend crash looped on causes
+  # already fixed in git (bad DNS names, an invalid transport literal, a
+  # stray serviceAccountRef, missing writable cache dirs) -- none of those
+  # fixes could ever reach the cluster, because ../agent-tools-servers
+  # `dependsOn` THIS Kustomization's health, and ../agentboard depends on
+  # THAT one in turn. One backend's bad config blocked every MCP server
+  # rollout and agentboard both, indefinitely.
+  #
+  # This tells Flux what the operator itself already knows: `Degraded` is
+  # fine to build on top of, only `Failed` genuinely blocks. CEL syntax
+  # confirmed against the live CRD and Flux's own docs -- the input is the
+  # object itself, no `status.`-prefix binding trick needed beyond that.
+  healthCheckExprs:
+    - apiVersion: toolhive.stacklok.dev/v1beta1
+      kind: VirtualMCPServer
+      failed: status.phase == 'Failed'
+      current: status.phase == 'Ready' || status.phase == 'Degraded'
   postBuild:
     substitute:
       APP: *app
