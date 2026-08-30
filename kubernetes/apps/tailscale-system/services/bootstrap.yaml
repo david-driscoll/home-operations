@@ -71,6 +71,16 @@ spec:
     - name: ssh
       port: 22
       targetPort: 22
+    # mcp-server-docker against this host's docker-socket-proxy -- see
+    # ../../agents/agent-tools-servers/docker/base/mcpserver.yaml's header
+    # for the full story, and ../../agents/agent-tools-servers/docker/alpha-site
+    # /kustomization.yaml for why this host resolves via ${ROOT_DOMAIN}
+    # rather than ${TAILSCALE_DOMAIN} the way the generated dockge-luna/
+    # dockge-skystar Services do. Paired with the `docker-socket-proxy`
+    # grant in acl-manager.ts, same as those two.
+    - name: docker-proxy
+      port: 2375
+      targetPort: 2375
     # A primary AdGuard host.
     - name: adguard
       port: 4000
@@ -138,6 +148,16 @@ spec:
     - name: ssh
       port: 22
       targetPort: 22
+    # mcp-server-docker against this host's docker-socket-proxy -- see
+    # ../../agents/agent-tools-servers/docker/base/mcpserver.yaml's header
+    # for the full story, and ../../agents/agent-tools-servers/docker/celestia
+    # /kustomization.yaml for why this host resolves via ${ROOT_DOMAIN}
+    # rather than ${TAILSCALE_DOMAIN} the way the generated dockge-luna/
+    # dockge-skystar Services do. Paired with the `docker-socket-proxy`
+    # grant in acl-manager.ts, same as those two.
+    - name: docker-proxy
+      port: 2375
+      targetPort: 2375
     # llama-agent (gemma-4-E4B), Hermes' backend.
     - name: llm-agent
       port: 8081
