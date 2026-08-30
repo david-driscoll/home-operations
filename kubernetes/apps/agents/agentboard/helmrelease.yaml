@@ -70,6 +70,28 @@ spec:
             runAsNonRoot: false
             runAsUser: 0
             runAsGroup: 0
+          # Confirmed live 2026-08-30: `shining-armor` is the one node in
+          # this cluster without AVX2 (`kubectl get node shining-armor -o
+          # jsonpath='{.metadata.labels}'` -- every cpu-cpuid.* label present
+          # tops out at X86_64_V2, and every OTHER node in the cluster
+          # carries `cpu-cpuid.AVX2: "true"`). `@gbasin/agentboard`'s
+          # published `-linux-x64` native binary needs it: scheduled there,
+          # the pod gets past `mise install` and straight into a SIGILL
+          # crash loop (`Command failed: .../agentboard --port 4040
+          # --hostname 0.0.0.0 ... signal: 'SIGILL'`) -- not a config error
+          # of this rollout's own making, an unlisted hardware requirement
+          # of an upstream prebuilt binary. Excluding by the actual
+          # capability (node-feature-discovery's own AVX2 label) rather than
+          # by hostname survives shining-armor's hardware changing, or
+          # another AVX2-less node joining later, with no edit needed here.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: feature.node.kubernetes.io/cpu-cpuid.AVX2
+                        operator: In
+                        values: ["true"]
         containers:
           *app :
             image:
