@@ -46,14 +46,35 @@ git config --global user.email "david.driscoll@gmail.com"
 # keeps `git push` working three days into an agent session instead of one
 # hour into it. `x-access-token` is GitHub's own fixed username for App
 # installation tokens over HTTPS -- not a placeholder.
+# Single-quoted ON PURPOSE. `$(cat ...)` must stay literal here and be
+# evaluated by git's OWN shell each time it invokes this helper, not
+# expanded once by this script at config-time -- that lazy re-read on every
+# invocation is the entire point (see the comment above).
+# shellcheck disable=SC2016
 git config --global credential."https://github.com".helper \
   '!f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f'
 
 # `locked = true` in ../resources/mise.toml means this resolves ONLY through
 # ../resources/mise.lock's pinned checksums/URLs -- see that file's header
 # for how to regenerate it after a version bump.
-echo "==> mise install (config: ${MISE_CONFIG_DIR}/config.toml)"
-mise trust "${MISE_CONFIG_DIR}/config.toml"
+#
+# `$${MISE_CONFIG_DIR}`, NOT `${MISE_CONFIG_DIR}` -- this is a shell
+# variable meant to expand at RUNTIME from ../helmrelease.yaml's pod env,
+# but this whole script is also a configMapGenerator input
+# (../kustomization.yaml), which components/common's substituteFrom patch
+# scans for `${VAR}` at BUILD time. An unescaped `${MISE_CONFIG_DIR}` here
+# looks identical to a Flux substitution to that patch, and since
+# `MISE_CONFIG_DIR` is never one of the actual cluster-secrets/shared-secrets
+# variables, strict mode hard-fails the whole Kustomization with
+# `variable not set (strict mode): "MISE_CONFIG_DIR"` -- confirmed live,
+# this is exactly what happened the first time Flux ever got far enough to
+# try building this ConfigMap (see [[flux-wait-true-degraded-phase-deadlock]]
+# for why that took until 2026-08-30). `$$` is Flux's own escape for a
+# literal `$` in its output, so `$${MISE_CONFIG_DIR}` renders as the literal
+# text `${MISE_CONFIG_DIR}` this script actually needs, and bash expands it
+# normally at container start.
+echo "==> mise install (config: $${MISE_CONFIG_DIR}/config.toml)"
+mise trust "$${MISE_CONFIG_DIR}/config.toml"
 mise install
 
 # tmux needs a running server before anything can attach a window to it.
