@@ -10,9 +10,14 @@
 # assumed rather than re-checked per image). No digest pin yet -- add one
 # before merging.
 #
-# No CONTEXT7_API_KEY -- works unauthenticated at Upstash's public rate
-# limit for now. Add one via a new OpenBao path if that turns out to be too
-# low for this namespace's usage.
+# CONTEXT7_API_KEY comes from ./context7.yaml's own ExternalSecret below,
+# sourced from David's existing `third-party-tokens/context7/apikey`
+# OpenBao path (property `apikey`) -- no new top-level prefix, so no root
+# ceremony needed (same `eso-equestria` grant every other third-party-tokens/
+# consumer here already uses, e.g. ./unifi-access.yaml's
+# `third-party-tokens/unifi/unifipoller`). Started out unauthenticated at
+# Upstash's public rate limit; wired up once that turned out to be too low
+# for this namespace's usage.
 #
 # `transport: stdio` because the package speaks stdio -- the operator's
 # proxy-runner is what turns that into Streamable HTTP, same as every
@@ -53,6 +58,11 @@ spec:
           env:
             - name: HOME
               value: /tmp
+            - name: CONTEXT7_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: toolhive-context7
+                  key: CONTEXT7_API_KEY
           volumeMounts:
             - name: npm-cache
               mountPath: /tmp
@@ -68,3 +78,37 @@ spec:
       memory: 128Mi
     limits:
       memory: 512Mi
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# David's existing Upstash/Context7 API key, already stored in OpenBao at
+# third-party-tokens/context7/apikey (property `apikey`) -- same
+# ClusterSecretStore/`eso-equestria` path every other third-party-tokens/
+# consumer in this directory uses (e.g. ./unifi-access.yaml).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-context7
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-context7
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        CONTEXT7_API_KEY: "{{ .apikey }}"
+  data:
+    - secretKey: apikey
+      remoteRef:
+        key: third-party-tokens/context7/apikey
+        property: apikey
