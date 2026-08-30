@@ -5,10 +5,22 @@
 # hypervisor. Published image confirmed live:
 # ghcr.io/rekklesna/proxmoxmcp-plus:latest -- no digest pin yet, add one
 # before merging. Three transport modes exist (stdio via PyPI, native MCP
-# HTTP via `PROXMOX_MCP_MODE=mcp-http` on :8000, or an OpenAPI bridge on
-# :8811 by default); this uses the native HTTP mode, same
-# no-stdio-wrapper shape as ../../degoog.yaml -- see its
-# header for why that needs no podTemplateSpec command override.
+# HTTP on :8000, or an OpenAPI bridge on :8811 by default); this uses the
+# native HTTP mode, same no-stdio-wrapper shape as ../../degoog.yaml -- see
+# its header for why that needs no podTemplateSpec command override.
+#
+# `MCP_TRANSPORT=STREAMABLE`, NOT `PROXMOX_MCP_MODE=mcp-http` (an earlier
+# draft's value) -- confirmed live, `PROXMOX_MCP_MODE=mcp-http` produces
+# an INVALID internal `mcp.transport: STREAMABLE-HTTP`, and the app's own
+# Pydantic config validator only accepts the literal values `STDIO`,
+# `SSE` or `STREAMABLE` (no `-HTTP`/`_HTTP` suffix) -- every proxmox pod
+# crashed on startup with that exact validation error. The project's own
+# docs (fetched live) disagree with each other here too (one example
+# shows `MCP_TRANSPORT=STREAMABLE_HTTP`, with an underscore) -- trusting
+# the running code's own error message over either doc example. NOT
+# independently re-verified beyond that the crash stopped; if this turns
+# out wrong, check the actual Pydantic Config schema in
+# proxmox_mcp/config/loader.py.
 #
 # David's explicit scope answer: "Full VM/LXC lifecycle". The project has
 # no built-in read-only/write-toggle flag of its own (checked its docs) --
@@ -41,8 +53,8 @@ spec:
     name: agent-tools
 
   env:
-    - name: PROXMOX_MCP_MODE
-      value: mcp-http
+    - name: MCP_TRANSPORT
+      value: STREAMABLE
     - name: PROXMOX_HOST
       value: "REPLACE-ME.invalid"
     - name: PROXMOX_PORT

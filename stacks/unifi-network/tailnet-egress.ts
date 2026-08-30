@@ -128,6 +128,11 @@ const defaultPorts: Record<ServiceKind, PortDef[]> = {
   dockge: [
     { name: "https", port: 443 },
     { name: "ssh", port: grantedPort("ssh", Tailscale.ports.ssh, 22), probe: "ssh_banner" },
+    // Every dockge host's docker-socket-proxy (docker/_common/docker-socket-proxy)
+    // -- the toolhive-docker-* MCP servers reach this from the equestria
+    // cluster. No probe: it speaks the raw Docker API, not HTTP 2xx on a
+    // known path, same as "https" above going unprobed.
+    { name: "docker-proxy", port: grantedPort("dockerSocketProxy", Tailscale.ports.dockerSocketProxy, 2375) },
   ],
   proxmox: [
     { name: "pve", port: grantedPort("proxmoxManagement", Tailscale.ports.proxmoxManagement, 8006), probe: "http_2xx" },

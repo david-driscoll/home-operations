@@ -38,18 +38,31 @@ spec:
 
   podTemplateSpec:
     spec:
+      # dnx needs a writable HOME for its first-time-use configuration and
+      # tool cache -- confirmed live: without this, it fails immediately
+      # trying to `mkdir /home/ubuntu/.dotnet` (IOException: Read-only file
+      # system). Same fix as ./context7.yaml's own header now documents;
+      # this file's ORIGINAL claim that omitting readOnlyRootFilesystem
+      # would avoid needing an emptyDir was wrong -- the operator's default
+      # pod spec runs read-only regardless of what this override sets.
+      volumes:
+        - name: dotnet-cache
+          emptyDir: {}
       containers:
         - name: mcp
           command: ["dnx"]
           # --yes: dnx prompts interactively to confirm running an
           # unrecognized tool on first use; there is no TTY here to answer it.
           args: ["NuGet.Mcp.Server", "--yes"]
-          # Flagged by Codacy (real finding -- see
-          # ./context7.yaml's comment). No
-          # readOnlyRootFilesystem: dnx downloads and extracts the tool package
-          # into its own cache on first run, with no emptyDir set up for that.
+          env:
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: dotnet-cache
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
 

@@ -111,6 +111,15 @@ export const Tailscale = {
     // from dockgeManagement: the two ports serve different jobs and should be
     // grantable independently.
     baoDumps: ["tcp:2023"] as TailscaleNetworkCapability[],
+    // docker-socket-proxy (docker/_common/docker-socket-proxy) on every
+    // dockge host, reached from the equestria cluster for the
+    // toolhive-docker-* MCP servers (kubernetes/apps/agents/agent-tools-servers/docker/).
+    // Deliberately its own entry, not folded into dockgeManagement (which
+    // already carries tcp:2375 but is granted only to admin users and
+    // dockge/proxmox/management peers, never to tag:egress) -- same
+    // "narrow, purpose-built grant beats reusing the broad set" reasoning
+    // as baoTransit/baoDumps above.
+    dockerSocketProxy: ["tcp:2375"] as TailscaleNetworkCapability[],
     // Garage, the geo-distributed S3 store on the celestia/luna/skystar dockge
     // hosts (docker/_common/garage). Three ports, three audiences, kept as
     // separate entries so each is grantable alone — the dockgeManagement

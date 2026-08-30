@@ -72,6 +72,23 @@ spec:
 # are two hops: a Kubernetes-auth login, then a separate `auth/token/create`
 # call to mint the token this ExternalSecret actually hands to the pod).
 #
+# No `serviceAccountRef` -- deliberately, and the ORIGINAL version of this
+# file having one was a real bug that broke this Generator entirely.
+# `VaultDynamicSecret` is a NAMESPACED resource, and a cross-namespace
+# `serviceAccountRef` (this used to point at `external-secrets`/
+# `kube-system`, matching who the login role is bound to) is NOT honored
+# for security reasons -- the lookup happens IN THIS GENERATOR'S OWN
+# namespace (agents), where no `external-secrets` ServiceAccount exists,
+# so every attempt failed with `ServiceAccount "external-secrets" not
+# found` (confirmed live via the external-secrets controller's own logs).
+# The CRD's own field doc says exactly what to do instead: "If the
+# service account selector is not supplied... the one bound to the
+# controller will be used" -- which already IS `external-secrets`/
+# `kube-system` (ESO's own pod identity), the same one every other
+# OpenBao consumer in this cluster (openbao-store.yaml's `eso-equestria`
+# role) already authenticates as. Omitting the field is what makes this
+# work, not adding it.
+#
 # Field shapes ARE live-verified against this cluster's actual
 # VaultDynamicSecret CRD (`kubectl explain vaultdynamicsecret.spec` /
 # `.spec.provider.auth.kubernetes`) -- the specific COMBINATION of
@@ -101,9 +118,6 @@ spec:
       kubernetes:
         mountPath: kubernetes
         role: agent-openbao-mcp
-        serviceAccountRef:
-          name: external-secrets
-          namespace: kube-system
 
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json

@@ -6,7 +6,14 @@ resources:
   - ../base
 patches:
   # See ../celestia/kustomization.yaml's comment for why target.name is
-  # omitted and why /metadata/name is patched explicitly.
+  # omitted and why /metadata/name is patched explicitly, and for the full
+  # dockge-<host> DNS name / egress-Service / ACL story DOCKER_HOST below
+  # relies on.
+  #
+  # `${TAILSCALE_DOMAIN}` here, not `${ROOT_DOMAIN}` -- see
+  # ../luna/kustomization.yaml's comment; skystar is in the same boat
+  # (stacks/ocracoke/index.ts records only a tailscale IP for it, no
+  # internal LAN one).
   - target:
       kind: MCPServer
     patch: |-
@@ -15,4 +22,4 @@ patches:
         value: toolhive-docker-skystar
       - op: replace
         path: /spec/env/0/value
-        value: tcp://skystar.${ROOT_DOMAIN}:2375
+        value: tcp://dockge-skystar.${TAILSCALE_DOMAIN}:2375

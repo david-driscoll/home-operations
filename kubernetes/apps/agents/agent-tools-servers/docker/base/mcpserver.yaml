@@ -20,14 +20,18 @@
 # deliberately obvious placeholder; every overlay patches it, none use it
 # as-is.
 #
-# Each host's DOCKER_HOST value assumes `<host>.${ROOT_DOMAIN}` resolves to
-# something reachable from inside the `equestria` cluster -- via the
-# cluster's own Tailscale Connector LAN-subnet route, same path every other
-# cross-cluster reference in this repo takes. NOT live-verified from inside
-# a pod. If this turns out wrong per-host, the fallback is that host's
-# internal/tailscale IP directly (see stacks/home/index.ts,
-# stacks/gulf-of-mexico/index.ts, stacks/ocracoke/index.ts for the recorded
-# addresses).
+# Each host's DOCKER_HOST value is that host's `dockge-<host>.${ROOT_DOMAIN}`
+# DNS name -- see any one overlay's own kustomization.yaml comment for the
+# full story (getContainerHostnames's naming convention, the tailnet
+# egress Service it resolves to, and the ACL grant that had to be added
+# alongside it). Two earlier drafts got this wrong before landing here:
+# first assuming `<host>.${ROOT_DOMAIN}` (a hostname that was never a real
+# record at all -- confirmed live), then hardcoding each host's LAN/tailscale
+# IP directly as a workaround, which would have worked but throws away the
+# indirection DNS gives for free (an IP that changes would need every
+# consumer updated by hand). `dockge-<host>.${ROOT_DOMAIN}` is the estate's
+# own real, existing, purpose-built name for exactly this -- it should
+# have been used from the start.
 #
 # Same uv-image pattern as ../../unifi-network.yaml --
 # see its header for why podTemplateSpec overrides command/args explicitly.

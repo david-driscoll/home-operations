@@ -82,6 +82,12 @@ spec:
 
   podTemplateSpec:
     spec:
+      # Same npm-cache fix as ./context7.yaml's own header explains --
+      # confirmed live, this one fails the exact same way (ENOENT: mkdir
+      # '/home/node/.npm') without it.
+      volumes:
+        - name: npm-cache
+          emptyDir: {}
       containers:
         - name: mcp
           command: ["npx"]
@@ -89,8 +95,15 @@ spec:
           envFrom:
             - secretRef:
                 name: toolhive-tailscale
+          env:
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: npm-cache
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
 
