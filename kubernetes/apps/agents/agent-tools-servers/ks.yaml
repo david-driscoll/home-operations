@@ -1,13 +1,13 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
 #
-# ONE Flux Kustomization for every MCP server, the shared agent-debug
-# ClusterRole, and toolhive-docs -- see ./kustomization.yaml's header for
-# why. No `${APP}` in postBuild.substitute below: every resource this
-# installs has its own literal `metadata.name` now (there is no single
-# right value to substitute across two dozen different servers), only
-# `${NAMESPACE}` is still shared and used (ClusterRoleBinding subject
-# namespaces, mostly).
+# ONE Flux Kustomization for every MCP server and toolhive-docs -- see
+# ./kustomization.yaml's header for why (and for where the shared
+# agent-debug ClusterRole went: ../agent-debug-rbac, split out 2026-08-30).
+# No `${APP}` in postBuild.substitute below: every resource this installs
+# has its own literal `metadata.name` now (there is no single right value to
+# substitute across two dozen different servers), only `${NAMESPACE}` is
+# still shared and used (ClusterRoleBinding subject namespaces, mostly).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -26,6 +26,13 @@ spec:
     # `agent-tools-mcp`, for the MCPGroup every MCPServer's `groupRef`
     # names -- see ../agent-tools-mcp/ks.yaml's own header.
     - name: agent-tools-mcp
+      namespace: *namespace
+    # `agent-debug-rbac`, for the ClusterRole ./kubernetes.yaml's own
+    # ClusterRoleBinding references by name -- not strictly load-bearing
+    # (RBAC bindings tolerate a not-yet-existing role, they just grant
+    # nothing until it appears) but kept explicit rather than relying on
+    # that self-healing.
+    - name: agent-debug-rbac
       namespace: *namespace
     # For every ExternalSecret this installs (pulumi/unifi-*/github's token
     # reflection/openbao/postgres's reflected Secret/tailscale/proxmox).

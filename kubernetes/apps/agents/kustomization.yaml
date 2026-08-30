@@ -40,14 +40,19 @@ resources:
   # for better-auth's Postgres schema (see #1332's history). Independent of the
   # MCP gateway above -- nothing in the serving path depends on this.
   - ./toolhive-registry/ks.yaml
+  # The shared agent-debug ClusterRole, alone in its own Kustomization since
+  # 2026-08-30 -- see ./agent-debug-rbac/clusterrole.yaml's header for the
+  # multi-hour agentboard outage that split it out of ./agent-tools-servers.
+  - ./agent-debug-rbac/ks.yaml
   # The rest of MCP serving, two pieces: ./agent-tools-mcp/ is the front
-  # door/MCPGroup, ./agent-tools-servers/ is every actual server plus the
-  # shared agent-debug ClusterRole and toolhive-docs -- see that
-  # directory's own ks.yaml/kustomization.yaml headers.
+  # door/MCPGroup, ./agent-tools-servers/ is every actual server plus
+  # toolhive-docs -- see that directory's own ks.yaml/kustomization.yaml
+  # headers.
   - ./agent-tools-mcp/ks.yaml
   - ./agent-tools-servers/ks.yaml
   # The agent runner. Depends only on external-secrets and
-  # agent-tools-servers (for its agent-debug ClusterRole), not on ToolHive's
-  # own MCPGroup -- it's an MCP CLIENT of the servers above, reached over
-  # plain HTTP+OAuth, not a build-time dependency of them.
+  # ./agent-debug-rbac (for the agent-debug ClusterRole) -- deliberately NOT
+  # on ./agent-tools-servers or ToolHive's own MCPGroup, both of which it's
+  # only ever an MCP CLIENT of over plain HTTP+OAuth at runtime, never a
+  # build-time dependent.
   - ./agentboard/ks.yaml

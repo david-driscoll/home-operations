@@ -1,22 +1,27 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/kustomization
 #
-# Every MCP server (and MCPRemoteProxy), plus the shared `agent-debug`
-# ClusterRole and the one pre-agent-tools server (docs.yaml), installed by
-# ONE Flux Kustomization (./ks.yaml) instead of one per server. Each entry
-# below used to be its own directory with its own `ks.yaml` -- collapsed
-# once the roster made two dozen near-identical Flux Kustomizations more
-# noise than the ordering guarantees were worth; nothing here has an
-# inter-dependency Flux itself needs to sequence (`groupRef`/`envFrom`/
-# `dependsOn`-style references resolve at the Kubernetes API level, not at
-# apply time), so one Kustomization applying all of them together is
-# equivalent in practice.
+# Every MCP server (and MCPRemoteProxy), plus the one pre-agent-tools server
+# (docs.yaml), installed by ONE Flux Kustomization (./ks.yaml) instead of
+# one per server. Each entry below used to be its own directory with its own
+# `ks.yaml` -- collapsed once the roster made two dozen near-identical Flux
+# Kustomizations more noise than the ordering guarantees were worth; nothing
+# here has an inter-dependency Flux itself needs to sequence (`groupRef`/
+# `envFrom`/`dependsOn`-style references resolve at the Kubernetes API
+# level, not at apply time), so one Kustomization applying all of them
+# together is equivalent in practice.
 #
-# agent-debug-rbac.yaml is the ONE resource here with no per-instance `${APP}` naming
-# concern (its ClusterRole `agent-debug` has always had a fixed literal
-# name) -- everything else had its own `metadata.name: ${APP}` templating
-# from its individual `ks.yaml`, now hardcoded to a literal per file since
-# there is only one Flux Kustomization (and one `${APP}` value) left to
+# The shared `agent-debug` ClusterRole used to live here too
+# (agent-debug-rbac.yaml) -- moved out to ../agent-debug-rbac/ 2026-08-30.
+# Bundling it with two dozen MCPServers meant this Kustomization's
+# `wait: true` health check (below) gated on EVERY one of them, and
+# ../agentboard depended on this whole thing being Ready just for that one
+# ClusterRole to exist -- so one perpetually broken MCPServer silently
+# blocked agentboard from ever deploying, for hours. See
+# ../agent-debug-rbac/clusterrole.yaml's header for the full story. Every
+# OTHER resource here had its own `metadata.name: ${APP}` templating from
+# its individual `ks.yaml`, now hardcoded to a literal per file since there
+# is only one Flux Kustomization (and one `${APP}` value) left to
 # substitute with.
 #
 # docker/ and proxmox/ are NOT flat files like the rest -- they are
@@ -28,7 +33,6 @@
 # for why each overlay also has to patch its own `/metadata/name` now (same
 # reasoning as every flat file above -- no more per-instance `${APP}`).
 resources:
-  - ./agent-debug-rbac.yaml
   - ./docs.yaml
   - ./kubernetes.yaml
   - ./pulumi.yaml
