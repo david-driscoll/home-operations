@@ -282,5 +282,18 @@ postinstall = [
   { run = "hk install --mise" },
   { run = "npm install" },
   { run = "pulumi install" },
-  { run = "graphify hook install" }
+  { run = "graphify hook install" },
+  # graphify's post-commit hook rebuilds graph.json/GRAPH_REPORT.md in a
+  # DETACHED background process, so its output lands as an uncommitted
+  # working-tree diff against files this repo tracks in git -- there is no
+  # follow-up commit. This installs a second, independently marked block
+  # into .git/hooks/post-commit (same file crew's sync hook and `graphify
+  # hook install` already share, each owning its own section) that folds a
+  # prior rebuild's leftover graphify-out/ diff into its own small commit.
+  # Idempotent -- safe to run on every `mise install`. See
+  # .config/hooks/register-graphify-sweep.sh and
+  # .config/hooks/graphify-sweep-commit.sh for the full rationale, including
+  # why this uses the classic file-based hook and not git's newer
+  # hook.<name>.command config channel (hk's own registration mechanism).
+  { run = ".config/hooks/register-graphify-sweep.sh" }
 ]
