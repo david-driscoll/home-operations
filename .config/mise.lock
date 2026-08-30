@@ -602,9 +602,9 @@ backend = "npm:typescript"
 specifiers = ["5.9.3"]
 
 [[tools."pipx:graphifyy"]]
-version = "0.9.52"
+version = "0.9.53"
 backend = "pipx:graphifyy"
-specifiers = ["0.9.52"]
+specifiers = ["0.9.53"]
 
 [[tools."pipx:yamllint"]]
 version = "1.38.0"
