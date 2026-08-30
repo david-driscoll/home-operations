@@ -14,11 +14,6 @@ spec:
   name: ToolHive
   category: Applications
   description: MCP servers, and the OAuth front door in front of them
-  # The endpoint an MCP client is pointed at, not a page to open in a browser --
-  # a GET here returns a JSON-RPC error, which is why the gatus check below uses
-  # /health instead.
-  url: https://${APP}.${ROOT_DOMAIN}/mcp
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:
       - admins

@@ -20,8 +20,6 @@ spec:
   name: ToolHive Registry
   category: Applications
   description: MCP catalogue API, mirrored from the upstream ToolHive registry
-  url: https://mcp.agents.${ROOT_DOMAIN}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:
       - admins
