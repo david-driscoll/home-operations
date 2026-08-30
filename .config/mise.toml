@@ -1,4 +1,18 @@
 
+# `[settings.npm]` below needs `npm.shell_out` recognized as a project-config
+# field, which mise 2026.7.7 (this estate's own machine, as of 2026-08-30)
+# does NOT have -- every single mise command prints a harmless but ugly
+# `Error loading settings file: unknown field \`shell_out\`` block on that
+# version rather than failing outright. `min_version` turns that into ONE
+# clear, actionable message instead (`mise version 2026.8.14 is required,
+# but you are using 2026.7.7 -- Run \`mise self-update\` to update mise`) --
+# confirmed live against both mise 2026.7.7 (this repo's ambient install)
+# and 2026.8.14 (the first version confirmed to accept `npm.shell_out`).
+# Bump this only alongside a `[tools]`/`[settings]` change that genuinely
+# needs a newer mise -- it blocks EVERY mise command below this version, not
+# just the one feature that needed it.
+min_version = "2026.8.14"
+
 [tools]
 python = "3.14.7"
 kubectl = "1.37.0"
@@ -165,6 +179,35 @@ lockfile = true
 # failure is quiet — a Talos config generated for 1.13.8 validated by a 1.13.5
 # client.
 activate_aggressive = true
+
+# Preventive, not a fix for anything broken here today -- `npm:typescript`
+# above has no postinstall script and no native binary, so it installs fine
+# either way. Added anyway 2026-08-30 for the same reason `locked` above was:
+# `kubernetes/apps/agents/agentboard/resources/mise.toml`'s own
+# `npm:@anthropic-ai/claude-code` entry silently installed a 500-byte STUB
+# instead of its real ~200MB native binary, because mise's npm backend
+# defaults to its own bundled installer ("aube") rather than real `npm
+# install` -- `shell_out = false` is the actual default, the opposite of
+# what that file's comment used to claim -- and aube does not run npm
+# lifecycle scripts. This is the exact repair for that class of failure if a
+# future npm: tool here (or in any other mise.toml in this repo) ever needs
+# one: turning this on alone is not enough for a package with a real
+# postinstall script -- real npm (11.16+) ALSO skips lifecycle scripts by
+# default via its own separate allow-scripts allowlist, so that tool's
+# `[tools]` entry additionally needs `{ version = "...", allow_builds =
+# true }` (see agentboard's mise.toml for the worked, live-verified
+# example). Re-run `mise install` once after adding either -- see the
+# `locked` comment above for the exact command.
+#
+# THIS TABLE MUST STAY LAST IN [settings] -- a TOML sub-table header extends
+# until the next `[header]` of any kind, so any key meant for the PARENT
+# `[settings]` table has to appear BEFORE this line or it silently becomes a
+# (rejected) key of `[settings.npm]` instead. Confirmed live: putting this
+# block any earlier swallowed `activate_aggressive` above into
+# `[settings.npm]` and broke `mise install` outright with `unknown field
+# activate_aggressive, expected one of bun, package_manager, shell_out`.
+[settings.npm]
+shell_out = true
 
 [env]
 # Secret values are `vals` references, resolved per command:
