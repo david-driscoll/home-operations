@@ -58,21 +58,23 @@ git config --global credential."https://github.com".helper \
 # ../resources/mise.lock's pinned checksums/URLs -- see that file's header
 # for how to regenerate it after a version bump.
 #
-# `$${MISE_CONFIG_DIR}`, NOT `${MISE_CONFIG_DIR}` -- this is a shell
-# variable meant to expand at RUNTIME from ../helmrelease.yaml's pod env,
-# but this whole script is also a configMapGenerator input
-# (../kustomization.yaml), which components/common's substituteFrom patch
-# scans for `${VAR}` at BUILD time. An unescaped `${MISE_CONFIG_DIR}` here
-# looks identical to a Flux substitution to that patch, and since
-# `MISE_CONFIG_DIR` is never one of the actual cluster-secrets/shared-secrets
-# variables, strict mode hard-fails the whole Kustomization with
-# `variable not set (strict mode): "MISE_CONFIG_DIR"` -- confirmed live,
-# this is exactly what happened the first time Flux ever got far enough to
-# try building this ConfigMap (see [[flux-wait-true-degraded-phase-deadlock]]
-# for why that took until 2026-08-30). `$$` is Flux's own escape for a
-# literal `$` in its output, so `$${MISE_CONFIG_DIR}` renders as the literal
-# text `${MISE_CONFIG_DIR}` this script actually needs, and bash expands it
-# normally at container start.
+# The two references to MISE_CONFIG_DIR below are DOUBLE-DOLLAR-escaped
+# (bash sees a normal single-dollar expansion once Flux is done) -- this
+# whole script is also a configMapGenerator input (../kustomization.yaml),
+# and components/common's substituteFrom patch scans the RAW TEXT of every
+# generated ConfigMap for a dollar-brace pattern at BUILD time, comments
+# included. MISE_CONFIG_DIR is meant to expand at RUNTIME instead, from
+# ../helmrelease.yaml's pod env -- an unescaped reference here looks
+# identical to a Flux substitution to that patch, and since MISE_CONFIG_DIR
+# is never one of the actual cluster-secrets/shared-secrets variables,
+# strict mode hard-fails the whole Kustomization with `variable not set
+# (strict mode): "MISE_CONFIG_DIR"`. Confirmed live TWICE: once for the
+# unescaped functional references (fixed first), and once more for this
+# very explanation, which named the broken pattern by writing it out
+# unescaped in prose -- Flux's scan does not know a comment from code, so
+# read this whole block as a warning not to reintroduce either mistake, and
+# double-escape any future dollar-brace example added here too. `$$` is
+# Flux's own escape for a literal `$` in its output.
 echo "==> mise install (config: $${MISE_CONFIG_DIR}/config.toml)"
 mise trust "$${MISE_CONFIG_DIR}/config.toml"
 mise install
