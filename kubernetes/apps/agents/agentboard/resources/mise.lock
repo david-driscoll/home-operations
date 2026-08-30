@@ -358,6 +358,9 @@ url = "https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip"
 version = "2.1.251"
 backend = "npm:@anthropic-ai/claude-code"
 
+[tools."npm:@anthropic-ai/claude-code".options]
+allow_builds = "true"
+
 [[tools."npm:@gbasin/agentboard"]]
 version = "0.4.23"
 backend = "npm:@gbasin/agentboard"
