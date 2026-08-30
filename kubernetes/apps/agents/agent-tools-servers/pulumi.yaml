@@ -27,6 +27,14 @@ spec:
   proxyMode: streamable-http
   groupRef:
     name: agent-tools
+  # Confirmed live: the image's own entrypoint is a yargs CLI needing an
+  # explicit `stdio`/`http` subcommand -- without this every pod crashed
+  # immediately ("Not enough non-option arguments: got 0, need at least
+  # 1"). Same top-level `args` pattern as ./github.yaml's own header
+  # documents (the field APPENDS to the image's entrypoint, no
+  # podTemplateSpec command override needed).
+  args:
+    - stdio
 
   podTemplateSpec:
     spec:
