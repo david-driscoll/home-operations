@@ -23,8 +23,20 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            # `local-user`, not `local-api` -- this is a browser app with no
-            # login of its own (see ./definition.yaml), so the authentik
-            # outpost forward-auth this middleware chains in is the ONLY
-            # thing standing between the internet^Wtailnet and a root shell.
-            name: local-user
+            # `authenticated-user`, NOT `local-user` -- this is a browser app
+            # with no login of its own (see ./definition.yaml), so the
+            # authentik outpost forward-auth this middleware chains in is the
+            # ONLY thing standing between the internet^Wtailnet and a root
+            # shell. `local-user` (network-gate only: error-pages +
+            # internal-network, no outpost step at all -- see
+            # network/traefik/middleware/authenticated-user.yaml) is what
+            # this said until 2026-08-30, and every word of THIS comment was
+            # already true then -- it just named the wrong middleware.
+            # Confirmed live: an unauthenticated request answered 200 with
+            # the app's own HTML, not a redirect to canterlot.driscoll.tech,
+            # from the first moment agentboard ever actually served traffic
+            # (its Kustomization sat blocked behind an unrelated Flux
+            # health-check deadlock for hours before that -- see
+            # ../agent-tools-mcp/ks.yaml's own header). Fixed the moment
+            # this was noticed, not folded silently into an unrelated diff.
+            name: authenticated-user
