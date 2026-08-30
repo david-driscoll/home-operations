@@ -30,14 +30,38 @@ yq = "4.53.6"
 # comes from. Pins match .config/mise.toml's.
 sops = "3.13.3"
 age = "1.3.2"
-# bun is NOT what runs agentboard below (mise's npm backend always shells out
-# through node/npm) -- it's here only because upstream's own dev instructions
-# call for Bun 1.3.14+, in case the published npm package's bin script still
-# shebangs `#!/usr/bin/env bun`. Drop it if that turns out not to be true.
+# bun is NOT what runs agentboard below -- it's here only because upstream's
+# own dev instructions call for Bun 1.3.14+, in case the published npm
+# package's bin script still shebangs `#!/usr/bin/env bun`. Drop it if that
+# turns out not to be true. (An earlier version of this comment claimed
+# "mise's npm backend always shells out through node/npm" -- wrong, and the
+# opposite of the actual default; see `[settings]` below for why that claim
+# mattered enough to get root-caused.)
 bun = "1.3.14"
 # The agent CLI. Package name per the `claude-api` skill / @anthropic-ai's
-# published CLI.
-"npm:@anthropic-ai/claude-code" = "2.1.251"
+# published CLI. `allow_builds = true`: confirmed live 2026-08-30 -- without
+# it, `claude` installs a 500-byte `claude.exe` STUB instead of the real
+# ~200MB native binary, and every invocation fails with "claude native
+# binary not installed". Root cause is two-layered:
+#
+#   1. mise's npm backend defaults to its own bundled installer ("aube"),
+#      NOT real `npm install` (`shell_out = false` is the actual default,
+#      the opposite of what this file used to claim) -- and aube does not
+#      run npm lifecycle scripts, so this package's `postinstall`
+#      (`node install.cjs`, which copies the platform-specific optional
+#      dependency's binary into place) never runs. `"npm.shell_out" = true`
+#      below turns this on so mise shells out to the real `npm install` this
+#      package actually needs.
+#   2. Real npm 11.16+ ALSO skips lifecycle scripts by default now, via its
+#      own separate allow-scripts allowlist -- shell_out alone still leaves
+#      a silent no-op postinstall (`npm warn install-scripts ... not yet
+#      covered by allowScripts`). `allow_builds = true` here is what
+#      actually lets npm run this specific package's postinstall.
+#
+# Both are required together; either alone still ships the stub. Reproduce
+# by removing this and watching `mise exec -- claude --version` fail inside
+# the pod.
+"npm:@anthropic-ai/claude-code" = { version = "2.1.251", allow_builds = true }
 # https://github.com/gbasin/agentboard -- no Docker image of its own, so it
 # is installed the same way as every other tool here rather than
 # `bun install -g` at image-build time (there is no image-build time).
@@ -48,3 +72,12 @@ experimental = true
 activate_aggressive = true
 lockfile = true
 locked = true
+
+# See the npm:@anthropic-ai/claude-code entry above for why this exists.
+# Confirmed harmless for npm:@gbasin/agentboard too: that package resolves
+# its native binary through npm's ordinary optionalDependencies platform
+# matching, not a postinstall script, and optionalDependencies resolution
+# happens during `npm install` regardless of --ignore-scripts -- shelling
+# out doesn't change what it installs, only HOW (real npm instead of aube).
+[settings.npm]
+shell_out = true
