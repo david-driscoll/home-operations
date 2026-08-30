@@ -387,6 +387,27 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
             annotations: {
               "tailscale.com/tailnet-fqdn": tailnetFqdn(server, kind),
               "tailscale.com/proxy-group": "tailnet-inbound",
+              // See the `ignoreChanges` comment just below for the FIRST bug this
+              // exact await-live step caused (an SSA field conflict with the
+              // tailscale operator's own concurrent rewrite of
+              // `spec.externalName`). This is the SECOND: 2026-08-30, every `up`
+              // against this stack hung indefinitely -- not failed, HUNG, 20+
+              // minutes of idle CPU with an established-but-silent connection to
+              // the k8s apiserver, immune to restarting the workspace pod, the
+              // apiserver-proxy pod, and (separately, ruled out first) a
+              // then-genuinely-broken source-controller. Matches a known bug
+              // class in pulumi-kubernetes's own await/watch logic
+              // (github.com/pulumi/pulumi-kubernetes#640: "the watch query gets
+              // the updated state too quickly and then waits indefinitely for
+              // further updates that never come") rather than anything wrong
+              // with this cluster. An ExternalName Service has no endpoints and
+              // no LoadBalancer IP -- nothing meaningful to await in the first
+              // place -- and this specific one has a SECOND controller
+              // concurrently mutating it, which is exactly the kind of
+              // condition that known bug class triggers on. skipAwait removes
+              // the whole watch/await code path rather than hoping the race
+              // does not recur.
+              "pulumi.com/skipAwait": "true",
             },
           },
           spec: {
@@ -491,6 +512,9 @@ export function createTailnetEgressServices(args: TailnetEgressArgs, opts: pulum
             annotations: {
               "tailscale.com/tailnet-fqdn": pulumi.interpolate`${vip.name}.${globals.tailscaleDomain}`,
               "tailscale.com/proxy-group": "tailnet-inbound",
+              // Same await-live hang as the per-device Services above -- see
+              // that annotation's comment for the full story.
+              "pulumi.com/skipAwait": "true",
             },
           },
           spec: {
