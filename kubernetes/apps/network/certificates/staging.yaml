@@ -37,10 +37,11 @@ spec:
     # rule as the Coder entry above; the reasoning for putting it here rather
     # than in a per-namespace Certificate is on the production twin.
     - "*.git.${ROOT_DOMAIN}"
-    # The `agents` namespace publishes two names under one label -- the MCP
-    # catalogue API (mcp.agents) and the ToolHive UI (toolhive.agents) -- and a
-    # wildcard matches exactly ONE label, so `*.${ROOT_DOMAIN}` does not reach
-    # them. Same reason `*.code.` and `*.git.` are listed above.
+    # The `agents` namespace publishes names under one label -- currently just
+    # the MCP catalogue API (mcp.agents; toolhive.agents, the Cloud UI, was
+    # retired 2026-08-29) -- and a wildcard matches exactly ONE label, so
+    # `*.${ROOT_DOMAIN}` does not reach them. Same reason `*.code.` and
+    # `*.git.` are listed above.
     #
     # A wildcard rather than two explicit SANs because this namespace is
     # expected to grow more MCP surfaces, and each one would otherwise be

@@ -33,10 +33,13 @@ resources:
   - ./toolhive-operator/ks.yaml
   - ./toolhive-valkey/ks.yaml
   - ./toolhive/ks.yaml
-  # The human-facing half: a catalogue API and the UI over it. Independent of
-  # the MCP gateway above -- nothing in the serving path depends on these.
+  # The catalogue API, read directly by `thv` CLI / ToolHive Desktop clients
+  # (`thv config set-registry`) rather than through a UI -- the Cloud UI that
+  # used to sit in front of it (toolhive-ui) was retired 2026-08-29: its
+  # upstream chart is archived and never shipped a Kubernetes migration path
+  # for better-auth's Postgres schema (see #1332's history). Independent of the
+  # MCP gateway above -- nothing in the serving path depends on this.
   - ./toolhive-registry/ks.yaml
-  - ./toolhive-ui/ks.yaml
   # The rest of MCP serving, two pieces: ./agent-tools-mcp/ is the front
   # door/MCPGroup, ./agent-tools-servers/ is every actual server plus the
   # shared agent-debug ClusterRole and toolhive-docs -- see that
