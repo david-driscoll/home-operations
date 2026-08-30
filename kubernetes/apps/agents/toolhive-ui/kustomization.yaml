@@ -8,3 +8,4 @@ resources:
   - ./externalsecret.yaml
   - ./httproute.yaml
   - ./definition.yaml
+  - ./db-init.yaml
