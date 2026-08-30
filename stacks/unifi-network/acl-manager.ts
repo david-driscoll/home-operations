@@ -449,6 +449,29 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
       { accept: [] },
     );
 
+    // The toolhive-docker-* MCP servers (kubernetes/apps/agents/agent-tools-servers/docker/)
+    // reach each dockge host's docker-socket-proxy over the tailnet, same
+    // path as the grant above -- equestria pods have no direct route, so
+    // the traffic leaves through the tailnet-inbound ProxyGroup (tag:egress)
+    // and lands on the dockge-* egress Service, which already declares
+    // tcp:2375 (../../components/constants.ts's dockerSocketProxy, added to
+    // defaultPorts.dockge in tailnet-egress.ts). Without this grant the
+    // Service forwards the port and the connection still dies in the ACL --
+    // confirmed live: every toolhive-docker-* pod crash-looped on DNS
+    // resolution failure BEFORE the egress Service/DNS name existed at all,
+    // so this grant was never exercised; add it in the same change as the
+    // hostname fix so the ACL isn't the next thing that looks like the far
+    // end being down.
+    manager.setGrant(
+      "docker-socket-proxy",
+      {
+        src: [tag.egress],
+        dst: [tag.dockge],
+        ip: ports.dockerSocketProxy,
+      },
+      { accept: [] },
+    );
+
     // The Phase 5 nightly dump: equestria's openbao-replica CronJob ships an
     // age-encrypted pg_dump to the bao-standby receiver on dockge-as:2023.
     // Same shape and same reasoning as the grant above — the traffic leaves

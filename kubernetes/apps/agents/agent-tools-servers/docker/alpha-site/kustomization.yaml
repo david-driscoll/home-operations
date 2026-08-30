@@ -6,9 +6,14 @@ resources:
   - ../base
 patches:
   # See ../celestia/kustomization.yaml's comment for why target.name is
-  # omitted and why /metadata/name is patched explicitly, and for why
-  # DOCKER_HOST uses an IP (alpha-site's internal LAN IP,
-  # stacks/home/index.ts).
+  # omitted and why /metadata/name is patched explicitly, and for the full
+  # dockge-<host> DNS name / egress-Service / ACL story DOCKER_HOST below
+  # relies on. `dockge-as`, not `dockge-alpha-site` -- alpha-site's
+  # ProxmoxHost carries `shortName: "as"`
+  # (stacks/home/index.ts), and getContainerHostnames uses
+  # `host.shortName ?? host.name`. Confirmed live: `dockge-as.${ROOT_DOMAIN}`
+  # resolves, `dockge-alpha-site.${ROOT_DOMAIN}` was never tried and would
+  # likely not.
   - target:
       kind: MCPServer
     patch: |-
@@ -17,4 +22,4 @@ patches:
         value: toolhive-docker-alpha-site
       - op: replace
         path: /spec/env/0/value
-        value: tcp://10.10.10.200:2375
+        value: tcp://dockge-as.${ROOT_DOMAIN}:2375

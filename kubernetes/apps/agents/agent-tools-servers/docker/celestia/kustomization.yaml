@@ -18,11 +18,23 @@ patches:
   # ../../ks.yaml (agent-tools-servers), so each overlay patches both the
   # per-host value AND the resource's own name explicitly.
   #
-  # DOCKER_HOST is celestia's internal LAN IP (stacks/home/index.ts), not
-  # its `${ROOT_DOMAIN}` hostname -- confirmed live, `celestia.<domain>`
-  # does not resolve from inside a pod in this cluster (the fallback this
-  # file's own base/mcpserver.yaml header always flagged as untested and
-  # possibly wrong).
+  # DOCKER_HOST is `dockge-celestia.${ROOT_DOMAIN}`, NOT `celestia.${ROOT_DOMAIN}`
+  # (an earlier draft's guess, which does not resolve at all -- confirmed
+  # live). The real DNS name comes from `getContainerHostnames("dockge",
+  # ...)` in components/helpers.ts: `<name>-<host.shortName ?? host.name>`,
+  # e.g. `dockge-celestia`. It resolves to a Kubernetes Service ClusterIP
+  # in-cluster (tailscale-system's `dockge-celestia` tailnet egress
+  # Service, stacks/unifi-network/tailnet-egress.ts), not to the host's
+  # LAN IP directly -- IPs were considered and rejected in favor of using
+  # this repo's own purpose-built DNS+egress-Service indirection layer, the
+  # same one every other in-cluster consumer of a dockge/proxmox/dns host
+  # already uses. Getting docker-socket-proxy's port (2375) actually
+  # reachable through that layer needed two more changes alongside this
+  # one: `defaultPorts.dockge` in tailnet-egress.ts, and a
+  # `docker-socket-proxy` ACL grant in acl-manager.ts (tag:egress ->
+  # tag:dockge) -- ports.dockgeManagement already listed 2375 but only
+  # grants it to admin users and dockge/proxmox/management peers, never to
+  # the cluster's own tag:egress identity.
   - target:
       kind: MCPServer
     patch: |-
@@ -31,4 +43,4 @@ patches:
         value: toolhive-docker-celestia
       - op: replace
         path: /spec/env/0/value
-        value: tcp://10.10.10.103:2375
+        value: tcp://dockge-celestia.${ROOT_DOMAIN}:2375
