@@ -17,6 +17,12 @@ patches:
   # Flux substitution to rely on now that all instances share ONE
   # ../../ks.yaml (agent-tools-servers), so each overlay patches both the
   # per-host value AND the resource's own name explicitly.
+  #
+  # DOCKER_HOST is celestia's internal LAN IP (stacks/home/index.ts), not
+  # its `${ROOT_DOMAIN}` hostname -- confirmed live, `celestia.<domain>`
+  # does not resolve from inside a pod in this cluster (the fallback this
+  # file's own base/mcpserver.yaml header always flagged as untested and
+  # possibly wrong).
   - target:
       kind: MCPServer
     patch: |-
@@ -25,4 +31,4 @@ patches:
         value: toolhive-docker-celestia
       - op: replace
         path: /spec/env/0/value
-        value: tcp://celestia.${ROOT_DOMAIN}:2375
+        value: tcp://10.10.10.103:2375

@@ -20,14 +20,13 @@
 # deliberately obvious placeholder; every overlay patches it, none use it
 # as-is.
 #
-# Each host's DOCKER_HOST value assumes `<host>.${ROOT_DOMAIN}` resolves to
-# something reachable from inside the `equestria` cluster -- via the
-# cluster's own Tailscale Connector LAN-subnet route, same path every other
-# cross-cluster reference in this repo takes. NOT live-verified from inside
-# a pod. If this turns out wrong per-host, the fallback is that host's
-# internal/tailscale IP directly (see stacks/home/index.ts,
-# stacks/gulf-of-mexico/index.ts, stacks/ocracoke/index.ts for the recorded
-# addresses).
+# Each host's DOCKER_HOST value is that host's internal LAN or tailscale
+# IP directly (see stacks/home/index.ts, stacks/gulf-of-mexico/index.ts,
+# stacks/ocracoke/index.ts for which), NOT its `${ROOT_DOMAIN}` hostname
+# -- an earlier draft assumed `<host>.${ROOT_DOMAIN}` would resolve from
+# inside the `equestria` cluster via the Tailscale Connector's LAN-subnet
+# route. Confirmed live it does not: every docker-* pod crash-looped on
+# `Failed to resolve '<host>.driscoll.tech'` until switched to IPs.
 #
 # Same uv-image pattern as ../../unifi-network.yaml --
 # see its header for why podTemplateSpec overrides command/args explicitly.

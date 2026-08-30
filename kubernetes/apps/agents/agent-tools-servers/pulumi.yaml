@@ -30,6 +30,17 @@ spec:
 
   podTemplateSpec:
     spec:
+      # Confirmed live: this image's own server writes to a HARDCODED
+      # `/app/dist/.cache` (not HOME-relative, so a HOME override alone
+      # would not fix it) -- without a writable mount there it fails
+      # immediately (ENOENT: mkdir '/app/dist/.cache'). This file's
+      # ORIGINAL claim that omitting readOnlyRootFilesystem would avoid
+      # needing an emptyDir was wrong -- the operator's default pod spec
+      # runs read-only regardless of what this override sets, same lesson
+      # ./context7.yaml's and ./nuget.yaml's headers now document.
+      volumes:
+        - name: pulumi-cache
+          emptyDir: {}
       containers:
         - name: mcp
           envFrom:
@@ -51,12 +62,21 @@ spec:
                 secretKeyRef:
                   name: github-token
                   key: token
-          # Flagged by Codacy (real finding -- see
-          # ./context7.yaml's comment). No
-          # readOnlyRootFilesystem: `pulumi` writes plugin/state caches under
-          # its own home dir, with no emptyDir set up for that here.
+            # `pulumi` itself (plugin/state cache under ~/.pulumi), not just
+            # this image's own server code, also needs a writable home --
+            # not confirmed live yet (the crash so far is the server never
+            # getting past its own startup), flagged in case this needs a
+            # second fix once it does.
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: pulumi-cache
+              mountPath: /app/dist/.cache
+            - name: pulumi-cache
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
 

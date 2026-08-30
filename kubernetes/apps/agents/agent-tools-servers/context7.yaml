@@ -34,19 +34,31 @@ spec:
 
   podTemplateSpec:
     spec:
+      # npm needs a writable HOME to hold its cache -- the operator's own
+      # default pod spec runs containers with a read-only root filesystem
+      # REGARDLESS of whether this override sets readOnlyRootFilesystem
+      # itself, confirmed live: without this, npx fails immediately trying
+      # to `mkdir /home/node/.npm` (ENOENT). Same emptyDir-at-HOME pattern
+      # ../toolhive-unifi-network/mcpserver.yaml's own header already
+      # documents for the uv-based servers -- an earlier draft of this file
+      # assumed (wrongly) that omitting readOnlyRootFilesystem here would
+      # negate that default; it does not.
+      volumes:
+        - name: npm-cache
+          emptyDir: {}
       containers:
         - name: mcp
           command: ["npx"]
           args: ["-y", "@upstash/context7-mcp"]
-          # Flagged by Codacy (real finding, unlike the httproute.yaml "id
-          # field" noise elsewhere in this PR -- a podTemplateSpec container
-          # override like this one can silently drop whatever hardening the
-          # operator's own default pod spec would otherwise apply).
-          # readOnlyRootFilesystem is NOT set here -- npx needs to write its
-          # own cache/extract dir and this image has no emptyDir set up for
-          # that the way the uv-based servers next door do.
+          env:
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: npm-cache
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
 

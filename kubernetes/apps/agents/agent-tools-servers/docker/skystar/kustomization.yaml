@@ -6,7 +6,9 @@ resources:
   - ../base
 patches:
   # See ../celestia/kustomization.yaml's comment for why target.name is
-  # omitted and why /metadata/name is patched explicitly.
+  # omitted and why /metadata/name is patched explicitly, and for why
+  # DOCKER_HOST uses an IP (skystar's tailscale IP -- it has no internal
+  # LAN IP recorded anywhere in this repo, stacks/ocracoke/index.ts).
   - target:
       kind: MCPServer
     patch: |-
@@ -15,4 +17,4 @@ patches:
         value: toolhive-docker-skystar
       - op: replace
         path: /spec/env/0/value
-        value: tcp://skystar.${ROOT_DOMAIN}:2375
+        value: tcp://100.111.10.105:2375
