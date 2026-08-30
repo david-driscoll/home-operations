@@ -4566,17 +4566,10 @@
     "semantic_hash": "c01e93c9023eabec799878687767b317"
   },
   "stacks/system/index.ts": {
-<<<<<<< HEAD
-    "mtime": 1788051097.507391,
-    "seen": 1788052690.102696,
-    "ast_hash": "fa9c9755e1a705e768e2fdbcfe8a393d",
-    "semantic_hash": "fa9c9755e1a705e768e2fdbcfe8a393d"
-=======
     "mtime": 1788021189.7934597,
     "seen": 1788050983.990634,
     "ast_hash": "fa9c9755e1a705e768e2fdbcfe8a393d",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "stacks/system/package.json": {
     "mtime": 1787838587.191429,
@@ -6145,17 +6138,10 @@
     "semantic_hash": "f6bbe096ef738ad92b6589c4b3c89c8c"
   },
   "kubernetes/apps/coder/renovate/renovatejob.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.4943297,
-    "seen": 1788052690.1028512,
-    "ast_hash": "69ec2aa95bfbfbcd79ed96bed31b8834",
-    "semantic_hash": "69ec2aa95bfbfbcd79ed96bed31b8834"
-=======
     "mtime": 1788050978.7105534,
     "seen": 1788050983.991497,
     "ast_hash": "69ec2aa95bfbfbcd79ed96bed31b8834",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/apps/database/kustomization.yaml": {
     "mtime": 1786895055.493667,
@@ -7526,17 +7512,10 @@
     "semantic_hash": "4cb4408336f31b8e895497eefe68d50c"
   },
   "kubernetes/apps/equestria/media/kustomization.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.4969358,
-    "seen": 1788052690.102944,
-    "ast_hash": "8e12d9f1991e9d6d90de33d2fb6a4478",
-    "semantic_hash": "8e12d9f1991e9d6d90de33d2fb6a4478"
-=======
     "mtime": 1788050978.7106822,
     "seen": 1788050983.991616,
     "ast_hash": "8e12d9f1991e9d6d90de33d2fb6a4478",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/apps/equestria/media/lidarr/definition.yaml": {
     "mtime": 1787884553.7218957,
@@ -8277,17 +8256,10 @@
     "semantic_hash": "8abd5f6ea45c55c49496661997af8475"
   },
   "kubernetes/apps/flux-system/flux-instance/helm/values.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.498866,
-    "seen": 1788052690.102997,
-    "ast_hash": "85e4da319596cf0ec0c2e44bcc76c8fd",
-    "semantic_hash": "85e4da319596cf0ec0c2e44bcc76c8fd"
-=======
     "mtime": 1788050978.7118106,
     "seen": 1788050983.991679,
     "ast_hash": "85e4da319596cf0ec0c2e44bcc76c8fd",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/apps/flux-system/flux-instance/helmrelease.yaml": {
     "mtime": 1787161095.021405,
@@ -11914,18 +11886,6 @@
     "semantic_hash": "6ca27537fcaaa083dc932bdbb9d9b77f"
   },
   "stacks/system/openbao-mcp.ts": {
-<<<<<<< HEAD
-    "mtime": 1788051097.5076246,
-    "seen": 1788052690.102696,
-    "ast_hash": "1b960b4b0eb704a1b4cf3e47edf2c540",
-    "semantic_hash": "1b960b4b0eb704a1b4cf3e47edf2c540"
-  },
-  "stacks/unifi-network/tailnet-egress.ts": {
-    "mtime": 1788051097.5085618,
-    "seen": 1788052690.1027,
-    "ast_hash": "68556f1e400007e07cfaedcbf8da16ed",
-    "semantic_hash": "68556f1e400007e07cfaedcbf8da16ed"
-=======
     "mtime": 1788021189.7935753,
     "seen": 1788050983.990635,
     "ast_hash": "1b960b4b0eb704a1b4cf3e47edf2c540",
@@ -11936,7 +11896,6 @@
     "seen": 1788050983.9906402,
     "ast_hash": "68556f1e400007e07cfaedcbf8da16ed",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "tsconfig.json": {
     "mtime": 1786775790.2745283,
@@ -12293,17 +12252,10 @@
     "semantic_hash": "8818b4ddc965d03a589f6271e020cfdb"
   },
   "kubernetes/apps/tailscale-system/services/bootstrap.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.5045028,
-    "seen": 1788052690.103193,
-    "ast_hash": "a23a309faf12172bfdbb98c7ba82f739",
-    "semantic_hash": "a23a309faf12172bfdbb98c7ba82f739"
-=======
     "mtime": 1788050978.7122867,
     "seen": 1788050983.9919128,
     "ast_hash": "a23a309faf12172bfdbb98c7ba82f739",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/components/route/api-key/kustomization.yaml": {
     "mtime": 1787884553.7315614,
@@ -12552,17 +12504,10 @@
     "semantic_hash": "4d060424969f36f3d021d28662ef32f4"
   },
   "kubernetes/apps/agents/agent-tools-servers/github.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.4904888,
-    "seen": 1788052690.102793,
-    "ast_hash": "89bd137dce09359833d2b3056448c89d",
-    "semantic_hash": "89bd137dce09359833d2b3056448c89d"
-=======
     "mtime": 1788050978.7102995,
     "seen": 1788050983.991425,
     "ast_hash": "89bd137dce09359833d2b3056448c89d",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/apps/agents/agent-tools-servers/home-assistant.yaml": {
     "mtime": 1788051097.4905527,
@@ -12601,17 +12546,10 @@
     "semantic_hash": "a5613583661e81d166a890c394061bb6"
   },
   "kubernetes/apps/agents/agent-tools-servers/openbao.yaml": {
-<<<<<<< HEAD
-    "mtime": 1788051097.4911098,
-    "seen": 1788052690.102797,
-    "ast_hash": "7a5eea7a9917cfe7c24472bcd702d325",
-    "semantic_hash": "7a5eea7a9917cfe7c24472bcd702d325"
-=======
     "mtime": 1788021189.7933142,
     "seen": 1788050983.991429,
     "ast_hash": "7a5eea7a9917cfe7c24472bcd702d325",
     "semantic_hash": ""
->>>>>>> e6fe4a5c (updates)
   },
   "kubernetes/apps/agents/agent-tools-servers/postgres.yaml": {
     "mtime": 1788051097.4911816,
