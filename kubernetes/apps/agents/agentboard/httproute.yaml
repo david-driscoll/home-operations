@@ -23,20 +23,46 @@ spec:
           extensionRef:
             group: traefik.io
             kind: Middleware
-            # `authenticated-user`, NOT `local-user` -- this is a browser app
-            # with no login of its own (see ./definition.yaml), so the
-            # authentik outpost forward-auth this middleware chains in is the
-            # ONLY thing standing between the internet^Wtailnet and a root
-            # shell. `local-user` (network-gate only: error-pages +
-            # internal-network, no outpost step at all -- see
-            # network/traefik/middleware/authenticated-user.yaml) is what
-            # this said until 2026-08-30, and every word of THIS comment was
-            # already true then -- it just named the wrong middleware.
-            # Confirmed live: an unauthenticated request answered 200 with
-            # the app's own HTML, not a redirect to canterlot.driscoll.tech,
-            # from the first moment agentboard ever actually served traffic
-            # (its Kustomization sat blocked behind an unrelated Flux
-            # health-check deadlock for hours before that -- see
-            # ../agent-tools-mcp/ks.yaml's own header). Fixed the moment
-            # this was noticed, not folded silently into an unrelated diff.
-            name: authenticated-user
+            # Reverted to `local-user` on 2026-08-31, hours after the
+            # `authenticated-user` switch below (kept for the record, not
+            # deleted):
+            #
+            #   `authenticated-user`, NOT `local-user` -- this is a browser
+            #   app with no login of its own (see ./definition.yaml), so the
+            #   authentik outpost forward-auth this middleware chains in is
+            #   the ONLY thing standing between the internet^Wtailnet and a
+            #   root shell. `local-user` (network-gate only: error-pages +
+            #   internal-network, no outpost step at all -- see
+            #   network/traefik/middleware/authenticated-user.yaml) is what
+            #   this said until 2026-08-30, and every word of THIS comment
+            #   was already true then -- it just named the wrong middleware.
+            #   Confirmed live: an unauthenticated request answered 200 with
+            #   the app's own HTML, not a redirect to canterlot.driscoll.tech,
+            #   from the first moment agentboard ever actually served traffic.
+            #
+            # That fix broke the app instead: the outpost's forwardAuth check
+            # (network/traefik/middleware/outpost.yaml) applies to EVERY
+            # path on this host with no exclusion, including `/ws` -- and a
+            # WebSocket upgrade cannot follow the 302 that check issues. Live
+            # trace (browser HAR) showed the outpost rejecting the session
+            # cookie on every single forwardAuth call for this host, even
+            # right after a real top-level login had just minted it, so the
+            # WS connection never completes and agentboard's own reconnect
+            # loop hammers `/api/client-log` in the background forever, each
+            # attempt ALSO getting redirected and its cross-origin fetch()
+            # follow producing a CORS/OPTIONS failure in devtools. Root cause
+            # of the forwardAuth rejection itself was not confirmed (needs
+            # live authentik admin access to the Provider's session/cookie
+            # config, not available this session) -- only that it happens
+            # for every request on this host, `/` included, not just `/ws`.
+            #
+            # This is a real, deliberate regression, not an oversight: back
+            # to network-gate-only, no per-user auth, matching agentboard's
+            # own documented threat model ("anyone who can reach it has full
+            # access to every terminal session") for anyone already inside
+            # the tailnet. Re-enabling `authenticated-user` needs either the
+            # forwardAuth-vs-WebSocket incompatibility fixed (likely
+            # excluding /ws from the outpost check some other way, without
+            # reopening it to unauthenticated tailnet access) or the
+            # rejection root-caused and fixed first.
+            name: local-user
