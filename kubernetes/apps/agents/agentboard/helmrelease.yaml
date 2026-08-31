@@ -117,11 +117,11 @@ spec:
               # extending it, so the standard entries have to be spelled out
               # here too or nothing on the base image resolves any more.
               PATH: /root/.local/share/mise/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-              ANTHROPIC_API_KEY:
-                valueFrom:
-                  secretKeyRef:
-                    name: *app
-                    key: anthropic-api-key
+              # ANTHROPIC_API_KEY:
+              #   valueFrom:
+              #     secretKeyRef:
+              #       name: *app
+              #       key: anthropic-api-key
               # `github-token`, the estate's own GitHub App installation
               # token -- see ./externalsecret.yaml's header for why nothing
               # here mints a second one. Fine as a plain env var for `gh`
