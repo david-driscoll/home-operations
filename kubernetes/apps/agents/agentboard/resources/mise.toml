@@ -20,7 +20,7 @@
 # failure under `locked = true`, not a silent live-resolve.
 [tools]
 node = "24.20.0"
-gh = "2.98.0"
+gh = "2.100.0"
 kubectl = "1.37.0"
 pulumi = "3.261.0"
 jq = "1.8.2"
