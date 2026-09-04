@@ -44,7 +44,7 @@
     "@pulumi/unifi": "file:sdks/unifi",
     "@pulumi/vault": "^7.11.0",
     "@pulumiverse/purrl": "^0.6.2",
-    "confbox": "^0.2.2",
+    "confbox": "^0.3.0",
     "diff": "^9.0.0",
     "jsonc-morph": "^0.3.0",
     "jsonc-parser": "^3.3.1",
