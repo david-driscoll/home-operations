@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-alpha-site
       - op: replace
         path: /spec/env/2/value
-        value: "10.10.10.200"
+        value: "alpha-site.opossum-yo.ts.net"
   # alpha-site is the ONE host on a SEPARATE Proxmox API token
   # (apps/proxmox/alpha-site/api-key, not apps/proxmox/api-key) -- see
   # ../base/externalsecret.yaml's header.
