@@ -9,25 +9,37 @@
 # native HTTP mode, same no-stdio-wrapper shape as ../../degoog.yaml -- see
 # its header for why that needs no podTemplateSpec command override.
 #
-# BOTH `PROXMOX_MCP_MODE=mcp-http` AND `MCP_TRANSPORT=STREAMABLE` are
-# required, and they do different jobs. The image's Dockerfile hardcodes
-# `ENV PROXMOX_MCP_MODE="openapi"`, and `proxmox_mcp/docker_entrypoint.py`
-# picks the process to exec purely from that variable -- it never reads
-# `MCP_TRANSPORT`. So `MCP_TRANSPORT` alone left every pod launching the
-# OpenAPI bridge on :8811, which refuses to boot without its own
-# `PROXMOX_API_KEY` ("OpenAPI proxy refuses to start without
-# PROXMOX_API_KEY"). `PROXMOX_MCP_MODE` selects the mode; `MCP_TRANSPORT`
-# then configures the server inside it.
+# TWO things are needed to start this image in native MCP HTTP mode, and
+# the second is a workaround for a genuine incompatibility.
 #
-# An earlier revision of this file dropped `PROXMOX_MCP_MODE` because
-# `mcp-http` used to yield an INVALID internal `mcp.transport:
-# STREAMABLE-HTTP`. Upstream has since fixed that: the entrypoint now
-# `setdefault`s the underscored `STREAMABLE_HTTP`, and
-# `config/models.py:150 normalize_transport` maps `STREAMABLE_HTTP` ->
-# `STREAMABLE` before the `Literal["STDIO", "SSE", "STREAMABLE"]`
-# validator sees it. Because it is `setdefault`, the explicit
-# `MCP_TRANSPORT=STREAMABLE` below still wins and is the value actually
-# validated -- that is why it stays.
+# 1. PROXMOX_MCP_MODE=mcp-http. The Dockerfile hardcodes
+#    `ENV PROXMOX_MCP_MODE="openapi"` and docker_entrypoint.py picks the
+#    process to exec purely from that variable -- it never reads
+#    MCP_TRANSPORT. Without it every pod launched the OpenAPI bridge on
+#    :8811, which exits without its own PROXMOX_API_KEY.
+#
+# 2. The command override below. ToolHive's operator sets MCP_TRANSPORT
+#    from spec.transport with an unconditional map assignment --
+#    `envVars["MCP_TRANSPORT"] = transportType`, in
+#    pkg/environment/environment.go:65 -- so it OVERWRITES anything we put
+#    in spec.env. The injected value is the CRD's hyphenated
+#    `streamable-http`; loader.py upper()s that to `STREAMABLE-HTTP`, and
+#    models.py's normalize_transport only maps the UNDERSCORED
+#    `STREAMABLE_HTTP` back to `STREAMABLE`. So it fails
+#    `Literal["STDIO", "SSE", "STREAMABLE"]` and the server exits.
+#
+#    This is the exact crash an earlier revision of this file blamed on
+#    `PROXMOX_MCP_MODE=mcp-http` itself. It is not that variable's fault:
+#    ToolHive's hyphen and ProxmoxMCP-Plus's accepted literals simply do
+#    not agree, and NOTHING settable via spec.env can bridge them, because
+#    the operator always wins. Exporting the value inside the container,
+#    after kubelet has built the environment, is the one place we can.
+#    MCP_HOST is exported too -- the operator sets it to the empty string,
+#    which the entrypoint's setdefault will not replace.
+#
+# Worth an upstream issue either way: ProxmoxMCP-Plus normalizing
+# `STREAMABLE-HTTP` alongside `STREAMABLE_HTTP` would remove the need for
+# this override entirely.
 #
 # David's explicit scope answer: "Full VM/LXC lifecycle". The project has
 # no built-in read-only/write-toggle flag of its own (checked its docs) --
@@ -65,6 +77,9 @@ spec:
     # PROXMOX_HOST by index (/spec/env/2/value) -- keep it third.
     - name: PROXMOX_MCP_MODE
       value: mcp-http
+    # Kept only so PROXMOX_HOST stays at index 2 for the overlays. The
+    # operator overwrites this value; the command override below is what
+    # actually sets the transport the app sees.
     - name: MCP_TRANSPORT
       value: STREAMABLE
     - name: PROXMOX_HOST
@@ -78,6 +93,15 @@ spec:
     spec:
       containers:
         - name: mcp
+          # See point 2 in this file's header. Re-exports the transport
+          # literal the app will actually accept, then hands off to the
+          # image's own entrypoint so PROXMOX_MCP_MODE still selects the
+          # mode.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              export MCP_TRANSPORT=STREAMABLE MCP_HOST=0.0.0.0
+              exec python -m proxmox_mcp.docker_entrypoint
           envFrom:
             - secretRef:
                 name: REPLACE-ME-name
