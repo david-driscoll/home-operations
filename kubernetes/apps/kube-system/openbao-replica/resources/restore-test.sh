@@ -153,12 +153,26 @@ echo "throwaway bao is unsealed and active (via $TRANSIT_ADDR)"
 # The AppRole lives INSIDE the backup (minted against the live cluster by
 # bootstrap/openbao/restore-test.sh), so a successful login also proves
 # the auth backends survived the round trip.
-token="$(curl -sf -X POST "$BAO_ADDR/v1/auth/approle/login" \
-  -d "{\"role_id\":\"$BAO_ROLE_ID\",\"secret_id\":\"$BAO_SECRET_ID\"}" | jq -r '.auth.client_token // empty')"
-[ -n "$token" ] || fail "approle login failed against the restored instance — was bootstrap/openbao/restore-test.sh ever run?"
+# `x=$(curl -sf ... | jq ...)` is a BARE ASSIGNMENT, so under `set -e` a
+# non-2xx response aborts the script on THIS line and the explanatory
+# `fail` on the next never runs -- which is how both of these steps have
+# been reporting nothing but a line number. Capture the status and body
+# instead, and let `fail` say what actually happened. This job's entire
+# job is to be believed when it says the backup is bad, so it has to be
+# able to tell "the backup is wrong" apart from "the harness is wrong".
+login_code="$(curl -s -o /tmp/login.json -w '%{http_code}' -X POST "$BAO_ADDR/v1/auth/approle/login" \
+  -d "{\"role_id\":\"$BAO_ROLE_ID\",\"secret_id\":\"$BAO_SECRET_ID\"}" || echo 000)"
+[ "$login_code" = "200" ] || fail "approle login returned HTTP $login_code: $(head -c 300 /tmp/login.json 2>/dev/null) — was bootstrap/openbao/restore-test.sh ever run?"
+token="$(jq -r '.auth.client_token // empty' /tmp/login.json 2>/dev/null || true)"
+[ -n "$token" ] || fail "approle login returned HTTP 200 but no client_token: $(head -c 300 /tmp/login.json 2>/dev/null)"
 
-canary="$(curl -sf -H "X-Vault-Token: $token" "$BAO_ADDR/v1/$CANARY_PATH" | jq -r '.data.data | length')"
-[ -n "$canary" ] && [ "$canary" -gt 0 ] || fail "canary read of $CANARY_PATH returned no data"
+canary_code="$(curl -s -o /tmp/canary.json -w '%{http_code}' -H "X-Vault-Token: $token" "$BAO_ADDR/v1/$CANARY_PATH" || echo 000)"
+# 403 means the restore-test AppRole's policy does not cover CANARY_PATH;
+# 404 means the path is genuinely absent from the restored data. Only the
+# second is a statement about the backup.
+[ "$canary_code" = "200" ] || fail "canary read of $CANARY_PATH returned HTTP $canary_code: $(head -c 300 /tmp/canary.json 2>/dev/null)"
+canary="$(jq -r '.data.data | length // 0' /tmp/canary.json 2>/dev/null || echo 0)"
+[ "$canary" -gt 0 ] || fail "canary read of $CANARY_PATH returned HTTP 200 but no fields: $(head -c 300 /tmp/canary.json 2>/dev/null)"
 echo "canary read OK ($canary field(s) at $CANARY_PATH)"
 
 # ── 7. Report ───────────────────────────────────────────────────────────────
