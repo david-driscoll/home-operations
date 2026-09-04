@@ -18,7 +18,7 @@ patches:
         path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
         value: toolhive-proxmox-alpha-site
       - op: replace
-        path: /spec/env/1/value
+        path: /spec/env/2/value
         value: "10.10.10.200"
   # alpha-site is the ONE host on a SEPARATE Proxmox API token
   # (apps/proxmox/alpha-site/api-key, not apps/proxmox/api-key) -- see

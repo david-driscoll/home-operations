@@ -18,7 +18,7 @@ patches:
         path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
         value: toolhive-proxmox-skystar
       - op: replace
-        path: /spec/env/1/value
+        path: /spec/env/2/value
         value: "100.111.10.105"
   - target:
       kind: ExternalSecret
