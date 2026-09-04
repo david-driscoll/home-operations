@@ -29,76 +29,83 @@ metadata:
 ---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# Postgres MCP Pro (github.com/crystaldba/postgres-mcp) -- query analysis,
-# index tuning, health checks, and (in unrestricted mode) direct SQL
-# execution against the estate's one shared CNPG Postgres cluster. Official
-# image `crystaldba/postgres-mcp`, confirmed live via its own README --
-# no digest pin yet, add one before merging.
+# DBHub (github.com/bytebase/dbhub), replacing crystaldba/postgres-mcp.
 #
-# SSE, not stdio -- a workaround, and the least-bad option available on
-# this image. Under stdio the server crash-looped every ~5 minutes (168
-# restarts in 15h): ../agent-tools-mcp's VirtualMCPServer health-checks
-# each backend with `server/discover` (MCP 2026-07-28), this server's
-# bundled MCP SDK has no such method, `JSONRPCMessage.model_validate_json`
-# raises a pydantic literal_error, and under stdio that escapes
-# stdio_server's anyio task group and kills the PROCESS. Under a
-# request-scoped ASGI transport the same bad request should be answered as
-# an error instead. NOT live-verified -- see the PR.
+# WHY THE SWAP. postgres-mcp could not be made to work in this stack at
+# all, for structural reasons rather than a misconfiguration:
 #
-# READ THIS BEFORE TOUCHING THE IMAGE. `crystaldba/postgres-mcp:latest`
-# was last published 2025-05-16 and is frozen at v0.3.0. The project's
-# repo has moved on -- streamable-http transport landed in Jan 2026
-# (07eb329c) and `mcp[cli]<2.0` was pinned in Aug 2026 (15c8e333) -- but
-# NONE of it has ever been published as an image. `:latest` here means
-# "15 months old", and its argparse still offers only
-# `--transport {stdio,sse}`:
+#   * Its published image is ABANDONED -- `:latest` was last pushed
+#     2025-05-16, frozen at v0.3.0. Everything since (streamable-http in
+#     Jan 2026, an `mcp[cli]<2.0` pin in Aug 2026) exists only in git and
+#     has never shipped as an image.
+#   * On stdio it DIED every ~5 minutes: ../agent-tools-mcp's
+#     VirtualMCPServer health-checks backends with `server/discover` (MCP
+#     2026-07-28), that image's MCP SDK cannot parse the method, and the
+#     pydantic error escapes stdio_server's anyio task group and kills the
+#     process. 168 restarts in 15h.
+#   * On SSE it survived but could not be AGGREGATED: its proxy serves
+#     /sse (200) and /messages (400) while vMCP only ever probes /mcp
+#     (404). No override exists -- MCPGroup.spec carries nothing but
+#     `description`, and vMCP per-workload config is tool filtering only.
 #
-#   postgres-mcp: error: argument --transport: invalid choice:
-#   'streamable-http' (choose from stdio, sse)
+# stdio dies on the probe, SSE cannot be aggregated, nothing bridges them.
 #
-# which is exactly what an earlier attempt at this fix hit by reading the
-# upstream default branch instead of the running image. Check the actual
-# image, not the repo.
+# WHY DBHUB. It is the exact shape those failures call for, and both halves
+# were checked against the RELEASE TAG rather than the default branch --
+# the mistake that produced the SSE attempt:
 #
-# SSE is deprecated in MCP, and an abandoned image holding the cluster's
-# shared Postgres SUPERUSER credential is the real problem here. The
-# durable fix is a maintained replacement, which is a decision rather than
-# a patch. Revert to `transport: stdio` if ToolHive stops sending Modern
-# methods to Legacy backends first.
+#   * Serves streamable-http on `/mcp` -- literally `app.post("/mcp", ...)`
+#     -- the one path vMCP probes.
+#   * ADOPTED MCP spec 2026-07-28 in v1.0.0, the very revision whose
+#     `server/discover` killed the old server, and serves 2025-era clients
+#     on the same endpoint. Dual-era by design.
+#   * Its image is alive: 1.2.3 published 2026-09-02, on a cadence of
+#     0.24.0 -> 1.2.3 in about six weeks.
+#   * MIT, ~3.5k stars, and the official example in Claude Code's own docs
+#     for connecting to PostgreSQL over MCP.
 #
-# --access-mode=unrestricted (full read-write, including arbitrary SQL) --
-# matches this rollout's established "full read-write from day one" default
-# for agent tooling (kubernetes MCP, pulumi MCP). See ./secret.yaml's header
-# for the blast-radius caveat this carries: the credential behind
-# DATABASE_URI is the cluster's shared superuser, not a scoped role.
-# --access-mode=restricted (read-only, enforces query time limits) is the
-# safer alternative if this needs narrowing later.
+# CONFIG, verified in src/config/env.ts at tag v1.2.3 (NOT main):
+#   * `process.env.DSN` is read before any .env file, so the connection
+#     string arrives as it always did -- from the reflected superuser
+#     Secret, never in argv where it would surface in the pod spec.
+#   * `--readonly` and `--max-rows` were REMOVED and now hard-error with a
+#     pointer to a TOML config; do not reintroduce them as flags. Read-only
+#     is `readonly = true` under `[[sources]]` in a TOML file. `readonly`
+#     is optional in the config type, so omitting it keeps today's
+#     read-write behaviour -- deliberate, see below.
 #
-# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
-# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+# Access model is UNCHANGED and still wide: the Secret header above records
+# that this is the cluster's shared superuser, so this server can
+# read/write/drop ANY app's database. DBHub does make narrowing cheap --
+# read-only mode, row limits and query timeouts are first-class -- but
+# swapping the server and changing its blast radius are two decisions, and
+# this file makes only the first.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPServer
 metadata:
   name: toolhive-postgres
 spec:
-  image: crystaldba/postgres-mcp:latest
-  transport: sse
+  # Pinned to the tag every claim in the header was checked against.
+  image: bytebase/dbhub:1.2.3
+  transport: streamable-http
   proxyPort: 8080
-  mcpPort: 8000
+  mcpPort: 8080
   groupRef:
     name: agent-tools
+  # `http` is DBHub's own spelling for streamable-http
+  # (docs/installation.mdx). Nothing here reads the operator-injected
+  # MCP_TRANSPORT, so there is no hyphen/underscore collision to work
+  # around as there is for the proxmox servers.
   args:
-    - "--access-mode=unrestricted"
-    - "--transport=sse"
-    - "--sse-host=0.0.0.0"
-    - "--sse-port=8000"
+    - "--transport=http"
+    - "--port=8080"
 
   podTemplateSpec:
     spec:
       containers:
         - name: mcp
           env:
-            - name: DATABASE_URI
+            - name: DSN
               valueFrom:
                 secretKeyRef:
                   name: postgres-superuser
