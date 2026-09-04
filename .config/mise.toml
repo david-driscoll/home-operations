@@ -28,7 +28,7 @@ gh = "2.98.0"
 # itself as `hk run pre-commit --from-hook` via git config, and an unpinned mise
 # shim fails inside the hook with `mise ERROR No version is set for shim: hk`.
 # The hook exits non-zero and git aborts the commit.
-hk = "1.56.1"
+hk = "1.57.0"
 pkl = "0.32.1"
 biome = "2.5.2"
 typos = "1.50.0"
