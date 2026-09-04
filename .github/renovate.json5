@@ -94,6 +94,75 @@
   //
   // Do NOT "fix" this by adding `dependencyLookupWarnings` back above -- see
   // that comment for why an unnamed failure is worse than a named one.
+
+  // THE MITIGATION for the above, and the reason it is per-host rather than
+  // global.
+  //
+  // The 2026-09-04 evening dashboard broke the original "it is a docker
+  // registry 429" reading, and it is worth recording why. That run failed on
+  //
+  //   gcr.io/cadvisor/cadvisor, data.forgejo.org/oci/docker,
+  //   data.forgejo.org/forgejo-helm/forgejo   -- docker datasource
+  //   ZiggyCreatures.FusionCache.Serialization.SystemTextJson, TMDbLib
+  //                                           -- NUGET datasource
+  //
+  // The nuget failures cannot be a docker token problem: different datasource,
+  // different code path, no registry token involved. Whatever is happening is
+  // therefore NOT specific to container registries, which rules out the
+  // getAuthHeaders fall-through as the whole story.
+  //
+  // What survives the evidence is per-host request pressure. Measured against
+  // this repo with `renovate --platform=local --dry-run=lookup` on 44.61.6:
+  // 1472 dependencies across 944 files, and ALL 1472 resolved -- zero lookup
+  // failures, including all five the hosted run had just failed on, at their
+  // correct current values (cadvisor v0.55.1, oci/docker 29-dind,
+  // forgejo-helm/forgejo 17.1.5, both nuget packages). 60 hand-rolled requests
+  // to the three hosts in a tight loop also returned 200/200. So the packages,
+  // the manifests and this config are all fine; what differs is the runner.
+  //
+  // Renovate ships NO per-host throttling by default -- `concurrentRequestLimit`
+  // defaults to null and `maxRequestsPerSecond` to 0, i.e. unlimited. Against a
+  // 1472-dependency repo that means large bursts at a handful of hosts from
+  // Mend's shared egress IPs, which is exactly the condition under which those
+  // hosts shed load. It also explains the two properties that make this so
+  // annoying to chase: the failing set ROTATES between runs, and it spans
+  // datasources.
+  //
+  // These are the four hosts observed failing across three dashboard runs.
+  // Limits are deliberately modest rather than aggressive: the run is weekly,
+  // so wall-clock cost is irrelevant, but strangling ghcr.io would hurt because
+  // most of the 1472 live there -- hence its more generous allowance.
+  //
+  // HONEST CAVEAT: this is unverifiable from here. The failure does not
+  // reproduce locally, so this cannot be tested before merge -- it is a
+  // targeted, documented, credential-free mitigation, not a proven fix. The
+  // success criterion is the "Package lookup failures" warning disappearing
+  // from issue #11 over the next few runs. If it does NOT, revert this rather
+  // than tightening the numbers further, and treat the residual as Mend-side.
+  hostRules: [
+    {
+      matchHost: "gcr.io",
+      concurrentRequestLimit: 2,
+      maxRequestsPerSecond: 4,
+    },
+    {
+      matchHost: "data.forgejo.org",
+      concurrentRequestLimit: 2,
+      maxRequestsPerSecond: 4,
+    },
+    {
+      matchHost: "api.nuget.org",
+      concurrentRequestLimit: 4,
+      maxRequestsPerSecond: 8,
+    },
+    {
+      // Most of this repo's dependencies resolve here, so this one is a brake,
+      // not a throttle.
+      matchHost: "ghcr.io",
+      concurrentRequestLimit: 8,
+      maxRequestsPerSecond: 12,
+    },
+  ],
   schedule: [
     "every weekend"
   ],
