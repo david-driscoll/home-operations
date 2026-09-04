@@ -101,26 +101,70 @@ spec:
                 # tag and is not one.
                 memory: 4Gi
             probes:
+              # `custom: true` on all three, and it is NOT decoration. Without
+              # it app-template DISCARDS the `spec:` below and renders its own
+              # default `tcpSocket` probe instead -- silently, with no error and
+              # no drift. Every one of these carefully-chosen zot health
+              # endpoints was dead config: verified on the live Deployment,
+              # which carried
+              #
+              #   {"tcpSocket":{"port":8080},"failureThreshold":3,
+              #    "initialDelaySeconds":10,"periodSeconds":10,"timeoutSeconds":1}
+              #
+              # while jellyfin -- which does pass `custom: true` -- correctly
+              # renders its `httpGet: /health`. The endpoints themselves are
+              # real: /livez, /readyz and /startupz all return 200 on
+              # zot v2.1.20.
+              #
+              # What that silently-substituted default cost, on 2026-09-04:
+              # a TCP probe on :8080 with a 3 x 10s budget gives zot ~40s from
+              # container start to having the listener up. On a cold start it
+              # spends that window on cve-db update, scrub, gc and retention
+              # across EVERY cached repo before serving, so the probe got
+              # `connection refused`, kubelet killed it, and it restarted --
+              # twice. While it was down, containerd got 502s and NotFound for
+              # every image the cluster asked it to proxy. Home Assistant had
+              # just been bumped to 2026.9.0 by Renovate, so it needed a pull it
+              # could not get: its 10m Helm timeout expired, the HelmRelease
+              # rolled back, the pod died mid-pull, and the next attempt started
+              # the same doomed pull from zero. jellyfin, n8n, unpoller,
+              # windmill-extra and the pulumi workspaces failed the same way.
+              #
+              # Same failure SHAPE as the 4Gi memory note above -- zot dies
+              # mid-sync and the symptom surfaces downstream as a bad tag -- but
+              # a different cause, so both guards are needed.
               liveness:
                 enabled: true
+                custom: true
                 spec:
                   initialDelaySeconds: 5
+                  timeoutSeconds: 5
                   httpGet:
                     path: /livez
                     port: &port 8080
               readiness:
                 enabled: true
+                custom: true
                 spec:
                   initialDelaySeconds: 10
+                  timeoutSeconds: 5
                   httpGet:
                     path: /readyz
                     port: *port
               startup:
                 enabled: true
+                custom: true
                 spec:
                   initialDelaySeconds: 10
                   periodSeconds: 10
-                  failureThreshold: 3
+                  # 30 x 10s = 5 minutes, not 40 seconds. This is exactly what a
+                  # startupProbe is for: hold liveness off while a slow starter
+                  # works through its cache. The failure mode it replaces takes
+                  # the whole cluster's image pulls down with it, so the budget
+                  # is deliberately generous -- a zot that needs four minutes is
+                  # doing its job, not hanging.
+                  failureThreshold: 30
+                  timeoutSeconds: 5
                   httpGet:
                     path: /startupz
                     port: *port
