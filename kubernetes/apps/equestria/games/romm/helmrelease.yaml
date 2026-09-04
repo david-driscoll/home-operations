@@ -41,7 +41,7 @@ spec:
           app:
             image:
               repository: ghcr.io/rommapp/romm
-              tag: 5.1.0-beta.3@sha256:4db0ee137a0948d27fea20dafc217d7c09d3ffaef2bfb7da6e89320201a64a50
+              tag: 5.2.0@sha256:3512f2ca455782f90247271bed23116e6bc675bc74e379be2c41696e607ab11e
             env:
               ROMM_PORT: &port 80
             envFrom:
