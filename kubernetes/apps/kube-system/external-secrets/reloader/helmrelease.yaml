@@ -299,7 +299,38 @@ spec:
               repository: ghcr.io/external-secrets-inc/reloader
               tag: 0.0.5-29.gfb00e3b@sha256:1a7d0fc9fe831c265420bc1fb3af297ad03a599c4802956c97d6e2de9deeabbf
             probes:
+              # `enabled: true` AND `custom: true`, and this block had NEITHER.
+              # They guard two different app-template behaviours, and missing
+              # the first is the worse of the two:
+              #
+              #   * no `enabled: true` -> the probe is not rendered AT ALL.
+              #     Verified on the live Deployment before this change:
+              #     `.livenessProbe` and `.readinessProbe` were both EMPTY. A
+              #     Tier 0 controller was running with no liveness probe (wedge
+              #     it and nothing restarts it) and no readiness probe (always
+              #     counted Ready, so its Services would route to a broken pod).
+              #
+              #   * no `custom: true` -> the probe IS rendered, but only the
+              #     scalar tuning below survives; the HANDLER is replaced by
+              #     app-template's default `tcpSocket`. That is the exact bug
+              #     that took the cluster's image pulls down via zot in #1431,
+              #     where the live probe kept the declared failureThreshold and
+              #     periodSeconds but silently became a TCP connect.
+              #
+              # Neither failure reports anything: no chart error, no Helm
+              # warning, and the HelmRelease still says UpgradeSucceeded and
+              # NoDriftDetected. The only way to see it is to diff the rendered
+              # Deployment against this file.
+              #
+              # The endpoints are real and were checked against the running pod
+              # before turning them on -- /healthz and /readyz both return 200
+              # on :8081, which is where `--health-probe-bind-address=:8081`
+              # above puts controller-runtime's health server. 8081 is not a
+              # declared containerPort and does not need to be; a probe may name
+              # a raw port number.
               liveness:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
                     path: /healthz
@@ -307,6 +338,8 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
               readiness:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
                     path: /readyz
