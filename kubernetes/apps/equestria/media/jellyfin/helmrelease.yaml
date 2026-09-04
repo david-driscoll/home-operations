@@ -42,8 +42,25 @@ spec:
         containers:
           jellyfin:
             image:
-              repository: jellyfin/jellyfin
-              tag: 12.0-rc3
+              # ghcr, not Docker Hub. The Jellyfin project publishes the same
+              # build to both -- verified rather than assumed: for 12.0-rc7 the
+              # two registries hand back different manifest-list AND per-arch
+              # manifest digests, but an IDENTICAL image config blob
+              # (sha256:c5a9986e...), which is what carries the rootfs diff_ids
+              # and the runtime config. Same extracted filesystem, same
+              # entrypoint; the layer blobs differ only because the two pushes
+              # gzipped independently (739,564,695 vs 740,568,681 bytes, same
+              # mediaType, same count). What ghcr buys is not being metered
+              # against Docker Hub's anonymous pull budget for the cluster's
+              # egress IP.
+              repository: ghcr.io/jellyfin/jellyfin
+              # Renovate could not see past 12.0-rc3 until #1429: the default
+              # `docker` versioning reads `-rc3` as an image VARIANT, so the tag
+              # was only ever comparable with itself and this pin sat five
+              # release candidates behind while the dashboard rendered it as
+              # tracked. Do not drop the digest -- every other image in this
+              # namespace carries one, and jellyfin was the sole exception.
+              tag: 12.0-rc7@sha256:2e7590493748ef56b50b7e2fe1fcda1319c10697f02d933101c784e7b28177d6
             env:
               JELLYFIN_CACHE_DIR: /cache
               JELLYFIN_CONFIG_DIR: /config/config
