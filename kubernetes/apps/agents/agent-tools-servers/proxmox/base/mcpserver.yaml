@@ -9,18 +9,25 @@
 # native HTTP mode, same no-stdio-wrapper shape as ../../degoog.yaml -- see
 # its header for why that needs no podTemplateSpec command override.
 #
-# `MCP_TRANSPORT=STREAMABLE`, NOT `PROXMOX_MCP_MODE=mcp-http` (an earlier
-# draft's value) -- confirmed live, `PROXMOX_MCP_MODE=mcp-http` produces
-# an INVALID internal `mcp.transport: STREAMABLE-HTTP`, and the app's own
-# Pydantic config validator only accepts the literal values `STDIO`,
-# `SSE` or `STREAMABLE` (no `-HTTP`/`_HTTP` suffix) -- every proxmox pod
-# crashed on startup with that exact validation error. The project's own
-# docs (fetched live) disagree with each other here too (one example
-# shows `MCP_TRANSPORT=STREAMABLE_HTTP`, with an underscore) -- trusting
-# the running code's own error message over either doc example. NOT
-# independently re-verified beyond that the crash stopped; if this turns
-# out wrong, check the actual Pydantic Config schema in
-# proxmox_mcp/config/loader.py.
+# BOTH `PROXMOX_MCP_MODE=mcp-http` AND `MCP_TRANSPORT=STREAMABLE` are
+# required, and they do different jobs. The image's Dockerfile hardcodes
+# `ENV PROXMOX_MCP_MODE="openapi"`, and `proxmox_mcp/docker_entrypoint.py`
+# picks the process to exec purely from that variable -- it never reads
+# `MCP_TRANSPORT`. So `MCP_TRANSPORT` alone left every pod launching the
+# OpenAPI bridge on :8811, which refuses to boot without its own
+# `PROXMOX_API_KEY` ("OpenAPI proxy refuses to start without
+# PROXMOX_API_KEY"). `PROXMOX_MCP_MODE` selects the mode; `MCP_TRANSPORT`
+# then configures the server inside it.
+#
+# An earlier revision of this file dropped `PROXMOX_MCP_MODE` because
+# `mcp-http` used to yield an INVALID internal `mcp.transport:
+# STREAMABLE-HTTP`. Upstream has since fixed that: the entrypoint now
+# `setdefault`s the underscored `STREAMABLE_HTTP`, and
+# `config/models.py:150 normalize_transport` maps `STREAMABLE_HTTP` ->
+# `STREAMABLE` before the `Literal["STDIO", "SSE", "STREAMABLE"]`
+# validator sees it. Because it is `setdefault`, the explicit
+# `MCP_TRANSPORT=STREAMABLE` below still wins and is the value actually
+# validated -- that is why it stays.
 #
 # David's explicit scope answer: "Full VM/LXC lifecycle". The project has
 # no built-in read-only/write-toggle flag of its own (checked its docs) --
@@ -53,6 +60,11 @@ spec:
     name: agent-tools
 
   env:
+    # Selects native MCP HTTP mode in docker_entrypoint.py. Without this the
+    # image defaults to `openapi` and the pod crash-loops. Overlays patch
+    # PROXMOX_HOST by index (/spec/env/2/value) -- keep it third.
+    - name: PROXMOX_MCP_MODE
+      value: mcp-http
     - name: MCP_TRANSPORT
       value: STREAMABLE
     - name: PROXMOX_HOST

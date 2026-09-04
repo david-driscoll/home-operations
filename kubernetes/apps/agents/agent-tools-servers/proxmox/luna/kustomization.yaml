@@ -18,7 +18,7 @@ patches:
         path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
         value: toolhive-proxmox-luna
       - op: replace
-        path: /spec/env/1/value
+        path: /spec/env/2/value
         value: "100.111.10.104"
   - target:
       kind: ExternalSecret

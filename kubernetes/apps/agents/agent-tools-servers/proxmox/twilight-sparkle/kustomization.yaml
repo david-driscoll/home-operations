@@ -29,7 +29,7 @@ patches:
         path: /spec/podTemplateSpec/spec/containers/0/envFrom/0/secretRef/name
         value: toolhive-proxmox-twilight-sparkle
       - op: replace
-        path: /spec/env/1/value
+        path: /spec/env/2/value
         value: "10.10.10.100"
   - target:
       kind: ExternalSecret
