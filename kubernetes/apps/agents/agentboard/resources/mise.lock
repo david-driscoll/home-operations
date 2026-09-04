@@ -362,7 +362,7 @@ backend = "npm:@anthropic-ai/claude-code"
 allow_builds = "true"
 
 [[tools."npm:@gbasin/agentboard"]]
-version = "0.4.23"
+version = "0.4.24"
 backend = "npm:@gbasin/agentboard"
 
 [[tools.pulumi]]

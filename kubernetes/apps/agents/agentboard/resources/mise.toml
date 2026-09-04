@@ -65,7 +65,7 @@ bun = "1.3.14"
 # https://github.com/gbasin/agentboard -- no Docker image of its own, so it
 # is installed the same way as every other tool here rather than
 # `bun install -g` at image-build time (there is no image-build time).
-"npm:@gbasin/agentboard" = "0.4.23"
+"npm:@gbasin/agentboard" = "0.4.24"
 
 [settings]
 experimental = true
