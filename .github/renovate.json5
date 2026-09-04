@@ -46,6 +46,54 @@
     // 2 GitRepository name/namespace pairs, zero duplicated. If the warning
     // returns, look for a new duplicate source rather than re-adding this.
   ],
+  // WHAT "Error obtaining docker token" + "Package lookup failures" ACTUALLY
+  // MEAN on issue #11, so nobody chases them as a config bug again.
+  //
+  // They are ONE failure reported twice, and it is infrastructural, not
+  // configuration. In lib/modules/datasource/docker/common.ts, the registry
+  // token request has explicit branches for 401 (debug, "Unauthorized docker
+  // lookup"), 403 (debug, "Not allowed to access docker registry"), 5xx, and
+  // -- only when `isDockerHost(registryHost)` -- RequestError and 429, both of
+  // which become an ExternalHostError that Renovate treats as retryable and
+  // does NOT count as a package-lookup failure. Every other outcome, including
+  // a 429 FROM A NON-DOCKER-HUB REGISTRY, falls through to
+  //
+  //   logger.warn({...}, 'Error obtaining docker token'); return null;
+  //
+  // A null there makes getTags() null, which makes getReleases() null, which
+  // `Result.wrapNullable(fetchCachedReleases(config), 'no-result')` in
+  // lib/modules/datasource/index.ts turns into precisely the dashboard's
+  // `Failed to look up docker package <name>: no-result`. So the two warnings
+  // are the head and tail of one code path: anonymous registry lookups being
+  // rate-limited from the Mend-hosted app's shared egress IPs.
+  //
+  // Three things establish it is rate limiting rather than anything in here:
+  //   * all four named packages resolve anonymously from a workstation --
+  //     token endpoint 200, tags/list 200, current tag present;
+  //   * the failing set ROTATES between runs, and even within one run is
+  //     inconsistent per host: `data.forgejo.org/forgejo/runner` looked up
+  //     fine (PR #1399) while `data.forgejo.org/forgejo/forgejo` and
+  //     `data.forgejo.org/oci/docker` failed on that same host;
+  //   * checked against the registries directly, NONE of the four are stale --
+  //     gcr.io/cadvisor/cadvisor v0.55.1, data.forgejo.org/oci/docker 29-dind,
+  //     data.forgejo.org/forgejo/forgejo 16.0.3-rootless and
+  //     ghcr.io/rajsinghtech/charts/garage-operator 0.7.7 are each the newest
+  //     tag on their track. The warning costs visibility, not freshness.
+  //
+  // This is the docker-datasource twin of the GITHUB_COM_TOKEN note in
+  // kubernetes/apps/coder/renovate/renovatejob.yaml: unauthenticated lookups
+  // exhaust a per-IP budget and report `no-result` for healthy dependencies.
+  // The same remedy applies where a registry accepts credentials -- Mend Cloud
+  // no longer reads `encrypted` blocks from the repo, so a token goes in
+  // Credentials at developer.mend.io and is referenced as
+  // `{{ secrets.NAME }}` from a hostRule. Worth doing for docker.io and
+  // ghcr.io; gcr.io and data.forgejo.org serve these repositories
+  // anonymously and have nothing to authenticate WITH, so those two stay
+  // best-effort and the self-hosted nightly bot (its own egress IP) is the
+  // backstop for them.
+  //
+  // Do NOT "fix" this by adding `dependencyLookupWarnings` back above -- see
+  // that comment for why an unnamed failure is worse than a named one.
   schedule: [
     "every weekend"
   ],
@@ -122,6 +170,86 @@
     },
   },
   packageRules: [
+    {
+      // Jellyfin's 12.0 release candidates are tagged `12.0-rcN`, and the
+      // DEFAULT `docker` versioning reads everything after the first `-` as an
+      // image VARIANT -- the same slot that holds `alpine` or `rootless` --
+      // never as a prerelease. `isCompatible` then demands the suffix match
+      // exactly, so `12.0-rc3` is only ever comparable with itself: rc4..rc7
+      // each carry a different suffix and are filtered out before sorting.
+      //
+      // Verified on renovate 44.61.6 against this repo's config: currentVersion
+      // parses as bare `12.0`, and the sole update generated is a pinDigest
+      // back onto `12.0-rc3` -- which is exactly what issue #11 shows,
+      //
+      //   `jellyfin/jellyfin 12.0-rc3` -> [Updates: `12.0-rc3`]
+      //
+      // and why that pin sat five release candidates behind while looking, on
+      // the dashboard, like a dependency Renovate was tracking.
+      //
+      // `loose` is NOT the fix, and was measured rather than assumed: it does
+      // produce an update, but to `12.0-rc7.20260831-232051` -- the datestamped
+      // per-build tag, which sorts above the clean one. Only a regex versioning
+      // that refuses to MATCH those tags (they are excluded as invalid) lands
+      // on `12.0-rc7`.
+      //
+      // The rc number goes in `prerelease`, not `build`, and that choice is
+      // what makes this survive GA. `prerelease` marks the tag unstable, which
+      // buys two things: `ignoreUnstable` still admits it, because the current
+      // value is itself unstable and shares major/minor/patch (filter.ts), and
+      // a future stable `12.0.0` outranks every rc, so this pin walks onto the
+      // GA release on its own. `build` would instead be appended to the release
+      // array, where `12.0.0` -> [12,0,0,0] sorts BELOW `12.0-rc7` ->
+      // [12,0,0,7] and the pin could never leave the rc track.
+      //
+      // Known edge, not worth more machinery: prereleases compare with
+      // localeCompare (generic.ts), so `rc10` would sort below `rc9`. Jellyfin
+      // has never shipped a double-digit rc; if it ever does, move the tag by
+      // hand that one time.
+      description: "Jellyfin RC tags: -rcN is a prerelease, not an image variant",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "jellyfin/jellyfin",
+        "ghcr.io/jellyfin/jellyfin",
+      ],
+      versioning: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(\\.(?<patch>\\d+))?(-rc(?<prerelease>\\d+))?$",
+    },
+    {
+      // Same trap as the jellyfin rule above, different shape of tag. RomM is
+      // pinned to `5.1.0-beta.3`, so `docker` versioning reads the variant slot
+      // as `beta.3` and will only ever compare it with another `beta.3` -- and
+      // the ONLY other one is `5.1.0-beta.3-slim`, whose suffix differs again.
+      // The dashboard is unambiguous about the result: the romm entry carries
+      // no `-> [Updates: ...]` at all, not even a digest refresh.
+      //
+      // Meanwhile upstream shipped stable `5.1.0` AND `5.2.0`. A tag with no
+      // suffix is not "compatible" with one that has `beta.3`, so a plain
+      // release is exactly as invisible here as a newer beta -- this pin cannot
+      // walk off the beta channel on its own, which is the part that matters.
+      //
+      // `semver` rather than a regex, because unlike jellyfin's two-part
+      // `12.0-rcN` these tags are already valid semver. Measured on renovate
+      // 44.61.6 against this config: `5.1.0-beta.3` -> `5.2.0`, updateType
+      // minor, branch renovate/ghcr.io-rommapp-romm-5.x. The `-slim` tags parse
+      // as prereleases (`beta.3-slim`) and are dropped by ignoreUnstable, which
+      // admits an unstable candidate only when it shares major/minor/patch with
+      // the current one -- so the variant does not leak in.
+      //
+      // Read the release notes before merging what this generates. RomM owns a
+      // Postgres schema and this estate has been bitten by its migrations
+      // before; a beta-to-stable move across a minor is a migration, not a tag
+      // change.
+      description: "RomM beta tags: -beta.N is a prerelease, not an image variant",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/rommapp/romm"
+      ],
+      versioning: "semver",
+    },
     {
       description: "CoreDNS Group",
       groupName: "CoreDNS",
