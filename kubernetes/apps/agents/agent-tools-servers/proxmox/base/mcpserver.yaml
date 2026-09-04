@@ -105,11 +105,33 @@ spec:
     # is not.
     - name: PROXMOX_VERIFY_SSL
       value: "true"
+    # JobStore opens this with sqlite3.connect() during __init__, and the
+    # upstream default is the BARE RELATIVE name `proxmox-jobs.sqlite3`,
+    # so it lands in the CWD. The operator runs MCP pods with
+    # readOnlyRootFilesystem: true regardless of what this file's own
+    # securityContext says (see ../../context7.yaml's header for the same
+    # trap), so that write fails and the server exits before serving:
+    #   sqlite3.OperationalError: unable to open database file
+    # There is no flag to disable the job store, only to move it. Pointed
+    # at the emptyDir mounted below. Appended LAST on purpose: the overlays
+    # patch PROXMOX_HOST by index (/spec/env/2/value), so nothing may be
+    # inserted above it.
+    - name: PROXMOX_JOBS_SQLITE_PATH
+      value: /tmp/proxmox-jobs.sqlite3
 
   podTemplateSpec:
     spec:
+      # Writable scratch for the job store above. Same emptyDir-at-/tmp
+      # pattern as ../../docs.yaml, for the same reason: the operator's
+      # read-only root filesystem is not negotiable from here.
+      volumes:
+        - name: tmp
+          emptyDir: {}
       containers:
         - name: mcp
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           # See point 2 in this file's header. Re-exports the transport
           # literal the app will actually accept, then hands off to the
           # image's own entrypoint so PROXMOX_MCP_MODE still selects the
