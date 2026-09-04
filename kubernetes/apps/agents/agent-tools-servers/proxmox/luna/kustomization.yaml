@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-luna
       - op: replace
         path: /spec/env/2/value
-        value: "100.111.10.104"
+        value: "luna.opossum-yo.ts.net"
   - target:
       kind: ExternalSecret
     patch: |-

@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-celestia
       - op: replace
         path: /spec/env/2/value
-        value: "10.10.10.103"
+        value: "celestia.opossum-yo.ts.net"
   - target:
       kind: ExternalSecret
     patch: |-

@@ -86,8 +86,25 @@ spec:
       value: "REPLACE-ME.invalid"
     - name: PROXMOX_PORT
       value: "8006"
+    # true, and it costs nothing: every hypervisor already presents a valid
+    # Let's Encrypt cert for its `*.opossum-yo.ts.net` name (verified live
+    # 2026-09-04 -- issuers YE1/YE2, and curl from inside this namespace
+    # reports ssl_verify_result=0 against all four reachable hosts). So the
+    # overlays address hosts by that HOSTNAME rather than by IP: the certs
+    # are issued for the name, and an IP would fail hostname verification
+    # for no reason. Let's Encrypt is already in the image's trust store,
+    # so there is no CA to mount.
+    #
+    # Upstream now REFUSES verify_ssl=false outright ("Insecure TLS
+    # configuration blocked: set proxmox.verify_ssl=true. Only
+    # dev_mode=true can allow verify_ssl=false"), and the only escape for
+    # this single-host config shape is PROXMOX_DEV_MODE=true -- switching
+    # off certificate verification against hosts holding full VM/LXC
+    # lifecycle credentials. Not needed. The old `false` here rested on an
+    # assumption that Proxmox's default self-signed cert was in play; it
+    # is not.
     - name: PROXMOX_VERIFY_SSL
-      value: "false"
+      value: "true"
 
   podTemplateSpec:
     spec:

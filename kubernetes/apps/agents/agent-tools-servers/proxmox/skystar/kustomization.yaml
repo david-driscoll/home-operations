@@ -19,7 +19,7 @@ patches:
         value: toolhive-proxmox-skystar
       - op: replace
         path: /spec/env/2/value
-        value: "100.111.10.105"
+        value: "skystar.opossum-yo.ts.net"
   - target:
       kind: ExternalSecret
     patch: |-
