@@ -1,27 +1,84 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# Home Assistant's own long-lived access token, reused -- NOT a new
+# credential. Same OpenBao item the stargate-command HA deployment already
+# reads (kubernetes/apps/stargate-command/secrets/home-assistant.yaml
+# extracts the whole thing); this pulls the single `apikey` property out of
+# it for the MCP proxy below.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-home-assistant
+  annotations:
+    reloader.stakater.com/auto: "true"
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-home-assistant
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      metadata:
+        annotations:
+          reloader.stakater.com/auto: "true"
+      data:
+        token: "{{ .apikey }}"
+  data:
+    - secretKey: apikey
+      remoteRef:
+        key: clusters/equestria/apps/home-assistant/eris-credentials
+        property: apikey
+
+---
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
-# `MCPRemoteProxy` -- see ./microsoft-docs.yaml's
-# header for what that CRD is and why it applies here too.
+# Bearer auth for the proxy below. An earlier revision of this file left
+# outgoing auth unwired and recorded that closing it needed TOKEN EXCHANGE
+# against Home Assistant's OAuth provider, plus a confidential OAuth client
+# registered on the Home Assistant side -- credentials that rollout did not
+# have.
 #
-# OUTGOING AUTH IS NOT WIRED UP YET, deliberately left incomplete rather
-# than guessed. Home Assistant's MCP endpoint requires its own OAuth
-# (this repo's own root .mcp.json authenticates to it with an interactive
-# localhost-callback flow: clientId "http://localhost:12345"). Bridging
-# that into an unattended server-to-server call needs `externalAuthConfigRef`
-# -> a NEW MCPExternalAuthConfig configured for TOKEN EXCHANGE against Home
-# Assistant's OAuth provider, which in turn needs a REAL OAuth client
-# registered on the Home Assistant side (client id + secret) -- credentials
-# this rollout does not have. Until that exists, requests through this
-# proxy most likely 401 upstream at Home Assistant, not here.
+# That turned out to be a bigger requirement than Home Assistant actually
+# imposes. `/api/mcp` accepts an ordinary long-lived access token as a
+# plain `Authorization: Bearer`, and the estate already holds one. Verified
+# live before writing any of this, using the existing credential:
 #
-# Two ways to close this gap, neither implemented here:
-#   1. Register a proper confidential OAuth client in Home Assistant and
-#      wire externalAuthConfigRef to it.
-#   2. Skip the proxy for this one server and keep it a direct entry in
-#      ../agentboard/resources/mcp.json (its original placement), so a
-#      human can complete the interactive OAuth flow once through
-#      agentboard's own terminal and have it persist on the PVC.
+#   GET  /api/      -> 200   (token valid)
+#   POST /api/mcp   -> 200   with a real MCP initialize result
+#                            (protocolVersion 2025-06-18, capabilities,
+#                             tools/prompts/resources advertised)
+#
+# versus HTTP 401 unauthenticated, which is what the proxy had been getting
+# on every attempt (154 of them per start, then "initialize not successful,
+# but continuing" -- it stays Running while serving nothing).
+#
+# So: no OAuth client registration, no token exchange, no new secret.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: home-assistant
+spec:
+  type: bearerToken
+  bearerToken:
+    tokenSecretRef:
+      name: toolhive-home-assistant
+      key: token
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `MCPRemoteProxy` -- see ./microsoft-docs.yaml's header for what that CRD
+# is and why it applies here too.
+#
+# Outgoing auth now wired via ../agent-tools-servers' MCPExternalAuthConfig
+# above; see its header for why the token-exchange route the previous
+# revision described is not needed. The CRD requires the
+# MCPExternalAuthConfig to live in the same namespace, which it does.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPRemoteProxy
 metadata:
@@ -31,6 +88,8 @@ spec:
   transport: streamable-http
   groupRef:
     name: agent-tools
+  externalAuthConfigRef:
+    name: home-assistant
 
   resources:
     requests:
