@@ -17,7 +17,7 @@ spec:
   schedule: "0 3 * * *"
 
   # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
-  image: ghcr.io/renovatebot/renovate:44.52.0
+  image: ghcr.io/renovatebot/renovate:44.61.6
 
   # No digest, on purpose. This is a CRD field, so neither the `kubernetes` nor
   # the `helm-values` manager sees it -- it is picked up by the repo's
