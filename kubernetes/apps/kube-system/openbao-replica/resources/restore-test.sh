@@ -113,6 +113,16 @@ listener "tcp" {
 storage "postgresql" {
   table      = "openbao_kv_store"
   ha_enabled = "false"
+  # max_parallel defaults to 128, but the scratch Postgres sidecar is the
+  # stock image at its default max_connections = 100 (minus superuser
+  # reserved). Restoring a real keyring makes bao open enough concurrent
+  # connections -- lease revocation alone is bursty -- to exhaust that, and
+  # every storage read then fails with
+  #   FATAL: sorry, too many clients already (SQLSTATE 53300)
+  # AFTER the restore, unseal and AppRole login have already succeeded, so
+  # the job reports the BACKUP as untrusted when the harness is what ran
+  # out. Cap it well under the sidecar's ceiling.
+  max_parallel = 32
 }
 seal "transit" {
   address    = "$TRANSIT_ADDR"
