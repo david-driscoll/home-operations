@@ -35,33 +35,36 @@ metadata:
 # image `crystaldba/postgres-mcp`, confirmed live via its own README --
 # no digest pin yet, add one before merging.
 #
-# Native Streamable HTTP, NOT stdio -- and this is a workaround, not a
-# preference. Under stdio this server crash-looped roughly every five
-# minutes (168 restarts in 15h). The trigger is ../agent-tools-mcp's
-# VirtualMCPServer: its backend health check probes with `server/discover`,
-# the MCP 2026-07-28 ("Modern") method. postgres-mcp pins `mcp[cli]<2.0`
-# (crystaldba/postgres-mcp@15c8e333, to dodge a breaking import), and that
-# SDK has no such method, so `JSONRPCMessage.model_validate_json` raises a
-# pydantic literal_error. Under stdio that exception reaches the lowlevel
-# server through the read stream and escapes stdio_server's anyio task
-# group, taking the PROCESS down -- the proxy then loses its pipe and
-# restarts too. Every other stdio server here survives the same probe; this
-# one is alone in being on a Python SDK old enough to die on it.
+# SSE, not stdio -- a workaround, and the least-bad option available on
+# this image. Under stdio the server crash-looped every ~5 minutes (168
+# restarts in 15h): ../agent-tools-mcp's VirtualMCPServer health-checks
+# each backend with `server/discover` (MCP 2026-07-28), this server's
+# bundled MCP SDK has no such method, `JSONRPCMessage.model_validate_json`
+# raises a pydantic literal_error, and under stdio that escapes
+# stdio_server's anyio task group and kills the PROCESS. Under a
+# request-scoped ASGI transport the same bad request should be answered as
+# an error instead. NOT live-verified -- see the PR.
 #
-# Under Streamable HTTP the same unparsable request is confined to one
-# ASGI request task and answered as a JSON-RPC error rather than killing
-# the process. That is the reasoning, NOT a live-verified result -- see the
-# PR. It cannot regress anything: the server is at zero availability today.
+# READ THIS BEFORE TOUCHING THE IMAGE. `crystaldba/postgres-mcp:latest`
+# was last published 2025-05-16 and is frozen at v0.3.0. The project's
+# repo has moved on -- streamable-http transport landed in Jan 2026
+# (07eb329c) and `mcp[cli]<2.0` was pinned in Aug 2026 (15c8e333) -- but
+# NONE of it has ever been published as an image. `:latest` here means
+# "15 months old", and its argparse still offers only
+# `--transport {stdio,sse}`:
 #
-# The real bug is upstream in ToolHive -- vMCP treats `server/discover` as
-# "inherently safe, since server/discover has no side effects"
-# (pkg/vmcp/client/modern.go), which does not hold for a Legacy stdio
-# backend that cannot parse it. Revert to `transport: stdio` once that is
-# fixed.
+#   postgres-mcp: error: argument --transport: invalid choice:
+#   'streamable-http' (choose from stdio, sse)
 #
-# --transport/--streamable-http-host/--streamable-http-port are
-# postgres-mcp's own flags (src/postgres_mcp/server.py:569-597); the host
-# must be 0.0.0.0, as its default binds localhost only.
+# which is exactly what an earlier attempt at this fix hit by reading the
+# upstream default branch instead of the running image. Check the actual
+# image, not the repo.
+#
+# SSE is deprecated in MCP, and an abandoned image holding the cluster's
+# shared Postgres SUPERUSER credential is the real problem here. The
+# durable fix is a maintained replacement, which is a decision rather than
+# a patch. Revert to `transport: stdio` if ToolHive stops sending Modern
+# methods to Legacy backends first.
 #
 # --access-mode=unrestricted (full read-write, including arbitrary SQL) --
 # matches this rollout's established "full read-write from day one" default
@@ -79,16 +82,16 @@ metadata:
   name: toolhive-postgres
 spec:
   image: crystaldba/postgres-mcp:latest
-  transport: streamable-http
+  transport: sse
   proxyPort: 8080
   mcpPort: 8000
   groupRef:
     name: agent-tools
   args:
     - "--access-mode=unrestricted"
-    - "--transport=streamable-http"
-    - "--streamable-http-host=0.0.0.0"
-    - "--streamable-http-port=8000"
+    - "--transport=sse"
+    - "--sse-host=0.0.0.0"
+    - "--sse-port=8000"
 
   podTemplateSpec:
     spec:
