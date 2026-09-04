@@ -25,7 +25,7 @@ kind: Kustomization
 # land in one branch.
 resources:
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
-  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/experimental-install.yaml
+  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/experimental-install.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
   - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.4.0/traefik/crds/traefik.io_ingressroutes.yaml
   # renovate: datasource=github-tags depName=traefik/traefik-helm-chart
