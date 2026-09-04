@@ -118,9 +118,29 @@ spec:
               startup:
                 enabled: true
                 spec:
+                  # zot does not listen until it has walked every repo in
+                  # /var/lib/registry building metadb ("parsing storage and
+                  # initializing", pkg/meta/parse.go). That scan is O(repos)
+                  # against a 60Gi Longhorn RWX volume and grows as the cache
+                  # fills -- it is already 82 repos.
+                  #
+                  # 10 + 3x10 gave it 40s. On a cold restart 2026-09-04 that
+                  # was not enough: the probe killed the container mid-scan
+                  # TWICE before a pass finally landed inside the budget.
+                  # Nothing was wrong with zot either time. The failure mode
+                  # is nasty out of proportion to the component -- if the
+                  # scan ever exceeds the budget consistently, the registry
+                  # crash-loops forever, and NOTHING in the cluster can pull
+                  # an image, including the registry's own dependencies.
+                  #
+                  # 10 + 30x10 = 310s. failureThreshold is the right dial
+                  # rather than initialDelaySeconds: a warm start still goes
+                  # Ready on the first probe ~10s in, so this costs nothing
+                  # in the normal case and only buys headroom for the cold
+                  # one.
                   initialDelaySeconds: 10
                   periodSeconds: 10
-                  failureThreshold: 3
+                  failureThreshold: 30
                   httpGet:
                     path: /startupz
                     port: *port
