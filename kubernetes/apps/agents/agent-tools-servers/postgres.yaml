@@ -96,9 +96,30 @@ spec:
   # (docs/installation.mdx). Nothing here reads the operator-injected
   # MCP_TRANSPORT, so there is no hyphen/underscore collision to work
   # around as there is for the proxmox servers.
+  #
+  # --allowed-hosts is REQUIRED here, and its absence is not a soft
+  # failure. DBHub ships DNS-rebinding protection that accepts only
+  # loopback plus its own pod name by default, and the toolhive proxy
+  # reaches the backend through the ClusterIP Service -- so every request
+  # arrives with `Host: mcp-toolhive-postgres` and is rejected:
+  #
+  #   HTTP 403 {"error":"Forbidden","message":"Host
+  #   'mcp-toolhive-postgres' is not allowed. Only loopback is permitted
+  #   by default; set --allowed-hosts ..."}
+  #
+  # while the pod sits 1/1 Running and logs a clean startup -- the same
+  # "healthy but serving nothing" shape ../docs.yaml warns about.
+  #
+  # Named explicitly rather than using DBHub's `*` (ALLOW_ANY_HOST): the
+  # rebinding threat it guards against is a browser one and does not
+  # really apply to a pod-to-pod ClusterIP call, but there is no reason to
+  # switch the control off when one hostname covers it. Both the Service
+  # short name (what the proxy actually sends) and its FQDN are listed, so
+  # this survives a caller that resolves the long form.
   args:
     - "--transport=http"
     - "--port=8080"
+    - "--allowed-hosts=mcp-toolhive-postgres,mcp-toolhive-postgres.agents.svc.cluster.local,mcp-toolhive-postgres-headless,mcp-toolhive-postgres-headless.agents.svc.cluster.local"
 
   podTemplateSpec:
     spec:
