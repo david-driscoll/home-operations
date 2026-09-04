@@ -60,7 +60,7 @@ spec:
               # Same pin as database/valkey -- Renovate tracks both and moves
               # them together.
               repository: ghcr.io/valkey-io/valkey
-              tag: 9.1-trixie@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf
+              tag: 9.1-trixie@sha256:475ee65cc75c327407458f5096cdd36954b3de3fc83f4c8ac31a4a8edecbf49e
             # `command` OVERRIDES the image's ENTRYPOINT, which is
             # docker-entrypoint.sh -- deliberately. That script re-execs as the
             # valkey user via gosu and chowns as it goes, which fights the
