@@ -46,7 +46,7 @@ shellcheck = "0.11.0"
 node = "24.20.0"
 pulumi = "3.261.0"
 "github:microsoft/apm" = { version = "v0.29.0", bin = "apm" }
-"github:eljulians/skillfile" = { version = "v1.9.1", bin = "skillfile" }
+"github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.6.5"
 dotnet = { version = "10.0.203" }
 # Secret-reference resolver for ref+openbao:// (PLAN §D.1). Keep this version
