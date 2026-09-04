@@ -157,7 +157,7 @@ spec:
           initContainers:
             - name: vals
               # renovate: datasource=docker depName=jdxcode/mise
-              image: jdxcode/mise:2026.8.14
+              image: jdxcode/mise:2026.9.1
               command: ["/bin/sh", "-ec"]
               args:
                 - |
