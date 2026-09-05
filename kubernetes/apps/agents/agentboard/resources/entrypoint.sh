@@ -117,59 +117,6 @@ if ! tmux has-session -t main 2>/dev/null; then
   tmux new-session -d -s main -n shell
 fi
 
-# AND THEN RESUME THE MOST RECENT ONES ANYWAY -- which is not a reversal of
-# the block above, so read both. The mistake that block describes was starting
-# a BRAND-NEW session on every boot: `claude` with no arguments, minting a
-# fresh id and orphaning the transcript that mattered. This starts no new
-# sessions at all. It reattaches to specific, existing ids and stops if there
-# are none, so a fresh PVC still comes up with just the bare `shell` window.
-#
-# WHY IT IS SAFE TO GUESS HERE WHEN IT WAS NOT BEFORE: "which session" is only
-# an unanswerable question when the answer would destroy something. Resuming
-# the three most-recently-touched transcripts destroys nothing -- every other
-# session is still on the PVC and still reachable with `claude --resume`, and
-# the picker is still there for choosing deliberately.
-#
-# THREE, NOT FIVE. Measured on 2026-09-05: one Claude Code session sat at
-# 1.67 GiB against this pod's cgroup, and five would not fit under the 12Gi
-# limit ../helmrelease.yaml now sets without re-introducing exactly the silent
-# background-task reaping that limit was raised to stop. Raise both together
-# or neither. The count is env-overridable so that does not need a rebuild.
-#
-# CWD COMES FROM THE TRANSCRIPT, never from the directory name. Claude Code
-# stores transcripts under ~/.claude/projects/<path-with-slashes-as-dashes>/,
-# and that mangling is LOSSY -- `-root-home-operations` could be
-# /root/home-operations or /root/home/operations, and this repo happens to
-# contain a literal hyphen, so the ambiguity is real rather than theoretical.
-# Every transcript line carries the real `cwd`, so read it from there. A
-# session whose directory no longer exists (a deleted git worktree, say) is
-# skipped rather than resumed into the wrong place.
-#
-# `$$` throughout is Flux's escape for a literal `$`, same as the mise line
-# above -- see that block's warning. `$(...)` needs no escaping and is left
-# alone, matching the credential.helper line near the top of this file.
-AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-3}"
-if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
-  find /root/.claude/projects -maxdepth 2 -name '*.jsonl' -printf '%T@ %p\n' 2>/dev/null \
-    | sort -rn \
-    | head -n "$$AGENTBOARD_RESUME_SESSIONS" \
-    | while read -r _ transcript; do
-        id=$(basename "$$transcript" .jsonl)
-        # First line that has one wins; `head` keeps this cheap on a
-        # multi-megabyte transcript instead of parsing the whole file.
-        cwd=$(head -n 200 "$$transcript" | jq -r 'select(.cwd) | .cwd' 2>/dev/null | head -n 1)
-        if [ -z "$$cwd" ] || [ ! -d "$$cwd" ]; then
-          echo "==> skipping $${id%%-*}: no usable cwd"
-          continue
-        fi
-        echo "==> resuming $${id%%-*} in $$cwd"
-        # A login shell, so ./bashrc puts the mise shims back on PATH. The
-        # `claude` wrapper there passes arguments through untouched, so this
-        # resumes in place rather than being rewritten into a new worktree.
-        tmux new-window -d -t main -n "$${id%%-*}" -c "$$cwd" \
-          "exec bash -lc 'claude --resume $$id'"
-      done
-fi
 
 # NOTHING IS STARTED IN THAT WINDOW ON PURPOSE. This used to be
 #
@@ -202,6 +149,102 @@ fi
 # Plain `claude`, no `mise exec --` prefix needed any more: ../resources/bashrc
 # puts the mise shims back on PATH for the login shells tmux hands out. See
 # that file for what /etc/profile was doing to them.
+
+# RESUME THE MOST RECENT SESSIONS, IN AGENTBOARD'S OWN TMUX SESSION.
+#
+# Not a reversal of the "nothing is started on purpose" block above -- read
+# both. That block warns against starting a BRAND-NEW session every boot,
+# minting a fresh id and orphaning the transcript that mattered. This starts
+# no new sessions: it reattaches to specific existing ids and does nothing
+# when there are none, so a fresh PVC still comes up with just `shell`.
+#
+# WHY THE WINDOWS GO IN `agentboard` AND NOT `main`, which is the whole reason
+# this runs down here in the background instead of next to the new-session
+# call above. agentboard tags every window it can see as `managed` or
+# `external`, and REFUSES to kill an external one -- "Cannot kill external
+# sessions". Classification is by tmux SESSION NAME: anything under
+# `agentboard` is managed, anything else is not. `main` is ours, created above
+# only so a tmux server exists, so every window in it is external and
+# permanently unkillable from the UI. Ten failed kill attempts in
+# ~/.agentboard/agentboard.log say so.
+#
+# Verified live 2026-09-05 rather than assumed: a window created with a plain
+# `tmux new-window -t agentboard` -- no agentboard involvement at all -- came
+# back from GET /api/sessions as `source=managed`, while every `main:@N`
+# window reported `external`. So placing them here is sufficient; they do not
+# have to be launched BY agentboard to be killable.
+#
+# Hence the wait: agentboard creates that session itself, a few seconds after
+# this script execs it, so there is nothing to attach to until it does. The
+# subshell backgrounds so `exec` below still replaces this process as PID 1.
+#
+# NAMES, PATHS AND ORDERING COME FROM agentboard's OWN DATABASE, not from the
+# transcript directory. ~/.claude/projects/<slashes-as-dashes>/ is a lossy
+# encoding -- `-root-home-operations` could be /root/home-operations or
+# /root/home/operations, and this repo has a literal hyphen -- whereas
+# agent_sessions carries `project_path` verbatim, `display_name` as the UI
+# shows it (`pure-star`, not `a882e2df`), and `last_activity_at` for a
+# truthful "most recent". A row with no project_path, or one pointing at a
+# directory that no longer exists (a removed worktree), is skipped rather than
+# resumed into the wrong place.
+#
+# `$$` throughout is Flux's escape for a literal `$`; `$(...)` needs none.
+# See the mise block above for the warning this follows.
+AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-3}"
+# `-` not `:-`: unset gets the default, explicitly EMPTY means resume in
+# silence. That is the off switch and it needs no rebuild. No single quotes in
+# it -- it is interpolated into a single-quoted `bash -lc` string below.
+AGENTBOARD_RESUME_PROMPT="$${AGENTBOARD_RESUME_PROMPT-continue from where you left off}"
+
+if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
+(
+  # agentboard creates its session shortly after start; give it a minute.
+  i=0
+  while [ "$$i" -lt 60 ]; do
+    tmux has-session -t agentboard 2>/dev/null && break
+    i=$((i + 1))
+    sleep 1
+  done
+  tmux has-session -t agentboard 2>/dev/null || {
+    echo "==> agentboard tmux session never appeared; not resuming"
+    exit 0
+  }
+
+  db=/root/.agentboard/agentboard.db
+  [ -f "$$db" ] || exit 0
+
+  # Read-only, and tab-separated so a display_name with spaces survives.
+  DB="$$db" N="$$AGENTBOARD_RESUME_SESSIONS" bun -e '
+    import { Database } from "bun:sqlite";
+    const db = new Database(process.env.DB, { readonly: true });
+    const n = parseInt(process.env.N, 10);
+    const rows = db.query(
+      "SELECT session_id, display_name, project_path FROM agent_sessions " +
+      "WHERE project_path IS NOT NULL AND project_path != \x27\x27 " +
+      "ORDER BY last_activity_at DESC LIMIT ?1").all(n);
+    for (const r of rows) console.log([r.session_id, r.display_name, r.project_path].join("\t"));
+  ' 2>/dev/null | while IFS="$$(printf '\t')" read -r id name path; do
+      [ -n "$$id" ] || continue
+      if [ ! -d "$$path" ]; then
+        echo "==> skipping $$name: $$path is gone"
+        continue
+      fi
+      # tmux window names cannot contain ':' or '.'; fall back to the id.
+      wname=$(printf '%s' "$${name:-$$id}" | tr ':.' '__' | cut -c1-24)
+      [ -n "$$wname" ] || wname="$${id%%-*}"
+      cmd="claude --resume $$id"
+      if [ -n "$$AGENTBOARD_RESUME_PROMPT" ]; then
+        cmd="$$cmd \"$$AGENTBOARD_RESUME_PROMPT\""
+      fi
+      echo "==> resuming $$wname ($${id%%-*}) in $$path"
+      # A login shell, so ./bashrc restores the mise shims on PATH. The
+      # `claude` wrapper there passes arguments through untouched, so this
+      # resumes in place instead of being rewritten into a new worktree.
+      tmux new-window -d -t agentboard -n "$$wname" -c "$$path" \
+        "exec bash -lc '$$cmd'"
+    done
+) &
+fi
 
 echo "==> starting agentboard on :4040"
 exec agentboard --port 4040 --hostname 0.0.0.0
