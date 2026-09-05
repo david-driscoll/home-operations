@@ -110,7 +110,7 @@ Verified by direct read-only tool calls on 2026-09-05:
 | `toolhive-microsoft-docs_` | ✅ docs search |
 | `toolhive-openbao_` | not probed — both tools read secret material |
 | `toolhive-github_` | 401 after ~1h; fixed by a periodic restart |
-| `toolhive-tailscale_` | API calls failed; fixed by correcting the tailnet name |
+| `toolhive-tailscale_` | API calls failed on two counts — wrong tailnet name and a stale key; both fixed |
 | `toolhive-pulumi_` | read-only plugin cache; fixed by setting `PULUMI_HOME` |
 
 ### One trap worth knowing about
@@ -121,8 +121,19 @@ Two of the three failures reported a cause that was not the cause.
 needs a Tailscale binary". It does not. That package calls the REST API first
 and only shells out to the CLI **when the API call fails**, so the ENOENT was
 the fallback failing and its message had replaced the API error that actually
-mattered. The real fault was the tailnet name. `get_version` reports
-`cliAvailable: false` and is perfectly content.
+mattered. `get_version` reports `cliAvailable: false` and is perfectly content.
+
+Underneath it were **two** faults, not one, and each was individually enough to
+break the API call — which is why the first two attempts at a single root cause
+both looked right and both were incomplete:
+
+1. **The tailnet name was wrong.** `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
+   substitution, resolving to `driscoll.tech`. The estate's tailnet is actually
+   `opossum-yo.ts.net` — visible in every device name `list_devices` now
+   returns — so that value could never have matched.
+2. **The API key was stale.** It is re-minted every 5 minutes against a ~1h
+   lifetime, and the pod had held one from container start for nearly seven
+   hours.
 
 Likewise `github_get_me` returning `401 Bad credentials` invites you to go
 looking for a bad token. The token is fine — it is *stale*, because an env var
@@ -234,9 +245,9 @@ changes — but silently fatal for anything that rotates:
 
 - `toolhive-tailscale` — its API key is re-minted **every 5 minutes** by
   `stacks/unifi-network/tailscale-api-token.ts` against a ~1h lifetime, so a pod
-  more than an hour old is holding an expired key. That is the most likely
-  reason its API calls were failing (the `spawn tailscale ENOENT` was the CLI
-  fallback masking it).
+  more than an hour old is holding an expired key. This was one of the two
+  faults behind its `spawn tailscale ENOENT`; the other was a wrong tailnet
+  name. See [One trap worth knowing about](#one-trap-worth-knowing-about).
 - `toolhive-openbao` — a `VaultDynamicSecret`, dynamic by definition.
 - `toolhive-pulumi` — pulls the same hourly `github-token` via `secretKeyRef`.
 
