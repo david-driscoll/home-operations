@@ -136,11 +136,10 @@ fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
 - **`toolhive-github_`** — `GITHUB_PERSONAL_ACCESS_TOKEN` comes from a
   `secretKeyRef`, resolved once at start, while `github-token` is an App
   installation token re-minted every 30m against a 60m life. The image has no
-  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply, and
-  Reloader cannot help because the StatefulSet belongs to the ToolHive
-  operator. A CronJob patches the operator's own `restarted-at` annotation
-  every 20 minutes:
-  [`github-restart.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github-restart.yaml).
+  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply.
+  Reloader does the restart, on the rotation itself; a small CronJob keeps its
+  annotation on the operator-owned StatefulSet:
+  [`github-token-refresh.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github-token-refresh.yaml).
 - **`toolhive-tailscale_`** — `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
   substitution that the file itself flagged as never verified. Now `-`,
   Tailscale's alias for the credential's default tailnet, matching what
@@ -150,6 +149,54 @@ fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
   `/home/node/.pulumi` on a read-only rootfs despite `HOME=/tmp`. `PULUMI_HOME`
   now points into the writable emptyDir. Whether plugin *download* then
   succeeds depends on egress and is unverified.
+
+
+### The option not taken: a remote backend with header injection
+
+Worth knowing about, because it would delete the CronJob above entirely.
+
+ToolHive can register a backend that runs **no pods at all**. `MCPServerEntry`
+(v1beta1, installed here and the stored version) is a "zero-infrastructure
+catalog entry": the vMCP connects straight to a remote URL, and headers can be
+injected from a Secret.
+
+```yaml
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServerEntry
+metadata:
+  name: toolhive-github
+spec:
+  remoteUrl: https://api.githubcopilot.com/mcp
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: Authorization
+        valueSecretRef:
+          name: github-token
+          key: authorization      # would need to render "Bearer <token>"
+```
+
+That removes the pod whose env var goes stale, which is the entire bug. Three
+things stopped it being the fix here, and all three are checkable:
+
+1. **Does the vMCP re-read the Secret?** If it caches at startup, the staleness
+   has just moved to the vMCP — which fronts *every* backend, making it strictly
+   worse than a pod that only serves GitHub.
+2. **Does GitHub's hosted MCP accept a GitHub App installation token?** The
+   estate's credential is an App token, not a user PAT, and the hosted endpoint
+   is documented with PATs.
+3. **`headerForward` has no format string.** It injects a raw Secret value, so
+   the Secret would need a key already containing `Bearer <token>` — a fourth
+   rendering in the `github-token` ExternalSecret, which already renders the
+   same token four ways.
+
+Note also that the newer upstream shape — `VirtualMCPServer.outgoingAuth` with
+`type: service_account`, `credentialsRef` and `headerFormat: "Bearer {token}"` —
+is **not** available on the CRD installed here: this cluster's `outgoingAuth`
+accepts only `discovered` and `externalAuthConfigRef`. That is worth re-checking
+after a ToolHive upgrade, since it would solve the format problem cleanly.
 
 ## Troubleshooting
 

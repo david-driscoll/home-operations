@@ -1,0 +1,154 @@
+---
+# WHAT KEEPS ./github.yaml AUTHENTICATED. Read that file's env comment first:
+# github-mcp-server takes its credential from an environment variable, an
+# environment variable resolves once at container start, and `github-token` is
+# an App installation token that dies ~60m later. Nothing in the image can
+# refresh it in place, so the pod has to be restarted when the token rotates.
+#
+# RELOADER DOES THE RESTART. This file does NOT restart anything -- it only
+# makes the workload eligible, once, and then keeps it eligible. The actual
+# bounce is driven by ../../kube-system/reloader watching `github-token` and
+# rolling the StatefulSet when its contents change, which is the moment a
+# fresh token lands rather than an arbitrary point on a timer.
+#
+# ---------------------------------------------------------------------------
+# WHY AN IMPERATIVE JOB EXISTS AT ALL, in a repo that declares everything.
+# Four things were checked before settling for it, and each is why the
+# obvious declarative shape does not exist:
+#
+#   1. Reloader keys off the WORKLOAD's annotations. Annotating the Secret
+#      does nothing on its own -- `github-token` has carried
+#      `reloader.stakater.com/auto: "true"` this whole time and this
+#      StatefulSet still sat through nine token rotations untouched.
+#
+#   2. The StatefulSet is not ours to declare. The ToolHive operator creates
+#      and owns it; there is no manifest here to put an annotation on, and
+#      declaring our own copy would fight the operator for the object.
+#
+#   3. `MCPServer.spec.resourceOverrides` cannot reach it. Checked against
+#      the CRD actually installed in this cluster: it has exactly two keys,
+#      `proxyDeployment` and `proxyService`. The proxy Deployment is not
+#      where the token lives -- the `mcp` container on the StatefulSet is --
+#      so neither override touches the object that needs the annotation.
+#
+#   4. There is no mutating policy engine here. No Kyverno, no Gatekeeper,
+#      nothing that could inject the annotation admission-side.
+#
+# WHY THE ANNOTATION IS NOT SIMPLY ERASED on the operator's next reconcile,
+# which is the obvious objection: the operator writes that StatefulSet with
+# SERVER-SIDE APPLY, and its field ownership covers `metadata.labels` and not
+# `metadata.annotations` (read off the live object's `managedFields`, manager
+# `toolhive-container-manager`, operation `Apply`). SSA only prunes fields a
+# manager previously owned and has stopped setting. It has never owned
+# annotations, so there is nothing for it to prune, and an annotation written
+# by a different manager -- this Job -- survives its reconciles.
+#
+# It does NOT survive the StatefulSet being deleted and recreated, which the
+# operator will do if an immutable field ever changes. That is the whole
+# reason this is a CronJob rather than a one-shot Job: the annotation is
+# re-asserted on a schedule, so the worst case is one interval of staleness
+# rather than a silent permanent regression.
+# ---------------------------------------------------------------------------
+#
+# THIS IS CHEAPER THAN IT LOOKS. `kubectl annotate` with an unchanged value is
+# a no-op -- it reports "unchanged" and issues no write -- so the steady state
+# is one read every 15 minutes and nothing else. In particular this job does
+# not itself cause a single restart; only a real token rotation does.
+#
+# THE ALTERNATIVE, if Reloader ever turns out not to act on this: ToolHive
+# publishes its own restart annotation,
+# `mcpserver.toolhive.stacklok.dev/restarted-at` (docs/operator/restart-annotation.md),
+# and patching THAT on a `*/20` schedule bounces the pod unconditionally.
+# That was the first shape of this file. It works, but it restarts a shared
+# backend three times an hour whether or not anything changed, so it is
+# recorded here as the fallback rather than shipped as the default.
+#
+# THE REAL WAY OUT is a credential that does not expire hourly -- a
+# fine-grained PAT in OpenBao would delete this file outright -- but that
+# trades a short-lived App token for a long-lived static one, which is a
+# security call for a human to make and not something to slip into a bug fix.
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: toolhive-github-token-refresh
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: toolhive-github-token-refresh
+rules:
+  # `resourceNames` pins this to the ONE StatefulSet it exists for. Without it
+  # this ServiceAccount could annotate -- and therefore, through Reloader,
+  # bounce -- every backend in the group: openbao, kubernetes, proxmox and the
+  # rest. `get` accompanies `patch` because `kubectl annotate` reads before it
+  # writes, and because a missing object should fail loudly as NotFound rather
+  # than silently no-op.
+  #
+  # No `list`/`watch`: this addresses one object by name and never enumerates.
+  # (`kubectl annotate <kind> <name>` does a get, not a list.)
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    resourceNames: ["toolhive-github"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: toolhive-github-token-refresh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: toolhive-github-token-refresh
+subjects:
+  - kind: ServiceAccount
+    name: toolhive-github-token-refresh
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: toolhive-github-token-refresh
+spec:
+  # 15m is not tuned to the token's lifetime -- Reloader handles that, on the
+  # rotation itself. It is only how long the annotation may be missing after
+  # the operator recreates the StatefulSet, which is rare.
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 120
+      template:
+        spec:
+          serviceAccountName: toolhive-github-token-refresh
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: kubectl
+              # Same pinned image the estate's other kubectl CronJobs use
+              # (kubernetes/apps/equestria/media/jellyfin/restart.yaml).
+              image: bitnami/kubectl@sha256:b29d8c1665b70817259ceecaea16ab27aab6368b48daf485d19436c809067492
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  kubectl annotate statefulset toolhive-github \
+                    reloader.stakater.com/auto=true --overwrite
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi

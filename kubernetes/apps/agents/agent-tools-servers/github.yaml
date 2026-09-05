@@ -45,7 +45,7 @@ spec:
           # ../agentboard/externalsecret.yaml's header. Takes precedence
           # over OAuth per the image's own docs, so this alone is
           # sufficient TO AUTHENTICATE. It does not STAY authenticated,
-          # which is what ./github-restart.yaml exists for:
+          # which is what ./github-token-refresh.yaml exists for:
           #
           # `secretKeyRef` resolves ONCE, at container start.
           # `github-token` is a GitHub App INSTALLATION token, re-minted
@@ -64,12 +64,18 @@ spec:
           # environment variable and document no token-file equivalent, so
           # a directory mount would have nothing to read it.
           #
-          # NOR IS THE SECRET ANNOTATION THE ANSWER, and this pod is the
-          # evidence: `github-token` ALREADY carries
-          # `reloader.stakater.com/auto: "true"` and this workload still
-          # sat unrestarted through nine rotations. Reloader keys off the
+          # NOR IS THE SECRET ANNOTATION ON ITS OWN THE ANSWER, and this pod
+          # is the evidence: `github-token` ALREADY carries
+          # `reloader.stakater.com/auto: "true"` and this workload still sat
+          # unrestarted through nine rotations. Reloader keys off the
           # WORKLOAD, and the StatefulSet here belongs to the ToolHive
-          # operator, not to this file -- there is nothing here to annotate.
+          # operator -- there is nothing in THIS file to annotate.
+          #
+          # Reloader is still what does the restarting, though. The missing
+          # piece is getting its annotation onto that operator-owned
+          # StatefulSet, which ./github-token-refresh.yaml does and explains
+          # at length -- including why `spec.resourceOverrides` cannot reach
+          # it and why the annotation is not erased on the next reconcile.
           env:
             - name: GITHUB_PERSONAL_ACCESS_TOKEN
               valueFrom:
