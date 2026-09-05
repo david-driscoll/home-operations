@@ -436,11 +436,12 @@ scope.
 
 Two things that follow, and both are easy to get wrong:
 
-- **`reloader.stakater.com/auto` goes on the WORKLOAD, and only there.** It is meaningless on a
-  Secret or ConfigMap; the resource-side annotations are `match` (opt-in with `search: "true"`)
-  and `ignore`. The estate puts `auto` on a lot of Secrets and ExternalSecrets where it does
-  nothing. `StatefulSet/openbao` already carries it correctly, so 2.3 needs no annotation
-  change — only the volume mount.
+- **`reloader.stakater.com/auto` goes on the WORKLOAD** — or on its pod template, which Reloader
+  falls back to when the workload carries none of the annotations it looks for. It is meaningless
+  on a Secret or ConfigMap; the resource-side annotations are `match` (opt-in with `search: "true"`)
+  and `ignore`. The estate used to put `auto` on a lot of Secrets and ExternalSecrets where it did
+  nothing; those were swept out. `StatefulSet/openbao` already carries it correctly, so 2.3 needs
+  no annotation change — only the volume mount.
 - **Still verify after 2.3 that reloader has actually picked the Secret up.** A
   mounted-but-unwatched Secret is the failure mode, and it would stay silent for 83 days.
   Watch for a reload event, or force it:

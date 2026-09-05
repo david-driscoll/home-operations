@@ -372,8 +372,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: ${APP}-env
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   secretStoreRef:
     kind: ClusterSecretStore
@@ -388,8 +386,6 @@ spec:
       metadata:
         labels:
           cnpg.io/reload: "true"
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         TZ: "${TIMEZONE}"
         # Database / Redis / OIDC variables (examples)
@@ -742,11 +738,31 @@ initContainers:
 ```
 
 ### Auto-Reload on Secret Changes
-Use `reloader.stakater.com/auto: "true"` annotation to restart pods when ExternalSecrets change:
+`reloader.stakater.com/auto: "true"` restarts a pod when a Secret or ConfigMap it
+references changes. **It goes on the WORKLOAD** — the Deployment / StatefulSet /
+DaemonSet / CronJob — which in app-template means `controllers.<name>.annotations`:
+
 ```yaml
-annotations:
-  reloader.stakater.com/auto: "true"
+controllers:
+  app:
+    annotations:
+      reloader.stakater.com/auto: "true"
 ```
+
+If the workload carries none of the annotations Reloader looks for, it falls back
+to the **pod template's** annotations, so `controllers.<name>.pod.annotations` also
+works. That fallback is the only way to reach an operator-owned workload you cannot
+declare (see `kubernetes/apps/agents/agent-tools-servers/github.yaml`, which puts it
+on `MCPServer.spec.podTemplateSpec.metadata.annotations`).
+
+**Do NOT put it on the ExternalSecret, on `spec.target.template.metadata.annotations`,
+or on the Secret itself — Reloader never reads any of those.** The only annotations
+meaningful on a Secret/ConfigMap are `reloader.stakater.com/match` (paired with
+`search: "true"` on the workload) and `reloader.stakater.com/ignore`. Nor does it
+belong on a Service, Ingress, HTTPRoute or Certificate `secretTemplate`. There is
+also no bare `reloader.stakater.com/reload`; the named forms are
+`configmap.reloader.stakater.com/reload` and `secret.reloader.stakater.com/reload`,
+and they take a resource name rather than `"true"`.
 
 ### Probes for Reliability
 Always include readiness and liveness probes:
@@ -844,7 +860,7 @@ When copying from a reference app:
   - Check pod events: `kubectl describe pod -n NAMESPACE POD_NAME`
 **Image digest mismatches**: If using v1.0.0 but chart resolves to v1.0.1, check Helm chart source for image pinning strategy
 **Pod stuck in Recreate strategy**: Check for PVC/storage binding issues, wait for volsync to ready state
-**reloader not triggering restarts**: Ensure `reloader.stakater.com/auto: "true"` annotation is on controller, and ExternalSecret has matching annotations
+**reloader not triggering restarts**: Ensure `reloader.stakater.com/auto: "true"` is on the controller (or its pod template) and that the workload actually references the Secret. The annotation does nothing on the ExternalSecret or on the Secret it produces — check the rendered Deployment, not the ExternalSecret
 **Permission denied on mounted storage**: For NFS, verify supplementalGroups includes storage owner GID; for media apps, verify PUID/PGID match storage ownership
 **Probes failing (not ready/alive)**:
   - Verify endpoint paths match app configuration (/health, /ready, /alive, /ping)

@@ -14,8 +14,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: &name postgres-user
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   refreshPolicy: Periodic
   refreshInterval: 4m
@@ -31,7 +29,6 @@ spec:
         labels:
           cnpg.io/reload: "true"
         annotations:
-          reloader.stakater.com/auto: "true"
           reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
       templateFrom:
         - target: Data
@@ -81,8 +78,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: &name postgres-superuser
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   refreshPolicy: Periodic
   refreshInterval: 4m
@@ -98,7 +93,6 @@ spec:
         labels:
           cnpg.io/reload: "true"
         annotations:
-          reloader.stakater.com/auto: "true"
           reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
       templateFrom:
         - target: Data

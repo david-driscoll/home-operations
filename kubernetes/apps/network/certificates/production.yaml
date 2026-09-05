@@ -15,7 +15,6 @@ spec:
     annotations:
       reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
       reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
-      reloader.stakater.com/auto: "true"
   issuerRef:
     name: letsencrypt-production
     kind: ClusterIssuer

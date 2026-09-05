@@ -700,7 +700,7 @@ table assumed only the first and got two apps wrong.
 
 | Mechanism | How it works | Needs |
 | --- | --- | --- |
-| Stakater Reloader | restarts the workload when a Secret it references changes | `reloader.stakater.com/auto: "true"` **on the workload**, not the pod template |
+| Stakater Reloader | restarts the workload when a Secret it references changes | `reloader.stakater.com/auto: "true"` **on the workload** — or on its pod template, which Reloader falls back to when the workload carries none. Never on the Secret |
 | Helm `valuesFrom` | helm-controller re-renders the release when a referenced Secret changes | nothing — automatic |
 | ESO reloader | annotates *downstream ExternalSecrets* so a chained sync re-runs | the `Config` CR, already deployed |
 

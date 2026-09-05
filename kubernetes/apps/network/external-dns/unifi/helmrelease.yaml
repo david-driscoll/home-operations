@@ -147,4 +147,8 @@ spec:
     serviceMonitor:
       enabled: true
     podAnnotations:
-      reloader.stakater.com/reload: "true"
+      # `/auto`, not `/reload`: there is no bare `reloader.stakater.com/reload`
+      # annotation -- only the `configmap.`/`secret.`-prefixed forms, which take
+      # a resource NAME rather than "true". This read as enabled and was inert.
+      # Matches ../cloudflare and ../technitium, which had it right all along.
+      reloader.stakater.com/auto: "true"

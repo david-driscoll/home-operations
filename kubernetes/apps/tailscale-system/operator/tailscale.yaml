@@ -23,10 +23,6 @@ spec:
   target:
     name: tailscale-oauth
     creationPolicy: Owner
-    template:
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
   dataFrom:
     - extract:
         # was: vaults/Eris/items/Eris Tailscale OAuth Operator

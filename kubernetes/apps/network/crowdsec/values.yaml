@@ -101,8 +101,6 @@ config:
     share_tainted: true
     share_context: true
 
-deployAnnotations:
-  reloader.stakater.com/auto: "true"
 
 # Makes crowdsec's own logs findable in Loki. Alloy derives its `app` label from
 # `__meta_kubernetes_pod_label_app_kubernetes_io_name` (observability/alloy's
@@ -325,7 +323,12 @@ agent:
       memory: 128Mi
     limits:
       memory: 256Mi
-  deployAnnotations:
+  # `daemonsetAnnotations`, not `deployAnnotations`: the agent renders as a
+  # DaemonSet here (`isDeployment` is unset), and chart 0.24.2 reads
+  # `agent.daemonsetAnnotations` for it -- `agent.deployAnnotations` is not a
+  # key the chart has at all, so this annotation reached no object. `lapi` below
+  # is the one component that really does use `deployAnnotations`.
+  daemonsetAnnotations:
     reloader.stakater.com/auto: "true"
   metrics:
     enabled: true

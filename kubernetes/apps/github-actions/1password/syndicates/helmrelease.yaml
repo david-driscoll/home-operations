@@ -29,8 +29,6 @@ spec:
       host: onepassword-syndicates
       annotations:
         reloader.stakater.com/auto: "true"
-      serviceAnnotations:
-        reloader.stakater.com/auto: "true"
       api:
         serviceMonitor:
           enabled: true

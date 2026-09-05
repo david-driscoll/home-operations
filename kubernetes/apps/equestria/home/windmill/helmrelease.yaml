@@ -97,12 +97,19 @@ spec:
       databaseUrlSecretKey: uri
       app:
         # NOTE: `app.annotations` renders onto the POD TEMPLATE, not the
-        # Deployment. Reloader only honours the annotation on the workload, so
-        # this one has never done anything -- verified live: the Deployment had
-        # no reloader annotation and the pod template had one. The working copy
-        # is applied by the post-render patch at the bottom of this file. This
-        # is left in place because it is harmless and the chart offers no
-        # `deploymentAnnotations` for the app component (worker groups do).
+        # Deployment. That is still enough on its own -- Reloader reads the
+        # workload's annotations first and FALLS BACK to the pod template's when
+        # the workload carries none of the ones it looks for (pkg/common's
+        # `if !found && !foundAuto && !foundTypedAuto && !foundSearchAnn`).
+        # An earlier version of this comment said the fallback did not exist and
+        # that this line had never done anything; that was wrong, and the same
+        # mistake is what put a CronJob in front of agent-tools' github backend
+        # before #1500 removed it.
+        # The post-render patch at the bottom of this file puts the annotation on
+        # the Deployment as well, which is what Reloader then actually reads --
+        # the workload wins and this one is never consulted. Kept because the
+        # chart offers no `deploymentAnnotations` for the app component (worker
+        # groups do), so this is the only in-values place to express the intent.
         annotations:
           reloader.stakater.com/auto: "true"
         volumes: &volumes

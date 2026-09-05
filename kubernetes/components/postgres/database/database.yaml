@@ -5,7 +5,6 @@ kind: Database
 metadata:
   name: ${APP}
   annotations:
-    reloader.stakater.com/auto: "true"
     # Nothing this component renders is ever pruned. The nested ks is
     # `deletionPolicy: Orphan` and both CRs carry `retain` reclaim policies, so
     # the guard is not what protects the data -- it protects the objects from a

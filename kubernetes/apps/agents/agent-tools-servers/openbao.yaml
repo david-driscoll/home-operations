@@ -147,8 +147,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: toolhive-openbao
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   refreshPolicy: Periodic
   refreshInterval: 20m
@@ -156,9 +154,6 @@ spec:
     name: toolhive-openbao
     creationPolicy: Owner
     template:
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         OPENBAO_URL: http://openbao-active.kube-system.svc.cluster.local:8200
         OPENBAO_TOKEN: "{{ .token }}"

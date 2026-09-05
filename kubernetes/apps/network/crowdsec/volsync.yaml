@@ -36,8 +36,6 @@ spec:
       metadata:
         labels:
           volsync: "true"
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         # Own repository per source -- restic repositories are per-volume here,
         # matching the one-repo-per-`${APP}` shape the component establishes.
@@ -62,8 +60,6 @@ spec:
       metadata:
         labels:
           volsync: "true"
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         RESTIC_REPOSITORY: "/repository/crowdsec-db"
         RESTIC_PASSWORD: "{{ .credential }}"

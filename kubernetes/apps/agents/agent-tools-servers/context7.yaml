@@ -104,8 +104,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: toolhive-context7
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   secretStoreRef:
     kind: ClusterSecretStore
@@ -116,9 +114,6 @@ spec:
     name: toolhive-context7
     creationPolicy: Owner
     template:
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         CONTEXT7_API_KEY: "{{ .apikey }}"
   data:

@@ -55,9 +55,11 @@ kubectl_cmd="kubectl create secret docker-registry $SECRET_NAME \
 # Execute with dry-run first, then apply
 $kubectl_cmd --dry-run=client -o yaml | kubectl apply -f -
 
-# Add annotations for reflection and reloading
+# Add annotations for reflection.
+# No `reloader.stakater.com/auto` here: Reloader reads that off the WORKLOAD
+# (falling back to its pod template), never off the Secret, so on this object it
+# did nothing. The consumers that must restart carry it themselves.
 echo "Adding annotations to secret..."
-kubectl annotate secret $SECRET_NAME reloader.stakater.com/auto='true' --namespace=kube-system --overwrite
 kubectl annotate secret $SECRET_NAME reflector.v1.k8s.emberstack.com/reflection-allowed='true' --namespace=kube-system --overwrite
 kubectl annotate secret $SECRET_NAME reflector.v1.k8s.emberstack.com/reflection-auto-enabled='true' --namespace=kube-system --overwrite
 

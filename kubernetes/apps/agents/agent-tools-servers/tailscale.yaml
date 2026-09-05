@@ -23,8 +23,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: toolhive-tailscale
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   secretStoreRef:
     kind: ClusterSecretStore
@@ -35,9 +33,6 @@ spec:
     name: toolhive-tailscale
     creationPolicy: Owner
     template:
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         TAILSCALE_API_KEY: "{{ .api_key }}"
         # "-" is Tailscale's alias for "the default tailnet of whatever

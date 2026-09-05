@@ -13,7 +13,6 @@ patches:
       metadata:
         name: not-used
         annotations:
-          reloader.stakater.com/auto: "true"
           external-dns.alpha.kubernetes.io/target: "${TUNNEL_DOMAIN}"
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
   - target:
@@ -30,6 +29,5 @@ patches:
           ingress:
             external:
               annotations:
-                reloader.stakater.com/auto: "true"
                 external-dns.alpha.kubernetes.io/target: "${TUNNEL_DOMAIN}"
                 traefik.ingress.kubernetes.io/router.entrypoints: websecure
