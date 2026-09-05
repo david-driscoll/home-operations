@@ -46,9 +46,27 @@ spec:
     # rotation (8 over 8 seconds at cutover, none after). That is the
     # rotate-then-propagate gap, not a fault.
     - ../../../components/postgres
-    - ../../../components/tailscale
+    #
+    # NO components/tailscale. Coder has exactly ONE CODER_ACCESS_URL
+    # (https://code.${ROOT_DOMAIN}) and derives the OIDC redirect_uri, the
+    # workspace-app wildcard, the `coder` CLI endpoint and every agent dial
+    # address from it -- there is no per-Host equivalent. A second hostname
+    # therefore cannot serve a login: starting the flow on
+    # code.${TAILSCALE_DOMAIN} set `oauth_state` on THAT origin while sending
+    # authentik a redirect_uri on code.${ROOT_DOMAIN}, so the callback arrived
+    # cookie-less and coder answered 401 `Cookie "oauth_state" must be
+    # provided.` (2026-09-05).
+    #
+    # CODER_REDIRECT_TO_ACCESS_URL is NOT the fix. Its first check is
+    # `!tunnel && accessURL.Scheme == "https" && r.TLS == nil` (cli/server.go),
+    # which runs BEFORE the X-Forwarded-Host and app-hostname escapes, and
+    # coder honours X-Forwarded-Proto nowhere in coderd/ or cli/. TLS is
+    # terminated at Traefik, so r.TLS is nil on every request and the flag
+    # would redirect the whole deployment to the access URL root in a loop.
+    #
+    # The tailnet reaches code.${ROOT_DOMAIN} through split-horizon DNS
+    # anyway, so nothing is lost.
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      TAILSCALE_HOST: code

@@ -19,13 +19,20 @@ spec:
   authentik:
     oauth2:
       clientType: confidential
+      # ONE entry on purpose. Coder builds redirect_uri from CODER_ACCESS_URL
+      # and nothing else, so a code.${TAILSCALE_DOMAIN} entry is never sent --
+      # it only made the single-access-URL constraint look optional. See
+      # ks.yaml for why coder has no tailnet route.
       allowedRedirectUris:
         - url: "https://code.${ROOT_DOMAIN}/api/v2/users/oidc/callback"
-        - url: "https://code.${TAILSCALE_DOMAIN}/api/v2/users/oidc/callback"
       propertyMappings:
         - email
         - openid
         - profile
+        # helmrelease.yaml asks for the offline_access scope. Without the
+        # matching mapping authentik simply does not grant it, coder gets no
+        # refresh token, and sessions end at token expiry instead of renewing.
+        - offline_access
       includeClaimsInIdToken: true
       subMode: user_email
 
