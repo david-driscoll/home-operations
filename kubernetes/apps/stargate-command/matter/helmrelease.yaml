@@ -77,6 +77,24 @@ spec:
         fsGroupChangePolicy: "OnRootMismatch"
         supplementalGroups:
           - 34
+      # hostNetwork is DELIBERATE and load-bearing. Do not "modernise" this to a
+      # Multus ipvlan LAN attachment the way jellyfin and plex were -- that was
+      # investigated for this workload and rejected on evidence. See
+      # docs/lan-attach/README.md "Stage 2".
+      #
+      # Measured on the running pod, matter is joined on the LAN NIC to
+      # 224.0.0.251 (mDNS v4) and ff02::fb (mDNS v6) and binds 5353 on both
+      # stacks. Its IPv6 need is link-local only -- this network has no routable
+      # IPv6 at all, every interface carries just fe80::/64 -- so link-local was
+      # never the blocker.
+      #
+      # The blocker is that an ipvlan attachment ADDS a second interface rather
+      # than replacing eth0, and the server then has to pick one. The documented
+      # lever is `--primary-interface`, and the most recent report of it
+      # (home-assistant/core#152848, Oct 2025) says plainly: "the parameter is
+      # ignored and it still binds useless interface enp1s0". That issue was
+      # closed `not_planned` by a stale bot, not fixed. Betting commissioned
+      # Matter fabrics on an unproven flag is not worth the tidier pod spec.
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
 

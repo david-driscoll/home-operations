@@ -167,7 +167,29 @@ spec:
                 memory: 1Gi
 
     defaultPodOptions:
-      # required for mDNS and other host network features
+      # hostNetwork is DELIBERATE and load-bearing. Do not "modernise" this to a
+      # Multus ipvlan LAN attachment the way jellyfin and plex were -- that was
+      # investigated for this workload and rejected on evidence. See
+      # docs/lan-attach/README.md "Stage 3".
+      #
+      # Measured on the running pod, HA is joined on the LAN NIC to
+      # 224.0.0.251 + ff02::fb (mDNS) and 239.255.255.250 + ff02::c (SSDP), and
+      # binds 5353, 1900, 8123, 8888, the HomeKit bridges (21063-21065) and the
+      # accessory-mode cameras (21070-21073).
+      #
+      # An ipvlan attachment cannot replace this, because it ADDS a second
+      # interface rather than replacing eth0 -- Cilium stays the default CNI, so
+      # the pod would hold both the pod network and the LAN. HA's zeroconf then
+      # has to choose, and home-assistant/core#132288 closes with the reporter
+      # confirming exactly the wrong choice: "it was indeed only using the eth0
+      # by default instead of the other interface that is the macvlan". The
+      # mitigation (`advertise_ip` / `ip_address` on the HomeKit entry) lives in
+      # HA's own config, not in git, so it would not be reproducible from this
+      # repo -- and getting it wrong re-advertises every HomeKit accessory and
+      # camera on an unreachable 10.206.x.x.
+      #
+      # hostNetwork gives this pod ONE coherent view of the network, which is
+      # why every upstream doc specifies host networking for HomeKit and SSDP.
       hostNetwork: true
       securityContext:
         fsGroup: 568
