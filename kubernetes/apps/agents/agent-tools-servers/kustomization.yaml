@@ -50,7 +50,7 @@ resources:
   - ./proxmox/twilight-sparkle
   - ./proxmox/celestia
   - ./proxmox/luna
-  - ./proxmox/skystar
+  # - ./proxmox/skystar
   - ./proxmox/alpha-site
   - ./openbao.yaml
   - ./postgres.yaml
