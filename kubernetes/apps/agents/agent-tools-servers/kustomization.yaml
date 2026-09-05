@@ -40,6 +40,7 @@ resources:
   - ./unifi-protect.yaml
   - ./unifi-access.yaml
   - ./github.yaml
+  - ./github-restart.yaml
   - ./context7.yaml
   - ./degoog.yaml
   - ./nuget.yaml
