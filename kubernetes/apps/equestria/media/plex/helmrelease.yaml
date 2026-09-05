@@ -77,13 +77,30 @@ spec:
               #     name: spike-management-credentials
               #     key: claim
             probes:
+              # exec probes on purpose, and NOT tunable back to httpGet while
+              # this pod carries the plex-lan-net ipvlan interface.
+              #
+              # A kubelet-dialed httpGet sources from the node's LAN IP. The
+              # pod's net1 carries 10.10.206.21/16, whose connected route is
+              # more specific than the eth0 default, so the reply is routed out
+              # net1 -- and an ipvlan child cannot reach its own parent. The
+              # probe times out, the pod never goes Ready, the Service loses its
+              # endpoints and the HTTPRoute has no backend.
+              #
+              # This is the exact trap technitium's helmrelease already
+              # documents; it was missed when the LAN attachment landed and took
+              # plex and jellyfin down until this fix. Curling 127.0.0.1 from
+              # inside the container never leaves the pod, so no return path is
+              # involved.
               liveness: &probes
                 enabled: true
                 custom: true
                 spec:
-                  httpGet:
-                    path: /identity
-                    port: &port 32400
+                  exec:
+                    command:
+                      - bash
+                      - -c
+                      - curl -fsS --max-time 8 http://127.0.0.1:32400/identity >/dev/null
                   initialDelaySeconds: 10
                   periodSeconds: 20
                   timeoutSeconds: 10
@@ -152,15 +169,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-              # Narrows the GPU set to the enp2s0 nodes (fluttershy, kerfuffle).
-              # plex-lan-net hardcodes `master: enp2s0`, and a NAD names exactly
-              # one parent interface, so the pod must not land on a control
-              # plane -- those carry enp3s0 and the attachment would fail there.
-              # Identical constraint to jellyfin. See docs/lan-attach/README.md.
-              - key: lan-nic
-                operator: In
-                values:
-                - enp2s0
 
     service:
       app:
@@ -168,7 +176,10 @@ spec:
         type: ClusterIP
         ports:
           http:
-            port: *port
+            # `&port` used to live on the probe's httpGet; it moved here when the
+            # probes became exec (see the probes block above). This is now the
+            # first occurrence, so it must stay ahead of the route's `*port`.
+            port: &port 32400
 
     route:
       internal:

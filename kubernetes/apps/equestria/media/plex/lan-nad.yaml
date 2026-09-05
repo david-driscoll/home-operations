@@ -33,22 +33,35 @@ metadata:
     # PLEX_NO_AUTH_NETWORKS already contains 10.10.0.0/16, so direct LAN access
     # on :32400 is deliberate and pre-existing policy, not something this opens.
     #
-    # ipvlan rather than macvlan, and master enp2s0 rather than enp3s0, for the
-    # same reasons as jellyfin-lan-net -- see that file and
-    # docs/lan-attach/README.md. Plex carries the identical Intel GPU affinity,
-    # so it needs the same `lan-nic: enp2s0` term to stay off the control
-    # planes, where this parent interface does not exist.
+    # `master` is deliberately OMITTED. The ipvlan CNI plugin documents it as
+    # optional, defaulting to the default route interface, and every node in
+    # this cluster routes default via its own LAN NIC and gateway 10.10.0.1:
+    #   fluttershy, kerfuffle, hard-hat -> enp2s0
+    #   milky-way, othalla, pegasus     -> enp3s0
+    #   shining-armor                   -> ens18
+    # So one NAD resolves to the correct parent on every node, and the workload
+    # is free to schedule anywhere its other constraints allow -- here, any
+    # Intel GPU node. This replaced a hardcoded `master: enp2s0` plus a
+    # `lan-nic` node label, which pinned the pod to two of the five GPU nodes
+    # purely to match the NIC name.
     #
-    # Address is PLEX_LAN_IP (10.10.206.21): verified free by ARP probe and
-    # absent from the UniFi client list, below the Cilium pool so it can never
-    # be auto-assigned, and adjacent to JELLYFIN_LAN_IP (.20).
+    # The assumption this rests on: the default route stays on the LAN NIC. If
+    # a node ever takes its default route via another interface, its ipvlan
+    # child follows that interface instead. Nothing here does that today --
+    # Tailscale runs as a subnet router, not a default gateway.
+    #
+    # Address is PLEX_LAN_IP (10.10.206.21): absent from the UniFi client list,
+    # below the Cilium pool so it can never be auto-assigned, and adjacent to
+    # JELLYFIN_LAN_IP (.20). The UniFi client list is the real evidence here --
+    # an ARP probe was also run at the time, but from a cilium-agent container
+    # that has no working ping, so it reported EVERY address free and proved
+    # nothing. Use a pod with real tooling if you need to re-check.
 spec:
   config: |
     {
       "cniVersion": "0.3.1",
       "name": "plex-lan-net",
       "type": "ipvlan",
-      "master": "enp2s0",
       "mode": "l2",
       "ipam": {
         "type": "static",

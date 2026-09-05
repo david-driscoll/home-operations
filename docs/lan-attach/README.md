@@ -88,23 +88,43 @@ foundation.
 | `othalla` | control plane | `enp3s0` | 10.10.209.11 | yes |
 | `pegasus` | control plane | `enp3s0` | 10.10.209.12 | yes |
 
-A NAD hardcodes `master`, so **a workload that can land on both `enp2s0` and
-`enp3s0` nodes cannot use a single NAD.** Every LAN-attached workload must be
-pinned to one NIC family. This is why stage 1 narrows Jellyfin.
+Every node routes its default via its own LAN NIC and gateway `10.10.0.1`.
+That matters: the ipvlan CNI plugin documents `master` as **optional**, and
+"Defaults to default route interface" when omitted. So a NAD that leaves
+`master` out resolves to the right parent on every node by itself, and the
+workload is free to schedule anywhere its other constraints allow.
+
+The NADs originally hardcoded `master: enp2s0` and paired it with a `lan-nic`
+node label, which pinned Jellyfin and Plex to two of the five Intel GPU nodes
+purely to match a NIC name. That restriction is gone — see "Portability across
+nodes" below.
 
 ## Constraints that apply to every LAN attachment
 
 - **Static IPAM is one address per NAD, so one pod per NAD.** Single-replica
   workloads only. If this grows past a handful, swap to the `whereabouts` IPAM
   plugin for a shared pool rather than minting NADs by hand.
+- **Omit `master`.** Let it default to the default-route interface so the NAD
+  is node-agnostic. The assumption this rests on is that a node's default route
+  stays on its LAN NIC; nothing here changes that today, since Tailscale runs as
+  a subnet router rather than a default gateway. If that ever changes, an ipvlan
+  child would follow the new default interface.
 - **Addresses must dodge two allocators.** The Cilium pool is
   `10.10.206.100-200` and `.202-252`; UniFi DHCP is `10.10.0.5-10.10.254.254`.
   Technitium sits at `10.10.206.202`, inside the Cilium block — it survives only
   because Cilium allocates upward from `.100`. **Do not repeat that.** Pick from
   outside both and add a UniFi reservation.
-- **Parent/child isolation:** a node cannot reach its own ipvlan child's IP.
-  Kubelet probes must target the primary Cilium pod IP — the default — so never
-  point a probe at the LAN address.
+- **Parent/child isolation breaks kubelet probes — use `exec` probes.** This is
+  the sharpest edge here and it cost an outage. A node cannot reach its own
+  ipvlan child, *and the reverse path bites too*: net1 carries a `/16`, whose
+  connected route is more specific than the eth0 default, so a reply to the
+  node's LAN IP leaves via net1 and dies. A kubelet-dialed `httpGet`/`tcpSocket`
+  sources from exactly that address, so it always times out — the pod never goes
+  Ready, the Service loses its endpoints, and the HTTPRoute has no backend.
+  Every LAN-attached workload must probe over `127.0.0.1` with an `exec` probe,
+  which never leaves the pod. `technitium`'s helmrelease documented this before
+  any of this work started; jellyfin and plex shipped with `httpGet` anyway and
+  went down until they were converted.
 - **One mDNS speaker per parent NIC.** ipvlan children share the parent MAC;
   multiple IGMP/mDNS speakers on one parent get ambiguous.
 
@@ -167,24 +187,34 @@ or its substitution — the 465-chart pass says nothing about this file.
    set to `10.10.206.20` and `10.10.206.21`. Flux renders a missing `${VAR}` as
    empty, which would ship `"address": "/16"`, fail the Multus attachment, and
    leave the pod in `ContainerCreating` forever.
-2. **`lan-nic=enp2s0` on fluttershy and kerfuffle** — applied live with
-   `kubectl label`. Without it the new affinity terms match zero nodes and both
-   pods go `Pending`. `talos/talconfig.yaml` carries the same label so it
-   survives a rebuild, but **do not run `mise run talos:apply` to land it** —
-   that would drag in Renovate's pending Kubernetes bump. Patch per node, or
-   let it ride until the next planned apply.
+2. ~~`lan-nic=enp2s0` on fluttershy and kerfuffle~~ — **no longer needed.**
+   The NADs omit `master`, so no node label gates scheduling. Remove the stale
+   labels once the master-less NADs are live:
+   `kubectl label node fluttershy kerfuffle lan-nic-`
 
 Either failure is a Jellyfin outage, and the Kustomization is `wait: true` with
 `retries: -1`, so it retries rather than surfacing loudly.
 
-#### Why 10.10.206.20
+#### Why 10.10.206.20 and .21
 
-It has to dodge two allocators. Verified free before assignment: no ARP reply
-from a LAN node, and no UniFi client record. It sits **below** the Cilium pool
-(`.100-200`, `.202-252`) so it can never be auto-assigned, and clear of the
-node band (`.10-.17`). UniFi DHCP nominally spans `10.10.0.5-10.10.254.254` but
-allocates upward from `.0.5` and has never reached `10.10.206.x` — the same
-assumption every other static in this band already rests on.
+They have to dodge two allocators. Both are absent from the UniFi client list,
+sit **below** the Cilium pool (`.100-200`, `.202-252`) so they can never be
+auto-assigned, and are clear of the node band (`.10-.17`). UniFi DHCP nominally
+spans `10.10.0.5-10.10.254.254` but allocates upward from `.0.5` and has never
+reached `10.10.206.x` — the same assumption every other static in this band
+already rests on.
+
+> **Correction.** These addresses were originally also described as "verified
+> free by ARP probe". That probe ran `ping` inside a `cilium-agent` container,
+> which has no `ping` binary — so it reported *every* address as free and was
+> worthless. The UniFi client list was the only real evidence. Both addresses
+> did turn out to be genuinely free, but the method did not show it.
+>
+> **To probe the LAN properly**, run a throwaway `hostNetwork` pod with real
+> tooling on a node other than the target's, e.g.
+> `kubectl run lan-probe --rm -i --restart=Never --image=alpine:… --overrides='{"spec":{"hostNetwork":true,…}}'`.
+> Verified working: that form reaches the gateway, node addresses, and
+> Technitium's ipvlan child, so a negative result from it means something.
 
 Note `sops set` reindented `cluster-secrets.sops.yaml` from 4-space to 2-space
 as a side effect, per `.sops.yaml`'s own `stores.yaml.indent: 2`. Read the diff
@@ -200,10 +230,40 @@ matches five nodes across **both** NIC families. Stage 1 adds a `lan-nic` node
 label so the affinity can narrow to `enp2s0` GPU nodes (`fluttershy`,
 `kerfuffle`) — the same label-plus-nodeSelector shape Technitium uses.
 
-Both workloads carry the identical Intel GPU affinity and therefore the
-identical `lan-nic` narrowing. They can share the two enp2s0 nodes: ipvlan
-children have distinct IPs, and `igmp_snooping` is off on the Home network, so
-Plex's multicast memberships do not depend on per-child snooping state.
+#### Portability across nodes
+
+Both NADs omit `master`, so each resolves to whichever interface carries that
+node's default route:
+
+| Nodes | Default-route NIC |
+|---|---|
+| `fluttershy`, `kerfuffle`, `hard-hat` | `enp2s0` |
+| `milky-way`, `othalla`, `pegasus` | `enp3s0` |
+| `shining-armor` | `ens18` |
+
+Jellyfin and Plex are therefore constrained only by their Intel GPU affinity and
+can use **any** of the five GPU nodes, control planes included. They can also
+share a node: ipvlan children have distinct IPs, and `igmp_snooping` is off on
+the Home network, so Plex's multicast memberships do not depend on per-child
+snooping state.
+
+#### Verified live, 2026-09-05
+
+Both attachments came up and both discovery protocols answer a broadcast sent
+from a *different* node (`milky-way`) than the one hosting the pods
+(`fluttershy`):
+
+```
+Jellyfin  255.255.255.255:7359  -> {"Address":"https://jellyfin.driscoll.tech",
+                                    "Id":"83f8650c…","Name":"Jellyfin"}
+Plex GDM  255.255.255.255:32414 -> HTTP/1.0 200 OK
+                                   Content-Type: plex/media-server
+                                   Name: Equestria   Port: 32400
+```
+
+Note Jellyfin hands back the Traefik URL, confirming that discovery works while
+serving still goes through the gateway. `network-status` on the pods shows
+`net1 = 10.10.206.20` and `10.10.206.21` alongside their Cilium `eth0`.
 
 Verification from a LAN host — Jellyfin:
 
