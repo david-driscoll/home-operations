@@ -31,9 +31,9 @@ spec:
       # 30-minute session, so every probe would renew the session and the
       # container would never stop at all.
       #
-      # The `sablier-<stack>@file` middleware in
-      # ../traefik/dynamic/middlewares.yaml therefore carries
-      # `ignoreUserAgent: ["^Gatus/"]` and answers this probe with a 200 without
+      # The `<stack>-sablier` middleware, defined by labels on the stack's own
+      # container in ./compose.yaml, therefore carries
+      # `ignoreUserAgent: ^Gatus/` and answers this probe with a 200 without
       # starting anything and without contacting Sablier.
       #
       #   PROVES:        DNS, TLS, Traefik is up, the router still exists, and

@@ -132,11 +132,17 @@ metrics:
 # presents as a 404 on the opted-in stacks only. Rollback is deleting this block
 # and the middleware references.
 #
-# Label-based plugin config would also work on this Traefik (v3.6+ registers
-# configuration from non-running containers, which is what makes any of this
-# possible while a container is stopped), but the file provider is where this
-# estate already keeps shared middlewares, and it avoids repeating six labels in
-# every opted-in compose file.
+# The per-stack middlewares are defined as LABELS on each opted-in container,
+# not here and not in ./dynamic/middlewares.yaml, so a stack stays readable as
+# one file. That works because Traefik lists containers with `All: true` and,
+# when a container carries `traefik.docker.allownonrunning`, `keepContainer`
+# returns before the non-running filter and the full dynamic config -- routers
+# AND middlewares -- is still decoded from its labels
+# (pkg/provider/docker/{pdocker,config}.go, v3.7). Support for that arrived in
+# Traefik v3.6; this host runs v3.7.13.
+#
+# ./dynamic/middlewares.yaml keeps only the genuinely shared middlewares
+# (compress, internal-network, errors), which is what it was always for.
 #
 # Keep this in step with kubernetes/apps/network/traefik/values.yaml, which
 # registers the same plugin at the same version for the cluster.

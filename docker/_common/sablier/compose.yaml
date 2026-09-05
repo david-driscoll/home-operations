@@ -1,7 +1,8 @@
 # On-demand scale-to-zero for the Dockge hosts. The Kubernetes counterpart is
 # kubernetes/apps/kube-system/sablier; the Traefik plugin that drives it is
-# registered in ../traefik/config.yaml, and the per-stack middlewares live in
-# ../traefik/dynamic/middlewares.yaml.
+# registered in ../traefik/config.yaml, and each opted-in stack defines its own
+# `<stack>-sablier` middleware with labels on its own container -- see
+# ../librespeed/compose.yaml for the shape.
 #
 # A `_common` stack, so it lands on celestia, alpha-site, luna and skystar. Each
 # host gets its own Sablier managing only its own containers -- there is no
