@@ -109,34 +109,47 @@ Verified by direct read-only tool calls on 2026-09-05:
 | `toolhive-context7_` | ✅ library resolve + docs query |
 | `toolhive-microsoft-docs_` | ✅ docs search |
 | `toolhive-openbao_` | not probed — both tools read secret material |
-| `toolhive-github_` | ⚠️ 401s ~1h after each pod start |
-| `toolhive-tailscale_` | ⚠️ CLI-backed tools fail; API-backed tools work |
-| `toolhive-pulumi_` | ⚠️ registry tools failed on a read-only plugin cache |
+| `toolhive-github_` | 401 after ~1h; fixed by a periodic restart |
+| `toolhive-tailscale_` | API calls failed; fixed by correcting the tailnet name |
+| `toolhive-pulumi_` | read-only plugin cache; fixed by setting `PULUMI_HOME` |
 
-### `toolhive-github_` — 401 Bad credentials
+### One trap worth knowing about
 
-`GITHUB_PERSONAL_ACCESS_TOKEN` comes from a `secretKeyRef`, which resolves **once
-at container start**. `github-token` is an App installation token re-minted every
-30m against a 60m life, so the baked-in value dies about an hour in and the pod
-keeps presenting it. Diagnosis and the rejected fixes are in
-[`agent-tools-servers/github.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github.yaml).
+Two of the three failures reported a cause that was not the cause.
 
-**Workaround:** use `gh` from the agentboard pane instead — it reads
-`GH_CONFIG_DIR` and is fresh per invocation.
+`list_devices` returned `spawn tailscale ENOENT`, which reads as "this image
+needs a Tailscale binary". It does not. That package calls the REST API first
+and only shells out to the CLI **when the API call fails**, so the ENOENT was
+the fallback failing and its message had replaced the API error that actually
+mattered. The real fault was the tailnet name. `get_version` reports
+`cliAvailable: false` and is perfectly content.
 
-### `toolhive-tailscale_` — `spawn tailscale ENOENT`
+Likewise `github_get_me` returning `401 Bad credentials` invites you to go
+looking for a bad token. The token is fine — it is *stale*, because an env var
+resolves once at container start and that credential is re-minted hourly.
 
-The package mixes REST-backed and CLI-backed tools; the CLI-backed half tries to
-exec a `tailscale` binary absent from `node:22-alpine`. The API key is minted
-correctly and is not the problem. See
-[`agent-tools-servers/tailscale.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tailscale.yaml).
+When a backend misbehaves, prefer the tool whose failure is **not** wrapped in a
+fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
 
-### `toolhive-pulumi_` — read-only plugin cache
+### The three fixes
 
-The `pulumi` CLI resolved its plugin root to `/home/node/.pulumi` on a read-only
-rootfs despite `HOME=/tmp`. Addressed by setting `PULUMI_HOME` at
-[`agent-tools-servers/pulumi.yaml`](../../kubernetes/apps/agents/agent-tools-servers/pulumi.yaml);
-whether plugin *download* then succeeds depends on egress and is unverified.
+- **`toolhive-github_`** — `GITHUB_PERSONAL_ACCESS_TOKEN` comes from a
+  `secretKeyRef`, resolved once at start, while `github-token` is an App
+  installation token re-minted every 30m against a 60m life. The image has no
+  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply, and
+  Reloader cannot help because the StatefulSet belongs to the ToolHive
+  operator. A CronJob patches the operator's own `restarted-at` annotation
+  every 20 minutes:
+  [`github-restart.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github-restart.yaml).
+- **`toolhive-tailscale_`** — `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
+  substitution that the file itself flagged as never verified. Now `-`,
+  Tailscale's alias for the credential's default tailnet, matching what
+  `stacks/unifi-network/tailscale-drop-firewall-rule.ts` already does against
+  the same endpoint.
+- **`toolhive-pulumi_`** — the `pulumi` CLI resolved its plugin root to
+  `/home/node/.pulumi` on a read-only rootfs despite `HOME=/tmp`. `PULUMI_HOME`
+  now points into the writable emptyDir. Whether plugin *download* then
+  succeeds depends on egress and is unverified.
 
 ## Troubleshooting
 

@@ -40,10 +40,41 @@ spec:
           reloader.stakater.com/auto: "true"
       data:
         TAILSCALE_API_KEY: "{{ .api_key }}"
-        # ${ROOT_DOMAIN} is this estate's Tailscale tailnet name, per its
-        # use throughout components/tailscale.ts -- not independently
-        # re-verified against Tailscale's own admin console for this file.
-        TAILSCALE_TAILNET: ${ROOT_DOMAIN}
+        # "-" is Tailscale's alias for "the default tailnet of whatever
+        # credential is presenting", NOT a placeholder left unfilled.
+        #
+        # THIS WAS THE ROOT_DOMAIN SUBSTITUTION, AND THAT IS WHAT BROKE THIS
+        # SERVER. That value carried its own disclaimer -- "not independently
+        # re-verified against Tailscale's own admin console" -- and it did not
+        # survive the check. Confirmed live 2026-09-05: every API-backed
+        # call came back empty or failed, `get_tailnet_info` returned no
+        # name and no organization, and `list_devices` surfaced
+        # "Failed to execute tailscale: spawn tailscale ENOENT".
+        #
+        # THAT ENOENT IS NOT THE BUG, and it is worth saying so because it is
+        # the only part that is visible. Reading the published package
+        # (@hexsleeves/tailscale-mcp-server 1.3.4, dist/index.js): its
+        # `listDevices` calls the REST API FIRST and only shells out to the
+        # `tailscale` binary when that call fails --
+        #
+        #   let t = await this.api.listDevices(...);
+        #   if (t.success) return ...
+        #   this.logger.warn("API device listing failed; trying CLI", t.error);
+        #
+        # -- so the missing CLI on node:22-alpine is the FALLBACK failing, and
+        # its message replaces the API error that actually mattered. Anyone
+        # reading only the tool output concludes the image needs a Tailscale
+        # binary. It does not; `get_version` reports `cliAvailable: false`
+        # and is perfectly happy.
+        #
+        # "-" is what this estate's own working Tailscale code already uses
+        # against the SAME endpoint this server calls --
+        # stacks/unifi-network/tailscale-drop-firewall-rule.ts does
+        # `client.GET("/tailnet/{tailnet}/devices", { path: { tailnet: "-" } })`
+        # -- against a credential minted from the same OAuth client. Taking
+        # the estate's proven value over a second, unverified guess at the
+        # literal name.
+        TAILSCALE_TAILNET: "-"
   data:
     - secretKey: api_key
       remoteRef:
@@ -90,33 +121,6 @@ spec:
           emptyDir: {}
       containers:
         - name: mcp
-          # ===================================================================
-          # KNOWN BROKEN -- EVERY TOOL THAT SHELLS OUT TO THE CLI FAILS HERE.
-          # Confirmed live 2026-09-05: `list_devices` through the vMCP
-          # returned `Failed to execute tailscale: spawn tailscale ENOENT`.
-          # Not an auth error and not a vMCP routing error -- the aggregator
-          # proxied the call and this package tried to exec a `tailscale`
-          # binary that does not exist in `node:22-alpine`.
-          #
-          # This file's header reasons from TAILSCALE_API_KEY that the server
-          # is REST-only. That is true of the API-backed tools and false of
-          # this one: the package mixes both, and the CLI-backed half cannot
-          # work on a bare node image no matter how good the token is. The
-          # key is minted correctly (stacks/unifi-network/tailscale-api-token.ts,
-          # every 5m) -- that half of the design is fine and is not what broke.
-          #
-          # The obvious candidate is the upstream image this file's header
-          # already mentions and passes over --
-          # ghcr.io/hexsleeves/tailscale-mcp-server -- IF it ships the CLI.
-          # NOT VERIFIED: that image was never pulled or inspected here, and
-          # swapping to an image that also lacks the binary would move the
-          # failure without fixing it while giving up the npx-on-node
-          # convention this rollout otherwise keeps. Whoever picks this up
-          # should confirm `tailscale` is on PATH in that image FIRST.
-          #
-          # Left as-is deliberately: the API-backed tools still work today,
-          # and a blind image swap risks the ones that currently do.
-          # ===================================================================
           command: ["npx"]
           args: ["-y", "@hexsleeves/tailscale-mcp-server"]
           envFrom:
