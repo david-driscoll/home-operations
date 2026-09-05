@@ -133,6 +133,40 @@
   // so wall-clock cost is irrelevant, but strangling ghcr.io would hurt because
   // most of the 1472 live there -- hence its more generous allowance.
   //
+  // RESULT OF THE FIRST RUN UNDER THIS CONFIG (dashboard 2026-09-05T01:21Z,
+  // four hours after the rule landed), recorded because it was mixed and half
+  // of it argued against me:
+  //
+  //   docker  3 failures -> 1. gcr.io/cadvisor, forgejo-helm/forgejo and the
+  //           ghcr.io entry all cleared; data.forgejo.org/oci/docker remained.
+  //   nuget   2 failures -> 7, spreading from one .cs file to five.
+  //
+  // So an `api.nuget.org` rule was tried here and has been REMOVED. Do not put
+  // it back without new evidence. There is no measured benefit and one run of
+  // correlation with harm, and the concurrency theory does not survive contact
+  // with the nuget numbers:
+  //
+  //   * Timed locally, nuget-only, 31 deps: 12s throttled vs 15s unthrottled,
+  //     zero lookup failures either way. The limit was never the bottleneck,
+  //     so it cannot have been causing timeouts -- but it bought nothing.
+  //   * All 31 resolve on the DEFAULT nuget.org feed with no skipReason, no
+  //     `Excess registryUrls`, and no second registry anywhere. Nothing in this
+  //     repo's config is steering them wrong.
+  //   * Renovate already retries GETs twice (`retryLimit = 2` in
+  //     lib/util/http/http.ts), so these survived three attempts. A single
+  //     transient blip is not the explanation.
+  //   * The failures arrive in a CLUSTER -- 7 packages across 5 unrelated files
+  //     in one run, then a different subset next run. That is the shape of the
+  //     shared service-index resolution going away for a window rather than
+  //     anything per-package: `getResourceUrl` catches the failure, logs at
+  //     debug, and returns null, so every nuget lookup in that window becomes
+  //     `no-result` at once. It caches the resolved serviceId for 60 minutes on
+  //     SUCCESS only, so there is nothing to tune from here.
+  //
+  // The docker rules below are KEPT, but on weak evidence -- one run in the
+  // right direction. If the docker entries come back too, drop the rest of this
+  // block rather than tuning the numbers.
+  //
   // HONEST CAVEAT: this is unverifiable from here. The failure does not
   // reproduce locally, so this cannot be tested before merge -- it is a
   // targeted, documented, credential-free mitigation, not a proven fix. The
@@ -149,11 +183,6 @@
       matchHost: "data.forgejo.org",
       concurrentRequestLimit: 2,
       maxRequestsPerSecond: 4,
-    },
-    {
-      matchHost: "api.nuget.org",
-      concurrentRequestLimit: 4,
-      maxRequestsPerSecond: 8,
     },
     {
       // Most of this repo's dependencies resolve here, so this one is a brake,
