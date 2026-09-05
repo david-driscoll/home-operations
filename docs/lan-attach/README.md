@@ -1,6 +1,7 @@
 # LAN attachment (Multus ipvlan) — discovery without hostNetwork
 
-**Status:** stage 1 implemented (Jellyfin). Stages 2–3 not started —
+**Status:** stage 1 implemented (Jellyfin **and** Plex — the full set the
+survey found). Stages 2–3 not started —
 Matter is blocked on an unanswered IPv6 question, Home Assistant goes last.
 
 ## The question this answers
@@ -107,9 +108,51 @@ pinned to one NIC family. This is why stage 1 narrows Jellyfin.
 - **One mDNS speaker per parent NIC.** ipvlan children share the parent MAC;
   multiple IGMP/mDNS speakers on one parent get ambiguous.
 
+## Which services actually broadcast — the survey
+
+Docs and GitHub searches were the starting point, but the authoritative answer
+came from the running cluster: `/proc/net/udp` and `/proc/net/igmp` inside every
+pod say what each service *actually* binds and which multicast groups it has
+*actually* joined, rather than what its README claims is possible.
+
+Coverage: 189 of 314 running pods inspected. The 125 misses are distroless or
+shell-less images, and break down as infrastructure — kube-system (35), agents
+(34), longhorn-system (19), network (9), observability (7) and smaller. In the
+two user-facing namespaces only `equestria/traefik-whoami` and
+`equestria/rustdesk-0` could not be entered; neither is a candidate (see below).
+
+### Positive findings
+
+| Service | Evidence | Verdict |
+|---|---|---|
+| **plex** | UDP `32410, 32412, 32413, 32414` (GDM) + `1901`; joined `239.0.0.250` (GDM) **and** `239.255.255.250` (SSDP/DLNA) | **Attach** |
+| **jellyfin** | UDP `7359` — the auto-discovery listener, exactly as documented | **Attached** (stage 1) |
+
+Nothing else in the cluster binds a discovery port or joins a non-default
+multicast group. Every other inspected pod showed only ephemeral UDP and the
+default `224.0.0.1` all-hosts membership.
+
+### Rejected, with the reason
+
+| Service | Why not |
+|---|---|
+| **qbittorrent** | BitTorrent LSD *would* use `239.192.152.143:6771`, but the running pod has not joined it — only its torrent port `18289` is bound, so LSD is off in its config. Even enabled it finds local peers for the same torrents, of which there are none here, and LAN-attaching it would put the WebUI on the LAN outside Traefik's auth. Negative value. |
+| **dispatcharr** | Does HDHomeRun emulation, but the running pod binds **no UDP at all** — the emulation is HTTP-only here. Its consumers (plex, jellyfin) are in-cluster anyway, and entering the HDHR URL by hand is the documented, more robust path. |
+| **rustdesk** | `rustdesk-server` (hbbs/hbbr) is a rendezvous/relay that clients reach by configured address; LAN peer discovery is a *client* feature. Also already has a LoadBalancer IP. Not inspectable (distroless), but not a candidate on design. |
+| **emby**, **ersatztv** | Both would qualify — Emby shares Jellyfin's `7359`, ErsatzTV emulates HDHomeRun on UDP `65001` — but both are commented out of their `kustomization.yaml` and have no HelmRelease or pod. Revisit if either is ever enabled. |
+| **stremio** | GitHub code search across the repo returned 0 hits for `SO_BROADCAST`, `ssdp` and `multicast`. |
+| everything else | No discovery port bound, no multicast group joined. |
+
+### Note on LoadBalancer services
+
+A Cilium L2-announced LoadBalancer IP does **not** substitute for this. It
+delivers unicast to the pod; it does not put the pod on the LAN broadcast
+domain, so broadcast and multicast discovery still never arrive. qbittorrent and
+rustdesk both have LoadBalancer IPs and would still be undiscoverable.
+
 ## Staged plan
 
-### Stage 1 — Jellyfin (implemented)
+### Stage 1 — Jellyfin and Plex (implemented)
 
 Lowest risk, clearest payoff, no Tier-0 exposure. Adds a NAD and pins the pod;
 changes nothing about how traffic reaches Jellyfin.
@@ -120,13 +163,13 @@ Order matters here: getting it wrong takes Jellyfin down, and `hk check` will
 not catch it. `flate` only renders HelmReleases, so it never validated the NAD
 or its substitution — the 465-chart pass says nothing about this file.
 
-1. **`JELLYFIN_LAN_IP` in `cluster-secrets.sops.yaml`** — set to
-   `10.10.206.20`. Flux renders a missing `${VAR}` as empty, which would ship
-   `"address": "/16"`, fail the Multus attachment, and leave the pod in
-   `ContainerCreating` forever.
+1. **`JELLYFIN_LAN_IP` and `PLEX_LAN_IP` in `cluster-secrets.sops.yaml`** —
+   set to `10.10.206.20` and `10.10.206.21`. Flux renders a missing `${VAR}` as
+   empty, which would ship `"address": "/16"`, fail the Multus attachment, and
+   leave the pod in `ContainerCreating` forever.
 2. **`lan-nic=enp2s0` on fluttershy and kerfuffle** — applied live with
-   `kubectl label`. Without it the new affinity term matches zero nodes and the
-   pod goes `Pending`. `talos/talconfig.yaml` carries the same label so it
+   `kubectl label`. Without it the new affinity terms match zero nodes and both
+   pods go `Pending`. `talos/talconfig.yaml` carries the same label so it
    survives a rebuild, but **do not run `mise run talos:apply` to land it** —
    that would drag in Renovate's pending Kubernetes bump. Patch per node, or
    let it ride until the next planned apply.
@@ -157,9 +200,25 @@ matches five nodes across **both** NIC families. Stage 1 adds a `lan-nic` node
 label so the affinity can narrow to `enp2s0` GPU nodes (`fluttershy`,
 `kerfuffle`) — the same label-plus-nodeSelector shape Technitium uses.
 
-Verification: from a LAN host,
-`echo -n 'Who is JellyfinServer?' | socat - UDP-DATAGRAM:255.255.255.255:7359,broadcast`
-should return the server JSON.
+Both workloads carry the identical Intel GPU affinity and therefore the
+identical `lan-nic` narrowing. They can share the two enp2s0 nodes: ipvlan
+children have distinct IPs, and `igmp_snooping` is off on the Home network, so
+Plex's multicast memberships do not depend on per-child snooping state.
+
+Verification from a LAN host — Jellyfin:
+
+```bash
+echo -n 'Who is JellyfinServer?' | socat - UDP-DATAGRAM:255.255.255.255:7359,broadcast
+```
+
+Plex GDM:
+
+```bash
+echo -n 'M-SEARCH * HTTP/1.0' | socat - UDP-DATAGRAM:255.255.255.255:32414,broadcast
+```
+
+Both should return server details. Plex clients on the LAN should then show the
+server as local rather than as a remote plex.tv connection.
 
 ### Stage 2 — Matter (not started; verify IPv6 first)
 

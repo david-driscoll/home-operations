@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/k8s.cni.cncf.io/networkattachmentdefinition_v1.json
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: plex-lan-net
+  namespace: equestria
+  annotations:
+    # Purpose: gives the Plex pod a real interface (net1) on the flat Home LAN
+    # so GDM -- Plex's own client discovery -- reaches LAN clients.
+    #
+    # Unlike jellyfin (chosen from docs), this one was confirmed empirically
+    # against the running pod. /proc/net/udp showed plex bound to UDP 32410,
+    # 32412, 32413 and 32414 -- the four GDM ports -- plus 1901, and
+    # /proc/net/igmp showed it joined to TWO multicast groups on eth0:
+    #   239.0.0.250     (EF0000FA) -- GDM announcements
+    #   239.255.255.250 (EFFFFFFA) -- SSDP, i.e. Plex's DLNA server
+    # None of that escapes the Cilium overlay today, so no LAN client has ever
+    # discovered this server; they only ever see it as a remote plex.tv
+    # connection.
+    #
+    # ⚠️  This also puts Plex's DLNA server on the LAN, because SSDP rides the
+    # same interface. Smart TVs and other DLNA clients will start seeing Plex
+    # as a media server. If that is unwanted, disable DLNA in Plex settings
+    # (Settings -> DLNA -> Enable the DLNA server) rather than reverting this.
+    #
+    # Not a regression in what Plex advertises: it already publishes its Cilium
+    # pod IP (10.206.x.x, unreachable from the LAN) in its connection list.
+    # Adding a reachable LAN address strictly improves that. GDM replies leave
+    # via the interface that received the query, so a LAN client's discovery
+    # gets the LAN address.
+    #
+    # PLEX_NO_AUTH_NETWORKS already contains 10.10.0.0/16, so direct LAN access
+    # on :32400 is deliberate and pre-existing policy, not something this opens.
+    #
+    # ipvlan rather than macvlan, and master enp2s0 rather than enp3s0, for the
+    # same reasons as jellyfin-lan-net -- see that file and
+    # docs/lan-attach/README.md. Plex carries the identical Intel GPU affinity,
+    # so it needs the same `lan-nic: enp2s0` term to stay off the control
+    # planes, where this parent interface does not exist.
+    #
+    # Address is PLEX_LAN_IP (10.10.206.21): verified free by ARP probe and
+    # absent from the UniFi client list, below the Cilium pool so it can never
+    # be auto-assigned, and adjacent to JELLYFIN_LAN_IP (.20).
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "plex-lan-net",
+      "type": "ipvlan",
+      "master": "enp2s0",
+      "mode": "l2",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "${PLEX_LAN_IP}/16"
+          }
+        ]
+      }
+    }
