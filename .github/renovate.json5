@@ -513,6 +513,62 @@
       enabled: false,
     },
     {
+      // The FOURTH manager that must not be handed a pinDigest, and the one
+      // the rule above missed. Every annotation this repo writes is served by
+      // the `Process annotated dependencies` customManager at the bottom of
+      // this file, and its "full docker image reference" pattern captures
+      //
+      //   (?<currentValue>[^\s@]+)
+      //
+      // -- a character class that STOPS AT THE `@`. So `currentValue` is the
+      // bare tag, `currentDigest` is never set, and `replaceString` spans only
+      // the tag. Renovate therefore believes the dep is unpinned, generates a
+      // pinDigest update, and then cannot write it back: doAutoReplace has
+      // nowhere to put the `@sha256:` suffix and throws
+      // WORKER_FILE_UPDATE_FAILED. That surfaces on the dashboard as
+      //
+      //   ⚠️ WARN: Error updating branch: update failure
+      //
+      // with the branch parked under "Errored ... will be retried" forever,
+      // because the retry re-runs the same impossible edit. The same note is
+      // already written from the other end in
+      // kubernetes/apps/coder/renovate/renovatejob.yaml ("No digest, on
+      // purpose ... cannot round-trip a `@sha256:` suffix") -- this is that
+      // observation turned into a guard.
+      //
+      // Measured on 44.61.6 against this repo, flattened updates 88 -> 40:
+      //
+      //   data.forgejo.org/forgejo/forgejo    2 -> 0
+      //   ghcr.io/cloudnative-pg/postgresql   4 -> 0
+      //   ghcr.io/pulumi/pulumi-nodejs       18 -> 0
+      //   ghcr.io/windmill-labs/windmill-extra 2 -> 0
+      //   jdxcode/mise                       18 -> 0
+      //   minio/mc                            2 -> 0
+      //   ghcr.io/renovatebot/renovate        6 -> 4
+      //
+      // -- exactly the two branches the dashboard had errored, and nothing
+      // else. The renovatebot/renovate entry is the proof that this is scoped
+      // correctly: it loses its two pinDigest updates and KEEPS its four real
+      // version bumps.
+      //
+      // `custom.regex`, not `regex`. ManagersMatcher (util/package-rules/managers.ts)
+      // tests `custom.${manager}` when isCustomManager(manager), so the bare
+      // name silently matches nothing -- verified by running both.
+      //
+      // This is a post-lookup matcher like the rule above, so the update is
+      // still generated and then dropped in flatten.ts. `pinDigests: false`
+      // would suppress it pre-lookup and was tried first; it does NOT work
+      // from a packageRule here, also verified by running it.
+      description: "Don't pin digests on annotated deps — the regex can't hold one",
+      matchManagers: [
+        "custom.regex"
+      ],
+      matchUpdateTypes: [
+        "pinDigest"
+      ],
+      enabled: false,
+    },
+    {
       // bootstrap/helmfile.yaml mirrors chart versions that are otherwise
       // owned by the flux manager (kubernetes/apps/**/helmrelease.yaml).
       // Renovate treats same-named deps found by different managers as one
