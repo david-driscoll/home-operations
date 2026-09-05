@@ -1,0 +1,67 @@
+---
+# The SAME tools as ./virtualmcpserver.yaml, on a cluster-internal Service with
+# NO authentication, for in-cluster agents that cannot drive a browser.
+#
+# WHY A SECOND SERVER RATHER THAN A SECOND PORT. `incomingAuth` is a property of
+# the whole VirtualMCPServer, not of a listener: set it and EVERY request to
+# /mcp is authenticated, unset it and none are. There is no per-route or
+# per-port form of it in the CRD, so "authenticated from outside, anonymous from
+# inside" cannot be expressed on one object. Two objects over one MCPGroup is
+# the only shape that gives both.
+#
+# `anonymous` is a first-class value here, not an omission -- the CRD requires
+# `incomingAuth` and says so in as many words: "Must be explicitly set - use
+# 'anonymous' type when no authentication is required." That is deliberate on
+# ToolHive's part, and worth keeping deliberate on ours: an MCP server that
+# fails OPEN by accident looks identical to one that is working.
+#
+# ==========================================================================
+# THIS ENDPOINT IS UNAUTHENTICATED AND FRONTS EVERY BACKEND IN THE GROUP.
+# That currently includes openbao, kubernetes, proxmox (x5), unifi-*, postgres
+# and docker (x4) -- read/write access to most of the estate, with no token and
+# no user identity. ./networkpolicy.yaml is what contains it, and it is NOT
+# optional: without it any pod in the cluster that can resolve the Service has
+# the same access agentboard does. Deleting that file silently converts this
+# into a cluster-wide privilege-escalation path, with nothing failing and
+# nothing alerting.
+#
+# It is deliberately NOT in ./httproute.yaml and deliberately ClusterIP, so it
+# has no hostname, no certificate and no path in from the LAN or the tailnet.
+# The authenticated ./virtualmcpserver.yaml remains the only external door.
+# ==========================================================================
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: VirtualMCPServer
+metadata:
+  name: agent-tools-internal
+spec:
+  # THE SAME GROUP as ./virtualmcpserver.yaml -- one set of backends, two front
+  # doors. Nothing in the CRD's validation rules forbids two VirtualMCPServers
+  # sharing an MCPGroup, and each aggregates independently, so backends need no
+  # knowledge that a second server exists.
+  groupRef:
+    name: agent-tools
+
+  incomingAuth:
+    # See the banner above. No oidcConfigRef: with `anonymous` there is nothing
+    # to validate, no issuer to discover, and none of the SSRF or audience
+    # machinery ../toolhive needed applies to this object at all.
+    type: anonymous
+
+  # Unchanged from ./virtualmcpserver.yaml: backends carry no auth of their own,
+  # so there is nothing to acquire on the way out.
+  outgoingAuth:
+    source: inline
+
+  # ClusterIP, and this is load-bearing rather than a default worth eliding --
+  # it is half of what keeps this endpoint off the network. The operator
+  # publishes `vmcp-agent-tools-internal` on 4483, which is the address
+  # ../agentboard/resources/mcp.json uses.
+  serviceType: ClusterIP
+
+  config:
+    aggregation:
+      # MUST match ./virtualmcpserver.yaml's. Tool names are part of the
+      # contract an agent's prompts are written against, so a client moved
+      # between the two doors must see identical names -- `prefix` on one side
+      # and the default on the other would silently rename every tool.
+      conflictResolution: prefix

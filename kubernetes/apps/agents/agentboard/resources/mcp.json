@@ -2,7 +2,7 @@
   "mcpServers": {
     "agent-tools": {
       "type": "http",
-      "url": "https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp"
+      "url": "http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp"
     }
   }
 }

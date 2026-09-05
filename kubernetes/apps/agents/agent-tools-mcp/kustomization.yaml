@@ -9,5 +9,11 @@ resources:
   # ../toolhive lists its own.
   - ./mcpoidcconfig.yaml
   - ./virtualmcpserver.yaml
+  # The anonymous in-cluster twin, and the policy that contains it. Keep the
+  # two adjacent: ./networkpolicy.yaml is the only thing keeping
+  # ./virtualmcpserver-internal.yaml from being reachable cluster-wide, and
+  # dropping it from this list is silent.
+  - ./virtualmcpserver-internal.yaml
+  - ./networkpolicy.yaml
   - ./httproute.yaml
   - ./definition.yaml
