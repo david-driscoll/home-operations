@@ -14,9 +14,10 @@ metadata:
 spec:
   type: inline
   inline:
-    # The embedded auth server's own issuer, verbatim from
-    # ./mcpexternalauthconfig.yaml. NOT authentik: after federation the token
-    # the proxy sees is ToolHive's, and its `iss` is this.
+    # The embedded auth server's own issuer, verbatim from ./helmrelease.yaml
+    # (the MCPExternalAuthConfig it renders under `rawResources.authserver`).
+    # NOT authentik: after federation the token the proxy sees is ToolHive's,
+    # and its `iss` is this.
     #
     # No `jwksUrl`: leaving it unset makes the proxy discover
     # /.well-known/openid-configuration from the issuer and take `jwks_uri`
@@ -48,14 +49,14 @@ spec:
     #
     # THE FAILURE IS TOTAL AND IT DOES NOT LOOK LIKE THIS FILE. Discovery is
     # what supplies BOTH validation paths, so losing it fails every token at
-    # once, and each consumer words it differently: ../toolhive-docs' MCPServer
-    # cached nothing at startup and answers `missing JWKS URL` for a JWT and
-    # `no introspection endpoint available` for an opaque token, while
-    # ../agent-tools-mcp's VirtualMCPServer rediscovers per request and quotes
-    # the guard verbatim. All three read as a bad token rather than as a proxy
-    # that cannot fetch its own keys -- which is how this cost an agentboard
-    # session on 2026-09-04, where re-running the client's OAuth login could
-    # never have helped.
+    # once, and each consumer words it differently. The MCPServer in
+    # ../agent-tools-servers/docs.yaml cached nothing at startup and answers
+    # `missing JWKS URL` for a JWT and `no introspection endpoint available`
+    # for an opaque token, while ../agent-tools-mcp's VirtualMCPServer
+    # rediscovers per request and quotes the guard verbatim. All three read as
+    # a bad token rather than as a proxy that cannot fetch its own keys --
+    # which is how this cost an agentboard session on 2026-09-04, where
+    # re-running the client's OAuth login could never have helped.
     #
     # The guard exists to stop a SERVER-SUPPLIED url reaching cloud metadata
     # endpoints. This issuer is operator-supplied, pinned above, and identical
@@ -74,7 +75,8 @@ spec:
     # The plain MCPServer path does not OR anything: mcpserver_runconfig.go
     # passes `resolvedOIDCConfig.JWKSAllowPrivateIP` alone into
     # runner.WithOIDCConfig. Setting the other field would fix
-    # ../agent-tools-mcp and leave ../toolhive-docs exactly as broken.
+    # ../agent-tools-mcp and leave ../agent-tools-servers/docs.yaml exactly
+    # as broken.
     #
     # It also stays at its `false` default on its own merits: it governs
     # FETCHING RFC 9728 metadata, and this proxy SERVES that document rather

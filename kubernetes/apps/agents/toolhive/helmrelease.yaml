@@ -50,9 +50,10 @@ spec:
     #
     # which is a DEADLOCK, not a slow start. The timeout fires install
     # remediation, remediation uninstalls, the uninstall's delete is refused by
-    # the operator's finalizer because ../toolhive-docs still references the
-    # object ("Cannot delete: referenced by workloads: [{MCPServer
-    # toolhive-docs}]"), and the CR sits Terminating while Helm retries forever.
+    # the operator's finalizer because ../agent-tools-servers/docs.yaml still
+    # references the object ("Cannot delete: referenced by workloads:
+    # [{MCPServer toolhive-docs}]"), and the CR sits Terminating while Helm
+    # retries forever.
     # Recovering needs the consumer removed by hand.
     #
     # Nothing is lost by not waiting. Readiness here is the ToolHive operator's
@@ -90,8 +91,9 @@ spec:
     rawResources:
       authserver:
         # Without this the chart names the resource after the release plus the
-        # key -- `toolhive-authserver`. The MCPServer in ../toolhive-docs
-        # references this by the bare name `toolhive`.
+        # key -- `toolhive-authserver`. The MCPServer in
+        # ../agent-tools-servers/docs.yaml references this by the bare name
+        # `toolhive`.
         forceRename: *app
         manifest:
           apiVersion: toolhive.stacklok.dev/v1beta1
@@ -107,7 +109,7 @@ spec:
               #
               # The auth server's routes (/oauth/*, the two .well-known
               # discovery documents, /.well-known/jwks.json) are served by the
-              # same process and port as the MCP proxy, so ../toolhive/httproute.yaml's
+              # same process and port as the MCP proxy, so ./httproute.yaml's
               # single `/` rule already carries them.
               issuer: https://${APP}.${ROOT_DOMAIN}
 
