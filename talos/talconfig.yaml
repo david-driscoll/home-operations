@@ -219,7 +219,14 @@ nodes:
           grow: false
           minSize: 1TB
           maxSize: 1TB
-    nodeLabels: *nodeLabels
+    nodeLabels:
+      <<: *nodeLabels
+      # Names this node's LAN parent interface so a Multus ipvlan NAD -- which
+      # hardcodes exactly one `master` -- can pin its workload to nodes where
+      # that parent exists. Consumed by jellyfin's nodeAffinity alongside the
+      # Intel GPU label, since the GPU set alone spans both enp2s0 (workers)
+      # and enp3s0 (control planes). See docs/lan-attach/README.md.
+      lan-nic: enp2s0
     nodeAnnotations: &intel_un1290_annotations
       node.longhorn.io/default-node-tags: '["bulk"]'
       node.longhorn.io/default-disks-config: |
@@ -262,7 +269,10 @@ nodes:
     # wipe -> rejoin-as-worker. etcd is now the ex-SGC trio alone.
     controlPlane: false
     userVolumes: *intel_un1290_user_volumes
-    nodeLabels: *nodeLabels
+    nodeLabels:
+      <<: *nodeLabels
+      # See fluttershy above -- same NIC, same reason.
+      lan-nic: enp2s0
     nodeAnnotations: *intel_un1290_annotations
     schematic: *intel_un1290_schematic
     patches: *intel_un1290_patches
