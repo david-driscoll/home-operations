@@ -88,15 +88,27 @@ foundation.
 | `othalla` | control plane | `enp3s0` | 10.10.209.11 | yes |
 | `pegasus` | control plane | `enp3s0` | 10.10.209.12 | yes |
 
-A NAD hardcodes `master`, so **a workload that can land on both `enp2s0` and
-`enp3s0` nodes cannot use a single NAD.** Every LAN-attached workload must be
-pinned to one NIC family. This is why stage 1 narrows Jellyfin.
+Every node routes its default via its own LAN NIC and gateway `10.10.0.1`.
+That matters: the ipvlan CNI plugin documents `master` as **optional**, and
+"Defaults to default route interface" when omitted. So a NAD that leaves
+`master` out resolves to the right parent on every node by itself, and the
+workload is free to schedule anywhere its other constraints allow.
+
+The NADs originally hardcoded `master: enp2s0` and paired it with a `lan-nic`
+node label, which pinned Jellyfin and Plex to two of the five Intel GPU nodes
+purely to match a NIC name. That restriction is gone — see "Portability across
+nodes" below.
 
 ## Constraints that apply to every LAN attachment
 
 - **Static IPAM is one address per NAD, so one pod per NAD.** Single-replica
   workloads only. If this grows past a handful, swap to the `whereabouts` IPAM
   plugin for a shared pool rather than minting NADs by hand.
+- **Omit `master`.** Let it default to the default-route interface so the NAD
+  is node-agnostic. The assumption this rests on is that a node's default route
+  stays on its LAN NIC; nothing here changes that today, since Tailscale runs as
+  a subnet router rather than a default gateway. If that ever changes, an ipvlan
+  child would follow the new default interface.
 - **Addresses must dodge two allocators.** The Cilium pool is
   `10.10.206.100-200` and `.202-252`; UniFi DHCP is `10.10.0.5-10.10.254.254`.
   Technitium sits at `10.10.206.202`, inside the Cilium block — it survives only
@@ -167,12 +179,10 @@ or its substitution — the 465-chart pass says nothing about this file.
    set to `10.10.206.20` and `10.10.206.21`. Flux renders a missing `${VAR}` as
    empty, which would ship `"address": "/16"`, fail the Multus attachment, and
    leave the pod in `ContainerCreating` forever.
-2. **`lan-nic=enp2s0` on fluttershy and kerfuffle** — applied live with
-   `kubectl label`. Without it the new affinity terms match zero nodes and both
-   pods go `Pending`. `talos/talconfig.yaml` carries the same label so it
-   survives a rebuild, but **do not run `mise run talos:apply` to land it** —
-   that would drag in Renovate's pending Kubernetes bump. Patch per node, or
-   let it ride until the next planned apply.
+2. ~~`lan-nic=enp2s0` on fluttershy and kerfuffle~~ — **no longer needed.**
+   The NADs omit `master`, so no node label gates scheduling. Remove the stale
+   labels once the master-less NADs are live:
+   `kubectl label node fluttershy kerfuffle lan-nic-`
 
 Either failure is a Jellyfin outage, and the Kustomization is `wait: true` with
 `retries: -1`, so it retries rather than surfacing loudly.
@@ -200,10 +210,22 @@ matches five nodes across **both** NIC families. Stage 1 adds a `lan-nic` node
 label so the affinity can narrow to `enp2s0` GPU nodes (`fluttershy`,
 `kerfuffle`) — the same label-plus-nodeSelector shape Technitium uses.
 
-Both workloads carry the identical Intel GPU affinity and therefore the
-identical `lan-nic` narrowing. They can share the two enp2s0 nodes: ipvlan
-children have distinct IPs, and `igmp_snooping` is off on the Home network, so
-Plex's multicast memberships do not depend on per-child snooping state.
+#### Portability across nodes
+
+Both NADs omit `master`, so each resolves to whichever interface carries that
+node's default route:
+
+| Nodes | Default-route NIC |
+|---|---|
+| `fluttershy`, `kerfuffle`, `hard-hat` | `enp2s0` |
+| `milky-way`, `othalla`, `pegasus` | `enp3s0` |
+| `shining-armor` | `ens18` |
+
+Jellyfin and Plex are therefore constrained only by their Intel GPU affinity and
+can use **any** of the five GPU nodes, control planes included. They can also
+share a node: ipvlan children have distinct IPs, and `igmp_snooping` is off on
+the Home network, so Plex's multicast memberships do not depend on per-child
+snooping state.
 
 Verification from a LAN host — Jellyfin:
 

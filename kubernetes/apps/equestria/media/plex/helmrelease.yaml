@@ -152,15 +152,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-              # Narrows the GPU set to the enp2s0 nodes (fluttershy, kerfuffle).
-              # plex-lan-net hardcodes `master: enp2s0`, and a NAD names exactly
-              # one parent interface, so the pod must not land on a control
-              # plane -- those carry enp3s0 and the attachment would fail there.
-              # Identical constraint to jellyfin. See docs/lan-attach/README.md.
-              - key: lan-nic
-                operator: In
-                values:
-                - enp2s0
 
     service:
       app:

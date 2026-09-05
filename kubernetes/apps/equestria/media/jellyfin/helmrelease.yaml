@@ -41,7 +41,7 @@ spec:
             # to it. Serving is unchanged: requests still arrive through the
             # HTTPRoute and its `local-user` middleware, because
             # JELLYFIN_PublishedServerUrl hands clients the Traefik URL.
-            # NAD, address constraints and node pinning: ./lan-nad.yaml.
+            # NAD and address constraints: ./lan-nad.yaml.
             k8s.v1.cni.cncf.io/networks: jellyfin-lan-net
         annotations:
           reloader.stakater.com/auto: "true"
@@ -157,16 +157,6 @@ spec:
                 operator: In
                 values:
                 - "true"
-              # Narrows the GPU set to the enp2s0 nodes (fluttershy, kerfuffle).
-              # jellyfin-lan-net hardcodes `master: enp2s0`, and a NAD names
-              # exactly one parent interface, so the pod must not land on a
-              # control plane -- those carry enp3s0 and the attachment would
-              # fail there. GPU affinity alone spans both NIC families.
-              # See docs/lan-attach/README.md.
-              - key: lan-nic
-                operator: In
-                values:
-                - enp2s0
 
     service:
       app:

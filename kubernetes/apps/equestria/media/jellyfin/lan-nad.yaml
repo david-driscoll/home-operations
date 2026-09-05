@@ -25,15 +25,22 @@ metadata:
     # some nodes are Proxmox KVM VMs, and macvlan would require promiscuous
     # mode on the Proxmox vmbr bridge. ipvlan L2 shares the parent MAC.
     #
-    # master is enp2s0 -- the WORKER LAN NIC. A NAD hardcodes one parent
-    # interface name, and Jellyfin's GPU affinity alone spans both NIC families
-    # (fluttershy/kerfuffle carry enp2s0; milky-way/othalla/pegasus carry
-    # enp3s0). The helmrelease therefore also requires `lan-nic: enp2s0`, so
-    # the pod can only land where this parent exists.
+    # `master` is deliberately OMITTED. The ipvlan CNI plugin documents it as
+    # optional, defaulting to the default route interface, and every node in
+    # this cluster routes default via its own LAN NIC and gateway 10.10.0.1:
+    #   fluttershy, kerfuffle, hard-hat -> enp2s0
+    #   milky-way, othalla, pegasus     -> enp3s0
+    #   shining-armor                   -> ens18
+    # So one NAD resolves to the correct parent on every node, and the workload
+    # is free to schedule anywhere its other constraints allow -- here, any
+    # Intel GPU node. This replaced a hardcoded `master: enp2s0` plus a
+    # `lan-nic` node label, which pinned the pod to two of the five GPU nodes
+    # purely to match the NIC name.
     #
-    # Nodes with NIC enp2s0 must be labeled:
-    #   kubectl label node fluttershy kerfuffle lan-nic=enp2s0
-    # talos/talconfig.yaml carries the same label so it survives a rebuild.
+    # The assumption this rests on: the default route stays on the LAN NIC. If
+    # a node ever takes its default route via another interface, its ipvlan
+    # child follows that interface instead. Nothing here does that today --
+    # Tailscale runs as a subnet router, not a default gateway.
     #
     # The address must dodge BOTH allocators: the Cilium pool
     # (10.10.206.100-200, .202-252) and UniFi DHCP (10.10.0.5-10.10.254.254).
@@ -49,7 +56,6 @@ spec:
       "cniVersion": "0.3.1",
       "name": "jellyfin-lan-net",
       "type": "ipvlan",
-      "master": "enp2s0",
       "mode": "l2",
       "ipam": {
         "type": "static",
