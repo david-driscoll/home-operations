@@ -79,8 +79,9 @@ locked = true
 # is fine on a laptop and useless here, because there is nobody at the
 # terminal to run it and a fresh PVC starts untrusted again.
 #
-# /root covers the working checkout (/root/home-operations/.mise.toml, which
-# carries this repo's op:// env references) and everything Claude Code creates
+# /root covers the working checkout (/root/home-operations/.config/mise.toml --
+# NOT a root `.mise.toml`, which does not exist; it carries this repo's tool
+# pins and its `vals` env references) and everything Claude Code creates
 # beneath it, including the git worktrees ../resources/bashrc now opens by
 # default -- those land under <project>/.claude/worktrees. /home is listed for
 # the same reason a non-root uid would need it; nothing runs as one today, so
