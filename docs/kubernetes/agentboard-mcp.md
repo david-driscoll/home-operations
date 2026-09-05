@@ -109,34 +109,116 @@ Verified by direct read-only tool calls on 2026-09-05:
 | `toolhive-context7_` | ✅ library resolve + docs query |
 | `toolhive-microsoft-docs_` | ✅ docs search |
 | `toolhive-openbao_` | not probed — both tools read secret material |
-| `toolhive-github_` | ⚠️ 401s ~1h after each pod start |
-| `toolhive-tailscale_` | ⚠️ CLI-backed tools fail; API-backed tools work |
-| `toolhive-pulumi_` | ⚠️ registry tools failed on a read-only plugin cache |
+| `toolhive-github_` | 401 after ~1h; fixed by a periodic restart |
+| `toolhive-tailscale_` | API calls failed; fixed by correcting the tailnet name |
+| `toolhive-pulumi_` | read-only plugin cache; fixed by setting `PULUMI_HOME` |
 
-### `toolhive-github_` — 401 Bad credentials
+### One trap worth knowing about
 
-`GITHUB_PERSONAL_ACCESS_TOKEN` comes from a `secretKeyRef`, which resolves **once
-at container start**. `github-token` is an App installation token re-minted every
-30m against a 60m life, so the baked-in value dies about an hour in and the pod
-keeps presenting it. Diagnosis and the rejected fixes are in
-[`agent-tools-servers/github.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github.yaml).
+Two of the three failures reported a cause that was not the cause.
 
-**Workaround:** use `gh` from the agentboard pane instead — it reads
-`GH_CONFIG_DIR` and is fresh per invocation.
+`list_devices` returned `spawn tailscale ENOENT`, which reads as "this image
+needs a Tailscale binary". It does not. That package calls the REST API first
+and only shells out to the CLI **when the API call fails**, so the ENOENT was
+the fallback failing and its message had replaced the API error that actually
+mattered. The real fault was the tailnet name. `get_version` reports
+`cliAvailable: false` and is perfectly content.
 
-### `toolhive-tailscale_` — `spawn tailscale ENOENT`
+Likewise `github_get_me` returning `401 Bad credentials` invites you to go
+looking for a bad token. The token is fine — it is *stale*, because an env var
+resolves once at container start and that credential is re-minted hourly.
 
-The package mixes REST-backed and CLI-backed tools; the CLI-backed half tries to
-exec a `tailscale` binary absent from `node:22-alpine`. The API key is minted
-correctly and is not the problem. See
-[`agent-tools-servers/tailscale.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tailscale.yaml).
+When a backend misbehaves, prefer the tool whose failure is **not** wrapped in a
+fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
 
-### `toolhive-pulumi_` — read-only plugin cache
+### The three fixes
 
-The `pulumi` CLI resolved its plugin root to `/home/node/.pulumi` on a read-only
-rootfs despite `HOME=/tmp`. Addressed by setting `PULUMI_HOME` at
-[`agent-tools-servers/pulumi.yaml`](../../kubernetes/apps/agents/agent-tools-servers/pulumi.yaml);
-whether plugin *download* then succeeds depends on egress and is unverified.
+- **`toolhive-github_`** — `GITHUB_PERSONAL_ACCESS_TOKEN` comes from a
+  `secretKeyRef`, resolved once at start, while `github-token` is an App
+  installation token re-minted every 30m against a 60m life. The image has no
+  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply — the
+  pod has to be restarted when the token rotates. Reloader does that, driven by
+  a `reloader.stakater.com/auto` annotation declared on
+  `podTemplateSpec.metadata` in
+  [`github.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github.yaml).
+
+  The annotation goes on the **pod template**, not the StatefulSet, because the
+  StatefulSet belongs to the operator. That works because Reloader falls back to
+  pod-template annotations when the workload carries none
+  (`pkg/common/common.go`), and the operator propagates what you write in
+  `podTemplateSpec.metadata.annotations` onto that template
+  (`pkg/container/kubernetes/client.go`). Note the annotation on the
+  `github-token` Secret does nothing on its own — Reloader keys off the
+  workload.
+- **`toolhive-tailscale_`** — `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
+  substitution that the file itself flagged as never verified. Now `-`,
+  Tailscale's alias for the credential's default tailnet, matching what
+  `stacks/unifi-network/tailscale-drop-firewall-rule.ts` already does against
+  the same endpoint.
+- **`toolhive-pulumi_`** — the `pulumi` CLI resolved its plugin root to
+  `/home/node/.pulumi` on a read-only rootfs despite `HOME=/tmp`. `PULUMI_HOME`
+  now points into the writable emptyDir. Whether plugin *download* then
+  succeeds depends on egress and is unverified.
+
+
+### The option not taken: a remote backend with header injection
+
+Worth knowing about, because it would delete the CronJob above entirely.
+
+ToolHive can register a backend that runs **no pods at all**. `MCPServerEntry`
+(v1beta1, installed here and the stored version) is a "zero-infrastructure
+catalog entry": the vMCP connects straight to a remote URL, and headers can be
+injected from a Secret.
+
+```yaml
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServerEntry
+metadata:
+  name: toolhive-github
+spec:
+  remoteUrl: https://api.githubcopilot.com/mcp
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  headerForward:
+    addHeadersFromSecret:
+      - headerName: Authorization
+        valueSecretRef:
+          name: github-token
+          key: authorization      # would need to render "Bearer <token>"
+```
+
+That removes the pod whose env var goes stale, which is the entire bug. Three
+things stopped it being the fix here, and all three are checkable:
+
+1. **Does the vMCP re-read the Secret?** If it caches at startup, the staleness
+   has just moved to the vMCP — which fronts *every* backend, making it strictly
+   worse than a pod that only serves GitHub.
+2. **Does GitHub's hosted MCP accept a GitHub App installation token?** The
+   estate's credential is an App token, not a user PAT, and the hosted endpoint
+   is documented with PATs.
+3. **`headerForward` has no format string.** It injects a raw Secret value, so
+   the Secret would need a key already containing `Bearer <token>` — a fourth
+   rendering in the `github-token` ExternalSecret, which already renders the
+   same token four ways.
+
+Do **not** go looking for `VirtualMCPServer.outgoingAuth` with
+`type: service_account`, `credentialsRef` and `headerFormat: "Bearer {token}"`
+to solve point 3. That shape appears in an example in ToolHive's own
+`docs/operator/virtualmcpserver-api.md`, but **it does not exist in the API, in
+any version** — and upgrading will not bring it:
+
+- The backend `type` enum has been `discovered;externalAuthConfigRef` in
+  `virtualmcpserver_types.go` continuously from **v0.28.0** (2026-05-19)
+  through `main`. `service_account` appears zero times in those Go types at
+  every version checked.
+- That same upstream doc contradicts its own example: the `BackendAuthConfig`
+  field reference printed directly beneath it lists only `discovered` and
+  `externalAuthConfigRef`, and no `serviceAccount` field at all.
+
+So it is upstream documentation drift, not a feature behind a version gate.
+`outgoingAuth` itself is long-standing and is present here; only that backend
+type is fictional. This cluster runs **v0.46.0**, the current release.
 
 ## Troubleshooting
 

@@ -37,60 +37,81 @@ spec:
     - stdio
 
   podTemplateSpec:
+    # WHAT KEEPS THIS SERVER AUTHENTICATED, and the only reason this
+    # `metadata` block exists.
+    #
+    # THE PROBLEM. `secretKeyRef` below resolves ONCE, at container start.
+    # `github-token` is a GitHub App INSTALLATION token, re-minted every 30m
+    # against a 60m life
+    # (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml),
+    # so the value baked in at pod start dies ~60m later and this pod goes on
+    # presenting it. Confirmed live 2026-09-05: `get_me` through the vMCP
+    # returned `401 Bad credentials` on a pod that had been up 4h48m, while
+    # every other backend answered fine.
+    #
+    # THE `gh` FIX DOES NOT TRANSFER. ../agentboard/helmrelease.yaml solves
+    # the same staleness for `gh` by pointing GH_CONFIG_DIR at a
+    # live-updating Secret DIRECTORY mount. github-mcp-server has no
+    # file-based credential -- its own installation docs describe
+    # GITHUB_PERSONAL_ACCESS_TOKEN as an environment variable and document no
+    # token-file equivalent -- so a mount would have nothing to read it. The
+    # pod has to be RESTARTED when the token rotates; there is no in-place
+    # refresh available.
+    #
+    # RELOADER DOES THE RESTART, driven by this annotation. It watches
+    # `github-token` and rolls the workload when the contents change, which
+    # is the moment a fresh token lands rather than a point on a timer.
+    #
+    # WHY THE ANNOTATION IS HERE, ON THE POD TEMPLATE, rather than on the
+    # StatefulSet where Reloader's docs put it. The StatefulSet is created
+    # and owned by the ToolHive operator -- there is no manifest of ours to
+    # annotate, `spec.resourceOverrides` reaches only `proxyDeployment` and
+    # `proxyService` (checked against the CRD installed here, those are its
+    # only two keys), and no mutating policy engine runs in this cluster.
+    # For a while the workaround was a CronJob shelling out to `kubectl
+    # annotate`. It is not needed:
+    #
+    #   RELOADER FALLS BACK TO THE POD TEMPLATE'S ANNOTATIONS when the
+    #   workload itself carries none of the ones it looks for --
+    #   internal/pkg/... `pkg/common/common.go`:
+    #
+    #     if !found && !foundAuto && !foundTypedAuto && !foundSearchAnn {
+    #         annotations = podAnnotations
+    #         reloaderEnabledValue = annotations[reloaderOpts.ReloaderAutoAnnotation]
+    #
+    # and the operator propagates what is written here onto that pod
+    # template -- pkg/container/kubernetes/client.go:
+    #
+    #     if patchedSpec.ObjectMetaApplyConfiguration != nil && len(patchedSpec.Annotations) > 0 {
+    #         baseTemplate = baseTemplate.WithAnnotations(patchedSpec.Annotations)
+    #
+    # So the declarative path exists on both sides and the two meet here. The
+    # StatefulSet's own `metadata.annotations` stays empty, which is fine --
+    # that is exactly the case the fallback is written for.
+    #
+    # NOTE FOR ANYONE DEBUGGING THIS: `github-token` ALSO carries
+    # `reloader.stakater.com/auto: "true"` on the Secret itself. That does
+    # nothing on its own -- Reloader keys off the WORKLOAD, and this pod sat
+    # through nine rotations while that annotation was in place. It is the
+    # annotation below that makes the difference, not that one.
+    #
+    # THERE IS NO 401 WINDOW IN STEADY STATE, despite the restart. A refresh
+    # mints a NEW token and the previous one stays valid until its own expiry
+    # (that ExternalSecret's header spells this out), so the outgoing pod is
+    # still holding a working credential right up to the moment the new pod
+    # takes over. The exposure is the few seconds of the roll itself, not an
+    # authentication gap.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       containers:
         - name: mcp
           # `github-token`, the estate's own GitHub App installation
           # token, reflected into this namespace automatically -- see
           # ../agentboard/externalsecret.yaml's header. Takes precedence
-          # over OAuth per the image's own docs, so this alone is
-          # sufficient TO AUTHENTICATE. It does not STAY authenticated:
-          #
-          # ===================================================================
-          # KNOWN BROKEN -- THIS SERVER 401s ABOUT AN HOUR AFTER EVERY START.
-          # Confirmed live 2026-09-05: `get_me` through the vMCP returned
-          # `401 Bad credentials` while every other backend answered fine.
-          # toolhive-github-0 had been up 4h48m (started 13:00:58Z, probed at
-          # 17:49Z).
-          #
-          # `secretKeyRef` resolves ONCE, at container start. `github-token`
-          # is a GitHub App INSTALLATION token: re-minted every 30m against a
-          # 60m life (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml).
-          # So the value baked in at pod start dies ~60m later and this pod
-          # keeps presenting it until something restarts it. Nothing does.
-          #
-          # This is the SAME failure ../agentboard/helmrelease.yaml documents
-          # at length for `gh` -- but that fix does NOT transfer. It works by
-          # pointing GH_CONFIG_DIR at a live-updating Secret DIRECTORY mount,
-          # and github-mcp-server has no file-based credential to point
-          # anywhere: its own installation docs describe
-          # GITHUB_PERSONAL_ACCESS_TOKEN as an environment variable and
-          # document no token-file equivalent. A directory mount would have
-          # nothing to read it.
-          #
-          # The annotation on the `github-token` Secret is NOT the answer
-          # either, and the evidence is this pod: that Secret already carries
-          # `reloader.stakater.com/auto: "true"` and this workload still sat
-          # unrestarted through nine rotations. Reloader keys off the
-          # WORKLOAD, and the StatefulSet here is generated by the ToolHive
-          # operator, not by this file.
-          #
-          # What the operator does offer is a restart annotation on the
-          # MCPServer itself --
-          # `mcpserver.toolhive.stacklok.dev/restarted-at: <timestamp>` (its
-          # docs/operator/restart-annotation.md; deleting the StatefulSet by
-          # hand is explicitly discouraged, the operator reads that as a
-          # failure). That is a lever for a periodic bounce, not an automatic
-          # refresh, so it needs something to drive it -- a CronJob patching
-          # the timestamp inside the token's 60m window is the obvious shape.
-          #
-          # DELIBERATELY NOT FIXED HERE. Every candidate above needs live
-          # verification this change was not able to do (no exec into the
-          # namespace, no way to observe a rotation land), and a wrong guess
-          # here restarts a shared backend on a timer for no reason. Diagnosis
-          # recorded so the next person starts from evidence, not from
-          # "GitHub tools are flaky".
-          # ===================================================================
+          # over OAuth per the image's own docs. Read the `metadata` block
+          # above for why this alone does not keep the server working.
           env:
             - name: GITHUB_PERSONAL_ACCESS_TOKEN
               valueFrom:
