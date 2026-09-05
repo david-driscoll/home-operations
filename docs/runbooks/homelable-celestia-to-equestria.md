@@ -197,9 +197,34 @@ first. The run retires the celestia authentik application and creates the
 equestria one, writing `homelable-oidc-credentials` into the `equestria`
 namespace where `homelable-env` extracts it.
 
-Until this runs, `homelable-env` cannot resolve and the pod sits in
-`CreateContainerConfigError`. On a data migration that gap is the window the
-restore uses; here it is just a wait.
+**Do not let this sit. It is not a passive wait — there is a clock on it.**
+
+Until this runs, `homelable-env` cannot resolve, the pod sits in
+`CreateContainerConfigError`, and the HelmRelease's `install` never goes
+healthy. That trips its own remediation:
+
+```
+Released=False   InstallFailed: timeout waiting for:
+                 [Deployment/equestria/homelable status: 'InProgress']
+Remediated=True  UninstallSucceeded: Helm uninstall remediation ... succeeded
+```
+
+`timeout: 10m` and `install.remediation.retries: 7` means it uninstalls and
+reinstalls every ten minutes, about seven times, and then **stalls** — after
+which the Pulumi run alone will not revive it. Nothing is lost when it does
+(the PVC is `existingClaim`, created by `components/volsync`, so Helm never
+owns it and the uninstall does not touch it), but the release needs a nudge:
+
+```bash
+flux -n equestria reconcile helmrelease homelable --reset --with-source
+```
+
+`--reset` is the part that matters: it clears the failure counters, without
+which the stalled release will not attempt another install.
+
+Observed on the first rollout — one `InstallFailed`/`UninstallSucceeded` cycle
+inside the first ten minutes. The earlier draft of this file called this gap
+"just a wait", which was wrong.
 
 ### 4. Let it start, and check the whole chain
 
