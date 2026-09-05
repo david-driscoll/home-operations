@@ -1,0 +1,62 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/k8s.cni.cncf.io/networkattachmentdefinition_v1.json
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: jellyfin-lan-net
+  namespace: equestria
+  annotations:
+    # Purpose: gives the Jellyfin pod a real interface (net1) on the flat Home
+    # LAN so that Jellyfin's *native* client auto-discovery works.
+    #
+    # Jellyfin does NOT use mDNS. Server discovery is a UDP broadcast to
+    # 255.255.255.255:7359 ("Who is JellyfinServer?"), and the port is not
+    # configurable upstream. A pod on the Cilium overlay never sees that
+    # broadcast, which is why no client on the LAN has ever auto-discovered
+    # this server. Per the kernel IPVLAN docs, an L2-mode slave will RX/TX
+    # multicast and broadcast, so an ipvlan child on the LAN parent does.
+    #
+    # This does NOT change how traffic reaches Jellyfin. JELLYFIN_PublishedServerUrl
+    # is https://jellyfin.${ROOT_DOMAIN}, so the discovery reply hands clients
+    # the normal Traefik URL -- the HTTPRoute and its `local-user` middleware
+    # still front every actual request. The LAN address answers discovery only.
+    #
+    # ipvlan rather than macvlan for the same reason as technitium-dns-net:
+    # some nodes are Proxmox KVM VMs, and macvlan would require promiscuous
+    # mode on the Proxmox vmbr bridge. ipvlan L2 shares the parent MAC.
+    #
+    # master is enp2s0 -- the WORKER LAN NIC. A NAD hardcodes one parent
+    # interface name, and Jellyfin's GPU affinity alone spans both NIC families
+    # (fluttershy/kerfuffle carry enp2s0; milky-way/othalla/pegasus carry
+    # enp3s0). The helmrelease therefore also requires `lan-nic: enp2s0`, so
+    # the pod can only land where this parent exists.
+    #
+    # Nodes with NIC enp2s0 must be labeled:
+    #   kubectl label node fluttershy kerfuffle lan-nic=enp2s0
+    # talos/talconfig.yaml carries the same label so it survives a rebuild.
+    #
+    # The address must dodge BOTH allocators: the Cilium pool
+    # (10.10.206.100-200, .202-252) and UniFi DHCP (10.10.0.5-10.10.254.254).
+    # Technitium's 10.10.206.202 sits inside the Cilium block and survives only
+    # because Cilium allocates upward from .100 -- do not copy that. Pick from
+    # outside both and add a UniFi reservation. See docs/lan-attach/README.md.
+    #
+    # Kubelet probes stay on the primary Cilium pod IP: a node cannot reach its
+    # own ipvlan child, so a probe aimed at this address would always fail.
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "jellyfin-lan-net",
+      "type": "ipvlan",
+      "master": "enp2s0",
+      "mode": "l2",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "${JELLYFIN_LAN_IP}/16"
+          }
+        ]
+      }
+    }

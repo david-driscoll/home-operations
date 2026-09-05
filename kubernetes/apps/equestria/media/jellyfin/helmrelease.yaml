@@ -33,6 +33,16 @@ spec:
   values:
     controllers:
       *app :
+        pod:
+          annotations:
+            # Attaches net1 on the flat Home LAN so Jellyfin's own client
+            # auto-discovery works -- it broadcasts on UDP 255.255.255.255:7359
+            # and never uses mDNS, so a pod on the Cilium overlay is invisible
+            # to it. Serving is unchanged: requests still arrive through the
+            # HTTPRoute and its `local-user` middleware, because
+            # JELLYFIN_PublishedServerUrl hands clients the Traefik URL.
+            # NAD, address constraints and node pinning: ./lan-nad.yaml.
+            k8s.v1.cni.cncf.io/networks: jellyfin-lan-net
         annotations:
           reloader.stakater.com/auto: "true"
           # Low Power keep-list: survives `downscaler/force-downtime` on the
@@ -147,6 +157,16 @@ spec:
                 operator: In
                 values:
                 - "true"
+              # Narrows the GPU set to the enp2s0 nodes (fluttershy, kerfuffle).
+              # jellyfin-lan-net hardcodes `master: enp2s0`, and a NAD names
+              # exactly one parent interface, so the pod must not land on a
+              # control plane -- those carry enp3s0 and the attachment would
+              # fail there. GPU affinity alone spans both NIC families.
+              # See docs/lan-attach/README.md.
+              - key: lan-nic
+                operator: In
+                values:
+                - enp2s0
 
     service:
       app:
