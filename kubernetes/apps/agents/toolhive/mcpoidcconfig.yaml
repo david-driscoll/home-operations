@@ -19,10 +19,64 @@ spec:
     # the proxy sees is ToolHive's, and its `iss` is this.
     #
     # No `jwksUrl`: leaving it unset makes the proxy discover
-    # /.well-known/jwks.json from the issuer. That discovery is an HTTPS call
-    # to the public hostname, so it hairpins out to Traefik and back -- which
-    # works only because network/internal-network's ipAllowList admits the
-    # cluster and service CIDRs. If that middleware is ever narrowed, this is
-    # one of the things that breaks, and it will look like a JWKS fetch
-    # failure rather than a firewall change.
+    # /.well-known/openid-configuration from the issuer and take `jwks_uri`
+    # from it. That discovery is an HTTPS call to the public hostname, so it
+    # hairpins out to Traefik and back -- which works only because
+    # network/internal-network's ipAllowList admits the cluster and service
+    # CIDRs. If that middleware is ever narrowed, this is one of the things
+    # that breaks, and it will look like a JWKS fetch failure rather than a
+    # firewall change.
     issuer: https://${APP}.${ROOT_DOMAIN}
+
+    # THE SAME SSRF GUARD ./resources/values.yaml WIDENS FOR THE UPSTREAM LEG,
+    # on the other side of the same flow. That file turns it off for the call
+    # OUT to authentik; this turns it off for the call BACK to our own issuer.
+    # Both are needed and neither implies the other -- separate HTTP clients,
+    # separate settings, and the first was fixed months before anyone noticed
+    # the second because nothing exercises this path until a token arrives.
+    #
+    # Without it the hairpin above is never dialled. `${APP}.${ROOT_DOMAIN}`
+    # resolves to an RFC-1918 address through Technitium's split horizon, and
+    # ToolHive refuses private targets for OIDC:
+    #
+    #   oidc discovery failed after retries ... Get
+    #   ".../.well-known/openid-configuration": dial tcp 10.x.x.x:443: the
+    #   provided URL redirects to a private IP address, which is not allowed
+    #
+    # ("redirects to" is the guard's generic wording for "resolves to" -- the
+    # chain has no redirect in it.)
+    #
+    # THE FAILURE IS TOTAL AND IT DOES NOT LOOK LIKE THIS FILE. Discovery is
+    # what supplies BOTH validation paths, so losing it fails every token at
+    # once, and each consumer words it differently: ../toolhive-docs' MCPServer
+    # cached nothing at startup and answers `missing JWKS URL` for a JWT and
+    # `no introspection endpoint available` for an opaque token, while
+    # ../agent-tools-mcp's VirtualMCPServer rediscovers per request and quotes
+    # the guard verbatim. All three read as a bad token rather than as a proxy
+    # that cannot fetch its own keys -- which is how this cost an agentboard
+    # session on 2026-09-04, where re-running the client's OAuth login could
+    # never have helped.
+    #
+    # The guard exists to stop a SERVER-SUPPLIED url reaching cloud metadata
+    # endpoints. This issuer is operator-supplied, pinned above, and identical
+    # to the hostname on ./httproute.yaml, so widening it is the narrow fix --
+    # the same argument the values.yaml note makes for `allowPrivateIPs`.
+    #
+    # THIS FIELD SPECIFICALLY, and `protectedResourceAllowPrivateIP` is NOT an
+    # interchangeable alternative despite the CRD description implying it is.
+    # That description ("if either ... is true, private IPs are allowed for all
+    # OIDC HTTP requests") describes only the vMCP path, which ORs the two:
+    #
+    #   AllowPrivateIP: oidcCfg.ProtectedResourceAllowPrivateIP ||
+    #                   oidcCfg.JwksAllowPrivateIP
+    #     -- pkg/vmcp/auth/factory/incoming.go, v0.46.0
+    #
+    # The plain MCPServer path does not OR anything: mcpserver_runconfig.go
+    # passes `resolvedOIDCConfig.JWKSAllowPrivateIP` alone into
+    # runner.WithOIDCConfig. Setting the other field would fix
+    # ../agent-tools-mcp and leave ../toolhive-docs exactly as broken.
+    #
+    # It also stays at its `false` default on its own merits: it governs
+    # FETCHING RFC 9728 metadata, and this proxy SERVES that document rather
+    # than fetching one.
+    jwksAllowPrivateIP: true
