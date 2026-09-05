@@ -1,6 +1,6 @@
 services:
   arcane-agent:
-    image: ghcr.io/getarcaneapp/agent:latest@sha256:283e15ebf2e5c4f4507475672c812eeaf5ed5b68c58acaebdf12e66ce3f1d798
+    image: ghcr.io/getarcaneapp/agent:latest@sha256:231f9f97d2939c0102978cca1f21b1a8941ebd5cff3aecd753e14958c8ae1a56
     container_name: arcane-agent
     environment:
       # Direct mode: the manager connects inbound to :3553 via the Traefik
