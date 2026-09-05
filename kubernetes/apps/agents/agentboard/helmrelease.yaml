@@ -151,19 +151,43 @@ spec:
               #     secretKeyRef:
               #       name: *app
               #       key: anthropic-api-key
-              # `github-token`, the estate's own GitHub App installation
-              # token -- see ./externalsecret.yaml's header for why nothing
-              # here mints a second one. Fine as a plain env var for `gh`
-              # and any tool that just reads $GITHUB_TOKEN once per
-              # invocation; it goes stale after ~60m like every other
-              # env-var consumer of this Secret in this repo. `git` itself
-              # does NOT use this var -- see ./resources/entrypoint.sh's
-              # credential.helper, which reads the mount below fresh instead.
-              GITHUB_TOKEN:
-                valueFrom:
-                  secretKeyRef:
-                    name: github-token
-                    key: token
+              # NO `GITHUB_TOKEN` env var, deliberately -- this used to be a
+              # `secretKeyRef` on `github-token`, and it was the last thing in
+              # this pod still holding a token that could go stale.
+              # `secretKeyRef` resolves ONCE at container start; the token
+              # behind it is re-minted every 30m against a 60m life, so `gh`
+              # started failing about an hour in while `git` sailed on (its
+              # credential helper re-reads the mounted file every invocation
+              # -- see ./resources/entrypoint.sh). Until now that was masked
+              # by an accident: `reloader.stakater.com/auto` restarted the pod
+              # on every rotation, re-resolving the var as a side effect. That
+              # restart loop is gone (see the controller annotations above),
+              # so the staleness would have become real.
+              #
+              # `gh` has no GITHUB_TOKEN_FILE or any other file-based token
+              # input -- verified against gh 2.100.0, which silently ignores
+              # such a variable and reports "not logged into any GitHub
+              # hosts". Its only file-based credential is its own hosts.yml,
+              # so point it at one. The `github-token` Secret now renders
+              # `hosts.yml` and `config.yml` alongside `token`
+              # (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml),
+              # and `persistence.github-token` below already mounts that whole
+              # Secret -- as a DIRECTORY, not a subPath, which is what makes
+              # the files update in place as the Secret rotates. (subPath
+              # mounts never receive updates; that is why this could not be
+              # done by mounting a single key.)
+              #
+              # Net effect: `gh` now gets a fresh credential per INVOCATION,
+              # the same guarantee `git` already had, with no shell wrapper
+              # and no env var to go stale. The stray `token`/`access_token`
+              # keys sharing that directory are inert -- confirmed live, gh
+              # ignores files it does not recognise.
+              #
+              # Anything that genuinely needs the raw value can still read
+              # /var/run/secrets/github-token/token, which is fresher than the
+              # env var ever was.
+              GH_CONFIG_DIR:
+                value: /var/run/secrets/github-token
               # The `pulumi` MCP server (../agent-tools-servers/pulumi.yaml) and any `pulumi`
               # the agent runs directly from its own tmux pane both need this
               # whole bundle -- same env var names the `pulumi` namespace's

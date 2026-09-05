@@ -48,22 +48,18 @@ if [ -x /usr/local/bin/mise ]; then
   esac
 fi
 
-# Re-read GITHUB_TOKEN from the mounted Secret rather than inheriting the pod
-# env's copy. ../helmrelease.yaml sets GITHUB_TOKEN via `secretKeyRef`, which
-# Kubernetes resolves ONCE at container start and never again, while the token
-# behind it is re-minted every 30m against a 60m life -- so the inherited value
-# is dead about an hour in, and `gh` starts failing with a stale credential
-# while `git` (which reads the same file through its credential helper, see
-# ../resources/entrypoint.sh) keeps working. That staleness used to be masked
-# by an accident: `reloader.stakater.com/auto` restarted the whole pod on every
-# rotation, which re-resolved the env var as a side effect. ../helmrelease.yaml
-# no longer does that on purpose, so read the file here instead -- every new
-# pane opens with a current token, which is as fresh as an env var can be
-# without a restart.
-if [ -r /var/run/secrets/github-token/token ]; then
-  GITHUB_TOKEN="$(cat /var/run/secrets/github-token/token)"
-  export GITHUB_TOKEN
-fi
+# No GITHUB_TOKEN re-read here any more. An earlier version of this file
+# exported it from the mounted Secret on every shell start, to work around
+# ../helmrelease.yaml's `secretKeyRef` going stale ~60m in. That is obsolete
+# and would now be actively harmful: `gh` prefers GH_TOKEN/GITHUB_TOKEN from
+# the environment OVER its own hosts.yml, so exporting one here would shadow
+# the live, per-invocation credential ../helmrelease.yaml's GH_CONFIG_DIR now
+# points gh at. Leave it unset.
+#
+# Need the raw token in a script? Read it fresh, the way git's credential
+# helper does -- never cache it in a variable that outlives the command:
+#
+#   curl -H "Authorization: Bearer $(cat /var/run/secrets/github-token/token)" ...
 
 # Yours, on the PVC, optional. Nothing in this repo writes it.
 if [ -f "$HOME/.bashrc.local" ]; then
