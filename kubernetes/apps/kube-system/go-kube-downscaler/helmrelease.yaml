@@ -102,10 +102,27 @@ spec:
       - deployments
       - statefulsets
       - cronjobs
-      # KEDA is not installed today, so this is inert -- carried forward from the py-
-      # config so that installing KEDA later does not silently leave ScaledObjects
-      # running through a Low Power window.
-      - scaledobjects
+      #
+      # `scaledobjects` IS NOT LISTED, AND MUST NOT BE UNTIL KEDA IS INSTALLED.
+      #
+      # It was carried over from the py-kube-downscaler config on the assumption
+      # -- written into that file's comments -- that it was INERT while KEDA was
+      # absent. That was true of py-. It is NOT true of the Go rewrite, which
+      # treats a missing resource type as fatal and exits on the first scan:
+      #
+      #   an error occurred while scanning workloads, exiting
+      #   failed to get workloads of type "scaledobjects": failed to get
+      #   scaledobjects: the server could not find the requested resource
+      #   (get scaledobjects.keda.sh)
+      #
+      # The pod CrashLoopBackOffs, and because Flux had already pruned py- by
+      # then, the estate is left with NO shed mechanism at all. Verified live on
+      # 2026-09-05: `kubectl get crd | grep keda.sh` returns nothing.
+      #
+      # Add the line back in the SAME change that installs KEDA, never before.
+      # The chart turns this list into both `--include-resources` and the RBAC
+      # rules, so an entry with no CRD behind it is a guaranteed crash loop
+      # rather than a harmless no-op.
 
     arguments:
       # DURATION, not seconds. See the migration note above.
