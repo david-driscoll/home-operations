@@ -234,6 +234,31 @@ cleared:
 flux -n equestria reconcile helmrelease homelable --reset --with-source
 ```
 
+**Do not try to clear it by editing the manifest, and be careful about
+unrelated merges during this window.** Any spec change bumps
+`metadata.generation`, which resets the remediation counters — but on a release
+that has NEVER successfully installed it also switches the code path from
+install to upgrade, and `upgrade.remediation.strategy: rollback` then has
+nothing to roll back to:
+
+```
+Stalled=True  MissingRollbackTarget: Failed to perform remediation:
+              missing target release for rollback: cannot remediate failed release
+Ready=False   UpgradeFailed: ... failed early due to stalled resources:
+              [Deployment/equestria/homelable status: 'Failed']
+```
+
+That is a strictly worse stall than the install one: the install path could keep
+uninstalling and retrying on its own, and this path cannot remediate at all.
+Observed live — a one-line commit removing a deprecated `rollback.recreate`
+field merged during the outage window and put the release here.
+
+The app is unaffected either way. The Deployment, Services and HTTPRoute from
+the last attempt survive both kinds of stall, so the kubelet still resolves
+`CreateContainerConfigError` on its own the moment the Secret appears and
+homelable starts serving. Only the HelmRelease needs the `--reset` above, to
+restore drift detection and future upgrades.
+
 **During the cycling (before it stalls)** Helm-owned objects are destroyed and
 recreated every ten minutes, so they intermittently appear missing and the
 ToolHive remote proxy flaps as its remote Service comes and goes. The PVC is
