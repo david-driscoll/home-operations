@@ -178,7 +178,22 @@ spec:
                 drop: ["ALL"]
                 add: ["NET_RAW"]
 
-          # uvicorn. Reachable on the tailnet only; see ../ingressroute-mcp.yaml.
+          # uvicorn, serving Streamable HTTP at /mcp.
+          #
+          # STAYS IN THIS POD even though its MCP surface now lives in the
+          # `agents` namespace
+          # (kubernetes/apps/agents/agent-tools-servers/homelable.yaml). It
+          # reaches the backend with an `X-MCP-Service-Key` header that bypasses
+          # OIDC by design, and that hop is a loopback one only while the two are
+          # siblings -- running the image over in `agents` instead would mean
+          # giving the backend a ClusterIP and turning a pod-private,
+          # OIDC-bypassing API into a cluster-wide one. Only the client-facing
+          # surface moved; the privileged hop did not.
+          #
+          # Its own `X-API-Key` gate is unconditional and cannot be turned off,
+          # so `MCP_API_KEY` must stay set here. The ToolHive side injects the
+          # same value as a header; see that file for why not setting it is worse
+          # than setting it.
           mcp:
             image:
               repository: ghcr.io/pouzor/homelable-mcp
@@ -277,9 +292,15 @@ spec:
         ports:
           http:
             port: *frontendPort
-      # A Service of its own so the tailnet IngressRoute has something to name.
-      # It selects the same pod as `homelable` above -- the port is what
-      # separates them.
+      # A Service of its own so the MCPRemoteProxy in `agents` has something to
+      # dial: http://homelable-mcp.equestria.svc.cluster.local:8001/mcp. It
+      # selects the same pod as `homelable` above -- the port is what separates
+      # them.
+      #
+      # Note what is NOT here: a Service for the backend. It has none, so port
+      # 8000 is reachable only from inside this pod, which is what keeps the
+      # `X-MCP-Service-Key` OIDC bypass a loopback-only privilege. Adding one
+      # would undo that; see the mcp container's comment above.
       mcp:
         controller: *app
         type: ClusterIP

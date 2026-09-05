@@ -25,11 +25,18 @@ afternoon laying it out — stop and plan a real data move instead: `homelab.db`
 is not reproducible from git or from a rescan, and it would have to be copied
 into the PVC before the pod first writes to it.
 
-Public hostnames do not change. `celestia` and `equestria` share one root
-domain, so `homelable.driscoll.tech`, `homelable.<tailnet>` and
-`homelable-mcp.<tailnet>` are the same names before and after — only what
+Public hostnames do not change, with one deliberate exception.
+`celestia` and `equestria` share one root domain, so `homelable.driscoll.tech`
+and `homelable.<tailnet>` are the same names before and after — only what
 answers on them moves. That is why the OIDC redirect URIs, the Gatus checks and
 the dashboard widget need no hostname edits.
+
+**`homelable-mcp.<tailnet>` goes away and is not replaced.** The MCP surface
+moves into ToolHive's `agent-tools` group, so clients reach it through the
+VirtualMCPServer's one hostname and one OIDC surface instead of a bespoke
+tailnet host whose only credential was a static `X-API-Key`. Any MCP client
+config pointing at `https://homelable-mcp.<tailnet>/mcp` has to be repointed —
+see [step 4](#4-let-it-start-and-check-the-whole-chain).
 
 ## What the manifests already do
 
@@ -59,11 +66,16 @@ with the merge:
   `/api/v1/liveview/config` stays reachable (it is OIDC-session-guarded and is
   what the UI reads to build a share link), which is why the two liveview
   matches are `Exact` rather than `PathPrefix`.
-- **MCP on the tailnet only** — `ingressroute-mcp.yaml` plus the nested
-  Kustomization in `mcp-tailnet-ks.yaml`, because `components/tailscale` emits
-  one hostname per app and is already spending it on the UI. There is
-  deliberately no HTTPRoute for the MCP server: its only credential is a static
-  `X-API-Key`, so the boundary has to be network-level.
+- **MCP through ToolHive** — `kubernetes/apps/agents/agent-tools-servers/homelable.yaml`
+  adds an `MCPRemoteProxy` to the `agent-tools` group, dialling the
+  `homelable-mcp` Service over the cluster network, plus an
+  `MCPExternalAuthConfig` of type `headerInjection` that supplies the
+  `X-API-Key` the server demands. The mcp CONTAINER stays in homelable's pod:
+  it reaches the backend with a header that bypasses OIDC by design, and that
+  is a loopback hop only while the two are siblings. Running the image in
+  `agents` instead would mean giving the backend a ClusterIP — turning a
+  pod-private, OIDC-bypassing API into a cluster-wide one. Only the
+  client-facing surface moved.
 - **Scanner capability** — `NET_RAW` added back on top of a `drop: ALL`. Note
   this is a real grant in Kubernetes, unlike on Docker where the upstream
   compose's `cap_add: NET_RAW` was a no-op against the default capability set.
@@ -211,8 +223,13 @@ kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=
   Traefik's access log on every successful load.
 - `https://homelable.<tailnet>/view?key=...` **does** load — proves the block is
   scoped to the LAN hostname and did not take live view out entirely.
-- `https://homelable-mcp.<tailnet>/mcp` answers with an `X-API-Key` header, and
-  `homelable-mcp.driscoll.tech` does **not** resolve to anything serving it.
+- `kubectl -n agents get mcpremoteproxy toolhive-homelable` reports `Ready`,
+  and homelable's tools appear through the `agent-tools` VirtualMCPServer. A
+  `Ready` proxy that returns 401 on every call means the injected `X-API-Key`
+  and the server's `MCP_API_KEY` have diverged — they read the same OpenBao
+  field, so that should only happen mid-rotation.
+- `https://homelable-mcp.<tailnet>/mcp` no longer resolves. That hostname was
+  retired with the move; repoint any MCP client that still has it.
 
 ### 5. Run the Pulumi home stack to release the DNS name
 

@@ -7,7 +7,11 @@ resources:
   - ./definition.yaml
   - ./externalsecret.yaml
   - ./middleware.yaml
-  - ./ingressroute-mcp.yaml
-  - ./mcp-tailnet-ks.yaml
-# ./mcp-tailnet/ is deliberately absent: it is rendered into the `network`
-# namespace by ./mcp-tailnet-ks.yaml, not into this build.
+# No MCP route of any kind here. The MCP surface lives in the `agents`
+# namespace as an MCPRemoteProxy joining the `agent-tools` group --
+# kubernetes/apps/agents/agent-tools-servers/homelable.yaml -- which reaches
+# the `homelable-mcp` Service in ./helmrelease.yaml over the cluster network. That replaced a
+# hand-rolled tailnet hostname (its own IngressRoute plus a nested
+# Kustomization rendering an Ingress into `network`, because
+# components/tailscale emits only one host per app) whose only credential was
+# a static X-API-Key.
