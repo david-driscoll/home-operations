@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app homelable
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/equestria/home/homelable
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: external-secrets
+      namespace: kube-system
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # Publishes homelable.${TAILSCALE_DOMAIN} -> service `homelable` port `http`.
+    # The MCP server's second tailnet hostname is NOT this component -- it only
+    # ever emits one host per app; see ./mcp-tailnet-ks.yaml.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # The SQLite DB *is* the hand-curated canvas and is not reproducible from
+      # git -- it was the whole reason the Dockge stack carried a backrest plan.
+      # It is a few MB of device rows; 2Gi is the same sizing freshrss uses for
+      # a comparable single-file store.
+      VOLSYNC_CAPACITY: 2Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # All three upstream images run as root (verified against the registry:
+      # `.config.User` is null on backend, frontend and mcp alike), so the DB
+      # and scan_config.json land 0:0. The restic mover defaults to 568 and
+      # would be reading someone else's files; pin it to the writer instead.
+      VOLSYNC_PUID: "0"
+      VOLSYNC_PGID: "0"

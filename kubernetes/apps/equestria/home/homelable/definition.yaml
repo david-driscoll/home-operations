@@ -3,12 +3,12 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: homelable
+  name: ${APP}
 spec:
   name: Homelable
   category: Applications
   description: Homelab network topology map and LAN device discovery
-  url: &url https://homelable.${searchDomain}
+  url: &url https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homelable.svg
   access_policy:
     groups:
@@ -18,8 +18,8 @@ spec:
     oauth2:
       clientType: confidential
       allowedRedirectUris:
-        - url: "https://homelable.${searchDomain}/api/v1/auth/oidc/callback"
-        - url: "https://homelable.${tailscaleDomain}/api/v1/auth/oidc/callback"
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oidc/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/api/v1/auth/oidc/callback"
       propertyMappings:
         - email
         - openid
@@ -29,28 +29,41 @@ spec:
   gatus:
     # The SPA shell. nginx serves it regardless of session, so a plain 200 is
     # the right signal that the frontend is up.
+    #
+    # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md):
+    # `equestria` is the shed-list namespace, so this workload is scaled to 0
+    # between 02:00 and 09:00. That window was not a factor on the Dockge host,
+    # and is new with this migration.
     - group: Applications
       url: *url
       method: GET
       conditions:
         - "[STATUS] == 200"
+      maintenance-windows: &shed
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
     # Deeper: /api/v1/health has no auth dependency and is proxied by nginx to
     # the backend, so this covers frontend -> nginx -> backend in one check.
+    # In Kubernetes those are two containers in one pod rather than two
+    # containers on a stack-private bridge, but the hop being proven is the same.
     - name: API
       group: Applications
-      url: https://homelable.${searchDomain}/api/v1/health
+      url: https://${APP}.${ROOT_DOMAIN}/api/v1/health
       method: GET
       conditions:
         - "[STATUS] == 200"
         - "[BODY].status == ok"
-    # Regression alarm for the live-view containment in compose.yaml. If the
-    # blocking router is removed, reordered, or out-prioritised, /view starts
-    # answering 200 on the LAN-facing hostname and this fires. Any other
-    # outcome (404 from error-pages, 502 if error-pages is down) still passes,
-    # so it only alerts on the thing that actually matters.
+      maintenance-windows: *shed
+    # Regression alarm for the live-view containment in ./middleware.yaml. If
+    # the blocking HTTPRoute rule or its filter is removed, /view starts
+    # answering 200 on the LAN-facing hostname and this fires. Any other outcome
+    # (403 from the block, 502 while the app is shed) still passes, so it only
+    # alerts on the thing that actually matters -- and needs no maintenance
+    # window, because "not 200" is exactly what a shed workload returns.
     - name: Live View Blocked
       group: Applications
-      url: https://homelable.${searchDomain}/view
+      url: https://${APP}.${ROOT_DOMAIN}/view
       method: GET
       conditions:
         - "[STATUS] != 200"

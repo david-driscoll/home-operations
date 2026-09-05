@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# The MCP server's tailnet Ingress, rendered into the `network` namespace where
+# Traefik's Service lives. A second copy of the machinery in
+# kubernetes/components/tailscale/ks.yaml, for the app's second hostname --
+# that component emits one host per app and is already spending it on the UI.
+#
+# WHY A NESTED KUSTOMIZATION AND NOT A PLAIN RESOURCE IN ./kustomization.yaml:
+# the Tailscale operator resolves an Ingress backend to `<ClusterIP>:<port>` and
+# requires that Service in the INGRESS's own namespace -- an ExternalName is
+# rejected outright. Traefik's Service is in `network`, and this app's build
+# cannot put anything there: Flux's `targetNamespace` is Kustomize's namespace
+# transformer and OVERRIDES an explicitly-set `metadata.namespace`. So the object
+# lands in `equestria` and `spec.targetNamespace` below puts the Ingress in
+# `network`.
+#
+# `decryption` and `substituteFrom` are spelled out rather than inherited, for
+# the same reason components/tailscale/ks.yaml spells them out: components/common
+# patches every Kustomization with them, but it is applied by the UMBRELLA
+# kustomization (kubernetes/apps/equestria/kustomization.yaml), and a
+# Kustomization emitted from inside an app's own build never passes through it.
+# Without them ${TAILSCALE_DOMAIN} resolves to nothing, silently.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  # NOT named after the target namespace. A nested ks named `${APP}-network`
+  # would self-prune; see the estate note on child-ks naming.
+  name: ${APP}-mcp-tailnet-ingress
+spec:
+  targetNamespace: network
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: ${APP}
+      driscoll.dev/name: ${APP}
+  path: ./kubernetes/apps/equestria/home/homelable/mcp-tailnet
+  dependsOn:
+    - name: tailscale-operator
+      namespace: tailscale-system
+  prune: true
+  # `false` for the reason components/tailscale/ks.yaml gives: gating this app's
+  # readiness on a tailnet VIP reaching `LoadBalancer` would make the Tailscale
+  # operator's progress a hard dependency of the app itself.
+  wait: false
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substitute:
+      APP: ${APP}
+    substituteFrom:
+      - name: cluster-secrets
+        kind: Secret
+      - name: cluster-versions
+        kind: ConfigMap
+      - name: shared-secrets
+        kind: Secret

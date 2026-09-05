@@ -402,6 +402,26 @@
       },
     },
     {
+      // homelable ships as three images -- frontend, backend and mcp -- built
+      // and tagged together from one upstream release. They are not
+      // independently versioned, and the frontend bakes
+      // `proxy_pass http://backend:8000` into its nginx config, so a bump that
+      // lands on one and not the others is a mixed-version deployment in a
+      // single pod. Grouping makes that impossible by construction rather than
+      // by remembering to merge three PRs at once.
+      description: "Homelable",
+      groupName: "Homelable",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/pouzor/homelable-*"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "CloudNative-PG Cluster",
       groupName: "CloudNative-PG Cluster",
       matchPackageNames: [
