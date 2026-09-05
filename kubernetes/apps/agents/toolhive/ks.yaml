@@ -24,7 +24,7 @@ spec:
     - name: external-secrets
       namespace: kube-system
     # The session store, for its password Secret as much as for the server:
-    # `aclUserConfig.passwordSecretRef` in ./mcpexternalauthconfig.yaml resolves
+    # `aclUserConfig.passwordSecretRef` in ./helmrelease.yaml resolves
     # against a Secret that ../toolhive-valkey's ExternalSecret creates.
     - name: toolhive-valkey
       namespace: *namespace
