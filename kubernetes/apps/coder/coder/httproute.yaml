@@ -14,6 +14,31 @@ spec:
   hostnames:
     - "code.${ROOT_DOMAIN}"
   rules:
+    # /api gets `local-api` -- the same internal-network guard as `local-user`,
+    # MINUS error-pages. error-pages intercepts 401-599 and swaps the body for a
+    # generic HTML page, and coder's JSON bodies are the only diagnostic it
+    # emits for a failed login: the OIDC callback logs NOTHING at any level, so
+    # `{"message":"Cookie \"oauth_state\" must be provided."}` vs
+    # `{"message":"State mismatched."}` is the whole difference between a
+    # five-minute fix and reproducing the flow against the pod by hand
+    # (2026-09-05). It also keeps error-pages off the API's websockets.
+    #
+    # Gateway API resolves overlapping rules by longest matching path prefix, so
+    # this wins for /api and the catch-all below keeps the pretty pages for the
+    # dashboard.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: ${APP}
+          port: 80
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: local-api
     - backendRefs:
         - name: ${APP}
           port: 80
