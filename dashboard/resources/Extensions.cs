@@ -111,6 +111,7 @@ app.MapGet("/applications", async (HttpContext context, IObservable<IEnumerable<
     var apps = await applications.FirstAsync();
     return RenderWidget("Applications", apps
     .Where(z => !z.Group.StartsWith("System:"))
+    .Where(z => !z.Name.Contains("(Tailnet)"))
     .OrderBy(app => app.Group), context.Response, app.Environment.IsProduction());
 
 }).CacheOutput();
