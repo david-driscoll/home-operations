@@ -25,20 +25,144 @@ spec:
   groupRef:
     name: agent-tools
 
-  # incomingAuth.oidcConfigRef has the EXACT SAME shape
-  # (name/audience/resourceUrl/scopes) individual MCPServers' oidcConfigRef
-  # already used -- so this reuses ../toolhive's existing embedded auth
-  # server (MCPExternalAuthConfig `toolhive`) and its MCPOIDCConfig `toolhive`
-  # directly. No second auth server (spec.authServerConfig, which would
-  # stand up an INDEPENDENT embedded OIDC issuer) is needed or wanted here.
+  # THIS SERVER RUNS ITS OWN AUTH SERVER, and an earlier revision of this file
+  # said the opposite -- that borrowing ../toolhive's was "needed or wanted"
+  # because incomingAuth.oidcConfigRef has the same shape an MCPServer's
+  # oidcConfigRef does. The shape matches; the AUDIENCE REGISTRY does not.
+  #
+  # An embedded auth server allows exactly ONE audience, derived from the
+  # resource URL of the workload hosting it, with no CRD field to extend it
+  # (see ./mcpoidcconfig.yaml for the two call sites and the live proof).
+  # ../toolhive's is hosted by toolhive-docs, so its one audience is
+  # `https://toolhive.${ROOT_DOMAIN}/mcp` and this host's resource could never
+  # be exchanged against it -- the token endpoint answered `invalid_target ...
+  # is not a registered audience` and never minted anything.
+  #
+  # So: a second issuer, on this hostname. The cost is a second DCR registry
+  # (clients registered against toolhive.${ROOT_DOMAIN} do not carry over) and
+  # a second entry in ../toolhive/definition.yaml's redirect-URI list. Both
+  # servers share this namespace's Valkey and signing key -- see the notes on
+  # `storage` and `signingKeySecretRefs` below for why that is safe.
   incomingAuth:
     type: oidc
     oidcConfigRef:
-      name: toolhive
+      # ./mcpoidcconfig.yaml, NOT `toolhive`: its issuer must equal
+      # authServerConfig.issuer below, and `toolhive`'s is the other hostname.
+      name: agent-tools
       # Own hostname -> own audience, same rule every individual MCPServer
-      # in this namespace already follows.
+      # in this namespace already follows. This value IS the registry: the
+      # operator derives the auth server's sole allowed audience from it.
       audience: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp
       resourceUrl: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp
+
+  # The embedded OAuth 2.0 authorization server, federating login to authentik.
+  #
+  # A NEAR-TWIN OF ../toolhive/helmrelease.yaml's, and everything that file
+  # says about WHY the embedded server exists at all applies here unchanged:
+  # authentik gates DCR behind a scoped bearer token, and it sets
+  # `aud = client_id` unconditionally with no RFC 8707 `resource` handling, so
+  # it can be the upstream IdP but never the authorization server MCP clients
+  # talk to.
+  #
+  # WHY THIS ONE NEEDS NO HELMRELEASE, unlike its twin. That file is a
+  # HelmRelease solely because MCPExternalAuthConfig's `issuerUrl` -- the
+  # UPSTREAM issuer, carrying authentik's RandomPet application slug -- is
+  # unknowable at commit time and has no secret-ref form, forcing app-template
+  # `rawResources` + `valuesFrom`. `oauth2Config` has no `issuerUrl` at all:
+  # it pins the three endpoints instead, and those are GLOBAL on authentik
+  # (no slug, verified against the rendered `toolhive-values` Secret). With
+  # nothing unknowable left, a plain manifest is enough and the Helm waiter
+  # deadlock documented in that file is avoided rather than re-inherited.
+  authServerConfig:
+    # MUST equal ./mcpoidcconfig.yaml's `issuer` -- the operator's
+    # ValidateAuthServerIntegration rejects the pair otherwise, and a mismatch
+    # would fail every token on an `iss` check anyway.
+    issuer: https://agent-tools-mcp.agents.${ROOT_DOMAIN}
+
+    upstreamProviders:
+      - name: authentik
+        # `oauth2`, NOT `oidc`, for the reason ../toolhive/resources/values.yaml
+        # gives at length: allowPrivateIPs exists only on oauth2Config, and
+        # authentik resolves to an RFC-1918 address from inside the cluster.
+        # Dropping `oidc` costs discovery, which is why the endpoints are
+        # pinned below.
+        type: oauth2
+        oauth2Config:
+          allowPrivateIPs: true
+          # GLOBAL authentik endpoints -- not per-application, so they carry no
+          # generated slug and cannot drift as the application is recreated.
+          # Literals here rather than store-sourced values: see the HelmRelease
+          # note above. ../toolhive/resources/values.yaml renders these same
+          # three from OpenBao and is the place to check if authentik moves.
+          authorizationEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/authorize/
+          tokenEndpoint: https://authentik.${ROOT_DOMAIN}/application/o/token/
+          userInfo:
+            # No fieldMapping: authentik emits standard OIDC claim names, which
+            # is what ToolHive assumes when this is nil.
+            endpointUrl: https://authentik.${ROOT_DOMAIN}/application/o/userinfo/
+          # THE SAME authentik client as ../toolhive, deliberately. It is
+          # PINNED in ../toolhive/definition.yaml (not generated), which is the
+          # only reason it can be a literal here. One authentik application
+          # with two redirect URIs, two ToolHive auth servers federating to it.
+          clientId: toolhive
+          clientSecretRef:
+            # Written by the `applications` Pulumi stack and surfaced by
+            # ../toolhive/externalsecret.yaml into this namespace.
+            name: toolhive-oidc
+            key: client-secret
+          # MUST be present in ../toolhive/definition.yaml's
+          # `allowedRedirectUris` before this can complete a login -- authentik
+          # rejects an unregistered redirect. That needs an `applications`
+          # stack run, not just a Flux reconcile.
+          redirectUri: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/oauth/callback
+          scopes:
+            - openid
+            - profile
+            - email
+            - offline_access
+
+    # Deliberately NARROW, same as ../toolhive/helmrelease.yaml: every client
+    # that registers through /oauth/register gains the right to request
+    # everything listed here, whatever it actually asked for.
+    baselineClientScopes:
+      - openid
+      - offline_access
+
+    storage:
+      # NOT the `memory` default: in memory, DCR registrations and live
+      # sessions die with the pod, which on this cluster is every Low Power
+      # window.
+      #
+      # SHARING ../toolhive-valkey WITH THE OTHER AUTH SERVER IS SAFE. The
+      # operator derives a per-workload key prefix --
+      # `storage.DeriveKeyPrefix(namespace, name)`, "thv:auth:{ns}:{name}:" --
+      # so the two servers cannot collide, and there is no CRD field to set it
+      # by hand.
+      type: redis
+      redis:
+        addr: toolhive-valkey.${NAMESPACE}.svc.cluster.local:6379
+        aclUserConfig:
+          passwordSecretRef:
+            name: toolhive-valkey
+            key: password
+
+    # REUSING ../toolhive's KEYS RATHER THAN MINTING A SECOND PAIR. Neither may
+    # be left unset -- the default is an ephemeral key, and the CRD's own
+    # wording is "JWTs will be invalid after restart", which on this cluster
+    # means nightly. See ../toolhive/externalsecret.yaml for what the values
+    # are and for the two load-bearing `openssl genpkey` flags.
+    #
+    # A shared signing key does NOT make the two servers interchangeable: each
+    # validates `iss` against its own issuer and `aud` against its own single
+    # registered audience, so a token minted by one is refused by the other on
+    # both counts. Splitting them later needs only a second OpenBao path and an
+    # edit here -- it is not a decision this locks in.
+    signingKeySecretRefs:
+      - name: toolhive-authserver-keys
+        key: signing.pem
+    hmacSecretRefs:
+      - name: toolhive-authserver-keys
+        key: hmac
 
   # Backends carry no oidcConfigRef/authServerRef of their own any more (see
   # each's mcpserver.yaml) -- there is nothing for vMCP to discover or

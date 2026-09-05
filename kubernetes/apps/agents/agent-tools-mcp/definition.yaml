@@ -20,6 +20,16 @@ spec:
     groups:
       - admins
   gatus:
+    # A NEGATIVE CHECK: it asserts the endpoint is still CLOSED. An
+    # incomingAuth-less vMCP serves every request that reaches its port, with a
+    # healthy pod throughout, so a 200 here means authentication was silently
+    # lost.
+    #
+    # IT CANNOT, HOWEVER, TELL YOU AUTHENTICATION WORKS. It stayed green
+    # through the entire SSRF outage and through the audience rejection that
+    # followed, because both fail CLOSED -- a proxy that cannot fetch its own
+    # JWKS answers 401 exactly like a proxy refusing a bad token. That is why
+    # the two below exist.
     - name: ToolHive Agent Tools MCP rejects unauthenticated
       group: "Applications"
       url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp
@@ -29,3 +39,41 @@ spec:
       body: '{}'
       conditions:
         - "[STATUS] == 401"
+
+    # THE TWO CHECKS BELOW WATCH THIS HOST'S OWN AUTHORIZATION SERVER, which is
+    # new as of the switch to ./virtualmcpserver.yaml's `authServerConfig`.
+    # Before that this hostname had no OAuth surface of its own and there was
+    # nothing here to check; now a second embedded server can fail to start
+    # while /mcp keeps answering 401, which is invisible to the check above.
+    # Same reasoning, and the same hard-won lesson, as
+    # ../toolhive/definition.yaml's.
+
+    # RFC 9728, the document an MCP client fetches FIRST. The
+    # `authorization_servers` assertion is the load-bearing half: it must name
+    # THIS host, not toolhive.${ROOT_DOMAIN}. If it ever points at the other
+    # server again, clients walk off to an issuer whose sole registered
+    # audience is not this one, and every token exchange fails with
+    # `invalid_target ... is not a registered audience`.
+    - name: ToolHive Agent Tools MCP protected-resource metadata
+      group: "Applications"
+      url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://agent-tools-mcp.agents.${ROOT_DOMAIN}"
+
+    # RFC 8414, served by this host's embedded authorization server.
+    # `registration_endpoint` is the assertion that matters: its presence IS
+    # the anonymous-DCR capability the embedded server exists to provide, and
+    # clients registered against the OTHER server do not carry over to this
+    # one. If this server fails to start, this document disappears while /mcp
+    # stays 401.
+    - name: ToolHive Agent Tools MCP authorization server
+      group: "Applications"
+      url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://agent-tools-mcp.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://agent-tools-mcp.agents.${ROOT_DOMAIN}/oauth/register"
