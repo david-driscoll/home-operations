@@ -90,6 +90,54 @@ stdio server and is **known to fail here** with `CONNECTION_CLOSED`; the
 `crew_state` entry likewise fails with `ENOENT` because `crew` is not installed
 in this image. Neither is a reason to distrust `agent-tools`.
 
+## Backend health
+
+The vMCP aggregates independent backends, and a broken one fails *through* it:
+the aggregator proxies the call and hands back the backend's own error. **A tool
+error is therefore not evidence the MCP path is broken** — check this section
+before diagnosing routing.
+
+Verified by direct read-only tool calls on 2026-09-05:
+
+| Backend | State |
+|---|---|
+| `toolhive-kubernetes_` | ✅ live cluster reads |
+| `toolhive-proxmox-*_` | ✅ node status across hosts |
+| `toolhive-docker-*_` | ✅ container listings |
+| `toolhive-postgres_` | ✅ schema search |
+| `toolhive-unifi-*_` | ✅ tool index |
+| `toolhive-context7_` | ✅ library resolve + docs query |
+| `toolhive-microsoft-docs_` | ✅ docs search |
+| `toolhive-openbao_` | not probed — both tools read secret material |
+| `toolhive-github_` | ⚠️ 401s ~1h after each pod start |
+| `toolhive-tailscale_` | ⚠️ CLI-backed tools fail; API-backed tools work |
+| `toolhive-pulumi_` | ⚠️ registry tools failed on a read-only plugin cache |
+
+### `toolhive-github_` — 401 Bad credentials
+
+`GITHUB_PERSONAL_ACCESS_TOKEN` comes from a `secretKeyRef`, which resolves **once
+at container start**. `github-token` is an App installation token re-minted every
+30m against a 60m life, so the baked-in value dies about an hour in and the pod
+keeps presenting it. Diagnosis and the rejected fixes are in
+[`agent-tools-servers/github.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github.yaml).
+
+**Workaround:** use `gh` from the agentboard pane instead — it reads
+`GH_CONFIG_DIR` and is fresh per invocation.
+
+### `toolhive-tailscale_` — `spawn tailscale ENOENT`
+
+The package mixes REST-backed and CLI-backed tools; the CLI-backed half tries to
+exec a `tailscale` binary absent from `node:22-alpine`. The API key is minted
+correctly and is not the problem. See
+[`agent-tools-servers/tailscale.yaml`](../../kubernetes/apps/agents/agent-tools-servers/tailscale.yaml).
+
+### `toolhive-pulumi_` — read-only plugin cache
+
+The `pulumi` CLI resolved its plugin root to `/home/node/.pulumi` on a read-only
+rootfs despite `HOME=/tmp`. Addressed by setting `PULUMI_HOME` at
+[`agent-tools-servers/pulumi.yaml`](../../kubernetes/apps/agents/agent-tools-servers/pulumi.yaml);
+whether plugin *download* then succeeds depends on egress and is unverified.
+
 ## Troubleshooting
 
 Check what the client actually resolved — the URL, not just the status:
