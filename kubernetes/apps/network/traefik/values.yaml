@@ -219,6 +219,63 @@ ingressClass:
   enabled: true
   isDefaultClass: false
   name: internal
+# ---- access logs: CrowdSec's ONLY input ----------------------------------
+#
+# TOP-LEVEL `accessLog`, not `logs.access`. Verified against traefik chart
+# 41.4.0's own values.yaml (line 591) rather than assumed -- `logs:` in this
+# chart holds the general log only, and a nested `logs.access` block would be
+# silently ignored, the same shape of dead config as the `deployment.tolerations`
+# and `ports.<n>.http.forwardedHeaders` notes above.
+#
+# WHY THIS IS HERE AND NOT IN THE CROWDSEC APP. Chart default is
+# `accessLog.enabled: false`, and nothing in this repo had ever overridden it, so
+# Traefik emitted no access logs at all. CrowdSec's agents tail this container's
+# log (`/var/log/containers/traefik-*_network_*.log`, see
+# network/crowdsec/helmrelease.yaml's inline `agent.acquisition`), which meant
+# they were reading ~30 lines/s of Traefik's own ANSI-coloured deprecation
+# warnings and nothing else.
+#
+# What that cost, measured live before this landed rather than reasoned about:
+# `crowdsecurity/cri-logs` succeeded on 100% of lines (it only unwraps the CRI
+# envelope), `crowdsecurity/traefik-logs` had NO series in
+# cs_node_hits_ok_total at all, cs_parser_hits_ok_total did not exist, and
+# cs_parser_hits_ko_total ran at 100% of the line rate. Every HTTP scenario in
+# COLLECTIONS -- traefik, base-http-scenarios, http-cve -- was therefore inert,
+# no bucket ever overflowed, and all 5,155 active decisions came from the CAPI
+# community blocklist. The agents looked entirely healthy the whole time.
+#
+# `format: json`, not the chart's `common` default. crowdsecurity/traefik-logs
+# parses both, but only the JSON branch reads ClientHost through
+# `TrimSpace(Split(..., ',')[-1])`, which takes the LAST hop of a comma-joined
+# X-Forwarded-For. That is what makes the ban land on the real client rather
+# than on cloudflared, and it pairs with the `forwardedHeaders.trustedIPs` block
+# above -- both halves are needed, neither is sufficient.
+#
+# User-Agent is kept explicitly because `fields.headers.defaultMode` is `drop`.
+# The parser reads it as `evt.Unmarshaled.traefik["request_User-Agent"]`, and
+# the bad-user-agent and crawler scenarios in base-http-scenarios are dead
+# without it. Nothing else is un-dropped: no Cookie, no Authorization.
+#
+# `addInternals` stays false (chart default). Traefik's own dashboard, ping and
+# the metrics endpoint are not traffic worth banning anyone over, and including
+# them would roughly double the volume for zero detection value.
+#
+# COST, stated plainly: this is new Loki ingest from a Tier-0 pod, proportional
+# to real request volume rather than to anything CrowdSec does. Alloy scrapes
+# every pod in the cluster (observability/alloy/resources/config.alloy), so
+# these lines land in Loki whether or not CrowdSec wants them. If retention
+# becomes a problem, `accessLog.filters.statusCodes` is the knob -- but note
+# that narrowing to errors also blinds the crawl and scan scenarios, which key
+# off successful requests.
+accessLog:
+  enabled: true
+  format: json
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
 metrics:
   addInternals: true
   prometheus:

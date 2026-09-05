@@ -103,6 +103,41 @@ config:
 
 deployAnnotations:
   reloader.stakater.com/auto: "true"
+
+# Makes crowdsec's own logs findable in Loki. Alloy derives its `app` label from
+# `__meta_kubernetes_pod_label_app_kubernetes_io_name` (observability/alloy's
+# config.alloy, discovery.relabel "pod_logs"), and this chart hardcodes ONLY
+# `k8s-app` / `type` / `version` onto its pod templates -- so until this key
+# existed, `{app="crowdsec"}` returned nothing while `{pod=~"crowdsec.*"}`
+# returned thousands of lines. Verified live before and after: the lines were
+# always in Loki, they were simply not reachable by the one label every other
+# app in the estate is queried by.
+#
+# ks.yaml's commonMetadata does NOT cover this. It labels the Flux-managed
+# objects (HelmRelease, OCIRepository, ConfigMap); the pods are rendered by Helm
+# underneath and never see it.
+#
+# TOP-LEVEL on purpose, not `lapi.podLabels` / `agent.podLabels`. The chart
+# treats the global as an override -- `{{- if .Values.podLabels }} ... {{- else
+# if .Values.lapi.podLabels }}` in lapi-deployment.yaml and agent-daemonSet.yaml
+# -- so setting both would silently discard the per-component one. One value
+# also means lapi and agent share an `app`, which is what makes
+# `{app="crowdsec"}` return the whole stack; `container` still separates them.
+#
+# SAFE AGAINST THE SELECTOR TRAP: this adds pod TEMPLATE labels only. Both
+# selectors stay `k8s-app`/`type` (immutable fields, untouched), the chart's
+# Services still select on `k8s-app`/`type`/`version`, and its ServiceMonitors
+# select Services by `app: crowdsec-service`. Verified by rendering the pinned
+# chart with and without this key and diffing. Nothing in the `network`
+# namespace selects `app.kubernetes.io/name: crowdsec` -- crowdsec-ui's Service
+# selects `crowdsec-ui`, which is a different value.
+#
+# `podLabels` is absent from the chart's values.schema.json, which is fine: the
+# schema sets no `additionalProperties: false`, so extra keys validate. The
+# `deployAnnotations` key directly above is in exactly the same position and has
+# been live for months.
+podLabels:
+  app.kubernetes.io/name: crowdsec
 lapi:
   # Tier 1 as of David's 2026-08-23 ruling ("crowdsec should be the same tier as
   # traefik"), reversing the exclusion noted under `agent.tolerations` above.
