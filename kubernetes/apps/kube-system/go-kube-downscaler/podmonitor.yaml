@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/podmonitor_v1.json
+#
+# HAND-WRITTEN rather than `podMonitor.enabled: true` in the HelmRelease.
+#
+# The chart's own PodMonitor template emits `podMetricsEndpoints[].port: 8085`.
+# That field takes a port NAME, and the chart's deployment.yaml declares the
+# container port with no `name:` at all -- so the rendered PodMonitor matches
+# nothing and scrapes nothing, with no error anywhere. Verified against
+# deployments/chart/templates/{deployment,podmonitor}.yaml at 1.3.4.
+#
+# `portNumber` addresses the port directly and does not need a name. The chart
+# also defaults `podMonitor.namespace` to the literal string "default", which
+# would place the object in a namespace that is not scraped here.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ${APP}
+spec:
+  selector:
+    matchLabels:
+      # The chart's own selectorLabels, not this Kustomization's commonMetadata:
+      # commonMetadata lands on the HelmRelease, never on the pods Helm renders
+      # from it. Same reasoning as ../../agents/toolhive-operator/podmonitor.yaml.
+      #
+      # And note the KEY. This chart does not use the app.kubernetes.io/* pair
+      # every other chart here does -- `go-kube-downscaler.selectorLabels` in
+      # _helpers.tpl is a single `application: <fullname>` label. Matching on
+      # app.kubernetes.io/name would select nothing, silently.
+      # <fullname> is `go-kube-downscaler` because the release name already
+      # contains the chart name, so the template does not prefix it.
+      application: go-kube-downscaler
+  podMetricsEndpoints:
+    - portNumber: 8085
+      path: /metrics
+      interval: 1m

@@ -1,0 +1,201 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sablier
+  namespace: kube-system
+spec:
+  chart:
+    spec:
+      chart: sablier
+      version: 1.7.1
+      sourceRef:
+        kind: HelmRepository
+        name: sablier
+        namespace: flux-system
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+
+  # ==========================================================================
+  # THE CHART EXPOSES NO POD-SPEC KNOBS. values.yaml at 1.7.1 has
+  # deploymentAnnotations/Labels, podAnnotations/Labels, deploymentStrategy,
+  # replicas, logLevel, config, extraArgs, extraEnv, extraVolumes(+Mounts),
+  # rbac, image, imagePullPolicy, probes and resources -- and NOTHING for
+  # tolerations, nodeSelector, affinity, priorityClassName or securityContext.
+  #
+  # A kustomize patch cannot reach a chart-rendered resource, so this is a
+  # postRenderer, shaped exactly like ../multus/helmrelease.yaml. Note the patch
+  # REPLACES the tolerations list wholesale -- the chart renders none, so there
+  # is nothing to preserve, but that is why the list is written out in full.
+  # ==========================================================================
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: sablier-sablier
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: sablier-sablier
+              spec:
+                template:
+                  spec:
+                    tolerations:
+                      # Sablier inherits go-kube-downscaler's Tier-1 argument
+                      # verbatim: Battery is entered FROM Low Power, and if the
+                      # thing that wakes workloads cannot be scheduled once the
+                      # control planes are tainted, then nothing can be woken
+                      # for the rest of the window.
+                      # See docs/cluster-consolidation/20-low-power-tier.md §4 --
+                      # and take the toleration from
+                      # ../go-kube-downscaler/helmrelease.yaml, NOT from that
+                      # doc's body, whose own boxed warning says the design it
+                      # describes is not what was built.
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+                        effect: NoSchedule
+                      # `failOpen: false` on every middleware (see
+                      # components/sablier) makes this pod a hard dependency of
+                      # every opted-in app: if it is unreachable those routes
+                      # return HTTP 500 rather than silently passing through.
+                      # The default 300s eviction delay would therefore be a
+                      # five-minute outage for every sleeping app whenever a
+                      # node goes NotReady. Same values as
+                      # ../../network/traefik/values.yaml, for the same reason.
+                      - key: node.kubernetes.io/not-ready
+                        operator: Exists
+                        effect: NoExecute
+                        tolerationSeconds: 60
+                      - key: node.kubernetes.io/unreachable
+                        operator: Exists
+                        effect: NoExecute
+                        tolerationSeconds: 60
+
+  values:
+    # Chart 1.7.1 pins appVersion 1.16.1. Overridden because three options this
+    # config depends on landed in 1.15.0 and the running behaviour of
+    # `auto-warm-externally-started` in particular is not optional here.
+    # Sablier's docs site tracks `main` and its "Next release" badges are stale;
+    # these were verified against the actual GitHub release notes.
+    image:
+      tag: 1.18.0
+
+    # SINGLE REPLICA, AND NOT NEGOTIABLE. Session state is in-memory
+    # (sablierapp/sablier#484), so a second replica does not give availability,
+    # it gives two disagreeing views of which workloads are awake.
+    replicas: 1
+
+    logLevel: info
+
+    config:
+      provider:
+        name: kubernetes
+
+        # THE DEFAULT HERE IS TRUE, AND IT WOULD SHED THE ESTATE.
+        # `auto-stop-on-startup` stops every workload carrying
+        # `sablier.enable=true` that is running when Sablier boots. On a chart
+        # upgrade, a node drain, or an OOM restart at 15:00 that means every
+        # on-demand app is torn down mid-use, with no request to wake it.
+        auto-stop-on-startup: false
+
+        # The counterpart, and the reason the line above is safe: instead of
+        # stopping externally-started workloads, open a normal session for them
+        # so they expire through the ordinary idle path. This is what keeps
+        # Sablier and Flux from fighting -- a `helm upgrade` re-renders
+        # `spec.replicas: 1` (documented in
+        # docs/cluster-consolidation/24-power-states.md, the 2026-08-23 entry:
+        # driftDetection.ignore does NOT apply to the upgrade path), and without
+        # this that workload would stay awake forever with no session attached
+        # to it.
+        #
+        # Mutually exclusive with `auto-stop-externally-started`; Sablier refuses
+        # to start with both. Added in v1.15.0.
+        auto-warm-externally-started: true
+
+        # Re-check the `sablier.enable` label before stopping an expired
+        # instance, so an app that was opted OUT while a session was open is not
+        # scaled to zero on the way past.
+        verify-enabled-on-expiration: true
+
+        kubernetes:
+          qps: 64
+          burst: 128
+          # Serve as soon as ONE replica is ready rather than waiting for the
+          # full desired count. Every opted-in app here runs `replicas: 1`, so
+          # this mostly matters for keeping the waiting page short when a
+          # Longhorn volume attach is the slow part.
+          ready-on-first-replica: true
+
+      sessions:
+        # How long a workload stays up after the last request. Deliberately far
+        # longer than Gatus's 2-minute probe interval is short -- see
+        # ./prometheusrule.yaml and the Gatus note in components/sablier for why
+        # a naive HTTP health check would keep everything awake forever.
+        default-duration: 30m
+
+      strategy:
+        dynamic:
+          default-theme: ghost
+          # NOT the 5s default. The waiting page self-refreshes, Traefik's
+          # accessLog is CrowdSec's only input, and ~12 requests to one URL in a
+          # minute is the shape of `crowdsecurity/http-crawl-non_statics`. At 5s
+          # a user waiting out a cold start can get themselves banned by the
+          # page that is telling them to wait.
+          default-refresh-frequency: 20s
+          show-details-by-default: false
+
+      server:
+        metrics:
+          # Off by default. ./servicemonitor.yaml and ./prometheusrule.yaml are
+          # the only visibility into whether a wake ever fails -- without this,
+          # a workload that cannot start looks identical to one nobody asked for.
+          enabled: true
+
+    extraEnv:
+      # `sablier.running-hours` windows are evaluated in the process's local
+      # timezone, and the container defaults to UTC. Sourced from the same
+      # `shared-secrets` value as the downscaler's window so the two cannot drift.
+      - name: TZ
+        value: "${TIMEZONE}"
+      # Sablier writes ANSI colour to stderr by default, which reaches Loki as
+      # escape sequences embedded in the message.
+      - name: NO_COLOR
+        value: "1"
+
+    rbac:
+      # Sablier can hibernate CloudNativePG Clusters via the `cnpg.io/hibernation`
+      # annotation and pause OT-CONTAINER-KIT Redis. Both stay OFF: `database` is
+      # in go-kube-downscaler's excludedNamespaces precisely because every
+      # keep-list app depends on it, and granting patch on `clusters` would put a
+      # one-label mistake between the estate and a hibernated Postgres.
+      cnpg: false
+      otkRedis: false
+
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi

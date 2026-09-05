@@ -46,7 +46,7 @@ spec:
       #
       # Not Tier 1: no critical-tier priority class, no control-plane toleration,
       # and its data volume stays on the bulk `longhorn` class. It does inherit
-      # `coder`'s kube-downscaler exclusion, because that list is namespace-wide
+      # `coder`'s go-kube-downscaler exclusion, because that list is namespace-wide
       # and there is no per-workload opt back IN -- but the effect is cosmetic.
       # With its PVC on `bulk` the runner has nowhere to schedule once the
       # workers are down, so during Low Power it goes Pending rather than being

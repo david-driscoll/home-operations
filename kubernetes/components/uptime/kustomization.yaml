@@ -1,0 +1,145 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# ============================================================================
+# Give ONE app a scheduled window that differs from the estate default.
+#
+# MOST APPS DO NOT NEED THIS. go-kube-downscaler is opt-OUT with a global
+# `DEFAULT_DOWNTIME` of `Mon-Sun 02:00-09:00 ${TIMEZONE}`, so every workload in
+# every non-excluded namespace already sheds nightly with no annotation at all.
+# Reach for one of these components only when an app needs a DIFFERENT window --
+# not to opt an app in, which is already the default.
+#
+# TWO COMPONENTS, ONE ANNOTATION EACH:
+#
+#   components/downtime -> `downscaler/downtime`, the hours the app is ASLEEP
+#   components/uptime   -> `downscaler/uptime`,   the hours the app is AWAKE
+#
+# They are separate on purpose. A single component defaulting the unused
+# substitution to `${VAR:=}` would render the annotation with an EMPTY value
+# rather than omitting the key, and hand the downscaler an unparsable timespan.
+# Worse, setting both at once is a configuration the downscaler treats as an
+# error and responds to by SILENTLY SKIPPING that workload for the cycle --
+# upstream's own docs warn this class of mistake "could only show up every few
+# years". Two components make picking both a visible act in the app's ks.yaml
+# rather than an invisible one.
+#
+# There is no `:=` default here either: an app that adds the component and
+# forgets the substitution gets a failed Kustomization, not a silently empty
+# annotation.
+#
+# ---------------------------------------------------------------------------
+# HOW TO USE IT
+#
+#   1. add `- ../../../../components/uptime` to the app's ks.yaml components
+#   2. set the matching variable in the same file's postBuild.substitute:
+#
+#        DOWNSCALER_UPTIME: "Mon-Fri 08:00-18:00 America/New_York"     # awake when
+#
+#      Write the REASON next to it. A window that differs from the estate
+#      default always has one, and the next person needs it.
+#
+# Three legitimate uses:
+#
+#   1. A wider window on something genuinely idle -- e.g. a tool only opened
+#      during working hours.
+#
+#   2. A narrower or shifted window on something with a scheduled job that
+#      would otherwise be missed. The *arr / download chain is the live example:
+#      radarr, sonarr, prowlarr, bazarr, autobrr, qbittorrent, sabnzbd and
+#      tautulli all do timed or webhook-driven background work and fail
+#      SILENTLY when they are down -- a completed download is never imported, a
+#      Sonarr webhook to Bazarr is fire-and-forget so it is lost rather than
+#      queued, and autobrr's IRC announces have no backfill at all. Today the
+#      estate default happens to be the right window for them; if it ever
+#      changes, they will need to pin this one.
+#
+#   3. Pinning a window in Git so a change to the estate default does not
+#      silently move an app that had a reason to be where it was.
+#
+# FORMAT CONSTRAINTS, both load-bearing and both inherited from the estate
+# default's comment in apps/kube-system/go-kube-downscaler/helmrelease.yaml:
+#   * a spec cannot cross midnight -- a range is read within a single day, so
+#     `22:00-06:00` is silently wrong rather than an error
+#   * end must be later than start in 24-hour time
+# Comma-separate for several windows; `Mon-Sun` is every day.
+#
+# ---------------------------------------------------------------------------
+# DO NOT combine with components/sablier. That component sets
+# `downscaler/exclude: "true"`, so the downscaler ignores the workload entirely
+# and any window set here becomes dead config that READS as if it were doing
+# something. An app is either scheduled or on-demand, never both -- see the long
+# note in components/sablier/kustomization.yaml for what happens when both
+# controllers own the same replica count.
+#
+# All three components also write /spec/postRenderers with `op: add` on the
+# whole list, so combining any two of them would additionally clobber one
+# another.
+# ============================================================================
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  # A postRenderer for the same reason as components/sablier: the annotation has
+  # to land on the Helm-rendered workload, which a kustomize patch cannot reach
+  # (apps/kube-system/multus/helmrelease.yaml is this repo's written proof), and
+  # targeting by KIND avoids having to know the app's controller key -- which
+  # varies, and does not exist at all for the non-app-template charts.
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+    patch: |-
+      # See the clobber warning in components/sablier: `add` on the whole list
+      # because most HelmReleases have no postRenderers for `/-` to append to.
+      # home/windmill and media/pinepods DO have one and must not use this
+      # component without hand-merging.
+      - op: add
+        path: /spec/postRenderers
+        value:
+          - kustomize:
+              patches:
+                - target:
+                    kind: Deployment
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      # Required by the schema, ignored for matching -- `target`
+                      # above is what selects.
+                      name: scheduled-uptime
+                      annotations:
+                        # An ANNOTATION, not a label, and not optional: the value
+                        # contains `:` and a space, both invalid in a Kubernetes
+                        # label value. The downscaler reads either, but only an
+                        # annotation can hold a timespan.
+                        downscaler/uptime: ${DOWNSCALER_UPTIME}
+                - target:
+                    kind: StatefulSet
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: StatefulSet
+                    metadata:
+                      # Required by the schema, ignored for matching -- `target`
+                      # above is what selects.
+                      name: scheduled-uptime
+                      annotations:
+                        # An ANNOTATION, not a label, and not optional: the value
+                        # contains `:` and a space, both invalid in a Kubernetes
+                        # label value. The downscaler reads either, but only an
+                        # annotation can hold a timespan.
+                        downscaler/uptime: ${DOWNSCALER_UPTIME}
+                - target:
+                    kind: CronJob
+                  patch: |
+                    apiVersion: batch/v1
+                    kind: CronJob
+                    metadata:
+                      # Required by the schema, ignored for matching -- `target`
+                      # above is what selects.
+                      name: scheduled-uptime
+                      annotations:
+                        # An ANNOTATION, not a label, and not optional: the value
+                        # contains `:` and a space, both invalid in a Kubernetes
+                        # label value. The downscaler reads either, but only an
+                        # annotation can hold a timespan.
+                        downscaler/uptime: ${DOWNSCALER_UPTIME}

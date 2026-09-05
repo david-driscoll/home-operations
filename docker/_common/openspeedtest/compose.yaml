@@ -6,13 +6,77 @@ services:
     dns:
       - 100.100.100.100
     labels:
+      # ON-DEMAND SET. This container is stopped after 30 minutes of no traffic
+      # and started again by the next request, instead of running 24/7 on four
+      # hosts. A speed-test page is idle essentially all of the time, which makes
+      # it the safest possible pilot: no volume, no state, nothing else on the
+      # host calls it, and a cold start is a couple of seconds.
+      #
+      # BOTH labels are required. `sablier.enable` is what Sablier discovers on
+      # (its Docker provider filters on this label), and `sablier.group` is what
+      # the `openspeedtest-sablier` middleware below asks to be started. A container
+      # with the labels but no middleware is stopped and never woken; a router
+      # with the middleware but no labels asks for a group that does not exist.
+      sablier.enable: true
+      sablier.group: openspeedtest
       # Enable Traefik for itself
       traefik.enable: true
+      # WITHOUT THIS THE WHOLE THING IS INERT. Traefik's docker provider ignores
+      # a stopped container by default, so the router below would vanish the
+      # moment Sablier stopped it -- 404, with no middleware left to wake
+      # anything. Traefik v3.6 added support for reading configuration from
+      # non-running containers (PR #10645); this host runs v3.7.13.
+      traefik.docker.allownonrunning: true
       # Dashboard configuration
       traefik.http.routers.openspeedtest.rule: Host(`openspeedtest.${CLUSTER_DOMAIN}`)
       traefik.http.routers.openspeedtest.entrypoints: websecure
       traefik.http.routers.openspeedtest.service: openspeedtest
       traefik.http.routers.openspeedtest.tls.certresolver: le
+      # The Sablier middleware, and it is the only one on this router. There is
+      # no auth or network gate here today, so anything that can reach the host
+      # can wake this container -- which matches its existing exposure rather
+      # than adding to it.
+      #
+      # `@docker`, not `@file`: the middleware is defined by the labels below
+      # rather than centrally in ../traefik/dynamic/middlewares.yaml, so the
+      # whole stack is self-contained and reads like every other router here.
+      traefik.http.routers.openspeedtest.middlewares: openspeedtest-sablier@docker
+
+      # The middleware itself. THIS IS ON THE SAME CONTAINER SABLIER STOPS, and
+      # that only works because of `traefik.docker.allownonrunning` above.
+      # Traefik lists containers with `All: true` and, when that label is set,
+      # `keepContainer` returns before the non-running filter -- then decodes
+      # the FULL dynamic config from the labels, middlewares included
+      # (pkg/provider/docker/{pdocker,config}.go, v3.7). Without the label the
+      # middleware would vanish the moment the container stopped, the router
+      # would reference a middleware that no longer exists, Traefik would drop
+      # the router, and the container could never be woken again.
+      #
+      # Keep these in step with the cluster-side defaults in
+      # kubernetes/components/sablier/middleware.yaml.
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.sablierUrl: http://sablier:10000
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.group: openspeedtest
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.sessionDuration: 30m
+      # Fail loud. An unreachable Sablier returns HTTP 500 rather than passing
+      # the request to a container that is almost certainly stopped, which the
+      # user could not tell from the app being broken.
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.failOpen: false
+      # MONITORING MUST NOT COUNT AS TRAFFIC. Gatus probes this URL every 2
+      # minutes on every host; without this the session would be renewed
+      # forever and the container would never stop -- the feature would
+      # silently do nothing. A single string is correct here: the plugin's
+      # ignoreUserAgent is a StringOrStringSlice precisely so Docker labels,
+      # which cannot express a list, still work.
+      #
+      # It also means the Gatus row proves only that the route exists: the
+      # plugin answers 200 on a match BEFORE contacting Sablier. Wake failures
+      # are covered by ../prometheus/config/rules/sablier.yml instead.
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.ignoreUserAgent: ^Gatus/
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.dynamic.displayName: OpenSpeedTest
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.dynamic.theme: ghost
+      # NOT the 5s default: the waiting page reloads itself, and ~12 requests to
+      # one URL per minute is the shape of crowdsecurity/http-crawl-non_statics.
+      traefik.http.middlewares.openspeedtest-sablier.plugin.sablier.dynamic.refreshFrequency: 20s
 
       traefik.http.services.openspeedtest.loadbalancer.server.port: 3000
     networks:

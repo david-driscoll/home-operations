@@ -29,7 +29,8 @@ resources:
   - ./headlamp/ks.yaml
   - ./multus/ks.yaml
   - ./priority-class/ks.yaml
-  - ./kube-downscaler/ks.yaml
+  - ./go-kube-downscaler/ks.yaml
+  - ./sablier/ks.yaml
   - ./openbao/ks.yaml
   - ./openbao-replica/ks.yaml
   - ./vsc-retention/ks.yaml

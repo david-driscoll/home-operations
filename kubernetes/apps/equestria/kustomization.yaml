@@ -7,7 +7,23 @@ components:
   - ../../components/alerts
   - ../../components/common
   - ../../components/repos/app-template
-# Low Power mode: py-kube-downscaler owns replica counts in this namespace.
+# Low Power mode: a controller other than Flux owns replica counts in this
+# namespace. UPDATED 2026-09-05 -- there are now TWO of them, and this block is
+# more load-bearing than before, not less.
+#
+#   go-kube-downscaler  scheduled shed, 02:00-09:00, everything by default
+#   sablier             on-demand sleep/wake, only apps carrying
+#                       `sablier.enable` (which also carry
+#                       `downscaler/exclude`, so exactly one controller owns
+#                       any given workload -- see components/sablier)
+#
+# The migration from py-kube-downscaler to the Go rewrite renamed nothing here:
+# both write `/spec/replicas` through the scale subresource exactly as py- did.
+# Sablier writes it too, and far more often -- every 30 minutes of idle rather
+# than twice a day -- so deleting this block because it mentions a controller
+# that no longer exists would break BOTH of them. The `/spec/suspend` half stays
+# too: GoKubeDownscaler still suspends CronJobs, and Sablier has no CronJob
+# concept at all.
 #
 # `equestria` is the shed-list namespace — entering Low Power is
 # `kubectl annotate namespace equestria downscaler/force-downtime=true`, which
@@ -54,7 +70,14 @@ patches:
                   ignore:
                     # Untargeted on purpose: /spec/replicas only exists on
                     # Deployment/StatefulSet/ReplicaSet in a rendered app chart, so
-                    # one rule covers every workload kind the downscaler touches.
+                    # one rule covers every workload kind either controller touches.
+                    #
+                    # Flux 2.9 added `target.labelSelector` on ignore rules, which
+                    # would allow scoping this to `sablier.enable=true` plus the
+                    # scheduled set. Deliberately NOT used: the premise above is
+                    # that a NEW app sheds without anyone opting it in, and a
+                    # selector would reintroduce exactly the per-app step this
+                    # block exists to avoid.
                     - paths: ["/spec/replicas"]
                     # CronJobs are suspended, not scaled. Targeted, because
                     # /spec/suspend also exists on Flux's own Kustomization and

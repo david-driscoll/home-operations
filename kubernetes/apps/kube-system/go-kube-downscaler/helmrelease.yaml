@@ -1,0 +1,288 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/ocirepository-source-v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: go-kube-downscaler
+  namespace: kube-system
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 1.3.4
+    digest: sha256:9632d32e9acc147b28398c7764521f7c1adbd8effa2cf3854b0e98aee4eee99f
+  url: oci://ghcr.io/caas-team/charts/go-kube-downscaler
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: go-kube-downscaler
+  namespace: kube-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: go-kube-downscaler
+  maxHistory: 3
+  interval: 1h
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: false
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    # MIGRATED 2026-09-05 from caas-team/py-kube-downscaler 0.3.12 to the Go rewrite
+    # by the SAME maintainers. py-'s own v26.4.0 release note puts it in maintenance
+    # mode -- "all new features and quality-of-life improvements will be developed in
+    # the new project" -- and GoKubeDownscaler reached feature parity at v1.3.0.
+    #
+    # The annotation vocabulary is UNCHANGED: `downscaler/exclude`,
+    # `downscaler/force-downtime`, `downscaler/original-replicas` all keep their names
+    # and meanings, so the nine keep-list workloads and every runbook that says
+    # `kubectl annotate namespace equestria downscaler/force-downtime=true` still work.
+    #
+    # WHAT DID CHANGE, and each one is load-bearing below:
+    #   * `--interval` is a DURATION, not an integer of seconds. py-'s `--interval=60`
+    #     means 60 seconds; Go's would mean 60 NANOSECONDS. It must be written `60s`.
+    #   * `excludedNamespaces` entries are compiled as REGEXES and matched with
+    #     `MatchString`, i.e. UNANCHORED SUBSTRING. `network` would also exclude a
+    #     namespace called `network-foo`. Every entry below is anchored `^...$` to
+    #     preserve py-'s exact-name semantics. See internal/pkg/util/regexList.go.
+    #   * `upscale-excluded` now defaults to FALSE. Under py-, `downscaler/exclude`
+    #     meant "do not scale down, but do scale up"; here it means COMPLETELY
+    #     UNTOUCHED. That is what makes the Sablier partition safe -- see
+    #     ../sablier/helmrelease.yaml.
+    #   * `includedResources` defaults to `deployments` ONLY. Omitting the list below
+    #     would silently drop CronJob suspension and StatefulSet handling.
+
+    # POLARITY, and it is two separate things:
+    #   * SCOPE is opt-out -- every workload is in scope unless it carries
+    #     `downscaler/exclude: "true"` or lives in an excluded namespace. That is what
+    #     makes a NEW app shed by default in Low Power without anyone remembering to
+    #     opt it in.
+    #   * ACTION is driven by `DEFAULT_DOWNTIME` below, which applies to EVERY
+    #     namespace not in `excludedNamespaces`, annotated or not.
+    #
+    # The Full <-> Low Power toggle is a live annotation, no Git commit:
+    #   kubectl annotate namespace equestria downscaler/force-downtime=true  --overwrite
+    #   kubectl annotate namespace equestria downscaler/force-downtime=false --overwrite
+    #
+    # There is now also a GLOBAL lever the Python version did not expose as cleanly:
+    # `--force-downtime` as a top-level argument below. Uncommenting it puts the whole
+    # estate into Low Power in one reviewable commit. It does NOT reach workloads
+    # carrying `downscaler/exclude` -- including every Sablier-managed app.
+    #
+    # `downscaler/force-downtime` is read from the NAMESPACE only -- there is no
+    # workload-level equivalent -- and a per-workload `downscaler/exclude: "true"` beats
+    # it. That precedence is what lets the Low Power keep-list (plex, jellyfin, immich,
+    # ...) share the `equestria` namespace with the shed-list. Original replica counts
+    # are stored per workload as `downscaler/original-replicas` and restored on the way
+    # up. For CronJobs the PRE-EXISTING `suspend` value is stashed in that same
+    # annotation and restored, so a CronJob you deliberately suspended stays suspended
+    # after a wake -- an improvement over py-, which always unsuspended.
+
+    # MUST be explicit. The chart renders this into `--include-resources=` and the
+    # binary's default is `deployments` alone.
+    includedResources:
+      - deployments
+      - statefulsets
+      - cronjobs
+      # KEDA is not installed today, so this is inert -- carried forward from the py-
+      # config so that installing KEDA later does not silently leave ScaledObjects
+      # running through a Low Power window.
+      - scaledobjects
+
+    arguments:
+      # DURATION, not seconds. See the migration note above.
+      - --interval=60s
+      # Flux is a competing writer on `spec.replicas` by construction. The default is
+      # 0 retries, which means a single 409 conflict SILENTLY drops that scaling
+      # action for the cycle -- and on the 09:00 upscale that is a workload left at
+      # zero until the next cycle notices.
+      - --max-retries-on-conflict=3
+      # Structured logs, so Loki gets fields rather than a prose blob.
+      - --json-logs
+      # GLOBAL LOW POWER. Uncomment, commit, and the whole estate sheds immediately,
+      # regardless of the clock. Comment it out again to leave. Prefer this to the
+      # per-namespace `kubectl annotate` when the intent is "the whole estate", because
+      # it is reviewable and it cannot be left half-applied across namespaces.
+      # - --force-downtime=true
+
+    # NIGHTLY LOW POWER -- 02:00-09:00 estate-local time, every day.
+    #
+    # This is the Low Power tier of docs/cluster-consolidation/24-power-states.md on a
+    # schedule rather than a manual toggle. It sheds Tier 2 only: the keep-list
+    # workloads carry `downscaler/exclude: "true"` in Git and survive, because the
+    # exclude check short-circuits BEFORE any uptime/downtime is evaluated.
+    #
+    # It does NOT power any node off. Node shutdown is 24's other half and needs a
+    # different mechanism; this is workloads only.
+    #
+    # FORMAT CONSTRAINTS, both load-bearing:
+    #   * a spec cannot cross midnight -- a range is interpreted within a single day,
+    #     so `22:00-06:00` would be silently wrong. 02:00 to 09:00 is same-day, which
+    #     is why this window works as written.
+    #   * end must be later than start in 24-hour time.
+    # Comma-separate for more windows; `Mon-Sun` is every day.
+    #
+    # ${TIMEZONE} comes from the `shared-secrets` Secret and is the estate's single
+    # source of truth for local time (America/New_York today). It is substituted here
+    # rather than hardcoded so this window and the Gatus maintenance windows that
+    # mirror it can never drift apart.
+    #
+    # This resolves because components/common patches child Kustomizations to add
+    # `shared-secrets` to substituteFrom. A postBuild variable that does not resolve
+    # makes the Kustomization fail rather than render an empty string, so a regression
+    # here is loud.
+    #
+    # NOTE the delivery mechanism differs from py-: the chart puts this in a ConfigMap
+    # consumed via `envFrom`, not on the command line. `configMap.extraConfig` is run
+    # through Helm's `tpl`, so it must contain no `{{ }}`; `${TIMEZONE}` is fine
+    # because Flux substitutes it before Helm ever sees the value.
+    configMap:
+      name: go-kube-downscaler
+      extraConfig: |
+        DEFAULT_DOWNTIME: "Mon-Sun 02:00-09:00 ${TIMEZONE}"
+
+    # Tier 0 and Tier 1 (docs/cluster-consolidation/20-low-power-tier.md §1) can never be
+    # shed. Membership here is what keeps them up: with `DEFAULT_DOWNTIME` set,
+    # everything absent from this list is shed nightly whether or not anyone annotates it.
+    #
+    # ANCHORED REGEXES, NOT NAMES. The Go rewrite compiles each entry with
+    # `regexp.Compile` and tests it with `MatchString`, which is an unanchored substring
+    # match -- bare `network` would also exclude `network-foo`, and bare `coder` would
+    # exclude anything containing "coder". `^...$` restores py-'s exact-name behaviour.
+    #
+    # BEFORE ADDING A NAMESPACE THAT RUNS AN OPERATOR, check whether it backs an
+    # admission webhook with `failurePolicy: Fail`. A webhook whose Service loses its
+    # endpoints does not fail soft -- it rejects every matching API call cluster-wide for
+    # the whole window. Audited 2026-08-26: cert-manager, cloudnative-pg, kube-system,
+    # longhorn-system and system-upgrade all host fail-closed webhooks and are all
+    # already listed.
+    excludedNamespaces:
+      - ^kube-downscaler$
+      - ^go-kube-downscaler$
+      - ^kube-system$
+      - ^longhorn-system$
+      - ^cert-manager$
+      - ^nfs-system$
+      - ^flux-system$
+      - ^cloudnative-pg$
+      - ^volsync-system$
+      - ^openebs-system$
+      - ^network$
+      - ^stargate-command$
+      - ^tailscale-system$
+      # ADDED 2026-08-26, after a nightly shed of this namespace blocked PVC creation
+      # ACROSS THE WHOLE CLUSTER for seven hours.
+      #
+      # garage-operator backs 14 `failurePolicy: Fail` webhooks. Thirteen only touch
+      # Garage's own CRs, but `vmanagedpvcfinalizer.kb.io` matches
+      # `persistentvolumeclaims` at `scope: *` with an empty namespaceSelector -- so
+      # with the operator at zero replicas, EVERY PersistentVolumeClaim in the cluster
+      # fails admission:
+      #
+      #   Error saving claim: failed calling webhook "vmanagedpvcfinalizer.kb.io":
+      #   no endpoints available for service "garage-operator-webhook"
+      #
+      # It went unnoticed for ~40h because nothing else happened to create a PVC inside
+      # a Low Power window.
+      #
+      # Excluding only the operator's namespace is deliberate: the garage-storage
+      # StatefulSets stay shed with the rest of Tier 2, since they serve data rather
+      # than admit API calls.
+      - ^garage-system$
+      # Tier 1 by 24 §1's amendment — these stay up during Battery.
+      - ^observability$
+      - ^pulumi$
+      # Low Power keep-list namespace (24 "Keep-list"). Same belt-and-braces
+      # reasoning as the Tier-0/1 entries above: it is never annotated with
+      # `force-downtime`, so listing it only makes a mistyped `kubectl annotate`
+      # inert.
+      # Also holds Forgejo (Tier 1) and its Actions runner. The runner is not
+      # Tier 1 and would be fine to shed, but this list is namespace-wide with
+      # no per-workload opt back in -- and it makes no practical difference,
+      # since the runner's volume is on the bulk tier and it simply goes
+      # Pending once the workers are down.
+      - ^coder$
+      # `system-upgrade` holds tuppr, which drives Talos and Kubernetes node
+      # upgrades. A nightly shed could stop it mid-upgrade — and tuppr does not
+      # self-clear a Failed TalosUpgrade, it needs a generation bump. Excluded
+      # because "CI can wait" does not extend to "the thing rebooting nodes can
+      # be stopped halfway".
+      - ^system-upgrade$
+      # `database` is not on the written keep-list but every keep-list app
+      # depends on it. CNPG's Postgres is operator-managed and invisible to the
+      # downscaler, but `valkey` is a plain Deployment and `postgres-backup` a
+      # CronJob — shedding `database` would take the cache and the nightly
+      # backup out from under Plex/Immich/n8n/FreshRSS while they keep running.
+      - ^database$
+      # ADDED 2026-09-05 with the Sablier rollout. `agents` hosts the ToolHive
+      # operator and ~28 MCP servers. It is NOT Sablier-manageable (VirtualMCPServer
+      # exposes no Deployment-label override and MCPServer.resourceOverrides reaches
+      # only the proxy Deployment, never the backend StatefulSet), and shedding the
+      # operator while its MCPServer CRs still exist leaves the estate's agent tooling
+      # in a half-reconciled state. Revisit if ToolHive gains a backend label override.
+      - ^agents$
+      #
+      # NOT excluded, deliberately: `github-actions`. 24's keep-list carried it,
+      # but David confirmed 2026-08-21 that it is safe to scale down — CI can
+      # wait out a window. It is a *shed* namespace, so Low Power entry annotates
+      # it alongside `equestria`.
+
+    # This controller IS the Low Power shed mechanism, and Battery is entered
+    # *from* Low Power -- so it has to be placeable on a control plane, or the
+    # one thing that sheds Tier 2 is itself the first casualty of the taint.
+    # Chart 1.3.4 renders .Values.tolerations into the Deployment pod spec.
+    # See docs/cluster-consolidation/24-power-states.md and
+    # docs/cluster-consolidation/20-low-power-tier.md §4.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+
+    # PROMETHEUS METRICS -- the headline reason to migrate. py-kube-downscaler has
+    # never had any (caas-team/py-kube-downscaler#164, open since 2025-07), which is
+    # why a missed 09:00 upscale has always been invisible until someone noticed an
+    # app was down. Alert rules live in ./prometheusrule.yaml.
+    #
+    # `metrics.enabled` renders `--metrics` and a containerPort 8085. The chart's own
+    # PodMonitor template is NOT used (podMonitor.enabled stays false): it emits
+    # `podMetricsEndpoints[].port: 8085`, but that field takes a port NAME and the
+    # chart's containerPort is unnamed, so it would silently scrape nothing. A
+    # hand-written PodMonitor using `targetPort` is in ./podmonitor.yaml.
+    metrics:
+      enabled: true
+    podMonitor:
+      enabled: false
+
+    # The chart's defaults are sized for a large multi-tenant cluster
+    # (limits 2000m/900Mi, requests 200m/300Mi). These are the numbers the live
+    # py- Deployment actually ran on, carried over verbatim.
+    #
+    # `limits.cpu` is set EXPLICITLY even though it looks redundant. Helm
+    # deep-merges values, so omitting it does not mean "no CPU limit" -- it means
+    # the chart's 2000m default survives, which is a silent 4x loosening of a
+    # limit nobody chose. Same reasoning as every other pinned default here.
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi

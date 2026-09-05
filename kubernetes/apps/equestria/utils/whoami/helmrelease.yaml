@@ -84,3 +84,19 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: authenticated-user
+              # LAST, and the position is the point. Filters run in list order,
+              # so Sablier sits behind both the CrowdSec bouncer and the
+              # authentik outpost: a banned IP cannot spin up a Deployment
+              # (cheap DoS-by-cold-start), and neither can an unauthenticated
+              # stranger who merely knows the hostname.
+              #
+              # `sablier-${APP}` comes from components/sablier, added to
+              # ./ks.yaml. Attaching it here rather than having the component
+              # patch it in is deliberate -- see that component's header for the
+              # five ways a generic JSON6902 filter patch breaks across this
+              # estate.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: sablier-${APP}

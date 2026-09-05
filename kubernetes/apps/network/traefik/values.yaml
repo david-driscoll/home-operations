@@ -297,11 +297,38 @@ providers:
     enabled: true
     allowCrossNamespace: true
     allowExternalNameServices: true
+    # PINNED, NOT CHANGED. Chart 41.4.0 already defaults this to `true` for both
+    # kubernetesCRD and kubernetesIngress, and _podtemplate.tpl emits the flag
+    # whenever the value is non-nil -- so the running pods already carry
+    # `--providers.kubernetescrd.allowEmptyServices=true`. Writing it out changes
+    # nothing today.
+    #
+    # It is here because it became LOAD-BEARING on 2026-09-05, when Sablier
+    # started scaling workloads to zero on demand. Without it, Traefik drops a
+    # service whose Endpoints are empty and the router goes with it -- so a
+    # sleeping app would 404 instead of reaching the Sablier middleware that is
+    # supposed to wake it, and it could never be woken again. That failure would
+    # look like a routing bug, not a chart-default regression.
+    #
+    # This file has a documented history of keys that silently stopped applying
+    # (see the `forwardedHeaders` note on the entrypoints, and the `accessLog`
+    # note). A default we now depend on should not be one of them.
+    allowEmptyServices: true
   kubernetesIngress:
     ingressClass: "internal"
     enabled: true
     allowExternalNameServices: true
+    # Same reasoning as kubernetesCRD above.
+    allowEmptyServices: true
   kubernetesGateway:
+    # NOTE for the Sablier work: there is deliberately no `allowEmptyServices`
+    # here, and none is needed. The Gateway provider has no such option, and it
+    # does not need one -- pkg/provider/kubernetes/gateway/kubernetes.go
+    # (getBackendAddresses) errors only when a Service has NO EndpointSlices at
+    # all. A Deployment scaled to zero keeps its EndpointSlice with an empty
+    # `endpoints` list, so the router is still built, with an empty server pool,
+    # and the middleware chain still runs. That is the entire mechanism by which
+    # an HTTPRoute-fronted app can be woken from zero.
     enabled: true
     experimentalChannel: true
     statusAddress:
@@ -350,6 +377,28 @@ experimental:
     crowdsec-bouncer-traefik-plugin:
       moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
       version: "v1.7.1"
+    # ADDED 2026-09-05. The proxy half of on-demand scale-to-zero: a middleware
+    # that asks Sablier whether the backing workload is awake, wakes it if not,
+    # and serves a self-refreshing waiting page until it is ready. The Sablier
+    # server itself is apps/kube-system/sablier; the per-app middleware objects
+    # come from components/sablier.
+    #
+    # https://plugins.traefik.io/plugins/69104ac3b7d4dd76110a1a09/sablier
+    #
+    # BLAST RADIUS OF A BAD VERSION: `experimental.abortOnPluginFailure` defaults
+    # to false (chart values.yaml), so Traefik still starts. The `sablier` plugin
+    # simply never registers, and every route carrying a middleware that
+    # references it is dropped -- those hostnames 404. Loud, and scoped to the
+    # opted-in apps rather than the whole ingress. Rollback is removing this
+    # block plus the components/sablier references.
+    #
+    # The BLOCKING strategy is unsupported on Kubernetes (see the plugin's own
+    # README), so every middleware here uses `dynamic`. That is also why the
+    # waiting page's refresh frequency matters -- see components/sablier.
+    sablier:
+      moduleName: "github.com/sablierapp/sablier-traefik-plugin"
+      # renovate: datasource=github-releases depName=sablierapp/sablier-traefik-plugin
+      version: "v1.3.0"
   fastProxy:
     enabled: true
   otlpLogs: true

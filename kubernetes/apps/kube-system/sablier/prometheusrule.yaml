@@ -1,0 +1,108 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# ============================================================================
+# Sablier is a REQUEST-PATH dependency, not a background controller.
+#
+# Every middleware in components/sablier sets `failOpen: false`, which means an
+# unreachable Sablier makes the opted-in apps return HTTP 500 rather than
+# quietly passing traffic through to a backend that may be scaled to zero. That
+# is the correct trade -- fail loud -- but it makes the rules below mandatory
+# rather than nice to have.
+#
+# The other reason this file exists: an app that is correctly asleep and an app
+# whose wake is broken look IDENTICAL from outside. Nothing else in the estate
+# can tell them apart -- and specifically, the Gatus row for an on-demand app
+# CANNOT. The Sablier middleware carries `ignoreUserAgent: ["^Gatus/"]` (it has
+# to; a 2-minute probe would otherwise renew the session forever and nothing
+# would ever sleep), and the plugin checks that list and answers 200 BEFORE it
+# contacts Sablier. So the uptime page proves the route exists, and these rules
+# prove the wake mechanism works. Neither is redundant with the other.
+#
+# Metrics deliberately NOT alerted on:
+#
+#   sablier_group_active_instances / sablier_group_locked
+#     Zero is the healthy steady state for an idle app. Alerting on it would be
+#     alerting on the feature working.
+#
+#   sablier_session_expires_at_timestamp_seconds
+#     One series per ACTIVE session, so it disappears entirely when everything
+#     is asleep. Useful in Grafana ("what is awake right now"), useless as an
+#     alert because absence is normal.
+# ============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: sablier.rules
+      rules:
+        # ---- the request path ------------------------------------------
+        - alert: SablierAbsent
+          annotations:
+            summary: Sablier is not reporting metrics
+            description: >-
+              No scrape target. With failOpen:false on every Sablier middleware,
+              a Sablier that is actually down means HTTP 500 for every opted-in
+              app -- not a degraded wake, a hard outage. Check
+              `kubectl -n kube-system get deploy sablier-sablier` first.
+          # `job` is the SERVICE name, which the chart doubles to
+          # `sablier-sablier` (`sablier-{{ .Release.Name }}`), not the
+          # ServiceMonitor name. Same convention as crowdsec's
+          # `job="crowdsec-service"` next door.
+          #
+          # Bare `absent(up{...})` rather than `absent(up{...} == 1)`: a target
+          # that exists but is failing to scrape is a different condition, and
+          # it is covered by the start-failure rule below plus the pod's own
+          # probes. This one is only about the target vanishing.
+          expr: absent(up{job="sablier-sablier"})
+          for: 5m
+          labels:
+            severity: critical
+
+        # ---- wakes actually succeed ------------------------------------
+        #
+        # THE ALERT THIS FILE EXISTS FOR. A failed start is invisible: the user
+        # sees a waiting page that never resolves, and every other signal in the
+        # estate (probes, Gatus on the scheduled apps, Traefik 5xx rules) is
+        # silent because there is no pod to be unhealthy and no 5xx to count.
+        - alert: SablierInstanceStartFailing
+          annotations:
+            summary: Sablier cannot start {{ $labels.instance }}
+            description: >-
+              {{ $value }} failed start(s) in the last 15 minutes. Someone
+              requested this app and it never came up -- they are looking at a
+              waiting page that will never resolve. Common causes: the workload
+              was renamed or deleted while still carrying `sablier.enable`, RBAC
+              lost `deployments/scale`, or the pod cannot schedule.
+          expr: increase(sablier_instance_start_failures_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+
+        # ---- wakes are fast enough to be usable ------------------------
+        #
+        # Not a correctness alert -- a warning that the on-demand set has grown
+        # to include something it should not. Every equestria data PVC is
+        # Longhorn RWO, so a cold start pays a full volume attach on top of the
+        # app's own boot. Two minutes at p90 means the waiting page is no longer
+        # a nicety and that app belongs back on the scheduled set.
+        - alert: SablierWakeSlow
+          annotations:
+            summary: Sablier wakes are taking over 2 minutes at p90
+            description: >-
+              p90 time-to-ready is {{ $value | humanizeDuration }}. Check
+              whether a newly opted-in app has a large Longhorn volume or a long
+              startup probe budget (radarr's, for example, allows ten minutes for
+              a cold Postgres migration). Either give it a
+              `sablier.ready-after`, or move it back to go-kube-downscaler's
+              scheduled set.
+          expr: |
+            histogram_quantile(
+              0.9,
+              sum by (le) (rate(sablier_instance_ready_duration_seconds_bucket[1h]))
+            ) > 120
+          for: 30m
+          labels:
+            severity: warning

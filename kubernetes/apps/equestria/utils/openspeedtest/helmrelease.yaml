@@ -61,3 +61,18 @@ spec:
           - backendRefs:
               - identifier: *app
                 port: *port
+            filters:
+              # LAST in the chain by construction -- it is the only filter here.
+              # `sablier-${APP}` comes from components/sablier, added to
+              # ./ks.yaml. Attached by hand rather than patched in by the
+              # component: see that component's header for the five ways a
+              # generic JSON6902 filter patch breaks across this estate.
+              #
+              # Note this route carries no network or auth gate today, so
+              # anything that can reach the internal Gateway can wake this app.
+              # That matches its existing exposure; it is not a new hole.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: sablier-${APP}

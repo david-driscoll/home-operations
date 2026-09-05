@@ -1,0 +1,157 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# ============================================================================
+# Move ONE app from the SCHEDULED set to the ON-DEMAND set.
+#
+# Every workload in this estate belongs to exactly one of three sets:
+#
+#   scheduled   (default, no marker)  go-kube-downscaler sheds it 02:00-09:00
+#   on-demand   (this component)      Sablier sleeps it after 30m idle,
+#                                     wakes it on an HTTP request, any hour
+#   always up   (downscaler/exclude)  neither controller touches it
+#
+# BOTH CONTROLLERS WRITE spec.replicas. A workload in two sets does not
+# degrade, it FLAPS: the downscaler upscales at 09:00, Sablier's session
+# expires and re-zeroes it, the downscaler upscales again 30 seconds later,
+# forever. sablierapp/sablier#1034 states the incompatibility outright and
+# names the GitOps case specifically.
+#
+# That is the whole reason this is a component and not three hand edits. It
+# applies the `sablier.enable` label and the `downscaler/exclude` annotation in
+# the SAME act, so the half-applied state that flaps cannot be created by
+# forgetting one of them.
+#
+# The partition is only clean because GoKubeDownscaler changed
+# `upscale-excluded` to default FALSE -- `downscaler/exclude` now means
+# COMPLETELY UNTOUCHED, where under py-kube-downscaler it meant the weaker
+# "do not scale down, but do scale up". See the migration note in
+# apps/kube-system/go-kube-downscaler/helmrelease.yaml.
+#
+# ---------------------------------------------------------------------------
+# HOW TO USE IT. Three steps, and the third is deliberately manual.
+#
+#   1. add `- ../../../../components/sablier` to the app's ks.yaml components
+#   2. nothing else, unless you want to override a default:
+#        SABLIER_SESSION_DURATION  (default 30m)
+#        SABLIER_THEME             (default ghost)
+#        SABLIER_REFRESH_FREQUENCY (default 20s)
+#   3. BY HAND, add the middleware to the app's route filters, LAST:
+#
+#        filters:
+#          - type: ExtensionRef
+#            extensionRef: {group: traefik.io, kind: Middleware, name: local-user}
+#          - type: ExtensionRef
+#            extensionRef: {group: traefik.io, kind: Middleware, name: sablier-${APP}}
+#
+# Step 3 is not automated, and that is a decision rather than an omission. The
+# obvious automation -- a JSON6902 `op: add` to
+# /spec/values/route/internal/rules/0/filters/- -- was written and rejected. It
+# breaks on a third of the estate, verified against all 63 equestria app dirs:
+#
+#   * 20 apps do not use the route key `internal` (they use `app`, `admin`,
+#     `server`, `strmgen`, `web`, `bolt`, or a pair of keys). A
+#     `${SABLIER_ROUTE}` substitution cannot fix this: Flux postBuild runs
+#     AFTER kustomize build, so the JSON pointer still contains the literal
+#     `${SABLIER_ROUTE}` when kustomize tries to resolve it.
+#   * 9 apps have no `filters` key at all on the target rule, so `add` to
+#     `/filters/-` errors rather than creating the list.
+#   * 7 apps have MULTIPLE rules -- sabnzbd, questarr and immich in-file, and
+#     radarr/sonarr/lidarr/mylar because components/route/api-key prepends one
+#     at index 0. JSON6902 has no array wildcard, so a generic patch can only
+#     ever hit one of them, and an app reachable-without-waking through its
+#     other rule is worse than one that is not opted in at all.
+#   * 15 apps route via a standalone httproute.yaml rather than an inline
+#     `route:` block, which is a different patch target entirely.
+#
+# A human editing the app's own file can see how many rules it has. A patch
+# cannot. ORDER MATTERS and is visible there too: Sablier goes LAST, after the
+# crowdsec and authentik filters, so that a banned IP cannot spin up a
+# Deployment (DoS-by-cold-start) and an unauthenticated stranger cannot either.
+#
+# ---------------------------------------------------------------------------
+# KNOWN GAP: the tailnet path.
+#
+# components/tailscale/ingressroute.yaml takes exactly ONE middleware, via
+# `${TAILSCALE_MIDDLEWARE}`, and resolves it in the `network` namespace. There
+# is no slot for a second, and a per-app Sablier middleware cannot live in
+# `network` from an app's own Kustomization. So an app that uses BOTH this
+# component and components/tailscale will sleep, and its tailnet hostname will
+# return 503 without waking it.
+#
+# None of the current on-demand apps use components/tailscale, so this is not
+# yet a live problem. The fix when it becomes one is a per-app chain in
+# `network` pointing at `sablier-${APP}`, set as TAILSCALE_MIDDLEWARE.
+# ============================================================================
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./middleware.yaml
+patches:
+  # WHY A postRenderer AND NOT A PLAIN KUSTOMIZE PATCH.
+  #
+  # `sablier.enable` must be a LABEL on the Deployment/StatefulSet metadata --
+  # Sablier's discovery is a server-side label selector and cannot match
+  # annotations. The workload is rendered by Helm, and a kustomize patch cannot
+  # reach a chart-rendered resource; apps/kube-system/multus/helmrelease.yaml is
+  # this repo's own written proof of that.
+  #
+  # Patching the HelmRelease VALUES instead (`controllers.<key>.labels`, which
+  # app-template 5.1.0 does expose) would require knowing `<key>`, and it varies
+  # per app -- `*app`, `app`, `main`, and several apps have more than one
+  # controller. Targeting by KIND inside a postRenderer needs to know none of
+  # that, and it works identically for the non-app-template charts
+  # (meilisearch, windmill, outline, pinepods) where no such values key exists.
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+    patch: |-
+      # `add` on the whole list, not `/-`, because the path must exist for `/-`
+      # to append and most HelmReleases have no postRenderers at all.
+      #
+      # THIS CLOBBERS AN EXISTING postRenderers LIST. Two equestria apps have
+      # one today -- home/windmill and media/pinepods. If either is ever opted
+      # in to Sablier, it must carry a hand-written entry instead of this
+      # component, or its existing post-render patch is silently dropped.
+      - op: add
+        path: /spec/postRenderers
+        value:
+          - kustomize:
+              patches:
+                - target:
+                    kind: Deployment
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      # Required by the schema, ignored for matching -- `target`
+                      # above is what selects. Every Deployment the release
+                      # renders is patched, which for a multi-controller chart
+                      # means all of them; that is intended, since a group must
+                      # wake together.
+                      name: sablier-managed
+                      labels:
+                        sablier.enable: "true"
+                      annotations:
+                        # An ANNOTATION, not a label, and this matters for the
+                        # options an app may add later: label values reject `:`
+                        # and `,`, which `sablier.running-hours` (09:00-18:00)
+                        # and a multi-value `sablier.group` both need.
+                        # Annotations win over labels when both are present.
+                        sablier.group: ${APP}
+                        # THE OTHER HALF OF THE PARTITION. Without this the
+                        # workload is in both sets and flaps every 30 seconds.
+                        downscaler/exclude: "true"
+                - target:
+                    kind: StatefulSet
+                  patch: |
+                    apiVersion: apps/v1
+                    kind: StatefulSet
+                    metadata:
+                      name: sablier-managed
+                      labels:
+                        sablier.enable: "true"
+                      annotations:
+                        sablier.group: ${APP}
+                        downscaler/exclude: "true"
