@@ -18,42 +18,9 @@
         "callbackPort": 12345
       }
     },
-    "unifi-network": {
-      "type": "stdio",
-      "command": "op",
-      "args": ["run", "--", "uvx", "unifi-network-mcp"],
-      "env": {
-        "UNIFI_NETWORK_HOST": "unifi.driscoll.tech",
-        "UNIFI_NETWORK_PORT": "443",
-        "UNIFI_NETWORK_SITE": "default",
-        "UNIFI_NETWORK_VERIFY_SSL": "false",
-        "UNIFI_NETWORK_USERNAME": "op://Eris/unifipoller/username",
-        "UNIFI_NETWORK_PASSWORD": "op://Eris/unifipoller/password"
-      }
-    },
-    "unifi-protect": {
-      "type": "stdio",
-      "command": "op",
-      "args": ["run", "--", "uvx", "unifi-protect-mcp"],
-      "env": {
-        "UNIFI_PROTECT_HOST": "unifi.driscoll.tech",
-        "UNIFI_PROTECT_PORT": "443",
-        "UNIFI_PROTECT_VERIFY_SSL": "false",
-        "UNIFI_PROTECT_USERNAME": "op://Eris/unifipoller/username",
-        "UNIFI_PROTECT_PASSWORD": "op://Eris/unifipoller/password"
-      }
-    },
-    "unifi-access": {
-      "type": "stdio",
-      "command": "op",
-      "args": ["run", "--", "uvx", "unifi-access-mcp"],
-      "env": {
-        "UNIFI_ACCESS_HOST": "unifi.driscoll.tech",
-        "UNIFI_ACCESS_PORT": "443",
-        "UNIFI_ACCESS_VERIFY_SSL": "false",
-        "UNIFI_ACCESS_USERNAME": "op://Eris/unifipoller/username",
-        "UNIFI_ACCESS_PASSWORD": "op://Eris/unifipoller/password"
-      }
+    "agent-tools": {
+      "type": "http",
+      "url": "https://agent-tools-mcp.agents.driscoll.tech/mcp"
     },
     "crew_state": {
       "command": "crew",
