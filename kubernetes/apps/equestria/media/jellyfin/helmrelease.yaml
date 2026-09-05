@@ -83,13 +83,30 @@ spec:
               PGID: ${PGID}
               TZ: ${TIMEZONE}
             probes:
+              # exec probes on purpose, and NOT tunable back to httpGet while
+              # this pod carries the jellyfin-lan-net ipvlan interface.
+              #
+              # A kubelet-dialed httpGet sources from the node's LAN IP. The
+              # pod's net1 carries 10.10.206.20/16, whose connected route is
+              # more specific than the eth0 default, so the reply is routed out
+              # net1 -- and an ipvlan child cannot reach its own parent. The
+              # probe times out, the pod never goes Ready, the Service loses its
+              # endpoints and the HTTPRoute has no backend.
+              #
+              # This is the exact trap technitium's helmrelease already
+              # documents; it was missed when the LAN attachment landed and took
+              # jellyfin and plex down until this fix. Curling 127.0.0.1 from
+              # inside the container never leaves the pod, so no return path is
+              # involved. `port` is still anchored for the Service and route.
               liveness: &probes
                 enabled: true
                 custom: true
                 spec:
-                  httpGet:
-                    path: /health
-                    port: &port 8096
+                  exec:
+                    command:
+                      - bash
+                      - -c
+                      - curl -fsS --max-time 8 http://127.0.0.1:8096/health >/dev/null
                   initialDelaySeconds: 10
                   periodSeconds: 20
                   timeoutSeconds: 10
@@ -164,7 +181,10 @@ spec:
         type: ClusterIP
         ports:
           http:
-            port: *port
+            # `&port` used to live on the probe's httpGet; it moved here when the
+            # probes became exec (see the probes block above). This is now the
+            # first occurrence, so it must stay ahead of the route's `*port`.
+            port: &port 8096
     route:
       internal:
         parentRefs:

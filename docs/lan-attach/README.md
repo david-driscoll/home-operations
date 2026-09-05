@@ -114,9 +114,17 @@ nodes" below.
   Technitium sits at `10.10.206.202`, inside the Cilium block — it survives only
   because Cilium allocates upward from `.100`. **Do not repeat that.** Pick from
   outside both and add a UniFi reservation.
-- **Parent/child isolation:** a node cannot reach its own ipvlan child's IP.
-  Kubelet probes must target the primary Cilium pod IP — the default — so never
-  point a probe at the LAN address.
+- **Parent/child isolation breaks kubelet probes — use `exec` probes.** This is
+  the sharpest edge here and it cost an outage. A node cannot reach its own
+  ipvlan child, *and the reverse path bites too*: net1 carries a `/16`, whose
+  connected route is more specific than the eth0 default, so a reply to the
+  node's LAN IP leaves via net1 and dies. A kubelet-dialed `httpGet`/`tcpSocket`
+  sources from exactly that address, so it always times out — the pod never goes
+  Ready, the Service loses its endpoints, and the HTTPRoute has no backend.
+  Every LAN-attached workload must probe over `127.0.0.1` with an `exec` probe,
+  which never leaves the pod. `technitium`'s helmrelease documented this before
+  any of this work started; jellyfin and plex shipped with `httpGet` anyway and
+  went down until they were converted.
 - **One mDNS speaker per parent NIC.** ipvlan children share the parent MAC;
   multiple IGMP/mDNS speakers on one parent get ambiguous.
 
