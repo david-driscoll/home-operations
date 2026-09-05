@@ -1,0 +1,237 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# ============================================================================
+# What is and is not already covered.
+#
+# The chart's `lapi.metrics.serviceMonitor` and `agent.metrics.serviceMonitor`
+# have been on for a while and they genuinely work -- verified live rather than
+# assumed: 8 targets `up`, one LAPI plus one agent per node, scraped on
+# :6060. The crowdsec docker image ships `prometheus.listen_addr: 0.0.0.0`
+# (NOT the upstream source default of 127.0.0.1), which is the only reason the
+# chart's Service port is reachable at all.
+#
+# So metrics arrive. Nothing looked at them. Every alert below exists because
+# the corresponding failure is INVISIBLE to the probes and to Gatus: the LAPI's
+# readiness probe proves the HTTP server answers, not that Traefik's bouncer is
+# still fetching decisions from it, and crowdsec-ui's Gatus check hits
+# `/api/health`, which upstream deliberately keeps independent of the LAPI.
+#
+# The class is the same one traefik/rules/silent-failure-rules.yaml was written
+# for -- everything Ready, nothing working -- and it matters more here than for
+# a normal app, because when CrowdSec stops enforcing, the estate does not go
+# down. It just quietly stops being defended.
+#
+# ---------------------------------------------------------------------------
+# Metrics deliberately NOT alerted on. All three would be permanently red.
+#
+#   cs_machines_last_heartbeat_timestamp
+#     The obvious "an agent stopped checking in" signal, and a trap. Machine
+#     names are POD names, and the LAPI never prunes a machine that goes away,
+#     so the live series today include four ghost agents and a ghost LAPI from
+#     earlier rollouts, all sitting at 9,400+ seconds of heartbeat age and
+#     climbing forever. Any threshold on this fires immediately and never
+#     clears. Agent liveness is covered by CrowdsecAgentsMissing below, which
+#     counts scrape targets against the DaemonSet's own desired count.
+#
+#   cs_papi_last_pull_timestamp
+#     Flat 0 on every pod, because console enrolment is deliberately OFF
+#     (Option B -- see the long note in values.yaml under `lapi.env`). PAPI is
+#     the hosted-console polling API and is not the community blocklist; CAPI
+#     is, and it is unaffected. Alerting on this would be alerting on a
+#     decision we made on purpose.
+#
+#   cs_active_decisions{origin="crowdsec"}
+#     Local decisions. There have never been any -- see the note on
+#     CrowdsecTraefikLogsUnparsed. `absent()` on it would fire forever until
+#     that is fixed AND something actually attacks the estate, which is not a
+#     signal, it is a wish.
+# ============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: crowdsec.rules
+      rules:
+        # ---- the LAPI itself -------------------------------------------
+        - alert: CrowdsecLapiAbsent
+          annotations:
+            description: >-
+              The CrowdSec LAPI has disappeared from Prometheus target discovery.
+              It is the only decision source Traefik's bouncer has, so while it is
+              gone nothing is enforced -- and because the bouncer fails open, every
+              service behind the gateway keeps answering normally. There is no
+              user-visible symptom to notice.
+            summary: CrowdSec LAPI is down.
+          expr: |
+            absent(up{job="crowdsec-service"} == 1)
+          for: 15m
+          labels:
+            severity: critical
+
+        # ---- the agents ------------------------------------------------
+        #
+        # Compared against the DaemonSet's OWN desired count rather than a
+        # hardcoded 7, so adding or draining a node does not turn this red.
+        # `or vector(0)` is load-bearing: with every agent gone, `count()` over
+        # an empty selector returns NO series, the comparison yields nothing,
+        # and a total outage would be the one case that never alerts.
+        #
+        # The `max()` is not cosmetic either. Binary arithmetic between two
+        # instant vectors only produces output where the label sets MATCH, and
+        # kube_daemonset_status_desired_number_scheduled arrives carrying
+        # kube-state-metrics' full label set (instance, pod, service, endpoint,
+        # ...) while `count(...)`/`vector(0)` are label-less. Subtracting them
+        # directly matches nothing and evaluates to empty forever -- it looks
+        # correct, passes every render, and can never fire. `max()` with no `by`
+        # collapses the left side to a label-less series so the two sides meet.
+        - alert: CrowdsecAgentsMissing
+          annotations:
+            description: >-
+              {{ $value }} CrowdSec agent(s) short of the DaemonSet's desired count.
+              An agent is a DaemonSet because it tails logs from the node it runs on,
+              so a node without one is a blind spot -- traffic through Traefik pods
+              there is never inspected, and nothing else reports the gap.
+            summary: Not every node is running a CrowdSec agent.
+          expr: |
+            max(kube_daemonset_status_desired_number_scheduled{namespace="network", daemonset="crowdsec-agent"})
+              - (count(up{job="crowdsec-agent-service"} == 1) or vector(0))
+              > 0
+          for: 30m
+          labels:
+            severity: warning
+
+        # ---- enforcement actually reaching Traefik ---------------------
+        #
+        # THE alert on this page. Traefik's bouncer polls
+        # GET /v1/decisions/stream every 30s (live: 0.0333 req/s, dead steady).
+        # If the API key is rotated without re-registering the bouncer -- the
+        # exact failure the ROTATION CAVEAT in values.yaml warns about -- or the
+        # plugin stops calling, the LAPI stays perfectly healthy, its probes stay
+        # green, and enforcement is simply over. This is the only signal that
+        # sees it.
+        #
+        # `sum()` across all bouncer instances on purpose: the `bouncer` label is
+        # `traefik@<pod-ip>`, so it churns on every Traefik rollout and a
+        # per-series rule would flap. Zero over a 15m window is unambiguous
+        # against a 30-second poll.
+        #
+        # `or vector(0)` and the `count(up ...)` gate are both load-bearing, and
+        # for opposite reasons. A bouncer that has NEVER polled produces no
+        # `route="/v1/decisions/stream"` series at all -- `sum()` over an empty
+        # selector returns no result, `== 0` then matches nothing, and the worst
+        # case would be the one that stays silent. `vector(0)` supplies the zero.
+        # The gate then stops this firing merely because the LAPI is down, which
+        # CrowdsecLapiAbsent already owns. `count()` with no `by` returns a
+        # label-less series, which is what lets it `and` against `vector(0)`.
+        - alert: CrowdsecBouncerNotPolling
+          annotations:
+            description: >-
+              No bouncer has fetched the decision stream from the LAPI for 15 minutes.
+              Traefik's CrowdSec middleware fails open, so bans have stopped being
+              enforced while every service keeps serving normally. Check that the
+              `traefik` bouncer is still registered -- `cscli bouncers list` -- because
+              a rotated apikey_bouncer does NOT re-register itself.
+            summary: Traefik's CrowdSec bouncer has stopped fetching decisions.
+          expr: |
+            (sum(rate(cs_lapi_route_requests_total{route="/v1/decisions/stream"}[15m])) or vector(0)) == 0
+              and
+            count(up{job="crowdsec-service"} == 1) > 0
+          for: 15m
+          labels:
+            severity: critical
+
+        # ---- the community blocklist -----------------------------------
+        #
+        # CAPI decisions are, today, the ONLY decisions this estate has (5,155
+        # live, entirely origin="CAPI"). They carry a TTL, so if the CAPI pull
+        # breaks the population does not freeze -- it drains. That decay is what
+        # makes a static floor a usable signal: normal operation sits three
+        # orders of magnitude above 100, and only a pull that has been broken for
+        # hours gets anywhere near it.
+        #
+        # Scoped to origin="CAPI" so that local decisions, once they start
+        # existing, cannot mask a dead community pull by padding the total.
+        - alert: CrowdsecCapiBlocklistDraining
+          annotations:
+            description: >-
+              Only {{ $value }} CAPI decisions remain, down from a normal several
+              thousand. The community blocklist is currently the estate's entire
+              source of bans, so this draining means the LAPI has stopped pulling
+              from CAPI and existing bans are ageing out.
+            summary: CrowdSec community blocklist is draining.
+          expr: |
+            (sum(cs_active_decisions{origin="CAPI"}) or vector(0)) < 100
+              and
+            count(up{job="crowdsec-service"} == 1) > 0
+          for: 1h
+          labels:
+            severity: warning
+
+        # ---- log acquisition -------------------------------------------
+        #
+        # Agent up, reading nothing. Distinct from CrowdsecAgentsMissing: this
+        # fires when the pods are healthy and scraped but the file source has
+        # gone silent -- a Traefik rollout that leaves the glob matching nothing,
+        # a /var/log/containers mount that stops resolving. Live baseline is
+        # ~30 lines/s; a true zero over 30m never happens while Traefik serves.
+        #
+        # `cs_filesource_hits_total` is labelled per source FILE, so a glob that
+        # matches nothing produces no series rather than a zero -- hence
+        # `or vector(0)`, for the same reason as CrowdsecBouncerNotPolling. The
+        # agent-count gate keeps this from duplicating CrowdsecAgentsMissing.
+        - alert: CrowdsecAcquisitionStalled
+          annotations:
+            description: >-
+              CrowdSec agents are running and being scraped but have read zero log
+              lines for 30 minutes. The acquisition glob
+              (/var/log/containers/traefik-*_network_*.log) is probably matching
+              nothing. Detection is off even though every pod is Ready.
+            summary: CrowdSec has stopped reading Traefik logs.
+          expr: |
+            (sum(rate(cs_filesource_hits_total[30m])) or vector(0)) == 0
+              and
+            count(up{job="crowdsec-agent-service"} == 1) > 0
+          for: 30m
+          labels:
+            severity: warning
+
+        # ---- log PARSING, which is not the same thing -------------------
+        #
+        # This one was written because it was firing. Before the `accessLog`
+        # block was added to traefik/values.yaml, Traefik emitted no access logs
+        # at all, so the 30 lines/s above were Traefik's own coloured
+        # deprecation warnings. They unwrap cleanly from the CRI envelope --
+        # `crowdsecurity/cri-logs` succeeded on 100% of them -- and then die,
+        # because `crowdsecurity/traefik-logs` filters on an access-log shape
+        # that was not there. Live proof: `cs_node_hits_ok_total` had exactly two
+        # node names, both cri-logs, and `cs_parser_hits_ok_total` had no series
+        # at all while `cs_parser_hits_ko_total` ran at 100% of the line rate.
+        #
+        # Net effect for as long as that lasted: crowdsecurity/traefik,
+        # base-http-scenarios and http-cve could never fire, no bucket ever
+        # overflowed, and every one of the estate's bans came from CAPI. The
+        # agents looked completely healthy throughout -- lines in, CPU spent,
+        # metrics flowing.
+        #
+        # `for: 2h` rather than 30m: a real drought in access logs is possible
+        # overnight on a homelab, and a Traefik rollout has to be able to
+        # complete without tripping this.
+        - alert: CrowdsecTraefikLogsUnparsed
+          annotations:
+            description: >-
+              CrowdSec is reading Traefik logs but has not successfully parsed one as
+              an access log in two hours. Every HTTP scenario (base-http-scenarios,
+              http-cve, traefik) is inert while this is true, leaving only the CAPI
+              community blocklist. Check that traefik's `accessLog` is still enabled
+              and still emitting JSON.
+            summary: CrowdSec is reading Traefik logs but parsing none of them.
+          expr: |
+            sum(rate(cs_filesource_hits_total[1h])) > 0
+              and
+            (sum(rate(cs_node_hits_ok_total{name="crowdsecurity/traefik-logs"}[1h])) or vector(0)) == 0
+          for: 2h
+          labels:
+            severity: warning

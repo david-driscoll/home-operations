@@ -68,6 +68,33 @@ spec:
   grafanaCom:
     id: 14981
 ---
+# Upstream's own board (grafana.com 21419, "CrowdSec Metrics"), so it tracks the
+# metric names the LAPI and agents actually export rather than a hand-rolled
+# subset. Verified against this cluster's live series before adding: it queries
+# cs_active_decisions, cs_lapi_*, cs_node_hits_*, cs_parser_hits_*,
+# cs_filesource_hits_total and cs_bucket_* -- all of which the two
+# ServiceMonitors in kubernetes/apps/network/crowdsec already deliver.
+#
+# Its appsec and cs_bucket_* panels will read empty, and that is correct: appsec
+# is disabled in values.yaml, and a bucket metric only exists once a scenario has
+# poured. Empty bucket panels are the fastest visual read on whether log parsing
+# is alive -- see the CrowdsecTraefikLogsUnparsed alert in
+# network/crowdsec/prometheusrule.yaml for what it means when they stay empty.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: crowdsec
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "network"
+  datasources:
+    - datasourceName: Prometheus
+      inputName: DS_PROMETHEUS
+  grafanaCom:
+    id: 21419
+---
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaDashboard
 metadata:

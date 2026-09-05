@@ -7,6 +7,7 @@ resources:
   - ./externalsecret.yaml
   - ./volsync.yaml
   - ./definition.yaml
+  - ./prometheusrule.yaml
 configMapGenerator:
   - name: ${APP}-values
     files:
