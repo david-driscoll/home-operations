@@ -24,8 +24,25 @@ configMapGenerator:
       - mise.lock=./resources/mise.lock
       - entrypoint.sh=./resources/entrypoint.sh
       # Claude Code's own MCP client config -- mounted at /root/.mcp.json,
-      # picked up automatically since the tmux session in
-      # ./resources/entrypoint.sh starts `claude` from $HOME.
+      # picked up when the tmux session in ./resources/entrypoint.sh starts
+      # `claude` from $HOME AND THE SESSION STAYS THERE.
+      #
+      # THAT LAST CLAUSE IS THE WHOLE CAVEAT, and it used not to be written
+      # down. Claude Code resolves `.mcp.json` from the session's working
+      # directory only -- it does not fall back to $HOME and does not walk
+      # parent directories. An agent here spends its life inside the repo
+      # checkout, /root/home-operations, which ships its own committed
+      # .mcp.json; that one shadows this mount entirely, and its `agent-tools`
+      # entry pointed at the authenticated external door this pod can never
+      # log in to. Net effect: agent-tools was dead in the only directory the
+      # agent actually works in, and nothing said so -- the server just showed
+      # "Needs authentication" forever.
+      #
+      # The fix is NOT here. ./helmrelease.yaml now sets AGENT_TOOLS_MCP_URL,
+      # which the repo's .mcp.json expands, so the repo copy resolves to the
+      # internal Service too -- read that env var's comment. This file stays
+      # because it still covers sessions started from $HOME or from any
+      # directory with no .mcp.json of its own, and the two now agree.
       #
       # IT POINTS AT THE CLUSTER-INTERNAL Service, over plain http and with no
       # token: `vmcp-agent-tools-internal.agents.svc.cluster.local:4483`, which

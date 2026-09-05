@@ -209,6 +209,44 @@ spec:
               # access to it is a deliberate, explicit call, not a default.
               SOPS_AGE_KEY_FILE:
                 value: /var/run/secrets/sops-age/age.agekey
+              # What the repo-root .mcp.json (4 levels up) expands its
+              # `agent-tools` URL to INSIDE THIS POD. That file is committed
+              # with an env-templated URL whose DEFAULT is the authenticated
+              # external door, so every client that does NOT set this var -- a
+              # laptop, CI, a Codespace -- is completely unchanged by it. This
+              # pod sets it, and only this pod, so it takes the internal one:
+              # ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+              #
+              # WHY THIS EXISTS AT ALL, given ./resources/mcp.json already
+              # mounts the same internal URL at /root/.mcp.json. That mount
+              # only wins while the session's working directory IS $HOME.
+              # Claude Code resolves `.mcp.json` from the CWD, not from $HOME
+              # and not by walking parents, and an agent on this pod spends
+              # its life inside the repo checkout (/root/home-operations) --
+              # where the repo's own committed .mcp.json shadows the mounted
+              # one completely. Verified live: `claude mcp get agent-tools`
+              # from /root reports the internal URL and "Connected", from
+              # /root/home-operations it reported the external URL and "Needs
+              # authentication". So the fallback that was supposed to make
+              # agent-tools work here was silently inert in the one directory
+              # that matters.
+              #
+              # An env var is what fixes that rather than editing the repo's
+              # .mcp.json to hardcode the Service DNS name, because the same
+              # file has to keep working off-cluster, where that name does not
+              # resolve. Claude Code expands shell-style env templates with a
+              # default (dollar-brace VAR colon-dash default) in .mcp.json
+              # values -- verified live against this endpoint, both branches.
+              # Spelled out in words rather than punctuation on purpose: Flux
+              # runs envsubst over this whole file (./ks.yaml `postBuild`),
+              # comments included, so the literal syntax would be REWRITTEN
+              # here and this comment would end up describing something else.
+              #
+              # NOT https, and no token: see ./kustomization.yaml's mcp.json
+              # comment and ../agent-tools-mcp/networkpolicy.yaml. That policy
+              # naming THIS pod is the whole of the access control.
+              AGENT_TOOLS_MCP_URL:
+                value: http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp
             envFrom:
               - secretRef:
                   name: ${APP}-pulumi

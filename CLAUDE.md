@@ -59,6 +59,25 @@ docker/         # Docker/Dockge stack configs per cluster
 | `bootstrap/INVENTORY.md`    | Every secret needed to bring the estate up from nothing, and where it lives |
 | `bootstrap/RUNBOOK.md`      | Break-glass procedures (OpenBao sealed, cluster gone, rebuild) |
 
+## MCP tools when running under agentboard
+
+If you are running **inside the agentboard pod** — `env | grep -q STAKATER_AGENTBOARD`,
+or `/etc/resolv.conf` searches `agents.svc.cluster.local` — then **use the
+`agent-tools` MCP server available inside that container**. It is ~357 tools
+across GitHub, Kubernetes, Proxmox (x5), UniFi, Docker (x4), Tailscale, Pulumi,
+OpenBao and Postgres, and it is the intended way to reach the estate from here.
+
+- The pod resolves `agent-tools` to a cluster-internal, **unauthenticated**
+  Service. Off-cluster clients keep the authenticated external hostname; the
+  same committed `.mcp.json` covers both via `AGENT_TOOLS_MCP_URL`.
+- **`Needs authentication` on `agent-tools` in this pod is never a login
+  problem.** The external door needs a browser-based OAuth flow that cannot be
+  completed here — that status means the client resolved the wrong URL.
+- The standalone `kubernetes` and `crew_state` MCP entries are expected to fail
+  in this image. Use `toolhive-kubernetes_*` from `agent-tools` instead.
+
+Full detail, tool inventory and troubleshooting: `docs/kubernetes/agentboard-mcp.md`.
+
 ## Safety
 
 - Never commit plaintext credentials. `.mise.toml` uses `op://` references; `Pulumi.*.yaml` files use `encryptionsalt`.

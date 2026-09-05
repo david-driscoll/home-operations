@@ -20,7 +20,7 @@
     },
     "agent-tools": {
       "type": "http",
-      "url": "https://agent-tools-mcp.agents.driscoll.tech/mcp"
+      "url": "${AGENT_TOOLS_MCP_URL:-https://agent-tools-mcp.agents.driscoll.tech/mcp}"
     },
     "crew_state": {
       "command": "crew",
