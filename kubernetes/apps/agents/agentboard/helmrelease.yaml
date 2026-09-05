@@ -54,8 +54,37 @@ spec:
       *app : {}
     controllers:
       *app :
+        # NOT `reloader.stakater.com/auto: "true"`, which is what this was
+        # and which made the pod restart EVERY 30 MINUTES. `auto` watches
+        # every ConfigMap and Secret the pod references -- including
+        # `github-token`, whose ExternalSecret carries `refreshInterval: 30m`
+        # (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml).
+        # A fresh token is a changed Secret, so reloader rolled the
+        # Deployment on every mint. Confirmed live 2026-09-05 from the
+        # namespace's own events: `Changes detected in 'github-token' of type
+        # 'SECRET' ... Updated 'agentboard' of type 'Deployment'`.
+        #
+        # That defeated the entire reason `github-token` is a VOLUME here
+        # rather than an env var (see `persistence.github-token` below and
+        # ./resources/entrypoint.sh's credential.helper): the volume was
+        # chosen SO THAT the token could rotate under a session running for
+        # days without a restart -- and then `auto` restarted the pod on that
+        # very rotation anyway. It also gave the pod a hard 30-minute ceiling
+        # on any agent session, which is the other half of why every restart
+        # looked like a brand-new Claude session.
+        #
+        # Listing the two by name instead. These are the only referenced
+        # objects a restart is actually the right response to:
+        #   - the mise-config ConfigMap holds entrypoint.sh, mise.toml/lock,
+        #     bashrc and mcp.json -- all read once, at container start.
+        #   - the -pulumi Secret arrives via `envFrom`, and env is resolved
+        #     once at start and never again.
+        # `github-token` and `sops-age` are deliberately absent: both are
+        # volume mounts whose file contents update in place, which is the
+        # whole point of mounting them that way.
         annotations:
-          reloader.stakater.com/auto: "true"
+          configmap.reloader.stakater.com/reload: ${APP}-mise-config
+          secret.reloader.stakater.com/reload: ${APP}-pulumi
         # One ReadWriteOnce PVC carries the whole home directory (tmux
         # history, agentboard's sqlite db, the Claude Code session and the
         # working checkout) -- a second pod could never attach it.
@@ -122,19 +151,43 @@ spec:
               #     secretKeyRef:
               #       name: *app
               #       key: anthropic-api-key
-              # `github-token`, the estate's own GitHub App installation
-              # token -- see ./externalsecret.yaml's header for why nothing
-              # here mints a second one. Fine as a plain env var for `gh`
-              # and any tool that just reads $GITHUB_TOKEN once per
-              # invocation; it goes stale after ~60m like every other
-              # env-var consumer of this Secret in this repo. `git` itself
-              # does NOT use this var -- see ./resources/entrypoint.sh's
-              # credential.helper, which reads the mount below fresh instead.
-              GITHUB_TOKEN:
-                valueFrom:
-                  secretKeyRef:
-                    name: github-token
-                    key: token
+              # NO `GITHUB_TOKEN` env var, deliberately -- this used to be a
+              # `secretKeyRef` on `github-token`, and it was the last thing in
+              # this pod still holding a token that could go stale.
+              # `secretKeyRef` resolves ONCE at container start; the token
+              # behind it is re-minted every 30m against a 60m life, so `gh`
+              # started failing about an hour in while `git` sailed on (its
+              # credential helper re-reads the mounted file every invocation
+              # -- see ./resources/entrypoint.sh). Until now that was masked
+              # by an accident: `reloader.stakater.com/auto` restarted the pod
+              # on every rotation, re-resolving the var as a side effect. That
+              # restart loop is gone (see the controller annotations above),
+              # so the staleness would have become real.
+              #
+              # `gh` has no GITHUB_TOKEN_FILE or any other file-based token
+              # input -- verified against gh 2.100.0, which silently ignores
+              # such a variable and reports "not logged into any GitHub
+              # hosts". Its only file-based credential is its own hosts.yml,
+              # so point it at one. The `github-token` Secret now renders
+              # `hosts.yml` and `config.yml` alongside `token`
+              # (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml),
+              # and `persistence.github-token` below already mounts that whole
+              # Secret -- as a DIRECTORY, not a subPath, which is what makes
+              # the files update in place as the Secret rotates. (subPath
+              # mounts never receive updates; that is why this could not be
+              # done by mounting a single key.)
+              #
+              # Net effect: `gh` now gets a fresh credential per INVOCATION,
+              # the same guarantee `git` already had, with no shell wrapper
+              # and no env var to go stale. The stray `token`/`access_token`
+              # keys sharing that directory are inert -- confirmed live, gh
+              # ignores files it does not recognise.
+              #
+              # Anything that genuinely needs the raw value can still read
+              # /var/run/secrets/github-token/token, which is fresher than the
+              # env var ever was.
+              GH_CONFIG_DIR:
+                value: /var/run/secrets/github-token
               # The `pulumi` MCP server (../agent-tools-servers/pulumi.yaml) and any `pulumi`
               # the agent runs directly from its own tmux pane both need this
               # whole bundle -- same env var names the `pulumi` namespace's
@@ -210,6 +263,19 @@ spec:
               # where entrypoint.sh's tmux session starts one.
               - path: /root/.mcp.json
                 subPath: mcp.json
+                readOnly: true
+              # ./resources/bash_profile and ./resources/bashrc -- what puts
+              # the mise shims dir back on PATH for the LOGIN shells tmux
+              # hands every agentboard terminal, after Debian's /etc/profile
+              # has hard-reassigned root's PATH and thrown this pod's own
+              # `env: PATH` above away. Read ./resources/bashrc before
+              # touching either: `claude` typed into an agentboard pane
+              # resolves through these.
+              - path: /root/.bash_profile
+                subPath: bash_profile
+                readOnly: true
+              - path: /root/.bashrc
+                subPath: bashrc
                 readOnly: true
       github-token:
         type: secret

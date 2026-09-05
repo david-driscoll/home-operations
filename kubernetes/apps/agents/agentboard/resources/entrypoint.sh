@@ -111,15 +111,36 @@ mise install
 
 # tmux needs a running server before anything can attach a window to it.
 # `new-session -d` backgrounds it; agentboard polls for windows, it does not
-# start the server itself.
+# start the server itself. The window is a bare login shell -- see the block
+# below for why nothing is sent to it.
 if ! tmux has-session -t main 2>/dev/null; then
-  tmux new-session -d -s main -n claude
+  tmux new-session -d -s main -n shell
 fi
 
-# The long-running Claude Code session agentboard's UI attaches to. `mise
-# exec` guarantees this sees the mise-installed `claude`, not a stray one
-# from the base image's PATH.
-tmux send-keys -t main:claude "mise exec -- claude" C-m
+# NOTHING IS STARTED IN THAT WINDOW ON PURPOSE. This used to be
+#
+#   tmux send-keys -t main:claude "mise exec -- claude" C-m
+#
+# and that line is what made every pod restart lose the thread. A restart
+# kills the tmux server and every process in it, so `has-session` always
+# missed and this always ran -- minting a BRAND-NEW Claude Code session each
+# time. The previous session was not gone (its transcript is on the home PVC
+# under /root/.claude, which is exactly what that PVC is for), but nothing
+# ever went back for it, so from the outside a restart looked like amnesia.
+#
+# tmux cannot fix that for us: the claude PROCESS is dead, only its
+# transcript survives, and there is no attach-to-a-dead-pid. Resuming is a
+# decision with a choice in it -- which session -- so it belongs to whoever
+# opens the terminal, not to a boot script guessing. From any agentboard
+# pane:
+#
+#   claude --continue    # pick the most recent session in this directory
+#   claude --resume      # choose from the list of past sessions
+#   claude               # deliberately start fresh
+#
+# Plain `claude`, no `mise exec --` prefix needed any more: ../resources/bashrc
+# puts the mise shims back on PATH for the login shells tmux hands out. See
+# that file for what /etc/profile was doing to them.
 
 echo "==> starting agentboard on :4040"
 exec agentboard --port 4040 --hostname 0.0.0.0
