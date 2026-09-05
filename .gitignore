@@ -70,3 +70,27 @@ talosconfig
 graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/cache/
+
+# Dated graph snapshots (`graphify-out/YYYY-MM-DD/`).
+#
+# These broke every Pulumi stack in the estate on 2026-09-05. Each is a ~24 MiB
+# copy of graph.json, they accrete about one a week, and nobody adds one on
+# purpose -- they ride along in whatever PR happens to run the sweep, which is
+# why 2026-08-28 arrived in the agentboard PR and 2026-09-05 in a coder fix.
+#
+# The Pulumi Kubernetes operator's workspace init fetches the repo as a Flux
+# source artifact and refuses anything over 100 MiB:
+#
+#   unable to fetch flux artifact: failed to extract archive
+#   tar "graphify-out/graph.json" is bigger than max archive size of 104857600 bytes
+#
+# The third snapshot took the repo from 95.7 MiB to 119.7 MiB and every
+# workspace pod went Init:Error -- all nine stacks stopped reconciling, silently,
+# for hours, since a stack that never runs looks identical to one with nothing
+# to do.
+#
+# The snapshots are pure derived data: `graphify update .` rebuilds the current
+# graph from tracked source, and no file in this repo references a dated path.
+# So they are ignored rather than retained -- keeping N of them would just move
+# the cliff, at 24 MiB a step.
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
