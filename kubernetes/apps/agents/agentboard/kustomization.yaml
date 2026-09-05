@@ -25,11 +25,30 @@ configMapGenerator:
       - entrypoint.sh=./resources/entrypoint.sh
       # Claude Code's own MCP client config -- mounted at /root/.mcp.json,
       # picked up automatically since the tmux session in
-      # ./resources/entrypoint.sh starts `claude` from $HOME. ${ROOT_DOMAIN}
-      # inside it is substituted the same as anywhere else in this
-      # Kustomization (components/common's substituteFrom patch, not
-      # ./ks.yaml's own postBuild.substitute -- that one only carries
-      # APP/NAMESPACE).
+      # ./resources/entrypoint.sh starts `claude` from $HOME.
+      #
+      # IT POINTS AT THE CLUSTER-INTERNAL Service, over plain http and with no
+      # token: `vmcp-agent-tools-internal.agents.svc.cluster.local:4483`, which
+      # is ../agent-tools-mcp/virtualmcpserver-internal.yaml. JSON cannot carry
+      # a comment, hence this one.
+      #
+      # It used to be `https://agent-tools-mcp.agents.${ROOT_DOMAIN}/mcp`, the
+      # authenticated door. That door works, but reaching it needs an OAuth
+      # authorization-code flow, and this pod has no browser and no human at
+      # it -- so the login could never be completed from here no matter how
+      # sound the server side was. The external hostname keeps its
+      # authentication for clients that CAN log in; this pod takes the internal
+      # path instead.
+      #
+      # http, not https, and that is not an oversight: the internal Service
+      # terminates no TLS and issues no certificate. Confidentiality here rests
+      # on ../agent-tools-mcp/networkpolicy.yaml restricting the endpoint to
+      # this pod, not on transport security -- read that file before widening
+      # anything.
+      #
+      # No ${ROOT_DOMAIN} in it any more, so the substitution note that used to
+      # live here no longer applies: an in-cluster Service DNS name is the same
+      # on every cluster.
       - mcp.json=./resources/mcp.json
     options:
       disableNameSuffixHash: true

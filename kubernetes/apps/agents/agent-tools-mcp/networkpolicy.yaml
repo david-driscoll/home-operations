@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/networkpolicy-networking-v1.json
+#
+# THE ONLY THING STANDING BETWEEN ./virtualmcpserver-internal.yaml AND THE
+# WHOLE CLUSTER. That server answers /mcp with no token and no identity, and
+# fronts openbao, kubernetes, proxmox, unifi, postgres and docker. Without this
+# policy, every pod in every namespace that can reach a ClusterIP -- which is
+# all of them, by default -- holds the same access agentboard does.
+#
+# DELETING THIS FILE BREAKS NOTHING VISIBLY. No pod crashes, no probe fails, no
+# alert fires; the endpoint simply becomes reachable by everything. That is the
+# reason it is a separate file with its own name rather than an appendix to the
+# server it protects: it should be conspicuous to delete.
+#
+# A NetworkPolicy that selects a pod is deny-by-default for every Ingress it
+# does not name, so this grants exactly one port to exactly one workload and
+# nothing else. That also means anything else needing to reach this server in
+# future must be ADDED here -- including monitoring. There is deliberately no
+# Gatus check on this endpoint in ../agent-tools-mcp/definition.yaml: a probe
+# would need its own hole in this policy, which is a poor trade for asserting a
+# path only one pod is allowed to take.
+#
+# Kubelet health probes originate from the node rather than a pod, and Cilium
+# permits host-to-pod traffic regardless of policy so probes are not affected.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-tools-internal-allow-agentboard
+spec:
+  podSelector:
+    matchLabels:
+      # The labels the ToolHive operator puts on a VirtualMCPServer's pods,
+      # confirmed against the live `vmcp-agent-tools` Service's own selector.
+      # `toolhive-name` is what distinguishes this server from the
+      # authenticated one -- both carry app.kubernetes.io/name=virtualmcpserver,
+      # so selecting on that alone would policy the EXTERNAL server too and cut
+      # off Traefik.
+      app.kubernetes.io/name: virtualmcpserver
+      toolhive-name: agent-tools-internal
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            # Matched on the immutable `kubernetes.io/metadata.name` label the
+            # apiserver maintains, not a hand-applied one that could drift --
+            # same reasoning as longhorn-system's policy. agentboard runs in
+            # this same namespace today; naming it explicitly rather than using
+            # an empty selector keeps the grant honest if either moves.
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentboard
+      ports:
+        - protocol: TCP
+          # The vMCP's only port. Not a range and not the whole pod: the
+          # operator serves /mcp, /health and /status on this one port, so
+          # opening it is unavoidable, but nothing else is opened with it.
+          port: 4483
