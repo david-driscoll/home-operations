@@ -61,6 +61,48 @@ fi
 #
 #   curl -H "Authorization: Bearer $(cat /var/run/secrets/github-token/token)" ...
 
+
+# WORKTREES, AND WHY A BARE `claude` GETS ONE HERE.
+#
+# THE FAILURE THIS PREVENTS, observed live 2026-09-05. Two agentboard sessions
+# were working in this pod at the same time, both in /root/home-operations,
+# which is ONE checkout on ONE PVC. The second session had 138 files modified
+# in the working tree that the first had never touched -- including five
+# *.sops.yaml. Neither could commit without sweeping up the other's work, and
+# ../../../../CLAUDE.md's rule against running anything broad over a
+# *.sops.yaml was one careless `git add -A` away from being broken by
+# accident. (The MACs were fine that time; they cover encrypted values, not
+# the plaintext metadata that had changed.)
+#
+# A pod that hands out terminals is a pod that will eventually hand out two,
+# so the shared checkout is the bug, not the collision.
+#
+# ONLY A BARE `claude` IS REWRITTEN. Anything with arguments is passed through
+# untouched, which is deliberate and is the whole reason this is a function
+# rather than an alias:
+#
+#   claude                 -> claude --worktree   (fresh start, isolated)
+#   claude --continue      -> unchanged           (resume where it already was)
+#   claude --resume        -> unchanged           (ditto)
+#   claude mcp list        -> unchanged           (subcommand, no session)
+#   claude -p '...'        -> unchanged           (one-shot, caller's choice)
+#
+# Resuming must NOT be moved into a fresh worktree: the session's transcript
+# is bound to the directory it started in, and relocating it would strand the
+# history ../resources/entrypoint.sh's banner exists to help you find.
+#
+# `command claude` is what stops this recursing. The worktree itself is
+# created by Claude Code, not here -- branch point and symlinked directories
+# come from ../../../../.claude/settings.json's `worktree` block, so this
+# function holds no policy of its own.
+claude() {
+  if [ "$#" -eq 0 ]; then
+    command claude --worktree
+  else
+    command claude "$@"
+  fi
+}
+
 # Yours, on the PVC, optional. Nothing in this repo writes it.
 if [ -f "$HOME/.bashrc.local" ]; then
   . "$HOME/.bashrc.local"

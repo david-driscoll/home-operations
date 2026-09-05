@@ -136,7 +136,14 @@ fi
 #
 #   claude --continue    # pick the most recent session in this directory
 #   claude --resume      # choose from the list of past sessions
-#   claude               # deliberately start fresh
+#   claude               # start fresh -- IN ITS OWN GIT WORKTREE
+#
+# That last one is not quite plain `claude`. ../resources/bashrc wraps a
+# BARE invocation to add `--worktree`, so two panes never end up editing
+# /root/home-operations at the same time -- which has already happened once,
+# and is written up in that file. Anything with arguments passes through
+# untouched, so the two resume forms above still land in the directory their
+# transcripts belong to.
 #
 # Plain `claude`, no `mise exec --` prefix needed any more: ../resources/bashrc
 # puts the mise shims back on PATH for the login shells tmux hands out. See
