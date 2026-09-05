@@ -15,8 +15,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: toolhive-homelable
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   secretStoreRef:
     kind: ClusterSecretStore
@@ -28,9 +26,6 @@ spec:
     creationPolicy: Owner
     template:
       engineVersion: v2
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         apikey: "{{ .mcp_api_key }}"
   data:

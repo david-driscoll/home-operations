@@ -113,8 +113,6 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: toolhive-unifi-network
-  annotations:
-    reloader.stakater.com/auto: "true"
 spec:
   secretStoreRef:
     kind: ClusterSecretStore
@@ -125,9 +123,6 @@ spec:
     name: toolhive-unifi-network
     creationPolicy: Owner
     template:
-      metadata:
-        annotations:
-          reloader.stakater.com/auto: "true"
       data:
         UNIFI_NETWORK_USERNAME: "{{ .username }}"
         UNIFI_NETWORK_PASSWORD: "{{ .password }}"

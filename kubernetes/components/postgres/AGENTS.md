@@ -228,9 +228,9 @@ entry there is a hard failure, and that guard is the reason this job can be trus
   `database/static-roles/${APP}` rotates the password immediately; `rotation_period` is
   mandatory and [openbao#284](https://github.com/openbao/openbao/issues/284) (disable auto
   rotation) is still open. So the app gets a forced restart every 30 days forever, and it must
-  be able to survive one: check `reloader.stakater.com/auto` is on the **workload** (not the pod
-  template), that the pod actually references the Secret, and that a cold boot fits inside its
-  liveness budget. Three of the phase-4 tranches turned up an app that failed one of those.
+  be able to survive one: check `reloader.stakater.com/auto` is on the **workload** (or on its pod
+  template, which Reloader falls back to when the workload carries none), that the pod actually
+  references the Secret, and that a cold boot fits inside its liveness budget. Three of the phase-4 tranches turned up an app that failed one of those.
 
 - **A dropped app leaves a live `components/postgres` line behind, and re-enabling it is not
   free.** `outline`, `retrom` and `strmgen` had their `Database` CR, database and role removed
@@ -247,11 +247,13 @@ entry there is a hard failure, and that guard is the reason this job can be trus
   with client certificates owns the generated `<name>-client-cert` Secret through a controller
   `ownerReference`, so pruning the role garbage-collects the credential — and CNPG's
   `deleteOwnedCertSecret` removes it outright the moment `enabled` goes false.
-- **`reloader.stakater.com/auto` belongs on the WORKLOAD, not on a Secret.** It is present on
-  the rendered `ExternalSecret` because the generator put it there and churning it would break
-  the byte-for-byte match with the live object, but it does nothing where it sits. What makes
-  an app pick up a changed password is the annotation on the app's own Deployment/StatefulSet.
-  This matters from phase 4 onward, when passwords start rotating.
+- **`reloader.stakater.com/auto` belongs on the WORKLOAD, not on a Secret.** It used to sit on
+  the rendered `ExternalSecret` and on the Secret that ExternalSecret produces, kept there to
+  preserve a byte-for-byte match with the live object; it did nothing where it sat, and the
+  estate-wide sweep removed it from both. What makes an app pick up a changed password is the
+  annotation on the app's own Deployment/StatefulSet — or on that workload's pod template, which
+  Reloader falls back to when the workload carries none. This matters from phase 4 onward, when
+  passwords start rotating.
 - **The nested ks does not inherit `components/common`.** Its `decryption` and
   `substituteFrom` are spelled out in `ks.yaml`; `common` is applied by the umbrella
   kustomization and never sees this object. If you add a new cluster-wide substitution source,

@@ -141,7 +141,6 @@ spec:
       tailscale:
         className: tailscale
         annotations:
-          reloader.stakater.com/auto: "true"
           tailscale.com/hostname: *app
         hosts:
           - host: "${APP}"

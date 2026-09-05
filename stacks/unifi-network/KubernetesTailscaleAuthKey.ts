@@ -63,9 +63,11 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
         metadata: {
           name: `tailscale-authkey`,
           namespace: "tailscale-system",
+          // No `reloader.stakater.com/auto` here: Reloader reads that off the
+          // WORKLOAD (falling back to its pod template), never off the Secret,
+          // so on this object it did nothing.
           annotations: {
             "reflector.v1.k8s.emberstack.com/reflection-allowed": "true",
-            "reloader.stakater.com/auto": "true",
           },
         },
         // Explicit, and load-bearing: the live Secret is type Opaque, and
@@ -102,9 +104,11 @@ export class KubernetesTailscaleAuthKeyComponent extends ComponentResource {
         metadata: {
           name: `tailscale-dns-authkey`,
           namespace: "tailscale-system",
+          // No `reloader.stakater.com/auto` here: Reloader reads that off the
+          // WORKLOAD (falling back to its pod template), never off the Secret,
+          // so on this object it did nothing.
           annotations: {
             "reflector.v1.k8s.emberstack.com/reflection-allowed": "true",
-            "reloader.stakater.com/auto": "true",
           },
         },
         // Same reasoning as the app authkey above.
