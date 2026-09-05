@@ -1,8 +1,8 @@
 # LAN attachment (Multus ipvlan) — discovery without hostNetwork
 
-**Status:** stage 1 implemented (Jellyfin **and** Plex — the full set the
-survey found). Stages 2–3 not started —
-Matter is blocked on an unanswered IPv6 question, Home Assistant goes last.
+**Status:** complete. Stage 1 (Jellyfin, Plex) is live and verified. Stages 2
+and 3 (Matter, Home Assistant) were investigated and **rejected on evidence** —
+`hostNetwork` stays on both.
 
 ## The question this answers
 
@@ -280,29 +280,78 @@ echo -n 'M-SEARCH * HTTP/1.0' | socat - UDP-DATAGRAM:255.255.255.255:32414,broad
 Both should return server details. Plex clients on the LAN should then show the
 server as local rather than as a remote plex.tv connection.
 
-### Stage 2 — Matter (not started; verify IPv6 first)
+### Stage 2 (Matter) and Stage 3 (Home Assistant) — investigated and **rejected**
 
-**Do not start this before answering the IPv6 question.** Matter operational
-discovery leans on mDNS over IPv6. The `Home` network reports
-`ipv6_interface_type: none` with `ipv6_ra_enabled: true`, and the Talos
-`networkInterfaces` are IPv4-only. Matter works today because `hostNetwork`
-gives it whatever the host NIC has. A static IPv4-only ipvlan attachment may not
-be equivalent. Confirm what IPv6 the Matter pod actually uses on the host today
-before moving it.
+Both were planned as follow-ups to get these workloads off `hostNetwork: true`.
+Both were then investigated against the running pods and upstream, and both are
+**not being done**. `hostNetwork` on these two is deliberate and load-bearing;
+the helmreleases now say so inline so nobody repeats the attempt.
 
-Matter is Tier 1 (survives Battery windows), so this is a staged, out-of-hours
-change with a tested rollback.
+#### What they actually do on the wire
 
-### Stage 3 — Home Assistant (not started; highest risk)
+Measured from the running pods (`/proc/net/igmp`, `/proc/net/igmp6`,
+`/proc/net/udp`, `/proc/net/tcp`) rather than inferred from docs:
 
-HA is the riskiest and must go last and alone. Beyond zeroconf browse it runs
-the HomeKit bridge and accessory-mode cameras (ports 21063, 21070-73), SSDP, and
-Thread. Changing HA's network identity re-announces the HomeKit bridge from a
-new address; HomeKit should recover via mDNS re-announcement, but "should" is
-carrying weight and the blast radius is every paired accessory.
+| | Multicast joined on the LAN NIC | Binds |
+|---|---|---|
+| **matter** | `224.0.0.251`, `ff02::fb` | `5353` on both stacks, `5580` |
+| **home-assistant** | `224.0.0.251`, `ff02::fb`, `239.255.255.250`, `ff02::c` | `5353`, `1900`, `8123`, `8888`, HomeKit bridges `21063-21065`, accessory cameras `21070-21073` |
 
-HA also had an outage on 2026-09-04. Do not stack this on top of an unrelated
-change.
+#### The IPv6 question is settled, and it was never the blocker
+
+This estate has **no routable IPv6 at all** — every interface on every node
+carries only `fe80::/64` link-local. Matter's IPv6 use is link-local multicast
+(`ff02::fb`), which an ipvlan child gets automatically from the kernel. So the
+concern originally raised here dissolves on measurement.
+
+#### The actual blocker: ipvlan *adds* an interface, it does not replace one
+
+Cilium remains the default CNI, so a Multus attachment leaves the pod holding
+**both** the pod network (`eth0`) and the LAN (`net1`). The application then has
+to choose which to advertise and browse on — and both of these are documented to
+choose wrong:
+
+- **Home Assistant** — [home-assistant/core#132288](https://github.com/home-assistant/core/issues/132288)
+  closes with the reporter confirming the exact failure: *"it was indeed only
+  using the eth0 by default instead of the other interface that is the
+  macvlan"*. The mitigation (`advertise_ip` / `ip_address` on the HomeKit entry)
+  lives in **HA's own config, not in git**, so it would not be reproducible from
+  this repo. Getting it wrong re-advertises every HomeKit accessory and camera
+  on an unreachable `10.206.x.x`.
+- **Matter** — the documented lever is `--primary-interface`. The most recent
+  report of it, [home-assistant/core#152848](https://github.com/home-assistant/core/issues/152848)
+  (Oct 2025), says plainly: *"the parameter is ignored and it still binds
+  useless interface enp1s0"*. That issue was closed **`not_planned` by a stale
+  bot**, not fixed.
+
+Read the closures carefully before citing them: of the four issues reviewed,
+two closed `completed` (one by the reporter over a quoting workaround), one was
+a confirmed diagnosis rather than a generic fix, and the most relevant closed
+`not_planned` on inactivity. "Closed" is not "fixed" here.
+
+#### Why hostNetwork is the right answer for these two
+
+It gives each pod **one coherent view of the network**, which is exactly what
+HomeKit, SSDP and Matter commissioning assume — and why every upstream doc for
+all three specifies host networking. Jellyfin and Plex are different: they only
+need to *receive a broadcast and answer it*, and they have no pairing state that
+a wrong advertisement would corrupt.
+
+The trade is real and worth stating plainly: these two keep host port bindings
+and stay outside NetworkPolicy. That is the price of working HomeKit and Matter,
+and it is cheaper than re-pairing an estate's worth of accessories.
+
+#### What would reopen this
+
+- A released `python-matter-server` where `--primary-interface` /
+  `--mdns-network-interface` demonstrably pins mDNS to one interface, verified
+  on a scratch workload before Matter is touched.
+- HomeKit `advertise_ip` becoming expressible in this repo rather than in HA's
+  UI-managed config entries.
+- Multus being able to *replace* the default interface rather than add to it,
+  which would remove the ambiguity at its root.
+
+Until then the pod spec stays as it is.
 
 ## Rejected options
 
