@@ -1,0 +1,388 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app homelable
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Single writer to one RWO Longhorn PVC holding a SQLite file.
+        strategy: Recreate
+        containers:
+          # nginx. The public face; the only container with an ingress route on
+          # the LAN hostname.
+          frontend:
+            image:
+              repository: ghcr.io/pouzor/homelable-frontend
+              tag: 3.3.5@sha256:720b0d3f9b5083b6cbf63ddb667510609ed9f6914531a82a981c848c22286f42
+              pullPolicy: IfNotPresent
+            env:
+              TZ: "${TIMEZONE}"
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            probes:
+              # `custom: true` is load-bearing on every probe in this file: a
+              # handler-bearing spec without it is silently swapped for a
+              # tcpSocket, and `enabled: true` omitted means no probe at all.
+              liveness: &frontendProbe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: &frontendPort 80
+                  initialDelaySeconds: 10
+                  periodSeconds: 15
+                  timeoutSeconds: 5
+                  failureThreshold: 4
+              readiness: *frontendProbe
+            securityContext:
+              # Official nginx image, root, binds :80 in the pod netns.
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["NET_BIND_SERVICE", "CHOWN", "SETUID", "SETGID"]
+
+          # uvicorn. No Service of its own -- see the hostAliases note below for
+          # why it is reachable only from inside this pod.
+          backend:
+            image:
+              repository: ghcr.io/pouzor/homelable-backend
+              tag: 3.3.5@sha256:61cdcc68330e1eb58cd7cb0a2c67685c046d26ee3fd64a0cf49ec4a689811fa0
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            env:
+              TZ: "${TIMEZONE}"
+              SQLITE_PATH: /app/data/homelab.db
+              # Wildcards are rejected outright in OIDC mode, so both hostnames
+              # the app is reachable on are listed explicitly.
+              CORS_ORIGINS: '["https://${APP}.${ROOT_DOMAIN}","https://${APP}.${TAILSCALE_DOMAIN}"]'
+              AUTH_MODE: oidc
+              # Single value, pinned to the ROOT_DOMAIN host. Login therefore
+              # only works via https://${APP}.${ROOT_DOMAIN} -- which resolves
+              # over the tailnet anyway through Technitium split-horizon. The
+              # tailscale route exists for parity and to carry live view; it is
+              # not a second login path.
+              OIDC_REDIRECT_URI: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oidc/callback"
+              OIDC_SCOPES: "openid profile email"
+              OIDC_COOKIE_SECURE: "true"
+              OIDC_SESSION_EXPIRE_MINUTES: "480"
+              # AUTH_USERNAME / AUTH_PASSWORD_HASH are AUTH_MODE=local only.
+              # Left out entirely rather than shipping upstream's admin/admin
+              # default hash.
+
+              # --- scanner -------------------------------------------------
+              # IoT (VLAN 10) and Guest (VLAN 2).
+              #
+              # Home is deliberately absent. It is a genuinely flat
+              # 10.10.0.0/16 with a DHCP pool spanning .0.5-.254.254, so there
+              # are no /24s to scope to -- and a *scheduled* sweep of 65,536
+              # addresses would push ~65k probes per pass at a gateway that has
+              # already had one load-spiral outage. Run the /16 as a manual,
+              # off-hours one-off from the scan dialog instead.
+              #
+              # These are LIVE first-run config, not inert defaults. The API
+              # persists overrides to scan_config.json next to the DB and that
+              # file then wins -- but this deployment starts on a fresh volume
+              # (the celestia canvas was not migrated, see the runbook), so
+              # there is no scan_config.json yet and the first scan uses exactly
+              # what is written here. They become inert only after someone
+              # changes the ranges in the UI.
+              SCANNER_RANGES: '["192.168.100.0/24","10.1.0.0/24"]'
+              SCANNER_HTTP_RANGES: "[]"
+              SCANNER_HTTP_PROBE_ENABLED: "false"
+              # Upstream default: the prober accepts any certificate. Fine for
+              # internal self-signed gear, but it is a knowing choice.
+              SCANNER_HTTP_VERIFY_TLS: "false"
+              # Upstream default, on purpose. This runs *alongside* Gatus, not
+              # instead of it -- comparable resolution is the whole point, since
+              # the question worth measuring is the disagreement rate.
+              STATUS_CHECKER_INTERVAL: "60"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+            probes:
+              liveness: &backendProbe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/health
+                    port: &backendPort 8000
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *backendProbe
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v1/health
+                    port: *backendPort
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+            securityContext:
+              # Strictly tighter than upstream, which only adds NET_RAW (a
+              # no-op -- it is already in Docker's default set, though NOT in
+              # Kubernetes' when ALL is dropped, so here the add is real). This
+              # sheds every other default and keeps only the raw-socket cap the
+              # ICMP discovery sweep and `nmap -sS` actually use. No privileged,
+              # no NET_ADMIN, no hostNetwork.
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["NET_RAW"]
+
+          # uvicorn, serving Streamable HTTP at /mcp.
+          #
+          # STAYS IN THIS POD even though its MCP surface now lives in the
+          # `agents` namespace
+          # (kubernetes/apps/agents/agent-tools-servers/homelable.yaml). It
+          # reaches the backend with an `X-MCP-Service-Key` header that bypasses
+          # OIDC by design, and that hop is a loopback one only while the two are
+          # siblings -- running the image over in `agents` instead would mean
+          # giving the backend a ClusterIP and turning a pod-private,
+          # OIDC-bypassing API into a cluster-wide one. Only the client-facing
+          # surface moved; the privileged hop did not.
+          #
+          # Its own `X-API-Key` gate is unconditional and cannot be turned off,
+          # so `MCP_API_KEY` must stay set here. The ToolHive side injects the
+          # same value as a header; see that file for why not setting it is worse
+          # than setting it.
+          mcp:
+            image:
+              repository: ghcr.io/pouzor/homelable-mcp
+              tag: 3.3.5@sha256:9c09208179487a3e8e6cb3c8f66c6fbc18978e08f90f08d6d7779cf94888c4dc
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            env:
+              TZ: "${TIMEZONE}"
+              # Resolves through the pod's own hostAliases, same literal the
+              # Dockge stack used.
+              BACKEND_URL: http://backend:8000
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+            probes:
+              # The MCP server exposes no health endpoint (the Dockge stack
+              # declared no healthcheck for it either), so this proves the
+              # listener and nothing more. Written as an explicit tcpSocket
+              # rather than left to the chart's default swap, so that what is
+              # being asserted is legible.
+              liveness: &mcpProbe
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &mcpPort 8001
+                  initialDelaySeconds: 20
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *mcpProbe
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+    defaultPodOptions:
+      securityContext:
+        # All three upstream images declare no USER and run as root; verified
+        # against the registry rather than assumed. fsGroup 0 keeps the PVC
+        # owned by the writer, and VOLSYNC_PUID/PGID in ks.yaml points the
+        # restic mover at the same uid.
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      # WHY ONE POD AND NOT THREE CONTROLLERS.
+      # The frontend image bakes `proxy_pass http://backend:8000` into
+      # /etc/nginx/conf.d/default.conf, in three location blocks (/api/,
+      # /api/v1/status/ws/, /ws/), with no `resolver` directive -- so nginx
+      # resolves the name once at startup and holds it. Two ways to satisfy
+      # that in Kubernetes:
+      #
+      #   a) a Service literally named `backend` in `equestria`. That is the
+      #      name collision the Dockge compose scoped to a stack-private network
+      #      precisely to avoid, and a namespace shared with ~18 other apps is a
+      #      worse place to claim it than `dockge_default` was.
+      #   b) mount our own default.conf from a ConfigMap. That forks upstream's
+      #      nginx config, and Renovate bumps this image -- a new location block
+      #      upstream would go missing silently.
+      #
+      # Neither is good. Co-locating the three containers keeps the pod netns
+      # shared (so `backend:8000` is a loopback hop) and lets upstream's config
+      # stay authoritative, at the cost of the three restarting together --
+      # which is the coupling `depends_on` gave them on celestia anyway.
+      hostAliases:
+        - ip: "127.0.0.1"
+          hostnames:
+            - backend
+
+    persistence:
+      # The SQLite DB *is* the hand-curated canvas and is not reproducible from
+      # git. scan_config.json (the persisted scanner overrides) lives beside it.
+      # Backend only -- neither nginx nor the MCP server touches it, exactly as
+      # on celestia.
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            backend:
+              - path: /app/data
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *frontendPort
+      # A Service of its own so the MCPRemoteProxy in `agents` has something to
+      # dial: http://homelable-mcp.equestria.svc.cluster.local:8001/mcp. It
+      # selects the same pod as `homelable` above -- the port is what separates
+      # them.
+      #
+      # Note what is NOT here: a Service for the backend. It has none, so port
+      # 8000 is reachable only from inside this pod, which is what keeps the
+      # `X-MCP-Service-Key` OIDC bypass a loopback-only privilege. Adding one
+      # would undo that; see the mcp container's comment above.
+      mcp:
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *mcpPort
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # --- live view containment ------------------------------------------
+          # LIVEVIEW_KEY enables a read-only canvas that bypasses OIDC entirely.
+          # The key travels in a query string, and Traefik's accessLog writes the
+          # full request line for a 200 -- so every *successful* live-view load
+          # would log the key in plaintext. It also lands in browser history and
+          # any outbound Referer.
+          #
+          # So /view is not served on the LAN-facing hostname at all. Live view
+          # is tailnet-only, via the tailscale component's IngressRoute: every
+          # viewer there is already Tailscale-authenticated and governed by the
+          # ACLs in git, and a compromised device on the flat 10.10.0.0/16
+          # cannot reach it.
+          #
+          # TWO paths must be blocked, not one:
+          #   /view             the SPA page -- frontend/src/main.tsx switches on
+          #                     window.location.pathname === '/view'
+          #   /api/v1/liveview  the data endpoint that page fetches. It is
+          #                     key-authenticated only, NOT session-guarded, so
+          #                     blocking the page alone would still leave the
+          #                     whole topology readable as JSON.
+          # /api/v1/liveview/config is deliberately NOT blocked: it is guarded by
+          # the OIDC session and is what the UI reads to build a share link.
+          # That is why the two liveview matches are `Exact` and not
+          # `PathPrefix` -- a prefix on /api/v1/liveview/ would swallow /config
+          # with it. Same reason the celestia rule used Traefik's `Path()`
+          # rather than `PathPrefix()` for those two and `PathPrefix()` only for
+          # /view.
+          #
+          # These rules beat the catch-all below on Gateway API's own precedence
+          # (longest matching path wins) -- no priority field to keep in sync,
+          # unlike the `priority: 1000` the Traefik router needed on celestia.
+          # The Gatus "Live View Blocked" check in ./definition.yaml is the
+          # regression alarm.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /view
+              - path:
+                  type: Exact
+                  value: /api/v1/liveview
+              - path:
+                  type: Exact
+                  value: /api/v1/liveview/
+            backendRefs:
+              - name: *app
+                port: *frontendPort
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: ${APP}-liveview-block
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *frontendPort
+            filters:
+              # homelable has native OIDC (AUTH_MODE=oidc) -- `local-user`, the
+              # network gate without the authentik outpost hop, same shape the
+              # Dockge stack used when it carried no forward-auth middleware.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

@@ -57,3 +57,4 @@ resources:
   - ./tailscale.yaml
   - ./microsoft-docs.yaml
   - ./home-assistant.yaml
+  - ./homelable.yaml

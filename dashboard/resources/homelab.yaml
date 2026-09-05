@@ -33,7 +33,7 @@
           title: Network
           title-url: ${HOMELABLE_URL}
           update-interval: 5m
-          url: ${HOMELABLE_URL}/api/v1/stats/summary
+          url: ${HOMELABLE_API_URL}/api/v1/stats/summary
           headers:
             X-API-Key: ${HOMELABLE_API_KEY}
             Accept: application/json

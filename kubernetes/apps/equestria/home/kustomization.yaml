@@ -17,5 +17,6 @@ resources:
   # - ./karakeep/ks.yaml
   - ./meilisearch/ks.yaml
   - ./tududi/ks.yaml
+  - ./homelable/ks.yaml
   # - ./outline/ks.yaml
   # - ./collabora/ks.yaml
