@@ -54,6 +54,36 @@ git config --global user.email "david.driscoll@gmail.com"
 git config --global credential."https://github.com".helper \
   '!f() { echo username=x-access-token; echo "password=$(cat /var/run/secrets/github-token/token)"; }; f'
 
+echo "==> cloning home-operations"
+# The working checkout the agent actually operates against, pre-seeded here
+# so a fresh session does not start by asking someone to clone it by hand.
+# /root/home-operations sits on the persistent `home` PVC
+# (../helmrelease.yaml's `persistence.home`), so the clone is a one-time
+# cost -- every restart after the first takes the fetch branch below.
+#
+# HTTPS, not SSH: the credential helper configured just above is this pod's
+# ONLY GitHub auth (no ssh key is mounted anywhere, and no known_hosts is
+# seeded), and it answers for `https://github.com` alone.
+#
+# Deliberately NOT fatal. `set -euo pipefail` is in force, so an unguarded
+# failure here would take the whole pod into CrashLoopBackOff over a
+# transient GitHub outage or an expired token -- and agentboard's actual job
+# (serving the terminal UI, below) does not depend on this checkout
+# existing. A warning in the pod log, with `git` still usable from the
+# agent's own pane to retry by hand, is the right failure mode.
+if [ ! -d /root/home-operations/.git ]; then
+  git clone https://github.com/david-driscoll/home-operations.git \
+    /root/home-operations \
+    || echo "WARNING: clone of home-operations failed; continuing without it"
+else
+  # `fetch`, NOT `pull`. This checkout survives restarts, so it may well be
+  # sitting on an agent's in-progress branch with uncommitted work; fetching
+  # refreshes origin/* without touching the working tree, the current
+  # branch, or anything an agent left mid-task.
+  git -C /root/home-operations fetch --prune origin \
+    || echo "WARNING: fetch of home-operations failed; checkout may be stale"
+fi
+
 # `locked = true` in ../resources/mise.toml means this resolves ONLY through
 # ../resources/mise.lock's pinned checksums/URLs -- see that file's header
 # for how to regenerate it after a version bump.
