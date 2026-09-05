@@ -22,11 +22,11 @@ spec:
     # interactive authentik redirect in front of every JSON-RPC call, which no
     # MCP client can follow. This provider is not consumed by a browser session
     # either -- it is the UPSTREAM leg of ToolHive's own authorization server
-    # (./mcpexternalauthconfig.yaml), so ToolHive is the only client that ever
+    # (./helmrelease.yaml), so ToolHive is the only client that ever
     # uses it.
     oauth2:
       clientType: confidential
-      # PINNED rather than generated, so ./mcpexternalauthconfig.yaml can carry
+      # PINNED rather than generated, so ./resources/values.yaml can carry
       # it as a literal -- that CRD has no secret-ref form for clientId.
       # components/authentik.ts's `clientIdPair` prefers this over a generated
       # value. Change it here and there in the same commit.

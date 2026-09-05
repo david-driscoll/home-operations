@@ -22,7 +22,7 @@
 #
 # The backend Service does not exist in Git: the operator creates
 # `mcp-<mcpserver-name>-proxy` on `spec.proxyPort` when it reconciles
-# ../toolhive-docs/mcpserver.yaml. Until then this route sits with an
+# ../agent-tools-servers/docs.yaml. Until then this route sits with an
 # unresolved backendRef, which is the expected state on a first apply.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -44,7 +44,7 @@ spec:
     # One label under ${ROOT_DOMAIN}, which the `*.${ROOT_DOMAIN}` SAN on
     # le-production already covers. This is also the auth server's `issuer`, so
     # changing it is a three-file change (here,
-    # ./mcpexternalauthconfig.yaml, ./mcpoidcconfig.yaml) and invalidates every
+    # ./helmrelease.yaml, ./mcpoidcconfig.yaml) and invalidates every
     # token and client registration in flight.
     - "${APP}.${ROOT_DOMAIN}"
   rules:
@@ -69,7 +69,7 @@ spec:
             # the OAuth endpoints answer with redirects and JSON errors.
             #
             # The network guard is now defence in depth rather than the only
-            # control -- ../toolhive-docs/mcpserver.yaml sets `oidcConfigRef`,
+            # control -- ../agent-tools-servers/docs.yaml sets `oidcConfigRef`,
             # so the proxy rejects an unauthenticated request on its own. It
             # stays because an in-cluster hairpin needs it to pass anyway (see
             # ./mcpoidcconfig.yaml) and removing it would buy nothing.
