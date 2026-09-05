@@ -27,7 +27,6 @@ spec:
   rollback:
     force: true
     cleanupOnFail: true
-    recreate: true
   uninstall:
     keepHistory: false
   values:

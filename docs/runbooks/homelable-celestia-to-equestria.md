@@ -197,34 +197,48 @@ first. The run retires the celestia authentik application and creates the
 equestria one, writing `homelable-oidc-credentials` into the `equestria`
 namespace where `homelable-env` extracts it.
 
-**Do not let this sit. It is not a passive wait — there is a clock on it.**
+**This has a deadline: the HelmRelease stalls after 8 install attempts, about
+80 minutes.** Observed live on the first rollout.
 
-Until this runs, `homelable-env` cannot resolve, the pod sits in
-`CreateContainerConfigError`, and the HelmRelease's `install` never goes
-healthy. That trips its own remediation:
+Until it runs, `homelable-env` cannot resolve, the pod sits in
+`CreateContainerConfigError`, and the install never goes healthy. That trips
+remediation on a ~10 minute cycle — and because the remediation UNINSTALLS,
+helm-controller's log reads as a series of first installs rather than retries:
 
 ```
-Released=False   InstallFailed: timeout waiting for:
-                 [Deployment/equestria/homelable status: 'InProgress']
-Remediated=True  UninstallSucceeded: Helm uninstall remediation ... succeeded
+release is in a failed state
+running 'uninstall' action with timeout of 10m0s
+release not installed: no release in storage for object
+running 'install' action with timeout of 10m0s
 ```
 
-`timeout: 10m` and `install.remediation.retries: 7` means it uninstalls and
-reinstalls every ten minutes, about seven times, and then **stalls** — after
-which the Pulumi run alone will not revive it. Nothing is lost when it does
-(the PVC is `existingClaim`, created by `components/volsync`, so Helm never
-owns it and the uninstall does not touch it), but the release needs a nudge:
+Do not read that as "it will retry forever". `status.installFailures` sits at 7
+for a full cycle while an 8th attempt runs, which looks like the budget being
+ignored; it is not. It ends at:
+
+```
+Stalled=True  RetriesExceeded: Failed to install after 8 attempt(s)
+```
+
+`install.remediation.retries: 7` means one initial install plus seven retries.
+
+**What stalling does and does not break.** The last attempt's objects are left
+in place rather than uninstalled — Deployment, both Services, the HTTPRoute and
+the Helm release secret all survive. So once the Secret appears, the kubelet
+resolves `CreateContainerConfigError` on its own and **the app comes up without
+any intervention**. What stays broken is the HelmRelease: `Ready=False`,
+`Stalled=True`, with drift detection and future upgrades not running until
+cleared:
 
 ```bash
 flux -n equestria reconcile helmrelease homelable --reset --with-source
 ```
 
-`--reset` is the part that matters: it clears the failure counters, without
-which the stalled release will not attempt another install.
-
-Observed on the first rollout — one `InstallFailed`/`UninstallSucceeded` cycle
-inside the first ten minutes. The earlier draft of this file called this gap
-"just a wait", which was wrong.
+**During the cycling (before it stalls)** Helm-owned objects are destroyed and
+recreated every ten minutes, so they intermittently appear missing and the
+ToolHive remote proxy flaps as its remote Service comes and goes. The PVC is
+untouched throughout — it is `existingClaim`, created by `components/volsync`,
+so Helm never owns it.
 
 ### 4. Let it start, and check the whole chain
 
@@ -287,10 +301,35 @@ rather than a broad `10.10.0.0/16` will silently drop the sweep, and the symptom
 is indistinguishable from "those hosts are down" — the map fills with offline
 nodes and nothing errors.
 
-Trigger a scan of `192.168.100.0/24` (IoT) and `10.1.0.0/24` (Guest) from the UI
-and confirm the online counts match what celestia last recorded. Guest is very
-likely to return nothing regardless, because of client isolation — that is
-expected and was true before the move.
+Trigger a scan of `192.168.100.0/24` (IoT) and `10.1.0.0/24` (Guest) from the
+UI. Guest is very likely to return nothing regardless, because of client
+isolation — that is expected and was true before the move.
+
+**There is no celestia baseline to compare against**, so do not look for one.
+Verified from the final tarball taken at cutover: `nodes` and `edges` were both
+**empty**, with 55 `device_inventory` rows and three `scan_runs` total. An
+earlier draft of this step said to "confirm the online counts match what
+celestia last recorded" — there were no recorded counts.
+
+**The new instance also scans a narrower set than celestia did**, so even a
+healthy scan will find less. celestia's `scan_config.json` had been overridden
+through the UI to:
+
+```json
+"scanner_ranges": ["192.168.100.0/24", "10.1.0.0/16", "10.10.0.0/16"]
+```
+
+— a `/16` for Guest rather than the `/24` in the env, and the flat Home
+`10.10.0.0/16` that this repo's config comments say is deliberately excluded
+(a scheduled sweep of 65,536 addresses, against a gateway with a load-spiral
+outage in its history). Documented intent and running system had diverged, and
+the UI override was winning. On a fresh volume the env wins instead.
+
+So the check here is **"did anything answer at all"**, not "did the count
+match". If IoT comes back empty, that is the SNAT/firewall failure this step
+exists to catch. Widening to the Home `/16` is a separate, deliberate decision
+— make it from the UI with the gateway watched, not by quietly editing
+`SCANNER_RANGES`.
 
 ### 7. Soak, then clean up
 
