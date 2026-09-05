@@ -355,7 +355,7 @@ checksum = "sha256:6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e54
 url = "https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip"
 
 [[tools."npm:@anthropic-ai/claude-code"]]
-version = "2.1.260"
+version = "2.1.261"
 backend = "npm:@anthropic-ai/claude-code"
 
 [tools."npm:@anthropic-ai/claude-code".options]
