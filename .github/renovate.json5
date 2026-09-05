@@ -95,103 +95,53 @@
   // Do NOT "fix" this by adding `dependencyLookupWarnings` back above -- see
   // that comment for why an unnamed failure is worse than a named one.
 
-  // THE MITIGATION for the above, and the reason it is per-host rather than
-  // global.
+  // hostRules THROTTLING WAS TRIED HERE AND HAS BEEN REMOVED. Do not add it
+  // back without new evidence; the whole experiment is written up below so it
+  // does not get re-run from scratch.
   //
-  // The 2026-09-04 evening dashboard broke the original "it is a docker
-  // registry 429" reading, and it is worth recording why. That run failed on
+  // What prompted it: the 2026-09-04 evening dashboard listed two NUGET
+  // packages alongside the docker ones. The nuget failures cannot be the
+  // docker token fall-through described above -- different datasource, no
+  // registry token in the path -- so that mechanism, while real, is not the
+  // whole story. Renovate also ships no per-host throttling by default
+  // (`concurrentRequestLimit: null`, `maxRequestsPerSecond: 0`), and this repo
+  // extracts 1472 dependencies across 944 files, so per-host request pressure
+  // looked like the missing piece. It was not.
   //
-  //   gcr.io/cadvisor/cadvisor, data.forgejo.org/oci/docker,
-  //   data.forgejo.org/forgejo-helm/forgejo   -- docker datasource
-  //   ZiggyCreatures.FusionCache.Serialization.SystemTextJson, TMDbLib
-  //                                           -- NUGET datasource
+  // Three runs later, throttling gcr.io / data.forgejo.org / api.nuget.org /
+  // ghcr.io produced no durable improvement. api.nuget.org was dropped first
+  // (nuget went 2 -> 7 failures under it). The rest went when all THREE
+  // data.forgejo.org dependencies failed in one run -- worse than the single
+  // failure before throttling -- which was the stated trigger to drop the
+  // block rather than tune the numbers.
   //
-  // The nuget failures cannot be a docker token problem: different datasource,
-  // different code path, no registry token involved. Whatever is happening is
-  // therefore NOT specific to container registries, which rules out the
-  // getAuthHeaders fall-through as the whole story.
+  // WHAT THE FAILURE ACTUALLY IS, established over four dashboards:
   //
-  // What survives the evidence is per-host request pressure. Measured against
-  // this repo with `renovate --platform=local --dry-run=lookup` on 44.61.6:
-  // 1472 dependencies across 944 files, and ALL 1472 resolved -- zero lookup
-  // failures, including all five the hosted run had just failed on, at their
-  // correct current values (cadvisor v0.55.1, oci/docker 29-dind,
-  // forgejo-helm/forgejo 17.1.5, both nuget packages). 60 hand-rolled requests
-  // to the three hosts in a tight loop also returned 200/200. So the packages,
-  // the manifests and this config are all fine; what differs is the runner.
+  // The last run failed on exactly `Flurl.Http` and `PromQL.NET`, which are
+  // the FIRST TWO nuget dependencies in extraction order. That is the tell.
+  // The nuget v3 datasource resolves `RegistrationsBaseUrl` from
+  // https://api.nuget.org/v3/index.json via `getResourceUrl`, which caches the
+  // answer for 60 minutes ON SUCCESS ONLY and, on failure, logs at debug and
+  // returns null. Every lookup racing that resolution therefore fails together
+  // and every lookup after it succeeds -- which is why the failing set is
+  // always a small CLUSTER, why its membership rotates, and why it lands on
+  // whichever dependencies happen to be first. The docker side behaves the
+  // same way per registry host: all three data.forgejo.org dependencies failed
+  // as a group, not individually.
   //
-  // Renovate ships NO per-host throttling by default -- `concurrentRequestLimit`
-  // defaults to null and `maxRequestsPerSecond` to 0, i.e. unlimited. Against a
-  // 1472-dependency repo that means large bursts at a handful of hosts from
-  // Mend's shared egress IPs, which is exactly the condition under which those
-  // hosts shed load. It also explains the two properties that make this so
-  // annoying to chase: the failing set ROTATES between runs, and it spans
-  // datasources.
+  // So this is a transient upstream/egress blip on the Mend runner landing in
+  // a code path that swallows it, NOT a repo configuration problem, and there
+  // is no knob here that reaches it. Verified repeatedly:
+  // `renovate --platform=local --dry-run=lookup` resolves ALL ~1473
+  // dependencies across ~945 files with zero lookup failures, including every
+  // package a hosted run had just failed on, each at its correct current
+  // version. Nothing named in this warning has ever actually been stale -- it
+  // costs visibility, not freshness.
   //
-  // These are the four hosts observed failing across three dashboard runs.
-  // Limits are deliberately modest rather than aggressive: the run is weekly,
-  // so wall-clock cost is irrelevant, but strangling ghcr.io would hurt because
-  // most of the 1472 live there -- hence its more generous allowance.
-  //
-  // RESULT OF THE FIRST RUN UNDER THIS CONFIG (dashboard 2026-09-05T01:21Z,
-  // four hours after the rule landed), recorded because it was mixed and half
-  // of it argued against me:
-  //
-  //   docker  3 failures -> 1. gcr.io/cadvisor, forgejo-helm/forgejo and the
-  //           ghcr.io entry all cleared; data.forgejo.org/oci/docker remained.
-  //   nuget   2 failures -> 7, spreading from one .cs file to five.
-  //
-  // So an `api.nuget.org` rule was tried here and has been REMOVED. Do not put
-  // it back without new evidence. There is no measured benefit and one run of
-  // correlation with harm, and the concurrency theory does not survive contact
-  // with the nuget numbers:
-  //
-  //   * Timed locally, nuget-only, 31 deps: 12s throttled vs 15s unthrottled,
-  //     zero lookup failures either way. The limit was never the bottleneck,
-  //     so it cannot have been causing timeouts -- but it bought nothing.
-  //   * All 31 resolve on the DEFAULT nuget.org feed with no skipReason, no
-  //     `Excess registryUrls`, and no second registry anywhere. Nothing in this
-  //     repo's config is steering them wrong.
-  //   * Renovate already retries GETs twice (`retryLimit = 2` in
-  //     lib/util/http/http.ts), so these survived three attempts. A single
-  //     transient blip is not the explanation.
-  //   * The failures arrive in a CLUSTER -- 7 packages across 5 unrelated files
-  //     in one run, then a different subset next run. That is the shape of the
-  //     shared service-index resolution going away for a window rather than
-  //     anything per-package: `getResourceUrl` catches the failure, logs at
-  //     debug, and returns null, so every nuget lookup in that window becomes
-  //     `no-result` at once. It caches the resolved serviceId for 60 minutes on
-  //     SUCCESS only, so there is nothing to tune from here.
-  //
-  // The docker rules below are KEPT, but on weak evidence -- one run in the
-  // right direction. If the docker entries come back too, drop the rest of this
-  // block rather than tuning the numbers.
-  //
-  // HONEST CAVEAT: this is unverifiable from here. The failure does not
-  // reproduce locally, so this cannot be tested before merge -- it is a
-  // targeted, documented, credential-free mitigation, not a proven fix. The
-  // success criterion is the "Package lookup failures" warning disappearing
-  // from issue #11 over the next few runs. If it does NOT, revert this rather
-  // than tightening the numbers further, and treat the residual as Mend-side.
-  hostRules: [
-    {
-      matchHost: "gcr.io",
-      concurrentRequestLimit: 2,
-      maxRequestsPerSecond: 4,
-    },
-    {
-      matchHost: "data.forgejo.org",
-      concurrentRequestLimit: 2,
-      maxRequestsPerSecond: 4,
-    },
-    {
-      // Most of this repo's dependencies resolve here, so this one is a brake,
-      // not a throttle.
-      matchHost: "ghcr.io",
-      concurrentRequestLimit: 8,
-      maxRequestsPerSecond: 12,
-    },
-  ],
+  // If it becomes worth chasing again, the next step is Mend's own run logs
+  // (linked from the dashboard), which show whether these are 429s, timeouts
+  // or connection resets. That is the one piece of evidence unobtainable from
+  // this side, and no config change should be made without it.
   schedule: [
     "every weekend"
   ],
