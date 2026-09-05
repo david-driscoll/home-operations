@@ -220,6 +220,39 @@ So it is upstream documentation drift, not a feature behind a version gate.
 `outgoingAuth` itself is long-standing and is present here; only that backend
 type is fictional. This cluster runs **v0.46.0**, the current release.
 
+
+### The Secret-level Reloader annotation is inert
+
+Every server here annotates its ExternalSecret and target Secret with
+`reloader.stakater.com/auto: "true"`. **That does nothing on its own.** Reloader
+keys off the *workload*, and a Secret carrying the annotation is not a workload.
+
+The consequence went unnoticed for a long time: no MCP server had a working
+reload path, so each ran whatever its Secret contained at pod start,
+indefinitely. Harmless for static credentials — the Secret's content never
+changes — but silently fatal for anything that rotates:
+
+- `toolhive-tailscale` — its API key is re-minted **every 5 minutes** by
+  `stacks/unifi-network/tailscale-api-token.ts` against a ~1h lifetime, so a pod
+  more than an hour old is holding an expired key. That is the most likely
+  reason its API calls were failing (the `spawn tailscale ENOENT` was the CLI
+  fallback masking it).
+- `toolhive-openbao` — a `VaultDynamicSecret`, dynamic by definition.
+- `toolhive-pulumi` — pulls the same hourly `github-token` via `secretKeyRef`.
+
+The fix is `reloader.stakater.com/auto` on `spec.podTemplateSpec.metadata.annotations`,
+which reaches the operator-owned StatefulSet's pod template. It is applied to
+every MCPServer that consumes a Secret. Servers consuming none (`degoog`,
+`docs`, `kubernetes`, `nuget`) are deliberately left alone.
+
+**Not applied cluster-wide, deliberately.** Reloader's chart has
+`reloader.autoReloadAll`, which would remove the need for any annotation. Turning
+it on would also restart every workload referencing `github-token` — agentboard,
+eight Pulumi Stack workspaces, renovate, maintainerr, dynacat — **every 30
+minutes**, which is exactly the restart loop `agentboard/helmrelease.yaml`
+records as having been removed on purpose. If it is ever enabled, those
+workloads need `reloader.stakater.com/ignore: "true"` first.
+
 ## Troubleshooting
 
 Check what the client actually resolved — the URL, not just the status:
