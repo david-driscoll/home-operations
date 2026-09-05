@@ -287,10 +287,35 @@ rather than a broad `10.10.0.0/16` will silently drop the sweep, and the symptom
 is indistinguishable from "those hosts are down" — the map fills with offline
 nodes and nothing errors.
 
-Trigger a scan of `192.168.100.0/24` (IoT) and `10.1.0.0/24` (Guest) from the UI
-and confirm the online counts match what celestia last recorded. Guest is very
-likely to return nothing regardless, because of client isolation — that is
-expected and was true before the move.
+Trigger a scan of `192.168.100.0/24` (IoT) and `10.1.0.0/24` (Guest) from the
+UI. Guest is very likely to return nothing regardless, because of client
+isolation — that is expected and was true before the move.
+
+**There is no celestia baseline to compare against**, so do not look for one.
+Verified from the final tarball taken at cutover: `nodes` and `edges` were both
+**empty**, with 55 `device_inventory` rows and three `scan_runs` total. An
+earlier draft of this step said to "confirm the online counts match what
+celestia last recorded" — there were no recorded counts.
+
+**The new instance also scans a narrower set than celestia did**, so even a
+healthy scan will find less. celestia's `scan_config.json` had been overridden
+through the UI to:
+
+```json
+"scanner_ranges": ["192.168.100.0/24", "10.1.0.0/16", "10.10.0.0/16"]
+```
+
+— a `/16` for Guest rather than the `/24` in the env, and the flat Home
+`10.10.0.0/16` that this repo's config comments say is deliberately excluded
+(a scheduled sweep of 65,536 addresses, against a gateway with a load-spiral
+outage in its history). Documented intent and running system had diverged, and
+the UI override was winning. On a fresh volume the env wins instead.
+
+So the check here is **"did anything answer at all"**, not "did the count
+match". If IoT comes back empty, that is the SNAT/firewall failure this step
+exists to catch. Widening to the Home `/16` is a separate, deliberate decision
+— make it from the UI with the gateway watched, not by quietly editing
+`SCANNER_RANGES`.
 
 ### 7. Soak, then clean up
 
