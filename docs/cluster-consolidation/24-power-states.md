@@ -15,6 +15,110 @@ tagging) and amends [20-low-power-tier.md](20-low-power-tier.md) (§1 Tier-1
 namespace list, §4 placement model) — read this file *and* 20 together; 20 is
 not being rewritten, this file records what changed and why.
 
+## Revision, 2026-09-05 — two controllers now: a clock and a request
+
+Low Power's mechanism has been split in two. Nothing below this heading is
+rewritten; this records what changed.
+
+**1. py-kube-downscaler → GoKubeDownscaler.** Same maintainers, same annotation
+vocabulary, same `downscaler/original-replicas` key. py-'s own
+[v26.4.0 release note](https://github.com/caas-team/py-kube-downscaler/releases/tag/v26.4.0)
+(2026-04-08) put it in maintenance mode — "all new features and quality-of-life
+improvements will be developed in the new project" — and the Go rewrite reached
+feature parity at v1.3.0. Everything §"Mechanism" below says about polarity,
+precedence and the keep-list is still true. Four things changed, and each one is
+commented at the point of use in
+`kubernetes/apps/kube-system/go-kube-downscaler/helmrelease.yaml`:
+
+- `--interval` is a **duration**, so `60` would mean 60 *nanoseconds*. It is
+  written `60s`.
+- `excludedNamespaces` entries are compiled as **regexes** and matched
+  unanchored, so bare `network` would also exclude `network-foo`. Every entry is
+  now anchored `^...$` to keep py-'s exact-name behaviour.
+- `upscale-excluded` defaults to **false**, so `downscaler/exclude` now means
+  *completely untouched* rather than py-'s weaker "do not scale down, but do
+  scale up". This is what makes point 2 safe.
+- `--include-resources` defaults to `deployments` alone; the list is explicit or
+  CronJob suspension silently disappears.
+
+**The 09:00 upscale is no longer invisible when it fails.** py- had no metrics at
+all ([#164](https://github.com/caas-team/py-kube-downscaler/issues/164), open
+since 2025-07), which is why the 2026-08-23 incident below took a week to
+surface. `go-kube-downscaler/prometheusrule.yaml` now alerts on the cycle counter
+going flat — the concrete symptom of
+[#520](https://github.com/caas-team/GoKubeDownscaler/issues/520), where an
+unparsable *namespace* annotation crashes the whole controller and the morning
+upscale simply never happens.
+
+**A global lever exists now.** `--force-downtime` is a top-level flag, so "the
+whole estate into Low Power" is one reviewable commit rather than a
+`kubectl annotate` per namespace. The per-namespace
+`downscaler/force-downtime` toggle documented below still works unchanged.
+
+**2. Sablier, for on-demand wake.** A Traefik middleware asks
+[Sablier](https://sablierapp.dev) whether the workload behind a route is awake,
+starts it if not, and serves a waiting page until it is ready; after 30 minutes
+of no requests it scales back to zero. So an app can now be down at 14:00 as
+well as at 03:00, without anyone deciding it should be.
+
+**Every workload belongs to exactly one of three sets**, and this is the part
+that matters operationally:
+
+| set | marker | owner |
+|---|---|---|
+| scheduled | *(nothing — opt-out)* | go-kube-downscaler, 02:00–09:00 |
+| on-demand | `sablier.enable` label **and** `downscaler/exclude` annotation | Sablier |
+| always up | `downscaler/exclude` only | neither |
+
+Both controllers write `spec.replicas` through the scale subresource. A workload
+in two sets does not degrade, it **flaps**: the downscaler upscales at 09:00,
+Sablier's session expires and re-zeroes it, the downscaler upscales again 30
+seconds later, forever.
+[sablierapp/sablier#1034](https://github.com/sablierapp/sablier/issues/1034)
+states the incompatibility outright. `kubernetes/components/sablier` exists so
+that both markers are applied in one act and the half-applied state cannot be
+created by forgetting one.
+
+Check the partition holds with:
+
+```bash
+kubectl get deploy,sts -A -o json | jq -r '
+  .items[] | select(.metadata.labels["sablier.enable"]=="true")
+  | select((.metadata.annotations["downscaler/exclude"] // "") != "true")
+  | "OVERLAP: \(.metadata.namespace)/\(.metadata.name)"'
+```
+
+**What Sablier cannot do, and why the scheduler stays.** It wakes on HTTP through
+Traefik and nothing else. Every cross-app call in this estate goes over ClusterIP
+Service DNS (`http://prowlarr.equestria.svc.cluster.local:9696` and friends), so
+anything another app calls internally must not be on-demand. Neither can it
+reach CronJobs, workloads with no route (`windmill-worker-*`, `meilisearch`,
+`rustdesk`, `tdarr-node`, `authentik-outpost`), or the `agents` namespace —
+`VirtualMCPServer` exposes no Deployment-label override and
+`MCPServer.resourceOverrides` reaches only the proxy Deployment, never the
+backend StatefulSet, so `agents` has been added to `excludedNamespaces`. Those
+all stay on the schedule, which is the whole reason a scheduler is still here.
+
+**Scope as of this revision.** The on-demand set is a pilot only: `whoami`,
+`librespeed` and `openspeedtest` on the cluster, plus `librespeed` and
+`openspeedtest` on the Dockge hosts. Everything else is unchanged. Which further
+apps join is a decision to take after the pilot has run, using
+`sablier_instance_ready_duration_seconds` to judge whether a cold start is
+tolerable for each.
+
+**Monitoring changes for on-demand apps only.** Gatus probes every app every two
+minutes (hardcoded in `components/authentik.ts`), which is shorter than any
+useful session duration — so a naive HTTP check would keep an on-demand app awake
+permanently. Its `ignoreUserAgent` escape hatch is worse: the plugin returns
+HTTP 200 *from the middleware*, so the check would pass forever whether the app
+were asleep, awake or crashlooping. On-demand apps therefore need their Gatus
+check repointed at a Prometheus query over
+`sablier_instance_start_failures_total` instead. **The scheduled set is
+unaffected** and keeps both its HTTP checks and its 02:00 +7h maintenance
+windows.
+
+---
+
 ## Revision, 2026-08-22 — Low Power runs on a schedule now. It sheds WORKLOADS, not NODES.
 
 > ### ⚠️ REVERSAL — 2026-08-22 evening. No node powers off during Low Power.

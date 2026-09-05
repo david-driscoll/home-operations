@@ -28,7 +28,16 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  components: []
+  components:
+    # ON-DEMAND SET. Scales to zero after 30m idle and wakes on request, instead
+    # of go-kube-downscaler's nightly 02:00-09:00 window. The component sets both
+    # `sablier.enable` and `downscaler/exclude` together -- see its header for
+    # why a workload in both sets flaps every 30 seconds rather than degrading.
+    #
+    # whoami is the pilot deliberately: it is stateless, nothing else in the
+    # estate calls it, and it already exists to produce loud single-route
+    # breakage (see the crowdsec note in ./helmrelease.yaml).
+    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

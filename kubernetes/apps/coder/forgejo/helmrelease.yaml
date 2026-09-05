@@ -99,8 +99,11 @@ spec:
 
     # Tier 1 (docs/cluster-consolidation/20-low-power-tier.md): the forge must
     # not be shed, and must be placeable on a control plane once the workers are
-    # powered down. The `forgejo` namespace is also in kube-downscaler's
-    # excludedNamespaces so a mistyped `kubectl annotate` cannot scale it to 0.
+    # powered down. It also runs in the `coder` namespace (see ./ks.yaml -- there
+    # is no `forgejo` namespace, which is what an earlier version of this comment
+    # claimed), and `coder` is in go-kube-downscaler's excludedNamespaces, so a
+    # mistyped `kubectl annotate` cannot scale it to 0. The protection was always
+    # real; only the namespace named here was wrong.
     priorityClassName: critical-tier
     tolerations:
       - key: node-role.kubernetes.io/control-plane

@@ -1,0 +1,86 @@
+# On-demand scale-to-zero for the Dockge hosts. The Kubernetes counterpart is
+# kubernetes/apps/kube-system/sablier; the Traefik plugin that drives it is
+# registered in ../traefik/config.yaml, and the per-stack middlewares live in
+# ../traefik/dynamic/middlewares.yaml.
+#
+# A `_common` stack, so it lands on celestia, alpha-site, luna and skystar. Each
+# host gets its own Sablier managing only its own containers -- there is no
+# cross-host coordination and none is wanted.
+services:
+  sablier:
+    container_name: sablier
+    image: sablierapp/sablier:1.18.0@sha256:c00c8a01c8c809dd258a8b362ad8ba9a9227753fc9857ae7506fd427175e038c
+    restart: unless-stopped
+    dns:
+      - 100.100.100.100
+    environment:
+      # THE DOCKER SOCKET IS NOT MOUNTED HERE, deliberately. `docker-socket-proxy`
+      # is already a `_common` stack on every host and already grants exactly the
+      # set Sablier needs -- CONTAINERS=1 for list/inspect, POST=1 with
+      # ALLOW_START=1 and ALLOW_STOP=1 for the lifecycle calls, plus the EVENTS
+      # stream and VERSION for the startup handshake.
+      #
+      # Mounting /var/run/docker.sock directly would give a container whose whole
+      # job is to be reachable from the request path unrestricted root-level
+      # access to the daemon. Upstream documents the proxy pattern for precisely
+      # this reason.
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
+      # `sablier.running-hours` windows are evaluated in the process's local
+      # timezone and the image defaults to UTC.
+      TZ: ${TIMEZONE}
+      # Sablier colours its stderr by default, which reaches the log collector as
+      # embedded escape sequences.
+      NO_COLOR: "1"
+    command:
+      - start
+      - --provider.name=docker
+      # `stop` rather than `pause`: pause keeps the container's memory resident,
+      # which is the opposite of the point on these hosts.
+      - --provider.docker.strategy=stop
+      # THE DEFAULT IS TRUE AND IT WOULD BE WRONG HERE. On startup Sablier stops
+      # every container labelled `sablier.enable=true` that happens to be
+      # running. A Sablier restart at 15:00 -- an image bump, a host reboot --
+      # would tear down every on-demand stack mid-use with no request to bring it
+      # back.
+      - --provider.auto-stop-on-startup=false
+      # The counterpart, and the reason the line above is safe.
+      #
+      # components/DockgeLxc.ts runs `docker compose up -d && docker compose
+      # start` whenever any file in a stack changes, which brings sleeping
+      # containers back up outside Sablier's knowledge. `auto-warm` opens a
+      # normal session for those so they expire down the ordinary idle path.
+      #
+      # The alternative, `--provider.auto-stop-externally-started`, would kill
+      # the container seconds after `up -d` -- possibly mid-healthcheck -- and
+      # make every deploy of an on-demand stack look broken. The two flags are
+      # mutually exclusive; Sablier refuses to start with both. Added in v1.15.0.
+      - --provider.auto-warm-externally-started=true
+      # Matches the Kubernetes side so the two behave the same way.
+      - --sessions.default-duration=30m
+      # NOT the 5s default: the waiting page self-refreshes and Traefik's
+      # accessLog is CrowdSec's input on the cluster side. Kept identical here so
+      # the two deployments do not drift.
+      - --strategy.dynamic.default-theme=ghost
+      - --strategy.dynamic.default-refresh-frequency=20s
+      - --server.metrics.enabled=true
+    labels:
+      autoheal: true
+      # Sablier has no web UI worth exposing and its API is unauthenticated --
+      # anything that can reach :10000 can start and stop containers on this
+      # host. It stays on the internal docker network only.
+      traefik.enable: false
+    healthcheck:
+      # The image ships its own client for this; `sablier health` hits
+      # /health on localhost:10000.
+      test: ["CMD", "sablier", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dockge_default
+x-dockge:
+  urls: []
+networks:
+  dockge_default:
+    external: true

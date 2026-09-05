@@ -1,0 +1,30 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/servicemonitor_v1.json
+#
+# A ServiceMonitor rather than a PodMonitor because the chart DOES render a
+# Service (unlike go-kube-downscaler and toolhive-operator next door).
+#
+# `targetPort` rather than `port`: the chart's Service port is unnamed
+# (`- protocol: TCP / port: 10000 / targetPort: 10000`), and `port` takes a
+# name. Naming it would require a fork of the chart; addressing the number does
+# not.
+#
+# `/metrics` is served by the same HTTP server as `/health` and the strategy
+# API, so this scrape shares a port with request-path traffic. That is upstream's
+# design, not a local shortcut.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ${APP}
+spec:
+  selector:
+    matchLabels:
+      # The chart's own label, not this Kustomization's commonMetadata --
+      # commonMetadata lands on the HelmRelease, never on what Helm renders from
+      # it. The chart labels everything `app: sablier-<release>`, and the release
+      # name is `sablier`, hence the doubled name.
+      app: sablier-sablier
+  endpoints:
+    - targetPort: 10000
+      path: /metrics
+      interval: 1m

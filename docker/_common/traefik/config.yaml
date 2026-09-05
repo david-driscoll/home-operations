@@ -117,6 +117,36 @@ metrics:
       - 5.0
     entryPoint: metrics
 
+# Plugin configuration
+#
+# ADDED 2026-09-05 alongside ../sablier. The plugin is the proxy half of
+# on-demand scale-to-zero: it asks Sablier whether the container behind a router
+# is running, starts it if not, and serves a self-refreshing waiting page until
+# it is ready. The middlewares that use it are in ./dynamic/middlewares.yaml;
+# the opted-in stacks carry `sablier.enable=true` labels.
+#
+# Traefik downloads plugins from GitHub at startup and compiles them with Yaegi.
+# `abortOnPluginFailure` is not set, and its default is false, so a version that
+# cannot be fetched or built does NOT stop Traefik -- the `sablier` middleware
+# simply never registers and every router referencing it is dropped, which
+# presents as a 404 on the opted-in stacks only. Rollback is deleting this block
+# and the middleware references.
+#
+# Label-based plugin config would also work on this Traefik (v3.6+ registers
+# configuration from non-running containers, which is what makes any of this
+# possible while a container is stopped), but the file provider is where this
+# estate already keeps shared middlewares, and it avoids repeating six labels in
+# every opted-in compose file.
+#
+# Keep this in step with kubernetes/apps/network/traefik/values.yaml, which
+# registers the same plugin at the same version for the cluster.
+experimental:
+  plugins:
+    sablier:
+      moduleName: "github.com/sablierapp/sablier-traefik-plugin"
+      # renovate: datasource=github-releases depName=sablierapp/sablier-traefik-plugin
+      version: "v1.3.0"
+
 # Providers configuration
 providers:
   docker:

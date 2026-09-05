@@ -1,0 +1,112 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# ============================================================================
+# These alerts exist because py-kube-downscaler had NO metrics at all
+# (caas-team/py-kube-downscaler#164, open since 2025-07) and so its failure mode
+# was silent by construction: a missed 09:00 upscale looks exactly like an
+# ordinary night until someone tries to use an app and finds it at zero.
+#
+# The Go rewrite exposes the metrics below. This file is the reason to migrate.
+#
+# Metrics deliberately NOT alerted on:
+#
+#   kubedownscaler_downscaled_workloads
+#     Non-zero for seven hours every night by design. A threshold on it fires
+#     nightly. The useful assertion is "non-zero OUTSIDE the window", which is
+#     what DownscalerWorkloadsStuckDown below expresses via the metric's own
+#     recovery rather than a clock this file would have to duplicate.
+#
+#   kubedownscaler_current_saved_{cpu_cores,memory_bytes}
+#     Reporting, not health. Grafana, not Alertmanager.
+#
+#   kubedownscaler_potential_*
+#     Only populated in --dry-run. Permanently absent in normal operation.
+# ============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-rules
+spec:
+  groups:
+    - name: go-kube-downscaler.rules
+      rules:
+        # ---- the controller is alive and cycling -----------------------
+        #
+        # THE MOST IMPORTANT RULE HERE. GoKubeDownscaler#520: an unparsable
+        # annotation on a NAMESPACE (as opposed to a workload, which degrades
+        # gracefully) crashes the whole controller. The reporter's morning
+        # upscale simply never happened. A dead controller keeps its last
+        # metrics values for as long as the pod lingers, so "the gauge looks
+        # fine" proves nothing -- only the cycle counter moving does.
+        - alert: DownscalerNotCycling
+          annotations:
+            summary: go-kube-downscaler has not completed a cycle in 10 minutes
+            description: >-
+              kubedownscaler_cycle_executions_total has not increased. The
+              controller is wedged or crashed. Nothing is being scaled down at
+              02:00 and, worse, nothing will be scaled back UP at 09:00.
+              Check `kubectl -n kube-system logs deploy/go-kube-downscaler`
+              for an annotation parse error -- a bad value on a NAMESPACE
+              annotation is fatal to the whole process (upstream #520).
+          expr: increase(kubedownscaler_cycle_executions_total[10m]) == 0
+          for: 10m
+          labels:
+            severity: critical
+        - alert: DownscalerAbsent
+          annotations:
+            summary: go-kube-downscaler is not reporting metrics
+            description: >-
+              The PodMonitor has no target. Either the Deployment is gone, or
+              `metrics.enabled` was turned off, or the chart's unnamed metrics
+              container port stopped matching ./podmonitor.yaml.
+          expr: absent(kubedownscaler_cycle_executions_total)
+          for: 15m
+          labels:
+            severity: critical
+
+        # ---- scaling actually works ------------------------------------
+        - alert: DownscalerScalingErrors
+          annotations:
+            summary: go-kube-downscaler is failing to scale workloads in {{ $labels.namespace }}
+            description: >-
+              {{ $value }} scaling error(s) of type {{ $labels.type }}.
+              Flux is a competing writer on spec.replicas, so a burst of 409
+              conflicts is the expected cause; --max-retries-on-conflict=3 is
+              set to absorb the ordinary case, so a sustained non-zero value
+              here means something else.
+          expr: kubedownscaler_scaling_errors > 0
+          for: 15m
+          labels:
+            severity: warning
+
+        # ---- workloads come back -------------------------------------------
+        #
+        # "Stuck down" expressed as DURATION, not as a clock. The Low Power
+        # window is seven hours, so any namespace that has had workloads at
+        # zero CONTINUOUSLY for nine is not in a window any more -- it failed
+        # to come back up.
+        #
+        # Deliberately not `hour(time())`-based: Prometheus evaluates in UTC,
+        # ${TIMEZONE} is America/New_York, and the offset changes twice a year.
+        # An hour-of-day rule here would be correct for half the year and
+        # quietly wrong for the other half. This one needs no timezone at all.
+        #
+        # This is the concrete symptom of upstream #520 (controller crashed
+        # before the 09:00 upscale) and of a 409 storm that exhausted retries.
+        - alert: DownscalerWorkloadsStuckDown
+          annotations:
+            summary: workloads in {{ $labels.namespace }} have been downscaled for 9h
+            description: >-
+              {{ $value }} workload(s) in {{ $labels.namespace }} have been
+              scaled to zero continuously for nine hours -- longer than the
+              seven-hour 02:00-09:00 window. They did not come back up.
+              Check DownscalerNotCycling first, then look for workloads left
+              carrying the restore annotation:
+              kubectl get deploy,sts -A -o json | jq -r '.items[] |
+              select(.metadata.annotations["downscaler/original-replicas"]) |
+              "\(.metadata.namespace)/\(.metadata.name)"'
+          expr: kubedownscaler_downscaled_workloads > 0
+          for: 9h
+          labels:
+            severity: critical

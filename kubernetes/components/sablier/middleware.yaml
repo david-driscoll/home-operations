@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# The per-app half of on-demand scale-to-zero. The Traefik plugin is registered
+# once in apps/network/traefik/values.yaml; the Sablier server is
+# apps/kube-system/sablier. This is the object a route points at.
+#
+# ONE PER APP, not one per namespace. `group` has to identify the workload, and
+# ~40 apps share the `equestria` namespace -- hence `sablier-${APP}` rather than
+# a shared alias like `local-user`. ${APP} resolves from the app's own ks.yaml
+# postBuild, which is the same mechanism components/tailscale/ingressroute.yaml
+# uses for `${APP}-tailnet`.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: sablier-${APP}
+spec:
+  plugin:
+    # This key MUST match the key under `experimental.plugins` in
+    # apps/network/traefik/values.yaml. A mismatch is not a validation error --
+    # Traefik simply never registers the middleware and drops every router that
+    # references it, which presents as a 404 on an app that was working. Same
+    # trap documented in apps/network/traefik/middleware/crowdsec.yaml.
+    sablier:
+      sablierUrl: http://sablier-sablier.kube-system.svc.cluster.local:10000
+      group: ${APP}
+      sessionDuration: ${SABLIER_SESSION_DURATION:=30m}
+
+      # FAIL LOUD. With failOpen:false an unreachable Sablier returns HTTP 500
+      # instead of passing the request through to a backend that is probably
+      # scaled to zero anyway -- which would be a connection error the user
+      # cannot distinguish from the app being broken. It does mean Sablier is a
+      # hard dependency of every opted-in app; apps/kube-system/sablier's
+      # PrometheusRule exists because of this line.
+      failOpen: false
+
+      # The BLOCKING strategy is unsupported on Kubernetes by this plugin, and
+      # the POKE strategy (Sablier v1.17.0) has no field in plugin v1.3.0's
+      # Config struct. Dynamic is the only option, not a preference.
+      dynamic:
+        displayName: ${APP}
+        theme: ${SABLIER_THEME:=ghost}
+        # NOT the 5s default. Traefik's accessLog is CrowdSec's only input, and
+        # a self-refreshing page emitting ~12 requests to one URL per minute is
+        # the shape of `crowdsecurity/http-crawl-non_statics`. At 5s the waiting
+        # page can get the waiting user banned. Also set as the server-side
+        # default in apps/kube-system/sablier.
+        refreshFrequency: ${SABLIER_REFRESH_FREQUENCY:=20s}

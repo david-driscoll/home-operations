@@ -25,7 +25,7 @@ with the merge:
   `data.forgejo.org/forgejo/forgejo:16.0.3-rootless` (the same version celestia
   ran). Tier 1: `longhorn-critical` data volume, `critical-tier` priority class
   and a control-plane toleration. The `coder` namespace is already in
-  kube-downscaler's `excludedNamespaces`, so Low Power cannot shed it.
+  go-kube-downscaler's `excludedNamespaces`, so Low Power cannot shed it.
 - **The break-glass admin and the authentik auth source** — the chart's
   `configure-gitea` init container reconciles both on every start, which is
   exactly what celestia's `provision.sh` did by hand. Same auth source name

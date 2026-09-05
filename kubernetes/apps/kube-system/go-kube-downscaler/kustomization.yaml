@@ -3,8 +3,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ./1password.yaml
-  - ./external-dns.yaml
-  - ./sablier.yaml
-  - ./tailscale.yaml
-  - ./traefik.yaml
+  - helmrelease.yaml
+  - podmonitor.yaml
+  - prometheusrule.yaml

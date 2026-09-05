@@ -1,0 +1,14 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
+#
+# A classic HTTP chart index, not OCI -- sablierapp/helm-charts#658 asks for OCI
+# and is still open, so this cannot follow the OCIRepository shape most charts
+# here use.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: sablier
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://sablierapp.github.io/helm-charts

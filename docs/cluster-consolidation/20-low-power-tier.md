@@ -52,7 +52,7 @@ has still never been run.** Four PRs merged on 2026-08-22 and between them deliv
 
 | PR | What landed | Verified how |
 |---|---|---|
-| [#1046](https://github.com/david-driscoll/home-operations/pull/1046) | py-kube-downscaler `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` — Tier 2 sheds every night; the eleven keep-list workloads carry `downscaler/exclude: "true"` in Git and survive. `system-upgrade` (tuppr) excluded so a shed cannot stop a node upgrade halfway | live 2026-08-22: `kube-system/kube-downscaler-py-kube-downscaler` runs with that arg, `${TIMEZONE}` resolved to `America/New_York` out of the `shared-secrets` Secret rather than hardcoded |
+| [#1046](https://github.com/david-driscoll/home-operations/pull/1046) **— tooling superseded 2026-09-05, window unchanged; see [24](24-power-states.md#revision-2026-09-05--two-controllers-now-a-clock-and-a-request)** | py-kube-downscaler `--default-downtime=Mon-Sun 02:00-09:00 ${TIMEZONE}` — Tier 2 sheds every night; the eleven keep-list workloads carry `downscaler/exclude: "true"` in Git and survive. `system-upgrade` (tuppr) excluded so a shed cannot stop a node upgrade halfway | live 2026-08-22: `kube-system/kube-downscaler-py-kube-downscaler` runs with that arg, `${TIMEZONE}` resolved to `America/New_York` out of the `shared-secrets` Secret rather than hardcoded |
 | [#1047](https://github.com/david-driscoll/home-operations/pull/1047) | Gatus `maintenance-windows` (`start: "02:00"`, `duration: 7h`, `timezone: ${TIMEZONE}`) on the **26** `definition.yaml` files whose services actually shed. Required un-pruning the Gatus fields on the `ApplicationDefinition` CRD, and brought the JSON schemas **and a real type generator** (`schemas/`, `scripts/generate-types.ts`, `mise run codegen`) into this repo from `stargate-command-cluster` — the generator had never existed here | 26 files carry the block; `schemas/` and `scripts/generate-types.ts` are present in-tree |
 | [#1048](https://github.com/david-driscoll/home-operations/pull/1048) | Intel GPU plugin split per node class: `intel-gpu-plugin` on the control planes (`sharedDevNum: 2`, and the **only** release that creates the fixed-name `NodeFeatureRule`) and `intel-gpu-plugin-workers` (`sharedDevNum: 3`, correcting the old and wrong `5`). Also right-sized the media apps — plex 6 CPU/4Gi/8Gi → 1 CPU/1Gi/4Gi with no CPU limit, jellyfin 4 CPU → 1 CPU and 8Gi → 4Gi, dispatcharr 1 CPU → 300m | live: both `GpuDevicePlugin` CRs exist with those ratios and disjoint device-id selectors (`46d4` control planes, `46a6` workers) |
 | ~~[#1051](https://github.com/david-driscoll/home-operations/pull/1051)~~ **REVERTED same day** | Shed **both** media workers: control-plane tolerations plus a **soft** (weight 100) node affinity toward the worker iGPU on plex/jellyfin/dispatcharr; a second descheduler profile running `RemovePodsViolatingNodeAffinity` with `evictLocalStoragePods: true` and `nodeFit: true` for the 09:00 return trip; and the `longhorn-media` StorageClass | **Backed out 2026-08-22 evening.** Only `nodeFit: true` on the *DefaultProfile* survives, for an unrelated reason ([29](29-taint-readiness-audit.md)). See [30](30-longhorn-media-tier.md) |
@@ -649,6 +649,22 @@ Pod count is not a constraint: 159 across three nodes against a 660 cap.
 ---
 
 ## 4. Placement mechanism — taint, required affinity, PriorityClass (Path A)
+
+> **Amended 2026-09-05.** Two workloads now depend on this section rather than
+> one. `go-kube-downscaler` replaced `py-kube-downscaler` (same argument: it IS
+> the shed mechanism, and Battery is entered *from* Low Power, so it must survive
+> the control-plane taint), and `sablier` joined it for the same reason plus one
+> more — with `failOpen: false` on every Sablier middleware, an unschedulable
+> Sablier means HTTP 500 for every on-demand app rather than a degraded wake. Its
+> HelmRelease therefore also carries `tolerationSeconds: 60` on
+> `not-ready`/`unreachable`, matching Traefik's, because the 300s default would
+> be a five-minute outage on every sleeping app whenever a node goes NotReady.
+>
+> Both take the toleration from
+> `kubernetes/apps/kube-system/go-kube-downscaler/helmrelease.yaml`, **not** from
+> the body of this section — see the boxed warning below about the design here
+> not being what was built. See
+> [24-power-states.md](24-power-states.md#revision-2026-09-05--two-controllers-now-a-clock-and-a-request).
 
 > This section designs the **permanent** structural version of low-power. **DONE and LIVE,
 > 2026-08-21.** §0.1 cleared, [29](29-taint-readiness-audit.md)'s four-command gate passed, the
