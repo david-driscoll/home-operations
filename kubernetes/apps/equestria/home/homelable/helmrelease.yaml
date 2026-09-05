@@ -119,10 +119,13 @@ spec:
               # already had one load-spiral outage. Run the /16 as a manual,
               # off-hours one-off from the scan dialog instead.
               #
-              # These are first-run defaults ONLY: the API persists overrides to
-              # scan_config.json next to the DB, which then wins. The migrated
-              # PVC carries that file, so whatever was set on celestia survives
-              # and these values are inert.
+              # These are LIVE first-run config, not inert defaults. The API
+              # persists overrides to scan_config.json next to the DB and that
+              # file then wins -- but this deployment starts on a fresh volume
+              # (the celestia canvas was not migrated, see the runbook), so
+              # there is no scan_config.json yet and the first scan uses exactly
+              # what is written here. They become inert only after someone
+              # changes the ranges in the UI.
               SCANNER_RANGES: '["192.168.100.0/24","10.1.0.0/24"]'
               SCANNER_HTTP_RANGES: "[]"
               SCANNER_HTTP_PROBE_ENABLED: "false"

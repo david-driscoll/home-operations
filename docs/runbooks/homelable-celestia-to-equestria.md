@@ -4,14 +4,26 @@ Moves the network topology map from the Docker stack on celestia
 (`docker/celestia/homelable`, retired in the same commit as this file) to
 Kubernetes on equestria (`kubernetes/apps/equestria/home/homelable`).
 
-**This is a real data migration, not a re-create.** The SQLite database at
-`/opt/stacks-data/homelable/homelab.db` *is* the hand-curated canvas — node
-positions, labels, groupings, manual links — and none of it is reproducible from
-git or from a rescan. `scan_config.json` beside it holds the persisted scanner
-overrides, which take precedence over the `SCANNER_*` environment defaults. Both
-have to be copied into the new PVC before the pod first starts, and
-[step 4](#4-copy-the-database-into-the-new-pvc) is timed to make that window
-exist rather than to race it.
+**This is a re-create, not a data migration** — David's call, 2026-09-05: the
+celestia canvas holds little enough that starting fresh is cheaper than moving
+it. Nothing is exported and nothing is imported. The new instance discovers the
+network on its first scan and the canvas is re-curated by hand from there.
+
+Two consequences worth stating, because both were the other way round in the
+first draft of this file:
+
+- **The `SCANNER_*` values in `helmrelease.yaml` are live first-run config, not
+  inert defaults.** They only lose to `scan_config.json`, and on a fresh volume
+  that file does not exist yet — so what is in git is what the first scan
+  actually uses. Read them before the first start, not after.
+- **The empty-PVC window stops being load-bearing.** The pod still cannot start
+  until the OIDC Secret exists, but nothing has to be smuggled in during that
+  gap any more.
+
+If the canvas stops being cheap to rebuild before this runs — someone spends an
+afternoon laying it out — stop and plan a real data move instead: `homelab.db`
+is not reproducible from git or from a rescan, and it would have to be copied
+into the PVC before the pod first writes to it.
 
 Public hostnames do not change. `celestia` and `equestria` share one root
 domain, so `homelable.driscoll.tech`, `homelable.<tailnet>` and
@@ -86,28 +98,36 @@ with the merge:
   fail where they previously resolved.
 - **A different source address for the scan.** Probes leave SNATed to an
   equestria node's `10.10.206.x` address, not celestia's LXC address. See
-  [step 7](#7-verify-the-scanner-actually-reaches-the-target-vlans).
+  [step 6](#6-verify-the-scanner-actually-reaches-the-target-vlans). This is the
+  one change with real teeth now that there is no data to compare against: a
+  dropped sweep and a genuinely quiet VLAN both render as an empty canvas.
 
 ## Manual steps
 
-Run them in this order. Steps 1–5 are the cutover; 6–8 close it out.
+Run them in this order. Steps 1–4 are the cutover; 5–7 close it out.
 
-### 1. Snapshot the celestia data and stop the stack
+### 1. Stop the celestia stack
 
 ```bash
 ssh dockge-celestia 'cd /opt/stacks/homelable && docker compose down'
 ```
 
+Stop rather than delete. Both instances answering on the same hostname is the
+one state to avoid, and until [step 5](#5-run-the-pulumi-home-stack-to-release-the-dns-name)
+runs, `homelable.driscoll.tech` still resolves to this host.
+
+Take the data tarball anyway — it costs one command and this is the only moment
+it is available, since the stack directory is deleted by this commit and there
+is nothing to scale back up:
+
 ```bash
 ssh dockge-celestia 'tar -C /opt/stacks-data -czf /tmp/homelable-data.tgz homelable' && scp dockge-celestia:/tmp/homelable-data.tgz .
 ```
 
-Stopping first matters: SQLite copied out from under a running writer can carry
-a hot WAL. With the stack down, `homelab.db` is quiescent.
-
-Keep this tarball until the soak in [step 8](#8-soak-then-clean-up) clears. It is
-the only rollback path — the celestia stack directory is deleted by this commit,
-so there is nothing to scale back up.
+Nothing in this runbook restores it. It is there so that "start fresh" stays a
+decision rather than becoming irreversible the moment the stack comes down —
+`docker compose down` with the volume still on disk is recoverable; a wiped LXC
+is not. Discard it at [step 7](#7-soak-then-clean-up).
 
 ### 2. Copy the OpenBao item — DONE 2026-09-05
 
@@ -128,7 +148,7 @@ change was needed.
 is the script's own documented advice: a path is a contract with `vals`
 templates, ExternalSecrets and `BaoStore` call sites, so cut consumers over
 first and delete the source in a second pass. Here that pass is
-[step 8](#8-soak-then-clean-up). It also means this step could safely run before
+[step 7](#7-soak-then-clean-up). It also means this step could safely run before
 the merge — which matters, because ESO fails the *whole* ExternalSecret on one
 missing `extract` path, and two of them read this item: homelable's own
 `homelable-env`, and `dashboard/externalsecret.yaml`. Merging against a
@@ -166,26 +186,14 @@ equestria one, writing `homelable-oidc-credentials` into the `equestria`
 namespace where `homelable-env` extracts it.
 
 Until this runs, `homelable-env` cannot resolve and the pod sits in
-`CreateContainerConfigError` — which is the window step 4 uses.
+`CreateContainerConfigError`. On a data migration that gap is the window the
+restore uses; here it is just a wait.
 
-### 4. Copy the database into the new PVC
+### 4. Let it start, and check the whole chain
 
-With the pod unable to start, the PVC is bound and empty and nothing can
-initialise a fresh `homelab.db` on top of the restore. Confirm that first:
-
-```bash
-kubectl -n equestria get pvc homelable && kubectl -n equestria get pods -l app.kubernetes.io/name=homelable
-```
-
-Then mount the claim from a scratch pod and unpack the tarball from step 1 into
-it, writing as uid 0 to match `VOLSYNC_PUID`. `homelab.db` and
-`scan_config.json` both belong at the root of the volume — the backend mounts it
-at `/app/data` and `SQLITE_PATH` is `/app/data/homelab.db`.
-
-### 5. Let it start, and check the whole chain
-
-Once step 3's Secret exists, reloader restarts the pod. Verify in this order —
-each check covers a hop the previous one does not:
+Once step 3's Secret exists, reloader restarts the pod and the backend
+initialises an empty `homelab.db` on the fresh PVC. Verify in this order — each
+check covers a hop the previous one does not:
 
 ```bash
 kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=50
@@ -193,7 +201,10 @@ kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=
 
 - `https://homelable.driscoll.tech/api/v1/health` returns `{"status":"ok"}` —
   proves frontend → nginx → `backend:8000` through the hostAliases entry.
-- The canvas shows the migrated nodes, not an empty map — proves step 4.
+- The canvas loads empty, then fills after the first scan. An empty map is the
+  expected starting state here, not a failure — see the re-create note at the
+  top. What is worth checking instead is that the scan ran at all, which
+  [step 6](#6-verify-the-scanner-actually-reaches-the-target-vlans) covers.
 - `https://homelable.driscoll.tech/view` returns **not 200** — proves the
   live-view block. This is the Gatus "Live View Blocked" check; if it returns
   200, the HTTPRoute rule lost its precedence and the key is being written to
@@ -203,7 +214,7 @@ kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=
 - `https://homelable-mcp.<tailnet>/mcp` answers with an `X-API-Key` header, and
   `homelable-mcp.driscoll.tech` does **not** resolve to anything serving it.
 
-### 6. Run the Pulumi home stack to release the DNS name
+### 5. Run the Pulumi home stack to release the DNS name
 
 ```bash
 cd stacks/home && pulumi preview
@@ -219,7 +230,7 @@ own, so it can only create `homelable.driscoll.tech` once Pulumi has removed the
 celestia CNAME. Expect a short gap between the two — external-dns picks it up on
 its next loop.
 
-### 7. Verify the scanner actually reaches the target VLANs
+### 6. Verify the scanner actually reaches the target VLANs
 
 The scan now originates from an equestria node's `10.10.206.x` address instead
 of celestia's. Any UniFi inter-VLAN rule written against the *source* address
@@ -232,14 +243,16 @@ and confirm the online counts match what celestia last recorded. Guest is very
 likely to return nothing regardless, because of client isolation — that is
 expected and was true before the move.
 
-### 8. Soak, then clean up
+### 7. Soak, then clean up
 
 - **Backrest on celestia** keeps the now-orphaned `homelable` plan: the
   generator in `components/dockerStackBackups.ts` discovers plans from compose
   files, but backrest's config is merged rather than pruned, so a plan whose
   stack no longer exists is not removed by a Pulumi run. Delete it by hand once
-  the tarball from step 1 is no longer the rollback path.
-- **`/opt/stacks-data/homelable/` on celestia** stays until the same point.
+  the new instance has a canvas worth keeping.
+- **`/opt/stacks-data/homelable/` on celestia and the step 1 tarball** stay until
+  the same point. Nothing restores them, but they are what makes "start fresh"
+  reversible, and they cost nothing to keep for a soak.
 - **The celestia OpenBao path** is still populated — step 2 copied rather than
   moved. Once the soak clears, destroy it, which is the same script with the
   same arguments plus `--move`: it re-verifies the destination before deleting
@@ -248,7 +261,8 @@ expected and was true before the move.
   ```bash
   mise run vals-run -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --move --apply
   ```
-- **The first VolSync run** is the real exit gate. Confirm
-  `ReplicationSource/homelable-src` has a `lastSyncTime` and that the snapshot
-  contains the migrated `homelab.db` — until that lands, the canvas exists in
-  exactly one place.
+- **The first VolSync run** is the real exit gate, and it matters more here than
+  it would after a data migration, not less: the canvas that needs protecting is
+  the one about to be built by hand on this cluster, and until the first
+  `ReplicationSource/homelable-src` `lastSyncTime` lands it exists on exactly one
+  Longhorn volume with no second copy anywhere.

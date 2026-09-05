@@ -43,6 +43,9 @@ spec:
       NAMESPACE: *namespace
       # The SQLite DB *is* the hand-curated canvas and is not reproducible from
       # git -- it was the whole reason the Dockge stack carried a backrest plan.
+      # This deployment starts empty (the celestia canvas was not migrated), so
+      # the volume this protects is the one about to be curated here, and the
+      # first ReplicationSource run is the moment it stops being single-copy.
       # It is a few MB of device rows; 2Gi is the same sizing freshrss uses for
       # a comparable single-file store.
       VOLSYNC_CAPACITY: 2Gi
