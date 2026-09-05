@@ -71,12 +71,40 @@ spec:
                   name: github-token
                   key: token
             # `pulumi` itself (plugin/state cache under ~/.pulumi), not just
-            # this image's own server code, also needs a writable home --
-            # not confirmed live yet (the crash so far is the server never
-            # getting past its own startup), flagged in case this needs a
-            # second fix once it does.
+            # this image's own server code, also needs a writable home. That
+            # was flagged here as unconfirmed; IT IS NOW CONFIRMED, and HOME
+            # alone did not cover it. First live tool call against this server
+            # (`pulumi-registry-list-resources`, provider `random`) failed:
+            #
+            #   error installing provider random: creating plugin root:
+            #   mkdir /home/node/.pulumi: read-only file system
+            #
+            # HOME=/tmp IS set and IS reaching the container -- verified in
+            # the live pod spec -- yet the `pulumi` CLI this server spawns
+            # still resolved its plugin root to /home/node/.pulumi, the home
+            # of uid 1000 in this image. So whatever that child process reads,
+            # it is not this HOME. Rather than chase which layer drops it,
+            # set the variable Pulumi documents for exactly this purpose.
             - name: HOME
               value: /tmp
+            # PULUMI_HOME is Pulumi's own override for the ~/.pulumi it just
+            # failed to create -- the plugin/policy cache root, the same knob
+            # its CI guides use to relocate that directory into a writable
+            # workspace. It is read directly rather than derived from HOME,
+            # which is the point: it does not depend on the home resolution
+            # that demonstrably is not working here.
+            #
+            # /tmp is the `pulumi-cache` emptyDir already mounted below, so
+            # this needs no new volume -- just a subdirectory Pulumi creates
+            # itself on first use.
+            #
+            # NOT independently verified past this error: whether plugin
+            # DOWNLOAD then succeeds depends on this pod having egress to
+            # get.pulumi.com, which nothing here establishes. This removes the
+            # confirmed blocker; if the next failure is a network one, that is
+            # a separate fix and not evidence this was wrong.
+            - name: PULUMI_HOME
+              value: /tmp/.pulumi
           volumeMounts:
             - name: pulumi-cache
               mountPath: /app/dist/.cache

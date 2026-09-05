@@ -90,6 +90,33 @@ spec:
           emptyDir: {}
       containers:
         - name: mcp
+          # ===================================================================
+          # KNOWN BROKEN -- EVERY TOOL THAT SHELLS OUT TO THE CLI FAILS HERE.
+          # Confirmed live 2026-09-05: `list_devices` through the vMCP
+          # returned `Failed to execute tailscale: spawn tailscale ENOENT`.
+          # Not an auth error and not a vMCP routing error -- the aggregator
+          # proxied the call and this package tried to exec a `tailscale`
+          # binary that does not exist in `node:22-alpine`.
+          #
+          # This file's header reasons from TAILSCALE_API_KEY that the server
+          # is REST-only. That is true of the API-backed tools and false of
+          # this one: the package mixes both, and the CLI-backed half cannot
+          # work on a bare node image no matter how good the token is. The
+          # key is minted correctly (stacks/unifi-network/tailscale-api-token.ts,
+          # every 5m) -- that half of the design is fine and is not what broke.
+          #
+          # The obvious candidate is the upstream image this file's header
+          # already mentions and passes over --
+          # ghcr.io/hexsleeves/tailscale-mcp-server -- IF it ships the CLI.
+          # NOT VERIFIED: that image was never pulled or inspected here, and
+          # swapping to an image that also lacks the binary would move the
+          # failure without fixing it while giving up the npx-on-node
+          # convention this rollout otherwise keeps. Whoever picks this up
+          # should confirm `tailscale` is on PATH in that image FIRST.
+          #
+          # Left as-is deliberately: the API-backed tools still work today,
+          # and a blind image swap risks the ones that currently do.
+          # ===================================================================
           command: ["npx"]
           args: ["-y", "@hexsleeves/tailscale-mcp-server"]
           envFrom:
