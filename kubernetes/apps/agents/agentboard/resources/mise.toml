@@ -37,7 +37,7 @@ age = "1.3.2"
 # "mise's npm backend always shells out through node/npm" -- wrong, and the
 # opposite of the actual default; see `[settings]` below for why that claim
 # mattered enough to get root-caused.)
-bun = "1.4.1"
+bun = "1.4.2"
 # The agent CLI. Package name per the `claude-api` skill / @anthropic-ai's
 # published CLI. `allow_builds = true`: confirmed live 2026-08-30 -- without
 # it, `claude` installs a 500-byte `claude.exe` STUB instead of the real
