@@ -4,6 +4,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./mcpgroup.yaml
+  # Ahead of ./virtualmcpserver.yaml, which references it by name. Kustomize
+  # does not order the apply, but keeping the accepting side first matches how
+  # ../toolhive lists its own.
+  - ./mcpoidcconfig.yaml
   - ./virtualmcpserver.yaml
   - ./httproute.yaml
   - ./definition.yaml
