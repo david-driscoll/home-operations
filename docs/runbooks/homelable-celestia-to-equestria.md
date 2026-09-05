@@ -224,10 +224,17 @@ kubectl -n equestria logs -l app.kubernetes.io/name=homelable -c backend --tail=
 - `https://homelable.<tailnet>/view?key=...` **does** load — proves the block is
   scoped to the LAN hostname and did not take live view out entirely.
 - `kubectl -n agents get mcpremoteproxy toolhive-homelable` reports `Ready`,
-  and homelable's tools appear through the `agent-tools` VirtualMCPServer. A
-  `Ready` proxy that returns 401 on every call means the injected `X-API-Key`
-  and the server's `MCP_API_KEY` have diverged — they read the same OpenBao
-  field, so that should only happen mid-rotation.
+  and homelable's tools appear through the `agent-tools` VirtualMCPServer.
+  Two distinct failures, which look nothing alike:
+  - **`phase: Failed`, never serves at all** — read
+    `status.conditions[ConfigurationValid].message`. If it names a "blocked
+    internal hostname", `allowPrivateEndpoint` is missing from the CR; the guard
+    rejects any `cluster.local` remote. This happened on the first rollout, and
+    a `kubectl apply --dry-run=server` does not catch it — the check is
+    controller-side, not an admission webhook.
+  - **`Ready`, but 401 on every call** — the injected `X-API-Key` and the
+    server's `MCP_API_KEY` have diverged. They read the same OpenBao field, so
+    that should only happen mid-rotation.
 - `https://homelable-mcp.<tailnet>/mcp` no longer resolves. That hostname was
   retired with the move; repoint any MCP client that still has it.
 
