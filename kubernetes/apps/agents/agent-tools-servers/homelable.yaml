@@ -97,13 +97,36 @@ spec:
 #
 # `http://` and a `.svc.cluster.local` address, not the public name: this
 # traffic never leaves the cluster network, same reasoning as ./degoog.yaml.
-# The CRD allows it (`remoteUrl` pattern is `^https?://`).
+#
+# `allowPrivateEndpoint` is REQUIRED to say that, and leaving it off is not a
+# soft failure -- the proxy goes `Failed` outright, which is exactly what it
+# did on the first rollout:
+#
+#   remote URL host is not allowed: hostname
+#   "homelable-mcp.equestria.svc.cluster.local"
+#   matches blocked internal hostname "cluster.local"
+#
+# MCPRemoteProxy runs an SSRF guard over `remoteUrl` that blocks RFC 1918
+# addresses, IPv6 unique-local, and any hostname ending in `cluster.local`
+# unless this flag is set. THAT is why the two remote proxies predating this
+# file (./home-assistant.yaml, ./microsoft-docs.yaml) both name PUBLIC URLs --
+# a constraint, not a house style. An MCPServer's `env` carries no such guard,
+# so ./degoog.yaml pointing at a ClusterIP with no flag is a misleading
+# precedent to generalise from: the two CRDs differ here.
+#
+# Setting the flag is the honest form of the fix. A bare `.svc` host
+# (`homelable-mcp.equestria.svc:8001`) also gets through -- the CRD documents
+# that bare `.svc` is never blocked, since no DNS resolution is performed --
+# but that evades the guard rather than declaring intent, and would leave the
+# next reader unaware the guard exists at all. Loopback, link-local,
+# cloud-metadata and kubernetes.default stay blocked either way.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPRemoteProxy
 metadata:
   name: toolhive-homelable
 spec:
   remoteUrl: http://homelable-mcp.equestria.svc.cluster.local:8001/mcp
+  allowPrivateEndpoint: true
   transport: streamable-http
   groupRef:
     name: agent-tools
