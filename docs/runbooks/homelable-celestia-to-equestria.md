@@ -109,23 +109,46 @@ Keep this tarball until the soak in [step 8](#8-soak-then-clean-up) clears. It i
 the only rollback path — the celestia stack directory is deleted by this commit,
 so there is nothing to scale back up.
 
-### 2. Move the OpenBao item
+### 2. Copy the OpenBao item — DONE 2026-09-05
+
+Already run, against the live cluster:
 
 ```bash
-bao kv get -format=json secrets/clusters/celestia/apps/homelable/keys | jq '.data.data' > /tmp/homelable-keys.json
+mise run vals-run -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --apply
 ```
 
-```bash
-bao kv put secrets/clusters/equestria/apps/homelable/keys @/tmp/homelable-keys.json && bao kv metadata delete secrets/clusters/celestia/apps/homelable/keys
-```
-
+`secrets/clusters/equestria/apps/homelable/keys` is at v1 with all five fields
+(`secret_key`, `live_view_key`, `homepage_api_key`, `mcp_api_key`,
+`mcp_service_key`) — re-running the script without `--apply` reports `SAME`,
+which is the destination read back and canonically compared against the source.
 `eso-equestria` already reads its own `clusters/equestria/*` prefix, so no policy
-change is needed.
+change was needed.
 
-**This is not optional and it is not deferrable.** ESO fails the *whole*
-ExternalSecret on one missing `extract` path, and two of them read this item:
-homelable's own `homelable-env`, and `dashboard/externalsecret.yaml`. Doing the
-merge without the move takes the dashboard down along with homelable.
+**Copy, not `--move`.** The celestia path is deliberately still populated, which
+is the script's own documented advice: a path is a contract with `vals`
+templates, ExternalSecrets and `BaoStore` call sites, so cut consumers over
+first and delete the source in a second pass. Here that pass is
+[step 8](#8-soak-then-clean-up). It also means this step could safely run before
+the merge — which matters, because ESO fails the *whole* ExternalSecret on one
+missing `extract` path, and two of them read this item: homelable's own
+`homelable-env`, and `dashboard/externalsecret.yaml`. Merging against a
+half-done move would have taken the dashboard down along with homelable.
+
+No consumer still resolves the celestia path — both ExternalSecrets are updated
+in this commit. Verify that stays true before step 8:
+
+```bash
+rg -n 'clusters/celestia/apps/homelable' --glob '!docs/**'
+```
+
+Two hits are expected and neither is a consumer. One is the provenance comment
+in `homelable/externalsecret.yaml`. The other is
+`scripts/bao-reorg/plan.ts:148`, a completed phase-2 entry recording
+`shared/homelable -> clusters/celestia/apps/homelable/keys`. Leave it: it is a
+historical record, and both halves are already no-ops — `index.ts` finds no
+`shared/homelable` to move, and `rewrite.ts` finds no reference to it to
+rewrite. Editing it to say `clusters/equestria` would claim that reorg did
+something it did not.
 
 ### 3. Run the Pulumi applications stack
 
@@ -213,6 +236,14 @@ expected and was true before the move.
   stack no longer exists is not removed by a Pulumi run. Delete it by hand once
   the tarball from step 1 is no longer the rollback path.
 - **`/opt/stacks-data/homelable/` on celestia** stays until the same point.
+- **The celestia OpenBao path** is still populated — step 2 copied rather than
+  moved. Once the soak clears, destroy it, which is the same script with the
+  same arguments plus `--move`: it re-verifies the destination before deleting
+  anything, and reports `SAME` on the copy it already made.
+
+  ```bash
+  mise run vals-run -- npx tsx scripts/bao-move.ts clusters/celestia/apps/homelable/keys clusters/equestria/apps/homelable/keys --move --apply
+  ```
 - **The first VolSync run** is the real exit gate. Confirm
   `ReplicationSource/homelable-src` has a `lastSyncTime` and that the snapshot
   contains the migrated `homelab.db` — until that lands, the canvas exists in
