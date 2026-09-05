@@ -1,0 +1,67 @@
+groups:
+  - name: sablier
+    interval: 60s
+    rules:
+      # ======================================================================
+      # On-demand scale-to-zero on the Dockge hosts (../../../sablier).
+      #
+      # The hard part of monitoring this is that "stopped" is the CORRECT
+      # steady state. A container asleep because nobody wanted it and a
+      # container that cannot start are indistinguishable from outside, and
+      # neither the Gatus row nor the container alerts can tell them apart:
+      #
+      #   * Gatus probes the app URL, but the Sablier middleware short-circuits
+      #     `User-Agent: Gatus/1.0` with a 200 before it ever contacts Sablier
+      #     (that is deliberate -- otherwise the 2-minute probe would renew the
+      #     session forever and nothing would ever sleep). So the Gatus row
+      #     proves the route exists and nothing more.
+      #
+      #   * rules/alerts.yml's DockerContainerDown keys off
+      #     `container_last_seen{name!=""}`, and this estate's cAdvisor emits no
+      #     `name` label -- verified against live Thanos,
+      #     `count(container_last_seen{job="cadvisor",name!=""})` is 0. It
+      #     cannot fire for a Dockge container at all, asleep or dead.
+      #
+      #     LANDMINE: if anyone ever makes that cAdvisor emit `name`, that alert
+      #     starts firing for EVERY Sablier-stopped container roughly five
+      #     minutes after it sleeps, and keeps firing for ~55 minutes. Whoever
+      #     does that must exclude the on-demand set at the same time.
+      #
+      # So these two rules are the only thing standing between a broken wake and
+      # silence.
+      # ======================================================================
+
+      # Sablier itself is gone. Every on-demand router on this host answers HTTP
+      # 500 while this is true, because the middlewares set `failOpen: false` --
+      # deliberately, so the failure is loud rather than a connection reset to a
+      # container that is not running.
+      - alert: SablierAbsent
+        expr: up{job="sablier"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sablier is down on {{ $labels.host }}"
+          description: >-
+            Every on-demand stack on {{ $labels.host }} is returning HTTP 500
+            (failOpen is false). Check `docker logs sablier` and that
+            docker-socket-proxy is reachable -- Sablier talks to the daemon
+            through it, not through a mounted socket.
+
+      # THE ONE THAT MATTERS. Somebody asked for a container and it did not come
+      # up. They are looking at a waiting page that will never resolve, and
+      # nothing else on this host will ever say so.
+      - alert: SablierInstanceStartFailing
+        expr: increase(sablier_instance_start_failures_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sablier cannot start {{ $labels.instance }} on {{ $labels.host }}"
+          description: >-
+            {{ $value }} failed start(s) in 15 minutes. Usual causes: the
+            container was renamed or removed while still carrying
+            `sablier.enable=true`, its image is unpullable, or the
+            docker-socket-proxy lost ALLOW_START. Note a container that is
+            merely ASLEEP produces no series here at all -- this only counts
+            starts that were attempted and failed.

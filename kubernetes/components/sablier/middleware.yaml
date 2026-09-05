@@ -34,6 +34,43 @@ spec:
       # PrometheusRule exists because of this line.
       failOpen: false
 
+      # MONITORING MUST NOT COUNT AS TRAFFIC.
+      #
+      # Gatus probes every app every 2 MINUTES -- the interval is hardcoded in
+      # components/authentik.ts (`endpoint.interval ??= "2m"`), not in the app's
+      # definition.yaml -- and it sends `User-Agent: Gatus/1.0`
+      # (GatusUserAgent in config/endpoint/endpoint.go). Without this list every
+      # probe would renew the session, `sessionDuration: 30m` would never
+      # elapse, and NOTHING WOULD EVER SLEEP. The feature would silently do
+      # nothing at all.
+      #
+      # KNOW EXACTLY WHAT THIS BUYS AND WHAT IT COSTS. The plugin's ServeHTTP
+      # checks this list FIRST and returns HTTP 200 immediately, before it
+      # contacts Sablier at all. So a matched probe proves:
+      #
+      #   DNS, TLS, Traefik up, the router still exists, and the plugin loaded
+      #   (a plugin that fails to build drops every router referencing it,
+      #   which Gatus sees as a 404)
+      #
+      # and proves NOTHING about:
+      #
+      #   whether Sablier is reachable, or whether this app would actually
+      #   start if a real user arrived
+      #
+      # Those two are covered by Prometheus instead -- SablierAbsent and
+      # SablierInstanceStartFailing in
+      # apps/kube-system/sablier/prometheusrule.yaml. The uptime page and
+      # Alertmanager deliberately assert different things here; each app's
+      # definition.yaml repeats this next to its check so the row is not
+      # mistaken for an app-health signal.
+      #
+      # Residual gap, accepted: an app nobody has visited for a week could be
+      # unstartable with nothing firing, because a failed start is only
+      # observable once someone asks for one. That is inherent to on-demand,
+      # not a defect in this configuration.
+      ignoreUserAgent:
+        - "^Gatus/"
+
       # The BLOCKING strategy is unsupported on Kubernetes by this plugin, and
       # the POKE strategy (Sablier v1.17.0) has no field in plugin v1.3.0's
       # Config struct. Dynamic is the only option, not a preference.

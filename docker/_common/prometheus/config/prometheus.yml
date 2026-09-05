@@ -110,6 +110,33 @@ scrape_configs:
         replacement: '${1}'  # Use the value of instance as hostname
         regex: '([^:]+).*'
 
+  # Sablier metrics (local sablier instance -- see ../../sablier)
+  #
+  # ADDED 2026-09-05 with on-demand scale-to-zero. Without this the Dockge side
+  # has no way to tell "container is stopped because nobody wanted it" (correct,
+  # and the whole point) from "container failed to start when someone did"
+  # (broken, and otherwise completely silent -- the user just watches a waiting
+  # page that never resolves).
+  #
+  # It is NOT covered by the container alerts in rules/alerts.yml. Those key off
+  # `container_last_seen{name!=""}`, and this estate's cAdvisor emits no `name`
+  # label at all -- `count(container_last_seen{job="cadvisor",name!=""})` is 0
+  # against live Thanos -- so DockerContainerDown cannot fire for a Dockge
+  # container whether it is asleep or genuinely dead. Alerting lives in
+  # rules/sablier.yml instead.
+  - job_name: 'sablier'
+    static_configs:
+      - targets: ['sablier:10000']
+        labels:
+          host: '${host}'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [instance]
+        target_label: hostname
+        replacement: '${1}'
+        regex: '([^:]+).*'
+
   # Blackbox Exporter - HTTP/TCP/ICMP probes
   - job_name: 'blackbox'
     scrape_interval: 2m

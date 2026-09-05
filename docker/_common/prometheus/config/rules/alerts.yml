@@ -11,6 +11,15 @@ groups:
       # with [10m], max_over_time loses the last value at T+600 and the alert
       # auto-resolves ~5 min after firing, even if the container is still down.
       # Using [1h] keeps the alert active for ~55 min before expiring.
+      #
+      # ON-DEMAND CONTAINERS: this rule requires `name!=""` and this estate's
+      # cAdvisor emits no `name` label, so today it cannot fire for a Dockge
+      # container at all (verified live:
+      # `count(container_last_seen{job="cadvisor",name!=""})` is 0). If that is
+      # ever fixed, this alert will start firing for EVERY Sablier-stopped
+      # container about five minutes after it sleeps and keep firing for ~55
+      # minutes. Exclude the on-demand set at the same time -- see
+      # ./sablier.yml, which is what actually watches those.
       - alert: DockerContainerDown
         expr: |
           (

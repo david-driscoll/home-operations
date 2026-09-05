@@ -19,3 +19,32 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
+      # WHAT THIS CHECK PROVES, since it is no longer what it looks like.
+      #
+      # This stack is on the ON-DEMAND set: Sablier (../sablier) stops the
+      # container after 30 minutes of no traffic and starts it again on the next
+      # request. It is therefore legitimately stopped most of the day, on all
+      # four hosts.
+      #
+      # A plain HTTP check would not merely page constantly -- it would BREAK the
+      # feature. Gatus probes every 2 minutes, which is far shorter than the
+      # 30-minute session, so every probe would renew the session and the
+      # container would never stop at all.
+      #
+      # The `sablier-<stack>@file` middleware in
+      # ../traefik/dynamic/middlewares.yaml therefore carries
+      # `ignoreUserAgent: ["^Gatus/"]` and answers this probe with a 200 without
+      # starting anything and without contacting Sablier.
+      #
+      #   PROVES:        DNS, TLS, Traefik is up, the router still exists, and
+      #                  the Sablier plugin loaded -- a plugin that fails to
+      #                  build drops every router referencing it, which shows up
+      #                  here as a 404.
+      #   DOES NOT PROVE: that Sablier is reachable, or that this container
+      #                  would actually start for a real user.
+      #
+      # The second half is covered by Prometheus on this host, not here:
+      # ../prometheus/config/rules/sablier.yml (SablierAbsent and
+      # SablierInstanceStartFailing), fed by the `sablier` scrape job added to
+      # ../prometheus/config/prometheus.yml. The uptime row and Alertmanager
+      # deliberately assert different things.

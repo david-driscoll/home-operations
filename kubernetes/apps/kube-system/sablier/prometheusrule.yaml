@@ -12,7 +12,12 @@
 #
 # The other reason this file exists: an app that is correctly asleep and an app
 # whose wake is broken look IDENTICAL from outside. Nothing else in the estate
-# can tell them apart.
+# can tell them apart -- and specifically, the Gatus row for an on-demand app
+# CANNOT. The Sablier middleware carries `ignoreUserAgent: ["^Gatus/"]` (it has
+# to; a 2-minute probe would otherwise renew the session forever and nothing
+# would ever sleep), and the plugin checks that list and answers 200 BEFORE it
+# contacts Sablier. So the uptime page proves the route exists, and these rules
+# prove the wake mechanism works. Neither is redundant with the other.
 #
 # Metrics deliberately NOT alerted on:
 #

@@ -24,6 +24,19 @@ http:
 
     # ---- Sablier: on-demand scale-to-zero -----------------------------------
     #
+    # MONITORING MUST NOT COUNT AS TRAFFIC. Gatus (alpha-site/uptime) probes
+    # every one of these URLs every 2 minutes -- and it probes them on ALL FOUR
+    # hosts, since these are `_common` stacks. Without `ignoreUserAgent` the
+    # session would be renewed every 2 minutes, `sessionDuration: 30m` would
+    # never elapse, and no container would ever stop. The feature would silently
+    # do nothing.
+    #
+    # The plugin checks this list FIRST and answers 200 without contacting
+    # Sablier, so a matched probe proves the router exists and the plugin
+    # loaded -- and proves nothing about whether the container would actually
+    # start. Same split as the cluster side; see
+    # kubernetes/components/sablier/middleware.yaml.
+    #
     # One middleware per opted-in stack, because `group` has to identify the
     # container. Attached from the stack's own router label:
     #
@@ -60,6 +73,8 @@ http:
           group: librespeed
           sessionDuration: 30m
           failOpen: false
+          ignoreUserAgent:
+            - "^Gatus/"
           dynamic:
             displayName: LibreSpeed
             theme: ghost
@@ -71,6 +86,8 @@ http:
           group: openspeedtest
           sessionDuration: 30m
           failOpen: false
+          ignoreUserAgent:
+            - "^Gatus/"
           dynamic:
             displayName: OpenSpeedTest
             theme: ghost

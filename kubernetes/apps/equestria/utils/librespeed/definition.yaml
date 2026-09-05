@@ -19,11 +19,31 @@ spec:
       method: GET
       conditions:
         - "[STATUS] == 200"
-      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
-      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
-      # that window is expected rather than an incident. Gatus keeps checking and
-      # keeps the history; it just does not alert.
-      maintenance-windows:
-        - start: "02:00"
-          duration: 7h
-          timezone: ${TIMEZONE}
+      # WHAT THIS CHECK PROVES, since it is no longer what it looks like.
+      #
+      # This app is on the ON-DEMAND set (see ./ks.yaml): Sablier scales it to
+      # zero after 30 minutes of no traffic and wakes it on the next request. So
+      # it is legitimately down most of the day, and a plain HTTP check would
+      # either page constantly or -- worse -- keep it awake forever, since Gatus
+      # probes every 2 minutes and any probe would renew the session.
+      #
+      # The Sablier middleware therefore carries `ignoreUserAgent: ["^Gatus/"]`
+      # (kubernetes/components/sablier/middleware.yaml) and answers this probe
+      # with a 200 WITHOUT waking anything and without contacting Sablier.
+      #
+      #   PROVES:        DNS, TLS, Traefik is up, the route still exists, and
+      #                  the Sablier plugin loaded -- a plugin that fails to
+      #                  build drops every router referencing it, which shows up
+      #                  here as a 404.
+      #   DOES NOT PROVE: that Sablier is reachable, or that this app would
+      #                  actually start for a real user.
+      #
+      # Those two live in Alertmanager instead, not here: SablierAbsent and
+      # SablierInstanceStartFailing in
+      # kubernetes/apps/kube-system/sablier/prometheusrule.yaml.
+      #
+      # The nightly `maintenance-windows` block that used to sit here has been
+      # REMOVED rather than adjusted. It muted 02:00-09:00 because
+      # go-kube-downscaler shed this app on a clock; Sablier sheds it whenever
+      # it is idle, at any hour, so there is no window left to mute -- and with
+      # the probe short-circuited there is nothing to mute anyway.

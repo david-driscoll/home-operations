@@ -106,16 +106,45 @@ apps join is a decision to take after the pilot has run, using
 `sablier_instance_ready_duration_seconds` to judge whether a cold start is
 tolerable for each.
 
-**Monitoring changes for on-demand apps only.** Gatus probes every app every two
-minutes (hardcoded in `components/authentik.ts`), which is shorter than any
-useful session duration — so a naive HTTP check would keep an on-demand app awake
-permanently. Its `ignoreUserAgent` escape hatch is worse: the plugin returns
-HTTP 200 *from the middleware*, so the check would pass forever whether the app
-were asleep, awake or crashlooping. On-demand apps therefore need their Gatus
-check repointed at a Prometheus query over
-`sablier_instance_start_failures_total` instead. **The scheduled set is
-unaffected** and keeps both its HTTP checks and its 02:00 +7h maintenance
-windows.
+**Monitoring, for on-demand apps only.** Gatus probes every app every two
+minutes — hardcoded in `components/authentik.ts`, not in each `definition.yaml`
+— which is far shorter than any useful session duration. Left alone it would not
+merely page constantly, it would *break the feature*: every probe renews the
+session, so nothing would ever sleep.
+
+The answer is a **deliberate split between the uptime page and Alertmanager**,
+because neither can assert the whole thing on its own:
+
+| signal | asserts | does not assert |
+|---|---|---|
+| Gatus row (`ignoreUserAgent: ["^Gatus/"]`) | DNS, TLS, Traefik up, route registered, plugin loaded | Sablier reachable; that the app would start |
+| `SablierAbsent` | Sablier is up | — |
+| `SablierInstanceStartFailing` | a wake was attempted and failed | — |
+
+The plugin checks `ignoreUserAgent` **first and returns 200 before it contacts
+Sablier at all**, so the Gatus row cannot see a dead Sablier — an earlier draft
+of this section claimed `failOpen: false` would turn the row red, and that is
+wrong for a UA-ignored probe. `SablierAbsent` is what covers it.
+
+Each app's `definition.yaml` repeats this next to its check so the row is never
+mistaken for an app-health signal, and the nightly `maintenance-windows` blocks
+are **removed** from on-demand apps rather than adjusted: they muted 02:00–09:00
+because the downscaler shed on a clock, and Sablier sheds whenever idle.
+
+**Residual gap, accepted:** an app nobody has visited for a week could be
+unstartable with nothing firing, because a failed start is only observable once
+someone asks for one. That is inherent to on-demand, not a defect.
+
+The same split exists on the Dockge hosts:
+`docker/_common/prometheus/config/rules/sablier.yml`, fed by a new `sablier`
+scrape job. Note that `DockerContainerDown` there **cannot** fire for a Dockge
+container — it requires `name!=""` and that cAdvisor emits no `name` label
+(`count(container_last_seen{job="cadvisor",name!=""})` is 0 live). Convenient
+today, but it means anyone who later fixes that cAdvisor will start paging for
+every sleeping container unless they exclude the on-demand set.
+
+**The scheduled set is unaffected** and keeps both its HTTP checks and its
+02:00 +7h maintenance windows.
 
 ---
 
