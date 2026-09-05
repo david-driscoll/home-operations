@@ -180,11 +180,14 @@ spec:
   # (checked: nothing matching /proxy|trust|header/i except
   # `passthroughHeaders`, a different concept -- which incoming headers get
   # forwarded to backends, not how this server reports its own scheme/host
-  # in URLs it hands back). Possibly vMCP always honours X-Forwarded-* the
-  # way individual MCPServers only do when told to; possibly it just isn't
-  # exposed as a field yet. Verify the OAuth discovery documents at
-  # https://agent-tools-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
-  # actually advertise https:// URLs once this reconciles, before trusting it.
+  # in URLs it hands back). VERIFIED NOT NEEDED, 2026-09-05: vMCP honours
+  # X-Forwarded-* on its own, the way individual MCPServers only do when told
+  # to. Every URL in /.well-known/oauth-authorization-server (issuer,
+  # authorize, token, jwks, register) and in
+  # /.well-known/oauth-protected-resource is https:// on this hostname, and an
+  # unauthenticated POST /mcp answers 401 with a `WWW-Authenticate: Bearer ...
+  # resource_metadata=` challenge whose path-suffixed variant resolves too --
+  # the whole handshake an MCP client needs, end to end.
   config:
     aggregation:
       # Default, made explicit: kubernetes/pulumi/unifi-* tool names don't
