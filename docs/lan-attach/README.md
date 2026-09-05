@@ -187,14 +187,26 @@ or its substitution — the 465-chart pass says nothing about this file.
 Either failure is a Jellyfin outage, and the Kustomization is `wait: true` with
 `retries: -1`, so it retries rather than surfacing loudly.
 
-#### Why 10.10.206.20
+#### Why 10.10.206.20 and .21
 
-It has to dodge two allocators. Verified free before assignment: no ARP reply
-from a LAN node, and no UniFi client record. It sits **below** the Cilium pool
-(`.100-200`, `.202-252`) so it can never be auto-assigned, and clear of the
-node band (`.10-.17`). UniFi DHCP nominally spans `10.10.0.5-10.10.254.254` but
-allocates upward from `.0.5` and has never reached `10.10.206.x` — the same
-assumption every other static in this band already rests on.
+They have to dodge two allocators. Both are absent from the UniFi client list,
+sit **below** the Cilium pool (`.100-200`, `.202-252`) so they can never be
+auto-assigned, and are clear of the node band (`.10-.17`). UniFi DHCP nominally
+spans `10.10.0.5-10.10.254.254` but allocates upward from `.0.5` and has never
+reached `10.10.206.x` — the same assumption every other static in this band
+already rests on.
+
+> **Correction.** These addresses were originally also described as "verified
+> free by ARP probe". That probe ran `ping` inside a `cilium-agent` container,
+> which has no `ping` binary — so it reported *every* address as free and was
+> worthless. The UniFi client list was the only real evidence. Both addresses
+> did turn out to be genuinely free, but the method did not show it.
+>
+> **To probe the LAN properly**, run a throwaway `hostNetwork` pod with real
+> tooling on a node other than the target's, e.g.
+> `kubectl run lan-probe --rm -i --restart=Never --image=alpine:… --overrides='{"spec":{"hostNetwork":true,…}}'`.
+> Verified working: that form reaches the gateway, node addresses, and
+> Technitium's ipvlan child, so a negative result from it means something.
 
 Note `sops set` reindented `cluster-secrets.sops.yaml` from 4-space to 2-space
 as a side effect, per `.sops.yaml`'s own `stores.yaml.indent: 2`. Read the diff
@@ -226,6 +238,24 @@ can use **any** of the five GPU nodes, control planes included. They can also
 share a node: ipvlan children have distinct IPs, and `igmp_snooping` is off on
 the Home network, so Plex's multicast memberships do not depend on per-child
 snooping state.
+
+#### Verified live, 2026-09-05
+
+Both attachments came up and both discovery protocols answer a broadcast sent
+from a *different* node (`milky-way`) than the one hosting the pods
+(`fluttershy`):
+
+```
+Jellyfin  255.255.255.255:7359  -> {"Address":"https://jellyfin.driscoll.tech",
+                                    "Id":"83f8650c…","Name":"Jellyfin"}
+Plex GDM  255.255.255.255:32414 -> HTTP/1.0 200 OK
+                                   Content-Type: plex/media-server
+                                   Name: Equestria   Port: 32400
+```
+
+Note Jellyfin hands back the Traefik URL, confirming that discovery works while
+serving still goes through the gateway. `network-status` on the pods shows
+`net1 = 10.10.206.20` and `10.10.206.21` alongside their Cilium `eth0`.
 
 Verification from a LAN host — Jellyfin:
 

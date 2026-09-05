@@ -50,9 +50,12 @@ metadata:
     # child follows that interface instead. Nothing here does that today --
     # Tailscale runs as a subnet router, not a default gateway.
     #
-    # Address is PLEX_LAN_IP (10.10.206.21): verified free by ARP probe and
-    # absent from the UniFi client list, below the Cilium pool so it can never
-    # be auto-assigned, and adjacent to JELLYFIN_LAN_IP (.20).
+    # Address is PLEX_LAN_IP (10.10.206.21): absent from the UniFi client list,
+    # below the Cilium pool so it can never be auto-assigned, and adjacent to
+    # JELLYFIN_LAN_IP (.20). The UniFi client list is the real evidence here --
+    # an ARP probe was also run at the time, but from a cilium-agent container
+    # that has no working ping, so it reported EVERY address free and proved
+    # nothing. Use a pod with real tooling if you need to re-check.
 spec:
   config: |
     {
