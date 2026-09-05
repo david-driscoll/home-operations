@@ -141,10 +141,9 @@ in this commit. Verify that stays true before step 8:
 rg -n 'clusters/celestia/apps/homelable' --glob '!docs/**'
 ```
 
-One hit is expected and is not a consumer: the provenance comment in
-`homelable/externalsecret.yaml`.
-
-`scripts/bao-reorg/plan.ts` no longer appears — its `shared/homelable` entry was
+Two hits are expected and neither is a consumer — both are prose. One is the
+provenance comment in `homelable/externalsecret.yaml`. The other is the comment
+above `scripts/bao-reorg/plan.ts`'s `shared/homelable` entry, whose `to:` was
 retargeted at `clusters/equestria/apps/homelable/keys` in the same commit. That
 file is a spec a replay would execute, not a log: nothing reads `to` except as a
 replacement string, `rewrite.ts` matches on `from` only, so the edit is inert
