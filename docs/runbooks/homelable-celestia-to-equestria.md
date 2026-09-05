@@ -141,14 +141,19 @@ in this commit. Verify that stays true before step 8:
 rg -n 'clusters/celestia/apps/homelable' --glob '!docs/**'
 ```
 
-Two hits are expected and neither is a consumer. One is the provenance comment
-in `homelable/externalsecret.yaml`. The other is
-`scripts/bao-reorg/plan.ts:148`, a completed phase-2 entry recording
-`shared/homelable -> clusters/celestia/apps/homelable/keys`. Leave it: it is a
-historical record, and both halves are already no-ops — `index.ts` finds no
-`shared/homelable` to move, and `rewrite.ts` finds no reference to it to
-rewrite. Editing it to say `clusters/equestria` would claim that reorg did
-something it did not.
+One hit is expected and is not a consumer: the provenance comment in
+`homelable/externalsecret.yaml`.
+
+`scripts/bao-reorg/plan.ts` no longer appears — its `shared/homelable` entry was
+retargeted at `clusters/equestria/apps/homelable/keys` in the same commit. That
+file is a spec a replay would execute, not a log: nothing reads `to` except as a
+replacement string, `rewrite.ts` matches on `from` only, so the edit is inert
+today and only matters in the one case that could still run it — a from-scratch
+replay against a restored pre-reorg OpenBao, where the old destination would
+strand the secret somewhere no consumer looks. The two-hop history is in the
+comment above the entry, and `docs/openbao-shared-secrets-reorg.md` carries a
+dated correction under the row it signed off; that table itself is left alone,
+because its `✎ Your call` column is a decision record.
 
 ### 3. Run the Pulumi applications stack
 

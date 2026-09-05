@@ -145,7 +145,23 @@ const CLUSTER_MOVES: MoveEntry[] = [
   { kind: "move", phase: 2, from: "shared/arcane", to: "clusters/celestia/apps/arcane/credentials" },
   { kind: "move", phase: 2, from: "shared/forgejo", to: "clusters/celestia/apps/forgejo/credentials", note: "docker/celestia/postgres/.env-local provisions the same password — both files move together" },
   { kind: "move", phase: 2, from: "shared/pdm-root", to: "clusters/celestia/apps/pdm/root" },
-  { kind: "move", phase: 2, from: "shared/homelable", to: "clusters/celestia/apps/homelable/keys", note: "read cross-cluster by dynacat; eso-equestria already reads clusters/celestia/*" },
+  // Retargeted 2026-09-05. This landed at `clusters/celestia/apps/homelable/keys`
+  // when it ran, because the app was a Dockge stack on celestia and the note here
+  // read "cross-cluster by dynacat; eso-equestria already reads
+  // clusters/celestia/*". The app has since moved to equestria
+  // (docs/runbooks/homelable-celestia-to-equestria.md) and BOTH consumers with it,
+  // so the read is no longer cross-cluster and that justification no longer
+  // applies -- eso-equestria reads its own prefix.
+  //
+  // Pointing `to` at the current home rather than the historical one is the right
+  // call for this file specifically: it is a declarative spec, not a log. Nothing
+  // reads `to` except as a replacement string and in reporting -- `rewrite.ts`
+  // matches on `from` only, and skips any file not containing "shared/" -- so this
+  // edit changes nothing today. It matters only in the one case that could still
+  // execute: a from-scratch replay against a restored pre-reorg OpenBao, where the
+  // celestia path would strand the secret somewhere no consumer looks and require a
+  // second hop to fix. The two-hop history stays in this comment.
+  { kind: "move", phase: 2, from: "shared/homelable", to: "clusters/equestria/apps/homelable/keys", note: "both consumers in equestria since 2026-09-05; landed under clusters/celestia/* when this ran" },
 
   // §E — the one cluster-scoped provider credential
   { kind: "move", phase: 2, from: "shared/eris-truenas-credentials", to: "clusters/spike/truenas-credentials", note: "spike is the TrueNAS host; `clusters/` here is a bucket, not a k8s cluster" },

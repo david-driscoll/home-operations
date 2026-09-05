@@ -262,6 +262,20 @@ worked examples are the first two rows.
 > That is fine — `eso-equestria` reads `clusters/celestia/*`; exactly the
 > alpha-site/authentik precedent that forced the policy widening.
 
+**Superseded 2026-09-05 — `homelable` is no longer cross-cluster.** The app
+moved off the celestia Dockge host into equestria
+(`docs/runbooks/homelable-celestia-to-equestria.md`), taking both consumers with
+it, so the secret now lives at `clusters/equestria/apps/homelable/keys` and
+`eso-equestria` reads it from its own prefix. The row above is left as the
+record of what was decided and executed at the time; `scripts/bao-reorg/plan.ts`
+is retargeted at the current home, because that file is a spec a replay would
+execute rather than a log.
+
+This does not weaken the cross-cluster precedent the note invokes —
+alpha-site/authentik is still what forced the policy widening, and
+`eso-equestria`'s grant on `clusters/celestia/*` is still in place and still
+load-bearing for other paths.
+
 ## D. `docker/_common/*` — decision required 🅒
 
 Same path, several hosts. Option B means *giving each host its own value*, not
