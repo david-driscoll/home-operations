@@ -1,0 +1,62 @@
+---
+# How THIS server validates the tokens ITS OWN auth server issues.
+#
+# WHY A SECOND ONE OF THESE, when ../toolhive/mcpoidcconfig.yaml already exists
+# and this file used to reference it directly. ToolHive's embedded auth server
+# registers exactly ONE audience, and it is not a field anyone can set:
+#
+#   BuildAuthServerRunConfig(..., []string{oidcConfig.ResourceURL}, ...)
+#     -- cmd/thv-operator/pkg/controllerutil/authserver.go
+#   deriveAllowedAudiences(config)
+#     -> []string{config.IncomingAuth.OIDC.Resource}
+#     -- cmd/thv-operator/pkg/vmcpconfig/converter.go ("The CRD intentionally
+#        omits AllowedAudiences")
+#
+# Both build a single-element list from the resource URL of whatever workload
+# HOSTS the server. ../toolhive's is hosted by the toolhive-docs MCPServer, so
+# its one registered audience is `https://toolhive.${ROOT_DOMAIN}/mcp` --
+# confirmed live in that workload's runconfig ConfigMap:
+#
+#   embedded_auth_server_config.allowed_audiences.0 =
+#     https://toolhive.driscoll.tech/mcp
+#
+# Borrowing that server therefore could never work from this hostname. The
+# token endpoint refused the exchange outright, before minting anything:
+#
+#   invalid_target: The requested resource is invalid, unknown, or malformed.
+#   Resource "https://agent-tools-mcp.agents.driscoll.tech/mcp" is not a
+#   registered audience
+#
+# and, like the SSRF failure below, it reads as a client problem. It is not:
+# no client-side login or re-registration can add an audience to a server's
+# allowlist. ./virtualmcpserver.yaml now runs its own auth server so that this
+# host's resource URL is the one registered audience.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPOIDCConfig
+metadata:
+  name: agent-tools
+spec:
+  type: inline
+  inline:
+    # MUST equal ./virtualmcpserver.yaml's `authServerConfig.issuer`, and the
+    # CRD says so in as many words ("its issuer must match
+    # IncomingAuth.OIDCConfigRef so that tokens it issues are accepted by the
+    # vMCP's incoming auth middleware"). Same host as ./httproute.yaml, whose
+    # single `/` rule already carries /oauth/* and the .well-known documents.
+    # No trailing slash -- RFC 8414, and the CRD pattern rejects one.
+    issuer: https://agent-tools-mcp.agents.${ROOT_DOMAIN}
+
+    # SAME REASON AS ../toolhive/mcpoidcconfig.yaml's, and it bites here for
+    # exactly the same reason: this issuer is this host, Technitium's split
+    # horizon resolves it to an RFC-1918 address, and ToolHive refuses private
+    # targets for OIDC discovery. Without it the proxy cannot fetch its own
+    # /.well-known/openid-configuration, never learns its `jwks_uri` or
+    # introspection URL, and fails EVERY token while reporting it as a bad
+    # token rather than as a discovery failure. See that file for the full
+    # story and for why `protectedResourceAllowPrivateIP` is NOT an
+    # interchangeable substitute.
+    #
+    # Moving the auth server onto this workload does not avoid the hairpin:
+    # the issuer is still a public hostname that resolves inward, so discovery
+    # still leaves the pod and comes back through Traefik.
+    jwksAllowPrivateIP: true

@@ -32,9 +32,10 @@ spec:
       # value. Change it here and there in the same commit.
       clientId: ${APP}
       allowedRedirectUris:
-        # ONE URI, and it is ToolHive's, not a client's. Every MCP client
-        # registers its own redirect with ToolHive's embedded server via DCR;
-        # authentik never sees them.
+        # EVERY URI HERE IS A TOOLHIVE AUTH SERVER'S, never a client's. MCP
+        # clients register their own redirects with those servers via DCR;
+        # authentik only ever sees the servers themselves. The list grows when
+        # a new auth server appears, not when a new client does.
         - url: https://${APP}.${ROOT_DOMAIN}/oauth/callback
         # On the tailnet this service is `mcp`, not `toolhive` -- the flat
         # namespace is the chance to name the two apps for what they are, and
@@ -44,6 +45,14 @@ spec:
         # would invalidate every token and client registration in flight, so the
         # driscoll.tech side stays exactly as it is.
         - url: https://mcp.${TAILSCALE_DOMAIN}/oauth/callback
+        # ../agent-tools-mcp's SECOND auth server, added because an embedded
+        # ToolHive auth server registers exactly one audience and this one's
+        # belongs to toolhive-docs -- see that file's ./mcpoidcconfig.yaml.
+        # It federates to THIS authentik client rather than one of its own,
+        # which is what puts its callback in this list. Until an `applications`
+        # stack run lands this entry, that server's login fails at authentik
+        # with an unregistered-redirect error, well before ToolHive is reached.
+        - url: https://agent-tools-mcp.agents.${ROOT_DOMAIN}/oauth/callback
       propertyMappings:
         - email
         - openid
