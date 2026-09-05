@@ -254,8 +254,28 @@ spec:
               requests:
                 cpu: 200m
                 memory: 512Mi
+              # 12Gi, up from 4Gi. NOT speculative headroom -- 4Gi was being
+              # hit. Claude Code here is a ~200MB native binary holding a long
+              # transcript in memory, and it reads MCP tool results that are
+              # routinely megabytes (one `docker list_containers` came back at
+              # 141KB, a ToolHive CRD at 320KB). Two background watcher tasks
+              # were killed mid-run by the harness with "the system is running
+              # low on memory" on 2026-09-05, in a pane doing nothing more
+              # exotic than curl and jq.
+              #
+              # THE OLD VALUE DID NOT FAIL CLEANLY, which is the part worth
+              # knowing: background work is reaped first, so long-running agent
+              # tasks died silently while the session that started them carried
+              # on. That reads as a flaky tool, not as a memory limit.
+              #
+              # Only the LIMIT moves. The 512Mi request is what the scheduler
+              # actually reserves and is still honest -- an idle pane really
+              # does sit near it -- so this buys burst room without claiming a
+              # node worth of memory it does not normally use. Do not treat
+              # that as free: a pod that genuinely reaches 12Gi will pressure
+              # its neighbours before it is itself evicted.
               limits:
-                memory: 4Gi
+                memory: 12Gi
 
     persistence:
       # $HOME for the main container: agentboard's sqlite db
