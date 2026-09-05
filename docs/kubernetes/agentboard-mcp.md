@@ -192,11 +192,23 @@ things stopped it being the fix here, and all three are checkable:
    rendering in the `github-token` ExternalSecret, which already renders the
    same token four ways.
 
-Note also that the newer upstream shape — `VirtualMCPServer.outgoingAuth` with
-`type: service_account`, `credentialsRef` and `headerFormat: "Bearer {token}"` —
-is **not** available on the CRD installed here: this cluster's `outgoingAuth`
-accepts only `discovered` and `externalAuthConfigRef`. That is worth re-checking
-after a ToolHive upgrade, since it would solve the format problem cleanly.
+Do **not** go looking for `VirtualMCPServer.outgoingAuth` with
+`type: service_account`, `credentialsRef` and `headerFormat: "Bearer {token}"`
+to solve point 3. That shape appears in an example in ToolHive's own
+`docs/operator/virtualmcpserver-api.md`, but **it does not exist in the API, in
+any version** — and upgrading will not bring it:
+
+- The backend `type` enum has been `discovered;externalAuthConfigRef` in
+  `virtualmcpserver_types.go` continuously from **v0.28.0** (2026-05-19)
+  through `main`. `service_account` appears zero times in those Go types at
+  every version checked.
+- That same upstream doc contradicts its own example: the `BackendAuthConfig`
+  field reference printed directly beneath it lists only `discovered` and
+  `externalAuthConfigRef`, and no `serviceAccount` field at all.
+
+So it is upstream documentation drift, not a feature behind a version gate.
+`outgoingAuth` itself is long-standing and is present here; only that backend
+type is fictional. This cluster runs **v0.46.0**, the current release.
 
 ## Troubleshooting
 
