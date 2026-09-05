@@ -50,5 +50,14 @@ configMapGenerator:
       # live here no longer applies: an in-cluster Service DNS name is the same
       # on every cluster.
       - mcp.json=./resources/mcp.json
+      # Shell dotfiles, mounted at /root/.bashrc and /root/.bash_profile.
+      # Not mise config despite this ConfigMap's name (neither is
+      # entrypoint.sh or mcp.json) -- what it really holds is everything a
+      # Dockerfile would have baked in, if this app had one. They exist
+      # because Debian's /etc/profile resets root's PATH in login shells and
+      # tmux only ever starts login shells; ./resources/bashrc has the full
+      # story and the live evidence.
+      - bashrc=./resources/bashrc
+      - bash_profile=./resources/bash_profile
     options:
       disableNameSuffixHash: true

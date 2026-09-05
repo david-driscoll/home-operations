@@ -1,0 +1,13 @@
+# ~/.bash_profile for the agentboard pod -- mounted READ-ONLY from
+# ../kustomization.yaml's configMapGenerator, not a file the home PVC owns.
+#
+# Login shells read THIS, never ~/.bashrc, and a login shell is exactly what
+# every tmux pane gets (tmux's `default-command` is empty, so it runs
+# `default-shell` with a dashed argv[0]) -- which means it is what every
+# terminal agentboard hands out. Bash stops at the first of
+# ~/.bash_profile, ~/.bash_login, ~/.profile that exists, so this file's only
+# job is to make sure the handoff below actually happens. See ./bashrc for
+# what the handoff is for.
+if [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi

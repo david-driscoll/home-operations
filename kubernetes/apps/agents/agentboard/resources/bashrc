@@ -1,0 +1,71 @@
+# ~/.bashrc for the agentboard pod -- mounted READ-ONLY from
+# ../kustomization.yaml's configMapGenerator (../helmrelease.yaml's
+# `persistence.mise-config`), NOT a file the home PVC owns. Personal shell
+# customisation goes in ~/.bashrc.local, sourced at the bottom; that one does
+# live on the PVC and survives restarts.
+#
+# WHY THIS FILE EXISTS. Debian's /etc/profile HARD-ASSIGNS PATH for uid 0:
+#
+#   if [ "$(id -u)" -eq 0 ]; then
+#     PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+#   fi
+#
+# It replaces, it does not append -- so ../helmrelease.yaml's carefully
+# ordered pod PATH, mise shims dir first, is thrown away in any LOGIN shell.
+# And a login shell is what every tmux pane gets, which is what every
+# agentboard terminal is. Confirmed live 2026-09-05 inside the running pod:
+#
+#   bash -c  'which claude'  -> /root/.local/share/mise/shims/claude
+#   bash -lc 'which claude'  -> nothing at all
+#
+# That is the whole reason ../resources/entrypoint.sh used to have to spell
+# `mise exec -- claude`, and the reason plain `claude` typed into an
+# agentboard pane found nothing.
+#
+# WHY SHIMS AND NOT `[env] _.path` IN ../resources/mise.toml. mise's `_.path`
+# entries are applied by mise's env machinery -- `mise activate`'s hook,
+# `mise exec`, `mise env`. None of those has run yet in a login shell that
+# /etc/profile just reset, so `_.path` would never get the chance to fire.
+# Something has to invoke mise from INSIDE the shell either way, and once it
+# does, `mise activate bash --shims` is the one-line form: it emits exactly
+#
+#   export PATH="/root/.local/share/mise/shims:$PATH"
+#
+# and nothing else. No PROMPT_COMMAND hook to install, no per-directory
+# re-resolution, and the result is byte-for-byte the PATH ordering
+# ../helmrelease.yaml's pod env already asks for -- so a shell that went
+# through /etc/profile and one that did not end up equivalent.
+#
+# No `case $- in *i*) ;; *) return;; esac` guard at the top, unlike Debian's
+# stock ~/.bashrc. Not because bash would source this non-interactively -- it
+# would not -- but so that an explicit `bash -c '. ~/.bashrc && ...'` gets the
+# same environment as a pane, and the PATH check below already makes a repeat
+# source a no-op instead of stacking duplicate entries.
+if [ -x /usr/local/bin/mise ]; then
+  case ":$PATH:" in
+    *":$MISE_DATA_DIR/shims:"*) ;;
+    *) eval "$(/usr/local/bin/mise activate bash --shims)" ;;
+  esac
+fi
+
+# Re-read GITHUB_TOKEN from the mounted Secret rather than inheriting the pod
+# env's copy. ../helmrelease.yaml sets GITHUB_TOKEN via `secretKeyRef`, which
+# Kubernetes resolves ONCE at container start and never again, while the token
+# behind it is re-minted every 30m against a 60m life -- so the inherited value
+# is dead about an hour in, and `gh` starts failing with a stale credential
+# while `git` (which reads the same file through its credential helper, see
+# ../resources/entrypoint.sh) keeps working. That staleness used to be masked
+# by an accident: `reloader.stakater.com/auto` restarted the whole pod on every
+# rotation, which re-resolved the env var as a side effect. ../helmrelease.yaml
+# no longer does that on purpose, so read the file here instead -- every new
+# pane opens with a current token, which is as fresh as an env var can be
+# without a restart.
+if [ -r /var/run/secrets/github-token/token ]; then
+  GITHUB_TOKEN="$(cat /var/run/secrets/github-token/token)"
+  export GITHUB_TOKEN
+fi
+
+# Yours, on the PVC, optional. Nothing in this repo writes it.
+if [ -f "$HOME/.bashrc.local" ]; then
+  . "$HOME/.bashrc.local"
+fi

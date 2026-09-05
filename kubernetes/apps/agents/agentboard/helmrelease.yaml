@@ -54,8 +54,37 @@ spec:
       *app : {}
     controllers:
       *app :
+        # NOT `reloader.stakater.com/auto: "true"`, which is what this was
+        # and which made the pod restart EVERY 30 MINUTES. `auto` watches
+        # every ConfigMap and Secret the pod references -- including
+        # `github-token`, whose ExternalSecret carries `refreshInterval: 30m`
+        # (kubernetes/apps/kube-system/secrets/github-app-token/token/externalsecret.yaml).
+        # A fresh token is a changed Secret, so reloader rolled the
+        # Deployment on every mint. Confirmed live 2026-09-05 from the
+        # namespace's own events: `Changes detected in 'github-token' of type
+        # 'SECRET' ... Updated 'agentboard' of type 'Deployment'`.
+        #
+        # That defeated the entire reason `github-token` is a VOLUME here
+        # rather than an env var (see `persistence.github-token` below and
+        # ./resources/entrypoint.sh's credential.helper): the volume was
+        # chosen SO THAT the token could rotate under a session running for
+        # days without a restart -- and then `auto` restarted the pod on that
+        # very rotation anyway. It also gave the pod a hard 30-minute ceiling
+        # on any agent session, which is the other half of why every restart
+        # looked like a brand-new Claude session.
+        #
+        # Listing the two by name instead. These are the only referenced
+        # objects a restart is actually the right response to:
+        #   - the mise-config ConfigMap holds entrypoint.sh, mise.toml/lock,
+        #     bashrc and mcp.json -- all read once, at container start.
+        #   - the -pulumi Secret arrives via `envFrom`, and env is resolved
+        #     once at start and never again.
+        # `github-token` and `sops-age` are deliberately absent: both are
+        # volume mounts whose file contents update in place, which is the
+        # whole point of mounting them that way.
         annotations:
-          reloader.stakater.com/auto: "true"
+          configmap.reloader.stakater.com/reload: ${APP}-mise-config
+          secret.reloader.stakater.com/reload: ${APP}-pulumi
         # One ReadWriteOnce PVC carries the whole home directory (tmux
         # history, agentboard's sqlite db, the Claude Code session and the
         # working checkout) -- a second pod could never attach it.
@@ -210,6 +239,19 @@ spec:
               # where entrypoint.sh's tmux session starts one.
               - path: /root/.mcp.json
                 subPath: mcp.json
+                readOnly: true
+              # ./resources/bash_profile and ./resources/bashrc -- what puts
+              # the mise shims dir back on PATH for the LOGIN shells tmux
+              # hands every agentboard terminal, after Debian's /etc/profile
+              # has hard-reassigned root's PATH and thrown this pod's own
+              # `env: PATH` above away. Read ./resources/bashrc before
+              # touching either: `claude` typed into an agentboard pane
+              # resolves through these.
+              - path: /root/.bash_profile
+                subPath: bash_profile
+                readOnly: true
+              - path: /root/.bashrc
+                subPath: bashrc
                 readOnly: true
       github-token:
         type: secret
