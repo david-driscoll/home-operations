@@ -78,6 +78,30 @@ OpenBao and Postgres, and it is the intended way to reach the estate from here.
 
 Full detail, tool inventory and troubleshooting: `docs/kubernetes/agentboard-mcp.md`.
 
+### Work in a git worktree, not the shared checkout
+
+`/root/home-operations` in the agentboard pod is **one checkout on one PVC**, and
+the pod hands out terminals — so more than one session can be in it at once.
+That is not hypothetical: on 2026-09-05 a second session had 138 files modified
+that the first had never touched, five of them `*.sops.yaml`. Neither could
+commit without sweeping up the other's work, and a reflexive `git add -A` would
+have staged encrypted material this repo treats as unrecoverable.
+
+- A bare `claude` in an agentboard pane already gets `--worktree` — the wrapper
+  is in `agentboard/resources/bashrc`. `--continue` and `--resume` pass through
+  untouched, because a resumed session belongs in the directory its transcript
+  came from.
+- **If you are already running in the shared checkout, use `EnterWorktree`
+  before editing anything.** Check first: `git status --short` showing files you
+  did not touch means another session is live in there.
+- Branch point and symlinked directories come from `.claude/settings.json`'s
+  `worktree` block — new worktrees branch from `origin/main` and symlink
+  `node_modules`, so no `npm ci` per worktree.
+- `git worktree add <path> origin/main` is the manual equivalent when you need
+  one outside a session; clean it up with `git worktree remove`.
+
+Never `git add -A` in the shared checkout without reading `git status` first.
+
 ## Safety
 
 - Never commit plaintext credentials. `.mise.toml` uses `op://` references; `Pulumi.*.yaml` files use `encryptionsalt`.

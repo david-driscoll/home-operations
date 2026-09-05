@@ -73,6 +73,31 @@ activate_aggressive = true
 lockfile = true
 locked = true
 
+# TRUST, so nothing in this pod ever stops to ask. mise refuses to parse a
+# non-global config it does not trust, and the estate's own setup docs
+# (../../../../CLAUDE.md) list `mise trust` as a manual one-time step -- which
+# is fine on a laptop and useless here, because there is nobody at the
+# terminal to run it and a fresh PVC starts untrusted again.
+#
+# /root covers the working checkout (/root/home-operations/.mise.toml, which
+# carries this repo's op:// env references) and everything Claude Code creates
+# beneath it, including the git worktrees ../resources/bashrc now opens by
+# default -- those land under <project>/.claude/worktrees. /home is listed for
+# the same reason a non-root uid would need it; nothing runs as one today, so
+# it is pre-emptive rather than load-bearing.
+#
+# Trust is inherited by path, so a worktree created tomorrow is trusted the
+# moment it exists. mise also shares trust across git worktrees on its own
+# (`mise trust --help`), but only from an already-trusted main checkout -- this
+# setting is what makes that main checkout trusted without a human.
+#
+# Verified live 2026-09-05 against this mise: both the TOML form here and the
+# MISE_TRUSTED_CONFIG_PATHS env form resolve to the same
+# `["/home", "/root"]`. The env var was NOT used, so that ../helmrelease.yaml
+# does not grow another MISE_* entry for something that belongs with the rest
+# of mise's configuration.
+trusted_config_paths = ["/home", "/root"]
+
 # See the npm:@anthropic-ai/claude-code entry above for why this exists.
 # Confirmed harmless for npm:@gbasin/agentboard too: that package resolves
 # its native binary through npm's ordinary optionalDependencies platform

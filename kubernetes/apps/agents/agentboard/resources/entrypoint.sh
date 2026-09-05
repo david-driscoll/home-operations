@@ -117,6 +117,60 @@ if ! tmux has-session -t main 2>/dev/null; then
   tmux new-session -d -s main -n shell
 fi
 
+# AND THEN RESUME THE MOST RECENT ONES ANYWAY -- which is not a reversal of
+# the block above, so read both. The mistake that block describes was starting
+# a BRAND-NEW session on every boot: `claude` with no arguments, minting a
+# fresh id and orphaning the transcript that mattered. This starts no new
+# sessions at all. It reattaches to specific, existing ids and stops if there
+# are none, so a fresh PVC still comes up with just the bare `shell` window.
+#
+# WHY IT IS SAFE TO GUESS HERE WHEN IT WAS NOT BEFORE: "which session" is only
+# an unanswerable question when the answer would destroy something. Resuming
+# the three most-recently-touched transcripts destroys nothing -- every other
+# session is still on the PVC and still reachable with `claude --resume`, and
+# the picker is still there for choosing deliberately.
+#
+# THREE, NOT FIVE. Measured on 2026-09-05: one Claude Code session sat at
+# 1.67 GiB against this pod's cgroup, and five would not fit under the 12Gi
+# limit ../helmrelease.yaml now sets without re-introducing exactly the silent
+# background-task reaping that limit was raised to stop. Raise both together
+# or neither. The count is env-overridable so that does not need a rebuild.
+#
+# CWD COMES FROM THE TRANSCRIPT, never from the directory name. Claude Code
+# stores transcripts under ~/.claude/projects/<path-with-slashes-as-dashes>/,
+# and that mangling is LOSSY -- `-root-home-operations` could be
+# /root/home-operations or /root/home/operations, and this repo happens to
+# contain a literal hyphen, so the ambiguity is real rather than theoretical.
+# Every transcript line carries the real `cwd`, so read it from there. A
+# session whose directory no longer exists (a deleted git worktree, say) is
+# skipped rather than resumed into the wrong place.
+#
+# `$$` throughout is Flux's escape for a literal `$`, same as the mise line
+# above -- see that block's warning. `$(...)` needs no escaping and is left
+# alone, matching the credential.helper line near the top of this file.
+AGENTBOARD_RESUME_SESSIONS="$${AGENTBOARD_RESUME_SESSIONS:-3}"
+if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
+  find /root/.claude/projects -maxdepth 2 -name '*.jsonl' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn \
+    | head -n "$$AGENTBOARD_RESUME_SESSIONS" \
+    | while read -r _ transcript; do
+        id=$(basename "$$transcript" .jsonl)
+        # First line that has one wins; `head` keeps this cheap on a
+        # multi-megabyte transcript instead of parsing the whole file.
+        cwd=$(head -n 200 "$$transcript" | jq -r 'select(.cwd) | .cwd' 2>/dev/null | head -n 1)
+        if [ -z "$$cwd" ] || [ ! -d "$$cwd" ]; then
+          echo "==> skipping $${id%%-*}: no usable cwd"
+          continue
+        fi
+        echo "==> resuming $${id%%-*} in $$cwd"
+        # A login shell, so ./bashrc puts the mise shims back on PATH. The
+        # `claude` wrapper there passes arguments through untouched, so this
+        # resumes in place rather than being rewritten into a new worktree.
+        tmux new-window -d -t main -n "$${id%%-*}" -c "$$cwd" \
+          "exec bash -lc 'claude --resume $$id'"
+      done
+fi
+
 # NOTHING IS STARTED IN THAT WINDOW ON PURPOSE. This used to be
 #
 #   tmux send-keys -t main:claude "mise exec -- claude" C-m
@@ -136,7 +190,14 @@ fi
 #
 #   claude --continue    # pick the most recent session in this directory
 #   claude --resume      # choose from the list of past sessions
-#   claude               # deliberately start fresh
+#   claude               # start fresh -- IN ITS OWN GIT WORKTREE
+#
+# That last one is not quite plain `claude`. ../resources/bashrc wraps a
+# BARE invocation to add `--worktree`, so two panes never end up editing
+# /root/home-operations at the same time -- which has already happened once,
+# and is written up in that file. Anything with arguments passes through
+# untouched, so the two resume forms above still land in the directory their
+# transcripts belong to.
 #
 # Plain `claude`, no `mise exec --` prefix needed any more: ../resources/bashrc
 # puts the mise shims back on PATH for the login shells tmux hands out. See
