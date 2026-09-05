@@ -54,7 +54,7 @@ dotnet = { version = "10.0.203" }
 # the workspace pods install the same pin via mise.
 vals = "0.46.0"
 "github:stacklok/toolhive" = "0.46.0"
-"pipx:graphifyy" = "0.9.53"
+"pipx:graphifyy" = "0.9.54"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'
