@@ -40,7 +40,6 @@ resources:
   - ./unifi-protect.yaml
   - ./unifi-access.yaml
   - ./github.yaml
-  - ./github-token-refresh.yaml
   - ./context7.yaml
   - ./degoog.yaml
   - ./nuget.yaml

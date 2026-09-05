@@ -136,10 +136,20 @@ fallback: `get_version` over `list_devices`, a direct `curl` probe over either.
 - **`toolhive-github_`** — `GITHUB_PERSONAL_ACCESS_TOKEN` comes from a
   `secretKeyRef`, resolved once at start, while `github-token` is an App
   installation token re-minted every 30m against a 60m life. The image has no
-  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply.
-  Reloader does the restart, on the rotation itself; a small CronJob keeps its
-  annotation on the operator-owned StatefulSet:
-  [`github-token-refresh.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github-token-refresh.yaml).
+  file-based credential, so the `gh`/`GH_CONFIG_DIR` trick cannot apply — the
+  pod has to be restarted when the token rotates. Reloader does that, driven by
+  a `reloader.stakater.com/auto` annotation declared on
+  `podTemplateSpec.metadata` in
+  [`github.yaml`](../../kubernetes/apps/agents/agent-tools-servers/github.yaml).
+
+  The annotation goes on the **pod template**, not the StatefulSet, because the
+  StatefulSet belongs to the operator. That works because Reloader falls back to
+  pod-template annotations when the workload carries none
+  (`pkg/common/common.go`), and the operator propagates what you write in
+  `podTemplateSpec.metadata.annotations` onto that template
+  (`pkg/container/kubernetes/client.go`). Note the annotation on the
+  `github-token` Secret does nothing on its own — Reloader keys off the
+  workload.
 - **`toolhive-tailscale_`** — `TAILSCALE_TAILNET` was a `${ROOT_DOMAIN}`
   substitution that the file itself flagged as never verified. Now `-`,
   Tailscale's alias for the credential's default tailnet, matching what
