@@ -122,6 +122,20 @@ spec:
     - "--allowed-hosts=mcp-toolhive-postgres,mcp-toolhive-postgres.agents.svc.cluster.local,mcp-toolhive-postgres-headless,mcp-toolhive-postgres-headless.agents.svc.cluster.local"
 
   podTemplateSpec:
+    # WHY THIS IS ON THE POD TEMPLATE AND NOT THE SECRET. Read
+    # ./github.yaml's podTemplateSpec comment for the long version; the
+    # short one is that Reloader keys off the WORKLOAD, the StatefulSet
+    # that workload refers to belongs to the ToolHive operator, and
+    # Reloader falls back to the POD TEMPLATE's annotations when the
+    # workload carries none -- which the operator propagates from here.
+    #
+    # The `reloader.stakater.com/auto` on this file's own ExternalSecret
+    # and target Secret does NOT do this. Annotating a Secret is inert on
+    # its own; it has been in place all along while every one of these
+    # servers ran whatever its Secret held at pod start, forever.
+    metadata:
+      annotations:
+        reloader.stakater.com/auto: "true"
     spec:
       containers:
         - name: mcp
