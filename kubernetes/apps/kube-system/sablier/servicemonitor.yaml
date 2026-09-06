@@ -19,11 +19,26 @@ metadata:
 spec:
   selector:
     matchLabels:
-      # The chart's own label, not this Kustomization's commonMetadata --
-      # commonMetadata lands on the HelmRelease, never on what Helm renders from
-      # it. The chart labels everything `app: sablier-<release>`, and the release
-      # name is `sablier`, hence the doubled name.
-      app: sablier-sablier
+      # A ServiceMonitor selects SERVICES, by the Service's own
+      # `metadata.labels` -- it never looks at pods. The chart does write
+      # `app: sablier-<release>` onto the Deployment's pod template, and into
+      # the Service's `spec.selector`, but it writes NO `app` label onto the
+      # Service's own metadata. That metadata carries only:
+      #
+      #   app.kubernetes.io/managed-by: Helm
+      #   helm.toolkit.fluxcd.io/name: sablier
+      #   helm.toolkit.fluxcd.io/namespace: kube-system
+      #
+      # So the previous `app: sablier-sablier` here matched zero Services and
+      # the scrape target was silently absent -- SablierAbsent fired from
+      # 2026-09-05T20:14Z while the Deployment itself was a healthy 1/1. An
+      # absent target and a dead Sablier look identical from Prometheus, which
+      # is exactly the failure ./prometheusrule.yaml exists to catch, so this
+      # selector being wrong disarmed that rule.
+      #
+      # Flux's label is the only stable identifier on that Service, and it
+      # matches exactly one Service in this namespace.
+      helm.toolkit.fluxcd.io/name: sablier
   endpoints:
     - targetPort: 10000
       path: /metrics
