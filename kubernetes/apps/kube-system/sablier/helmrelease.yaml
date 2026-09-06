@@ -184,11 +184,24 @@ spec:
         value: "1"
 
     rbac:
-      # Sablier can hibernate CloudNativePG Clusters via the `cnpg.io/hibernation`
-      # annotation and pause OT-CONTAINER-KIT Redis. Both stay OFF: `database` is
-      # in go-kube-downscaler's excludedNamespaces precisely because every
-      # keep-list app depends on it, and granting patch on `clusters` would put a
-      # one-label mistake between the estate and a hibernated Postgres.
+      # BOTH STAY FALSE, and `cnpg` is compensated for in ./rbac.yaml -- read
+      # that file before changing either of these.
+      #
+      # The chart's `cnpg: true` grants get/list/watch AND **patch** on
+      # `clusters.postgresql.cnpg.io`. Patch is what writes
+      # `cnpg.io/hibernation: "on"` and takes a Postgres cluster down, and
+      # `database` is in go-kube-downscaler's excludedNamespaces precisely
+      # because every keep-list app depends on it.
+      #
+      # But leaving it false alone is NOT sufficient: Sablier's provider watches
+      # CNPG Clusters unconditionally, and with the CRD installed but access
+      # denied the list failure aborts ALL group discovery, not just the CNPG
+      # part -- so nothing sleeps and nothing can be woken. ./rbac.yaml grants
+      # the read verbs the informer needs, and withholds patch.
+      #
+      # `otkRedis` needs no such compensation: the redis-operator CRD is not
+      # installed here, and an ABSENT CRD is skipped gracefully. It is only the
+      # present-but-forbidden case that breaks.
       cnpg: false
       otkRedis: false
 
