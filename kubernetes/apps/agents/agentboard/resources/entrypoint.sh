@@ -269,6 +269,34 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
   db=/root/.agentboard/agentboard.db
   [ -f "$$db" ] || exit 0
 
+  # ONLY IN-PROGRESS SESSIONS. A session the UI has moved to History is one
+  # someone has finished with, and resurrecting it every boot is noise -- worse,
+  # it competes for the N slots with the sessions that were actually mid-task.
+  #
+  # THE PREDICATE IS agentboard's OWN, not one invented here. Read off the
+  # prepared statements in its bundle (0.4.27, `bin/agentboard`), which is also
+  # what the sidebar groups by:
+  #
+  #   active       current_window IS NOT NULL
+  #   hibernating  current_window IS NULL AND is_pinned = 1
+  #   history      current_window IS NULL AND is_pinned = 0
+  #
+  # So `NOT (current_window IS NULL AND is_pinned = 0)` is exactly "not in
+  # History", and it covers BOTH remaining states -- which matters, because
+  # which one a restarted session is sitting in is a RACE. This block runs the
+  # moment `tmux has-session -t agentboard` succeeds, and agentboard's own
+  # startup reconcile -- the pass that notices the pre-restart `current_window`
+  # values point at windows the dead tmux server took with it, and rewrites them
+  # to hibernating -- may or may not have run yet. Before it: stale
+  # `current_window`, non-NULL, kept. After it: `is_pinned = 1`, kept. Either
+  # way the row survives the filter and the answer does not depend on who won.
+  #
+  # `is_pinned` is a hibernation marker here, NOT the UI's pin: agentboard sets
+  # it on any window that goes away on its own (`orphanSession` defaults to
+  # `hibernate: true`) and clears it on the two paths that mean "I am done with
+  # this" -- Move to History, and killing the window from the UI. That second one
+  # is why a killed session stays dead across a restart instead of coming back.
+  #
   # Read-only, and tab-separated so a display_name with spaces survives.
   DB="$$db" N="$$AGENTBOARD_RESUME_SESSIONS" bun -e '
     import { Database } from "bun:sqlite";
@@ -277,6 +305,7 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
     const rows = db.query(
       "SELECT session_id, display_name, project_path FROM agent_sessions " +
       "WHERE project_path IS NOT NULL AND project_path != \x27\x27 " +
+      "AND NOT (current_window IS NULL AND is_pinned = 0) " +
       "ORDER BY last_activity_at DESC LIMIT ?1").all(n);
     for (const r of rows) console.log([r.session_id, r.display_name, r.project_path].join("\t"));
   ' 2>/dev/null | while IFS="$$(printf '\t')" read -r id name path; do
