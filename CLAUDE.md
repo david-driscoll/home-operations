@@ -53,12 +53,27 @@ a tool being `(missing)` here now means the boot install failed or the pin was
 added since, rather than the pod never having tried. Check `mise ls --current`
 either way; that is what tells you which it is.
 
+A third cause is the working directory rather than the install. A shim resolves
+its version from the config covering the CURRENT directory, so `mise ls --current`
+run from `/tmp` lists only the tools
+[`agentboard/resources/mise.toml`](kubernetes/apps/agents/agentboard/resources/mise.toml)
+pins globally -- not this repo's `.config/mise.toml`. Most shims fall back to an
+installed version anyway and work from anywhere, which is exactly what makes the
+exceptions confusing. On 2026-09-06 `python3` in an agent's `/tmp` scratchpad
+instead hard-failed with `No version is set for shim: python3`, and that session
+reported both Python and `graphify` as unavailable; both were fine, and `cd`-ing
+into the checkout was the entire fix. `python` is pinned globally now so that
+instance is closed, but the shape is not -- run this repo's tooling from the
+checkout, not from a scratch directory. `mise use -g` is not the workaround: the
+pod's global config is a read-only ConfigMap mount and the write fails with EBUSY.
+
 So before reporting a tool as unavailable:
 
 ```bash
 mise ls --current        # what is pinned here, and which are "(missing)"
 mise install <tool>      # e.g. `flux2`, `npm:typescript` -- beats the whole set
 mise trust               # only if a config is reported untrusted
+cd <the checkout>        # shims resolve against the CURRENT dir, not $PATH alone
 ```
 
 `mise install` with no arguments pulls ~30 tools including dotnet and
