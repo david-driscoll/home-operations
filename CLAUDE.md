@@ -16,10 +16,59 @@ cd stacks/<stack-name>
 pulumi preview        # always preview before deploying
 pulumi up --yes       # deploy
 
-# Required env vars (provided by .mise.toml via 1Password op:// references)
+# Required env vars (declared in .config/mise.toml as `vals` refs -- `ref+openbao://`,
+# `ref+sops://`, … -- and resolved per command by `mise run vals-run <cmd>`.
+# They were op:// literals resolved by `op run`; that has not been true since
+# each value started naming its own backend. See that file's [env] header.)
 # CONNECT_HOST, CONNECT_TOKEN, PULUMI_CONFIG_PASSPHRASE
 # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (Minio)
 # AUTHENTIK_TOKEN, AUTHENTIK_URL
+```
+
+### Every CLI this repo uses comes from mise
+
+`flux`, `kubectl`, `talosctl`, `sops`, `yq`, `jq`, `pulumi`, `age`, `gh`, `tsc`,
+`biome`, `yamllint`, `shellcheck`, `typos`, `actionlint` and the rest are pinned in
+**`.config/mise.toml`**. There is no `.mise.toml` at the repo root -- the ones under
+`docker/*/`, `stacks/*/` and `dashboard/` are per-directory configs for those
+subtrees, not this. Almost nothing is on the system PATH.
+
+**A tool that looks missing is usually an uninstalled pin -- or an untrusted
+config -- not an absent binary**, and both fail silently. mise will not load a
+config it does not trust, so no shim is created and the tool reports exactly what
+it would if it had never existed. On 2026-09-05 a session concluded from that that
+the repo had no `flux` and no `kustomize`, and shipped a PR whose description said
+the manifest and TypeScript checks could not be run. Both could: `mise trust` then
+`mise install flux2 npm:typescript` took under a minute, and the checks then showed
+the one failing `kustomize build` was already failing on `main` -- which is the
+answer that PR should have carried.
+
+Trust is no longer the likely half of that in an agentboard pod: `trusted_config_paths`
+in [`agentboard/resources/mise.toml`](kubernetes/apps/agents/agentboard/resources/mise.toml)
+covers `/root`, and trust inherits by path, so the checkout and every worktree
+under it are trusted with nobody at the terminal. A fresh clone elsewhere still
+needs `mise trust` once. What remains common everywhere is the second half: the
+pod image ships only some of the pins, and the rest show as `(missing)`.
+
+So before reporting a tool as unavailable:
+
+```bash
+mise ls --current        # what is pinned here, and which are "(missing)"
+mise install <tool>      # e.g. `flux2`, `npm:typescript` -- beats the whole set
+mise trust               # only if a config is reported untrusted
+```
+
+`mise install` with no arguments pulls ~30 tools including dotnet and
+powershell-core. Name the ones you need instead.
+
+**There is no standalone `kustomize`** -- `kubectl kustomize <dir>` is it, and the
+pinned kubectl provides it. For a Flux-rendered check (labels, `postBuild`
+substitution) `flux build` also runs fully offline, but only if you hand it the
+Kustomization CR; without `--kustomization-file` it goes looking for a cluster:
+
+```bash
+flux build kustomization <name> -n <ns> --path <dir> \
+  --kustomization-file <dir>/ks.yaml --dry-run
 ```
 
 ## Architecture
@@ -55,7 +104,7 @@ docker/         # Docker/Dockge stack configs per cluster
 | `components/op.ts`          | 1Password Connect client                   |
 | `stacks/home/index.ts`      | Canonical stack usage example              |
 | `stacks/authentik/index.ts` | Example: writing outputs back to 1Password |
-| `.mise.toml`                | Tool versions and env var setup            |
+| `.config/mise.toml`         | Tool versions and env var setup (NOT `.mise.toml`) |
 | `bootstrap/INVENTORY.md`    | Every secret needed to bring the estate up from nothing, and where it lives |
 | `bootstrap/RUNBOOK.md`      | Break-glass procedures (OpenBao sealed, cluster gone, rebuild) |
 
@@ -104,7 +153,7 @@ Never `git add -A` in the shared checkout without reading `git status` first.
 
 ## Safety
 
-- Never commit plaintext credentials. `.mise.toml` uses `op://` references; `Pulumi.*.yaml` files use `encryptionsalt`.
+- Never commit plaintext credentials. `.config/mise.toml` uses `vals` references (`ref+openbao://`, `ref+sops://`, …); `Pulumi.*.yaml` files use `encryptionsalt`.
 - Run `pulumi preview` before every `pulumi up`, especially for DNS/provider changes.
 - Test risky changes against a non-production stack (alpha-site) first.
 - Code can create/modify 1Password items — be intentional when touching `OPClient` or stacks that persist outputs.
