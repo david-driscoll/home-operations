@@ -1,0 +1,74 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/rbac.authorization.k8s.io/clusterrole_v1.json
+#
+# ============================================================================
+# READ-ONLY access to CloudNativePG Clusters. Without it, NOTHING on the
+# Kubernetes side of Sablier works at all.
+#
+# Sablier's Kubernetes provider starts an informer on
+# `clusters.postgresql.cnpg.io` UNCONDITIONALLY -- there is no flag to turn the
+# integration off. Upstream's docs say it "skips those integrations gracefully
+# when the CRDs are absent", and that is true: the redis-operator CRD is not
+# installed here and is skipped silently. But CRD ABSENT and RBAC DENIED are
+# different cases, and only the first is handled.
+#
+# With the CRD installed (it is -- this estate runs CNPG) and no permission, the
+# list fails, and the failure is not scoped to the CNPG integration. It aborts
+# the whole reconciliation:
+#
+#   ERR cannot retrieve groups from provider reason=reconciliation
+#       error="clusters.postgresql.cnpg.io is forbidden: User
+#       system:serviceaccount:kube-system:sablier-sablier cannot list ..."
+#   ERR running-hours reconciliation failed to list instances ...
+#   ERR unregistered instance warm scan failed ...
+#
+# Sablier then discovers ZERO groups. Nothing sleeps, nothing can be woken, and
+# the only outward symptom is that opted-in workloads simply never scale down --
+# which reads as "the feature does nothing" rather than as an error. Observed
+# live 2026-09-05: all three pilot apps sat at 1 replica for hours.
+#
+# WHY THIS FILE RATHER THAN `rbac.cnpg: true` IN THE HELMRELEASE.
+# The chart's flag grants get, list, watch AND **patch**. Patch is what lets
+# Sablier write `cnpg.io/hibernation: "on"` and take a Postgres cluster down --
+# and `database` is in go-kube-downscaler's excludedNamespaces precisely because
+# every keep-list app depends on it. Granting cluster-wide patch on CNPG
+# Clusters to satisfy an informer would put a single mislabelled object between
+# this estate and a hibernated database.
+#
+# These four verbs are what the informer needs and nothing more. No CNPG Cluster
+# carries `sablier.enable`, and with no patch verb none could be hibernated even
+# if one did.
+#
+# If Sablier ever gains a flag to disable the CNPG integration outright, this
+# file should be deleted in favour of it.
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sablier-cnpg-read
+rules:
+  - apiGroups:
+      - postgresql.cnpg.io
+    resources:
+      - clusters
+    verbs:
+      - get
+      - list
+      - watch
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/rbac.authorization.k8s.io/clusterrolebinding_v1.json
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sablier-cnpg-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sablier-cnpg-read
+subjects:
+  # The chart names everything `sablier-<release>`, and the release is `sablier`
+  # -- hence the doubled name. Confirmed from the RBAC denial itself, which
+  # names `system:serviceaccount:kube-system:sablier-sablier`.
+  - kind: ServiceAccount
+    name: sablier-sablier
+    namespace: kube-system
