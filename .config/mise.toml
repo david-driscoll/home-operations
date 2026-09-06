@@ -41,6 +41,18 @@ typos = "1.50.1"
 # second, independent reason shellcheck is pinned rather than assumed.
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
+# Same rule, third instance. hk's `eso-values-lint` step runs
+# `go -C scripts/eso-values-lint run .`, and `go` was never pinned -- it worked
+# only where Go happened to be installed system-wide, exactly like `pipx` below.
+# In the agentboard pod it was not, so the step died with `sh: 1: go: not found`
+# and took the whole pre-push hook down with it once the hooks were registered.
+# CI does not catch this: .github/workflows/flux-local.yaml installs Go from
+# scripts/eso-values-lint/go.mod via actions/setup-go, so the workflow passes on
+# a machine the local hook cannot reproduce.
+#
+# Keep the MAJOR.MINOR in step with that go.mod's `go 1.24` directive, which is
+# the version CI resolves; the patch floats on Renovate.
+go = "1.24.13"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
 node = "24.20.0"
@@ -54,6 +66,20 @@ dotnet = { version = "10.0.203" }
 # the workspace pods install the same pin via mise.
 vals = "0.46.0"
 "github:stacklok/toolhive" = "0.46.0"
+# REQUIRED BY the `pipx:` backend below, and the reason it never installed here.
+# mise's pipx backend shells out to a `pipx` on PATH (or `uv`, with
+# MISE_PIPX_UVX=1); it does not vendor one. Neither was pinned, so
+# `pipx:graphifyy` could only ever resolve on a machine that happened to have
+# pipx installed system-wide -- on one that did not, `mise install` reported
+# `pipx may be required but was not found`, graphify never landed, and
+# [hooks].postinstall's `graphify hook install` failed with 127 on EVERY
+# `mise install` in this repo. Pinning it makes the dependency explicit and
+# satisfiable from the lockfile like everything else.
+#
+# `python` above is also required (pipx builds the venv with it) and was
+# already pinned -- it was simply never installed in the agentboard pod, which
+# is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
+pipx = "1.17.2"
 "pipx:graphifyy" = "0.9.55"
 
 [tasks.codegen]

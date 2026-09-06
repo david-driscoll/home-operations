@@ -448,6 +448,74 @@ version = "0.46.0"
 backend = "github:stacklok/toolhive"
 specifiers = ["0.46.0"]
 
+[tools."github:stacklok/toolhive"."platforms.linux-arm64"]
+checksum = "sha256:a5ded123ebb710fdeee768fde8ed39dbcb483507b9e081954f021adecfc9571b"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634699"
+
+[tools."github:stacklok/toolhive"."platforms.linux-arm64-musl"]
+checksum = "sha256:a5ded123ebb710fdeee768fde8ed39dbcb483507b9e081954f021adecfc9571b"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634699"
+
+[tools."github:stacklok/toolhive"."platforms.linux-x64"]
+checksum = "sha256:2ee4825887074aaab635254e225c7cb9781d4cb3c03eb503eee00475d8499e18"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634706"
+
+[tools."github:stacklok/toolhive"."platforms.linux-x64-musl"]
+checksum = "sha256:2ee4825887074aaab635254e225c7cb9781d4cb3c03eb503eee00475d8499e18"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634706"
+
+[tools."github:stacklok/toolhive"."platforms.macos-arm64"]
+checksum = "sha256:8c956a07fc3c30cd4b77443d5aa67507aff920e97d0ba6ae1bec814df0d0e88e"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634621"
+
+[tools."github:stacklok/toolhive"."platforms.macos-x64"]
+checksum = "sha256:a8df0c74fdbc04c72e802bd8000bfcd340914f1eeae3576e19e2b1698aea0dd8"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634620"
+
+[tools."github:stacklok/toolhive"."platforms.windows-x64"]
+checksum = "sha256:a0191fe69007daf6a3b63abc89efae9421451d99b4d4e948931ccf91eb928231"
+url = "https://github.com/stacklok/toolhive/releases/download/v0.46.0/toolhive_0.46.0_windows_amd64.zip"
+url_api = "https://api.github.com/repos/stacklok/toolhive/releases/assets/532634619"
+
+[[tools.go]]
+version = "1.24.13"
+backend = "core:go"
+specifiers = ["1.24.13"]
+
+[tools.go."platforms.linux-arm64"]
+checksum = "sha256:74d97be1cc3a474129590c67ebf748a96e72d9f3a2b6fef3ed3275de591d49b3"
+url = "https://dl.google.com/go/go1.24.13.linux-arm64.tar.gz"
+
+[tools.go."platforms.linux-arm64-musl"]
+checksum = "sha256:74d97be1cc3a474129590c67ebf748a96e72d9f3a2b6fef3ed3275de591d49b3"
+url = "https://dl.google.com/go/go1.24.13.linux-arm64.tar.gz"
+
+[tools.go."platforms.linux-x64"]
+checksum = "sha256:1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"
+url = "https://dl.google.com/go/go1.24.13.linux-amd64.tar.gz"
+
+[tools.go."platforms.linux-x64-musl"]
+checksum = "sha256:1fc94b57134d51669c72173ad5d49fd62afb0f1db9bf3f798fd98ee423f8d730"
+url = "https://dl.google.com/go/go1.24.13.linux-amd64.tar.gz"
+
+[tools.go."platforms.macos-arm64"]
+checksum = "sha256:f282d882c3353485e2fc6c634606d85caf36e855167d59b996dbeae19fa7629a"
+url = "https://dl.google.com/go/go1.24.13.darwin-arm64.tar.gz"
+
+[tools.go."platforms.macos-x64"]
+checksum = "sha256:6cc6549b06725220b342b740497ffd24e0ebdcef75781a77931ca199f46ad781"
+url = "https://dl.google.com/go/go1.24.13.darwin-amd64.tar.gz"
+
+[tools.go."platforms.windows-x64"]
+checksum = "sha256:40b16bc8f00540a2cb02dff4de72b73e966fdd8d65f95e33d8e4080b48a2459a"
+url = "https://dl.google.com/go/go1.24.13.windows-amd64.zip"
+
 [[tools.hk]]
 version = "1.58.1"
 backend = "aqua:jdx/hk"
@@ -600,6 +668,41 @@ url = "https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip"
 version = "5.9.3"
 backend = "npm:typescript"
 specifiers = ["5.9.3"]
+
+[[tools.pipx]]
+version = "1.17.2"
+backend = "aqua:pypa/pipx"
+specifiers = ["1.17.2"]
+
+[tools.pipx."platforms.linux-arm64"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
+
+[tools.pipx."platforms.linux-arm64-musl"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
+
+[tools.pipx."platforms.linux-x64"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
+
+[tools.pipx."platforms.linux-x64-musl"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
+
+[tools.pipx."platforms.macos-arm64"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
+
+[tools.pipx."platforms.macos-x64"]
+checksum = "sha256:31d517b7afebf55d3b597d613c735389068a973a54712a50641845cf2cb2bb1d"
+url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
+url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
 
 [[tools."pipx:graphifyy"]]
 version = "0.9.55"

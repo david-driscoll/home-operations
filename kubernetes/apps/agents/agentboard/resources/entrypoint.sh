@@ -140,6 +140,42 @@ echo "==> mise install (config: $${MISE_CONFIG_DIR}/config.toml)"
 mise trust "$${MISE_CONFIG_DIR}/config.toml"
 mise install
 
+# THEN THE REPO'S OWN TOOLS, which are a DIFFERENT SET from the one above.
+# ../resources/mise.toml pins the ~11 things the pod itself needs to boot
+# (node, kubectl, pulumi, gh, claude code, agentboard). The checkout's
+# .config/mise.toml pins the ~33 this repo's work needs -- hk, flate, biome,
+# yamllint, actionlint, shellcheck, typos, python, graphify and the rest.
+# Only the first was ever installed, and the gap was invisible because both
+# configs are trusted, so `mise ls --current` lists all 33 and marks most
+# "(missing)" rather than erroring.
+#
+# What that cost, concretely: `hk install --mise` in the repo's
+# [hooks].postinstall could never run, so NO git hooks were registered and
+# every check in .config/hk.pkl was inactive in this pod -- detect-private-key
+# and check-added-large-files included, in a repo whose CLAUDE.md warns never
+# to commit plaintext credentials. `graphify hook install` failed the same way,
+# and both printed a bare `not found` + exit 127 on every `mise install` an
+# agent ran for some unrelated tool.
+#
+# THE WHOLE SET, not a curated subset. A hand-picked "just what the hooks need"
+# list is a second inventory that drifts from .config/mise.toml the first time
+# a hk step gains a tool -- and lockfile/pin drift is already this estate's
+# recurring bug (see that file's `locked = true` note). One list cannot drift.
+# The cost is a slower FIRST boot and a few GB; both are one-time, because
+# ~/.local/share/mise is on the /root PVC and a restart with tools already
+# there is a no-op.
+#
+# NON-FATAL on purpose. This script is `set -euo pipefail`, and a bare
+# `mise install` here would turn one bad pin -- a yanked release, an upstream
+# 404, a lockfile that Renovate bumped without regenerating -- into a pod that
+# cannot start at all. A pod with an incomplete toolchain is recoverable from
+# the terminal; a pod stuck in CrashLoopBackOff is not.
+echo "==> mise install (repo: /root/home-operations/.config/mise.toml)"
+if ! (cd /root/home-operations && mise install); then
+  echo "WARNING: repo mise install failed; some tooling and git hooks may be missing." >&2
+  echo "         Investigate with: cd /root/home-operations && mise ls --current" >&2
+fi
+
 # NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
 # used to be
 #
