@@ -1,4 +1,7 @@
-node_modules/
+# Bare pattern, not `node_modules/`: a worktree gets node_modules as a symlink
+# (see the `worktree` block in .claude/settings.json), and a trailing slash
+# matches only real directories -- so every worktree showed `?? node_modules`.
+node_modules
 .tmp/
 .tmp/
 
@@ -94,3 +97,18 @@ graphify-out/cache/
 # So they are ignored rather than retained -- keeping N of them would just move
 # the cliff, at 24 MiB a step.
 graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
+# Session worktrees (`.claude/worktrees/<name>/`).
+#
+# `.claude/` is tracked -- settings.json, the agent charters and the command
+# catalog all live there -- so the worktree directory needs a rule of its own.
+# Since #1506 a bare `claude` in an agentboard pane gets `--worktree`, and each
+# one is a full second checkout of this repo nested inside it. Left untracked
+# they bury real edits in `git status`, which is exactly the signal the shared
+# checkout depends on to notice another session; committed, they would be the
+# repo inside itself.
+#
+# They are disposable by design: the `worktree` block in `.claude/settings.json`
+# branches each from origin/main and symlinks node_modules, so nothing in one is
+# worth keeping that is not already on a branch.
+.claude/worktrees/
