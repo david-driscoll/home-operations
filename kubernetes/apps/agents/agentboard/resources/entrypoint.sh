@@ -1,4 +1,35 @@
 #!/usr/bin/env bash
+#
+# SHELLCHECK CANNOT FULLY READ THIS FILE, and the three codes below are off
+# for one specific, provable reason -- not as a severity floor. Every other
+# rule, including the rest of the error and warning tiers, stays on, matching
+# ../../../../.shellcheckrc's stance of justifying each disable at its site.
+#
+# This file is a TEMPLATE, not a script as committed. It is delivered through
+# a ConfigMap and Flux runs envsubst over it (../ks.yaml `postBuild`), so
+# every shell variable is written `$$VAR` and only becomes `$VAR` at apply
+# time. shellcheck analyses the pre-substitution text, where `$$VAR` parses as
+# `$$` (the PID) followed by the literal string `VAR`. That single
+# misreading produces all three:
+#
+#   SC2034  "appears unused" -- the assignment is seen, the `$$VAR` uses are
+#           not, so every variable here looks write-only.
+#   SC2157  "argument to -n is always true due to literal strings" -- `[ -n
+#           "$$X" ]` looks like a non-empty literal rather than a variable.
+#   SC2170  "invalid number for -gt" -- `[ "$$N" -gt 0 ]` looks like a
+#           comparison against text.
+#
+# Rewriting the tests as `case` would silence two of them but not SC2034, and
+# would trade readable code for appeasing a parser that is reading the wrong
+# document. What actually validates this file is running shellcheck (and
+# `bash -n`) against the SUBSTITUTED form:
+#
+#   sed 's/\$\$/$/g' entrypoint.sh | shellcheck -
+#
+# Do that after editing. The other `$$` templates in this repo
+# (kubernetes/apps/kube-system/openbao-replica/resources/) need no directive
+# only because none of them puts `$$VAR` inside a `[ ... ]` test.
+# shellcheck disable=SC2034,SC2157,SC2170
 # Bootstrap + entrypoint for the agentboard pod, run as `command` against a
 # STOCK debian:13-slim image (see ../helmrelease.yaml) -- there is no
 # agentboard-specific Dockerfile or CI build in this repo. That is a
@@ -109,16 +140,41 @@ echo "==> mise install (config: $${MISE_CONFIG_DIR}/config.toml)"
 mise trust "$${MISE_CONFIG_DIR}/config.toml"
 mise install
 
-# tmux needs a running server before anything can attach a window to it.
-# `new-session -d` backgrounds it; agentboard polls for windows, it does not
-# start the server itself. The window is a bare login shell -- see the block
-# below for why nothing is sent to it.
-if ! tmux has-session -t main 2>/dev/null; then
-  tmux new-session -d -s main -n shell
-fi
+# NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
+# used to be
+#
+#   if ! tmux has-session -t main 2>/dev/null; then
+#     tmux new-session -d -s main -n shell
+#   fi
+#
+# carrying the comment "agentboard polls for windows, it does not start the
+# server itself". That premise was wrong, and believing it cost the UI its
+# kill button.
+#
+# WHAT IT COST. agentboard tags every window it can see `managed` or
+# `external` and REFUSES to kill an external one -- "Cannot kill external
+# sessions". Classification is by tmux SESSION NAME: anything under
+# `agentboard` is managed, anything else is not. `main` was ours, so every
+# window in it was permanently unkillable from the phone. Ten failed attempts
+# are recorded in ~/.agentboard/agentboard.log.
+#
+# WHY THE PREMISE WAS WRONG. Verified 2026-09-06 rather than reasoned about:
+# agentboard was run against a completely empty TMUX_TMPDIR -- its own HOME
+# and port as well, so the live server was never touched -- and it started a
+# tmux server there on its own, creating its `agentboard` session in it. The
+# bootstrap was never load-bearing. What it actually did was guarantee that
+# the first session on the socket was one agentboard would not manage.
+#
+# The giveaway had been sitting in ~/.agentboard/tmux-server.pid the whole
+# time: it pointed at the pid of OUR `tmux new-session`, not at a server
+# agentboard had spawned. Adoption, not creation -- which reads identically
+# from the outside until you take the bootstrap away.
+#
+# A terminal now opens into agentboard's own root window, in its own session,
+# which it will kill on request like any other.
 
 
-# NOTHING IS STARTED IN THAT WINDOW ON PURPOSE. This used to be
+# NO CLAUDE SESSION IS AUTO-STARTED FROM SCRATCH, EITHER. This used to be
 #
 #   tmux send-keys -t main:claude "mise exec -- claude" C-m
 #
@@ -156,17 +212,17 @@ fi
 # both. That block warns against starting a BRAND-NEW session every boot,
 # minting a fresh id and orphaning the transcript that mattered. This starts
 # no new sessions: it reattaches to specific existing ids and does nothing
-# when there are none, so a fresh PVC still comes up with just `shell`.
+# when there are none, so a fresh PVC still comes up with nothing but
+# agentboard's own root window.
 #
-# WHY THE WINDOWS GO IN `agentboard` AND NOT `main`, which is the whole reason
-# this runs down here in the background instead of next to the new-session
-# call above. agentboard tags every window it can see as `managed` or
-# `external`, and REFUSES to kill an external one -- "Cannot kill external
-# sessions". Classification is by tmux SESSION NAME: anything under
-# `agentboard` is managed, anything else is not. `main` is ours, created above
-# only so a tmux server exists, so every window in it is external and
-# permanently unkillable from the UI. Ten failed kill attempts in
-# ~/.agentboard/agentboard.log say so.
+# WHY THE WINDOWS GO IN `agentboard`, which is the whole reason this runs down
+# here in the background rather than earlier in this script. agentboard tags
+# every window it can see as `managed` or `external`, and REFUSES to kill an
+# external one -- "Cannot kill external sessions". Classification is by tmux
+# SESSION NAME: anything under `agentboard` is managed, anything else is not.
+# Ten failed kill attempts in ~/.agentboard/agentboard.log are what surfaced
+# this, back when the bootstrap above still created a `main` session for these
+# windows to land in.
 #
 # Verified live 2026-09-05 rather than assumed: a window created with a plain
 # `tmux new-window -t agentboard` -- no agentboard involvement at all -- came
