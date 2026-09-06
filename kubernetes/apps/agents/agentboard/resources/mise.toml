@@ -20,6 +20,21 @@
 # failure under `locked = true`, not a silent live-resolve.
 [tools]
 node = "24.20.0"
+# Pinned here, in the POD'S GLOBAL config, rather than only in
+# ../../../../../.config/mise.toml -- and the distinction is the whole point.
+# A mise shim resolves its version from the config covering the CURRENT
+# directory, so a repo-only pin leaves `python3` working inside the checkout
+# and dead everywhere else. An agent doing scratch work in /tmp gets
+# "No version is set for shim: python3" and reasonably concludes Python is
+# not installed; that misread cost a triage session on 2026-09-06.
+#
+# `mise use -g` cannot fix this from inside the pod: /root/.config/mise/config.toml
+# is THIS file, mounted read-only from a ConfigMap (../helmrelease.yaml), so
+# the global pin has to be committed here.
+#
+# Version tracks .config/mise.toml's `python` exactly, per this file's header
+# rule about keeping shared tools in step.
+python = "3.14.7"
 gh = "2.100.0"
 kubectl = "1.37.0"
 pulumi = "3.261.0"
