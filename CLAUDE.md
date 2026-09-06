@@ -47,8 +47,11 @@ Trust is no longer the likely half of that in an agentboard pod: `trusted_config
 in [`agentboard/resources/mise.toml`](kubernetes/apps/agents/agentboard/resources/mise.toml)
 covers `/root`, and trust inherits by path, so the checkout and every worktree
 under it are trusted with nobody at the terminal. A fresh clone elsewhere still
-needs `mise trust` once. What remains common everywhere is the second half: the
-pod image ships only some of the pins, and the rest show as `(missing)`.
+needs `mise trust` once. The pod also installs this config's pins at boot, not
+just its own -- `entrypoint.sh` runs `mise install` twice, once per config -- so
+a tool being `(missing)` here now means the boot install failed or the pin was
+added since, rather than the pod never having tried. Check `mise ls --current`
+either way; that is what tells you which it is.
 
 So before reporting a tool as unavailable:
 

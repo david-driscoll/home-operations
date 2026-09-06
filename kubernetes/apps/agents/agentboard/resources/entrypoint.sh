@@ -140,6 +140,42 @@ echo "==> mise install (config: $${MISE_CONFIG_DIR}/config.toml)"
 mise trust "$${MISE_CONFIG_DIR}/config.toml"
 mise install
 
+# THEN THE REPO'S OWN TOOLS, which are a DIFFERENT SET from the one above.
+# ../resources/mise.toml pins the ~11 things the pod itself needs to boot
+# (node, kubectl, pulumi, gh, claude code, agentboard). The checkout's
+# .config/mise.toml pins the ~33 this repo's work needs -- hk, flate, biome,
+# yamllint, actionlint, shellcheck, typos, python, graphify and the rest.
+# Only the first was ever installed, and the gap was invisible because both
+# configs are trusted, so `mise ls --current` lists all 33 and marks most
+# "(missing)" rather than erroring.
+#
+# What that cost, concretely: `hk install --mise` in the repo's
+# [hooks].postinstall could never run, so NO git hooks were registered and
+# every check in .config/hk.pkl was inactive in this pod -- detect-private-key
+# and check-added-large-files included, in a repo whose CLAUDE.md warns never
+# to commit plaintext credentials. `graphify hook install` failed the same way,
+# and both printed a bare `not found` + exit 127 on every `mise install` an
+# agent ran for some unrelated tool.
+#
+# THE WHOLE SET, not a curated subset. A hand-picked "just what the hooks need"
+# list is a second inventory that drifts from .config/mise.toml the first time
+# a hk step gains a tool -- and lockfile/pin drift is already this estate's
+# recurring bug (see that file's `locked = true` note). One list cannot drift.
+# The cost is a slower FIRST boot and a few GB; both are one-time, because
+# ~/.local/share/mise is on the /root PVC and a restart with tools already
+# there is a no-op.
+#
+# NON-FATAL on purpose. This script is `set -euo pipefail`, and a bare
+# `mise install` here would turn one bad pin -- a yanked release, an upstream
+# 404, a lockfile that Renovate bumped without regenerating -- into a pod that
+# cannot start at all. A pod with an incomplete toolchain is recoverable from
+# the terminal; a pod stuck in CrashLoopBackOff is not.
+echo "==> mise install (repo: /root/home-operations/.config/mise.toml)"
+if ! (cd /root/home-operations && mise install); then
+  echo "WARNING: repo mise install failed; some tooling and git hooks may be missing." >&2
+  echo "         Investigate with: cd /root/home-operations && mise ls --current" >&2
+fi
+
 # NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
 # used to be
 #
@@ -269,6 +305,34 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
   db=/root/.agentboard/agentboard.db
   [ -f "$$db" ] || exit 0
 
+  # ONLY IN-PROGRESS SESSIONS. A session the UI has moved to History is one
+  # someone has finished with, and resurrecting it every boot is noise -- worse,
+  # it competes for the N slots with the sessions that were actually mid-task.
+  #
+  # THE PREDICATE IS agentboard's OWN, not one invented here. Read off the
+  # prepared statements in its bundle (0.4.27, `bin/agentboard`), which is also
+  # what the sidebar groups by:
+  #
+  #   active       current_window IS NOT NULL
+  #   hibernating  current_window IS NULL AND is_pinned = 1
+  #   history      current_window IS NULL AND is_pinned = 0
+  #
+  # So `NOT (current_window IS NULL AND is_pinned = 0)` is exactly "not in
+  # History", and it covers BOTH remaining states -- which matters, because
+  # which one a restarted session is sitting in is a RACE. This block runs the
+  # moment `tmux has-session -t agentboard` succeeds, and agentboard's own
+  # startup reconcile -- the pass that notices the pre-restart `current_window`
+  # values point at windows the dead tmux server took with it, and rewrites them
+  # to hibernating -- may or may not have run yet. Before it: stale
+  # `current_window`, non-NULL, kept. After it: `is_pinned = 1`, kept. Either
+  # way the row survives the filter and the answer does not depend on who won.
+  #
+  # `is_pinned` is a hibernation marker here, NOT the UI's pin: agentboard sets
+  # it on any window that goes away on its own (`orphanSession` defaults to
+  # `hibernate: true`) and clears it on the two paths that mean "I am done with
+  # this" -- Move to History, and killing the window from the UI. That second one
+  # is why a killed session stays dead across a restart instead of coming back.
+  #
   # Read-only, and tab-separated so a display_name with spaces survives.
   DB="$$db" N="$$AGENTBOARD_RESUME_SESSIONS" bun -e '
     import { Database } from "bun:sqlite";
@@ -277,6 +341,7 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
     const rows = db.query(
       "SELECT session_id, display_name, project_path FROM agent_sessions " +
       "WHERE project_path IS NOT NULL AND project_path != \x27\x27 " +
+      "AND NOT (current_window IS NULL AND is_pinned = 0) " +
       "ORDER BY last_activity_at DESC LIMIT ?1").all(n);
     for (const r of rows) console.log([r.session_id, r.display_name, r.project_path].join("\t"));
   ' 2>/dev/null | while IFS="$$(printf '\t')" read -r id name path; do
