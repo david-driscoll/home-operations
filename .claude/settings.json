@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/david/.local/share/mise/installs/pipx-graphifyy/0.9.50/bin/graphify hook-guard search"
+            "command": "mise x -- graphify hook-guard search"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/david/.local/share/mise/installs/pipx-graphifyy/0.9.50/bin/graphify hook-guard read"
+            "command": "mise x -- graphify hook-guard read"
           }
         ]
       }
