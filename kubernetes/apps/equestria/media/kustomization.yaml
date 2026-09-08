@@ -3,6 +3,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  # Two arr-mcp instances, not one: its schema refuses a config naming both
+  # `jellyfin` and `plex`, and the estate runs both. Each pairs with the Seerr
+  # that actually front-ends its media server -- which is NOT the pairing the
+  # two Seerr hostnames suggest. See each app's externalsecret.yaml header.
+  - ./arr-mcp-jellyfin/ks.yaml
+  - ./arr-mcp-plex/ks.yaml
   - ./bazarr/ks.yaml
   # - ./emby/ks.yaml
   - ./jellyfin/ks.yaml

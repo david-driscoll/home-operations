@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app arr-mcp-plex
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/equestria/media/arr-mcp-plex
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # No `postgres` -- arr-mcp keeps audit.db and its log ring buffer in
+    # SQLite under /config, which is what the volsync PVC is for. No
+    # `truenas-volumes` either: it never touches the media, only the APIs in
+    # front of it.
+    - ../../../../components/volsync
+    - ../../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # 1Gi rather than the 5Gi default: the whole volume is one config.yaml,
+      # audit.db and a log ring buffer. Note VOLSYNC_CAPACITY only ever goes
+      # UP -- lowering it later makes Flux delete and recreate the PVC, which
+      # destroys the audit trail (components/volsync/AGENTS.md).
+      VOLSYNC_CAPACITY: 1Gi

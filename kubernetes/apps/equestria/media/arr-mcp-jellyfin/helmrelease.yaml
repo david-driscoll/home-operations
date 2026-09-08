@@ -1,0 +1,211 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# arr-mcp -- ONE MCP server for the whole media stack, rather than one per
+# service. The Jellyfin half of a matched pair; ../arr-mcp-plex is the other.
+#
+# WHY TWO DEPLOYMENTS AND NOT ONE. arr-mcp's config schema REFUSES a config
+# naming both `jellyfin` and `plex` (src/config/schema.ts, the `superRefine` on
+# ServicesSchema): `get_library`'s per-user join asks whether "the other side"
+# can see a file, and with two media servers that question has no single
+# answer. The estate runs both, so it gets two arr-mcp instances -- exactly the
+# way ../seerr and ../jellyseerr are two copies of one image for the same
+# reason. Each pairs its media server with the Seerr that actually front-ends
+# it (see ./externalsecret.yaml), and both read the same five *arrs.
+#
+# WHY IT LIVES IN `equestria` AND NOT `agents`. It talks to ten services in
+# this namespace over plain HTTP. The MCP SURFACE is what moves to the agent
+# estate, via an MCPRemoteProxy in
+# kubernetes/apps/agents/agent-tools-servers/arr-mcp.yaml -- the same split
+# ../../../agents/agent-tools-servers/homelable.yaml makes and for the same
+# reason.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app arr-mcp-jellyfin
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+
+        initContainers:
+          # WHY config.yaml IS COPIED IN RATHER THAN MOUNTED.
+          #
+          # arr-mcp keeps everything -- credentials, audit.db, the log ring
+          # buffer -- in one directory, and its entrypoint runs
+          # `chown -R "$PUID:$PGID" /config` under `set -e`. A Secret projected
+          # straight onto /config/config.yaml is read-only, so that chown fails
+          # and the container never starts. (It only chowns as root, and this
+          # pod runs as 568 -- but the non-root branch then needs the file
+          # writable anyway, because `writeConfigAtomic` renames a temp file
+          # over it.)
+          #
+          # So the Secret lands on its own mount and is copied onto the PVC on
+          # every start. What that buys, beyond starting at all:
+          #
+          #   - GIT AND OPENBAO STAY AUTHORITATIVE. The config UI can save over
+          #     config.yaml -- it is a real editor, and arr-mcp is built around
+          #     it -- and any such edit is reverted at the next pod start. That
+          #     is the intended direction: change ./externalsecret.yaml, not
+          #     the browser.
+          #   - audit.db AND THE LOG BUFFER SURVIVE. They are written next to
+          #     config.yaml in the same directory, and arr-mcp's own security
+          #     notes call a trail that vanishes on restart "not a trail". The
+          #     PVC (../../../../components/volsync) is what keeps them.
+          #
+          # Same image as the app so there is one tag and one Renovate entry,
+          # not two. `install -m 0600` rather than `cp`: the file holds the
+          # bearer token and every service API key, and 0600 is the mode
+          # arr-mcp itself writes it with.
+          seed-config:
+            image: &image
+              repository: ghcr.io/bardesss/arr-mcp
+              tag: 1.21.2@sha256:6f1fbd06fac4a1cadfb09c2879ce18e01bcb74d266fe4a43bb42fb7330c72913
+              pullPolicy: IfNotPresent
+            command: ["/usr/bin/install"]
+            args: ["-m", "0600", "/config-source/config.yaml", "/config/config.yaml"]
+            securityContext: &securityContext
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+
+        containers:
+          app:
+            image: *image
+            env:
+              TZ: ${TIMEZONE}
+              # Both documented in the image's own Dockerfile. ARR_MCP_PORT is
+              # read by src/index.ts AND by the image's HEALTHCHECK, so the two
+              # cannot drift; the probes below use the same anchor.
+              ARR_MCP_CONFIG_DIR: /config
+              ARR_MCP_PORT: &port 6060
+              # No PUID/PGID. Those exist for the root branch of
+              # docker-entrypoint.sh, which chowns /config and then drops
+              # privileges with gosu. This pod already starts as 568 and never
+              # sees that branch -- `fsGroup` under defaultPodOptions is what
+              # makes /config writable instead. Setting them here would be
+              # inert and would read as if it were doing something.
+            probes:
+              # `/healthz` answers 200 even when the configuration is invalid,
+              # reporting `degraded` in the body. That is deliberate upstream:
+              # a container healthcheck that restarts on a bad config would
+              # restart-loop the very process serving the repair page that
+              # fixes it. So a probe on this path says "the process is up", not
+              # "the config parses" -- for the latter watch the MCPRemoteProxy
+              # in ../../../agents/agent-tools-servers/arr-mcp.yaml, whose
+              # /mcp answers 503 while the config is broken.
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 20
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 25m
+                memory: 128Mi
+              limits:
+                # better-sqlite3 plus the response caches. The IMDb dataset --
+                # the one thing here with a real memory appetite -- is off (no
+                # `metadata:` block in ./externalsecret.yaml's config).
+                memory: 512Mi
+
+    defaultPodOptions:
+      securityContext:
+        # 568 matches every other media app here and, more to the point,
+        # VOLSYNC_PUID/VOLSYNC_PGID's defaults in
+        # ../../../../components/volsync -- so a restored snapshot arrives
+        # owned by the uid that has to read it.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /config
+      # globalMounts, so it lands in the init container that reads it. It also
+      # lands in the app container, which ignores it -- no extra exposure,
+      # since /config/config.yaml is a byte-for-byte copy of the same file.
+      config-source:
+        type: secret
+        name: ${APP}-config
+        globalMounts:
+          - path: /config-source
+            readOnly: true
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
