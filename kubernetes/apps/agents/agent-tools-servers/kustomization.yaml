@@ -58,3 +58,6 @@ resources:
   - ./microsoft-docs.yaml
   - ./home-assistant.yaml
   - ./homelable.yaml
+  # TWO remote proxies in one file, one per media server -- arr-mcp's schema
+  # refuses a config naming both jellyfin and plex, and the estate runs both.
+  - ./arr-mcp.yaml

@@ -1,0 +1,199 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# arr-mcp's OWN bearer token, reused -- NOT a new credential. The same OpenBao
+# path the deployment itself reads
+# (kubernetes/apps/equestria/media/arr-mcp-plex/externalsecret.yaml renders it
+# into config.yaml's `auth.bearer_token`); this pulls the same property out for
+# the header the proxy below sends.
+#
+# The two halves MUST stay equal. arr-mcp compares the presented token against
+# `auth.bearer_token` on EVERY request -- read from the runtime, not captured
+# at startup, so a rotation takes effect on the next call rather than the next
+# restart. They read the same field of the same item, so a rotation reaches
+# both; a rotation that reached only one would be a 401 on every tool call.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-arr-mcp-plex
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-arr-mcp-plex
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        token: "{{ .bearer_token }}"
+  data:
+    - secretKey: bearer_token
+      remoteRef:
+        key: clusters/equestria/apps/arr-mcp-plex/bearer-token
+        property: token
+
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The Jellyfin instance's token. Same reasoning as the Plex one above, and a
+# SEPARATE credential on purpose: each arr-mcp generates and owns its own, so
+# revoking one does not touch the other.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-arr-mcp-jellyfin
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-arr-mcp-jellyfin
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        token: "{{ .bearer_token }}"
+  data:
+    - secretKey: bearer_token
+      remoteRef:
+        key: clusters/equestria/apps/arr-mcp-jellyfin/bearer-token
+        property: token
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# Outgoing auth for the proxy below, and it is NOT optional the way an unwired
+# `externalAuthConfigRef` usually is.
+#
+# `/mcp` requires a bearer token unconditionally. arr-mcp has no
+# unauthenticated mode and no "trusted network" bypass -- deliberately, because
+# (its words) "LAN-only is a network assumption rather than a security control".
+# Without this the proxy gets a 401 on every call and stays Running while
+# serving nothing, the same failure ./home-assistant.yaml records.
+#
+# `bearerToken`, not ./homelable.yaml's `headerInjection`: this endpoint reads a
+# real `Authorization: Bearer` header (`presentedToken` in src/app.ts), so the
+# purpose-built type applies. The `?token=` query form exists too
+# (`allow_token_in_url`) and is deliberately NOT used -- it is off in the
+# rendered config, and it would put a working credential into every access log
+# in front of this.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: arr-mcp-plex
+spec:
+  type: bearerToken
+  bearerToken:
+    tokenSecretRef:
+      name: toolhive-arr-mcp-plex
+      key: token
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: arr-mcp-jellyfin
+spec:
+  type: bearerToken
+  bearerToken:
+    tokenSecretRef:
+      name: toolhive-arr-mcp-jellyfin
+      key: token
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `MCPRemoteProxy` -- see ./microsoft-docs.yaml's header for what that CRD is.
+#
+# TWO SERVERS, NOT ONE, and that is upstream's constraint rather than a choice
+# made here: arr-mcp's config schema REFUSES a config naming both `jellyfin`
+# and `plex`, because `get_library`'s per-user join needs exactly one media
+# server to ask "can the other side see this file?" of. The estate runs both,
+# so it runs two arr-mcps. They share the five *arrs and the two download
+# clients and differ only in their media server and the Seerr that front-ends
+# it. See kubernetes/apps/equestria/media/arr-mcp-plex/externalsecret.yaml.
+#
+# WHY REMOTE PROXIES AND NOT MCPServers RUNNING THE IMAGE HERE, the way
+# ./degoog.yaml runs degoog's own sidecar -- the same question ./homelable.yaml
+# answers, with a different reason:
+#
+#   - arr-mcp is a stateful appliance, not a stateless surface. It owns a
+#     config volume holding every service credential, an `audit.db` that is
+#     supposed to outlive restarts, and a config UI that is the intended way to
+#     operate it. Running it here would mean a PVC, a route and an Authentik
+#     provider in `agents` for something whose entire subject matter is in
+#     `equestria`.
+#   - An MCPServer's `volumes` field takes hostPath only, and its `secrets`
+#     field takes env vars only -- neither can carry a config FILE, which is
+#     arr-mcp's sole configuration interface. That would leave `podTemplateSpec`
+#     re-implementing what the app-template HelmRelease already expresses.
+#
+# So the container stays next to the ten services it reads, and only the MCP
+# SURFACE moves here -- clients arrive through ../agent-tools-mcp's
+# VirtualMCPServer, one hostname and one OIDC surface, rather than a bearer
+# token handed to each of them.
+#
+# `http://` and a `.svc.cluster.local` address, not the public name: this
+# traffic never leaves the cluster network.
+#
+# `allowPrivateEndpoint` is REQUIRED to say that -- MCPRemoteProxy runs an SSRF
+# guard over `remoteUrl` that blocks any hostname ending in `cluster.local`,
+# and leaving the flag off is not a soft failure but an outright `Failed`. See
+# ./homelable.yaml's header for the full account of that guard.
+#
+# EXPECTED TO BE UNREACHABLE 02:00-09:00. The backend carries no
+# `downscaler/exclude`, so it sheds with the `equestria` namespace along with
+# every service it reads (docs/cluster-consolidation/24-power-states.md). These
+# proxies stay up through the window and cannot reach it; a tool call in that
+# window fails rather than answering from a stale cache, which is the honest
+# outcome.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolhive-arr-mcp-plex
+spec:
+  remoteUrl: http://arr-mcp-plex.equestria.svc.cluster.local:6060/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  externalAuthConfigRef:
+    name: arr-mcp-plex
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# The Jellyfin half. See the Plex proxy above for everything that applies to
+# both.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolhive-arr-mcp-jellyfin
+spec:
+  remoteUrl: http://arr-mcp-jellyfin.equestria.svc.cluster.local:6060/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  externalAuthConfigRef:
+    name: arr-mcp-jellyfin
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

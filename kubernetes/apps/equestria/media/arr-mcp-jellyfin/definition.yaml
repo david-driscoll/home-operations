@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: arr-mcp (Jellyfin)
+  category: Media Management
+  description: One MCP server for the whole Jellyfin media stack
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyfin.svg
+  access_policy:
+    groups:
+      # The config UI shows every configured service's API key and can change
+      # them. Same group the *arrs themselves use -- narrower would be
+      # defensible, wider is not.
+      - media-managers
+  authentik:
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This carries NO `downscaler/exclude`, so it sheds with the namespace --
+      # deliberately, because every service it reads sheds too and an arr-mcp
+      # with nothing to talk to answers nothing. The MCPRemoteProxy in
+      # kubernetes/apps/agents/agent-tools-servers/arr-mcp.yaml stays up
+      # through the window and cannot reach this; that is expected.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
