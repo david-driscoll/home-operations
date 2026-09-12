@@ -197,7 +197,14 @@ spec:
       dns:
         controller: *app
         type: ClusterIP
-        clusterIP: "${TECHNITIUM_CLUSTER_IP}"
+        # The `:=` default is for OFFLINE rendering, not for the cluster. CI's
+        # flate cannot decrypt cluster-secrets, so a bare substitution renders
+        # empty, kustomize re-emits it as null, and app-template's schema
+        # rejects the release (`/service/dns/clusterIP: got null, want string`)
+        # -- that failed the first push of this change. In the cluster the
+        # secret always resolves and the default is never used. It is the same
+        # address as the secret; change both together.
+        clusterIP: "${TECHNITIUM_CLUSTER_IP:=10.196.0.53}"
         ports:
           dns-udp:
             port: 53
