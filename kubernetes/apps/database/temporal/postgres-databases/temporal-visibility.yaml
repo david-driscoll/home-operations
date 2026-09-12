@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/postgresql.cnpg.io/database_v1.json
+#
+# Temporal's visibility store -- the second of the two databases every Temporal
+# cluster needs. `temporal` (rendered by components/postgres) holds the
+# workflow/history persistence; this one holds the list-and-filter index that
+# backs `ListWorkflowExecutions` and the UI's search.
+#
+# It exists as a real database rather than a schema because Temporal addresses
+# the two through separate `datastores` entries in config_template.yaml and
+# applies a DIFFERENT schema to each -- and the server opens both at startup
+# and creates neither. So this has to exist before the pod does.
+#
+# With ENABLE_ES=false (see ../externalsecret.yaml) this is the visibility
+# store; Elasticsearch would replace it and is deliberately not deployed.
+#
+# It uses the app's own role and the app's own credential: POSTGRES_USER and
+# POSTGRES_PWD are shared by both datastores and only the database name differs.
+# There is no second role, no second OpenBao static role, and no second password.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: ${APP}-visibility
+  annotations:
+    # Nothing in this component family is ever pruned; see
+    # kubernetes/components/postgres/AGENTS.md.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+    # ⚠️ NOT OPTIONAL. The postgres-backup CronJob enumerates these objects and,
+    # for each, reads the credential Secret this annotation names -- defaulting
+    # to `<database>-postgres`, which for an extra database does not exist.
+    # Without this the nightly run fails on `temporal-visibility-postgres`, and
+    # one failed database exits the whole job non-zero.
+    driscoll.dev/backup-credentials: ${APP}-postgres
+spec:
+  cluster:
+    name: postgres
+  name: ${APP}-visibility
+  # The app's own login role -- it already exists, components/postgres renders
+  # it. Temporal authenticates as this role for both datastores, so it must own
+  # this database too.
+  owner: ${APP}
+  ensure: present
+  allowConnections: true
+  # ⚠️ `ensure: absent` DROPS the database. Deleting this file is the safe way
+  # to stop managing it; the reclaim policy then leaves the live database alone.
+  databaseReclaimPolicy: retain
+  # ONLY `public`, for the reason spelled out at length in
+  # kubernetes/components/postgres/database/database.yaml: a schema named after
+  # the role arms the dormant `$user` element of the default search_path and
+  # shadows public. Temporal's schema files are all unqualified DDL, so this is
+  # load-bearing rather than stylistic.
+  schemas:
+    - ensure: present
+      name: public
+      owner: ${APP}

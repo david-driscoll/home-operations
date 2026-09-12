@@ -1,0 +1,408 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# Deliberately app-template rather than the upstream chart at
+# gitroomhq/postiz-helmchart. That chart bundles its own PostgreSQL and Redis
+# subcharts, exposes the app through an Ingress, and pins `image.tag: latest` --
+# every one of which fights a convention this repo enforces elsewhere
+# (components/postgres, the shared valkey, Gateway API, digest-pinned images).
+# Adopting it would mean overriding all four and still inheriting its release
+# cadence, so the container is wired up directly instead.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app postiz
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the controller, which is the only place it does anything. This
+          # is what makes the 30-day OpenBao password rotation reach the pod --
+          # DATABASE_URL comes from postiz-env via envFrom and is read once at
+          # boot. See components/postgres/AGENTS.md.
+          reloader.stakater.com/auto: "true"
+          # ⚠️ Low Power keep-list -- NOT optional for this app. `equestria` is
+          # the shed-list namespace: `downscaler/force-downtime` scales every
+          # non-excluded workload to 0, and the scheduled shed runs 02:00-09:00.
+          # This pod is the scheduler (RUN_CRON) and the Temporal worker, so a
+          # shed window is not a pause -- it is seven hours in which every post
+          # due to publish silently does not, and a missed publish window
+          # cannot be recovered by waking back up.
+          # Per-workload exclude beats the namespace toggle (scaler.py
+          # define_scope). docs/cluster-consolidation/24-power-states.md
+          downscaler/exclude: "true"
+        replicas: 1
+        # Single replica, and not only because of the ReadWriteOnce volume:
+        # RUN_CRON is true in postiz-env, so this process owns the scheduler.
+        # A second one would double-fire every scheduled post.
+        #
+        # Recreate for the same reason -- a rolling update would briefly run
+        # two schedulers, and would deadlock on the PVC regardless.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/gitroomhq/postiz-app
+              # v2.23.0 (2026-08-04). Anything from v2.12.0 onward requires the
+              # Temporal cluster this app dependsOn; v2.11.x was the last
+              # BullMQ-on-Redis release. Do not roll back across that line
+              # without also reading apps/database/temporal.
+              tag: v2.23.0@sha256:785f97312f66a347fb96cdccc4ded5a33ced69a672c89a9adc8054e7d6a21dc5
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            securityContext:
+              allowPrivilegeEscalation: false
+              # The image builds and serves a Next.js app and runs pm2, both of
+              # which write outside the volumes (.next caches, pm2's runtime
+              # directory, nginx's temp paths).
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 200m
+                # Three Node processes -- frontend (Next.js SSR), backend
+                # (NestJS) and orchestrator (Temporal worker) -- under one pm2.
+                memory: 1Gi
+              limits:
+                # Video uploads stream rather than buffer as of v2.23.0, which
+                # is what makes 3Gi enough; on an older tag the worker held
+                # whole files in memory.
+                memory: 3Gi
+            probes:
+              # `/` on the nginx port. There is no dedicated health endpoint --
+              # the upstream compose healthcheck is exactly this request, and
+              # treats any status below 500 as healthy.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: &port 5000
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  initialDelaySeconds: 20
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 6
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /
+                    port: *port
+                  # Generous on purpose, and load-bearing for the credential
+                  # rotation above: the pm2 entrypoint runs
+                  # `pnpm run prisma-db-push` before any process listens, so a
+                  # cold boot includes a schema migration. The upstream compose
+                  # file allows 120s of start_period for the same reason; 10
+                  # minutes here means a rotation restart cannot be probe-killed
+                  # part-way through a migrate.
+                  periodSeconds: 10
+                  timeoutSeconds: 10
+                  failureThreshold: 60
+
+      # The public half of this app, and the ONLY thing on it the internet is
+      # allowed to reach. A read-only static file server over the same volume
+      # postiz writes uploads into.
+      #
+      # WHY THIS EXISTS AT ALL. TikTok and Meta do not accept an uploaded byte
+      # stream -- they fetch the media from a URL, so that URL has to be public.
+      # Under `local` storage postiz records the URL as
+      # `FRONTEND_URL + '/uploads' + path` (upload/local.storage.ts, hard-coded
+      # in both uploadSimple and uploadFile), so the media CANNOT live on its
+      # own hostname: whatever serves it has to answer on FRONTEND_URL's host,
+      # under /uploads. Hence one hostname, two backends, split by path in the
+      # route below.
+      #
+      # A separate controller rather than a sidecar on `postiz`: this one is
+      # reachable from the internet and that one is not, so they get separate
+      # pods, separate blast radii, and a `replicas` count that can move without
+      # touching the scheduler. It holds no secret -- no envFrom, no database,
+      # no write path.
+      cdn:
+        annotations:
+          # Same keep-list reasoning as the app: a shed window here means every
+          # media URL already handed to a provider 404s until 09:00.
+          downscaler/exclude: "true"
+        replicas: 1
+        # RollingUpdate, not Recreate: this controller only ever READS the
+        # volume, so two of them overlapping during a rollout is fine, and the
+        # media URLs stay answerable throughout.
+        strategy: RollingUpdate
+        pod:
+          # Overrides defaultPodOptions, which runs as ROOT for postiz's sake
+          # (its nginx.conf needs it). Nothing about this controller does, and
+          # it is the one pod here exposed to the internet, so it must not
+          # inherit that. 568 is the estate's standard non-root app uid.
+          #
+          # It can still read what postiz writes: postiz creates upload dirs
+          # 0755 and files 0644 as root, so world-read is enough and no shared
+          # fsGroup is needed between the two pods.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 568
+            runAsGroup: 568
+            seccompProfile: { type: RuntimeDefault }
+        containers:
+          cdn:
+            image:
+              repository: ghcr.io/static-web-server/static-web-server
+              tag: 2.44.0@sha256:2c1a7c3e0feaea5859307403b74e1c575f3ec1499094fc077344173d11abaae2
+              pullPolicy: IfNotPresent
+            env:
+              # Serves /srv, and the claim's `uploads` subPath is mounted at
+              # /srv/uploads -- so the URL path /uploads/<y>/<m>/<d>/<file> maps
+              # straight onto disk with NO prefix rewriting. That is deliberate:
+              # Gateway API does not strip a PathPrefix match, and postiz's
+              # recorded URLs already contain /uploads.
+              SERVER_ROOT: /srv
+              # >1024 because this runs non-root. The image's own EXPOSE 80 is
+              # not usable here.
+              SERVER_PORT: &cdn-port 8080
+              SERVER_HOST: "0.0.0.0"
+              # ⚠️ Off, and load-bearing. Upload paths are date-foldered with
+              # 32-hex random filenames, which is the only thing keeping one
+              # public media URL from enumerating every other. A directory index
+              # would hand the whole library to anyone who trims the filename.
+              SERVER_DIRECTORY_LISTING: "false"
+              # No symlink following: the volume is written by another pod.
+              SERVER_IGNORE_HIDDEN_FILES: "true"
+              SERVER_LOG_LEVEL: info
+            securityContext:
+              allowPrivilegeEscalation: false
+              # A single static Rust binary serving a read-only mount -- it
+              # needs nothing writable anywhere.
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 256Mi
+            probes:
+              liveness: &cdn-probe
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # `/` returns 404 with directory listing off, which is a
+                    # perfectly good liveness signal -- the server answered.
+                    # Checking a real media path is impossible: the filenames
+                    # are random and the directory is empty on a fresh install.
+                    path: /
+                    port: *cdn-port
+                  initialDelaySeconds: 5
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                <<: *cdn-probe
+                spec:
+                  httpGet:
+                    path: /
+                    port: *cdn-port
+                  initialDelaySeconds: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 6
+
+    defaultPodOptions:
+      securityContext:
+        # ⚠️ Root, deliberately. The published image declares no USER (verified
+        # against its OCI config: `"User": null`) and its command is
+        # `nginx && pnpm run pm2`. The bundled nginx.conf opens with `user www;`,
+        # which only a root master process can act on -- as a non-root user
+        # nginx fails to switch user and the reverse proxy on :5000 never comes
+        # up, taking both the UI and /api with it.
+        #
+        # The container drops ALL capabilities and cannot escalate (see above),
+        # so this is root-in-a-box rather than root on the node.
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    persistence:
+      # One claim, two mount points -- the same split the upstream compose file
+      # makes with its `postiz-config` and `postiz-uploads` volumes. subPath
+      # keeps them apart inside the single volsync PVC so both are covered by
+      # one backup schedule.
+      #
+      # advancedMounts, NOT globalMounts: the claim is mounted into both
+      # controllers and they must not see the same thing. `cdn` is internet-
+      # facing, so it gets `uploads` only, read-only, and never /config.
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          ${APP}:
+            ${APP}:
+              - path: /config
+                subPath: config
+              # Must agree with UPLOAD_DIRECTORY in externalsecret.yaml. This is
+              # the half of the volume that grows.
+              - path: /uploads
+                subPath: uploads
+          cdn:
+            cdn:
+              # Mounted UNDER the server root (SERVER_ROOT=/srv) so the on-disk
+              # layout reproduces the URL path: /uploads/<y>/<m>/<d>/<file>.
+              #
+              # readOnly is belt-and-braces on top of the container's
+              # readOnlyRootFilesystem -- this pod is the internet-facing one
+              # and has no reason to be able to write a byte.
+              - path: /srv/uploads
+                subPath: uploads
+                readOnly: true
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          # nginx, not the app. 5000 fronts both the Next.js frontend and
+          # /api/ -> localhost:3000; 3000 and 4200 are internal to the pod and
+          # deliberately not exposed.
+          http:
+            port: *port
+      cdn:
+        controller: cdn
+        type: ClusterIP
+        ports:
+          http:
+            port: *cdn-port
+
+    # ⚠️ ONE hostname, TWO gateways, split by path -- and that split only works
+    # because the three external-dns instances are scoped by `--gateway-name`
+    # (apps/network/external-dns/{technitium,unifi,cloudflare}). Read the header
+    # in external-dns/technitium before touching either route here: without that
+    # scoping, both instances see both routes, and one name with the internal
+    # gateway's ${INTERNAL_DOMAIN} target and the external gateway's
+    # ${EXTERNAL_DOMAIN} target is a CNAME that cannot hold both.
+    #
+    # WHY THE HOSTNAME HAS TO BE SHARED. Media must be fetchable from the public
+    # internet (TikTok and Meta pull from a URL rather than accepting an
+    # upload), and the URL postiz emits is hard-coded to
+    # `FRONTEND_URL + '/uploads' + path` in upload/local.storage.ts. So whatever
+    # serves media must answer on FRONTEND_URL's host. A CDN on its own hostname
+    # cannot work however the bytes are shared -- postiz would still hand the
+    # providers the old URL.
+    #
+    # Tailscale Funnel cannot serve it either, for two independent reasons: it
+    # answers only on <node>.<tailnet>.ts.net with no custom-domain support, and
+    # TikTok requires media URLs to sit under a domain whose ownership is
+    # verified in its console.
+    #
+    # The result is that the app itself has NO public route at all -- the
+    # external gateway carries only /uploads/, so there is nothing to reach from
+    # the internet but the read-only cdn pod.
+    route:
+      # The app. Internal gateway, network-gated, exactly like every other app
+      # in this namespace.
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  # Network gate only, no authentik outpost -- postiz does its
+                  # own OIDC against authentik (POSTIZ_GENERIC_OAUTH in
+                  # externalsecret.yaml), and a forward-auth layer in front of
+                  # it would intercept the /settings callback before the app
+                  # ever saw the authorization code. Same shape freshrss uses.
+                  name: local-user
+
+      # Media only. This is the single path the public internet can reach, and
+      # it does not touch the postiz container at all.
+      external:
+        annotations:
+          # Follows kubernetes/apps/flux-system/flux-instance/httproute.yaml,
+          # the estate's other public route: CNAME to the tunnel and let
+          # Cloudflare proxy it, rather than advertising a LoadBalancer IP.
+          external-dns.alpha.kubernetes.io/target: "${TUNNEL_DOMAIN}"
+          external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+        parentRefs:
+          - name: external
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # The ONLY rule on this gateway. Anything else on this hostname --
+          # the UI, /api, the login page -- has no route here and gets the
+          # gateway's 404. That is the whole point: the app is not merely
+          # denied publicly, it is not published publicly.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /uploads/
+            backendRefs:
+              - identifier: cdn
+                port: *cdn-port
+            # No filters, deliberately. TikTok and Meta fetch these URLs from
+            # their own infrastructure with no cookies and no client IP of
+            # ours -- any auth or network gate here blocks the publish. The
+            # protection is that the paths are unguessable (32 hex chars), the
+            # backend is a read-only static server with directory listing off,
+            # and it can reach nothing but the uploads subPath.

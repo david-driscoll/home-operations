@@ -1,0 +1,60 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app temporal
+  namespace: &namespace database
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  # Anchored because components/postgres/databases appends `/postgres-databases`
+  # to it -- see kubernetes/components/postgres/AGENTS.md. Writing the string
+  # once means moving this directory cannot leave a stale roles/databases path.
+  path: &path ./kubernetes/apps/database/temporal
+  prune: true
+  # Same reasoning as valkey's: never cascade-delete what this manages on a
+  # Kustomization ownership change. The workload is stateless, but the two
+  # CNPG `Database` objects it owns are not.
+  deletionPolicy: Orphan
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+    # Temporal keeps ALL of its state in Postgres -- there is no volume on this
+    # app. Two databases are needed, not one: `temporal` (the cluster's own
+    # persistence) and `temporal-visibility` (the list/search index). The
+    # server opens both at startup and creates neither, which is exactly the
+    # case components/postgres/databases exists for.
+    #
+    # ⚠️ NEW APP -- read the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml before merging. `stacks/system` reliably wins
+    # the race against Flux on new-app day and dies on
+    # `role "temporal" does not exist`, stalling the Pulumi stack for a day
+    # unless cleared with the runbook there. It cost a stalled stack on degoog
+    # (#1180).
+    - ../../../components/postgres
+    - ../../../components/postgres/databases
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      POSTGRES_APP_PATH: *path

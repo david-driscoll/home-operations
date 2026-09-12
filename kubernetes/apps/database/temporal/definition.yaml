@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Temporal
+  category: ${CLUSTER_TITLE}
+  description: "Durable workflow engine — backs Postiz's scheduled publishing"
+  # dashboard-icons has no Temporal entry (checked against its full tree), so
+  # this points at the project's own logo -- the same fallback outline,
+  # karakeep and pulsarr use.
+  icon: https://raw.githubusercontent.com/temporalio/documentation/main/static/img/assets/temporal-logo.svg
+  access_policy:
+    groups:
+      - admins
+  # No `url` and no gatus HTTP check: this is a gRPC-only cluster-internal
+  # service with no web surface of its own. Its health is observed through the
+  # one thing that consumes it -- postiz -- and through the frontend's own
+  # metrics on :9090.

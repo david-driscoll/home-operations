@@ -62,6 +62,30 @@ spec:
             key: credential
     extraArgs:
       - --cloudflare-dns-records-per-page=5000
+      # ---- SPLIT HORIZON: PUBLIC DNS PUBLISHES THE *EXTERNAL* GATEWAY ONLY --
+      #
+      # The counterpart of `--gateway-name=internal` on ../technitium and
+      # ../unifi; read the long note in ../technitium for why one hostname on
+      # two gateways is otherwise an unresolvable CNAME conflict, and which app
+      # needs the split.
+      #
+      # SCOPE: gateway-* sources ONLY — `traefik-proxy`, `ingress`, `service`
+      # and `crd` still publish here exactly as before.
+      #
+      # WHAT THIS DROPS, AND WHY IT IS SAFE: every internal-gateway hostname
+      # loses its public record. Those records resolved to ${INTERNAL_DOMAIN},
+      # an RFC1918 address, so nothing reachable is lost — and nothing depended
+      # on them for access:
+      #
+      #   tailnet devices  stacks/unifi-network/acl-manager.ts sets
+      #                    `overrideLocalDns: true` with the Technitium nodes as
+      #                    nameservers, so they never consult public DNS for
+      #                    this zone at all.
+      #   LAN devices      resolve through UniFi, which keeps the internal
+      #                    gateway (../unifi).
+      #
+      # Reverting this line restores the old records on the next sync.
+      - --gateway-name=external
     sources:
       - "traefik-proxy"
       - "crd"

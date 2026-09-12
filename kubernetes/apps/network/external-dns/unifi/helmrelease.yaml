@@ -127,6 +127,18 @@ spec:
       # hardcoding the domain against the repo's convention.
       - '--regex-domain-filter=(\A|\.)${ROOT_DOMAIN}\z'
       - '--regex-domain-exclusion=\*'
+      # ---- SPLIT HORIZON: THIS RESOLVER PUBLISHES THE *INTERNAL* GATEWAY ----
+      #
+      # Same flag and same reason as ../technitium, whose header carries the
+      # full explanation: this is the LAN resolver, so it is one of the two
+      # that must keep the internal gateway while ../cloudflare takes the
+      # external one. Unrelated to the regex filters above — those scope the
+      # NAMES this provider will accept, this scopes which Gateway's routes are
+      # considered at all.
+      #
+      # SCOPE: gateway-* sources ONLY; the tailnet Ingress and the traefik-proxy
+      # source are unaffected.
+      - --gateway-name=internal
     sources:
       - "traefik-proxy"
       - "crd"
