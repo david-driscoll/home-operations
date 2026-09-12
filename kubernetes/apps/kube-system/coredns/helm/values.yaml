@@ -94,6 +94,69 @@ servers:
         parameters: name regex (dockge-[a-z0-9-]+)\.driscoll\.tech {1}.${TAILSCALE_DOMAIN} answer auto
       - name: forward
         parameters: . "${TAILSCALE_NAMESERVER_IP}"
+  # The rest of driscoll.tech, resolved against the INTERNAL authoritative zone
+  # (Technitium) first and the node's upstream only if Technitium is down.
+  #
+  # WHY. Until this block, driscoll.tech fell through to `.` above, which
+  # forwards to /etc/resolv.conf -- the node resolver, i.e. public Quad9. So
+  # pods resolved internal hostnames through PUBLIC DNS, and only worked because
+  # Cloudflare happened to carry a CNAME->RFC1918 record for every internal
+  # route. Scoping external-dns by gateway (so one hostname can live on both
+  # gateways) removed those records, and in-cluster resolution of 12 of the 21
+  # internal names workloads here call went NXDOMAIN at once -- git, bao, s3,
+  # registry, code, photos, renovate among them. The Pulumi `system` stack
+  # stalled on `getaddrinfo ENOTFOUND git.driscoll.tech`.
+  #
+  # Pods now resolve these names the way every tailnet device already does:
+  # acl-manager.ts sets `overrideLocalDns: true` with the Technitium nodes as
+  # nameservers, so the internal zone is already the estate's resolver of record.
+  #
+  # THIS IS NOT THE CATCH-ALL THE dockge BLOCK ABOVE WARNS AGAINST. That warning
+  # is about a REWRITE to tailnet names, which hard-fails every name with no
+  # tailnet counterpart. This is a FORWARD to the authoritative zone, which
+  # carries all of those names -- checked before landing: all 21 hostnames
+  # in-cluster code references resolve in Technitium, and none resolve
+  # publicly that do not also resolve there. The ACME lookups that warning
+  # mentions do not come through here at all: cert-manager checks DNS-01 over
+  # DoH to Quad9 with dns01RecursiveNameserversOnly (cert-manager/helm/values.yaml).
+  #
+  # The more specific dns.driscoll.tech and dockge-*.driscoll.tech blocks still
+  # win for their names -- CoreDNS routes a query to the most specific zone.
+  #
+  # The upstream is the TECHNITIUM_CLUSTER_IP substitution: a pinned ClusterIP
+  # Service on the in-cluster Technitium, NOT its ipvlan address (the
+  # TECHNITIUM_VIP substitution). See the `dns` service in
+  # apps/equestria/dns/technitium/helmrelease.yaml for why the ipvlan address
+  # would time out from whichever CoreDNS replica shares a node with it.
+  #
+  # (Variable names are spelled without the dollar-brace form in these comments
+  # on purpose: this file is slurped into a ConfigMap, and Flux postBuild
+  # envsubst expands that form even inside a comment -- eso-values-lint.)
+  - zones:
+      - zone: driscoll.tech
+        scheme: dns://
+        use_tcp: false
+    port: 53
+    plugins:
+      - name: errors
+      - name: cache
+        parameters: 30
+      - name: forward
+        # Two upstreams, tried IN ORDER. plugin/pkg/parse HostPortOrFile parses
+        # each argument independently -- an IP becomes ip:53, a path is read as
+        # resolv.conf -- so the second entry is exactly the upstream this zone
+        # used before, not a new egress path.
+        #
+        # ⚠️ The fallback is for Technitium being UNREACHABLE, not for a missing
+        # record. forward only moves on when an upstream is unhealthy; an
+        # authoritative NXDOMAIN from Technitium is returned as-is. That is the
+        # intended behaviour: Technitium is a single replica, and without the
+        # fallback its restart would take in-cluster resolution of the whole
+        # zone with it. With it, an outage degrades to how this zone behaved
+        # before this block existed.
+        parameters: . "${TECHNITIUM_CLUSTER_IP}" /etc/resolv.conf
+        configBlock: |-
+          policy sequential
   # Tailscale DNS stub zone for ts.net domains
   - zones:
       - zone: ts.net
