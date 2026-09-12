@@ -80,7 +80,7 @@ vals = "0.46.0"
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
 pipx = "1.17.2"
-"pipx:graphifyy" = "0.9.55"
+"pipx:graphifyy" = "0.9.58"
 
 [tasks.codegen]
 description = 'Regenerate types/application-definition.d.ts from schemas/'
