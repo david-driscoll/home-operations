@@ -32,9 +32,9 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
-    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/volsync
+    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

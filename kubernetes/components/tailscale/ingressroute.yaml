@@ -48,29 +48,8 @@ spec:
         # and answers 400 "no app for hostname".
         #
         # Cross-namespace is allowed: providers.kubernetesCRD.allowCrossNamespace.
-        #
-        # The NAMESPACE is substitutable so that an app can point this at a
-        # middleware in its OWN namespace, and the default keeps every existing
-        # caller on `network` unchanged. Added 2026-09-11 for on-demand
-        # scale-to-zero: a Sablier-managed app needs its Sablier middleware on
-        # this route too, or the tailnet hostname answers 503 for a sleeping app
-        # and there is no way to wake it from the tailnet at all.
-        #
-        # There is only ONE middleware slot here, and Sablier's is necessarily
-        # per-app (the plugin config carries `group: ${APP}`), so it cannot live
-        # in `network` alongside the shared `tailscale-local`/`tailscale-user`.
-        # components/sablier therefore ships a per-app CHAIN,
-        # `${APP}-sablier-tailnet`, which fans out to the shared base middleware
-        # plus the app's own `sablier-${APP}`. An opted-in app sets:
-        #
-        #   TAILSCALE_MIDDLEWARE: <app>-sablier-tailnet
-        #   TAILSCALE_MIDDLEWARE_NAMESPACE: equestria
-        #
-        # written out literally, because a `${APP}` inside a postBuild
-        # substitution VALUE is not re-expanded -- substitution runs once over
-        # the manifest, not recursively over its own inputs.
         - name: ${TAILSCALE_MIDDLEWARE:=tailscale-local}
-          namespace: ${TAILSCALE_MIDDLEWARE_NAMESPACE:=network}
+          namespace: network
       services:
         - name: ${TAILSCALE_SERVICE:=${APP}}
           port: ${TAILSCALE_PORT:=http}

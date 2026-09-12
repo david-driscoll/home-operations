@@ -35,7 +35,6 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
-    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     # DEGOOG_POSTGRES puts the indexer on Postgres instead of its bundled
     # SQLite file, which is the documented way to run a busy instance.
@@ -52,12 +51,11 @@ spec:
     - ../../../../components/postgres
     - ../../../../components/tailscale
     - ../../../../components/volsync
+    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      TAILSCALE_MIDDLEWARE: degoog-sablier-tailnet
-      TAILSCALE_MIDDLEWARE_NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 5Gi
       VOLSYNC_ACCESSMODES: ReadWriteOnce
       # The app is `degoog`; the address is `search`. Same split immich has

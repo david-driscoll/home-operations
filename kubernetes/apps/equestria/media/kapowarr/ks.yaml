@@ -32,17 +32,15 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
-    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/tailscale
     - ../../../../components/volsync
+    - ../../../../components/sablier
   postBuild:
     substitute:
       # Mirrors this app's internal HTTPRoute, which gates every path behind
       # authentik with no API carve-out -- so this app deliberately does NOT add
       # components/tailscale/api-key.
-      TAILSCALE_MIDDLEWARE: kapowarr-sablier-tailnet
-      TAILSCALE_MIDDLEWARE_NAMESPACE: *namespace
-      SABLIER_TAILSCALE_BASE: tailscale-user
+      TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace

@@ -70,18 +70,33 @@
 # Deployment (DoS-by-cold-start) and an unauthenticated stranger cannot either.
 #
 # ---------------------------------------------------------------------------
-# KNOWN GAP: the tailnet path.
+# THE TAILNET PATH is handled, and needs nothing from the app.
 #
-# components/tailscale/ingressroute.yaml takes exactly ONE middleware, via
-# `${TAILSCALE_MIDDLEWARE}`, and resolves it in the `network` namespace. There
-# is no slot for a second, and a per-app Sablier middleware cannot live in
-# `network` from an app's own Kustomization. So an app that uses BOTH this
-# component and components/tailscale will sleep, and its tailnet hostname will
-# return 503 without waking it.
+# components/tailscale/ingressroute.yaml takes exactly ONE middleware and
+# resolves it in `network`, so a Sablier-managed app would otherwise answer 503
+# on its tailnet hostname while asleep with nothing able to wake it. The patch
+# below repoints that route at ./middleware.yaml's per-app chain.
 #
-# None of the current on-demand apps use components/tailscale, so this is not
-# yet a live problem. The fix when it becomes one is a per-app chain in
-# `network` pointing at `sablier-${APP}`, set as TAILSCALE_MIDDLEWARE.
+# It reads `${APP}` and `${NAMESPACE}` from the MANIFEST, which is where
+# substitution actually happens -- a `${APP}` written into a postBuild
+# substitution VALUE is NOT re-expanded. Verified by rendering it: the literal
+# `${APP}-sablier-tailnet` reached the IngressRoute unexpanded. That is why an
+# earlier revision made each app hand-type its own name, and why this one does
+# not have to.
+#
+# A non-matching patch target is a NO-OP, not an error (verified with
+# `kubectl kustomize`), so apps with no tailnet route -- romm, game-thumbs --
+# simply skip it. That is what lets one component serve both.
+#
+# ORDERING IS LOAD-BEARING: this component must be listed AFTER
+# components/tailscale in the app's ks.yaml, or the IngressRoute does not exist
+# yet and the patch silently does nothing. It is listed last everywhere.
+#
+# It patches `/spec/routes/0`, and that component renders exactly one route. An
+# app that also uses components/tailscale/api-key gets a SECOND tailnet route
+# which this does not reach -- that route would bypass Sablier and 503 against a
+# sleeping backend. None of the current on-demand apps use it; check before
+# adding one that does.
 # ============================================================================
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
@@ -155,3 +170,24 @@ patches:
                       annotations:
                         sablier.group: ${APP}
                         downscaler/exclude: "true"
+  # Repoint the tailnet route at the per-app Sablier chain. See the note above
+  # for why this is a patch here rather than a substitution in each app.
+  - target:
+      group: traefik.io
+      kind: IngressRoute
+      # NO `name:` SELECTOR, deliberately. kustomize matches `target.name` as a
+      # REGEX, and the name at this point is the un-substituted literal
+      # `${APP}-tailnet` -- in which `$` anchors end-of-string and `{}` are
+      # quantifier syntax, so it matches nothing and the patch silently does
+      # NOTHING. That is exactly how it failed the first time: chains rendered
+      # correctly, IngressRoutes kept pointing at `tailscale-local`, and the
+      # only symptom would have been a 503 on the tailnet at runtime.
+      #
+      # Matching on group+kind is also sufficient: components/tailscale renders
+      # exactly one IngressRoute per app.
+    patch: |-
+      - op: replace
+        path: /spec/routes/0/middlewares
+        value:
+          - name: ${APP}-sablier-tailnet
+            namespace: ${NAMESPACE}

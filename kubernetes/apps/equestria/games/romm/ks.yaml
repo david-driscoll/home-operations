@@ -32,7 +32,6 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
-    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     # Rotating credential, and the startup probe below is a prerequisite for
     # it: romm's boot (43-49s across two rollouts) did not fit the 30s budget
@@ -43,6 +42,7 @@ spec:
     # and DB_PASSWD reaches the app from romm-env via envFrom.
     - ../../../../components/postgres
     - ../../../../components/volsync
+    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

@@ -37,14 +37,12 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
-    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/volsync
     - ../../../../components/tailscale
+    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      TAILSCALE_MIDDLEWARE: maintainerr-sablier-tailnet
-      TAILSCALE_MIDDLEWARE_NAMESPACE: *namespace
       VOLSYNC_CAPACITY: 2Gi
