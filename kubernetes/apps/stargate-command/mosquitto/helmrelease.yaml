@@ -149,8 +149,8 @@ spec:
         type: LoadBalancer
         annotations:
           io.cilium/lb-ipam-ips: "${AUTOMATION_VIP}"
-          external-dns.alpha.kubernetes.io/hostname: ${AUTOMATION_DOMAIN}
-          external-dns.alpha.kubernetes.io/target: "${AUTOMATION_VIP}"
+          external-dns.kubernetes.io/hostname: ${AUTOMATION_DOMAIN}
+          external-dns.kubernetes.io/target: "${AUTOMATION_VIP}"
           tailscale.com/expose: "true"
           tailscale.com/hostname: "${AUTOMATION_CNAME}"
           tailscale.com/tags: "tag:observability"

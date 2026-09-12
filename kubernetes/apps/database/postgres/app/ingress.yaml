@@ -4,8 +4,8 @@ kind: TCPRoute
 metadata:
   name: ${APP}-internal
   annotations:
-    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
-    external-dns.alpha.kubernetes.io/hostname: postgres.${CLUSTER_DOMAIN}
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/hostname: postgres.${CLUSTER_DOMAIN}
 spec:
   parentRefs:
     - name: internal

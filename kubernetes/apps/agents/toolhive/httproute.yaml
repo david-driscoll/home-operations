@@ -29,7 +29,7 @@ kind: HTTPRoute
 metadata:
   name: ${APP}
   annotations:
-    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
 spec:
   parentRefs:
     # `internal`, so this resolves only on the LAN and the tailnet through

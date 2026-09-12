@@ -72,7 +72,7 @@ spec:
       enabled: true
       ingressClassName: internal
       annotations:
-        external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+        external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
         traefik.ingress.kubernetes.io/router.entrypoints: websecure
         traefik.ingress.kubernetes.io/router.middlewares: network-authenticated-user@kubernetescrd
       hosts:

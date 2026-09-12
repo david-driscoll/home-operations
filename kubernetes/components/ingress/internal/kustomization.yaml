@@ -14,7 +14,7 @@ patches:
       metadata:
         name: not-used
         annotations:
-          external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+          external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
   - target:
       group: helm.toolkit.fluxcd.io
@@ -30,5 +30,5 @@ patches:
           ingress:
             internal:
               annotations:
-                external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+                external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
                 traefik.ingress.kubernetes.io/router.entrypoints: websecure
