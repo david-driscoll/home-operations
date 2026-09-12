@@ -106,7 +106,7 @@ spec:
           job-server:
             image:
               repository: ghcr.io/fredrikburmester/streamystats-job-server
-              tag: v2.19.2@sha256:11a76c838e63b30ca938221059e38ab29a5fea5bfbdda232183e0413f4c149c6
+              tag: v2.20.0@sha256:b9e6fc640b02ede44f379970cf3f8e81a20bb82bb846e2f738c5db650784137c
             # The image's own CMD, `./migrate-bin && exec ./server`, is kept: this
             # container is also the migration runner.
             # The complete set of variables v2.19.2 reads (checked with a grep of
