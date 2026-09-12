@@ -7,7 +7,7 @@ kubectl = "1.37.0"
 # repeatedly calls out `kubectl cnpg destroy`/`promote` over touching a PVC or
 # forcing a failover by hand.
 "github:cloudnative-pg/cloudnative-pg" = { version = "v1.30.0", bin = "kubectl-cnpg" }
-powershell-core = "7.6.5"
+powershell-core = "7.6.6"
 1password-cli = "2.39.0"
 # Talos tooling for the `talos:*` tasks under .config/mise/tasks/talos/.
 #
