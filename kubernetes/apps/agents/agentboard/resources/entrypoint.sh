@@ -176,6 +176,30 @@ if ! (cd /root/home-operations && mise install); then
   echo "         Investigate with: cd /root/home-operations && mise ls --current" >&2
 fi
 
+# PRUNE WHAT THE INSTALLS ABOVE SUPERSEDED. `mise install` only ever adds: a
+# Renovate bump to a pin installs the new version beside the old one and
+# nothing removes the old one. On 2026-09-12 the 20Gi /root PVC reached 100%
+# holding six claude-code versions, five agentboard, four graphify and three
+# pulumi (~200-300M each), plus a 1.9G npm cache -- and the pod crash-looped
+# at `git config` above, which cannot write ~/.gitconfig.lock on a full disk.
+# The trigger was simply the next claude-code bump rolling the pod.
+#
+# `mise prune` deletes every installed version that is not the one pinned by
+# some config in ~/.local/state/mise/tracked-configs. That set includes each
+# agent worktree's .config/mise.toml, so a long-lived worktree on an old
+# branch keeps ITS pins alive until the worktree is removed -- intended, since
+# that worktree may still be in use. Links to configs that no longer exist
+# (removed worktrees) are pruned too, which is what releases their pins.
+#
+# `mise cache prune` and `npm cache clean` drop download caches only; the next
+# install re-fetches what it needs. Everything here is NON-FATAL for the same
+# reason the repo install above is: housekeeping must never be the thing that
+# keeps the pod from starting.
+echo "==> pruning superseded tool versions and caches"
+mise prune --yes || echo "WARNING: mise prune failed; old tool versions remain on the PVC" >&2
+mise cache prune || true
+npm cache clean --force >/dev/null 2>&1 || true
+
 # NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
 # used to be
 #
