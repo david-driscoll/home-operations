@@ -164,13 +164,44 @@ spec:
       - name: toolhive-authserver-keys
         key: hmac
 
-  # Backends carry no oidcConfigRef/authServerRef of their own any more (see
-  # each's mcpserver.yaml) -- there is nothing for vMCP to discover or
-  # authenticate against on the way out, only cluster-internal
-  # Streamable-HTTP/stdio-proxy traffic to Services this route never exposes
-  # externally.
+  # Backends carry no oidcConfigRef/authServerRef of their own -- only
+  # cluster-internal Streamable-HTTP/stdio-proxy traffic to Services this route
+  # never exposes externally -- WITH ONE EXCEPTION, and it must be named here.
+  #
+  # ../agent-tools-servers/homelable.yaml's MCPRemoteProxy carries an
+  # `externalAuthConfigRef` (headerInjection, the X-API-Key homelable-mcp's
+  # middleware demands). The operator handles that ref in TWO places that do
+  # NOT share a predicate, and `source: inline` with no `backends` satisfies
+  # only the first:
+  #
+  #   - vmcpconfig/converter.go walks the GROUP's workloads unconditionally, so
+  #     it emits `outgoingAuth.backends.toolhive-homelable.headerInjection.
+  #     headerValueEnv: TOOLHIVE_HEADER_INJECTION_VALUE_HOMELABLE` into
+  #     config.yaml no matter what this field says.
+  #   - virtualmcpserver_deployment.go's buildOutgoingAuthEnvVars only mounts
+  #     the backing Secret as that env var when `source: discovered` (line 514),
+  #     or `.backends` is non-nil (520), or `.default` is set (526).
+  #
+  # With inline-and-empty, none of the three fire: the config names an env var
+  # the Deployment never sets, and vmcp exits 1 at startup with "environment
+  # variable ... not set or empty". Latent from the day homelable joined the
+  # group (2026-09-05) and detonated by the first unrelated rollout after it
+  # (2026-09-07), which is what makes it worth spelling out rather than just
+  # fixing -- the trigger is arbitrary and the failure is total.
+  #
+  # Naming the backend explicitly (rather than flipping to `discovered`) keeps
+  # this file the place where outgoing auth is declared: a future workload that
+  # grows an externalAuthConfigRef fails loudly here instead of being wired up
+  # silently.
   outgoingAuth:
     source: inline
+    backends:
+      # Key is the BACKEND (workload) name; `name:` is the
+      # MCPExternalAuthConfig's. They differ -- see homelable.yaml.
+      toolhive-homelable:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: homelable
 
   serviceType: ClusterIP
 

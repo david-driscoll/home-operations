@@ -47,10 +47,18 @@ spec:
     # machinery ../toolhive needed applies to this object at all.
     type: anonymous
 
-  # Unchanged from ./virtualmcpserver.yaml: backends carry no auth of their own,
-  # so there is nothing to acquire on the way out.
+  # Unchanged from ./virtualmcpserver.yaml, including the homelable backend and
+  # the whole reason it has to be named -- see that file's comment here. Both
+  # servers aggregate the SAME MCPGroup, so both generate the same
+  # `headerValueEnv` into config.yaml and both need the Secret mounted; this one
+  # crashlooped identically on 2026-09-07.
   outgoingAuth:
     source: inline
+    backends:
+      toolhive-homelable:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: homelable
 
   # ClusterIP, and this is load-bearing rather than a default worth eliding --
   # it is half of what keeps this endpoint off the network. The operator
