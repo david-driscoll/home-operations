@@ -444,6 +444,7 @@
       ],
       matchPackageNames: [
         "ghcr.io/cloudnative-pg/postgresql",
+        "ghcr.io/imusmanmalik/timescaledb-postgis",
         "docker.io/library/postgres",
         "postgres"
       ],
@@ -451,6 +452,32 @@
         "major"
       ],
       enabled: false,
+    },
+    {
+      // The shared CNPG cluster's operand (database/postgres/app/resources/
+      // values.yaml `cluster.imageName`) is the TimescaleDB-capable family,
+      // tagged `<pg major>.<pg minor>-<postgis>-<build date>-<flavour>-<os>`,
+      // e.g. `18.6-3.6.4-202608311018-system-bookworm`. Default docker
+      // versioning cannot order that, so this maps it onto regex versioning:
+      //
+      //   major    PostgreSQL major  -> the rule above drops it, always
+      //   minor    PostgreSQL minor  -> a rolling restart
+      //   patch    PostGIS minor, build PostGIS patch, revision build date
+      //            -> weekly rebuilds against a newer CNPG base
+      //
+      // PostGIS's own major is pinned to the literal `3` rather than captured,
+      // because regex versioning has only five numeric groups and a PostGIS
+      // major is not something to take unattended anyway. The flavour and OS
+      // are literals too, so only `-system-bookworm` tags are candidates: a
+      // `standard` or `trixie` build is a different base image, not an update.
+      description: "Order the TimescaleDB CNPG operand's compound tags",
+      matchDatasources: [
+        "docker"
+      ],
+      matchPackageNames: [
+        "ghcr.io/imusmanmalik/timescaledb-postgis"
+      ],
+      versioning: "regex:^(?<major>\\d+)\\.(?<minor>\\d+)-3\\.(?<patch>\\d+)\\.(?<build>\\d+)-(?<revision>\\d+)-system-bookworm$",
     },
     {
       description: "Spegel Group",

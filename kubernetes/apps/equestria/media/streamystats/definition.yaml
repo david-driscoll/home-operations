@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Streamystats
+  category: Media Management
+  description: Jellyfin watch statistics, history and recommendations.
+  url: https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/streamystats.svg
+  # No `authentik:` block, same as media/tautulli: the app has no OIDC and signs
+  # users in with their Jellyfin accounts. This grants dashboard visibility.
+  access_policy:
+    groups:
+      - friends
+      - family
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app tracearr
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    # The shared CNPG cluster, which must already be running the
+    # TimescaleDB-capable operand (apps/database/postgres/app/resources/
+    # values.yaml) -- tracearr's `Database` declares `timescaledb`, and CNPG
+    # cannot create an extension its image does not ship.
+    - name: postgres
+      namespace: database
+    # BullMQ queues and the poller's leader lease.
+    - name: valkey
+      namespace: database
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/media/tracearr
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # Rotating credential. The Deployment reads DATABASE_URL out of the
+    # tracearr-env Secret via envFrom and carries reloader.stakater.com/auto,
+    # so the 30-day rotation restarts it. The startup probe in
+    # helmrelease.yaml is what makes that restart survivable.
+    #
+    # The extensions it needs are declared by the patch in kustomization.yaml,
+    # not by the superuser sibling -- see the note there.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # Not the database -- that lives in CNPG. This holds tracearr's own
+      # pg_dump backups (/data/backup) and its poster cache
+      # (/app/data/image-cache, ~2GB per 100k posters). Only ever goes UP
+      # (components/volsync/AGENTS.md).
+      VOLSYNC_CAPACITY: 10Gi
+      # The image runs as tracearr:nodejs, 1001:1001. The mover has to write
+      # restores as the same owner or the app cannot read its own backups.
+      VOLSYNC_PUID: "1001"
+      VOLSYNC_PGID: "1001"

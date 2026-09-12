@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+patches:
+  # THE DATABASE'S EXTENSIONS, declared on the CNPG `Database` rather than left
+  # to the app.
+  #
+  # `timescaledb` and `timescaledb_toolkit` are untrusted extensions: only a
+  # superuser can CREATE them, and the role components/postgres gives this app
+  # holds `login` and nothing else. Tracearr does not fail on that -- it is
+  # worse. `initTimescaleDB()` (apps/server/src/db/timescale.ts) checks
+  # `pg_extension`, finds nothing, and returns success with "TimescaleDB
+  # extension not installed - skipping setup": no hypertable, no compression,
+  # no continuous aggregates, and a healthy-looking pod. Pre-creating them here
+  # turns its own `CREATE EXTENSION IF NOT EXISTS` calls into no-ops.
+  #
+  # `components/postgres/superuser` would also work and is the documented way
+  # immich gets its extensions. It is deliberately not used: it hands a
+  # superuser role to an app whose only need for one is three CREATE EXTENSION
+  # statements. What does not work without it: tracearr's in-app backup
+  # RESTORE (it checks `usesuper` and says so), which is not how this estate
+  # restores anyway -- CNPG/barman is.
+  #
+  # Mechanism: the same two-level patch components/postgres/superuser uses.
+  # This patches the nested `${APP}-postgres` Kustomization that
+  # components/postgres emits, appending to its `spec.patches`; that child then
+  # patches the `Database` it renders into `database`. JSON6902 `add .../-`,
+  # never a strategic merge on `spec.patches`: a Flux Kustomization has no Go
+  # schema, so a merge would REPLACE the list and silently drop any sibling's
+  # entry. And NOT in ks.yaml's own `spec.patches` -- the equestria umbrella
+  # injects that field into every child.
+  #
+  # `pg_trgm` is trusted and tracearr's migrations create it themselves; it is
+  # listed so the database's full extension set is written down in one place.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: timescaledb
+                  ensure: present
+                - name: timescaledb_toolkit
+                  ensure: present
+                - name: pg_trgm
+                  ensure: present

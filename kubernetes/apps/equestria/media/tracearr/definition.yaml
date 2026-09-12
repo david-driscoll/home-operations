@@ -1,0 +1,67 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Tracearr
+  category: Media Management
+  description: Live stream monitoring, watch history and account-sharing detection across Plex, Jellyfin and Emby.
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tracearr.svg
+  # ⚠️ THIS POLICY IS NECESSARY, NOT SUFFICIENT. It decides who authentik will
+  # issue a token to. Tracearr then applies its own rule on top, and as of
+  # 2.2.3 that rule makes it a SINGLE-LOGIN app
+  # (apps/server/src/lib/authGuards.ts, @tracearr/shared LOGIN_ROLES):
+  #
+  #   - Only `owner` and `admin` users can log in. Everyone synced from
+  #     Plex/Jellyfin/Emby is a `member` (the column default): tracked, never a
+  #     login. Neither the UI nor Tracearr's own routes can grant `admin`; only
+  #     Better Auth's admin-plugin API could, which is untested here.
+  #   - The FIRST account created becomes the owner -- which is why CLAIM_CODE is
+  #     set (externalsecret.yaml). After that, sign-up is closed: any other
+  #     authentik user who presses the SSO button gets "This Tracearr instance
+  #     already has an owner. Only the owner can log in."
+  #   - SSO matches an existing account by EMAIL and links it on first use
+  #     (account linking trusts the `oidc` provider, because authentik reports
+  #     `email_verified: false`). So the owner can create the account with a
+  #     local password and use SSO later, as long as the two emails match.
+  #
+  # So friends/family here means "may be sent to the login page", not "can see
+  # their stats". Once SSO works for the owner, local username/password login
+  # can be switched off in Tracearr's settings (`localLoginEnabled`).
+  access_policy:
+    groups:
+      - friends
+      - family
+  # An OAuth2 provider, not `proxy:`. Tracearr speaks OIDC itself (env
+  # OIDC_ISSUER_URL/_CLIENT_ID/_CLIENT_SECRET, from the ${APP}-oidc
+  # ExternalSecret), so the route stays on `local-user` and authentik is only
+  # the identity provider -- the same shape as media/pinepods.
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oauth2/callback/oidc"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/api/v1/auth/oauth2/callback/oidc"
+      propertyMappings:
+        - openid
+        - profile
+        - email
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
