@@ -36,6 +36,7 @@ spec:
     name: flux-system
     namespace: flux-system
   components:
+    - ../../../../components/sablier
     - ../../../../components/failover/fast-node-eviction
     # Rotating credential. The Deployment reads DB_PASS out of the
     # jellyseerr-env Secret via envFrom and carries reloader.stakater.com/auto,
@@ -49,3 +50,5 @@ spec:
     substitute:
       APP: *app
       NAMESPACE: *namespace
+      TAILSCALE_MIDDLEWARE: jellyseerr-sablier-tailnet
+      TAILSCALE_MIDDLEWARE_NAMESPACE: *namespace
