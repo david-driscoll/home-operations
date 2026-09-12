@@ -64,7 +64,7 @@ dotnet = { version = "10.0.203" }
 # Secret-reference resolver for ref+openbao:// (PLAN §D.1). Keep this version
 # in step with the vals initContainer in kubernetes/apps/pulumi/*/stack.yaml —
 # the workspace pods install the same pin via mise.
-vals = "0.46.0"
+vals = "0.46.1"
 "github:stacklok/toolhive" = "v0.49.0"
 # REQUIRED BY the `pipx:` backend below, and the reason it never installed here.
 # mise's pipx backend shells out to a `pipx` on PATH (or `uv`, with
