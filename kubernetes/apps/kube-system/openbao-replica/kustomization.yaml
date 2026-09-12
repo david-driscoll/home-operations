@@ -11,6 +11,7 @@ configMapGenerator:
     files:
       - dump.sh=./resources/dump.sh
       - restore-test.sh=./resources/restore-test.sh
+      - canary-check.sh=./resources/canary-check.sh
       - age-recipients.txt=./resources/age-recipients.txt
 generatorOptions:
   disableNameSuffixHash: true

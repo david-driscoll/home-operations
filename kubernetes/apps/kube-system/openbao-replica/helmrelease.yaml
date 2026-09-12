@@ -253,7 +253,17 @@ spec:
               SCRATCH_PG_DB: *scratchDb
               # Same transit path the real cluster unseals through.
               TRANSIT_ADDR: http://dockge-as.${TAILSCALE_DOMAIN}:8200
-              CANARY_PATH: secrets/data/third-party-tokens/cloudflare/driscoll-tech
+              # ANCHORED because ./canary-check.sh's controller reads the same
+              # path and the two must never disagree — a checker watching a
+              # different key than the test it front-runs is worse than no
+              # checker. This value also has four counterparts OUTSIDE this file
+              # (bootstrap/openbao/restore-test.sh's CANARY_PATH,
+              # docker/alpha-site/bao-standby/restore.sh, bootstrap/RUNBOOK.md,
+              # and the live `restore-test` policy); scripts/bao-reorg/plan.ts
+              # names them and they change in lockstep or break-glass
+              # verification fails. The live policy lagging that lockstep on
+              # 2026-09-05 is the whole reason canary-check exists.
+              CANARY_PATH: &canaryPath secrets/data/third-party-tokens/cloudflare/driscoll-tech
               VAULT_TRANSIT_SEAL_TOKEN:
                 valueFrom:
                   secretKeyRef:
@@ -285,6 +295,83 @@ spec:
               limits:
                 memory: 1Gi
                 cpu: "1"
+
+      # The daily half of Scenario D. ./resources/canary-check.sh's header has
+      # the full argument; the short version is that the monthly restore test
+      # covers six steps that depend on the DUMP and one that depends on
+      # server-side GRANT state, and only the grant can rot with nobody
+      # touching this repo. Testing just that one, daily, turns a month of
+      # silence into a day.
+      #
+      # Deliberately the cheapest controller here: no SFTP, no scratch
+      # Postgres, no age identity, no transit. It logs in with the AppRole the
+      # restore test already carries and reads one key. Nothing it touches can
+      # affect the nightly dump or the monthly test.
+      canary-check:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        type: cronjob
+        cronjob:
+          # 04:00 daily: after the 03:00 dump, well clear of the 05:00 monthly
+          # restore test on the 1st. It reads live server state and shares no
+          # resource with either, so the spacing is for legible logs rather
+          # than contention.
+          schedule: "0 4 * * *"
+          backoffLimit: 2
+          concurrencyPolicy: Forbid
+          startingDeadlineSeconds: 300
+          successfulJobsHistory: 1
+          failedJobsHistory: 3
+          suspend: false
+        containers:
+          main:
+            image: *baoImage
+            securityContext: *rootCtx
+            env:
+              # openbao-active, not openbao: the general Service also routes to
+              # standbys, and a standby answers a read with a 307 to the leader
+              # rather than the data. Same address every in-cluster consumer
+              # uses (kubernetes/components/postgres/database/credentials.yaml,
+              # the pulumi stacks).
+              #
+              # In-cluster on purpose, NOT bao.${ROOT_DOMAIN}: this check must
+              # stay up when DNS, the gateway or the external cert is what is
+              # broken, because none of those say anything about the grant.
+              BAO_ADDR: http://openbao-active.kube-system.svc.cluster.local:8200
+              CANARY_PATH: *canaryPath
+              GATUS_URL: https://uptime.${ROOT_DOMAIN}
+              GATUS_CONNECT_TO: uptime.${ROOT_DOMAIN}:443:dockge-as.${TAILSCALE_DOMAIN}:443
+              GATUS_TOKEN: openbao-break-glass_canary-check
+              # THE SAME low-privilege AppRole the monthly test uses — read on
+              # one path and nothing else. That is the point: this proves the
+              # credential a human would break glass with still works, using
+              # only that credential. No admin token is parked in the cluster,
+              # which is why this is a CronJob and `restore-test.sh status` is
+              # not (that reads the policy document and needs admin).
+              BAO_ROLE_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: openbao-replica-restore
+                    key: role-id
+              BAO_SECRET_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: openbao-replica-restore
+                    key: secret-id
+            command:
+              - /bin/sh
+              - -c
+              - >-
+                set -eu;
+                apk add --no-cache bash coreutils curl jq
+                && exec bash /scripts/canary-check.sh
+            resources:
+              requests:
+                memory: 64Mi
+                cpu: 10m
+              limits:
+                memory: 128Mi
+                cpu: 200m
 
     persistence:
       scripts:

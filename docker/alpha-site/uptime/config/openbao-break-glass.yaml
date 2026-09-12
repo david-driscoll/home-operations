@@ -30,6 +30,29 @@ external-endpoints:
         success-threshold: 1
         failure-threshold: 1
         minimum-reminder-interval: 24h
+  - name: canary-check
+    group: "OpenBao Break Glass"
+    token: openbao-break-glass_canary-check
+    # Daily at 04:00. This is the fast half of Scenario D: it tests ONLY that
+    # the restore-test AppRole can still read the canary on the live server --
+    # the single link in the break-glass chain that can rot without anyone
+    # touching the repo, and the one that did on 2026-09-05 and went unnoticed
+    # for a month. 26h of silence means a check was missed, same headroom as
+    # the nightly dump.
+    #
+    # A red here does NOT mean the backup is bad: the dumps can be perfect
+    # while the grant is gone. It means a human would be unable to VERIFY a
+    # restore, which RUNBOOK Scenario D treats as equivalent. The job's error
+    # text distinguishes 403 (policy drift, the expected failure) from 404
+    # (canary moved or deleted) from everything else (the checker itself).
+    heartbeat:
+      interval: 26h
+    alerts:
+      - type: pushover
+        enabled: true
+        success-threshold: 1
+        failure-threshold: 1
+        minimum-reminder-interval: 24h
   - name: restore-test
     group: "OpenBao Break Glass"
     token: openbao-break-glass_restore-test
