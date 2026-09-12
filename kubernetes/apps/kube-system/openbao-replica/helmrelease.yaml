@@ -371,7 +371,13 @@ spec:
                 cpu: 10m
               limits:
                 memory: 128Mi
-                cpu: 200m
+                # A whole core, not a "right-sized" 200m: a fractional limit is
+                # CFS-throttled even on an idle node, which only slows the
+                # `apk add` this job spends most of its runtime in. The request
+                # is what reserves capacity; this is a ceiling. Same value as
+                # restore-test above, and Codacy's no-fractional-cpu-limits
+                # rule flags anything less.
+                cpu: "1"
 
     persistence:
       scripts:
