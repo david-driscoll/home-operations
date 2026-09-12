@@ -54,7 +54,7 @@ shellcheck = "0.11.0"
 # the version CI resolves; the patch floats on Renovate.
 go = "1.27.1"
 "pipx:yamllint" = "1.38.0"
-"npm:typescript" = "5.9.3"
+"npm:typescript" = "7.0.2"
 node = "24.20.0"
 pulumi = "3.262.0"
 "github:microsoft/apm" = { version = "v0.30.0", bin = "apm" }
