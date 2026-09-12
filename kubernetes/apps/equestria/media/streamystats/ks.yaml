@@ -1,0 +1,50 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app streamystats
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/media/streamystats
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # Rotating credential. Both containers read DATABASE_URL out of the
+    # streamystats-env Secret via envFrom and the controller carries
+    # reloader.stakater.com/auto, so the 30-day rotation restarts the pod. The
+    # startup probes in helmrelease.yaml are what make that restart survivable.
+    #
+    # The extensions it needs are declared by the patch in kustomization.yaml.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    # NO `volsync`. Upstream's only volume is the database's, and that is CNPG's
+    # here (barman + the nightly pg_dump). Both containers are stateless -- no
+    # config directory, no cache. There is no PVC to back up.
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

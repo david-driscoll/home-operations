@@ -58,17 +58,22 @@ type: postgresql
 # TRACKING: nothing watched this image until step 1 -- the `helm-values`
 # manager only recognises `image.repository`/`image.tag` pairs and this chart
 # takes a single `imageName` string, so the cluster sat on 17.5 for a year while
-# every other image in the estate moved. The annotation below and the matching
-# one on `imageName` feed the "Process annotated dependencies" custom manager in
-# .github/renovate.json5; they resolve to the same depName and currentValue, so
-# one update rewrites both, and they must move together because
-# `version.postgresql` is what the chart derives `cluster.postgresqlMajor` from.
+# every other image in the estate moved. The annotation on `imageName` feeds the
+# "Process annotated dependencies" custom manager in .github/renovate.json5.
+# `version.postgresql` used to carry a twin annotation on the same depName so
+# one update rewrote both; since the move to the TimescaleDB image family (whose
+# tags are `<pg>-<postgis>-<date>-<flavour>-<os>`, not a bare `18.6`) only
+# `imageName` is tracked -- see the note on `version` below.
 #
 # Majors are blocked outright by the "Never propose a Postgres major" rule
-# there. Renovate will offer 18.x minors from here on -- those are rolling
-# restarts, safe to take. It will never offer 19.
+# there. Renovate will offer 18.x minors and dated rebuilds from here on --
+# those are rolling restarts, safe to take. It will never offer 19.
 version:
-  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
+  # NOT Renovate-annotated any more -- see `cluster.imageName`. The chart only
+  # derives `cluster.postgresqlMajor` from this, and a major is never automated
+  # (the "Never propose a Postgres major" rule), so it only changes by hand, on a
+  # major, together with the image. Keep the minor in step when you touch it so
+  # the two do not read as disagreeing.
   postgresql: "18.6"
 mode: standalone
 # DORMANT, AND NOT RENDERED AT ALL. `mode: standalone` means this cluster
@@ -212,8 +217,50 @@ backups:
   retentionPolicy: "30d"
 cluster:
   instances: 3
-  # renovate: datasource=docker depName=ghcr.io/cloudnative-pg/postgresql
-  imageName: ghcr.io/cloudnative-pg/postgresql:18.6
+  # TIMESCALEDB-CAPABLE OPERAND, ADDED FOR media/tracearr. This is the official
+  # `ghcr.io/cloudnative-pg/postgresql:18.6-system-bookworm` image with the
+  # packagecloud TimescaleDB (TSL build, so compression and continuous aggregates
+  # work), timescaledb_toolkit, PostGIS and pgRouting layered on, still running as
+  # uid 26: https://github.com/imusmanmalik/cloudnative-pg-timescaledb-postgis-containers
+  # (Dockerfile is `FROM $BASE` + one apt layer). Everything the previous image
+  # carried -- vector, pg_trgm, unaccent, uuid-ossp, cube, earthdistance,
+  # pg_stat_statements -- comes from that same base.
+  #
+  # IT MOVES THE OS FROM BULLSEYE TO BOOKWORM. The bare `18.6` tag this replaces
+  # is the same digest as `18.6-system-bullseye` (checked against the registry
+  # 2026-09-12), and the TimescaleDB family is only built on bookworm/trixie.
+  # Same PostgreSQL minor, so CNPG does a ROLLING update (replicas, then a
+  # switchover), not an offline major upgrade -- the "same distribution" rule in
+  # the header only binds pg_upgrade. glibc 2.31 -> 2.36 can reorder libc
+  # collations, which would silently corrupt text indexes; it cannot here because
+  # every database is `datlocprovider = 'c'` with `C`/`C` (re-verified live
+  # 2026-09-12, all 38 databases). The column-level check to re-run before
+  # merging, in every database, expecting zero rows:
+  #
+  #   SELECT DISTINCT c.collname FROM pg_attribute a
+  #     JOIN pg_collation c ON c.oid = a.attcollation
+  #    WHERE c.collname NOT IN ('default','C','POSIX','ucs_basic');
+  #
+  # ROLLBACK: revert this line AND `shared_preload_libraries` together, as one
+  # change -- a server told to preload a library its image lacks will not start.
+  # That is clean for as long as no database has run `CREATE EXTENSION
+  # timescaledb`. Once tracearr's has, its database must be dropped (or the
+  # extension removed) first.
+  #
+  # EXTENSION UPDATES ARE MANUAL. An image bump ships a newer timescaledb, but
+  # the installed extension stays put until `ALTER EXTENSION timescaledb UPDATE`
+  # runs as its owner -- which is the superuser, because CNPG's `Database`
+  # created it, not the app. It must be the FIRST statement in its session.
+  # Tracearr logs a drift warning at boot when this is due.
+  #
+  # NO DIGEST, ON PURPOSE. The annotated-dependency regex manager captures the
+  # tag only and cannot rewrite an `@sha256:` suffix, so a digest here would be
+  # left behind on every bump and silently keep the old image. The dated tag is
+  # immutable by the publisher's policy; that is the pin.
+  #
+  # `versioning` for this tag shape lives in .github/renovate.json5.
+  # renovate: datasource=docker depName=ghcr.io/imusmanmalik/timescaledb-postgis
+  imageName: ghcr.io/imusmanmalik/timescaledb-postgis:18.6-3.6.4-202608311018-system-bookworm
   priorityClassName: system-node-critical
   storage:
     size: ${POSTGRES_STORAGE:=10Gi}
@@ -271,6 +318,20 @@ cluster:
       tcp_keepalives_idle: "10"
       tcp_keepalives_interval: "10"
       tcp_keepalives_count: "3"
+      # TimescaleDB, for media/tracearr. `timescaledb.license` is set here rather
+      # than left to its default because tracearr, finding `apache`, tries to fix
+      # it with ALTER SYSTEM -- which its non-superuser role cannot do -- and then
+      # runs without compression. The GUC only accepts file/argv sources, so this
+      # is the one place it can come from.
+      timescaledb.license: timescale
+      timescaledb.telemetry_level: "off"
+      # Tracearr's own compose ships 4096 for large Tautulli imports over many
+      # chunks. The lock table is sized max_locks_per_transaction x
+      # (max_connections + max_prepared_transactions), so at 300 connections 4096
+      # would pin roughly 300MB of shared memory on every instance. 512 is ~8x the
+      # default; raise it only if an import actually fails with "out of shared
+      # memory" / "Try increasing max_locks_per_transaction".
+      max_locks_per_transaction: "512"
     # Inserted between CNPG's fixed rules and its default
     # `host all all all scram-sha-256` catch-all, so this is matched first for
     # an SSL connection as `openbao` to the `openbao` database.
@@ -303,7 +364,13 @@ cluster:
       # of the catch-all.
       - hostnossl openbao openbao all reject
     pg_ident: []
-    shared_preload_libraries: []
+    # `timescaledb` must be preloaded before any database can CREATE EXTENSION
+    # it. CNPG still appends `pg_stat_statements` on its own (the
+    # `pg_stat_statements.*` parameters above trigger that), so the live value
+    # becomes `timescaledb,pg_stat_statements`. Changing this list restarts every
+    # instance.
+    shared_preload_libraries:
+      - timescaledb
     ldap: {}
   serviceAccountTemplate: {}
   additionalLabels: {}

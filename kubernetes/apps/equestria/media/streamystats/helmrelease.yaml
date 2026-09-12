@@ -1,0 +1,208 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app streamystats
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        # ONE POD, TWO CONTAINERS -- upstream's `nextjs-app` and `job-server`
+        # services from docker-compose.yml, minus its `vectorchord` database
+        # (CNPG's here). They talk to each other server-side only, so a shared
+        # pod turns their URLs into localhost and keeps the pair moving as one
+        # unit: same image version, same secret, same restart on rotation.
+        # Upstream ordered them db -> job-server healthy -> nextjs; here the
+        # web container simply reports unready until the worker has migrated.
+        #
+        # ⚠️ NO DOWNGRADES. Migrations are one-way. Rolling the tags back leaves
+        # the newer schema behind and the older app fails against it; the only
+        # rollback is a database restore. Bump both tags together.
+        containers:
+          app:
+            image:
+              repository: ghcr.io/fredrikburmester/streamystats-nextjs
+              tag: v2.19.2@sha256:9d6edd4017b2fcf889d1afc64e1bdddfbcdcb47db43b75c662ad8d5c0402c67a
+            env:
+              TZ: ${TIMEZONE}
+              NODE_ENV: production
+              # Next.js standalone binds `HOSTNAME`, not `HOST`.
+              HOSTNAME: 0.0.0.0
+              PORT: &port 3000
+              JOB_SERVER_URL: http://localhost:3005
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness: &web-probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *web-probes
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext: &container-security
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                # Upstream's compose caps both app containers at 2G.
+                memory: 2Gi
+          job-server:
+            image:
+              repository: ghcr.io/fredrikburmester/streamystats-job-server
+              tag: v2.19.2@sha256:11a76c838e63b30ca938221059e38ab29a5fea5bfbdda232183e0413f4c149c6
+            # The image's own CMD, `./migrate-bin && exec ./server`, is kept: this
+            # container is also the migration runner.
+            env:
+              TZ: ${TIMEZONE}
+              NODE_ENV: production
+              HOST: 0.0.0.0
+              PORT: &job-port 3005
+              NEXTJS_URL: http://localhost:3000
+              # Every CRON_* schedule and SESSION_POLL_INTERVAL_MS is left at
+              # upstream's default (activity/users/recent items every minute,
+              # full sync 02:00). Note the nightly Low Power shed has this pod
+              # at 0 replicas from 02:00 to 09:00, so CRON_FULL_SYNC's 02:00 run
+              # never fires; the startup full sync at 09:00 covers it, which is
+              # why SKIP_STARTUP_FULL_SYNC stays false.
+              SKIP_STARTUP_FULL_SYNC: "false"
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness: &job-probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *job-port
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *job-probes
+              # First boot against an EMPTY database runs the whole drizzle
+              # migration chain before the server listens, and every 30-day
+              # password rotation forces a cold start. 60 x 10s, as media/seerr.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *job-port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            # The job-server image (debian:bookworm-slim) sets no USER, so it
+            # would run as root. It does not need to: it is two compiled bun
+            # binaries plus world-readable drizzle SQL and geoip data, and writes
+            # nothing to disk outside /tmp. The pod-level 1001 below applies.
+            securityContext: *container-security
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+
+    defaultPodOptions:
+      securityContext:
+        # nextjs-app's own user (nextjs:nodejs, 1001:1001); job-server has none.
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          # Only the web container. The job server's 3005 is internal to the
+          # pod, same as upstream's compose, which never publishes it.
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              # Same as media/tautulli: network gate only. Streamystats has no
+              # OIDC; users sign in with their Jellyfin credentials against the
+              # connected server, so a forward-auth hop would only add a second
+              # login in front of that one.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+
+    persistence:
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp

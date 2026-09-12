@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Tracearr
+  category: Media Management
+  description: Live stream monitoring, watch history and account-sharing detection across Plex, Jellyfin and Emby.
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tracearr.svg
+  access_policy:
+    groups:
+      - friends
+      - family
+  # An OAuth2 provider, not `proxy:`. Tracearr speaks OIDC itself (env
+  # OIDC_ISSUER_URL/_CLIENT_ID/_CLIENT_SECRET, from the ${APP}-oidc
+  # ExternalSecret), so the route stays on `local-user` and authentik is only
+  # the identity provider -- the same shape as media/pinepods.
+  authentik:
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/api/v1/auth/oauth2/callback/oidc"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/api/v1/auth/oauth2/callback/oidc"
+      propertyMappings:
+        - openid
+        - profile
+        - email
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident. Gatus keeps checking and
+      # keeps the history; it just does not alert.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

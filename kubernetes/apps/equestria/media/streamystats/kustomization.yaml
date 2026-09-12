@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+patches:
+  # THE DATABASE'S EXTENSIONS, declared on the CNPG `Database` rather than left
+  # to the app. Same mechanism, and the same reasons, as media/tracearr's
+  # kustomization.yaml -- read that note for why it is a JSON6902 append on the
+  # nested `${APP}-postgres` Kustomization and not components/postgres/superuser.
+  #
+  # `vector` is untrusted, so the app's login-only role cannot create it.
+  # Streamystats' migration runner (packages/database/src/migrate-entrypoint.ts)
+  # does try, but it catches the permission error, logs "might require
+  # superuser" and carries on -- straight into drizzle migration 0000, which
+  # declares a `vector` column and an HNSW index, and fails there. Pre-creating
+  # it makes that attempt a no-op.
+  #
+  # `uuid-ossp` and `pg_trgm` are trusted and would work either way; listed so
+  # the full set the migrations expect is written down in one place.
+  #
+  # Plain pgvector (0.8.6 on this cluster), not VectorChord: upstream's compose
+  # uses the vchord image, but its schema only uses `vector` + HNSW, and its
+  # DOCKERLESS.md runs on stock postgresql-17-pgvector.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: vector
+                  ensure: present
+                - name: uuid-ossp
+                  ensure: present
+                - name: pg_trgm
+                  ensure: present

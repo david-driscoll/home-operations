@@ -17,6 +17,11 @@ resources:
   - ./sonarr/ks.yaml
   - ./plex/ks.yaml
   - ./tautulli/ks.yaml
+  # Tautulli's neighbours: Tracearr covers Plex + Jellyfin + Emby (and needs
+  # the TimescaleDB operand on the shared CNPG cluster); Streamystats covers
+  # Jellyfin only.
+  - ./tracearr/ks.yaml
+  - ./streamystats/ks.yaml
   - ./lidarr/ks.yaml
   - ./mylar/ks.yaml
   # - ./watchstate/ks.yaml

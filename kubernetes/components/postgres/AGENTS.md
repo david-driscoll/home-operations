@@ -168,6 +168,58 @@ manifest is the safe way to stop managing one; and the app is still not told the
 name by any of this — that stays a literal in the app's own ExternalSecret
 (`SONARR__POSTGRES__LOGDB: sonarr-log`).
 
+### Extensions
+
+App roles here hold `login` and nothing else, so they can create **trusted** extensions
+(`pg_trgm`, `uuid-ossp`, `unaccent`, …) but not **untrusted** ones (`vector`, `timescaledb`,
+`timescaledb_toolkit`). There are two ways to give an app one of the latter:
+
+| Way | Used by | Cost |
+| --- | --- | --- |
+| `spec.extensions` on its `Database`, patched in from the app | `tracearr`, `streamystats` | CNPG creates them as the superuser; the app's own `CREATE EXTENSION IF NOT EXISTS` becomes a no-op |
+| `../../components/postgres/superuser` | `immich` | the app role **is** a superuser, for everything, forever |
+
+Prefer the first. It is not a sibling component because the extension list differs per app
+and `postBuild.substitute` cannot carry a list (see **Why** above), so the app writes the patch
+in its own `kustomization.yaml` — the same two-level JSON6902 append `superuser/` uses, aimed at
+`Database` instead of `DatabaseRole`:
+
+```yaml
+patches:
+  - target: {group: kustomize.toolkit.fluxcd.io, kind: Kustomization, name: .*-postgres$}
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target: {group: postgresql.cnpg.io, kind: Database}
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata: {name: not-used}
+            spec:
+              extensions:
+                - {name: vector, ensure: present}
+```
+
+Not in the app's `ks.yaml` `spec.patches`: the equestria umbrella kustomization injects that
+field into every child, and a second writer stops being additive.
+
+Two things to know before relying on it:
+
+- **An app that cannot create its extension may not fail.** Tracearr checks `pg_extension`,
+  finds no `timescaledb`, logs "skipping setup" and runs healthy with no hypertables and no
+  compression. Verify with `\dx` in the database, not by loading the UI.
+- **Extension updates are manual.** The superuser created the extension, so the superuser owns
+  it, and an image bump that ships a newer version changes nothing until
+  `ALTER EXTENSION <name> UPDATE` runs as that owner — as the first statement of its session
+  for `timescaledb`. Removing an entry from the list does not drop the extension; `ensure:
+  absent` does, along with everything that depends on it.
+
+`timescaledb` additionally needs the cluster to preload it and run an image that ships it —
+both are set in `apps/database/postgres/app/resources/values.yaml`. A TimescaleDB database's
+nightly `pg_dump` is restored with `SELECT timescaledb_pre_restore();` before `pg_restore` and
+`SELECT timescaledb_post_restore();` after, both as the superuser.
+
 ### The backup's annotation contract
 
 Three annotations, all optional, all read off the `Database` resource. They are the whole

@@ -1,0 +1,192 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app tracearr
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        # Exactly one. The session poller is a singleton ("only 1 supported"
+        # upstream), and Recreate keeps a rollout from running two at once.
+        replicas: 1
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/connorgallopo/tracearr
+              # No `v` prefix on this project's tags -- `v2.2.3` does not exist.
+              tag: 2.2.3@sha256:d66822b5c5e76c27c12eec4de05c6eb9fbc4005968df5587bf5d2d3718f15dff
+            # https://docs.tracearr.com -- configuration/environment-variables.
+            # Media servers (Plex, Jellyfin, Emby) are added through the web UI
+            # after first boot, not through env.
+            env:
+              TZ: ${TIMEZONE}
+              NODE_ENV: production
+              HOST: 0.0.0.0
+              PORT: &port 3000
+              LOG_LEVEL: info
+              # Behind Traefik: take the client address from X-Forwarded-*, or
+              # sign-in rate limits count every user as the proxy.
+              TRUST_PROXY: "true"
+              CORS_ORIGIN: https://${APP}.${ROOT_DOMAIN}
+              # The shared valkey in `database`, which sets no password (see
+              # home/degoog/externalsecret.yaml). Index 11 is this app's; taken
+              # elsewhere today: 0 immich, 5 romm, 6 dispatcharr, 8 searxng,
+              # 9 degoog, 10 postiz. The prefix is belt-and-braces for anything
+              # that ignores the index. BullMQ needs `maxmemory-policy
+              # noeviction` or its queues corrupt silently; that is valkey's
+              # default, and apps/database/valkey sets no override.
+              REDIS_URL: redis://valkey.database.svc.cluster.local:6379/11
+              REDIS_PREFIX: "tracearr:"
+              # Upstream defaults to 50. This is one tenant of a 300-connection
+              # cluster shared by the whole estate.
+              DATABASE_POOL_MAX: "10"
+              OIDC_PROVIDER_NAME: Authentik
+            envFrom:
+              # DATABASE_URL, JWT_SECRET, COOKIE_SECRET, ENCRYPTION_KEY. envFrom
+              # so the rotated database password reaches the pod as a Secret
+              # change that reloader can see.
+              - secretRef:
+                  name: ${APP}-env
+              # OIDC_ISSUER_URL / _CLIENT_ID / _CLIENT_SECRET. OPTIONAL, and that
+              # is load-bearing: the credential only exists once stacks/
+              # applications has read definition.yaml and created the authentik
+              # provider, which is after this pod first boots. Tracearr enables
+              # SSO only when all three are set, so it starts without them and
+              # reloader restarts it when this Secret appears.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+              # Boot runs the migrations and then the TimescaleDB setup
+              # (hypertable conversion, continuous aggregates, compression
+              # policies) before it listens -- and every 30-day password rotation
+              # forces a cold start. A startup probe suspends liveness until the
+              # first pass, so 60 x 10s buys ten minutes and costs nothing on a
+              # normal boot. Same reasoning as media/seerr.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Upstream's chart sets false too: the poster cache and backups are
+              # written under /app and /data.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                # Upstream's sizing: "~1GB RAM for the Tracearr container".
+                memory: 1Gi
+
+    defaultPodOptions:
+      securityContext:
+        # The image's own user, tracearr:nodejs.
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`. Sign-in goes through
+              # authentik via tracearr's own OIDC (definition.yaml), and a
+              # forward-auth hop would also gate the three paths upstream says
+              # must stay public: /api/v1/email/unsubscribe/*,
+              # /api/v1/newsletters/view/* and /api/v1/images/proxy.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+
+    persistence:
+      # The volsync PVC. The database is NOT on it -- that is CNPG's, covered by
+      # barman and the nightly pg_dump -- so this is only what tracearr itself
+      # keeps on disk. The image bakes its GeoLite and basemap files into
+      # /app/data, which is why the cache mounts at its own subdirectory rather
+      # than over /app/data.
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data/backup
+            subPath: backup
+          - path: /app/data/image-cache
+            subPath: image-cache
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
