@@ -88,6 +88,35 @@ spec:
               capabilities:
                 drop:
                   - ALL
+                # ⚠️ RUNNING AS UID 0 IS NOT ENOUGH ON ITS OWN. Dropping ALL
+                # takes CAP_DAC_OVERRIDE away from root too, and root without it
+                # is subject to ordinary file permission checks. The image
+                # chowns /var/lib/nginx to the `www` user, so the nginx master
+                # -- which runs as root because nginx.conf says `user www;` --
+                # could not create its own temp directories and died instantly
+                # on every start:
+                #
+                #   [emerg] mkdir() "/var/lib/nginx/body" failed (13: Permission denied)
+                #
+                # That was 81 CrashLoopBackOff restarts on the first deploy.
+                #
+                # These four are what a root-master nginx that drops to an
+                # unprivileged worker actually needs, and nothing more:
+                #   DAC_OVERRIDE  create/write under www-owned /var/lib/nginx
+                #   CHOWN         ngx_create_paths() chowns those temp dirs to
+                #                 the worker user so workers can buffer uploads
+                #                 (client_max_body_size is 2G, so they will)
+                #   SETGID/SETUID fork the workers as www; without these the
+                #                 master fails at setuid() instead, one step
+                #                 further along than the mkdir did
+                #
+                # NET_BIND_SERVICE is deliberately absent: nginx listens on
+                # 5000, which is unprivileged.
+                add:
+                  - CHOWN
+                  - DAC_OVERRIDE
+                  - SETGID
+                  - SETUID
             resources:
               requests:
                 cpu: 200m
@@ -210,6 +239,14 @@ spec:
               # No symlink following: the volume is written by another pod.
               SERVER_IGNORE_HIDDEN_FILES: "true"
               SERVER_LOG_LEVEL: info
+              # Adds a /health endpoint returning 200 and writing no log line.
+              # REQUIRED for the probes below, and the reason is worth stating:
+              # with SERVER_DIRECTORY_LISTING off and no index.html at the root,
+              # `/` returns 404 -- and the kubelet counts ONLY 200-399 as a
+              # probe success, so probing `/` fails forever. That is exactly
+              # what happened on the first deploy: 121 restarts, readiness never
+              # true, liveness killing the container every couple of minutes.
+              SERVER_HEALTH: "true"
             securityContext:
               allowPrivilegeEscalation: false
               # A single static Rust binary serving a read-only mount -- it
@@ -230,11 +267,13 @@ spec:
                 custom: true
                 spec:
                   httpGet:
-                    # `/` returns 404 with directory listing off, which is a
-                    # perfectly good liveness signal -- the server answered.
-                    # Checking a real media path is impossible: the filenames
-                    # are random and the directory is empty on a fresh install.
-                    path: /
+                    # `/health` (SERVER_HEALTH above), NOT `/`. A bare `/` is a
+                    # 404 here -- no index.html, listing off -- and the kubelet
+                    # treats anything outside 200-399 as a failed probe.
+                    # Checking a real media path is not an option either: the
+                    # filenames are random and the directory is empty on a
+                    # fresh install.
+                    path: &cdn-health /health
                     port: *cdn-port
                   initialDelaySeconds: 5
                   periodSeconds: 30
@@ -244,7 +283,7 @@ spec:
                 <<: *cdn-probe
                 spec:
                   httpGet:
-                    path: /
+                    path: *cdn-health
                     port: *cdn-port
                   initialDelaySeconds: 3
                   periodSeconds: 10
