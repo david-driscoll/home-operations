@@ -52,6 +52,15 @@ readonly APPROLE_FILE="bootstrap/openbao/restore-test-approle.sops.yaml"
 # (404 on the destroyed old path, 403 on the new one) and the monthly test will
 # fail at the canary read. Re-run `./restore-test.sh init` with an admin token
 # to converge the policy; `status` reports the drift without one.
+#
+# THE DRIFT IS NOW WATCHED DAILY rather than discovered monthly, by the
+# `canary-check` CronJob in
+# kubernetes/apps/kube-system/openbao-replica/resources/canary-check.sh. It logs
+# in as the role and reads CANARY_PATH against the live server, so it needs no
+# admin token and can run unattended -- which `status` cannot, because reading
+# the policy DOCUMENT is itself an admin operation (the `else` branch below
+# cannot tell "policy missing" from "this token may not read it"). A 403 there
+# is this exact drift and the job says so; `init` here is still the fix.
 readonly CANARY_PATH="secrets/data/third-party-tokens/cloudflare/driscoll-tech"
 
 log()  { printf '  %s\n' "$*"; }
