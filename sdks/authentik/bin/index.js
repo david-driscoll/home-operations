@@ -28,11 +28,14 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRbacPermissionOutput = exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getPolicyExpressionOutput = exports.getPolicyExpression = exports.getPolicyBindingOutput = exports.getPolicyBinding = exports.getOutpostOutput = exports.getOutpost = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.getApplicationEntitlementOutput = exports.getApplicationEntitlement = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.EndpointsGoogleChromeConnector = exports.EndpointsDeviceAccessGroup = exports.EndpointsConnectorAgentEnrollmentToken = exports.EndpointsConnectorAgent = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = void 0;
-exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.OutpostProviderAttachment = exports.Outpost = exports.Group = exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = exports.getUser = exports.getStagePromptFieldOutput = exports.getStagePromptField = exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = void 0;
-exports.types = exports.config = exports.User = exports.Token = exports.TaskSchedule = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEndpoints = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.StageAccountLockdown = exports.SourceTelegram = exports.SourceScim = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = exports.SourceLdap = exports.SourceKerberos = exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderWsFederation = void 0;
+exports.getRbacPermission = exports.getProviderSamlMetadataOutput = exports.getProviderSamlMetadata = exports.getProviderOauth2ConfigOutput = exports.getProviderOauth2Config = exports.getPropertyMappingSourceLdapOutput = exports.getPropertyMappingSourceLdap = exports.getPropertyMappingProviderScopeOutput = exports.getPropertyMappingProviderScope = exports.getPropertyMappingProviderScimOutput = exports.getPropertyMappingProviderScim = exports.getPropertyMappingProviderSamlOutput = exports.getPropertyMappingProviderSaml = exports.getPropertyMappingProviderRadiusOutput = exports.getPropertyMappingProviderRadius = exports.getPropertyMappingProviderRacOutput = exports.getPropertyMappingProviderRac = exports.getPolicyExpressionOutput = exports.getPolicyExpression = exports.getPolicyBindingOutput = exports.getPolicyBinding = exports.getOutpostOutput = exports.getOutpost = exports.getGroupsOutput = exports.getGroups = exports.getGroupOutput = exports.getGroup = exports.getFlowOutput = exports.getFlow = exports.getCertificateKeyPairOutput = exports.getCertificateKeyPair = exports.getBrandOutput = exports.getBrand = exports.getApplicationEntitlementOutput = exports.getApplicationEntitlement = exports.FlowStageBinding = exports.Flow = exports.EventTransport = exports.EventRule = exports.EnterpriseLicense = exports.EndpointsGoogleChromeConnector = exports.EndpointsDeviceAccessGroup = exports.EndpointsConnectorAgentEnrollmentToken = exports.EndpointsConnectorAgent = exports.CertificateKeyPair = exports.Brand = exports.Blueprint = exports.ApplicationEntitlement = exports.Application = exports.Agent = void 0;
+exports.ProviderRadius = exports.ProviderRac = exports.ProviderProxy = exports.ProviderOauth2Dcr = exports.ProviderOauth2 = exports.ProviderMicrosoftEntra = exports.ProviderLdap = exports.ProviderGoogleWorkspace = exports.PropertyMappingSourceScim = exports.PropertyMappingSourceSaml = exports.PropertyMappingSourcePlex = exports.PropertyMappingSourceOauth = exports.PropertyMappingSourceLdap = exports.PropertyMappingSourceKerberos = exports.PropertyMappingProviderScope = exports.PropertyMappingProviderScim = exports.PropertyMappingProviderSaml = exports.PropertyMappingProviderRadius = exports.PropertyMappingProviderRac = exports.PropertyMappingProviderMicrosoftEntra = exports.PropertyMappingProviderGoogleWorkspace = exports.PropertyMappingNotification = exports.PolicyUniquePassword = exports.PolicyReputation = exports.PolicyPassword = exports.PolicyGeoip = exports.PolicyExpression = exports.PolicyExpiry = exports.PolicyEventMatcher = exports.PolicyDummy = exports.PolicyBinding = exports.OutpostProviderAttachment = exports.Outpost = exports.ObjectAttribute = exports.Group = exports.getWebauthnDeviceTypeOutput = exports.getWebauthnDeviceType = exports.getUsersOutput = exports.getUsers = exports.getUserOutput = exports.getUser = exports.getStagePromptFieldOutput = exports.getStagePromptField = exports.getStageOutput = exports.getStage = exports.getSourceOutput = exports.getSource = exports.getServiceConnectionKubernetesOutput = exports.getServiceConnectionKubernetes = exports.getRbacPermissionOutput = void 0;
+exports.TaskSchedule = exports.SystemSettings = exports.StageUserWrite = exports.StageUserLogout = exports.StageUserLogin = exports.StageUserDelete = exports.StageSource = exports.StageRedirect = exports.StagePromptField = exports.StagePrompt = exports.StagePassword = exports.StageMutualTls = exports.StageInvitation = exports.StageIdentification = exports.StageEndpoints = exports.StageEmail = exports.StageDummy = exports.StageDeny = exports.StageConsent = exports.StageCaptcha = exports.StageAuthenticatorWebauthn = exports.StageAuthenticatorValidate = exports.StageAuthenticatorTotp = exports.StageAuthenticatorStatic = exports.StageAuthenticatorSms = exports.StageAuthenticatorEndpointGdtc = exports.StageAuthenticatorEmail = exports.StageAuthenticatorDuo = exports.StageAccountLockdown = exports.SourceTelegram = exports.SourceScim = exports.SourceSaml = exports.SourcePlex = exports.SourceOauth = exports.SourceLdap = exports.SourceKerberos = exports.ServiceConnectionKubernetes = exports.ServiceConnectionDocker = exports.RequestRuleChildBinding = exports.RequestRuleBinding = exports.RequestRule = exports.RbacRole = exports.RbacPermissionUser = exports.RbacPermissionRole = exports.RbacInitialPermissions = exports.RacEndpoint = exports.ProviderWsFederation = exports.ProviderSsf = exports.ProviderScim = exports.ProviderSaml = void 0;
+exports.types = exports.config = exports.UserOffboarding = exports.User = exports.Token = void 0;
 const pulumi = __importStar(require("@pulumi/pulumi"));
 const utilities = __importStar(require("./utilities"));
+exports.Agent = null;
+utilities.lazyLoad(exports, ["Agent"], () => require("./agent"));
 exports.Application = null;
 utilities.lazyLoad(exports, ["Application"], () => require("./application"));
 exports.ApplicationEntitlement = null;
@@ -138,6 +141,8 @@ exports.getWebauthnDeviceTypeOutput = null;
 utilities.lazyLoad(exports, ["getWebauthnDeviceType", "getWebauthnDeviceTypeOutput"], () => require("./getWebauthnDeviceType"));
 exports.Group = null;
 utilities.lazyLoad(exports, ["Group"], () => require("./group"));
+exports.ObjectAttribute = null;
+utilities.lazyLoad(exports, ["ObjectAttribute"], () => require("./objectAttribute"));
 exports.Outpost = null;
 utilities.lazyLoad(exports, ["Outpost"], () => require("./outpost"));
 exports.OutpostProviderAttachment = null;
@@ -198,6 +203,8 @@ exports.ProviderMicrosoftEntra = null;
 utilities.lazyLoad(exports, ["ProviderMicrosoftEntra"], () => require("./providerMicrosoftEntra"));
 exports.ProviderOauth2 = null;
 utilities.lazyLoad(exports, ["ProviderOauth2"], () => require("./providerOauth2"));
+exports.ProviderOauth2Dcr = null;
+utilities.lazyLoad(exports, ["ProviderOauth2Dcr"], () => require("./providerOauth2Dcr"));
 exports.ProviderProxy = null;
 utilities.lazyLoad(exports, ["ProviderProxy"], () => require("./providerProxy"));
 exports.ProviderRac = null;
@@ -222,6 +229,12 @@ exports.RbacPermissionUser = null;
 utilities.lazyLoad(exports, ["RbacPermissionUser"], () => require("./rbacPermissionUser"));
 exports.RbacRole = null;
 utilities.lazyLoad(exports, ["RbacRole"], () => require("./rbacRole"));
+exports.RequestRule = null;
+utilities.lazyLoad(exports, ["RequestRule"], () => require("./requestRule"));
+exports.RequestRuleBinding = null;
+utilities.lazyLoad(exports, ["RequestRuleBinding"], () => require("./requestRuleBinding"));
+exports.RequestRuleChildBinding = null;
+utilities.lazyLoad(exports, ["RequestRuleChildBinding"], () => require("./requestRuleChildBinding"));
 exports.ServiceConnectionDocker = null;
 utilities.lazyLoad(exports, ["ServiceConnectionDocker"], () => require("./serviceConnectionDocker"));
 exports.ServiceConnectionKubernetes = null;
@@ -302,6 +315,8 @@ exports.Token = null;
 utilities.lazyLoad(exports, ["Token"], () => require("./token"));
 exports.User = null;
 utilities.lazyLoad(exports, ["User"], () => require("./user"));
+exports.UserOffboarding = null;
+utilities.lazyLoad(exports, ["UserOffboarding"], () => require("./userOffboarding"));
 // Export sub-modules:
 const config = __importStar(require("./config"));
 exports.config = config;
@@ -311,6 +326,8 @@ const _module = {
     version: utilities.getVersion(),
     construct: (name, type, urn) => {
         switch (type) {
+            case "authentik:index/agent:Agent":
+                return new exports.Agent(name, undefined, { urn });
             case "authentik:index/application:Application":
                 return new exports.Application(name, undefined, { urn });
             case "authentik:index/applicationEntitlement:ApplicationEntitlement":
@@ -341,6 +358,8 @@ const _module = {
                 return new exports.FlowStageBinding(name, undefined, { urn });
             case "authentik:index/group:Group":
                 return new exports.Group(name, undefined, { urn });
+            case "authentik:index/objectAttribute:ObjectAttribute":
+                return new exports.ObjectAttribute(name, undefined, { urn });
             case "authentik:index/outpost:Outpost":
                 return new exports.Outpost(name, undefined, { urn });
             case "authentik:index/outpostProviderAttachment:OutpostProviderAttachment":
@@ -399,6 +418,8 @@ const _module = {
                 return new exports.ProviderMicrosoftEntra(name, undefined, { urn });
             case "authentik:index/providerOauth2:ProviderOauth2":
                 return new exports.ProviderOauth2(name, undefined, { urn });
+            case "authentik:index/providerOauth2Dcr:ProviderOauth2Dcr":
+                return new exports.ProviderOauth2Dcr(name, undefined, { urn });
             case "authentik:index/providerProxy:ProviderProxy":
                 return new exports.ProviderProxy(name, undefined, { urn });
             case "authentik:index/providerRac:ProviderRac":
@@ -423,6 +444,12 @@ const _module = {
                 return new exports.RbacPermissionUser(name, undefined, { urn });
             case "authentik:index/rbacRole:RbacRole":
                 return new exports.RbacRole(name, undefined, { urn });
+            case "authentik:index/requestRule:RequestRule":
+                return new exports.RequestRule(name, undefined, { urn });
+            case "authentik:index/requestRuleBinding:RequestRuleBinding":
+                return new exports.RequestRuleBinding(name, undefined, { urn });
+            case "authentik:index/requestRuleChildBinding:RequestRuleChildBinding":
+                return new exports.RequestRuleChildBinding(name, undefined, { urn });
             case "authentik:index/serviceConnectionDocker:ServiceConnectionDocker":
                 return new exports.ServiceConnectionDocker(name, undefined, { urn });
             case "authentik:index/serviceConnectionKubernetes:ServiceConnectionKubernetes":
@@ -503,11 +530,14 @@ const _module = {
                 return new exports.Token(name, undefined, { urn });
             case "authentik:index/user:User":
                 return new exports.User(name, undefined, { urn });
+            case "authentik:index/userOffboarding:UserOffboarding":
+                return new exports.UserOffboarding(name, undefined, { urn });
             default:
                 throw new Error(`unknown resource type ${type}`);
         }
     },
 };
+pulumi.runtime.registerResourceModule("authentik", "index/agent", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/application", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/applicationEntitlement", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/blueprint", _module);
@@ -523,6 +553,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/eventTransport", _modu
 pulumi.runtime.registerResourceModule("authentik", "index/flow", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/flowStageBinding", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/group", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/objectAttribute", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/outpost", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/outpostProviderAttachment", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/policyBinding", _module);
@@ -552,6 +583,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/providerGoogleWorkspac
 pulumi.runtime.registerResourceModule("authentik", "index/providerLdap", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/providerMicrosoftEntra", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/providerOauth2", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/providerOauth2Dcr", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/providerProxy", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/providerRac", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/providerRadius", _module);
@@ -564,6 +596,9 @@ pulumi.runtime.registerResourceModule("authentik", "index/rbacInitialPermissions
 pulumi.runtime.registerResourceModule("authentik", "index/rbacPermissionRole", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/rbacPermissionUser", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/rbacRole", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/requestRule", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/requestRuleBinding", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/requestRuleChildBinding", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/serviceConnectionDocker", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/serviceConnectionKubernetes", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/sourceKerberos", _module);
@@ -604,6 +639,7 @@ pulumi.runtime.registerResourceModule("authentik", "index/systemSettings", _modu
 pulumi.runtime.registerResourceModule("authentik", "index/taskSchedule", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/token", _module);
 pulumi.runtime.registerResourceModule("authentik", "index/user", _module);
+pulumi.runtime.registerResourceModule("authentik", "index/userOffboarding", _module);
 pulumi.runtime.registerResourcePackage("authentik", {
     version: utilities.getVersion(),
     constructProvider: (name, type, urn) => {

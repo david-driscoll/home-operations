@@ -114,9 +114,3 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: authenticated-user
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: sablier-${APP}
----

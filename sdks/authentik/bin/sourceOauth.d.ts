@@ -91,11 +91,10 @@ export declare class SourceOauth extends pulumi.CustomResource {
     readonly propertyMappingsGroups: pulumi.Output<string[] | undefined>;
     /**
      * Allowed values:
-     *   - `apple`
      *   - `openidconnect`
-     *   - `entraid`
-     *   - `azuread`
+     *   - `apple`
      *   - `discord`
+     *   - `entraid`
      *   - `facebook`
      *   - `github`
      *   - `gitlab`
@@ -223,11 +222,10 @@ export interface SourceOauthState {
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `apple`
      *   - `openidconnect`
-     *   - `entraid`
-     *   - `azuread`
+     *   - `apple`
      *   - `discord`
+     *   - `entraid`
      *   - `facebook`
      *   - `github`
      *   - `gitlab`
@@ -343,11 +341,10 @@ export interface SourceOauthArgs {
     propertyMappingsGroups?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     /**
      * Allowed values:
-     *   - `apple`
      *   - `openidconnect`
-     *   - `entraid`
-     *   - `azuread`
+     *   - `apple`
      *   - `discord`
+     *   - `entraid`
      *   - `facebook`
      *   - `github`
      *   - `gitlab`

@@ -34,7 +34,6 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/volsync
-    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

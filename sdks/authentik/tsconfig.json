@@ -19,6 +19,7 @@
         "skipLibCheck": true
     },
     "files": [
+        "agent.ts",
         "application.ts",
         "applicationEntitlement.ts",
         "blueprint.ts",
@@ -62,6 +63,7 @@
         "getWebauthnDeviceType.ts",
         "group.ts",
         "index.ts",
+        "objectAttribute.ts",
         "outpost.ts",
         "outpostProviderAttachment.ts",
         "policyBinding.ts",
@@ -92,6 +94,7 @@
         "providerLdap.ts",
         "providerMicrosoftEntra.ts",
         "providerOauth2.ts",
+        "providerOauth2Dcr.ts",
         "providerProxy.ts",
         "providerRac.ts",
         "providerRadius.ts",
@@ -104,6 +107,9 @@
         "rbacPermissionRole.ts",
         "rbacPermissionUser.ts",
         "rbacRole.ts",
+        "requestRule.ts",
+        "requestRuleBinding.ts",
+        "requestRuleChildBinding.ts",
         "serviceConnectionDocker.ts",
         "serviceConnectionKubernetes.ts",
         "sourceKerberos.ts",
@@ -147,6 +153,7 @@
         "types/input.ts",
         "types/output.ts",
         "user.ts",
+        "userOffboarding.ts",
         "utilities.ts"
     ]
 }

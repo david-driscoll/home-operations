@@ -36,6 +36,7 @@ export class ProviderScim extends pulumi.CustomResource {
      * Allowed values:
      *   - `token`
      *   - `oauth`
+     *   - `oauth_interactive`
      *      Defaults to `token`.
      */
     declare public readonly authMode: pulumi.Output<string | undefined>;
@@ -53,6 +54,7 @@ export class ProviderScim extends pulumi.CustomResource {
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `gitlab`
      *   - `webex`
      *   - `vcenter`
      *      Defaults to `default`.
@@ -149,6 +151,7 @@ export interface ProviderScimState {
      * Allowed values:
      *   - `token`
      *   - `oauth`
+     *   - `oauth_interactive`
      *      Defaults to `token`.
      */
     authMode?: pulumi.Input<string | undefined>;
@@ -166,6 +169,7 @@ export interface ProviderScimState {
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `gitlab`
      *   - `webex`
      *   - `vcenter`
      *      Defaults to `default`.
@@ -205,6 +209,7 @@ export interface ProviderScimArgs {
      * Allowed values:
      *   - `token`
      *   - `oauth`
+     *   - `oauth_interactive`
      *      Defaults to `token`.
      */
     authMode?: pulumi.Input<string | undefined>;
@@ -222,6 +227,7 @@ export interface ProviderScimArgs {
      *   - `aws`
      *   - `slack`
      *   - `sfdc`
+     *   - `gitlab`
      *   - `webex`
      *   - `vcenter`
      *      Defaults to `default`.

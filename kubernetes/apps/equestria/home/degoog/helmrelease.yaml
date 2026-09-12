@@ -270,8 +270,3 @@ spec:
                   # definition.yaml. A browser's address-bar search and the
                   # OpenSearch descriptor cannot follow an auth redirect.
                   name: local-user
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: sablier-${APP}

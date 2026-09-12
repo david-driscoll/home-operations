@@ -90,8 +90,3 @@ spec:
                   group: traefik.io
                   kind: Middleware
                   name: local-user
-              - type: ExtensionRef
-                extensionRef:
-                  group: traefik.io
-                  kind: Middleware
-                  name: sablier-${APP}

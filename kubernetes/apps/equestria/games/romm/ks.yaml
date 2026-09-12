@@ -42,7 +42,6 @@ spec:
     # and DB_PASSWD reaches the app from romm-env via envFrom.
     - ../../../../components/postgres
     - ../../../../components/volsync
-    - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app

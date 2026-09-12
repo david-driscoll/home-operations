@@ -31,10 +31,6 @@ export declare class StageAuthenticatorWebauthn extends pulumi.CustomResource {
     readonly maxAttempts: pulumi.Output<number | undefined>;
     readonly name: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
-     */
-    readonly preventDuplicateDevices: pulumi.Output<boolean | undefined>;
-    /**
      * Allowed values:
      *   - `required`
      *   - `preferred`
@@ -80,10 +76,6 @@ export interface StageAuthenticatorWebauthnState {
     maxAttempts?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
     /**
-     * Defaults to `true`.
-     */
-    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
-    /**
      * Allowed values:
      *   - `required`
      *   - `preferred`
@@ -120,10 +112,6 @@ export interface StageAuthenticatorWebauthnArgs {
     hints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     maxAttempts?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
-    /**
-     * Defaults to `true`.
-     */
-    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `required`

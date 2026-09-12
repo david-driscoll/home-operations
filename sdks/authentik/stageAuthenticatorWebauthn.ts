@@ -48,10 +48,6 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
     declare public readonly maxAttempts: pulumi.Output<number | undefined>;
     declare public readonly name: pulumi.Output<string>;
     /**
-     * Defaults to `true`.
-     */
-    declare public readonly preventDuplicateDevices: pulumi.Output<boolean | undefined>;
-    /**
      * Allowed values:
      *   - `required`
      *   - `preferred`
@@ -89,7 +85,6 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["hints"] = state?.hints;
             resourceInputs["maxAttempts"] = state?.maxAttempts;
             resourceInputs["name"] = state?.name;
-            resourceInputs["preventDuplicateDevices"] = state?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = state?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = state?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = state?.userVerification;
@@ -102,7 +97,6 @@ export class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["hints"] = args?.hints;
             resourceInputs["maxAttempts"] = args?.maxAttempts;
             resourceInputs["name"] = args?.name;
-            resourceInputs["preventDuplicateDevices"] = args?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = args?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = args?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = args?.userVerification;
@@ -131,10 +125,6 @@ export interface StageAuthenticatorWebauthnState {
     hints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     maxAttempts?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
-    /**
-     * Defaults to `true`.
-     */
-    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `required`
@@ -173,10 +163,6 @@ export interface StageAuthenticatorWebauthnArgs {
     hints?: pulumi.Input<pulumi.Input<string>[] | undefined>;
     maxAttempts?: pulumi.Input<number | undefined>;
     name?: pulumi.Input<string | undefined>;
-    /**
-     * Defaults to `true`.
-     */
-    preventDuplicateDevices?: pulumi.Input<boolean | undefined>;
     /**
      * Allowed values:
      *   - `required`

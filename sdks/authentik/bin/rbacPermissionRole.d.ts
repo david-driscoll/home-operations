@@ -23,6 +23,8 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_core.application`
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
+     *   - `authentik_core.objectattribute`
+     *   - `authentik_core.actor`
      *   - `authentik_crypto.certificatekeypair`
      *   - `authentik_endpoints.deviceuserbinding`
      *   - `authentik_endpoints.deviceaccessgroup`
@@ -52,6 +54,7 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_providers_ldap.ldapprovider`
      *   - `authentik_providers_oauth2.scopemapping`
      *   - `authentik_providers_oauth2.oauth2provider`
+     *   - `authentik_providers_oauth2.oauth2dynamicclientregistration`
      *   - `authentik_providers_proxy.proxyprovider`
      *   - `authentik_providers_rac.racprovider`
      *   - `authentik_providers_rac.endpoint`
@@ -122,11 +125,13 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_agents.agent`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
      *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
+     *   - `authentik_lifecycle.useroffboarding`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
@@ -135,6 +140,10 @@ export declare class RbacPermissionRole extends pulumi.CustomResource {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_requests.requestrulechildbinding`
+     *   - `authentik_requests.requestrulebinding`
+     *   - `authentik_requests.requestrule`
+     *   - `authentik_requests.grantrequest`
      *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -166,6 +175,8 @@ export interface RbacPermissionRoleState {
      *   - `authentik_core.application`
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
+     *   - `authentik_core.objectattribute`
+     *   - `authentik_core.actor`
      *   - `authentik_crypto.certificatekeypair`
      *   - `authentik_endpoints.deviceuserbinding`
      *   - `authentik_endpoints.deviceaccessgroup`
@@ -195,6 +206,7 @@ export interface RbacPermissionRoleState {
      *   - `authentik_providers_ldap.ldapprovider`
      *   - `authentik_providers_oauth2.scopemapping`
      *   - `authentik_providers_oauth2.oauth2provider`
+     *   - `authentik_providers_oauth2.oauth2dynamicclientregistration`
      *   - `authentik_providers_proxy.proxyprovider`
      *   - `authentik_providers_rac.racprovider`
      *   - `authentik_providers_rac.endpoint`
@@ -265,11 +277,13 @@ export interface RbacPermissionRoleState {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_agents.agent`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
      *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
+     *   - `authentik_lifecycle.useroffboarding`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
@@ -278,6 +292,10 @@ export interface RbacPermissionRoleState {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_requests.requestrulechildbinding`
+     *   - `authentik_requests.requestrulebinding`
+     *   - `authentik_requests.requestrule`
+     *   - `authentik_requests.grantrequest`
      *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`
@@ -301,6 +319,8 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_core.application`
      *   - `authentik_core.applicationentitlement`
      *   - `authentik_core.token`
+     *   - `authentik_core.objectattribute`
+     *   - `authentik_core.actor`
      *   - `authentik_crypto.certificatekeypair`
      *   - `authentik_endpoints.deviceuserbinding`
      *   - `authentik_endpoints.deviceaccessgroup`
@@ -330,6 +350,7 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_providers_ldap.ldapprovider`
      *   - `authentik_providers_oauth2.scopemapping`
      *   - `authentik_providers_oauth2.oauth2provider`
+     *   - `authentik_providers_oauth2.oauth2dynamicclientregistration`
      *   - `authentik_providers_proxy.proxyprovider`
      *   - `authentik_providers_rac.racprovider`
      *   - `authentik_providers_rac.endpoint`
@@ -400,11 +421,13 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_tasks_schedules.schedule`
      *   - `authentik_brands.brand`
      *   - `authentik_blueprints.blueprintinstance`
+     *   - `authentik_agents.agent`
      *   - `authentik_endpoints_connectors_fleet.fleetconnector`
      *   - `authentik_endpoints_connectors_google_chrome.googlechromeconnector`
      *   - `authentik_lifecycle.lifecyclerule`
      *   - `authentik_lifecycle.lifecycleiteration`
      *   - `authentik_lifecycle.review`
+     *   - `authentik_lifecycle.useroffboarding`
      *   - `authentik_policies_unique_password.uniquepasswordpolicy`
      *   - `authentik_providers_google_workspace.googleworkspaceprovider`
      *   - `authentik_providers_google_workspace.googleworkspaceprovidermapping`
@@ -413,6 +436,10 @@ export interface RbacPermissionRoleArgs {
      *   - `authentik_providers_ssf.ssfprovider`
      *   - `authentik_providers_ws_federation.wsfederationprovider`
      *   - `authentik_reports.dataexport`
+     *   - `authentik_requests.requestrulechildbinding`
+     *   - `authentik_requests.requestrulebinding`
+     *   - `authentik_requests.requestrule`
+     *   - `authentik_requests.grantrequest`
      *   - `authentik_stages_account_lockdown.accountlockdownstage`
      *   - `authentik_stages_authenticator_endpoint_gdtc.authenticatorendpointgdtcstage`
      *   - `authentik_stages_mtls.mutualtlsstage`

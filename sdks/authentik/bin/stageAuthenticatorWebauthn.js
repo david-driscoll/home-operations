@@ -65,7 +65,6 @@ class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["hints"] = state?.hints;
             resourceInputs["maxAttempts"] = state?.maxAttempts;
             resourceInputs["name"] = state?.name;
-            resourceInputs["preventDuplicateDevices"] = state?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = state?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = state?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = state?.userVerification;
@@ -79,7 +78,6 @@ class StageAuthenticatorWebauthn extends pulumi.CustomResource {
             resourceInputs["hints"] = args?.hints;
             resourceInputs["maxAttempts"] = args?.maxAttempts;
             resourceInputs["name"] = args?.name;
-            resourceInputs["preventDuplicateDevices"] = args?.preventDuplicateDevices;
             resourceInputs["residentKeyRequirement"] = args?.residentKeyRequirement;
             resourceInputs["stageAuthenticatorWebauthnId"] = args?.stageAuthenticatorWebauthnId;
             resourceInputs["userVerification"] = args?.userVerification;
