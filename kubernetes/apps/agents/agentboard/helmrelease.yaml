@@ -305,16 +305,13 @@ spec:
               - path: /root/.config/mise/config.toml
                 subPath: config.toml
                 readOnly: true
-              # `mise install` resolves through this at strict-lockfile
-              # confidence rather than a live "latest" lookup. Named
-              # `mise.lock`, NOT paired to `config.toml`'s own basename --
-              # see ./resources/mise.lock's header for why: this path is
-              # mise's special-cased GLOBAL config location, and the global
-              # lockfile is always `mise.lock` regardless of the config
-              # file's name.
-              - path: /root/.config/mise/mise.lock
-                subPath: mise.lock
-                readOnly: true
+              # No `mise.lock` mount beside this any more: the lockfile was
+              # dropped along with `locked = true` (dd2663ee), and a subPath
+              # mount of a key the ConfigMap no longer carries does not fail
+              # quietly. If a global lockfile returns, it must be named
+              # `mise.lock` (mise special-cases this global config path and
+              # ignores config.toml's basename) and added in
+              # ./kustomization.yaml's configMapGenerator in the same change.
               # ./resources/entrypoint.sh -- see ./helmrelease.yaml's
               # `command` above. Deliberately NOT under /root: it is
               # image/config, not state, and has no business on the

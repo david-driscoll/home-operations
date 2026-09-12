@@ -10,18 +10,17 @@ resources:
   - ./rbac.yaml
 # Everything ./helmrelease.yaml's `command` needs and cannot get from a
 # Dockerfile, because there isn't one -- see ./resources/entrypoint.sh's
-# header. `mise.lock`, NOT `config.lock`: mise special-cases the global
-# config path (`~/.config/mise/config.toml`, which is where this mounts --
-# see ./resources/mise.lock's header) and always names ITS lockfile
-# `mise.lock` regardless of the config file's own basename; that
-# basename-pairing rule only holds for non-global project configs.
-# disableNameSuffixHash because ./helmrelease.yaml mounts these by literal
-# name.
+# header. No lockfile: ./resources/mise.toml dropped `lockfile`/`locked` and
+# the pinned mise.lock was deleted (dd2663ee), so tools resolve from the
+# versions pinned in mise.toml alone. A `mise.lock` entry that outlived its
+# file broke `kustomize build` for this whole Kustomization -- if a lockfile
+# comes back, it has to return here AND as the subPath mount in
+# ./helmrelease.yaml together. disableNameSuffixHash because
+# ./helmrelease.yaml mounts these by literal name.
 configMapGenerator:
   - name: ${APP}-mise-config
     files:
       - config.toml=./resources/mise.toml
-      - mise.lock=./resources/mise.lock
       - entrypoint.sh=./resources/entrypoint.sh
       # Claude Code's own MCP client config -- mounted at /root/.mcp.json,
       # picked up when the tmux session in ./resources/entrypoint.sh starts
