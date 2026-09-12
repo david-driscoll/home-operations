@@ -16,7 +16,9 @@
  *
  *   1. the tunnel resource (ADOPTED — see "Adoption" below, it is never created),
  *   2. the tunnel's ingress rules,
- *   3. the write-back of the tunnel's identity and token to OpenBao.
+ *   3. the write-back of the tunnel's identity to OpenBao. The connector token
+ *      is carried through that write verbatim, after checking it belongs to
+ *      this tunnel — it is read from the item, never fetched or regenerated.
  *
  * It owns NO DNS. Every `<app>.driscoll.tech` CNAME that points at
  * `<tunnel-id>.cfargotunnel.com` is created by external-dns in-cluster
@@ -58,9 +60,10 @@ export interface CloudflareTunnelArgs {
   /**
    * OpenBao path, within the `secrets` mount, holding this tunnel's identity.
    *
-   * `name` is READ from here and is the only hand-written field. `tunnelId`,
-   * `credential` (the connector token) and `hostname` are WRITTEN back on every
-   * run. Read and write are the same path on purpose — one item is the whole
+   * `name` and `credential` (the connector token) are READ from here; `name` is
+   * the one field a human sets, `credential` is whatever the connector already
+   * runs on. `tunnelId` and `hostname` are WRITTEN, and `name`/`credential` are
+   * written back unchanged, on every run. Read and write are the same path on purpose — one item is the whole
    * answer to "what is this tunnel", for humans and for the ExternalSecret that
    * feeds the connector.
    */
@@ -109,7 +112,7 @@ export class CloudflareTunnelComponent extends ComponentResource {
       retainOnDelete: true,
     };
 
-    const identity = globals.store.getSecretByPath<{ name: string }>(args.secretPath);
+    const identity = globals.store.getSecretByPath<{ name: string; credential: string }>(args.secretPath);
 
     // THE FIRST GUARD. This component reads `name` from the same OpenBao path it
     // overwrites. There is no Pulumi cycle — the read is a plan-time data source
@@ -222,22 +225,46 @@ export class CloudflareTunnelComponent extends ComponentResource {
       cro,
     );
 
-    // The resource itself exposes no token output, so the data source is the
-    // only way to reach it. It takes plain strings rather than Inputs, hence the
-    // apply. This is what retires the hand-maintained copy in OpenBao: the token
-    // is derived from the account and tunnel, so reading it is stable rather
-    // than a rotation.
+    // The connector token is READ from the item, not fetched from Cloudflare.
     //
-    // PERMISSION: the Cloudflare API token behind `globals.cloudflareProvider`
-    // needs `Cloudflare Tunnel Write` (dashboard: Account > Cloudflare Tunnel >
-    // Edit). Read is not enough — `GET .../cfd_tunnel/<id>/token` answers
-    // `401 {"code":1001,"message":"Not authorized"}` to a token that can read the
-    // tunnel's configuration fine, which is exactly what the first preview hit on
-    // 2026-09-12. Updating the ingress rules above needs Write as well.
+    // It is already there — `credential`, the key the connector has always run
+    // on — and a tunnel token is a pure function of account, tunnel and tunnel
+    // secret, none of which this component ever changes. Fetching it through
+    // `getZeroTrustTunnelCloudflaredToken` would return the same bytes while
+    // adding a dependency on the one endpoint that refuses a read-only API token
+    // (401 "Not authorized", first preview, 2026-09-12). Reading it also means a
+    // run can never write back a token other than the one cloudflared is using.
+    //
+    // THE THIRD GUARD. The item is written back wholesale, so it must not carry a
+    // token for some other tunnel. A tunnel token is base64 JSON `{a, t, s}`:
+    // account tag, tunnel id, tunnel secret. Refuse unless `a` and `t` match what
+    // this component manages — a mismatch means the item and the tunnel have
+    // diverged, and writing it back would bless the divergence.
+    //
+    // PERMISSION, which reading the token does not remove: updating the ingress
+    // rules above needs `Cloudflare Tunnel Write` on the API token behind
+    // `globals.cloudflareProvider` (dashboard: Account > Cloudflare Tunnel > Edit).
     this.token = secret(
-      all([globals.cloudFlareAccountId, this.tunnelId]).apply(([accountId, tunnelId]) =>
-        cloudflare.getZeroTrustTunnelCloudflaredToken({ accountId, tunnelId }, { provider: globals.cloudflareProvider, parent: this }).then(result => result.token),
-      ),
+      all([identity.credential, globals.cloudFlareAccountId, this.tunnelId]).apply(([credential, accountId, tunnelId]) => {
+        const where = `secrets/${args.secretPath}#credential`;
+        if (typeof credential !== "string" || credential.trim() === "") {
+          throw new Error(`CloudflareTunnel "${name}": no connector token at ${where}. The connector cannot start without it; restore it before running this stack.`);
+        }
+        let decoded: { a?: unknown; t?: unknown; s?: unknown };
+        try {
+          decoded = JSON.parse(Buffer.from(credential.trim(), "base64").toString("utf8"));
+        } catch {
+          throw new Error(`CloudflareTunnel "${name}": ${where} is not a tunnel token (expected base64 JSON with a, t, s).`);
+        }
+        // Never interpolate `decoded.s` or the credential into an error.
+        if (decoded.t !== tunnelId || decoded.a !== accountId || typeof decoded.s !== "string" || decoded.s === "") {
+          throw new Error(
+            `CloudflareTunnel "${name}": ${where} does not belong to this tunnel ` +
+              `(tunnel id ${decoded.t === tunnelId ? "matches" : "differs"}, account ${decoded.a === accountId ? "matches" : "differs"}). Refusing to write it back.`,
+          );
+        }
+        return credential.trim();
+      }),
     );
 
     // Write-back. `credential` is the key the ExternalSecret at
