@@ -37,7 +37,7 @@ node = "24.20.0"
 python = "3.14.7"
 gh = "2.100.0"
 kubectl = "1.37.0"
-pulumi = "3.261.0"
+pulumi = "3.262.0"
 jq = "1.8.2"
 yq = "4.53.6"
 # For decrypting this repo's *.sops.yaml files -- see ../helmrelease.yaml's
