@@ -705,9 +705,9 @@ url = "https://github.com/pypa/pipx/releases/download/1.17.2/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/540192956"
 
 [[tools."pipx:graphifyy"]]
-version = "0.9.58"
+version = "0.9.59"
 backend = "pipx:graphifyy"
-specifiers = ["0.9.58"]
+specifiers = ["0.9.59"]
 
 [[tools."pipx:yamllint"]]
 version = "1.38.0"
