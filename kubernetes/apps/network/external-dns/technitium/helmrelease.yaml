@@ -65,6 +65,32 @@ spec:
       - --rfc2136-tsig-secret-alg=hmac-sha256
       # external-dns reads zone state via AXFR, which must also be TSIG-signed
       - --rfc2136-tsig-axfr
+      # ---- SPLIT HORIZON: THIS RESOLVER PUBLISHES THE *INTERNAL* GATEWAY ----
+      #
+      # Scopes the gateway-httproute source to the `internal` Gateway only.
+      # Paired with `--gateway-name=external` on ../cloudflare, which is what
+      # makes it possible for ONE hostname to resolve to the internal gateway
+      # in here and to the tunnel in public DNS.
+      #
+      # Without this the two cannot coexist. All three external-dns instances
+      # run `policy: sync` over the same sources with no gateway or annotation
+      # filter, so a hostname routed on BOTH gateways yields two desired
+      # endpoints for one name with different CNAME targets (`internal` is
+      # annotated ${INTERNAL_DOMAIN}, `external` is ${EXTERNAL_DOMAIN}) — and a
+      # CNAME cannot hold both. postiz needs exactly that split: the app on the
+      # internal gateway, and /uploads/ published publicly so TikTok and Meta
+      # can fetch media. See apps/equestria/home/postiz/helmrelease.yaml.
+      #
+      # SCOPE: gateway-* sources ONLY. `traefik-proxy`, `ingress`, `service`
+      # and `crd` are untouched, so the tailnet Ingress that components/
+      # tailscale emits (kind: Ingress) still resolves here as before.
+      #
+      # WHAT THIS DROPS: external-gateway hostnames stop resolving on the
+      # internal resolvers. Today that is only `flux-${CLUSTER_CNAME}-webhook`,
+      # which is called from the internet and never from inside. Technitium is
+      # authoritative for the zone, so such a name is NXDOMAIN internally
+      # rather than falling through to public DNS.
+      - --gateway-name=internal
     env:
       # TSIG key name + shared secret from the "Technitium TSIG Key" 1Password
       # item (username = key name, credential = shared secret). The key is
