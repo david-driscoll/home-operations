@@ -70,7 +70,7 @@ spec:
               # release candidates behind while the dashboard rendered it as
               # tracked. Do not drop the digest -- every other image in this
               # namespace carries one, and jellyfin was the sole exception.
-              tag: 12.0-rc7@sha256:2e7590493748ef56b50b7e2fe1fcda1319c10697f02d933101c784e7b28177d6
+              tag: 12.0@sha256:74f4d87d9cf262c52d62be6be265c0355c6a7e21d0477ab6c654a49a4f8b1fd4
             env:
               JELLYFIN_CACHE_DIR: /cache
               JELLYFIN_CONFIG_DIR: /config/config
