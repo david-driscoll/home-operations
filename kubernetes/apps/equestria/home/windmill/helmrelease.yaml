@@ -127,6 +127,23 @@ spec:
           deploymentAnnotations:
             reloader.stakater.com/auto: "true"
           replicas: 3
+          # 120s, NOT the chart's 604800 (seven days), and this is what was
+          # stopping Talos upgrades. The chart's comment says a worker "will
+          # wait for [a running job] to finish before terminating", but on
+          # 1.809.0 an IDLE worker catches SIGTERM and never exits: two old-
+          # ReplicaSet workers sat `Terminating` for 16h still pinging the
+          # database. tuppr runs `talosctl upgrade` with Talos's own drain,
+          # whose --drain-timeout is a fixed 5m that tuppr exposes no knob
+          # for, so any node holding one of these fails its upgrade outright
+          # ("error when waiting for pod windmill-workers-... to terminate:
+          # context deadline exceeded" -- hard-hat, 2026-09-12, 3 attempts,
+          # batch stopped with four nodes still outdated). Keep this well
+          # under 5m: the drain evicts every pod on the node in parallel and
+          # the timeout covers all of them. A job SIGKILLed here is picked up
+          # again by Windmill's zombie-job handling on another worker.
+          # The template reads `default 604800`, so 0 would silently mean
+          # seven days again -- never set it to 0.
+          terminationGracePeriodSeconds: &workerGrace 120
           volumes: *volumes
           volumeMounts: *volumeMounts
           resources:
@@ -142,6 +159,8 @@ spec:
           deploymentAnnotations:
             reloader.stakater.com/auto: "true"
           replicas: 1
+          # See the default group above.
+          terminationGracePeriodSeconds: *workerGrace
           volumes: *volumes
           volumeMounts: *volumeMounts
           resources:
