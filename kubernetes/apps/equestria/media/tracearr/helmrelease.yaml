@@ -46,9 +46,16 @@ spec:
               repository: ghcr.io/connorgallopo/tracearr
               # No `v` prefix on this project's tags -- `v2.2.3` does not exist.
               tag: 2.2.3@sha256:d66822b5c5e76c27c12eec4de05c6eb9fbc4005968df5587bf5d2d3718f15dff
-            # https://docs.tracearr.com -- configuration/environment-variables.
-            # Media servers (Plex, Jellyfin, Emby) are added through the web UI
-            # after first boot, not through env.
+            # Every variable in https://docs.tracearr.com/configuration/environment
+            # is either set here, set in externalsecret.yaml, or deliberately
+            # left at its default below. Media servers (Plex, Jellyfin, Emby)
+            # are added through the web UI after first boot, not through env.
+            #
+            # Left at their defaults on purpose:
+            #   BASE_PATH          served at its own hostname, not a subpath
+            #   BACKUP_DIR         /data/backup, which is where the PVC mounts
+            #   DNS_CACHE_MAX_TTL  in-cluster CoreDNS already caches; off
+            #   IMAGE_CACHE_MIN_FREE_PERCENT  10; IMAGE_CACHE_MAX_MB is the cap
             env:
               TZ: ${TIMEZONE}
               NODE_ENV: production
@@ -56,9 +63,28 @@ spec:
               PORT: &port 3000
               LOG_LEVEL: info
               # Behind Traefik: take the client address from X-Forwarded-*, or
-              # sign-in rate limits count every user as the proxy.
+              # sign-in rate limits count every user as the proxy. Traefik also
+              # forwards X-Forwarded-Proto, which is what gets session cookies
+              # their `Secure` flag -- the docs' other reverse-proxy requirement.
               TRUST_PROXY: "true"
+              # The canonical origin. Better Auth's CSRF check additionally
+              # trusts the request's own host (apps/server/src/lib/auth.ts,
+              # trustedOriginsForRequest), so the tailnet hostname signs in too
+              # without being listed here.
               CORS_ORIGIN: https://${APP}.${ROOT_DOMAIN}
+              # The docs say to leave this off behind a reverse proxy that
+              # compresses. This estate's Traefik has no compress middleware, so
+              # without it every API response and asset goes out uncompressed.
+              # Safe with live updates: the hook skips `text/event-stream`
+              # (apps/server/src/index.ts), and Socket.io frames never pass
+              # through onSend.
+              GZIP_ENABLED: "true"
+              # The poster cache shares its volume with the pg_dump backups in
+              # /data/backup (VOLSYNC_CAPACITY 10Gi in ks.yaml). Left alone it
+              # grows until 10% of the volume is free, which would leave the
+              # backups no room. Capping it at 4GiB (~200k posters) keeps ~5GiB
+              # for backups.
+              IMAGE_CACHE_MAX_MB: "4096"
               # The shared valkey in `database`, which sets no password (see
               # home/degoog/externalsecret.yaml). Index 11 is this app's; taken
               # elsewhere today: 0 immich, 5 romm, 6 dispatcharr, 8 searxng,
@@ -71,9 +97,13 @@ spec:
               # Upstream defaults to 50. This is one tenant of a 300-connection
               # cluster shared by the whole estate.
               DATABASE_POOL_MAX: "10"
+              # Label on the SSO button. The other three OIDC variables come
+              # from the ${APP}-oidc Secret below; see definition.yaml for who
+              # that button actually lets in.
               OIDC_PROVIDER_NAME: Authentik
             envFrom:
-              # DATABASE_URL, JWT_SECRET, COOKIE_SECRET, ENCRYPTION_KEY. envFrom
+              # DATABASE_URL, JWT_SECRET, COOKIE_SECRET, BETTER_AUTH_SECRET,
+              # ENCRYPTION_KEY, CLAIM_CODE. envFrom
               # so the rotated database password reaches the pod as a Secret
               # change that reloader can see.
               - secretRef:
