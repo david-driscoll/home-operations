@@ -87,7 +87,7 @@ spec:
       # anonymously with zero warnings. Nothing in this repo fixes that; bump
       # the tag by hand until Mend can reach the host.
       # renovate: datasource=docker depName=data.forgejo.org/forgejo/forgejo
-      fullOverride: data.forgejo.org/forgejo/forgejo:16.0.3-rootless
+      fullOverride: data.forgejo.org/forgejo/forgejo:16.0.4-rootless
       pullPolicy: IfNotPresent
 
     # Forgejo is explicitly not HA -- the chart refuses to be useful above one
