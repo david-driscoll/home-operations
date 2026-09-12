@@ -318,20 +318,48 @@ cluster:
       tcp_keepalives_idle: "10"
       tcp_keepalives_interval: "10"
       tcp_keepalives_count: "3"
-      # TimescaleDB, for media/tracearr. `timescaledb.license` is set here rather
+      # ─── STAGED: STEP 2 OF THE TIMESCALEDB OPERAND CHANGE ─────────────────────
+      #
+      # These three lines are commented out ON PURPOSE, and must stay that way
+      # until the cluster reports the TimescaleDB image (`kubectl -n database get
+      # cluster postgres -o jsonpath='{.status.image}'`). Then uncomment them in a
+      # change of their own.
+      #
+      # Why they cannot ride with `imageName`: CNPG's validating webhook refuses
+      # an image change and a `spec.postgresql.parameters` change in the same
+      # update while `primaryUpdateMethod: switchover`
+      # (internal/webhook/v1/cluster_webhook.go, validateConfigurationChange, 1.30.0):
+      #
+      #   Can't change image name and configuration at the same time when
+      #   `primaryUpdateMethod` is set to `switchover`. There are differences in
+      #   PostgreSQL configuration parameters: {"max_locks_per_transaction":…}
+      #
+      # That is exactly how #1638 failed on 2026-09-12: helm-controller's
+      # server-side apply of the Cluster was denied, three upgrade attempts
+      # failed, and it rolled back. The webhook rejected it before anything
+      # changed, so the cluster was never touched. Only `parameters` is
+      # compared -- `shared_preload_libraries` below is its own field and was
+      # not in the rejected diff, so it goes in with the image.
+      #
+      # Running without them in between is safe. The packagecloud TSL build's
+      # `timescaledb.license` default is already `timescale` (verify with `SHOW
+      # timescaledb.license;` once rolled), telemetry merely stays on, and 64
+      # locks per transaction is only a limit for very large Tautulli imports.
+      #
+      # TimescaleDB, for media/tracearr. `timescaledb.license` is pinned rather
       # than left to its default because tracearr, finding `apache`, tries to fix
       # it with ALTER SYSTEM -- which its non-superuser role cannot do -- and then
       # runs without compression. The GUC only accepts file/argv sources, so this
       # is the one place it can come from.
-      timescaledb.license: timescale
-      timescaledb.telemetry_level: "off"
+      # timescaledb.license: timescale
+      # timescaledb.telemetry_level: "off"
       # Tracearr's own compose ships 4096 for large Tautulli imports over many
       # chunks. The lock table is sized max_locks_per_transaction x
       # (max_connections + max_prepared_transactions), so at 300 connections 4096
       # would pin roughly 300MB of shared memory on every instance. 512 is ~8x the
       # default; raise it only if an import actually fails with "out of shared
       # memory" / "Try increasing max_locks_per_transaction".
-      max_locks_per_transaction: "512"
+      # max_locks_per_transaction: "512"
     # Inserted between CNPG's fixed rules and its default
     # `host all all all scram-sha-256` catch-all, so this is matched first for
     # an SSL connection as `openbao` to the `openbao` database.
