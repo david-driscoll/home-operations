@@ -251,7 +251,15 @@ BAO_ADDR = "https://bao.equestria.driscoll.tech"
 BAO_AUTH_METHOD = "approle"
 BAO_ROLE_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/role_id"
 BAO_SECRET_ID = "ref+sops://{{config_root}}/.config/bao-approle.sops.yaml#/secret_id"
-SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
+
+# Only a DEFAULT. An agentboard pod already exports SOPS_AGE_KEY_FILE pointing
+# at the mounted estate identity (/var/run/secrets/sops-age/age.agekey, see
+# kubernetes/apps/agents/agentboard/helmrelease.yaml), and no repo-root age.key
+# exists there. A plain assignment overrode that correct value with a missing
+# file, so every `ref+sops://` failed in the pod with "0 successful groups
+# required, got 0". Verified 2026-09-12: get_env keeps an inherited value and
+# falls back to {{config_root}}/age.key when nothing is set.
+SOPS_AGE_KEY_FILE = "{{ get_env(name='SOPS_AGE_KEY_FILE', default=config_root ~ '/age.key') }}"
 
 # Where talhelper writes the generated admin talosconfig, and where every
 # `talos:*` task expects to find it. Set globally so an ad-hoc `talosctl` in
