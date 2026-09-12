@@ -64,6 +64,19 @@ spec:
               repository: docker.io/temporalio/auto-setup
               tag: 1.29.7@sha256:f14912b699cf73015ad5c4fc18d522d4b014db90e794039214dfb7c022c2644f
               pullPolicy: IfNotPresent
+            env:
+              # auto-setup.sh otherwise registers its SAMPLE search attributes
+              # (CustomStringField, CustomTextField, CustomIntField, ...) in the
+              # default namespace on every start. Two of those are type Text,
+              # and the SQL visibility store allows only THREE Text attributes
+              # per namespace -- Postiz's backend needs two of its own
+              # (organizationId, postId) and registers them at boot. 2 + 2 > 3,
+              # so its NestJS init threw `cannot have more than 3 search
+              # attribute of type Text`, the backend never listened on :3000,
+              # and nginx served 502s (ServiceSustained5xx, 2026-09-12).
+              # Removing the samples by hand is not enough on its own: without
+              # this flag they come back the next time this pod restarts.
+              SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES: "true"
             envFrom:
               - secretRef:
                   name: ${APP}-env
