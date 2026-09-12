@@ -83,3 +83,41 @@ spec:
         # page can get the waiting user banned. Also set as the server-side
         # default in apps/kube-system/sablier.
         refreshFrequency: ${SABLIER_REFRESH_FREQUENCY:=20s}
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# THE TAILNET PATH. Unreferenced, and harmless, for an app with no tailnet route.
+#
+# components/tailscale/ingressroute.yaml has exactly ONE middleware slot, and
+# Sablier's middleware is necessarily per-app because its plugin config carries
+# `group: ${APP}` -- so it cannot be folded into the shared `tailscale-local` /
+# `tailscale-user` objects in `network`. This chain is the fan-out: the shared
+# base first, then the app's own Sablier middleware. ../kustomization.yaml
+# repoints the IngressRoute at it.
+#
+# WITHOUT IT, an opted-in app answers 503 on its tailnet hostname the whole time
+# it is asleep, with nothing to wake it -- you would have to hit the internal
+# hostname first. Reaching an app from off-LAN is most of what the tailnet is
+# for, so that is a regression, not a rough edge.
+#
+# THE BASE IS READ FROM THE APP'S OWN `TAILSCALE_MIDDLEWARE`, which is the whole
+# point: an app already sets that to `tailscale-user` when its tailnet route
+# needs the authentik hop (tandoor, kapowarr, super-productivity), and leaves it
+# unset for the network-gated default. Reusing it means the tailnet route cannot
+# silently lose that hop while the internal route keeps it, and it means opting
+# an app in adds NO new substitution -- the earlier revision of this component
+# required three, one of which was a hand-typed copy of the app's own name.
+#
+# ORDER MATCHES THE INTERNAL ROUTE: the network gate (and the authentik outpost,
+# where used) runs BEFORE Sablier, so waking a workload still requires getting
+# past whatever that app already required. Sablier last.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ${APP}-sablier-tailnet
+spec:
+  chain:
+    middlewares:
+      - name: ${TAILSCALE_MIDDLEWARE:=tailscale-local}
+        namespace: network
+      - name: sablier-${APP}

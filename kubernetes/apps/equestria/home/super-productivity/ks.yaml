@@ -27,6 +27,7 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/tailscale
+    - ../../../../components/sablier
   postBuild:
     substitute:
       # Mirrors this app's internal HTTPRoute, which gates every path behind
