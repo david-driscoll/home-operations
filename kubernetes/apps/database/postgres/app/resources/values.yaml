@@ -387,6 +387,20 @@ cluster:
     # `pg_stat_statements.*` parameters above trigger that), so the live value
     # becomes `timescaledb,pg_stat_statements`. Changing this list restarts every
     # instance.
+    #
+    # ⚠️ ROLLING THIS IN WITH AN IMAGE THAT FIRST SHIPS THE LIBRARY WEDGES THE
+    # LAST INSTANCE. Seen on 2026-09-12 (#1649). CNPG updated the two replicas,
+    # switched over, and then the demoted primary -- still on the old image --
+    # had to restart to rejoin as a replica. The config it restarts with already
+    # preloads `timescaledb`, which the old image does not have, so postgres
+    # cannot start: the container exits 0 into CrashLoopBackOff. CNPG will not
+    # replace an instance that is not ready, so it sits in `phase: Upgrading
+    # cluster` ("the instance is using a different image") with 2/3 ready,
+    # indefinitely. Deleting that one replica pod is the fix -- it is recreated
+    # on the new image against its existing PVC and rejoins.
+    #
+    # Next time, avoid it by shipping the image FIRST and the preload entry in a
+    # later change, once every instance reports the new image.
     shared_preload_libraries:
       - timescaledb
     ldap: {}
