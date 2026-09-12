@@ -1,0 +1,73 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app postiz
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    - name: valkey
+      namespace: database
+    # Postiz's `orchestrator` process is a Temporal worker and the publishing
+    # path runs entirely through it -- see helmrelease.yaml. Without a
+    # reachable frontend it starts, fails to poll a task queue, and scheduled
+    # posts never publish.
+    - name: temporal
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/postiz
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # Prisma migrations run on every boot (`pnpm run prisma-db-push` in the
+    # image's pm2 entrypoint), so the database must exist first.
+    #
+    # Rotating credential: reloader.stakater.com/auto sits on the controller in
+    # helmrelease.yaml and the pod reads DATABASE_URL out of the postiz-env
+    # Secret, so the 30-day rotation actually reaches it. The startup probe is
+    # sized for a cold boot that includes a migration, so a rotation restart
+    # cannot be probe-killed mid-migrate.
+    #
+    # ⚠️ NEW APP -- read the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml before merging. `stacks/system` reliably wins
+    # the race against Flux on new-app day and dies on
+    # `role "postiz" does not exist`. It cost a stalled stack on degoog (#1180).
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # Two PVCs' worth of data in one claim: /config (small) and /uploads
+      # (every image and video ever attached to a post, kept forever -- Postiz
+      # never prunes it). Start here and raise it; volsync resizes in place.
+      VOLSYNC_CAPACITY: 20Gi
+      # ReadWriteMany, not ReadWriteOnce: TWO pods mount this claim -- postiz
+      # writes uploads into it, and the `cdn` controller beside it serves them
+      # read-only to the public internet (see helmrelease.yaml for why the media
+      # host cannot be a separate origin). n8n already runs RWX on this storage.
+      VOLSYNC_ACCESSMODES: ReadWriteMany

@@ -1,0 +1,156 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app temporal
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the controller, which is the only place it does anything. This
+          # is what makes the 30-day OpenBao password rotation reach the pod --
+          # POSTGRES_PWD comes from temporal-env via envFrom, and Temporal
+          # reads it once at boot. See components/postgres/AGENTS.md.
+          reloader.stakater.com/auto: "true"
+          # Low Power keep-list. `database` is not the shed-list namespace that
+          # `equestria` is, but this is stated rather than assumed: postiz
+          # cannot publish a scheduled post without a reachable frontend, and a
+          # missed publish window is not recoverable by waking back up.
+          downscaler/exclude: "true"
+        replicas: 1
+        # Single node. Temporal scales by running the four services as separate
+        # deployments, which is not warranted for one low-volume consumer --
+        # `autosetup` runs all four in-process. A rolling update would put two
+        # nodes with the same ringpop identity in the cluster mid-swap.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              # Docker Hub is the only registry Temporal publishes to -- there
+              # is no ghcr.io/temporalio mirror (verified: the GHCR token
+              # endpoint 403s and the manifest is unknown).
+              #
+              # 1.29.7, not the 1.32.0 the server repo tags: the auto-setup
+              # IMAGE lags the server releases and 1.29.7 (2026-06-12) is the
+              # newest one published.
+              repository: docker.io/temporalio/auto-setup
+              tag: 1.29.7@sha256:f14912b699cf73015ad5c4fc18d522d4b014db90e794039214dfb7c022c2644f
+              pullPolicy: IfNotPresent
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            securityContext:
+              allowPrivilegeEscalation: false
+              # entrypoint.sh runs `dockerize -template` to render
+              # config_template.yaml into /etc/temporal/config/docker.yaml on
+              # every start, so the config directory must be writable.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # Four Go services in one process. 1Gi is comfortable at this
+                # volume; the history service is the part that grows.
+                memory: 1Gi
+            probes:
+              # TCP rather than gRPC. Temporal serves a gRPC health service on
+              # :7233, but a plain socket check is enough to answer "is the
+              # frontend accepting connections" and has no protocol coupling.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &port 7233
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 6
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: *port
+                  # Generous on purpose: auto-setup.sh applies the full schema
+                  # to BOTH databases and creates the default namespace before
+                  # the server binds anything. First boot against an empty
+                  # database is minutes, not seconds, and a startup probe that
+                  # fires early would restart the pod mid-migration.
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # Numeric, and load-bearing. The image declares `USER temporal` by NAME
+        # (server.Dockerfile: `adduser -u 1000 -G temporal -D temporal`), and
+        # with runAsNonRoot and no numeric override the kubelet refuses to
+        # start it -- "has non-numeric user (temporal), cannot verify user is
+        # non-root". 1000 is that user; /etc/temporal/config is chowned to it.
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          # The frontend gRPC port -- the only one a client needs. The image
+          # also exposes 6933-6939 (ringpop membership) and 7234/7235/7239
+          # (history/matching/worker), which are intra-cluster and pointless on
+          # a single node.
+          grpc:
+            port: *port
+          metrics:
+            port: 9090
+
+    # No `route` and no `persistence`. Temporal has no web UI of its own (that
+    # is a separate temporalio/ui image) and keeps every byte of state in
+    # Postgres, so there is nothing to expose and nothing to back up here --
+    # the nightly pg_dump over the `database` namespace already covers it.

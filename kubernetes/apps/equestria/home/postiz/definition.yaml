@@ -1,0 +1,42 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Postiz
+  category: Applications
+  description: "Social media scheduling — plan and publish across channels"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postiz.svg
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # oauth2, NOT proxy. Postiz speaks OIDC itself (POSTIZ_GENERIC_OAUTH, with
+    # authentik as the documented example in its own compose file), and it has
+    # to: the app keeps its own user/organization records and maps the OIDC
+    # subject onto them. A forward-auth proxy would gate the door but leave
+    # Postiz with nobody logged in.
+    oauth2:
+      clientType: confidential
+      # ⚠️ `/settings`, which looks wrong and is not. Postiz's generic-OAuth
+      # callback is handled by the frontend settings route, not by an
+      # /auth/callback path -- this is what its own OAuth documentation
+      # registers.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/settings"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/settings"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

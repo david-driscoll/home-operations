@@ -10,4 +10,5 @@ components:
 resources:
   - ./postgres
   - ./valkey/ks.yaml
+  - ./temporal/ks.yaml
   # - ./neo4j/ks.yaml

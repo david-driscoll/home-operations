@@ -1,0 +1,12 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./externalsecret.yaml
+  - ./definition.yaml
+# NOTE: ./postgres-databases/ is deliberately NOT listed. It sits inside this
+# app's build path, and components/postgres/databases renders it separately into
+# the `database` namespace. Listing it here would render the `Database` a second
+# time. See kubernetes/components/postgres/AGENTS.md.
