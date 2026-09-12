@@ -4,12 +4,12 @@ kind: Gateway
 metadata:
   name: external
   annotations:
-    external-dns.alpha.kubernetes.io/target: &hostname "${EXTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/target: &hostname "${EXTERNAL_DOMAIN}"
 spec:
   gatewayClassName: traefik
   infrastructure:
     annotations:
-      external-dns.alpha.kubernetes.io/hostname: *hostname
+      external-dns.kubernetes.io/hostname: *hostname
       io.cilium/lb-ipam-ips: "${EXTERNAL_IP}"
   listeners:
     - name: web

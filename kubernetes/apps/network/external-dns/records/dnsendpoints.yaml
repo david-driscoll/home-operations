@@ -10,7 +10,7 @@ spec:
       recordType: CNAME
       targets: ["${TUNNEL_DOMAIN}"]
       providerSpecific:
-      - name: external-dns.alpha.kubernetes.io/cloudflare-proxied
+      - name: external-dns.kubernetes.io/cloudflare-proxied
         value: "true"
 ---
 apiVersion: externaldns.k8s.io/v1alpha1

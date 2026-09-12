@@ -228,7 +228,7 @@ ingress:
   ingressClassName: internal
   host: "longhorn.${CLUSTER_DOMAIN}"
   annotations:
-    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.middlewares: network-local-user@kubernetescrd
 metrics:

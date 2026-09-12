@@ -418,8 +418,8 @@ spec:
           # Follows kubernetes/apps/flux-system/flux-instance/httproute.yaml,
           # the estate's other public route: CNAME to the tunnel and let
           # Cloudflare proxy it, rather than advertising a LoadBalancer IP.
-          external-dns.alpha.kubernetes.io/target: "${TUNNEL_DOMAIN}"
-          external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+          external-dns.kubernetes.io/target: "${TUNNEL_DOMAIN}"
+          external-dns.kubernetes.io/cloudflare-proxied: "true"
         parentRefs:
           - name: external
             namespace: network

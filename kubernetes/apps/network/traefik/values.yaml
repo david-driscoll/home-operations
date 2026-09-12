@@ -44,7 +44,7 @@ tolerations:
     tolerationSeconds: 60
 service:
   annotations:
-    external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
     io.cilium/lb-ipam-ips: "${INTERNAL_IP}"
 additionalArguments:
   - '--providers.file.filename=/config/store.yaml'
@@ -345,8 +345,8 @@ ingressRoute:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: internal
-      external-dns.alpha.kubernetes.io/target: "${INTERNAL_DOMAIN}"
-      external-dns.alpha.kubernetes.io/hostname: internal.${CLUSTER_DOMAIN}
+      external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+      external-dns.kubernetes.io/hostname: internal.${CLUSTER_DOMAIN}
     matchRule: Host(`internal.${CLUSTER_DOMAIN}`)
     services:
       - name: api@internal
@@ -413,10 +413,10 @@ gatewayClass:
 gateway:
   enabled: true
   annotations:
-    external-dns.alpha.kubernetes.io/target: &hostname "${INTERNAL_DOMAIN}"
+    external-dns.kubernetes.io/target: &hostname "${INTERNAL_DOMAIN}"
   infrastructure:
     annotations:
-      external-dns.alpha.kubernetes.io/target: *hostname
+      external-dns.kubernetes.io/target: *hostname
   name: internal
   listeners:
     web:

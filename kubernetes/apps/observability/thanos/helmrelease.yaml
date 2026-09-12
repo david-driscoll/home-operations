@@ -78,8 +78,8 @@ spec:
         enabled: true
         ingressClassName: internal
         annotations:
-          external-dns.alpha.kubernetes.io/target: ${INTERNAL_DOMAIN}
-          external-dns.alpha.kubernetes.io/hostname: thanos.${ROOT_DOMAIN}
+          external-dns.kubernetes.io/target: ${INTERNAL_DOMAIN}
+          external-dns.kubernetes.io/hostname: thanos.${ROOT_DOMAIN}
           traefik.ingress.kubernetes.io/router.entrypoints: websecure
           traefik.ingress.kubernetes.io/router.middlewares: network-authenticated-user@kubernetescrd
         hostname: thanos.${ROOT_DOMAIN}
