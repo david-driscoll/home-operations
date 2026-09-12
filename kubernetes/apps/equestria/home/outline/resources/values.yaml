@@ -6,7 +6,7 @@ image:
   # -- This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
-  tag: "1.10.0@sha256:cc9f1f05fd7cd316745b5fc9cfe01e681b1b4cf97705d1d812a5c778d7986cfd"
+  tag: "1.10.1@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8"
 # -- This is for setting up the secret key. It will be auto generated if not set and external secret is not set.
 secretKey: "{{ .outline_password }}"
 
