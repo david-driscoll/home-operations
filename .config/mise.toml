@@ -65,7 +65,7 @@ dotnet = { version = "10.0.203" }
 # in step with the vals initContainer in kubernetes/apps/pulumi/*/stack.yaml —
 # the workspace pods install the same pin via mise.
 vals = "0.46.0"
-"github:stacklok/toolhive" = "0.46.0"
+"github:stacklok/toolhive" = "v0.49.0"
 # REQUIRED BY the `pipx:` backend below, and the reason it never installed here.
 # mise's pipx backend shells out to a `pipx` on PATH (or `uv`, with
 # MISE_PIPX_UVX=1); it does not vendor one. Neither was pinned, so
