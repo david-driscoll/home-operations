@@ -175,6 +175,40 @@ spec:
             port: 53443
             protocol: TCP
 
+      # IN-CLUSTER DNS. CoreDNS forwards the driscoll.tech zone here (see the
+      # `driscoll.tech` server block in apps/kube-system/coredns/helm/values.yaml),
+      # so pods resolve internal names against the authoritative internal zone
+      # rather than public DNS.
+      #
+      # A Service, NOT the ipvlan address above. CoreDNS runs on the control
+      # planes and so does this pod, and ipvlan L2 blocks traffic between a host
+      # and its own ipvlan children -- the CoreDNS replica sharing a node with
+      # Technitium would time out on every forward to ${TECHNITIUM_VIP}. This is
+      # the same asymmetry the exec probes above work around. Through a Service
+      # the traffic reaches the pod's primary (Cilium) interface instead, and
+      # because pod IPs are outside the LAN /16 the replies route back through
+      # it too. The listeners are already bound on every interface -- `admin`
+      # reaches 53443 exactly this way.
+      #
+      # clusterIP is PINNED because CoreDNS can only forward to an address, not
+      # a name. ${TECHNITIUM_CLUSTER_IP} lives in cluster-secrets beside
+      # CLUSTER_IP (kube-dns) and TAILSCALE_NAMESERVER_IP, the two existing
+      # pinned DNS addresses.
+      dns:
+        controller: *app
+        type: ClusterIP
+        clusterIP: "${TECHNITIUM_CLUSTER_IP}"
+        ports:
+          dns-udp:
+            port: 53
+            protocol: UDP
+          dns-tcp:
+            # TCP as well as UDP: CoreDNS retries over TCP on a truncated
+            # answer, and a large response with no TCP listener would fail
+            # rather than degrade.
+            port: 53
+            protocol: TCP
+
     persistence:
       config:
         existingClaim: ${APP}
