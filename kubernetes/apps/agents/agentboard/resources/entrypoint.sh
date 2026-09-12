@@ -35,7 +35,7 @@
 # agentboard-specific Dockerfile or CI build in this repo. That is a
 # deliberate simplification, not an oversight: everything this pod needs
 # beyond a bare Debian base is either something mise installs at runtime
-# (../resources/mise.toml/./mise.lock -- node, kubectl, pulumi, gh, claude
+# (../resources/mise.toml -- node, kubectl, pulumi, gh, claude
 # code, agentboard itself) or a handful of apt packages, and maintaining a
 # Dockerfile + registry + build pipeline for that little was judged not
 # worth it. The cost is a slower pod start (apt-get + the mise installer run
@@ -115,9 +115,10 @@ else
     || echo "WARNING: fetch of home-operations failed; checkout may be stale"
 fi
 
-# `locked = true` in ../resources/mise.toml means this resolves ONLY through
-# ../resources/mise.lock's pinned checksums/URLs -- see that file's header
-# for how to regenerate it after a version bump.
+# Resolves from the exact versions pinned in ../resources/mise.toml. There is
+# no lockfile any more: `lockfile`/`locked` and mise.lock were dropped in
+# dd2663ee, so a version bump is a one-line pin change with nothing to
+# regenerate beside it.
 #
 # The two references to MISE_CONFIG_DIR below are DOUBLE-DOLLAR-escaped
 # (bash sees a normal single-dollar expansion once Flux is done) -- this
@@ -159,15 +160,15 @@ mise install
 #
 # THE WHOLE SET, not a curated subset. A hand-picked "just what the hooks need"
 # list is a second inventory that drifts from .config/mise.toml the first time
-# a hk step gains a tool -- and lockfile/pin drift is already this estate's
-# recurring bug (see that file's `locked = true` note). One list cannot drift.
+# a hk step gains a tool -- and pin drift is already this estate's recurring
+# bug. One list cannot drift.
 # The cost is a slower FIRST boot and a few GB; both are one-time, because
 # ~/.local/share/mise is on the /root PVC and a restart with tools already
 # there is a no-op.
 #
 # NON-FATAL on purpose. This script is `set -euo pipefail`, and a bare
 # `mise install` here would turn one bad pin -- a yanked release, an upstream
-# 404, a lockfile that Renovate bumped without regenerating -- into a pod that
+# 404, a pin Renovate bumped to a release that never published -- into a pod that
 # cannot start at all. A pod with an incomplete toolchain is recoverable from
 # the terminal; a pod stuck in CrashLoopBackOff is not.
 echo "==> mise install (repo: /root/home-operations/.config/mise.toml)"

@@ -15,8 +15,10 @@
 # (kubectl get crd virtualmcpservers.toolhive.stacklok.dev -o json), not
 # assumed from documentation -- the summarized docs consulted while
 # designing this were wrong about at least one adjacent field shape
-# elsewhere in this rollout (see ../agentboard/resources/mise.lock's header
-# for that story), so this one was checked directly.
+# elsewhere in this rollout (the story was in the header of
+# ../agentboard/resources/mise.lock, deleted in dd2663ee -- read it with
+# `git show dd2663ee^:kubernetes/apps/agents/agentboard/resources/mise.lock`),
+# so this one was checked directly.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: VirtualMCPServer
 metadata:
