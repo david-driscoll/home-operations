@@ -207,11 +207,16 @@ export class CloudflareTunnelComponent extends ComponentResource {
         source: "cloudflare",
         config: {
           // Pulumi camelCases what the Cloudflare API spells differently:
-          // `ingresses` is the API's `ingress`, `noTlsVerify` its `noTLSVerify`,
-          // `warpRouting` its `warp-routing`. Checked against the provider's own
-          // input types, not guessed — the API spellings silently no-op here.
+          // `ingresses` is the API's `ingress`, `noTlsVerify` its `noTLSVerify`.
+          // Checked against the provider's own input types, not guessed — the
+          // API spellings silently no-op here.
           ingresses,
-          warpRouting: { enabled: false },
+          // No `warpRouting`, although the input type accepts it. Cloudflare
+          // derives `warp-routing.enabled` from whether the tunnel has private
+          // network routes, and provider 6.10.0 rejects setting it: the first
+          // preview on 2026-09-12 failed with "Invalid Configuration for
+          // Read-Only Attribute" at `config.warpRouting.enabled`. It is `false`
+          // live because this tunnel has no routes, which is also what keeps it.
         },
       },
       cro,
@@ -222,6 +227,13 @@ export class CloudflareTunnelComponent extends ComponentResource {
     // apply. This is what retires the hand-maintained copy in OpenBao: the token
     // is derived from the account and tunnel, so reading it is stable rather
     // than a rotation.
+    //
+    // PERMISSION: the Cloudflare API token behind `globals.cloudflareProvider`
+    // needs `Cloudflare Tunnel Write` (dashboard: Account > Cloudflare Tunnel >
+    // Edit). Read is not enough — `GET .../cfd_tunnel/<id>/token` answers
+    // `401 {"code":1001,"message":"Not authorized"}` to a token that can read the
+    // tunnel's configuration fine, which is exactly what the first preview hit on
+    // 2026-09-12. Updating the ingress rules above needs Write as well.
     this.token = secret(
       all([globals.cloudFlareAccountId, this.tunnelId]).apply(([accountId, tunnelId]) =>
         cloudflare.getZeroTrustTunnelCloudflaredToken({ accountId, tunnelId }, { provider: globals.cloudflareProvider, parent: this }).then(result => result.token),
