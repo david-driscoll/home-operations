@@ -282,10 +282,17 @@ spec:
       # (~/.agentboard), the Claude Code session/config (~/.claude), the mise
       # install this pod provisions at start, and the working checkout the
       # agent operates against.
+      #
+      # 40Gi, raised from 20Gi on 2026-09-12 when the volume hit 100% and the
+      # pod crash-looped on `git config` failing to write ~/.gitconfig.lock.
+      # Growing this is an online Longhorn expansion (allowVolumeExpansion);
+      # shrinking it is not possible at all. ./resources/entrypoint.sh now
+      # prunes superseded tool versions on every boot, which is what actually
+      # filled it -- the extra room is for agent worktrees, not for that.
       home:
         type: persistentVolumeClaim
         accessMode: ReadWriteOnce
-        size: 20Gi
+        size: 40Gi
         storageClass: longhorn
         globalMounts:
           - path: /root
