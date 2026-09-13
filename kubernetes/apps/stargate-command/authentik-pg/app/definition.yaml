@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Authentik Postgres
+  category: ${CLUSTER_TITLE}
+  description: Primary database for authentik on equestria and alpha-site
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postgres.svg
+  gatus:
+    # The LAN address rather than the in-cluster Service: it is the path the
+    # Pi's authentik and its standby use, and "up in-cluster but unreachable
+    # from the LAN" is exactly the failure worth seeing.
+    - url: "tcp://10.10.206.150:5432"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"

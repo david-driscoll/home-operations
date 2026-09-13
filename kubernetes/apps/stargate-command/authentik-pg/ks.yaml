@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# authentik-pg -- the dedicated CNPG cluster behind authentik on BOTH sites.
+# See docs/authentik-active-active/PLAN.md.
+#
+# In stargate-command, the Tier-1 namespace, rather than in `database`: this
+# cluster runs on the control planes so SSO survives a Battery window, and the
+# namespace is what says so (docs/cluster-consolidation/20-low-power-tier.md §1).
+#
+# Dedicated rather than a database on `database/postgres`, and that is not a
+# preference: the alpha-site Pi runs a PHYSICAL streaming standby of this
+# cluster, and physical replication copies a whole cluster -- every database,
+# every role. On the shared cluster that would be ~35 app databases, OpenBao's
+# storage, and a TimescaleDB/PostGIS image the Pi would have to match.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app authentik-pg
+  namespace: &namespace stargate-command
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/stargate-command/authentik-pg/app
+  dependsOn:
+    - name: postgres-operator
+      namespace: cloudnative-pg
+    - name: external-secrets
+      namespace: kube-system
+  prune: true
+  # Same reason as database/postgres: an ownership change must never
+  # cascade-delete the Cluster CR and its PVCs
+  # (docs/cluster-consolidation/27-migration-churn-failure-modes.md).
+  deletionPolicy: Orphan
+  # Safe here, unlike on the shared cluster (doc 28): nothing in the bootstrap
+  # chain -- OpenBao, external-secrets, the stores -- depends on this
+  # Kustomization, so a not-Ready ExternalSecret stalls authentik and nothing
+  # else.
+  wait: true
+  force: false
+  suspend: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

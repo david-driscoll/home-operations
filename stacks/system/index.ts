@@ -67,6 +67,7 @@
 import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
+import { configureAuthentikPg } from "./authentik-pg.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
@@ -118,6 +119,10 @@ export const clusters = CLUSTERS.map(c => c.key);
 // store reads are `hosts/dockge/*` and the admin token, never the
 // `clusters/<key>/details` paths this stack produces.
 export const garage = configureGarage(globals);
+
+// Credentials for stargate-command/authentik-pg, shared by authentik on equestria and
+// alpha-site and by the Pi's streaming standby. See authentik-pg.ts's header.
+configureAuthentikPg(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped
