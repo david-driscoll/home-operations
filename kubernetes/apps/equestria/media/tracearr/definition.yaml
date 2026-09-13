@@ -19,14 +19,20 @@ spec:
   #     Plex/Jellyfin/Emby is a `member` (the column default): tracked, never a
   #     login. Neither the UI nor Tracearr's own routes can grant `admin`; only
   #     Better Auth's admin-plugin API could, which is untested here.
-  #   - The FIRST account created becomes the owner -- which is why CLAIM_CODE is
-  #     set (externalsecret.yaml). After that, sign-up is closed: any other
+  #   - The owner MUST be created as a LOCAL account (username + password + the
+  #     CLAIM_CODE from externalsecret.yaml). SSO cannot create it, even though
+  #     the fresh-install login page offers the button: Better Auth's OIDC
+  #     sign-up inserts no `username`, `users.username` is NOT NULL, and the
+  #     callback fails with `/login?error=unable_to_create_user` (postgres:
+  #     `null value in column "username" ... violates not-null constraint`).
+  #     Hit on 2026-09-13; upstream confirms OIDC is sign-IN only
+  #     (connorgallopo/Tracearr#981). After that, sign-up is closed: any other
   #     authentik user who presses the SSO button gets "This Tracearr instance
   #     already has an owner. Only the owner can log in."
-  #   - SSO matches an existing account by EMAIL and links it on first use
+  #   - SSO then matches that local account by EMAIL and links it on first use
   #     (account linking trusts the `oidc` provider, because authentik reports
-  #     `email_verified: false`). So the owner can create the account with a
-  #     local password and use SSO later, as long as the two emails match.
+  #     `email_verified: false`). The local account's email must equal the
+  #     authentik user's email exactly (compared lowercased).
   #
   # So friends/family here means "may be sent to the login page", not "can see
   # their stats". Once SSO works for the owner, local username/password login
