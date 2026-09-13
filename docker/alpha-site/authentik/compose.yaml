@@ -200,7 +200,15 @@ services:
 # Declares a database + login role on this node's shared postgres
 # (docker/_common/postgres). Pulumi collects this block, mints the password,
 # stores it in OpenBao, and substitutes ${PGAPP_USER}/${PGAPP_PASSWORD}/
-# ${PGAPP_DATABASE} into this stack's files — see .env's database section.
+# ${PGAPP_DATABASE} into this stack's files.
+#
+# NO LONGER WHAT AUTHENTIK CONNECTS TO. Since phase 2 of
+# docs/authentik-active-active/PLAN.md the .env points at stargate-command/authentik-pg,
+# and nothing in this stack uses the ${PGAPP_*} tokens any more. The block stays
+# so the frozen pre-cutover copy -- the soak's rollback path -- keeps a working
+# login role. Deleting the block would orphan that database rather than drop it
+# (dockerStackPostgres.ts: removed means RETAIN), so retirement goes through
+# `ensure: absent` in phase 4, once the soak has passed.
 x-postgres:
   database: authentik
 
