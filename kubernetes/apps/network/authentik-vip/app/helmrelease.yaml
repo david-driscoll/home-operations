@@ -90,7 +90,13 @@ spec:
                 drop: ["ALL"]
                 # NET_ADMIN adds/removes the VIP, NET_RAW is the VRRP (IP proto
                 # 112) socket and gratuitous ARP, NET_BROADCAST for the ARP sends.
-                add: ["NET_ADMIN", "NET_RAW", "NET_BROADCAST"]
+                # SETGID/SETUID: keepalived runs every track script under
+                # script_user and calls setgroups() first; without these it logs
+                # "Couldn't setgroups: Operation not permitted" every interval and
+                # the script NEVER RUNS -- the instance held MASTER with authentik
+                # at zero replicas on 2026-09-13. The check is what makes the VIP
+                # safe, so these are load-bearing.
+                add: ["NET_ADMIN", "NET_RAW", "NET_BROADCAST", "SETGID", "SETUID"]
             resources:
               requests:
                 cpu: 10m
