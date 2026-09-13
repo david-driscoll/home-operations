@@ -52,8 +52,8 @@ builder.Services.AddOutputCache(o =>
 builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikApplication>>(observer =>
 {
     var env = sp.GetRequiredService<IHostEnvironment>();
-    return Observable.Timer(env.IsProduction() ? TimeSpan.FromHours(1) : TimeSpan.FromSeconds(10))
-    .StartWith(0)
+    return Observable.Timer(env.IsProduction() ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(10))
+        .StartWith(0)
         .Select(_ => Observable.FromAsync(async () =>
          await $"{authentikUrl}/api/v3/core/applications/?only_with_launch_url=true&page_size=100&superuser_full_list=true"
             .WithOAuthBearerToken(bearerToken)
@@ -68,6 +68,8 @@ builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikAppli
                 .Where(z => !string.IsNullOrWhiteSpace(z.MetaLaunchUrl?.ToString()))
                 .ToArray())
                 .Switch()
+                .Publish()
+                .RefCount()
                 .Subscribe(observer);
 }));
 // builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikApplication>>(observer =>
@@ -105,6 +107,7 @@ builder.Services.AddSingleton(sp => Observable.Create<IEnumerable<AuthentikAppli
 
 
 var app = builder.Build();
+using var _ = app.Services.GetRequiredService<IObservable<IEnumerable<AuthentikApplication>>>().Subscribe();
 app.UseOutputCache();
 app.MapGet("/applications", async (HttpContext context, IObservable<IEnumerable<AuthentikApplication>> applications) =>
 {
