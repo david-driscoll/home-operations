@@ -187,6 +187,23 @@ services:
 x-postgres:
   database: authentik
 
+# The SSO names resolve to the keepalived VIP, not to this Dockge host (phase 7
+# of docs/authentik-active-active/PLAN.md). Each stays the CNAME DockgeLxc has
+# always created for it -- only the target moves, which is an in-place update in
+# all three DNS providers. authentik-vip is an A record for 10.10.255.10 owned by
+# stacks/home, held by equestria (priority 150) or this Pi (100).
+#
+# authentik.${CLUSTER_DOMAIN} is deliberately NOT here: it stays this site's own
+# name, pointing at this host, so the Pi's authentik can be reached directly
+# whoever holds the VIP. equestria's counterpart is authentik.<its domain>.
+#
+# Undoing this (e.g. keepalived is misbehaving) is deleting the three lines and
+# merging: the names go back to CNAMEs for this host, in place.
+x-dns:
+  authentik.${searchDomain}: authentik-vip.${searchDomain}
+  iris.${searchDomain}: authentik-vip.${searchDomain}
+  canterlot.${searchDomain}: authentik-vip.${searchDomain}
+
 x-dockge:
   urls:
     - https://authentik.${searchDomain}
