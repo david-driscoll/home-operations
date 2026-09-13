@@ -1,8 +1,9 @@
-# Graph Report - home-operations  (2026-09-12)
+# Graph Report - home-operations  (2026-09-13)
 
 ## Corpus Check
-- 2056 files · ~1,916,448 words
+- 2058 files · ~1,930,169 words
 - Verdict: corpus is large enough that graph structure adds value.
+- Unclassified: 232 file(s) not represented in the graph (top: .map 146, (none) 46, .toml 19)
 
 ## Summary
 - 26654 nodes · 30868 edges · 2323 communities (1996 shown, 247 thin omitted)
@@ -10,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dd2663ee`
+- Built from commit: `a9c2d57b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -10503,7 +10504,7 @@ Nodes (3): ClusterDefinition CRD (driscoll.dev/v1), Flux Kustomization: applicat
   kubernetes/apps/equestria/pvr/strmgen/kustomization.yaml · relation: references
 
 ## Knowledge Gaps
-- **15582 isolated node(s):** `Alert`, `ApiEventCollection`, `ApiKeyPlainAuth`, `App`, `AppChartMetadata` (+15577 more)
+- **15582 isolated node(s):** `Pagination`, `Results`, `Next`, `Previous`, `Count` (+15577 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 17793 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **247 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
