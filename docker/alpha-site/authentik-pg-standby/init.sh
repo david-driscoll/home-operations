@@ -16,4 +16,14 @@ mkdir -p "$data_root/pgdata"
 chown 999:999 "$data_root/pgdata"
 chmod 700 "$data_root/pgdata"
 
+# The unix socket directory, shared by the server and the role writer (both 999).
+mkdir -p "$data_root/run"
+chown 999:999 "$data_root/run"
+chmod 750 "$data_root/run"
+
+# The published role file: written by 999, served read-only by busybox (65534).
+mkdir -p "$data_root/status"
+chown 999:999 "$data_root/status"
+chmod 755 "$data_root/status"
+
 echo "authentik-pg-standby data directory ready."

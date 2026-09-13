@@ -1,0 +1,113 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app authentik-vip
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      authentik-vip:
+        # Every node, control planes included: the VIP has to be holdable in a
+        # Battery window, when only the control planes are up (doc 20 §4).
+        type: daemonset
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          # The VIP is an address on the NODE's interface, so keepalived must live
+          # in the host network namespace.
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          priorityClassName: critical-tier
+          # SIGTERM makes keepalived release the VIP and send a priority-0 advert,
+          # which hands over in about one advert_int. The grace period only has to
+          # cover that.
+          terminationGracePeriodSeconds: 15
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+        initContainers:
+          render:
+            image: &image
+              repository: docker.io/osixia/keepalived
+              tag: 2.3.4@sha256:e6092c753816163d4ca7140e01d1ab5f2c7c131afac90a7d2aef36224887fc00
+            command: ["/bin/sh", "/config/render.sh"]
+            env:
+              NODE_IP:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.hostIP
+              NODE_NAME:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              # Every VRRP participant. The equestria nodes (talos/talconfig.yaml)
+              # and the alpha-site Dockge LXC. Keep in step with talconfig and with
+              # docker/alpha-site/authentik-vip/keepalived.conf's unicast_peer.
+              VRRP_PEERS: >-
+                10.10.206.10 10.10.206.14 10.10.206.16 10.10.206.17
+                10.10.209.10 10.10.209.11 10.10.209.12
+                10.10.10.9
+            envFrom:
+              - secretRef:
+                  name: authentik-vip-vrrp
+            securityContext:
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+        containers:
+          app:
+            image: *image
+            # Bypass the image's templating entrypoint: the config is ours, rendered
+            # above, and nothing else should rewrite it.
+            command: ["keepalived"]
+            args:
+              - --dont-fork
+              - --log-console
+              - --log-detail
+              - --vrrp
+              - --use-file=/etc/keepalived/keepalived.conf
+            securityContext:
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+                # NET_ADMIN adds/removes the VIP, NET_RAW is the VRRP (IP proto
+                # 112) socket and gratuitous ARP, NET_BROADCAST for the ARP sends.
+                add: ["NET_ADMIN", "NET_RAW", "NET_BROADCAST"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+    persistence:
+      config:
+        type: configMap
+        name: authentik-vip-config
+        defaultMode: 0555
+        globalMounts:
+          - path: /config
+            readOnly: true
+      keepalived:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 1Mi
+        globalMounts:
+          - path: /etc/keepalived
