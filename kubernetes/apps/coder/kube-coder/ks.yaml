@@ -1,0 +1,116 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# kube-coder (https://github.com/imran31415/kube-coder) -- browser workspaces
+# with code-server, ttyd, noVNC and CLI agents, one pod per user.
+#
+# Upstream publishes no Helm repository, so the charts are read straight out of
+# a GitRepository pinned to a release tag. That source is the only shared piece
+# and lives here in `coder`; each workspace is its own Kustomization that
+# targets its own `ws-<user>` namespace.
+#
+# WHY NOT ALL IN `coder`: the workspace chart's Role grants the pod's
+# ServiceAccount create/get/update/patch/delete on every Secret in its
+# namespace, and the pod runs agent-generated code by design. In `coder` that
+# is coder's OIDC + DB credentials, Forgejo's and Renovate's tokens. Upstream
+# moved to per-user namespaces for exactly this reason (their issue #103).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app kube-coder
+  namespace: &namespace coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/coder/kube-coder/source
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# One workspace. To add a user, copy this document -- keep `path` on the shared
+# ./workspace directory, nothing in it names a user literally -- and change the
+# name, targetNamespace and the KUBE_CODER_* substitutions. The hostname
+# needs no certificate work: *.dev.${ROOT_DOMAIN} is a SAN on
+# le-production/le-staging for exactly this.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app kube-coder-david
+  # The Flux object sits with the rest of `coder`; everything it applies lands
+  # in the workspace's own namespace below.
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: &namespace ws-david
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: kube-coder
+      namespace: coder
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+  path: ./kubernetes/apps/coder/kube-coder/workspace
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  # The devlaptop image is ~3 GB; a cold pull on a fresh node is most of this.
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # No failover/fast-node-eviction: it patches `defaultPodOptions`, which only
+    # the app-template chart reads.
+    #
+    # No components/tailscale: the tailnet reaches ${ROOT_DOMAIN} names through
+    # split-horizon DNS, and a second hostname would need its own authentik
+    # proxy provider for no gain.
+    - ../../../../components/volsync
+    # Per-workspace grant to the agents MCP server. Also needs this namespace
+    # named in apps/agents/agent-tools-mcp/networkpolicy.yaml.
+    - ../components/agent-tools
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      KUBE_CODER_USER: david
+      # Seeded into the workspace's git config on first boot.
+      KUBE_CODER_GIT_NAME: David Driscoll
+      KUBE_CODER_GIT_EMAIL: david.driscoll@gmail.com
+      # The home volume. Holds repos, node_modules, agent state and the
+      # persistent-memory SQLite db -- the chart's own default is 20Gi.
+      # Only ever raise this: components/volsync forces PVC recreation on an
+      # immutable change, and a shrink cannot restore from a larger snapshot.
+      VOLSYNC_CAPACITY: 20Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The workspace pod runs as 1000:1000 with fsGroup 1000; the restic mover
+      # must match or it cannot read what it backs up.
+      VOLSYNC_PUID: "1000"
+      VOLSYNC_PGID: "1000"

@@ -15,6 +15,7 @@ resources:
   - ./forgejo-garage/ks.yaml
   - ./forgejo/ks.yaml
   - ./forgejo-runner/ks.yaml
+  - ./kube-coder/ks.yaml
   # The operator first: ./renovate/ks.yaml is nothing but a RenovateJob, and
   # the CRD that admits it ships with the operator's chart. Flux orders on
   # dependsOn rather than on this list, so the order here is documentation --

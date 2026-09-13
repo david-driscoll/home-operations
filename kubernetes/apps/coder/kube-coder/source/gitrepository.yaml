@@ -1,0 +1,28 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/gitrepository-source-v1.json
+#
+# kube-coder ships its charts only in-repo (charts/base-infrastructure,
+# charts/workspace, charts/workspace-controller) -- there is no Helm repository
+# or OCI chart to point a HelmRelease at.
+#
+# Pinned to a release TAG, and the tag has to move in lockstep with the image
+# tag in ../workspace/helmrelease.yaml: the chart's ConfigMaps carry server.py,
+# start.sh and the SPA-facing entrypoints that the devlaptop image expects, so a
+# chart from one release on an image from another is untested territory.
+#
+# The ignore list keeps the artifact to the charts. The repo also carries a
+# mobile app, store assets and the image build context, none of which a
+# HelmChart build reads.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ${APP}
+spec:
+  interval: 1h
+  timeout: 5m
+  url: https://github.com/imran31415/kube-coder.git
+  ref:
+    tag: v1.60.2
+  ignore: |
+    /*
+    !/charts/

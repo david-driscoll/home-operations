@@ -53,3 +53,7 @@ spec:
     # expected to grow more MCP surfaces, and each one would otherwise be
     # another two-file certificate change plus an ACME re-issue.
     - "*.agents.${ROOT_DOMAIN}"
+    # kube-coder workspaces, one host per user (<user>.dev.${ROOT_DOMAIN}; see
+    # apps/coder/kube-coder/ks.yaml). A wildcard so adding a user is not a
+    # certificate change.
+    - "*.dev.${ROOT_DOMAIN}"

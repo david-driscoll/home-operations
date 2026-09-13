@@ -13,7 +13,8 @@
 # server it protects: it should be conspicuous to delete.
 #
 # A NetworkPolicy that selects a pod is deny-by-default for every Ingress it
-# does not name, so this grants exactly one port to exactly one workload and
+# does not name, so this grants exactly one port to the workloads listed below
+# -- agentboard, plus each kube-coder workspace named individually -- and
 # nothing else. That also means anything else needing to reach this server in
 # future must be ADDED here -- including monitoring. There is deliberately no
 # Gatus check on this endpoint in ../agent-tools-mcp/definition.yaml: a probe
@@ -52,6 +53,21 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: agentboard
+        # kube-coder workspaces, ONE ENTRY PER WORKSPACE, by namespace name.
+        # Deliberately not a label selector on `kube-coder.dev/managed`: that
+        # would grant every future workspace this server the moment it exists.
+        # The workspace side is apps/coder/kube-coder/components/agent-tools,
+        # which must also be listed on that workspace's Kustomization.
+        #
+        # A workspace runs agent-generated code, and this entry gives that code
+        # agentboard's reach. Add one only for a workspace whose users you
+        # would hand agentboard.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ws-david
+          podSelector:
+            matchLabels:
+              app: ws-david
       ports:
         - protocol: TCP
           # The vMCP's only port. Not a range and not the whole pod: the

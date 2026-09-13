@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+#
+# Opt-in, per workspace: access to the agents namespace's aggregated MCP
+# server (vmcp-agent-tools-internal -- GitHub, Kubernetes, Proxmox, UniFi,
+# Docker, Tailscale, Pulumi, OpenBao, Postgres, ...). Listed under `components:`
+# on that workspace's Kustomization in ../../ks.yaml, NOT in ../../workspace, so
+# it can never arrive by copying a workspace.
+#
+# IT TAKES TWO HALVES, and this component is only one:
+#
+#   1. here  -- egress from the workspace pod to the vMCP, and the URL in its env.
+#   2. apps/agents/agent-tools-mcp/networkpolicy.yaml -- an ingress entry naming
+#      the workspace's namespace. That server answers with NO authentication,
+#      and that policy is the only thing gating it, so each workspace is added
+#      by name there, deliberately, rather than matched by a label.
+#
+# With only half in place the connection is simply dropped.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - ./ciliumnetworkpolicy.yaml
+patches:
+  - target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+      labelSelector: kube-coder.dev/release=workspace
+    # The same variable agentboard sets, and the one this repo's own .mcp.json
+    # reads -- so a home-operations checkout inside the workspace picks up the
+    # agent-tools server with no further setup. Other MCP clients can be
+    # pointed at it from the dashboard's Settings -> MCP servers.
+    patch: |-
+      - op: add
+        path: /spec/values/user/env/-
+        value:
+          name: AGENT_TOOLS_MCP_URL
+          value: http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp

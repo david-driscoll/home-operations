@@ -1,0 +1,37 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+#
+# Upstream's `make deploy-base`. Despite the name it is one ConfigMap,
+# `kaniko-wrapper`, which the workspace pod mounts as /usr/local/bin/docker-build
+# -- and a pod can only mount a ConfigMap from its own namespace, so it is
+# installed once per workspace namespace (upstream's `make deploy` does the
+# same), not once in `coder`.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${APP}-base
+spec:
+  interval: 1h
+  timeout: 5m
+  chart:
+    spec:
+      chart: ./charts/base-infrastructure
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: kube-coder
+        namespace: coder
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      strategy: rollback
+  uninstall:
+    keepHistory: false
+  values:
+    namespace: ${NAMESPACE}
+    build:
+      mode: kaniko

@@ -1,0 +1,206 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${APP}
+  labels:
+    # What ../components/* patch by. A patch target's `name` is a regex and the
+    # name here is still the literal `${APP}` when kustomize runs (Flux
+    # substitutes afterwards), so there is no name to aim at.
+    kube-coder.dev/release: workspace
+spec:
+  interval: 1h
+  timeout: 15m
+  dependsOn:
+    # kaniko-wrapper is a ConfigMap volume without `optional: true`; the pod
+    # sits in ContainerCreating until it exists.
+    - name: ${APP}-base
+  chart:
+    spec:
+      chart: ./charts/workspace
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: kube-coder
+        namespace: coder
+  maxHistory: 3
+  driftDetection:
+    mode: enabled
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      strategy: rollback
+  uninstall:
+    keepHistory: false
+  values:
+    namespace: ${NAMESPACE}
+    user:
+      name: ${KUBE_CODER_USER}
+      host: ${KUBE_CODER_USER}.dev.${ROOT_DOMAIN}
+      env:
+        - name: GIT_USER_NAME
+          value: "${KUBE_CODER_GIT_NAME}"
+        - name: GIT_USER_EMAIL
+          value: "${KUBE_CODER_GIT_EMAIL}"
+
+    image:
+      # The GHCR build is upstream's signed release artifact (release.yml,
+      # keyless cosign + SBOM). The chart's default points at their private
+      # DigitalOcean registry. Keep the tag on the same release as the
+      # GitRepository ref in ../source/gitrepository.yaml.
+      repository: ghcr.io/imran31415/kube-coder/devlaptop
+      tag: 1.60.2@sha256:0c4c890f19b69be099cc2cebb3eea0fe26b9724547800007c44e9099802a0698
+      # Chart default is Always, which re-resolves a ~3 GB image on every
+      # restart. The digest pin makes that pointless.
+      pullPolicy: IfNotPresent
+      # Public image; an empty name drops imagePullSecrets entirely.
+      pullSecretName: ""
+
+    ingress:
+      # AUTH MODE `basic` IS NOT HTTP BASIC AUTH HERE. To server.py it means
+      # "an authenticating edge sits in front of me; trust it" -- check_claude_auth
+      # returns True unconditionally -- and it makes the SPA use root paths
+      # (/api, /vscode, /terminal) rather than /oauth/*. The edge is authentik
+      # forward auth on the HTTPRoute (httproute.yaml), and the only way to
+      # the pod that bypasses it is closed by the ingress NetworkPolicy patch
+      # below.
+      #
+      # `oauth2` is not usable: it deploys a GitHub-only oauth2-proxy whose
+      # client id/secret are `required`, and fronts it with nginx auth_request.
+      auth:
+        type: basic
+        # `required` by ingress.yaml in basic mode. The Ingresses that read it
+        # are deleted by the post-renderer, so no Secret by this name exists.
+        secretName: unused-ingress-deleted-by-post-renderer
+      className: ""
+      tls:
+        enabled: false
+        clusterIssuer: ""
+
+    # nginx `default-backend` + `custom-http-errors` wiring only; Traefik has
+    # no equivalent on an HTTPRoute, so the holding page would never be served.
+    holdingPage:
+      enabled: false
+
+    # No workspace-controller is deployed, so no ClusterRole to bind to.
+    controller:
+      rbac:
+        enabled: false
+
+    networkPolicy:
+      egress:
+        enabled: true
+        # Pinned rather than `auto`: auto asks .Capabilities, and a
+        # `flux build`/`helm template` diff would then show the portable
+        # NetworkPolicy while the cluster gets the CiliumNetworkPolicy.
+        flavor: cilium
+        # Link-local only (never remove it). The chart's defaults also list
+        # upstream's DOKS pod/service CIDRs; this cluster's are deliberately NOT
+        # substituted in, because on the Cilium flavor they would be dead
+        # weight that reads like a guarantee:
+        #
+        #   - Cilium CIDR selectors never match traffic to a Cilium-managed
+        #     endpoint. Pod-to-pod is decided by identity, so a pod CIDR in
+        #     `egressDeny` blocks nothing, and `toCIDRSet: 0.0.0.0/0` allows
+        #     nothing in-cluster either.
+        #   - ClusterIPs are translated to backend pod IPs at connect() (socket
+        #     LB, kubeProxyReplacement), before policy sees the packet.
+        #
+        # So in-cluster isolation comes from the allowlist being default-deny,
+        # and the in-cluster peers a workspace MAY reach are named explicitly:
+        # ./ciliumnetworkpolicy.yaml (Forgejo, Coder) and, per workspace,
+        # ../components/agent-tools. Anything whose name resolves to the
+        # internal Gateway lands on the Traefik pods and is covered by the same
+        # rule. The internet, GitHub and model providers are unaffected.
+        deniedCIDRs:
+          - 169.254.0.0/16
+        dns:
+          enabled: true
+          # Portable flavor only; the Cilium flavor matches CoreDNS by labels.
+          serviceIPs:
+            - ${CLUSTER_IP}/32
+          namespace: kube-system
+          podLabels:
+            k8s-app: kube-dns
+        # Portable flavor only; Cilium uses the kube-apiserver entity.
+        apiServerIPs: []
+
+    build:
+      # The default. `buildkit` adds a privileged root DinD sidecar that can
+      # escape to the node.
+      mode: kaniko
+
+  postRenderers:
+    - kustomize:
+        patches:
+          # Every Ingress the chart renders is nginx-annotated (auth, regex
+          # rewrites, websocket header ConfigMaps in `ingress-nginx`) and this
+          # cluster runs no nginx. Routing is httproute.yaml.
+          - target:
+              group: networking.k8s.io
+              version: v1
+              kind: Ingress
+            patch: |-
+              $patch: delete
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: not-used
+          # The chart's home PVC is replaced by components/volsync's `${APP}`
+          # PVC so the home directory gets the nightly restic backup and a
+          # restore path. Deleted here rather than left orphaned: it carries
+          # helm.sh/resource-policy: keep, so once created only a manual
+          # `kubectl delete` would ever remove it.
+          - target:
+              version: v1
+              kind: PersistentVolumeClaim
+              name: ws-${KUBE_CODER_USER}-home
+            patch: |-
+              $patch: delete
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: not-used
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: ws-${KUBE_CODER_USER}
+            patch: |-
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: not-used
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: home
+                        persistentVolumeClaim:
+                          claimName: ${APP}
+          # Upstream admits only the `ingress-nginx` namespace. Narrowed to the
+          # Traefik pods rather than all of `network`, which also runs
+          # cloudflare-tunnel, k8s-gateway and crowdsec. With AUTH_MODE=basic
+          # this policy is the ONLY thing between an in-cluster pod and an
+          # unauthenticated shell, so it must stay this tight.
+          - target:
+              group: networking.k8s.io
+              version: v1
+              kind: NetworkPolicy
+              name: ws-${KUBE_CODER_USER}-ingress
+            patch: |-
+              - op: replace
+                path: /spec/ingress
+                value:
+                  - from:
+                      - namespaceSelector:
+                          matchLabels:
+                            kubernetes.io/metadata.name: network
+                        podSelector:
+                          matchLabels:
+                            app.kubernetes.io/name: traefik

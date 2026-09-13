@@ -1,0 +1,18 @@
+---
+# The workspace's own namespace. Not components/common: its `default-limits`
+# LimitRange would sit beside the chart's own LimitRange, and two ranges that
+# both set container defaults resolve in no documented order. The chart's is
+# the one the ResourceQuota is sized against, so it is the one that stays.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE}
+  labels:
+    # The labels upstream's scripts/ensure-workspace-namespace.sh stamps; the
+    # workspace-controller, if it is ever deployed, finds tenants by them.
+    kube-coder.dev/managed: "true"
+    kube-coder.dev/user: ${KUBE_CODER_USER}
+  annotations:
+    # The home PVC lives in here. Removing the Kustomization must not take the
+    # namespace -- and with it the user's data -- along for the ride.
+    kustomize.toolkit.fluxcd.io/prune: disabled
