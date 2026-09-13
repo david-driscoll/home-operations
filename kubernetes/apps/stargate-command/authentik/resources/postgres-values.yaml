@@ -1,0 +1,206 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cloudnative-pg/charts/refs/heads/main/charts/cluster/values.schema.json
+#
+# authentik-pg. Read docs/authentik-active-active/PLAN.md before changing
+# anything here: three settings below are load-bearing for the alpha-site
+# standby, and getting any of them wrong breaks it silently rather than loudly.
+nameOverride: &name "authentik-pg"
+fullnameOverride: *name
+type: postgresql
+version:
+  # Must stay on the SAME MAJOR as the Pi standby's image
+  # (docker/alpha-site/authentik-pg-standby/compose.yaml). Physical replication
+  # does not cross majors at all -- the standby refuses to start.
+  postgresql: "18.6"
+mode: standalone
+backups:
+  enabled: true
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+  endpointURL: "{{ .minio_endpoint }}"
+  provider: s3
+  s3:
+    region: "{{ .minio_region }}"
+    bucket: "cnpg-${CLUSTER_CNAME}"
+    # Own prefix in the shared bucket. Never reuse database/postgres's: barman
+    # refuses to archive into a prefix holding another cluster's WAL
+    # ("Expected empty archive"), which is the good outcome.
+    path: "/barman/authentik-pg"
+    accessKey: "{{ .minio_username }}"
+    secretKey: "{{ .minio_password }}"
+  wal:
+    compression: gzip
+    encryption: ''
+    maxParallel: 2
+  data:
+    compression: gzip
+    encryption: ''
+    jobs: 1
+  scheduledBackups:
+  - name: daily-backup
+    schedule: "0 30 16 * * *"
+    backupOwnerReference: self
+    method: plugin
+    pluginConfiguration:
+      name: barman-cloud.cloudnative-pg.io
+  retentionPolicy: "30d"
+cluster:
+  instances: 3
+  # LOAD-BEARING #1 -- glibc, Debian bookworm, stock PGDG build.
+  #
+  # The Pi standby runs `postgres:18.6-bookworm`: the same Debian release and
+  # the same PGDG packages, so the two sides agree on glibc. They would NOT
+  # with the alpine image the Pi's shared postgres uses (musl), and a physical
+  # standby with a different libc collation serves text-index lookups that
+  # silently miss rows after promotion. LOAD-BEARING #2 below makes collation
+  # libc-independent anyway; this makes it true twice.
+  #
+  # No TimescaleDB, no PostGIS: authentik uses neither, and every extension
+  # here would have to exist in the standby image too.
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm@sha256:17c0ee85fd74ed54e696e745bb0d9418643db3b8cb7fd9e67e6007a105b575a9
+  # TIER 1, ON THE CONTROL PLANES (PLAN.md decision A, option 1). Identity has
+  # to survive a Battery window, when the workers are off and only the three
+  # control planes run (docs/cluster-consolidation/20-low-power-tier.md §4).
+  #
+  #   - nodeSelector pins every instance to a control plane. Three instances,
+  #     three control planes, required anti-affinity per hostname: one each. A
+  #     control plane down leaves that instance Pending and the other two
+  #     serving, which is the intended shape.
+  #   - the toleration is what lets them land there at all;
+  #   - critical-tier, not system-cluster-critical: an application pod must not
+  #     preempt genuine control-plane components on a 4-core node.
+  #   - longhorn-local (one replica, strict-local): the volume lives on the
+  #     control plane's own disk, and CNPG's three instances are the redundancy.
+  #     Losing a control-plane disk costs a re-clone of that instance from the
+  #     primary, not data. longhorn-critical would be 3 x 3 copies for no
+  #     additional survivability.
+  priorityClassName: critical-tier
+  storage:
+    size: 20Gi
+    storageClass: longhorn-local
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+  logLevel: "info"
+  affinity:
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+  enableSuperuserAccess: false
+  initdb:
+    database: authentik
+    owner: authentik
+    secret:
+      name: authentik-pg-app
+    encoding: UTF8
+    # LOAD-BEARING #2 -- the builtin collation provider (PG 17+).
+    #
+    # C.UTF-8 from the builtin provider is implemented inside postgres itself,
+    # not by the OS, so its sort order is identical on x86-64 and arm64 and on
+    # any libc. That is what makes an equestria (amd64) -> Pi (arm64) physical
+    # standby safe to promote as far as collation goes. It cannot be changed
+    # after initdb -- a different provider means a new cluster and a restore.
+    localeProvider: builtin
+    builtinLocale: C.UTF-8
+  # LOAD-BEARING #3 -- NO replication slot here, deliberately.
+  #
+  # The standby's slot (`alpha_site_standby`) is created by
+  # `pg_basebackup --create-slot` at the moment the Pi clones this cluster
+  # (docker/alpha-site/authentik-pg-standby). Creating it at initdb instead
+  # looks tidier and breaks: the phase-2 restore of a ~2.7 GB database writes
+  # WAL that an unconsumed slot retains, past max_slot_wal_keep_size below,
+  # and PostgreSQL permanently invalidates a slot that crosses it.
+  #
+  # `replicationSlots.synchronizeReplicas` copies the slot to the CNPG
+  # replicas once it exists, so it survives an in-cluster failover. It does
+  # NOT survive a rebuild of this cluster from backup -- re-clone the standby
+  # (FAILOVER.md, "re-establish replication").
+  replicationSlots:
+    highAvailability:
+      enabled: true
+    synchronizeReplicas:
+      enabled: true
+    updateInterval: 30
+  roles:
+    # The owner, managed as well as bootstrapped, so a rotation in OpenBao
+    # (stacks/system/authentik-pg.ts) becomes an ALTER ROLE here. initdb only
+    # reads its secret once.
+    - name: authentik
+      ensure: present
+      login: true
+      passwordSecret:
+        name: authentik-pg-app
+    - name: alpha_site_standby
+      ensure: present
+      login: true
+      replication: true
+      passwordSecret:
+        name: authentik-pg-replication
+  services:
+    additional:
+      # The LAN door to the primary -- the Pi's authentik and its standby both
+      # dial it. A LoadBalancer on the `rw` selector follows CNPG failovers, and
+      # `recovery_target_timeline = latest` on the Pi follows the timeline.
+      #
+      # Pinned rather than auto-assigned: this address is written into the Pi's
+      # .env and primary_conninfo, so it must not move when the Service is
+      # recreated. Inside Cilium's LB pool (10.10.206.100-200), and verified
+      # unallocated on 2026-09-13.
+      #
+      # No external-dns hostname on purpose. The cloudflare instance watches
+      # Services too, and a public record for a database is not wanted.
+      - selectorType: rw
+        updateStrategy: patch
+        serviceTemplate:
+          metadata:
+            name: authentik-pg-lan
+            annotations:
+              io.cilium/lb-ipam-ips: "10.10.206.150"
+          spec:
+            type: LoadBalancer
+  monitoring:
+    enabled: true
+    podMonitor:
+      enabled: true
+    prometheusRule:
+      enabled: true
+      excludeRules:
+      - CNPGClusterLogicalReplicationErrorsCritical
+      - CNPGClusterLogicalReplicationErrors
+      - CNPGClusterLogicalReplicationStoppedCritical
+      - CNPGClusterLogicalReplicationStopped
+    disableDefaultQueries: false
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      wal_keep_size: "512MB"
+      max_slot_wal_keep_size: "4GB"
+      wal_sender_timeout: "60s"
+      tcp_keepalives_idle: "10"
+      tcp_keepalives_interval: "10"
+      tcp_keepalives_count: "3"
+    pg_hba:
+      # Replication is the one thing the default `host all all all
+      # scram-sha-256` rule does NOT cover -- `all` never matches the
+      # `replication` pseudo-database. Pinned to the Dockge LXC's address.
+      #
+      # Cilium load-balances this cluster in DSR mode, which preserves the
+      # client address. If the standby logs "no pg_hba.conf entry for
+      # replication connection from host <x>", <x> is the address it really
+      # arrives from -- check it before widening this.
+      - hostssl replication alpha_site_standby 10.10.10.9/32 scram-sha-256
+    pg_ident: []
+imageCatalog:
+  create: false
+  images: []
+poolers: []

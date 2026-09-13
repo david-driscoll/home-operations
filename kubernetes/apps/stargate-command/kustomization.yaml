@@ -11,6 +11,7 @@ components:
   - ../../components/common
   - ../../components/repos/app-template
 resources:
+  - ./authentik/ks.yaml
   - ./chrony/ks.yaml
   - ./matter/ks.yaml
   - ./mosquitto/ks.yaml

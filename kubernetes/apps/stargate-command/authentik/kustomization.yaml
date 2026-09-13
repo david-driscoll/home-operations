@@ -1,0 +1,15 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # The database: CNPG cluster `authentik-pg`.
+  - ./postgres-externalsecret.yaml
+  - ./postgres-helmrelease.yaml
+  - ./definition.yaml
+configMapGenerator:
+- name: authentik-pg-values
+  files:
+  - values.yaml=./resources/postgres-values.yaml
+  options:
+    disableNameSuffixHash: true
