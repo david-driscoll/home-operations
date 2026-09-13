@@ -44,10 +44,13 @@ available as the primary it writes to. Accepted 2026-09-13.
 
 ## Decisions (and the facts they rest on)
 
-1. **Dedicated CNPG cluster `database/authentik-pg`, not a database on
+1. **Dedicated CNPG cluster `stargate-command/authentik-pg`, not a database on
    `database/postgres`.** Physical replication copies a whole cluster; the
    shared one holds ~35 databases, OpenBao's storage, and a TimescaleDB/PostGIS
-   image.
+   image. It lives in the Tier-1 namespace and is **pinned to the control
+   planes** (`critical-tier`, control-plane toleration, `longhorn-local` on
+   each control plane's disk) so it survives a Battery window when the workers
+   are off — decided 2026-09-13.
 2. **Physical streaming to the Pi, amd64 → arm64.** PostgreSQL documents
    physical replication as same-architecture only. x86-64 and aarch64 agree on
    endianness, alignment and float format, so the control-file checks pass and
@@ -113,11 +116,11 @@ Each phase is its own commit (or PR).
 
 | # | What | Where | Gate to proceed |
 |---|------|-------|-----------------|
-| 1 | `authentik-pg` cluster + credentials | `kubernetes/apps/database/authentik-pg`, `stacks/system/authentik-pg.ts` | Cluster Ready, `authentik-pg-lan` holds `10.10.206.150`, `psql` from the Pi LXC works |
+| 1 | `authentik-pg` cluster + credentials | `kubernetes/apps/stargate-command/authentik`, `stacks/system/authentik-pg.ts` | Cluster Ready, `authentik-pg-lan` holds `10.10.206.150`, `psql` from the Pi LXC works |
 | 2 | Move data: dump Pi → restore `authentik-pg`, repoint the Pi's authentik | `docker/alpha-site/authentik/.env`, [CUTOVER.md](CUTOVER.md) | **Merge only inside the window, after the restore** (see above); Gatus green on all four names; logins + outposts work |
 | 3 | Pi streaming standby | `docker/alpha-site/authentik-pg-standby` | Lag < 1 min in Prometheus; **promotion rehearsal with `amcheck` passes** on a throwaway copy |
 | 4 | Retire the Pi's shared-postgres tenant + valkey | `docker/alpha-site/authentik` | Soak ≥ 7 days after phase 2 |
-| 5 | authentik on equestria (staging hostname), media on Garage | `kubernetes/apps/equestria/idp/authentik`, `stacks/system/garage.ts` | Both sites serve logins against the one DB |
+| 5 | authentik on equestria (staging hostname), media on Garage | `kubernetes/apps/stargate-command/authentik`, `stacks/system/garage.ts` | Both sites serve logins against the one DB |
 | 6 | keepalived both sides + Traefik `externalIPs` | `kubernetes/apps/network/keepalived`, `docker/alpha-site/keepalived` | VIP moves on `docker stop authentik-server` / pod kill and back on recovery |
 | 7 | DNS cutover of the vanity names to the VIP | `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | Gatus per-site + VIP checks green |
 | 8 | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |

@@ -1,0 +1,32 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app authentik-pg
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: cluster
+      # Same chart as database/postgres -- move them together.
+      version: 0.8.1
+      sourceRef:
+        kind: HelmRepository
+        name: cloudnative-pg
+        namespace: cloudnative-pg
+  maxHistory: 3
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  valuesFrom:
+    - kind: Secret
+      name: authentik-pg-values
+      valuesKey: values.yaml

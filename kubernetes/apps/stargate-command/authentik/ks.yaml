@@ -1,0 +1,58 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# authentik -- the estate's identity provider, equestria half. One app that owns
+# its database: the `postgres-*` files are the dedicated CNPG cluster
+# `authentik-pg`, the rest is authentik itself. docs/authentik-active-active/PLAN.md.
+#
+# In stargate-command, the Tier-1 namespace, because SSO has to survive a
+# Battery window: the cluster is pinned to the control planes and authentik's
+# pods tolerate them (docs/cluster-consolidation/20-low-power-tier.md §1).
+#
+# A dedicated cluster rather than a database on `database/postgres`, and that
+# is not a preference: the alpha-site Pi runs a PHYSICAL streaming standby of
+# it, and physical replication copies a whole cluster -- every database, every
+# role. On the shared cluster that would be ~35 app databases, OpenBao's
+# storage, and a TimescaleDB/PostGIS image the Pi would have to match.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app authentik
+  namespace: &namespace stargate-command
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  path: ./kubernetes/apps/stargate-command/authentik
+  dependsOn:
+    - name: postgres-operator
+      namespace: cloudnative-pg
+    - name: external-secrets
+      namespace: kube-system
+    # Owns the `authentik` HelmRepository the authentik HelmRelease pulls from.
+    - name: authentik-remote-cluster
+      namespace: equestria
+  prune: true
+  # Same reason as database/postgres: an ownership change must never
+  # cascade-delete the Cluster CR and its PVCs
+  # (docs/cluster-consolidation/27-migration-churn-failure-modes.md).
+  deletionPolicy: Orphan
+  wait: false
+  force: false
+  suspend: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
