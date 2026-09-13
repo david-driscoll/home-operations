@@ -20,40 +20,14 @@
 #     it is N, not N+1 — one Pi, one PSU, one USB cable. That is an accepted risk
 #     (section 6), and the mitigation is a rehearsed, verified restore, not
 #     redundancy.
+#
+# No Redis. authentik 2025.10 moved its cache, task broker and channel layer
+# into PostgreSQL, so the bundled valkey this stack used to run served nothing;
+# it was removed in phase 4 of docs/authentik-active-active/PLAN.md. A deploy
+# does not remove the old container (`compose up -d` leaves orphans running) —
+# `docker rm -f authentik-redis` and `rm -rf /opt/stacks-data/authentik/redis`
+# once, by hand.
 services:
-  # ---------------------------------------------------------------------------
-  # Redis (valkey) — cache and websocket bus, bundled rather than shared.
-  #
-  # In-cluster authentik uses valkey.database.svc.cluster.local DB index 5. That
-  # instance does not move, and there is no docker/_common/redis to join: this is
-  # the estate's only Docker-side consumer, so a shared component for one consumer
-  # would be infrastructure built on spec. Bundled here, and therefore DB 0.
-  # ---------------------------------------------------------------------------
-  authentik-redis:
-    image: valkey/valkey:9-alpine@sha256:a0dbf4c1d5708782907c10e2c72deff317518518b5288a58416981d9db95d30b
-    container_name: authentik-redis
-    hostname: authentik-redis
-    command: --save 60 1 --loglevel warning
-    environment:
-      TZ: ${TIMEZONE}
-    user: "999:1000"
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /opt/stacks-data/authentik/redis:/data
-    healthcheck:
-      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    restart: unless-stopped
-    mem_limit: 256m
-    networks:
-      - dockge_default
-
   # ---------------------------------------------------------------------------
   # Server — the API and the UI, and the embedded outpost this host's own
   # forwardAuth will use once section 2.5 lands.
@@ -66,9 +40,6 @@ services:
     env_file:
       - path: .env
         required: true
-    depends_on:
-      authentik-redis:
-        condition: service_healthy
     user: "1000:1000"
     cap_drop:
       - ALL
@@ -173,9 +144,6 @@ services:
     env_file:
       - path: .env
         required: true
-    depends_on:
-      authentik-redis:
-        condition: service_healthy
     user: "1000:1000"
     cap_drop:
       - ALL
