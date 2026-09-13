@@ -482,4 +482,23 @@ function clusterWideDns(globals: GlobalResources) {
     globals,
     { parent: globals },
   );
+
+  // authentik's keepalived VIP (docs/authentik-active-active/PLAN.md, phase 7).
+  // The vanity SSO names stay CNAMEs and are RETARGETED at this record by
+  // docker/alpha-site/authentik/compose.yaml's `x-dns` block. That is an
+  // in-place value update on UniFi, Technitium and Cloudflare, whereas turning
+  // those CNAMEs into A records changes `type`, which Technitium and Cloudflare
+  // implement as delete-then-create -- the live-DNS-destroying shape
+  // components/StandardDns.ts documents. This record must exist before the
+  // retarget lands, so it ships a commit ahead of it.
+  StandardDns.create(
+    "authentik-vip-a",
+    {
+      type: "A",
+      hostname: pulumi.interpolate`authentik-vip.${globals.searchDomain}`,
+      ipAddress: `10.10.255.10`,
+    },
+    globals,
+    { parent: globals },
+  );
 }

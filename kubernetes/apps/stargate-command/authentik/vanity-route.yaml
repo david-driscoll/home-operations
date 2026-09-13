@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# The estate's SSO names, routed on equestria so Traefik can answer for them
+# when keepalived puts the VIP on an equestria node (PLAN.md phase 7). The
+# alpha-site Traefik routes the same three names from its compose labels.
+#
+# UNPUBLISHED ON PURPOSE. The unifi and technitium external-dns instances
+# publish every hostname on routes attached to the `internal` Gateway. These
+# names are owned by Pulumi (CNAMEs to authentik-vip, from
+# docker/alpha-site/authentik/compose.yaml), and a second writer on live SSO
+# DNS is the incident docs/cluster-consolidation/07-authentik-to-alpha-site.md
+# was written around.
+#
+# The controller annotation is how: external-dns skips any route whose
+# `external-dns.kubernetes.io/controller` is set to anything but its own
+# value, `dns-controller` (source/gateway.go -> annotations.IsControllerMismatch,
+# v0.22.0). A separate route rather than more hostnames on the chart's route,
+# because the chart's route IS meant to publish the staging name.
+#
+# Harmless before the DNS retarget: nothing resolves these names to equestria
+# until then, and the gateway's wildcard certificate already covers them.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}-vanity
+  annotations:
+    external-dns.kubernetes.io/controller: pulumi
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+      sectionName: websecure
+  hostnames:
+    - authentik.${ROOT_DOMAIN}
+    - iris.${ROOT_DOMAIN}
+    - canterlot.${ROOT_DOMAIN}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: authentik-server
+          port: 80
