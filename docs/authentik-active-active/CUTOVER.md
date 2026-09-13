@@ -57,6 +57,10 @@ A `no pg_hba.conf entry` or timeout here is a phase-1 problem; stop.
 pi$ docker exec postgres psql -U postgres -d authentik -tAc "select extname from pg_extension"
 #   plpgsql only. Anything else must exist in the CNPG image or be excluded at dump time (doc 07 trap 1).
 pi$ docker exec postgres psql -U postgres -tAc "select pg_size_pretty(pg_database_size('authentik'))"
+pi$ find /opt/stacks-data/authentik/media -type f
+#   Uploaded media does not follow authentik to equestria (PLAN.md decision 8).
+#   Re-point each file's owner (application icon, source icon, brand) at a URL
+#   in the admin UI before phase 5, then these can stay where they are.
 pi$ docker inspect authentik-server --format '{{.Config.Image}}'
 #   The pinned 2026.8.2 digest. Record it -- if a Renovate bump lands before the
 #   window, the restored schema and the image must still match (doc 07: a newer
