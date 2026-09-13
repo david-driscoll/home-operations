@@ -1,0 +1,49 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# The alpha-site standby, seen from the primary. Watched from here rather than
+# from the Pi because the question is "is the copy we would promote current?",
+# and the primary's slot answers it whatever state the Pi is in.
+#
+# Before phase 3 clones the standby there is no `alpha_site_standby` slot and so
+# no series; neither rule fires. `and on (pod) ... in_recovery == 0` keeps only
+# the primary's row -- CNPG replicas carry a synchronised, always-inactive copy
+# of the slot that would otherwise look like a disconnected standby.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ${APP}-alpha-site-standby
+spec:
+  groups:
+    - name: authentik-pg.standby
+      rules:
+        - alert: AuthentikPgStandbyDisconnected
+          expr: |
+            max(
+              cnpg_pg_replication_slots_active{namespace="stargate-command", slot_name="alpha_site_standby"}
+              and on (pod) cnpg_pg_replication_in_recovery{namespace="stargate-command"} == 0
+            ) == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "alpha-site authentik standby is not streaming"
+            description: >-
+              The alpha_site_standby slot on authentik-pg has been inactive for 15m. The Pi's copy is
+              going stale, and the primary is retaining WAL for it (bounded by max_slot_wal_keep_size).
+              Check `docker logs authentik-pg-standby` on dockge-as.
+        - alert: AuthentikPgStandbyWalRetained
+          expr: |
+            max(
+              cnpg_pg_replication_slots_pg_wal_lsn_diff{namespace="stargate-command", slot_name="alpha_site_standby"}
+              and on (pod) cnpg_pg_replication_in_recovery{namespace="stargate-command"} == 0
+            ) > 2 * 1024 * 1024 * 1024
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "authentik-pg is retaining {{ $value | humanize1024 }}B of WAL for the alpha-site standby"
+            description: >-
+              At max_slot_wal_keep_size (4GB) PostgreSQL invalidates the slot and the standby needs a
+              full re-clone (FAILOVER.md, "re-establish replication"). Fix the Pi's connection, or drop
+              the slot deliberately, before it gets there.

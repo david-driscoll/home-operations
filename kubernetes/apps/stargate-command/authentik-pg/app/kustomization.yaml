@@ -6,6 +6,7 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./definition.yaml
+  - ./prometheusrule.yaml
 configMapGenerator:
 - name: ${APP}-values
   files:
