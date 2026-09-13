@@ -1,0 +1,82 @@
+# authentik-pg-standby — a hot, physical streaming standby of equestria's
+# stargate-command/authentik-pg, for MANUAL promotion when equestria is down.
+#
+# Phase 3 of docs/authentik-active-active/PLAN.md. Promotion and re-cloning are
+# in FAILOVER.md in this directory; read it before touching the data directory.
+#
+# Deliberately NOT the shared docker/_common/postgres:
+#   - That instance is read-write and runs provision.sh on every deploy; as a
+#     standby it would fail provisioning, and DockgeLxc's postgresInit turns a
+#     failed provision into a failed stacks/home run for every stack here.
+#   - It is alpine (musl). This must be glibc — see the image note.
+#
+# Nothing connects to this while it is a standby. authentik keeps talking to
+# authentik-pg; FAILOVER.md repoints it here only after a promotion.
+services:
+  authentik-pg-standby:
+    # SAME MAJOR, SAME DISTRO as authentik-pg's
+    # ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm
+    # (kubernetes/apps/stargate-command/authentik/resources/postgres-values.yaml):
+    #   - physical replication cannot cross a major version at all;
+    #   - Debian bookworm glibc on both sides, so even libc collations agree
+    #     (authentik-pg uses the builtin C.UTF-8 provider, which makes this
+    #     belt-and-braces).
+    # Bump the two together. A standby on a NEWER minor than the primary is
+    # fine; an older one may fail to replay WAL a newer primary wrote.
+    #
+    # arm64 vs the primary's amd64: unsupported by PostgreSQL, works in practice
+    # (same endianness, alignment and float format). PLAN.md decision 2 — the
+    # promotion rehearsal with amcheck is the gate.
+    image: postgres:18.6-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
+    container_name: authentik-pg-standby
+    hostname: authentik-pg-standby
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      TZ: ${TIMEZONE}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # uid/gid 999 is `postgres` in the Debian image (NOT 70, which is alpine's).
+    # init.sh prepares the data directory for it.
+    user: "999:999"
+    entrypoint: ["/bin/bash", "/standby-entrypoint.sh"]
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # Under /opt/stacks-data, never /opt/stacks — DockgeLxc rm -rf's the
+      # definition directory when a stack is deleted. See
+      # docker/_common/postgres/compose.yaml for the incident behind that rule.
+      - /opt/stacks-data/authentik-pg-standby/pgdata:/var/lib/postgresql/data
+      - ./standby-entrypoint.sh:/standby-entrypoint.sh:ro
+      - ./config:/etc/postgresql:ro
+    shm_size: 128mb
+    healthcheck:
+      # Healthy = streaming while a standby, or accepting queries once promoted.
+      # A standby whose WAL receiver is down is UNHEALTHY: that is the state in
+      # which the copy silently goes stale, and the only one worth surfacing.
+      test:
+        - CMD-SHELL
+        - "psql -U postgres -d postgres -tAc \"select case when pg_is_in_recovery() then (select count(*) from pg_stat_wal_receiver where status = 'streaming') else 1 end\" | grep -qx 1"
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      # The first boot is a full clone over the LAN onto a USB SSD.
+      start_period: 1h
+    stop_grace_period: 1m
+    restart: unless-stopped
+    # NOT autoheal-labelled, for the reason the shared postgres gives: an
+    # unhealthy database is usually recovering, and restarting it on a loop is
+    # the worst response. Here, a restart would also re-run the entrypoint.
+    mem_limit: 768m
+    dns:
+      - 100.100.100.100
+    # No published ports and no traefik labels. After a promotion the Pi's
+    # authentik reaches this by name on dockge_default.
+    networks:
+      - dockge_default
+
+networks:
+  dockge_default:
+    external: true

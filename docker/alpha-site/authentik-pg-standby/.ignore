@@ -1,0 +1,25 @@
+# GATED — phase 3 of docs/authentik-active-active/PLAN.md.
+#
+# Any file ending in .ignore makes DockgeLxc skip this whole stack. Deleting
+# this file IS the deploy: the next stacks/home run starts the standby, and on
+# an empty data directory the entrypoint immediately clones authentik-pg.
+#
+# Delete it only when ALL of these hold:
+#
+#   1. Phase 2's cutover is DONE and soaked for a day. Cloning before the
+#      restore copies an empty database and then streams ~2.7 GB of restore WAL
+#      over the Pi's USB SSD for nothing.
+#   2. The equestria authentik-pg replication path exists in OpenBao (phase 1's
+#      system-stack run). .env references it, and a missing reference aborts
+#      the ENTIRE stacks/home run, not just this stack (HO#636).
+#   3. `kubectl -n stargate-command get cluster authentik-pg` is healthy and nothing
+#      already holds the slot:
+#        select slot_name, active, wal_status from pg_replication_slots;
+#      No row, or an inactive row -- the entrypoint handles both. An ACTIVE
+#      row means something else is streaming as this standby; stop.
+#   4. The Pi has room: `df -h /opt/stacks-data` shows free space of at least
+#      twice `pg_database_size('authentik')` on the primary.
+#
+# After it is running, the phase-3 gate in PLAN.md still applies: the standby is
+# not trusted for a real failover until the promotion rehearsal in FAILOVER.md
+# passes amcheck.
