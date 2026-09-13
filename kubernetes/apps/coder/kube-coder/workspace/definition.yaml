@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: kube-coder (${KUBE_CODER_USER})
+  category: Applications
+  description: Browser workspace with VS Code, terminal, desktop and CLI agents
+  url: &url https://${KUBE_CODER_USER}.dev.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/code-server.svg
+  # A workspace is one person's shell. server.py runs in AUTH_MODE=basic and
+  # trusts the edge completely, so this policy is the whole access decision --
+  # widen it and you hand out a terminal, not a dashboard.
+  #
+  # Shared by every workspace that points at this directory, so every member of
+  # this group can open every workspace. Per-user isolation at the door would
+  # need a per-user group substituted in from ks.yaml.
+  access_policy:
+    groups:
+      - admins
+  authentik:
+    # Forward auth, not OIDC: the only native login upstream supports is a
+    # GitHub-only oauth2-proxy. See the `ingress.auth` note in helmrelease.yaml.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

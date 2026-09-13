@@ -1,0 +1,85 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io/httproute_v1.json
+#
+# The Gateway API translation of the chart's basic-mode Ingresses, with the
+# prefix handling corrected. Each in-pod service serves from its own root, and
+# the SPA (AUTH_MODE=basic, so an empty auth prefix) links to them as:
+#
+#   /                  server.py        :6080  dashboard SPA + /api + /browser
+#   /vscode/           code-server      :8080  no --base-path, so strip
+#   /terminal/         ttyd             :7681  no -b, so strip
+#   /vnc-direct/...    websockify/noVNC :6081  --web root, so strip
+#   /websockify        websockify       :6081  any path upgrades, kept as-is
+#
+# Upstream's basic-mode Ingresses do NOT strip /vscode and rewrite /terminal to
+# a bare `/` (which would also eat /terminal/ws); their oauth2-mode Ingresses
+# strip all three, and those are the ones the image is exercised against.
+# ReplacePrefixMatch gives the oauth2-mode behaviour: /terminal/ws -> /ws.
+#
+# Gateway API picks the longest matching prefix, so the four specific rules win
+# over the catch-all regardless of order.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${APP}
+  annotations:
+    external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+spec:
+  parentRefs:
+    - name: internal
+      namespace: network
+      kind: Gateway
+  hostnames:
+    - "${KUBE_CODER_USER}.dev.${ROOT_DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /vscode
+      filters: &strip
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authenticated-api
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: ws-${KUBE_CODER_USER}
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /terminal
+      filters: *strip
+      backendRefs:
+        - name: ws-${KUBE_CODER_USER}
+          port: 7681
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /vnc-direct
+      filters: *strip
+      backendRefs:
+        - name: ws-${KUBE_CODER_USER}
+          port: 6081
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /websockify
+      filters: &auth
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authenticated-api
+      backendRefs:
+        - name: ws-${KUBE_CODER_USER}
+          port: 6081
+    - filters: *auth
+      backendRefs:
+        - name: ws-${KUBE_CODER_USER}
+          port: 6080

@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# `authenticated-user` MINUS error-pages. Traefik resolves an HTTPRoute's
+# ExtensionRef in the route's own namespace, and this namespace does not get
+# components/common, so the chain has to be declared here regardless.
+#
+# error-pages is left out on purpose: it swaps every 401-599 body for a generic
+# HTML page, and nearly everything behind this host is an API, an SSE stream or
+# a websocket (server.py's /api, ttyd, websockify, code-server). A JSON error
+# replaced by HTML is a silent SPA failure; see apps/coder/coder/httproute.yaml
+# for the same call made for Coder.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authenticated-api
+spec:
+  chain:
+    middlewares:
+      - name: outpost
+        namespace: network
+      - name: internal-network
+        namespace: network

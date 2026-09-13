@@ -312,6 +312,20 @@
       },
     },
     {
+      // The GitRepository tag (flux manager, git-tags) and the devlaptop image
+      // (helm-values, docker) are one release: the chart ships the entrypoint
+      // ConfigMaps the image runs. Split PRs would land a chart on an image
+      // from another release. See kubernetes/apps/coder/kube-coder/.
+      description: "kube-coder Group",
+      groupName: "kube-coder",
+      matchPackageNames: [
+        "/imran31415/kube-coder/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "Flux Operator Group",
       groupName: "Flux Operator",
       matchPackageNames: [

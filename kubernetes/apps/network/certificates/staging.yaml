@@ -46,3 +46,5 @@ spec:
     # expected to grow more MCP surfaces, and each one would otherwise be
     # another two-file certificate change plus an ACME re-issue.
     - "*.agents.${ROOT_DOMAIN}"
+    # kube-coder workspaces; reasoning on the production twin.
+    - "*.dev.${ROOT_DOMAIN}"

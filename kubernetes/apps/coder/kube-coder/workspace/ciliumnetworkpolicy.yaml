@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Forgejo and Coder, for every workspace -- by their REAL hostnames, through the
+# internal Gateway, because neither works on an in-cluster Service name:
+#
+#   - Forgejo's ROOT_URL/SSH_DOMAIN is git.${ROOT_DOMAIN}; every clone URL,
+#     LFS endpoint and redirect it hands out names that host.
+#   - Coder has exactly one CODER_ACCESS_URL (code.${ROOT_DOMAIN}) and derives
+#     the CLI endpoint and every agent dial address from it. See
+#     apps/coder/coder/ks.yaml.
+#
+# Those names resolve to the internal Gateway's LoadBalancer address, which
+# Cilium translates to the Traefik pods before policy is evaluated -- so the
+# peer to allow is Traefik, and the chart's egress policy (ws-<user>-egress)
+# denies it like any other in-cluster pod. Policies are additive: this adds
+# allows alongside that one and loosens nothing else.
+#
+# WHY SNI AND NOT JUST "TRAEFIK:443": that would be every app on the internal
+# Gateway, and ~40 of them are gated only by `internal-network`, which admits
+# the pod CIDR. `serverNames` limits the TLS handshake to the two hosts. It is
+# enforced by Cilium's L7 proxy (on by default; nothing in cilium's values turns
+# it off) and it is a handshake check, not a boundary against a hostile
+# client -- Traefik routes on the Host header, so SNI git.* with Host: other.*
+# would still reach `other`. It keeps agents on the two services they were
+# given; it does not contain one determined to leave. The chart's egress policy
+# carries the same caveat for the internet as a whole.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ws-${KUBE_CODER_USER}-forgejo-coder
+spec:
+  endpointSelector:
+    matchLabels:
+      app: ws-${KUBE_CODER_USER}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+      toPorts:
+        # `websecure`. HTTPS only: port 80 on Traefik exists solely to redirect
+        # here, and would carry no SNI to check.
+        - ports:
+            - port: "443"
+              protocol: TCP
+          serverNames:
+            - git.${ROOT_DOMAIN}
+            - code.${ROOT_DOMAIN}
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+      toPorts:
+        # `gitssh`, for git over SSH. No SNI on raw TCP, but nothing else can
+        # be reached this way: Forgejo's TCPRoute is the only route attached to
+        # the Gateway's port-22 listener. postgres/mariadb/bolt listeners are
+        # on other ports and stay closed.
+        - ports:
+            - port: "22"
+              protocol: TCP
