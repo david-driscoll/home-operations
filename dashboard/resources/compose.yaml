@@ -19,6 +19,7 @@ services:
       - GRAFANA_TOKEN
       - SONARR_API_KEY
       - TAUTULLI_API_KEY
+      - TRACEARR_API_KEY
       - SABNZBD_API_KEY
       - JELLYFIN_API_KEY
       - PLEX_API_KEY
@@ -31,6 +32,7 @@ services:
       - QBITTORRENT_URL
       - SONARR_URL
       - TAUTULLI_URL
+      - TRACEARR_URL
       - JELLYFIN_URL
       - PLEX_URL
       - ROMM_URL
