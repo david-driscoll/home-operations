@@ -24,3 +24,11 @@ spec:
       interval: 1m
       conditions:
         - "[CONNECTED] == true"
+    # /ready/, not /live/: ready includes the database, and "this site cannot
+    # reach authentik-pg" is the failure this site exists to be independent of.
+    # It is also exactly what keepalived's health check keys on in phase 6.
+    - url: https://authentik.${CLUSTER_DOMAIN}/-/health/ready/
+      method: GET
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"

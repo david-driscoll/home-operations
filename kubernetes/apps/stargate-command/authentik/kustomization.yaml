@@ -7,6 +7,10 @@ resources:
   - ./postgres-externalsecret.yaml
   - ./postgres-helmrelease.yaml
   - ./definition.yaml
+  - ./postgres-prometheusrule.yaml
+  # authentik itself.
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
 configMapGenerator:
 - name: authentik-pg-values
   files:

@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
+configMapGenerator:
+  - name: authentik-vip-config
+    files:
+      - keepalived.conf.tmpl=./resources/keepalived.conf.tmpl
+      - render.sh=./resources/render.sh
+      - check-authentik.sh=./resources/check-authentik.sh
+      - check-fence.sh=./resources/check-fence.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        # These are shell scripts and a template. Flux's postBuild substitution
+        # would rewrite every ${...} in them -- to EMPTY for anything it does not
+        # know. The files use $VAR and @TOKEN@ anyway; this makes it impossible.
+        kustomize.toolkit.fluxcd.io/substitute: disabled
