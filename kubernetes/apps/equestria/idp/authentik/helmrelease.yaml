@@ -1,0 +1,177 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app authentik
+spec:
+  interval: 1h
+  timeout: 15m
+  chart:
+    spec:
+      chart: authentik
+      # VERSION LOCK. Chart, image tag and digest below must match
+      # docker/alpha-site/authentik/compose.yaml exactly: both sites share one
+      # database, and a newer server migrates the schema out from under the
+      # older one. Upgrade procedure is in docs/authentik-active-active/PLAN.md
+      # ("Version lock").
+      version: 2026.8.2
+      sourceRef:
+        kind: HelmRepository
+        name: authentik
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    global:
+      image:
+        repository: ghcr.io/goauthentik/server
+        tag: "2026.8.2"
+        digest: sha256:ff8489a5af4f4fe415ffd180a8e3c10b120bc2592d13d79dac050d977f7b9ecd
+      deploymentAnnotations:
+        reloader.stakater.com/auto: "true"
+        # Low Power keep-list. Without this the nightly shed of the equestria
+        # namespace scales authentik to zero, and keepalived (phase 6) hands the
+        # VIP to the Pi every night. docs/cluster-consolidation/24-power-states.md
+        downscaler/exclude: "true"
+      # Tier 1, like traefik (network/traefik values.yaml): identity has to be
+      # schedulable on the control planes when the workers are off.
+      priorityClassName: critical-tier
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 60
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 60
+      # Behaviour mirrors docker/alpha-site/authentik/.env. Two sites serving
+      # one IdP must not disagree about how it behaves -- change both together.
+      env:
+        - name: AUTHENTIK_POSTGRESQL__HOST
+          value: authentik-pg-rw.stargate-command.svc.cluster.local
+        - name: AUTHENTIK_POSTGRESQL__PORT
+          value: "5432"
+        - name: AUTHENTIK_POSTGRESQL__NAME
+          value: authentik
+        - name: AUTHENTIK_POSTGRESQL__SSLMODE
+          value: require
+        - name: AUTHENTIK_POSTGRESQL__CONN_HEALTH_CHECKS
+          value: "true"
+        # No uploaded media (PLAN.md decision 8): icons and backgrounds are
+        # URLs, which is what every Pulumi-managed application already sets.
+        # /data is scratch here -- an upload made through THIS site would
+        # vanish on restart and never exist on the Pi.
+        - name: AUTHENTIK_STORAGE__MEDIA__BACKEND
+          value: file
+        - name: AUTHENTIK_DISABLE_UPDATE_CHECK
+          value: "true"
+        - name: AUTHENTIK_DISABLE_STARTUP_ANALYTICS
+          value: "false"
+        - name: AUTHENTIK_AVATARS
+          value: gravatar
+        - name: AUTHENTIK_DEFAULT_USER_CHANGE_NAME
+          value: "true"
+        - name: AUTHENTIK_DEFAULT_USER_CHANGE_EMAIL
+          value: "true"
+        - name: AUTHENTIK_DEFAULT_USER_CHANGE_USERNAME
+          value: "true"
+        - name: AUTHENTIK_GDPR_COMPLIANCE
+          value: "true"
+        - name: AUTHENTIK_DEFAULT_TOKEN_DURATION
+          value: minutes=60
+        - name: AUTHENTIK_DEFAULT_TOKEN_LENGTH
+          value: "128"
+        - name: AUTHENTIK_ERROR_REPORTING__ENABLED
+          value: "false"
+        - name: AUTHENTIK_ERROR_REPORTING__SEND_PII
+          value: "false"
+        - name: AUTHENTIK_ERROR_REPORTING__ENVIRONMENT
+          value: ${CLUSTER_CNAME}
+        - name: AUTHENTIK_LOG_LEVEL
+          value: info
+        # Do not let this worker auto-register the cluster it runs in as an
+        # outpost integration. equestria's outposts are already managed through
+        # the authentik-remote-cluster ServiceAccount (stacks/applications), and a
+        # second "Local Kubernetes Cluster" connection would reconcile the same
+        # namespace from a different identity.
+        - name: AUTHENTIK_OUTPOSTS__DISCOVER
+          value: "false"
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 256Mi
+      volumeMounts:
+        - name: data
+          mountPath: /data
+    authentik:
+      # Everything secret comes from the ExternalSecret; the chart must not
+      # render its own config Secret (which would carry an empty secret key).
+      enabled: false
+      existingSecret:
+        secretName: authentik-env
+    postgresql:
+      enabled: false
+    geoip:
+      enabled: false
+    # equestria already has the authentik-remote-cluster release (idp/), which
+    # owns the outpost-management ServiceAccount; a second copy would collide.
+    serviceAccount:
+      create: false
+    server:
+      replicas: 2
+      pdb:
+        enabled: true
+        minAvailable: 1
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: authentik
+                    app.kubernetes.io/component: server
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+      route:
+        main:
+          enabled: true
+          # STAGING NAME ONLY. The vanity names (authentik/iris/canterlot) are
+          # owned by Pulumi and move to the VIP in phase 7. Adding them here
+          # would make external-dns a second writer on live SSO DNS -- the
+          # incident docs/cluster-consolidation/07-authentik-to-alpha-site.md
+          # was written around.
+          hostnames:
+            - authentik.${CLUSTER_DOMAIN}
+          annotations:
+            external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
+          parentRefs:
+            - name: internal
+              namespace: network
+              kind: Gateway
+    worker:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          memory: 1Gi

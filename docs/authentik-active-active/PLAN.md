@@ -17,6 +17,7 @@ It is a deliberate trade, and the trade is not free:
 | --------------- | ----------------------------------- | ------------------------------------------------------------------ |
 | alpha-site down | **All SSO down** until the Pi is back | VIP moves to equestria; SSO unaffected                              |
 | equestria down  | SSO unaffected                      | **SSO down until a human promotes the Pi standby** (FAILOVER.md) |
+| Battery / Low Power (workers off) | SSO unaffected         | SSO unaffected — every piece is Tier 1 (decision A)                |
 
 authentik ≥ 2025.10 keeps sessions, tasks and its channel layer in PostgreSQL,
 so a read-only standby cannot serve a login. The Pi's authentik is only as
@@ -33,7 +34,7 @@ available as the primary it writes to. Accepted 2026-09-13.
           │ externalIPs                         │ 0.0.0.0:443
    Traefik (network/traefik)             Traefik (docker/_common/traefik)
           │                                     │
-   authentik server+worker (idp)         authentik server+worker
+   authentik server+worker (equestria)   authentik server+worker
           │                                     │
           └──────────► authentik-pg-rw ◄────────┘  10.10.206.150 (LB)
                      CNPG, 3 instances           │
@@ -83,8 +84,13 @@ available as the primary it writes to. Accepted 2026-09-13.
    which would fight the Pi's keepalived for ARP; `externalIPs` are served by
    kube-proxy replacement (`kube-proxy-replacement=true`) but never announced,
    so keepalived is the only thing answering ARP for the VIP.
-8. **Media on Garage S3**, shared by both sites, instead of the Pi's local
-   `/media`.
+8. **No uploaded media.** Revised 2026-09-13 from "media on Garage S3":
+   authentik's S3 backend hands browsers presigned URLs to fetch directly, so
+   Garage would have to be exposed to every browser over TLS — new public
+   infrastructure for what doc 07 counted as 4 files / 108 KB. Every
+   Pulumi-managed application already sets its icon as a URL; the few uploaded
+   files are converted to URLs too (CUTOVER.md pre-flight lists them), and
+   both sites keep the `file` backend on scratch storage.
 9. **One DNS writer.** The vanity names (`authentik`, `iris`, `canterlot`) stay
    owned by Pulumi and move from a CNAME-to-the-Pi to an A record for the VIP.
    equestria's routes for those names carry no external-dns hostname. Two
@@ -95,6 +101,25 @@ available as the primary it writes to. Accepted 2026-09-13.
     fails if the Pi's postgres reports `pg_is_in_recovery() = false`
     (unreachable counts as "not promoted"). The runbook adds hibernating
     `authentik-pg` before letting Flux reconcile.
+
+## Decision A — Battery / Low Power (decided 2026-09-13)
+
+In Battery mode the workers are off and only Tier 0/1 runs on the control
+planes (doc 20). A primary on worker-bound volumes would have made a power
+outage an "equestria down" for SSO on **both** sites — worse than today, where
+the PoE-powered Pi rides through it.
+
+Chosen: **option 1 — `authentik-pg` runs on the control planes.** It lives in
+`stargate-command` (the Tier-1 namespace), with a required `nodeSelector` on
+`node-role.kubernetes.io/control-plane`, the control-plane toleration,
+`critical-tier`, and `longhorn-local` on each control plane's own disk (three
+instances are the redundancy; a lost disk is a re-clone, not data loss). The
+other pieces were already Tier 1: authentik's pods carry the same toleration
+and `critical-tier`, keepalived runs on every node, and Traefik is Tier 1.
+
+Rejected: `longhorn-critical` for the same pods (3 × 3 copies buys nothing
+once the pods are pinned), and "accept it, promote the Pi in a Battery window"
+(a runbook for a scheduled event is a regression, not a design).
 
 ## Phases
 
@@ -111,6 +136,11 @@ Each phase is its own commit (or PR).
   restarts against an empty `authentik-pg`, runs its migrations there and
   serves a blank IdP — and the later `pg_restore` then collides with that
   schema. It merges at step 5 of [CUTOVER.md](CUTOVER.md), not before.
+- Phase 5 has the same trap from the other side: equestria's authentik
+  connects to `authentik-pg` the moment Flux applies it, and against an empty
+  database it runs the migrations — after which CUTOVER.md step 4's "0 tables"
+  gate fails. **Merge phase 5 only after phase 2's cutover has completed.**
+- Phase 4b drops the soak's rollback copy; it merges after the soak.
 - Later-phase Pi stacks ship gated with `.ignore`; removing the gate is the
   deploy.
 
@@ -120,7 +150,7 @@ Each phase is its own commit (or PR).
 | 2 | Move data: dump Pi → restore `authentik-pg`, repoint the Pi's authentik | `docker/alpha-site/authentik/.env`, [CUTOVER.md](CUTOVER.md) | **Merge only inside the window, after the restore** (see above); Gatus green on all four names; logins + outposts work |
 | 3 | Pi streaming standby | `docker/alpha-site/authentik-pg-standby` | Lag < 1 min in Prometheus; **promotion rehearsal with `amcheck` passes** on a throwaway copy |
 | 4 | Retire the Pi's shared-postgres tenant + valkey | `docker/alpha-site/authentik` | Soak ≥ 7 days after phase 2 |
-| 5 | authentik on equestria (staging hostname), media on Garage | `kubernetes/apps/equestria/idp/authentik`, `stacks/system/garage.ts` | Both sites serve logins against the one DB |
+| 5 | authentik on equestria (staging hostname) | `kubernetes/apps/equestria/idp/authentik` (namespace `equestria`) | Both sites serve logins against the one DB; `downscaler/exclude` present on both Deployments |
 | 6 | keepalived both sides + Traefik `externalIPs` | `kubernetes/apps/network/keepalived`, `docker/alpha-site/keepalived` | VIP moves on `docker stop authentik-server` / pod kill and back on recovery |
 | 7 | DNS cutover of the vanity names to the VIP | `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | Gatus per-site + VIP checks green |
 | 8 | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |

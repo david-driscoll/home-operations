@@ -1,0 +1,43 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# authentik on equestria -- the second site of docs/authentik-active-active/PLAN.md.
+# Same version, same AUTHENTIK_SECRET_KEY and the same database as the copy on
+# alpha-site (docker/alpha-site/authentik). Phase 5 serves a STAGING hostname
+# only; the vanity names move to the VIP in phase 7.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app authentik
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: authentik-pg
+      namespace: stargate-command
+    - name: external-secrets
+      namespace: kube-system
+    # Owns the `authentik` HelmRepository this release pulls from.
+    - name: authentik-remote-cluster
+      namespace: equestria
+  path: ./kubernetes/apps/equestria/idp/authentik
+  prune: true
+  wait: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

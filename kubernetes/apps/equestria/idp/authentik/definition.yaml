@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  # Gatus keys endpoints on (name, group) and PANICS on a duplicate across the
+  # merged config (docs/cluster-consolidation/27-migration-churn-failure-modes.md).
+  # alpha-site's copy is ("Authentik", "Infrastructure"); this one differs in
+  # both, deliberately.
+  name: Authentik (Equestria)
+  category: ${CLUSTER_TITLE}
+  description: The equestria half of active-active authentik.
+  url: https://authentik.${CLUSTER_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
+  # NO `authentik:` block: authentik cannot be an OAuth client of itself (the
+  # same reason docker/alpha-site/authentik/definition.yaml gives).
+  gatus:
+    # /ready/, not /live/: ready includes the database, and "this site cannot
+    # reach authentik-pg" is the failure this site exists to be independent of.
+    # It is also exactly what keepalived's health check keys on in phase 6.
+    - url: https://authentik.${CLUSTER_DOMAIN}/-/health/ready/
+      method: GET
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
