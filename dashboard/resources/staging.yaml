@@ -158,6 +158,100 @@
               <p class="color-negative">Failed to load playback data</p>
             {{ end }}
 
+        # ─── Tracearr ────────────────────────────────────────────────────────
+        # Same three views as the Tautulli widgets above, but from Tracearr's
+        # public API (openapi-v1.json on its GitHub releases), which covers Plex,
+        # Jellyfin and Emby in one place. Auth is `Authorization: Bearer
+        # trr_pub_...`. TRACEARR_URL is the in-cluster Service, so these never
+        # leave the cluster; `title-url` is what a browser follows, so it is the
+        # public name.
+        #
+        # Tracearr is shed nightly 02:00-09:00 with the rest of `equestria`, so
+        # these show their failure text in that window.
+        - type: custom-api
+          title: Tracearr Today
+          title-url: https://tracearr.${ROOT_DOMAIN}
+          url: ${TRACEARR_URL}/api/v1/public/stats/today?timezone=America/New_York
+          headers:
+            Authorization: Bearer ${TRACEARR_API_KEY}
+            Accept: application/json
+          update-interval: 5m
+          template: |
+            {{ if eq .Response.StatusCode 200 }}
+              <div class="flex justify-between text-center">
+                <div>
+                  <div class="color-highlight size-h3">{{ .JSON.Int "activeStreams" | formatNumber }}</div>
+                  <div class="size-h6">STREAMING</div>
+                </div>
+                <div>
+                  <div class="color-highlight size-h3">{{ .JSON.Int "todayPlays" | formatNumber }}</div>
+                  <div class="size-h6">PLAYS</div>
+                </div>
+                <div>
+                  <div class="color-highlight size-h3">{{ printf "%.1f" (.JSON.Float "watchTimeHours") }}h</div>
+                  <div class="size-h6">WATCHED</div>
+                </div>
+                <div>
+                  <div class="color-highlight size-h3">{{ .JSON.Int "activeUsersToday" | formatNumber }}</div>
+                  <div class="size-h6">USERS</div>
+                </div>
+              </div>
+            {{ else }}
+              <p class="color-negative">Failed to load Tracearr stats ({{ .Response.StatusCode }})</p>
+            {{ end }}
+
+        - type: custom-api
+          title: Tracearr Now Playing
+          title-url: https://tracearr.${ROOT_DOMAIN}
+          url: ${TRACEARR_URL}/api/v1/public/streams
+          headers:
+            Authorization: Bearer ${TRACEARR_API_KEY}
+            Accept: application/json
+          update-interval: 30s
+          template: |
+            {{ if eq .Response.StatusCode 200 }}
+              {{ if eq (len (.JSON.Array "data")) 0 }}
+                <p class="color-subdue">No active sessions</p>
+              {{ else }}
+                <ul class="list list-gap-8">
+                {{ range .JSON.Array "data" }}
+                  <li style="padding: 8px 0; border-bottom: 1px solid var(--color-separator);">
+                    <strong>{{ if .String "showTitle" }}{{ .String "showTitle" }} · {{ end }}{{ .String "mediaTitle" }}</strong><br>
+                    <span style="font-size: 0.85rem; color: var(--color-subdue);">{{ .String "username" }} • {{ .String "serverName" }} • {{ .String "state" }}{{ if .Bool "isTranscode" }} • transcode{{ end }}</span>
+                  </li>
+                {{ end }}
+                </ul>
+              {{ end }}
+            {{ else }}
+              <p class="color-negative">Failed to load Tracearr streams ({{ .Response.StatusCode }})</p>
+            {{ end }}
+
+        - type: custom-api
+          title: Tracearr Recently Played
+          title-url: https://tracearr.${ROOT_DOMAIN}
+          url: ${TRACEARR_URL}/api/v1/public/history?pageSize=10
+          headers:
+            Authorization: Bearer ${TRACEARR_API_KEY}
+            Accept: application/json
+          update-interval: 5m
+          template: |
+            {{ if eq .Response.StatusCode 200 }}
+              {{ if eq (len (.JSON.Array "data")) 0 }}
+                <p class="color-subdue">No history yet</p>
+              {{ else }}
+                <ul class="list list-gap-8">
+                {{ range .JSON.Array "data" }}
+                  <li style="display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--color-separator);">
+                    <span>{{ if .String "showTitle" }}{{ .String "showTitle" }} · {{ end }}{{ .String "mediaTitle" }}</span>
+                    <span style="color: var(--color-subdue); font-size: 0.85rem; white-space: nowrap;">{{ .String "user.username" }}</span>
+                  </li>
+                {{ end }}
+                </ul>
+              {{ end }}
+            {{ else }}
+              <p class="color-negative">Failed to load Tracearr history ({{ .Response.StatusCode }})</p>
+            {{ end }}
+
         # Jellyfin Latest
         - type: custom-api
           title: Jellyfin Latest
