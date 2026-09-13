@@ -144,7 +144,7 @@ cluster:
       login: true
       replication: true
       passwordSecret:
-        name: authentik-pg-replication
+        name: authentik-pg-standby-auth
   services:
     additional:
       # The LAN door to the primary -- the Pi's authentik and its standby both
