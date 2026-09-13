@@ -132,7 +132,7 @@ spec:
     serviceAccount:
       create: false
     server:
-      replicas: 2
+      replicas: 0
       pdb:
         enabled: true
         minAvailable: 1
@@ -173,7 +173,7 @@ spec:
               namespace: network
               kind: Gateway
     worker:
-      replicas: 1
+      replicas: 0
       resources:
         requests:
           cpu: 100m
