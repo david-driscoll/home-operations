@@ -1,7 +1,15 @@
-# Phase 2 cutover: alpha-site authentik → `stargate-command/authentik-pg`
+# The cutover (PR B): alpha-site authentik → `stargate-command/authentik-pg`
 
 Moves authentik's data from the Pi's shared postgres into the dedicated CNPG
-cluster and points the Pi's authentik at it. **Authentik is down for the
+cluster and points the Pi's authentik at it. The PR that does the repoint
+(PLAN.md's PR B) deploys more than that in the same merge, all of it safe
+only once the restore is done:
+
+- the Pi's streaming standby, which clones `authentik-pg` at first start;
+- removal of the Pi's unused valkey;
+- authentik on equestria, on its staging hostname;
+- keepalived on both sites, holding `10.10.255.10` (nothing resolves to it yet);
+- `FAILOVER.md` onto the Pi. **Authentik is down for the
 window** (new logins and forwardAuth checks fail; sessions apps already hold
 keep working). Plan the window from the rehearsal timing, not a guess.
 
@@ -50,6 +58,19 @@ pi$ docker run --rm --env-file /root/authentik-pg.env "$PGIMG" \
 ```
 
 A `no pg_hba.conf entry` or timeout here is a phase-1 problem; stop.
+
+### 0.2a The rest of the merge has what it needs
+
+```sh
+ws$ bao kv get -field=password secrets/clusters/equestria/apps/authentik-vip/vrrp >/dev/null && echo VRRP-OK
+ws$ bao kv get -field=username secrets/clusters/equestria/apps/authentik-pg/replication          # alpha_site_standby
+pi$ df -h /opt/stacks-data          # free space >= 2x the database size from 0.3 (the standby clone)
+pi$ docker run --rm --env-file /root/authentik-pg.env "$PGIMG" \
+      psql -tAc "select slot_name, active from pg_replication_slots"     # no alpha_site_standby row, or an inactive one
+```
+
+A missing OpenBao reference does not fail one stack; it aborts the entire
+`stacks/home` run (HO#636), so the two `bao kv get`s are load-bearing.
 
 ### 0.3 Source facts
 
@@ -171,7 +192,7 @@ pi$ docker run --rm --env-file /root/authentik-pg.env "$PGIMG" \
 
 The deployed `/opt/stacks/authentik/.env` is the Pulumi-rendered copy, with
 references already resolved. Rewrite its database block to exactly what the
-phase-2 commit renders, so the later operator run finds nothing to change.
+PR B renders, so the later operator run finds nothing to change.
 
 ```sh
 pi$ cp /opt/stacks/authentik/.env /root/authentik.env.pre-cutover
@@ -190,7 +211,7 @@ pi$ cd /opt/stacks/authentik && docker compose up -d authentik-server authentik-
 
 ### Slow path — merge and let the operator deploy
 
-Resume the operator (step 7) first, merge the phase-2 PR, and wait for the
+Resume the operator (step 7) first, merge PR B, and wait for the
 `home-operations` Stack to finish. Adds the length of a full `stacks/home` run
 to the outage.
 
@@ -210,6 +231,20 @@ pi$ docker exec authentik-server wget -qO- --server-response http://localhost:90
   `authentik-pg` is non-zero, and the shared postgres shows **no** authentik
   sessions: `docker exec postgres psql -U postgres -tAc "select count(*) from pg_stat_activity where datname='authentik'"` → 0.
 
+### 6.1 The rest of the merge (after step 7's unfreeze has run it)
+
+```sh
+pi$ docker logs authentik-pg-standby 2>&1 | grep -E 'clone complete|starting as STANDBY'
+pi$ curl -s http://10.10.10.9:5480/role                       # standby (once the clone finishes)
+pi$ docker ps --format '{{.Names}} {{.Status}}' | grep -E 'authentik-vip|authentik-pg-standby'
+pi$ docker rm -f authentik-redis                              # the orphaned valkey; the stack no longer declares it
+ws$ kubectl -n stargate-command get deploy authentik-server authentik-worker   # ready
+ws$ kubectl -n network get ds authentik-vip                   # one pod per node
+ws$ curl -sk --resolve authentik.equestria.driscoll.tech:443:10.10.255.10 https://authentik.equestria.driscoll.tech/-/health/ready/ -o /dev/null -w '%{http_code}\n'   # 200 -- equestria holds the VIP
+```
+
+Then the phase-6 gate in PLAN.md, before PR C.
+
 ## 7. Unfreeze and converge
 
 ```sh
@@ -217,7 +252,7 @@ ws$ kubectl -n pulumi scale <operator deployment> --replicas=1
 ws$ flux resume kustomization pulumi-operator -n pulumi
 ```
 
-Merge the phase-2 PR (fast path) and watch the `home-operations` run. It should
+Merge PR B (fast path) and watch the `home-operations` run. The Pi side should
 copy an identical `.env` and leave the authentik containers' `Created` time
 unchanged. Only the comments differ from the fast-path edit, and compose
 recreates on parsed values, not bytes. If it does recreate them, compare
@@ -242,13 +277,12 @@ Wipe `authentik-pg` (0.4) before trying again.
 
 **B — after step 5, during the soak.** `authentik-pg` has accepted writes the
 shared copy never saw; rolling back loses them (logins, new tokens, config
-changes since the window). Restore the pre-cutover env and revert the phase-2
-commit:
+changes since the window). Restore the pre-cutover env and revert PR B:
 
 ```sh
 pi$ cp /root/authentik.env.pre-cutover /opt/stacks/authentik/.env
 pi$ cd /opt/stacks/authentik && docker compose up -d authentik-server authentik-worker
-ws$ git revert <phase-2 commit>   # merge it, so the next operator run renders the same file
+ws$ git revert <PR B's squash commit>   # merge it: renders the same .env, and also removes the standby, keepalived and equestria's authentik
 ```
 
 The shared copy exists until phase 4 sets `ensure: absent`. After that, rollback

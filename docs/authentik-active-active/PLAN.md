@@ -127,33 +127,33 @@ Each phase is its own commit (or PR).
 
 **Merging is deploying.** The Pulumi Operator runs `system` and
 `home-operations` (`stacks/home`, which deploys the Pi) on every new commit to
-`main`, and Flux applies `kubernetes/` at the same time. So:
+`main`, and Flux applies `kubernetes/` at the same time. So the phases are
+grouped into **four PRs**, and each boundary is a point where a human has to
+act before the next merge:
 
-- Phase 1 needs no ordering: the `system` run creates the OpenBao records while
-  Flux creates the cluster, and the ExternalSecrets retry until the records
-  exist. Only the `authentik-pg` Kustomization waits in the meantime.
-- Phase 2's `.env` change **is the cutover**. Merged early, the Pi's authentik
-  restarts against an empty `authentik-pg`, runs its migrations there and
-  serves a blank IdP — and the later `pg_restore` then collides with that
-  schema. It merges at step 5 of [CUTOVER.md](CUTOVER.md), not before.
-- Phase 5 has the same trap from the other side: equestria's authentik
-  connects to `authentik-pg` the moment Flux applies it, and against an empty
-  database it runs the migrations — after which CUTOVER.md step 4's "0 tables"
-  gate fails. **Merge phase 5 only after phase 2's cutover has completed.**
-- Phase 4b drops the soak's rollback copy; it merges after the soak.
-- Later-phase Pi stacks ship gated with `.ignore`; removing the gate is the
-  deploy.
+| PR | Phases | Merge when |
+|----|--------|------------|
+| **A** | 1, plus the VIP's VRRP password | Any time. The `system` run creates the OpenBao records while Flux creates the cluster; ExternalSecrets retry until they exist. |
+| **B — the cutover** | 2, 3, 4a, 5, 6, 8 | **At step 5 of [CUTOVER.md](CUTOVER.md), inside the window, after the restore.** Everything in it is either the cutover itself or only safe after it: equestria's authentik (5) would migrate an empty database, and the standby (3) would clone one. Merged early, the Pi's authentik restarts against an empty `authentik-pg` and serves a blank IdP. |
+| **C — DNS** | 7 | After the phase-6 gate passes, and `pulumi preview` on `home-operations` shows `update`, never `replace`, for the three names. |
+| **D** | 4b | Last, after ≥ 7 days of soak — it drops the cutover's rollback copy. |
 
-| # | What | Where | Gate to proceed |
-|---|------|-------|-----------------|
-| 1 | `authentik-pg` cluster + credentials | `kubernetes/apps/stargate-command/authentik`, `stacks/system/authentik-pg.ts` | Cluster Ready, `authentik-pg-lan` holds `10.10.206.150`, `psql` from the Pi LXC works |
-| 2 | Move data: dump Pi → restore `authentik-pg`, repoint the Pi's authentik | `docker/alpha-site/authentik/.env`, [CUTOVER.md](CUTOVER.md) | **Merge only inside the window, after the restore** (see above); Gatus green on all four names; logins + outposts work |
-| 3 | Pi streaming standby | `docker/alpha-site/authentik-pg-standby` | Lag < 1 min in Prometheus; **promotion rehearsal with `amcheck` passes** on a throwaway copy |
-| 4 | Retire the Pi's shared-postgres tenant + valkey | `docker/alpha-site/authentik` | Soak ≥ 7 days after phase 2 |
-| 5 | authentik on equestria (staging hostname) | `kubernetes/apps/stargate-command/authentik` (namespace `stargate-command`) | Both sites serve logins against the one DB; both Deployments carry the Tier-1 tolerations |
-| 6 | keepalived both sides + Traefik `externalIPs` + the fence's role endpoint | `kubernetes/apps/network/authentik-vip`, `docker/alpha-site/authentik-vip` (`.ignore`-gated), `docker/alpha-site/authentik-pg-standby` | See "Phase 6 gate" below |
-| 7 | DNS cutover of the vanity names to the VIP | `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | Gatus per-site + VIP checks green |
-| 8 | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |
+The VRRP password sits in PR A rather than with keepalived because PR B's
+merge triggers the `system` and `home-operations` runs with no ordering
+between them, and a `home-operations` render that beat the `system` run to a
+missing OpenBao reference would abort the whole run (HO#636).
+
+| # | PR | What | Where | Gate to proceed |
+|---|----|------|-------|-----------------|
+| 1 | A | `authentik-pg` cluster + credentials | `kubernetes/apps/stargate-command/authentik`, `stacks/system/authentik-pg.ts` | Cluster Ready, one instance per control plane, `authentik-pg-lan` holds `10.10.206.150`, `psql` from the Pi LXC works |
+| 2 | B | Move data: dump Pi → restore `authentik-pg`, repoint the Pi's authentik | `docker/alpha-site/authentik/.env`, [CUTOVER.md](CUTOVER.md) | Gatus green on all four names; logins + outposts work |
+| 3 | B | Pi streaming standby (clones at first start) | `docker/alpha-site/authentik-pg-standby` | Lag < 1 min in Prometheus; **promotion rehearsal with `amcheck` passes** on a throwaway copy |
+| 4a | B | Drop the Pi's unused valkey | `docker/alpha-site/authentik` | `docker rm -f authentik-redis` once |
+| 5 | B | authentik on equestria (staging hostname) | `kubernetes/apps/stargate-command/authentik` (namespace `stargate-command`) | Both sites serve logins against the one DB; both Deployments carry the Tier-1 tolerations |
+| 6 | B | keepalived both sides + Traefik `externalIPs` + the fence's role endpoint | `kubernetes/apps/network/authentik-vip`, `docker/alpha-site/authentik-vip`, `docker/alpha-site/authentik-pg-standby` | See "Phase 6 gate" below |
+| 7 | C | `authentik-vip` A record, equestria's unpublished vanity route, then the CNAME retarget | `stacks/home/index.ts`, `kubernetes/apps/stargate-command/authentik/vanity-route.yaml`, `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | `dig authentik-vip.driscoll.tech` → `10.10.255.10` from all three providers; Gatus green for all four authentik names |
+| 8 | B | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |
+| 4b | D | Retire the Pi's shared-postgres tenant | `docker/alpha-site/authentik` | Soak ≥ 7 days after the cutover |
 
 ### Phase 6 gate
 
