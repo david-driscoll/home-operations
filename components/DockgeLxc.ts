@@ -1333,6 +1333,48 @@ export class DockgeLxc extends ComponentResource {
             }
           })();
 
+          // `x-dns`: per-hostname CNAME target overrides. By default every non-tailnet
+          // Host() name becomes a CNAME to THIS Dockge host; a name listed here
+          // points at the given target instead. Added for authentik's VIP
+          // (docs/authentik-active-active/PLAN.md phase 7), where the SSO names must
+          // resolve to authentik-vip rather than to whichever site deployed them.
+          //
+          // Retargets, never retypes: the record stays a CNAME under the same
+          // resource name, so changing a target is an in-place value update on
+          // UniFi, Technitium and Cloudflare. Changing `type` would be
+          // delete-then-create on two of the three (see StandardDns.ts).
+          //
+          // A key that matches no Host() rule is a hard error rather than a skip: a
+          // typo here would otherwise leave a live SSO name on its old target with
+          // nothing to say so.
+          const dnsTargets = (() => {
+            let parsed: any;
+            try {
+              parsed = yaml.parse(content);
+            } catch {
+              return new Map<string, string>();
+            }
+            const block = parsed?.["x-dns"];
+            if (block === undefined || block === null) return new Map<string, string>();
+            if (typeof block !== "object" || Array.isArray(block)) {
+              throw new Error(`${stackName}: x-dns must be a mapping of hostname -> CNAME target.`);
+            }
+            const targets = new Map<string, string>();
+            for (const [name, target] of Object.entries(block)) {
+              if (typeof target !== "string" || target.length === 0) {
+                throw new Error(`${stackName}: x-dns["${name}"] must be a non-empty hostname string.`);
+              }
+              if (!hosts.has(name)) {
+                throw new Error(`${stackName}: x-dns names "${name}", which no Host() rule in this stack declares. Known: ${[...hosts].join(", ")}.`);
+              }
+              if (name.indexOf(tailscaleDomain) > -1) {
+                throw new Error(`${stackName}: x-dns cannot retarget "${name}" -- tailnet names are Tailscale services, not DNS records.`);
+              }
+              targets.set(name, target);
+            }
+            return targets;
+          })();
+
           for (const host of hosts) {
             if (host.indexOf(tailscaleDomain) > -1) {
               // this is a service domain
@@ -1429,7 +1471,7 @@ export class DockgeLxc extends ComponentResource {
                   hostname: host,
                   ipAddress: this.tailscaleIpAddress,
                   type: "CNAME",
-                  record: this.hostname,
+                  record: dnsTargets.get(host) ?? this.hostname,
                 },
                 this.args.globals,
                 {

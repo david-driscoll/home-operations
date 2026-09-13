@@ -92,7 +92,10 @@ available as the primary it writes to. Accepted 2026-09-13.
    files are converted to URLs too (CUTOVER.md pre-flight lists them), and
    both sites keep the `file` backend on scratch storage.
 9. **One DNS writer.** The vanity names (`authentik`, `iris`, `canterlot`) stay
-   owned by Pulumi and move from a CNAME-to-the-Pi to an A record for the VIP.
+   owned by Pulumi and stay CNAMEs, retargeted from the Pi to a new
+   `authentik-vip` A record — a value change is in place on all three
+   providers, a type change is delete-then-create on two (verified against the
+   provider sources, 2026-09-13).
    equestria's routes for those names carry no external-dns hostname. Two
    writers on these names is the doc 07 incident.
 10. **Split-brain fence.** After a manual promotion of the Pi, a recovering
