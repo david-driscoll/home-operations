@@ -1,0 +1,17 @@
+# GATED — phase 6 of docs/authentik-active-active/PLAN.md.
+#
+# keepalived.conf in this directory references the VRRP password record that
+# stacks/system mints (authentik-vip.ts). The merge that adds this stack also
+# triggers that system run, and nothing orders the two: if stacks/home renders
+# first, the missing reference aborts the ENTIRE stacks/home run (HO#636).
+#
+# Delete this file once:
+#   1. `bao kv get secrets/clusters/equestria/apps/authentik-vip/vrrp` returns
+#      a value;
+#   2. authentik-server publishes 127.0.0.1:9000 on dockge-as (same phase-6
+#      change -- `ss -ltn | grep 127.0.0.1:9000` on the LXC). Without it the
+#      health check fails and this instance sits in FAULT, which is safe but
+#      useless;
+#   3. the equestria DaemonSet (network/authentik-vip) is running, so the VIP
+#      has a priority-150 holder and this instance starts as the backup it is
+#      meant to be.

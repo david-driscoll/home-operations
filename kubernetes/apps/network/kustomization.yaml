@@ -8,6 +8,7 @@ components:
   - ../../components/common
   - ../../components/repos/app-template
 resources:
+  - ./authentik-vip/ks.yaml
   - ./certificates/ks.yaml
   - ./cloudflare-tunnel/ks.yaml
   - ./crowdsec/ks.yaml

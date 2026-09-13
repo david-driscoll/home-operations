@@ -1,0 +1,43 @@
+# authentik-vip — keepalived holding authentik's VIP (10.10.255.10) on
+# alpha-site, as the priority-100 BACKUP to equestria's priority-150 DaemonSet
+# (kubernetes/apps/network/authentik-vip). Phase 6 of
+# docs/authentik-active-active/PLAN.md.
+#
+# The Pi's Traefik already listens on 0.0.0.0:443 in this LXC, so the moment
+# keepalived adds the VIP to eth0, Traefik answers on it. Nothing else is needed
+# for traffic to flow.
+services:
+  authentik-vip:
+    # Same image and digest as the equestria DaemonSet: one keepalived version on
+    # both ends of one VRRP instance. Multi-arch (amd64 + arm64).
+    image: docker.io/osixia/keepalived:2.3.4@sha256:e6092c753816163d4ca7140e01d1ab5f2c7c131afac90a7d2aef36224887fc00
+    container_name: authentik-vip
+    hostname: authentik-vip
+    # The VIP is an address on the LXC's own eth0. Inside an unprivileged LXC
+    # that is still permitted: the LXC's user namespace owns its network
+    # namespace, so NET_ADMIN here reaches exactly that interface and no
+    # further -- the same reason technitium's tailscale sidecar works.
+    network_mode: host
+    # Bypass the image's templating entrypoint; the config below is complete.
+    entrypoint: ["keepalived"]
+    command:
+      - --dont-fork
+      - --log-console
+      - --log-detail
+      - --vrrp
+      - --use-file=/etc/keepalived/keepalived.conf
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BROADCAST
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./keepalived.conf:/etc/keepalived/keepalived.conf:ro
+      - ./check-authentik.sh:/config/check-authentik.sh:ro
+    # keepalived releases the VIP and sends a priority-0 advert on SIGTERM.
+    stop_grace_period: 15s
+    restart: unless-stopped
+    mem_limit: 64m

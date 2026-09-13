@@ -1,0 +1,78 @@
+# authentik VIP -- equestria side. Rendered per node by render.sh; @TOKENS@ are
+# filled from the Downward API and the VRRP secret.
+#
+# MUST AGREE with docker/alpha-site/authentik-vip/keepalived.conf on:
+#   virtual_router_id, advert_int, auth_pass, the VIP, and each other's peers.
+# Two instances that disagree on any of these do not hear each other, and both
+# become MASTER for the same address.
+
+global_defs {
+    router_id @NODE_NAME@
+    enable_script_security
+    script_user root
+    # Re-announce the VIP's MAC periodically while MASTER, so a switch or client
+    # that missed the transition's gratuitous ARP converges within a minute.
+    vrrp_garp_master_refresh 60
+}
+
+# authentik on equestria can serve a login: its server is ready (which includes
+# reaching authentik-pg) and Traefik is accepting connections.
+vrrp_script authentik_ready {
+    # Through /bin/sh: enable_script_security vets the EXECUTABLE, and a ConfigMap
+    # mount (kubelet symlink farm) is not something it will accept as one.
+    script "/bin/sh /config/check-authentik.sh"
+    interval 5
+    timeout 4
+    fall 3
+    rise 2
+}
+
+# PLAN.md decision 10, the split-brain fence. FAILS while the alpha-site standby
+# reports itself promoted: after a manual failover, equestria coming back must
+# not preempt the VIP onto its own stale primary.
+vrrp_script alpha_site_not_promoted {
+    script "/bin/sh /config/check-fence.sh"
+    interval 10
+    timeout 6
+    fall 1
+    rise 3
+}
+
+vrrp_instance authentik {
+    # Everyone starts BACKUP; priority decides. preempt_delay only applies to
+    # BACKUP-start instances, and it is what stops a node that JUST became
+    # healthy (a restarted authentik pod, a node back from maintenance) from
+    # snatching the VIP back before it has proven stable.
+    state BACKUP
+    interface @IFACE@
+    virtual_router_id 55
+    # 150 on every equestria node, 100 on the Pi. Equal priorities among the
+    # nodes are fine: preemption needs STRICTLY higher priority, so the VIP
+    # stays wherever it is until that node fails.
+    priority 150
+    preempt_delay 30
+    advert_int 1
+
+    # VRRPv2 over unicast. Multicast is not an option across this estate's
+    # switching, and unicast also scopes who takes part in the election.
+    unicast_src_ip @NODE_IP@
+    unicast_peer {
+@PEERS@
+    }
+
+    authentication {
+        auth_type PASS
+        auth_pass @VRRP_PASSWORD@
+    }
+
+    virtual_ipaddress {
+        10.10.255.10/16 dev @IFACE@
+    }
+
+    # A failing track script with no weight puts the instance in FAULT, which
+    # releases the VIP outright rather than merely lowering priority.
+    track_script {
+        authentik_ready
+        alpha_site_not_promoted
+    }
+}

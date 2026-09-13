@@ -60,6 +60,13 @@ services:
     mem_limit: 1500m
     dns:
       - 100.100.100.100
+    # LOOPBACK ONLY. For keepalived's track script (docker/alpha-site/authentik-vip),
+    # which runs on the host network and cannot resolve this container by name.
+    # Never widen it: everything that is not a local health check goes through
+    # Traefik, and authentik behind no proxy would trust whatever X-Forwarded-*
+    # a LAN client chose to send.
+    ports:
+      - "127.0.0.1:9000:9000"
     networks:
       - dockge_default
     labels:

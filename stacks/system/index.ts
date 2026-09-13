@@ -68,6 +68,7 @@ import { baoKvSecret, baoProvenance } from "@components/bao.ts";
 import { GlobalResources } from "@components/globals.ts";
 import { CLUSTERS } from "@components/store/clusters.ts";
 import { configureAuthentikPg } from "./authentik-pg.ts";
+import { configureAuthentikVip } from "./authentik-vip.ts";
 import { discoverForgejoTargets, ForgejoConfigurationComponent } from "./forgejo-renovate.ts";
 import { configureGarage } from "./garage.ts";
 import { OpenBaoMcpComponent } from "./openbao-mcp.ts";
@@ -123,6 +124,9 @@ export const garage = configureGarage(globals);
 // Credentials for stargate-command/authentik-pg, shared by authentik on equestria and
 // alpha-site and by the Pi's streaming standby. See authentik-pg.ts's header.
 configureAuthentikPg(globals);
+
+// The VRRP password for authentik's keepalived VIP, both sites. See authentik-vip.ts.
+configureAuthentikVip(globals);
 
 // OpenBao's PostgreSQL database secrets engine (phase 3b of
 // docs/postgres-credentials/PLAN.md). A no-op until ENGINE_ENABLED is flipped

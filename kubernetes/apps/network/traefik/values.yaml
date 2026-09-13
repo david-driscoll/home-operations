@@ -46,6 +46,19 @@ service:
   annotations:
     external-dns.kubernetes.io/target: "${INTERNAL_DOMAIN}"
     io.cilium/lb-ipam-ips: "${INTERNAL_IP}"
+  spec:
+    # authentik's VIP (docs/authentik-active-active/PLAN.md, decision 7).
+    #
+    # keepalived (network/authentik-vip) puts 10.10.255.10 on whichever node wins
+    # the VRRP election; Cilium's kube-proxy replacement then delivers :80/:443
+    # on that address to Traefik like any other Service address.
+    #
+    # externalIPs, NOT a second LoadBalancer address: Cilium L2-announces every
+    # LoadBalancer IP unconditionally, which would answer ARP for the VIP from
+    # equestria even while the Pi holds it. externalIPs are served but never
+    # announced, so keepalived stays the only thing claiming the address.
+    externalIPs:
+      - 10.10.255.10
 additionalArguments:
   - '--providers.file.filename=/config/store.yaml'
   - '--serversTransport.insecureSkipVerify=true'

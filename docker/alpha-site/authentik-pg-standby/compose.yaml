@@ -51,6 +51,8 @@ services:
       - /opt/stacks-data/authentik-pg-standby/pgdata:/var/lib/postgresql/data
       - ./standby-entrypoint.sh:/standby-entrypoint.sh:ro
       - ./config:/etc/postgresql:ro
+      # The unix socket, shared with authentik-pg-standby-role below.
+      - /opt/stacks-data/authentik-pg-standby/run:/var/run/postgresql
     shm_size: 128mb
     healthcheck:
       # Healthy = streaming while a standby, or accepting queries once promoted.
@@ -74,6 +76,48 @@ services:
       - 100.100.100.100
     # No published ports and no traefik labels. After a promotion the Pi's
     # authentik reaches this by name on dockge_default.
+    networks:
+      - dockge_default
+
+  # ---------------------------------------------------------------------------
+  # The fence signal (PLAN.md decision 10). Two small containers rather than one
+  # because the postgres image has psql and no HTTP server, and busybox has the
+  # reverse. role.sh's header explains the three possible answers.
+  # ---------------------------------------------------------------------------
+  authentik-pg-standby-role:
+    image: postgres:18.6-bookworm@sha256:1c59e2c3c818eaa0f0628f695b36e7c9e362d6b219b36a54a32df645cbd7e1af
+    container_name: authentik-pg-standby-role
+    user: "999:999"
+    entrypoint: ["/bin/bash", "/role.sh"]
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./role.sh:/role.sh:ro
+      - /opt/stacks-data/authentik-pg-standby/run:/var/run/postgresql
+      - /opt/stacks-data/authentik-pg-standby/status:/status
+    restart: unless-stopped
+    mem_limit: 32m
+    network_mode: none
+
+  authentik-pg-standby-role-http:
+    image: busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
+    container_name: authentik-pg-standby-role-http
+    user: "65534:65534"
+    command: ["httpd", "-f", "-v", "-p", "8080", "-h", "/status"]
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /opt/stacks-data/authentik-pg-standby/status:/status:ro
+    ports:
+      # The LAN address: equestria's nodes read it. It says one word -- whether
+      # this server is a standby -- which is not a secret.
+      - "${ipAddress}:5480:8080"
+    restart: unless-stopped
+    mem_limit: 16m
     networks:
       - dockge_default
 

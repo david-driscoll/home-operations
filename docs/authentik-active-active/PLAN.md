@@ -151,9 +151,36 @@ Each phase is its own commit (or PR).
 | 3 | Pi streaming standby | `docker/alpha-site/authentik-pg-standby` | Lag < 1 min in Prometheus; **promotion rehearsal with `amcheck` passes** on a throwaway copy |
 | 4 | Retire the Pi's shared-postgres tenant + valkey | `docker/alpha-site/authentik` | Soak ≥ 7 days after phase 2 |
 | 5 | authentik on equestria (staging hostname) | `kubernetes/apps/equestria/idp/authentik` (namespace `equestria`) | Both sites serve logins against the one DB; `downscaler/exclude` present on both Deployments |
-| 6 | keepalived both sides + Traefik `externalIPs` | `kubernetes/apps/network/keepalived`, `docker/alpha-site/keepalived` | VIP moves on `docker stop authentik-server` / pod kill and back on recovery |
+| 6 | keepalived both sides + Traefik `externalIPs` + the fence's role endpoint | `kubernetes/apps/network/authentik-vip`, `docker/alpha-site/authentik-vip` (`.ignore`-gated), `docker/alpha-site/authentik-pg-standby` | See "Phase 6 gate" below |
 | 7 | DNS cutover of the vanity names to the VIP | `docker/alpha-site/authentik/compose.yaml` (`x-dns`), `components/DockgeLxc.ts` | Gatus per-site + VIP checks green |
 | 8 | Failover runbook | [`docker/alpha-site/authentik-pg-standby/FAILOVER.md`](../../docker/alpha-site/authentik-pg-standby/FAILOVER.md) | Rehearsed once end-to-end |
+
+### Phase 6 gate
+
+The VIP carries nothing until phase 7, so all of this is tested before any
+client depends on it:
+
+1. **The equestria health check works from the host network.** Cilium runs
+   with `bpf-lb-sock=false`, and the track script reaches authentik's and
+   Traefik's ClusterIPs from a hostNetwork pod. `kubectl -n network exec
+   ds/authentik-vip -- sh /config/check-authentik.sh; echo $?` must print `0`
+   on a worker **and** a control plane. If it fails everywhere the failure is
+   safe (equestria sits in FAULT and the Pi keeps the VIP), but it is not the
+   design — stop and fix the path before phase 7.
+2. **Exactly one holder.** `ip -4 addr show | grep 10.10.255.10` on every
+   equestria node (via `talosctl get addresses`) and in the Pi LXC finds one.
+3. **Moves and returns.** `docker stop authentik-server` on the Pi: no change
+   (equestria holds it). Scale `equestria/authentik-server` to 0: the Pi takes
+   it within ~15 s. Scale back: equestria takes it back after `preempt_delay`.
+4. **Clients across the router see it.** `curl -sk --resolve
+   authentik.driscoll.tech:443:10.10.255.10 https://authentik.driscoll.tech/-/health/ready/`
+   from the LAN, from the IoT VLAN and over the tailnet, with equestria and
+   then the Pi holding the VIP. Cilium load-balances in DSR mode, so a reply
+   can leave from a different node than the one holding the VIP — this is the
+   check that proves the router is fine with that.
+5. **The fence.** `curl http://10.10.10.9:5480/role` prints `standby` once
+   phase 3 is live. A rehearsed promotion (FAILOVER.md) must flip it to
+   `primary` and put every equestria instance into FAULT.
 
 ## Version lock
 
