@@ -1,23 +1,26 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/not-first/glance-schema/master/schema.json#/definitions/widget
+# `$include: ../github/token.yaml` expands to `token: <GitHub App token>`. It is
+# a Secret-mounted fragment, not an env var, so the 30m token rotation is a
+# config hot-reload rather than a pod restart -- see dashboard/github-token.yaml.
 # Uptime Monitor
 - $include: service-status.yaml
 - type: repository
   repository: david-driscoll/home-operations
-  token: ${GITHUB_TOKEN}
+  $include: ../github/token.yaml
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
   update-interval: 10m
 - type: repository
   repository: david-driscoll/vault
-  token: ${GITHUB_TOKEN}
+  $include: ../github/token.yaml
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1
   update-interval: 10m
 - type: repository
   repository: david-driscoll/equestria-cluster
-  token: ${GITHUB_TOKEN}
+  $include: ../github/token.yaml
   pull-requests-limit: 3
   issues-limit: -1
   commits-limit: -1

@@ -1,1 +1,5 @@
 *.kubeconfig.json
+# Local stand-ins for the dynacat-github Secret fragments (see github-token.yaml).
+# compose.yaml mounts resources/ at /app/config, so a local run needs
+# resources/github/token.yaml and authorization.yaml -- and they hold a token.
+resources/github/

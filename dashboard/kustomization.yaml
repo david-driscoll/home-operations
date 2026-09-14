@@ -6,6 +6,7 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
+  - ./github-token.yaml
   - ./definition.yaml
 configMapGenerator:
 - name: dynacat-config

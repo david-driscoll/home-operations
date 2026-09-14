@@ -477,24 +477,34 @@
     # Development & GitHub
     - size: small
       widgets:
-        # GitHub Personal Repos
+        # GitHub repos the App is installed on, most recently pushed first.
+        #
+        # Not /user/repos: that is a user-token endpoint, and a GitHub App
+        # installation token gets 403 "Resource not accessible by integration"
+        # from it, so this widget has shown "Failed to load repos" ever since
+        # GITHUB_TOKEN became the App token. /installation/repositories is the
+        # installation-token equivalent; it has no `sort`, hence sortByTime.
         - type: custom-api
           title: My Repos
-          url: https://api.github.com/user/repos?sort=updated&per_page=15&affiliation=owner
+          url: https://api.github.com/installation/repositories?per_page=100
           update-interval: 30m
           headers:
-            Authorization: Bearer ${GITHUB_TOKEN}
+            # Expands to `Authorization: Bearer <token>` -- a hot-reloaded
+            # Secret fragment, not an env var; see dashboard/github-token.yaml.
+            $include: github/authorization.yaml
             Accept: application/vnd.github+json
           template: |
             {{ if eq .Response.StatusCode 200 }}
               <ul class="list list-gap-8">
-              {{ range .JSON.Array "" }}
+              {{ range $i, $repo := .JSON.Array "repositories" | sortByTime "pushed_at" "rfc3339" "desc" }}
+                {{ if lt $i 15 }}
                 <li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--color-separator);">
-                  <a href="{{ .String "html_url" }}" target="_blank" class="color-highlight" style="text-decoration: none; flex: 1;">{{ .String "name" }}</a>
-                  {{ if gt (.Int "stargazers_count") 0 }}
-                    <span style="font-size: 0.85rem; color: var(--color-subdue);">⭐ {{ .Int "stargazers_count" }}</span>
+                  <a href="{{ $repo.String "html_url" }}" target="_blank" class="color-highlight" style="text-decoration: none; flex: 1;">{{ $repo.String "name" }}</a>
+                  {{ if gt ($repo.Int "stargazers_count") 0 }}
+                    <span style="font-size: 0.85rem; color: var(--color-subdue);">⭐ {{ $repo.Int "stargazers_count" }}</span>
                   {{ end }}
                 </li>
+                {{ end }}
               {{ end }}
               </ul>
             {{ else }}

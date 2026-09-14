@@ -15,7 +15,6 @@ services:
       - RADARR_URL
       - LIDARR_API_KEY
       - LIDARR_URL
-      - GITHUB_TOKEN
       - GRAFANA_TOKEN
       - SONARR_API_KEY
       - TAUTULLI_API_KEY
