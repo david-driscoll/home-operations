@@ -1,7 +1,9 @@
 # Authentik active-active: equestria + alpha-site behind one VIP
 
-Status: **in progress** — phases land as separate commits; each phase below says
-what gates the next one. Started 2026-09-13.
+Status: **cut over 2026-09-13/14.** Both sites serve against `authentik-pg`, the
+SSO names resolve to the VIP, the Pi standby streams. Outstanding: PR D (drop
+the Pi's old copy) after the soak, and the FAILOVER.md `amcheck` rehearsal,
+which has not been run yet. See "As run" at the end for what diverged.
 
 ## Why, and what it changes about doc 07
 
@@ -192,3 +194,36 @@ schema out from under an older one. Renovate groups the two pins
 (`docker/alpha-site/authentik/compose.yaml`, the equestria HelmRelease) into one
 PR. Upgrade by stopping the Pi's authentik, letting equestria migrate, then
 starting the Pi on the new image.
+
+## As run (2026-09-13)
+
+PRs A, B and C merged within minutes of each other, before CUTOVER.md's data
+move, so `authentik-pg` started empty and both sites migrated it; the DNS
+retarget went live at the same time. The old copy on the Pi's shared postgres
+was frozen when the Pi's authentik was recreated (20:49 UTC) and was intact.
+Recovery, with David's approval to proceed unattended:
+
+1. Fresh `pg_dump` of the frozen copy (one-shot container on the Pi reading the
+   superuser credential from the rendered env, never leaving the host).
+2. `pg_restore --clean --if-exists --single-transaction` into `authentik-pg`
+   after terminating the other sessions, so no client ever saw an empty
+   schema; equestria's authentik held at zero replicas meanwhile (#1685).
+   Restored at 21:03 UTC; counts identical to the baseline (users=11 groups=9
+   apps=151 tokens=7 flows=26), no ownership drift.
+3. Two defects fixed live:
+   - `authentik-pg-replication` is a Secret name CNPG reserves for its own
+     streaming_replica client certificate, so the managed role never got a
+     password and the standby could not clone. Renamed to
+     `authentik-pg-standby-auth` (#1685).
+   - keepalived under `cap_drop: ALL` cannot `setgroups()` before running its
+     track script, so the script never ran: an equestria node held the VIP as
+     MASTER with authentik at zero and Traefik answered 503 on the SSO names.
+     `SETGID`/`SETUID` added on both sides (#1690). Until that landed, SSO was
+     down on the vanity names for about four hours (`authentik.as.driscoll.tech`
+     kept working).
+4. #1690 restored equestria's replicas; the `home-operations` run succeeded at
+   05:42 UTC on 2026-09-14 and the VIP has answered 200 since.
+
+Lesson for the runbooks: a stacked PR set where merging deploys needs the
+"merge only inside the window" PR to be physically unmergeable until then
+(a draft, or a required check), not a note in its description.
