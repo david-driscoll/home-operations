@@ -1,5 +1,11 @@
 # The cutover (PR B): alpha-site authentik → `stargate-command/authentik-pg`
 
+> **Done 2026-09-13**, not by this sequence: PR B merged early and the restore
+> ran against live clients instead. PLAN.md "As run" has the record. The steps
+> below remain the reference for a rehearsed cutover; the restore command that
+> was actually used tolerates running clients (`--clean --if-exists
+> --single-transaction` after `pg_terminate_backend` of the other sessions).
+
 Moves authentik's data from the Pi's shared postgres into the dedicated CNPG
 cluster and points the Pi's authentik at it. The PR that does the repoint
 (PLAN.md's PR B) deploys more than that in the same merge, all of it safe
