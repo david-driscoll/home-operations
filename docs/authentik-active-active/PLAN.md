@@ -1,9 +1,14 @@
 # Authentik active-active: equestria + alpha-site behind one VIP
 
 Status: **cut over 2026-09-13/14.** Both sites serve against `authentik-pg`, the
-SSO names resolve to the VIP, the Pi standby streams. Outstanding: PR D (drop
-the Pi's old copy) after the soak, and the FAILOVER.md `amcheck` rehearsal,
-which has not been run yet. See "As run" at the end for what diverged.
+SSO names resolve to the VIP, the Pi standby streams (verified <1 s behind on
+2026-09-14). The FAILOVER.md rehearsal **passed on 2026-09-14**: a clone of the
+standby opened read-write on the Pi and `amcheck` heap-verified all 824 btree
+indexes (primary `ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm`
+amd64, standby `postgres:18.6-bookworm` arm64; clone 2m31s, check 2m50s), so
+the standby is trusted for promotion. Outstanding: PR D (drop the Pi's old
+copy) after the soak, and the phase-6 VIP move test (scale equestria's
+authentik to zero and back). See "As run" at the end for what diverged.
 
 ## Why, and what it changes about doc 07
 
