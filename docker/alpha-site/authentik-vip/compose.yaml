@@ -32,6 +32,11 @@ services:
       - NET_ADMIN
       - NET_RAW
       - NET_BROADCAST
+      # keepalived setgroups()/setuid()s before running each track script;
+      # without these the script never runs and the check is inert (seen
+      # live 2026-09-13, "Couldn't setgroups: Operation not permitted").
+      - SETGID
+      - SETUID
     security_opt:
       - no-new-privileges:true
     volumes:
