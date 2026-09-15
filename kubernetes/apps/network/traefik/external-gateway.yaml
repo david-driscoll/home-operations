@@ -11,36 +11,23 @@ spec:
     annotations:
       external-dns.kubernetes.io/hostname: *hostname
       io.cilium/lb-ipam-ips: "${EXTERNAL_IP}"
+  # ONE listener, on purpose. This Gateway exists only to be reached by the
+  # Cloudflare tunnel, and the tunnel dials 8444.
+  #
+  # Port 8444 maps to Traefik's `tunnel` entrypoint, which no internal-Gateway
+  # listener shares, so the routes bound there are exactly the routes attached
+  # to this Gateway -- see the `tunnel` entrypoint in values.yaml for the
+  # incident this closes (postiz's login and signup were public).
+  #
+  # ⚠️ Do NOT add a listener on 80 or 443 here. Traefik maps listeners to
+  # entrypoints by port alone, so a listener on 443 would land on `websecure`
+  # beside every INTERNAL route, and anything published here would be served on
+  # the internal door as well. That is not an exposure by itself, but it is the
+  # sharing that made the original one possible, and it buys nothing: the
+  # tunnel is the only client. The web/websecure listeners that used to be here
+  # were removed once the tunnel was confirmed on 8444 (2026-09-15: GitHub ping
+  # 200 through ^/hook/, and internal-only paths 404 on 8444 directly).
   listeners:
-    - name: web
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All
-
-    - name: websecure
-      protocol: HTTPS
-      port: 443
-      allowedRoutes:
-        namespaces:
-          from: All
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - name: le-production-tls
-            kind: Secret
-
-    # The listener the Cloudflare tunnel actually reaches. Port 8444 maps to
-    # Traefik's `tunnel` entrypoint, which no internal-Gateway listener shares, so
-    # routes bound there are exactly the routes attached to this Gateway -- see
-    # the `tunnel` entrypoint in values.yaml for the incident this closes.
-    #
-    # Routes attached without a `sectionName` (all of them today) bind to every
-    # listener here, so they are served on 8444 as well as 80/443 with no change
-    # to the routes. The web/websecure listeners above are now reachable only from
-    # inside the network, carry nothing the tunnel needs, and are slated for
-    # removal once the tunnel is confirmed on 8444.
     - name: tunnel
       protocol: HTTPS
       port: 8444
