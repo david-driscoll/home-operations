@@ -37,6 +37,20 @@ import * as tailscale from "@pulumi/tailscale";
 // dockge host EXCEPT alpha-site runs a node (docker/alpha-site/garage/.ignore
 // is the other half of this statement — change both together or the sync
 // heartbeats and the buckets disagree about the estate).
+//
+// ⚠️ SKYSTAR STAYS IN THIS LIST EVEN THOUGH `clusters/skystar.yaml` IS
+// DISABLED (2026-09-15), and removing it is not the tidy-up it looks like.
+// This list is the BUCKET layout, not the set of live hosts: each entry owns a
+// `postgres-<cluster>` bucket created by `backupBucket`, which carries
+// `protect: true` and `retainOnDelete: true` precisely so no refactor can
+// discard a recovery window. Drop an entry and `pulumi up` does not quietly
+// delete the bucket — it REFUSES, and the stack fails on a protected
+// resource instead of on a missing host.
+//
+// Retiring a site for real means deciding what happens to its dumps first,
+// then removing the guard by hand, then this entry. Until someone does that,
+// the bucket outlives the host and `deliverCredentialFile` skips the file
+// copy with a warning.
 const GARAGE_CLUSTERS = ["celestia", "luna", "skystar"] as const;
 
 // The SigV4 region — must match s3_api.s3_region in
@@ -149,7 +163,45 @@ export function configureGarage(globals: GlobalResources) {
   function deliverCredentialFile(clusterKey: string, fileName: string, content: pulumi.Output<string>, instances: pulumi.Unwrap<DockgeLxcDefinition>[]) {
     const instance = instances.find(i => i.name === `${clusterKey}-dockge`);
     if (!instance) {
-      throw new Error(`no dockge inventory item named '${clusterKey}-dockge' under secrets/hosts/dockge/ — has stacks for that site run since the host existed?`);
+      // WARN AND SKIP, NOT THROW — and the difference is the whole point of
+      // this block.
+      //
+      // A missing inventory item means one of two things, and only one of them
+      // is a problem:
+      //
+      //   1. the site stack has not run yet for a host that DOES exist — the
+      //      case the original `throw` was written for. The credential simply
+      //      is not mintable yet; the next credentialed run delivers it.
+      //   2. the site is DISABLED or retired, and its host is gone for good —
+      //      `clusters/skystar.yaml.disabled`, 2026-09-15.
+      //
+      // Neither is worth taking the whole stack down for, and throwing did
+      // exactly that: `stacks/system` failed on every run from the moment
+      // skystar was disabled, which stopped it creating
+      // `database/static-roles/<app>` for EVERY new app carrying
+      // `components/postgres` — a Jellyfin test instance was the one that
+      // found it, stuck in CreateContainerConfigError waiting on a password
+      // this stack had not minted. One retired dockge host should not be able
+      // to block every future database in the estate.
+      //
+      // ⚠️ GARAGE_CLUSTERS IS NOT THE PLACE TO FIX THIS. Dropping a cluster
+      // from that list removes its `postgres-<cluster>` bucket from the
+      // program, and `backupBucket` sets `protect: true` — so Pulumi refuses
+      // the delete and the stack fails a different way, on a resource holding
+      // a recovery window. The bucket and key are meant to outlive the host:
+      // the dumps in them stay readable from any node in the garage cluster.
+      // What cannot outlive the host is the file copy, because there is no
+      // longer a machine to scp it to. So the layout list stays whole and
+      // delivery degrades.
+      //
+      // The consuming loop treats an absent file as "idle" already — that is
+      // how luna/skystar know not to mirror (see the mirror.env note below) —
+      // so skipping degrades to the documented no-op rather than a broken
+      // host.
+      pulumi.log.warn(
+        `No dockge inventory item named '${clusterKey}-dockge' under secrets/hosts/dockge/ — skipping ${fileName} delivery. The bucket and key still exist in Garage; nothing on that host will use them until the site stack runs again and a credentialed run re-delivers the file. If '${clusterKey}' is retired, this warning is the expected steady state.`,
+      );
+      return;
     }
     // The inventory item's ssh section carries the password too (concealed in
     // OpenBao); the checked-in interface only names hostname/username.
