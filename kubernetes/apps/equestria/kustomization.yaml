@@ -85,6 +85,35 @@ patches:
                     - paths: ["/spec/suspend"]
                       target:
                         kind: CronJob
+                # Failed installs and upgrades are RETRIED, never rolled back or
+                # uninstalled. Added 2026-09-15 after a batch of ten upgrades
+                # landed at once: Longhorn RWO detach queues and multi-GB image
+                # pulls pushed several past `timeout`, and the per-app
+                # `upgrade.remediation.strategy: rollback` then put the OLD image
+                # back -- after the new one had already migrated its database.
+                # kapowarr v1.3.2 -> v1.3.1 crashlooped on "Database is for newer
+                # version of Kapowarr", and helm-controller retried that broken
+                # rollback ten times rather than the upgrade that would have
+                # fixed it. jellyfin 12.1 and immich v3.2.2 went through the
+                # same rollback and only survived because their retry won the
+                # race. Nearly every app here owns a database or config store
+                # it migrates on start, so a rollback is never the safe default.
+                #
+                # RetryOnFailure re-attempts the release every `retryInterval`
+                # with NO remediation; a slow rollout just finishes on a later
+                # pass. It also covers install: tdarr sat Stalled for two days
+                # after one install timeout with its pods healthy the whole time.
+                # With a strategy set, helm-controller ignores the per-app
+                # `install/upgrade.remediation` blocks entirely -- they are inert
+                # in this namespace, not a second opinion.
+                install:
+                  strategy:
+                    name: RetryOnFailure
+                    retryInterval: 5m
+                upgrade:
+                  strategy:
+                    name: RetryOnFailure
+                    retryInterval: 5m
 resources:
   # - ./books   # deliberately disabled upstream; carried for parity only
   - ./dns
