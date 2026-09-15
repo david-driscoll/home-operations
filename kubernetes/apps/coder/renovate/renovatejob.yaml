@@ -170,6 +170,32 @@ spec:
         // option.
         gitUrl: 'endpoint',
 
+        // Silences the level-40 warning every run logs against
+        // forgejo-http.<ns>.svc.cluster.local, a ClusterIP and so an internal
+        // address:
+        //
+        //   HTTP request to an internal host, which `internalHostAccess=block`
+        //   would refuse - permit it with a `hostRules` entry naming the host
+        //
+        // `internalHostAccess` defaults to `warn` today and becomes `block` in
+        // a future major. Under `block` the configured platform `endpoint` is
+        // exempt, so this bot would keep working either way -- the grant is
+        // here to stop the warning, and to survive `endpoint` ever ceasing to
+        // be the only internal host reached (git clone uses the same host via
+        // `gitUrl: 'endpoint'` above).
+        //
+        // A URL PREFIX WITH THE PORT, not a bare hostname: Renovate matches a
+        // bare `matchHost` against every subdomain, and the docs recommend the
+        // narrow form so one grant cannot quietly cover other Services. Safe
+        // in this ConfigMap because it carries no credential -- `allowInternal`
+        // alone is an access grant, and the token stays in RENOVATE_TOKEN.
+        hostRules: [
+          {
+            matchHost: 'http://forgejo-http.${NAMESPACE}.svc.cluster.local:3000',
+            allowInternal: true,
+          },
+        ],
+
         // Not set here and deliberately so: `endpoint` and `token` come from
         // RENOVATE_ENDPOINT / RENOVATE_TOKEN, which the operator sets from
         // spec.provider and spec.secretRef. `platform` is restated below only
