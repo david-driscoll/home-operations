@@ -55,7 +55,7 @@ shellcheck = "0.11.0"
 go = "1.27.1"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
-node = "24.20.0"
+node = "24.21.0"
 pulumi = "3.262.0"
 "github:microsoft/apm" = { version = "v0.30.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
