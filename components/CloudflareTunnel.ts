@@ -54,6 +54,7 @@ import * as cloudflare from "@pulumi/cloudflare";
 import { all, ComponentResource, type ComponentResourceOptions, type Input, interpolate, log, type Output, output, secret } from "@pulumi/pulumi";
 import { baoKvSecret, baoProvenance } from "./bao.ts";
 import type { GlobalResources } from "./globals.ts";
+import { buildIngressEntries, type TunnelRule } from "./tunnelRules.ts";
 
 export interface CloudflareTunnelArgs {
   globals: GlobalResources;
@@ -69,13 +70,17 @@ export interface CloudflareTunnelArgs {
    */
   secretPath: string;
   /**
-   * Public hostnames this tunnel serves, one ingress rule each.
+   * Public hostnames this tunnel serves, each optionally restricted to a path
+   * regex (see `components/tunnelRules.ts`). One hostname per rule.
    *
    * MUST be non-empty — see the guard in the constructor for why that is
    * enforced rather than assumed.
    */
-  hostnames: Input<string[]>;
-  /** Origin every hostname is routed to. Defaults to the in-cluster Traefik service. */
+  rules: Input<TunnelRule[]>;
+  /**
+   * Origin every hostname is routed to. Defaults to the in-cluster Traefik
+   * service on its `tunnel` entrypoint (8444) — NOT 443. See the default below.
+   */
   service?: Input<string>;
   /**
    * SNI presented to the origin. Defaults to the estate search domain, which is
@@ -158,24 +163,44 @@ export class CloudflareTunnelComponent extends ComponentResource {
     // credentials rather than regenerating an empty list (.config/mise.toml) —
     // in both cases the empty result is indistinguishable from a real one by the
     // time it reaches the writer.
-    this.hostnames = output(args.hostnames).apply(list => {
-      const cleaned = list.map(hostname => hostname.trim()).filter(hostname => hostname.length > 0);
+    const rules = output(args.rules).apply(list => {
+      const cleaned = list.map(rule => ({ ...rule, hostname: rule.hostname.trim() })).filter(rule => rule.hostname.length > 0);
       if (cleaned.length === 0) {
         throw new Error(
           `CloudflareTunnel "${name}": no hostnames. Refusing to write a tunnel config that serves only the catch-all — ` +
             "that would take every externally published name dark. If the tunnel really should serve nothing, delete this component.",
         );
       }
-      const duplicates = [...new Set(cleaned.filter((hostname, index) => cleaned.indexOf(hostname) !== index))];
+      const hostnames = cleaned.map(rule => rule.hostname);
+      const duplicates = [...new Set(hostnames.filter((hostname, index) => hostnames.indexOf(hostname) !== index))];
       if (duplicates.length > 0) {
-        // Cloudflare matches ingress rules top-down, so a duplicate is a rule
-        // that can never fire. It always means two HTTPRoutes claim one name.
-        throw new Error(`CloudflareTunnel "${name}": duplicate hostnames ${duplicates.join(", ")}. Two routes claim the same name; only the first rule would ever match.`);
+        // Discovery merges several routes on one hostname into a single rule,
+        // so a duplicate here is a caller bug, and Cloudflare matching top-down
+        // would silently never fire the second rule.
+        throw new Error(`CloudflareTunnel "${name}": duplicate hostnames ${duplicates.join(", ")}. Only the first rule would ever match.`);
       }
-      return cleaned.sort();
+      return cleaned;
     });
+    this.hostnames = rules.apply(list => list.map(rule => rule.hostname).sort());
 
-    const service = output(args.service ?? "https://traefik.network.svc.cluster.local");
+    // PORT 8444 -- Traefik's `tunnel` entrypoint -- NOT 443, and this is the
+    // security boundary rather than a detail.
+    //
+    // Traefik binds a Gateway listener to an entrypoint BY PORT alone, and each
+    // route's router to exactly that entrypoint (pkg/provider/kubernetes/gateway,
+    // `entryPointName` and `EntryPoints: []string{listener.EPName}`, v3.7.13).
+    // The internal and external Gateways both listened on 443, so both landed on
+    // `websecure`, and a tunneled request could match an INTERNAL route. On
+    // 2026-09-15 that exposed postiz's login and open registration: its external
+    // route matched only /uploads/, but `/` matched its internal route, whose
+    // ipAllowList passed because tunnel traffic comes from the in-cluster
+    // cloudflared pod.
+    //
+    // Only the external Gateway has a listener on 8444, so only its routes are
+    // bound to this entrypoint -- whatever path arrives, including ones Traefik
+    // normalizes (`/uploads/../api/` -> `/api/`). Path rules below are the second
+    // layer. Do not point this back at 443.
+    const service = output(args.service ?? "https://traefik.network.svc.cluster.local:8444");
     const originServerName = output(args.originServerName ?? globals.searchDomain);
     // Cloudflare REQUIRES the last ingress rule to be a hostname-less catch-all,
     // so "serve nothing else" cannot be expressed by omitting it. 404 is the
@@ -184,23 +209,34 @@ export class CloudflareTunnelComponent extends ComponentResource {
     // a strange thing to have been showing the public internet.
     const catchAllService = output(args.catchAllService ?? "http_status:404");
 
-    const ingresses = all([this.hostnames, service, originServerName, catchAllService]).apply(([hostnames, origin, serverName, catchAll]) => [
-      ...hostnames.map(hostname => ({
-        hostname,
-        service: origin,
-        originRequest: {
-          // Traefik serves the wildcard LE certificate for the external Gateway,
-          // which does not match the in-cluster service name cloudflared dials.
-          // `originServerName` fixes the SNI; `noTlsVerify` covers the fact that
-          // the connector has no reason to trust the cluster's chain.
-          noTlsVerify: true,
-          originServerName: serverName,
-        },
-      })),
-      // Appended AFTER the guard above, never folded into it — so an empty
-      // hostname list can never be mistaken for a list of one.
-      { service: catchAll },
-    ]);
+    // Ordering and the traversal-deny rules come from buildIngressEntries
+    // (components/tunnelRules.ts, unit-tested): per restricted hostname a `..`
+    // deny first, then the path-restricted serving rule; the catch-all last.
+    // The catch-all is appended there AFTER the guard above, never folded into
+    // it — so an empty hostname list can never be mistaken for a list of one.
+    const ingresses = all([rules, service, originServerName, catchAllService]).apply(([list, origin, serverName, catchAll]) =>
+      buildIngressEntries(list, catchAll).map(entry =>
+        entry.service === "origin"
+          ? {
+              hostname: entry.hostname,
+              ...(entry.path ? { path: entry.path } : {}),
+              service: origin,
+              originRequest: {
+                // Traefik serves the wildcard LE certificate for the external Gateway,
+                // which does not match the in-cluster service name cloudflared dials.
+                // `originServerName` fixes the SNI; `noTlsVerify` covers the fact that
+                // the connector has no reason to trust the cluster's chain.
+                noTlsVerify: true,
+                originServerName: serverName,
+              },
+            }
+          : {
+              ...(entry.hostname ? { hostname: entry.hostname } : {}),
+              ...(entry.path ? { path: entry.path } : {}),
+              service: entry.service,
+            },
+      ),
+    );
 
     this.config = new cloudflare.ZeroTrustTunnelCloudflaredConfig(
       `${name}-config`,

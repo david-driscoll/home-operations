@@ -30,3 +30,25 @@ spec:
         certificateRefs:
           - name: le-production-tls
             kind: Secret
+
+    # The listener the Cloudflare tunnel actually reaches. Port 8444 maps to
+    # Traefik's `tunnel` entrypoint, which no internal-Gateway listener shares, so
+    # routes bound there are exactly the routes attached to this Gateway -- see
+    # the `tunnel` entrypoint in values.yaml for the incident this closes.
+    #
+    # Routes attached without a `sectionName` (all of them today) bind to every
+    # listener here, so they are served on 8444 as well as 80/443 with no change
+    # to the routes. The web/websecure listeners above are now reachable only from
+    # inside the network, carry nothing the tunnel needs, and are slated for
+    # removal once the tunnel is confirmed on 8444.
+    - name: tunnel
+      protocol: HTTPS
+      port: 8444
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: le-production-tls
+            kind: Secret
