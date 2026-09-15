@@ -78,16 +78,26 @@ spec:
         # there are no projects to run, the per-project rule above has nothing
         # to fire on, and the whole group goes quiet in exactly the way a
         # working estate does. This is the rule that tells the two apart.
+        #
+        # MATCH `failed`, NOT `!= "success"`. The operator only ever emits two
+        # values for this label -- `metricStore.IncDiscoveryJob(..., "failed")`
+        # and `(..., "completed")` in src/internal/renovate/discoveryAgent.go --
+        # so `status!="success"` matched the SUCCESSFUL runs too. One healthy
+        # nightly discovery per day put `increase(...[24h])` at ~1.0007, just
+        # over the `> 1` threshold, and this alert sat firing from 2026-09-14
+        # while discovery was working (`discovered_repositories=1`, projects
+        # enumerated). `> 0` is the right threshold once the selector only
+        # matches real failures: one failed discovery is worth knowing about.
         - alert: RenovateDiscoveryFailing
           annotations:
             description: >-
-              {{ $value }} discovery Jobs for {{ $labels.renovate_job }} ended
-              in a non-success state in the last 24h. Renovate cannot enumerate
+              {{ $value }} discovery Jobs for {{ $labels.renovate_job }} failed
+              in the last 24h. Renovate cannot enumerate
               repositories -- usually an expired Forgejo token, or an endpoint
               refused by the operator's policy.allowedHosts.
             summary: Renovate repository discovery is failing.
           expr: |
-            increase(renovate_operator_discovery_jobs_total{renovate_namespace="coder", status!="success"}[24h]) > 1
+            increase(renovate_operator_discovery_jobs_total{renovate_namespace="coder", status="failed"}[24h]) > 0
           for: 1h
           labels:
             severity: warning
