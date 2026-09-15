@@ -1,16 +1,17 @@
 /**
  * UniFi-side DNS configuration for the Technitium cluster.
  *
- * Discovers the dns-* Technitium nodes from the tailnet (same prefix collection
- * as acl-manager.ts), matches each to its dockge host via the 1Password
- * tailscale exports (which carry the host's LAN mac + internalIp, discovered by
- * DockgeLxc over Proxmox SSH), and then:
+ * Discovers the tag:dns Technitium nodes from the tailnet (getDnsMachines,
+ * shared with acl-manager.ts), matches each to its dockge host via the
+ * 1Password tailscale exports (which carry the host's LAN mac + internalIp,
+ * discovered by DockgeLxc over Proxmox SSH), and then:
  *
  * - pins a DHCP reservation for each host on its current LAN IP, and
- * - points DHCP DNS on the Home and IoT networks at those hosts (plus the
- *   standing internal resolvers as fallback), so clients resolve through
- *   Technitium (ports 53/853 are published on the dockge host IPs by
- *   docker/_common/technitium/compose.yaml).
+ * - points DHCP DNS on the Home and IoT networks at the hosts whose node is
+ *   currently connected to control (plus the standing internal resolvers as
+ *   fallback), so clients resolve through Technitium (ports 53/853 are
+ *   published on the dockge host IPs by docker/_common/technitium/compose.yaml).
+ *   The stack resyncs every five minutes, so the list follows online state.
  *
  * Hosts whose internalIp is outside the Home subnet (e.g. skystar offsite, and
  * luna once it moves) are ignored — they participate in tailnet DNS only.
@@ -22,27 +23,19 @@
  */
 
 import * as pulumi from "@pulumi/pulumi";
-import * as tailscale from "@pulumi/tailscale";
 import * as purrl from "@pulumiverse/purrl";
 import * as unifi from "@pulumiverse/unifi";
 import CIDRMatcher from "cidr-matcher";
 import { dns, Tailscale } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
+import { getDnsMachines } from "../../components/tailscale.ts";
 
 export async function configureLocalDns(globals: GlobalResources) {
   const parent = new pulumi.ComponentResource("custom:unifi:LocalDns", "local-dns", {});
   const cro = { parent, provider: globals.unifiProvider };
 
   // dns-<cluster> tailscale machines → their dockge-<cluster> hosts from the exports
-  const dnsMachines = tailscale.getDevicesOutput({ namePrefix: "dns-" }, { provider: globals.tailscaleProvider }).apply(result =>
-    (result.devices ?? [])
-      .map(device => ({
-        key: device.name.split(".")[0].replace(/^dns-/, ""),
-        ip: device.addresses.find(address => !address.includes(":")) ?? device.addresses[0],
-      }))
-      .sort((a, b) => a.key.localeCompare(b.key)),
-  );
-  const dnsClusterKeys = dnsMachines.apply(machines => machines.map(machine => machine.key));
+  const dnsMachines = getDnsMachines(globals);
 
   // UniFi's dnsmasq is authoritative for driscoll.tech (the LAN domain), so any
   // name it lacks returns empty instead of falling through — publish the cluster
@@ -63,24 +56,31 @@ export async function configureLocalDns(globals: GlobalResources) {
     ),
   );
 
-  const dnsHosts = pulumi.all([globals.store.getTailscaleExports(), dnsClusterKeys]).apply(([allExports, clusterKeys]) => {
+  // Every dns host on the Home subnet, online or not, keyed by cluster. The
+  // reservations below use all of them; only DHCP DNS is gated on online.
+  const dnsHosts = pulumi.all([globals.store.getTailscaleExports(), dnsMachines]).apply(([allExports, machines]) => {
     const matcher = new CIDRMatcher([Tailscale.subnets.home]);
     return allExports
       .flatMap(exp => exp.hosts)
       .filter(host => host.nodeType === "dockge")
-      .filter(host => clusterKeys.some(key => host.name === `dockge-${key}`))
       .filter(host => host.internalIp && matcher.contains(host.internalIp))
+      .flatMap(host => {
+        const machine = machines.find(machine => host.name === `dockge-${machine.key}`);
+        return machine ? [{ ...host, online: machine.online }] : [];
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
   });
 
-  // Technitium hosts first, standing internal resolvers as fallback, capped at
-  // the controller's four DHCP DNS slots. Refuses to act on an empty derivation
-  // so a broken export can never blank out client DNS.
+  // Online Technitium hosts first, standing internal resolvers as fallback,
+  // capped at the controller's four DHCP DNS slots. Refuses to act when the
+  // derivation is empty so a broken export can never blank out client DNS;
+  // every node being offline at once is a real state, and then clients get
+  // the fallback resolvers alone.
   const dhcpDns = dnsHosts.apply(hosts => {
-    const derived = hosts.map(host => host.internalIp!);
-    if (derived.length === 0) {
+    if (hosts.length === 0) {
       throw new Error("local-dns: no dns hosts found on the Home subnet — refusing to update DHCP DNS");
     }
+    const derived = hosts.filter(host => host.online).map(host => host.internalIp!);
     return [...derived, ...dns.internalIps.filter(ip => !derived.includes(ip))].slice(0, 4);
   });
 

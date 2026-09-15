@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { FullItem } from "@1password/connect";
 import { baoKvSecret, baoProvenance, baoSlug } from "@components/bao.ts";
 import { OnePasswordItem, type OnePasswordItemSectionInput } from "@dynamic/1password/OnePasswordItem.ts";
-import type { TailscaleCidr } from "@openapi/tailscale-grants.js";
+import type { TailscaleCidr, TailscaleIp } from "@openapi/tailscale-grants.js";
 import { remote, type types } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
@@ -12,6 +12,7 @@ import * as unifi from "@pulumiverse/unifi";
 import createClient, { type Client } from "openapi-fetch";
 import { ClientCredentials } from "simple-oauth2";
 import type { paths } from "../types/tailscale.ts";
+import { Tailscale } from "./constants.ts";
 import type { GlobalResources } from "./globals.ts";
 import { awaitOutput, copyFileToRemote } from "./helpers.ts";
 
@@ -518,4 +519,42 @@ export function createPeerRelayRule(fwdIp: pulumi.Input<string>, globals: Global
     );
     return relayPort;
   });
+}
+
+/**
+ * Lists tailnet devices through the REST API with `fields=all` -- the only way
+ * to read `connectedToControl`, which the pulumi data source does not expose.
+ *
+ * Filters are `<field>=<value>` query params: `{ tags: "tag:dns" }` becomes
+ * `?tags=tag:dns`. There is no `filters=` key; the API silently ignores one and
+ * returns the whole tailnet.
+ */
+export function getTailscaleDevicesViaAPI(globals: GlobalResources, filters: Record<string, string> = {}) {
+  return pulumi.output(getTailscaleClient(globals)).apply(client =>
+    client.GET("/tailnet/{tailnet}/devices", {
+      params: { path: { tailnet: "-" }, query: { ...filters, fields: "all" } },
+    }),
+  );
+}
+
+/**
+ * Technitium cluster nodes: every device tagged tag:dns, named dns-<cluster>.
+ * `key` is the cluster key (dns-celestia -> celestia) and `online` is whether
+ * the node is currently connected to control. Callers decide whether offline
+ * nodes matter -- the ACL keeps them, DHCP DNS drops them.
+ */
+export function getDnsMachines(globals: GlobalResources) {
+  return getTailscaleDevicesViaAPI(globals, { tags: Tailscale.tag.dns }).apply(result =>
+    (result.data?.devices ?? [])
+      .map(device => {
+        const name = device.name!.split(".")[0];
+        return {
+          name,
+          key: name.replace(/^dns-/, ""),
+          ip: (device.addresses!.find(address => !address.includes(":")) ?? device.addresses![0]) as TailscaleIp,
+          online: device.connectedToControl ?? false,
+        };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key)),
+  );
 }
