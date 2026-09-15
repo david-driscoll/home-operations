@@ -1,6 +1,6 @@
 /**
- * Which hostnames the Cloudflare tunnel should serve, read from the cluster
- * rather than listed here.
+ * Which hostnames -- and which paths on them -- the Cloudflare tunnel should
+ * serve, read from the cluster rather than listed here.
  *
  * Publishing a service externally in Equestria means exactly one thing: an
  * HTTPRoute whose `parentRefs` name the `external` Gateway in the `network`
@@ -33,26 +33,21 @@
  */
 
 import type { KubernetesClusterDefinition } from "@components/store/interfaces.ts";
+import { deriveTunnelRules, type HttpRouteLike, type TunnelRule } from "@components/tunnelRules.ts";
 import * as k8s from "@kubernetes/client-node";
 import { type Output, output } from "@pulumi/pulumi";
 
-/** The Gateway that means "published to the internet through the tunnel". */
-const EXTERNAL_GATEWAY_NAME = "external";
-const EXTERNAL_GATEWAY_NAMESPACE = "network";
-
-interface HttpRouteLike {
-  metadata?: { name?: string; namespace?: string };
-  spec?: {
-    parentRefs?: { name?: string; namespace?: string; kind?: string; group?: string }[];
-    hostnames?: string[];
-  };
-}
-
 /**
- * Every hostname published through the external Gateway, sorted and
- * de-duplicated.
+ * Every hostname published through the external Gateway, each with the paths it
+ * is published for. The Gateway API path semantics, the merge rules for several
+ * routes on one hostname, and why a path is a second layer rather than the
+ * boundary all live in components/tunnelRules.ts, where they are unit-tested.
+ *
+ * Paths used to be dropped here, which made a hostname published for one path
+ * reachable on every path: on 2026-09-15 that put postiz's login and open
+ * registration on the internet through a route that matched only /uploads/.
  */
-export function discoverExternalHostnames(cluster: KubernetesClusterDefinition & { kubeConfig: string }): Output<string[]> {
+export function discoverExternalRules(cluster: KubernetesClusterDefinition & { kubeConfig: string }): Output<TunnelRule[]> {
   const kubeConfig = new k8s.KubeConfig();
   kubeConfig.loadFromString(cluster.kubeConfig);
   const customObjectApi = kubeConfig.makeApiClient(k8s.CustomObjectsApi);
@@ -65,33 +60,8 @@ export function discoverExternalHostnames(cluster: KubernetesClusterDefinition &
     resourcePlural: "httproutes",
   }) as Promise<{ items?: HttpRouteLike[] }>;
 
-  return output(routes).apply(list => {
-    const hostnames = new Set<string>();
-
-    for (const route of list.items ?? []) {
-      const attachedToExternal = (route.spec?.parentRefs ?? []).some(
-        ref =>
-          ref.name === EXTERNAL_GATEWAY_NAME &&
-          // A parentRef with no namespace means the route's own namespace, per
-          // the Gateway API spec. Defaulting it to `network` instead would match
-          // a route in any namespace that happened to name a local Gateway
-          // "external", and publish it to the internet.
-          (ref.namespace ?? route.metadata?.namespace) === EXTERNAL_GATEWAY_NAMESPACE &&
-          // `kind` defaults to Gateway when absent; anything else that is
-          // explicitly not a Gateway is not ours.
-          (ref.kind ?? "Gateway") === "Gateway",
-      );
-      if (!attachedToExternal) continue;
-
-      // A route with no hostnames matches every hostname the Gateway listens on.
-      // A tunnel ingress rule cannot express that, and inventing a wildcard rule
-      // would route names nobody asked to publish. Skipped rather than guessed.
-      for (const hostname of route.spec?.hostnames ?? []) {
-        const trimmed = hostname.trim();
-        if (trimmed.length > 0) hostnames.add(trimmed);
-      }
-    }
-
-    return [...hostnames].sort();
-  });
+  // Attachment, hostname and path handling -- including the parentRef namespace
+  // default and skipping hostname-less routes -- is deriveTunnelRules'. An empty
+  // result still reaches CloudflareTunnelComponent, which refuses it.
+  return output(routes).apply(list => deriveTunnelRules(list.items ?? []));
 }

@@ -141,6 +141,44 @@ ports:
     transport:
       respondingTimeouts:
         readTimeout: "0s"
+  # THE CLOUDFLARE TUNNEL'S ENTRYPOINT, and the boundary between the internet and
+  # the internal Gateway. Only the `external` Gateway has a listener on 8444
+  # (external-gateway.yaml, listener `tunnel`), and the tunnel's origin is this
+  # port (components/CloudflareTunnel.ts).
+  #
+  # WHY A SEPARATE ENTRYPOINT AT ALL. Traefik maps a Gateway listener to an
+  # entrypoint by port alone, and binds each route's router to exactly that
+  # entrypoint (pkg/provider/kubernetes/gateway, v3.7.13). The internal and
+  # external Gateways both listen on 443, so both land on `websecure`, and the
+  # tunnel -- which used to dial 443 -- could match any INTERNAL route for a
+  # hostname it forwarded. On 2026-09-15 that exposed postiz's login and open
+  # registration: its external route matched only /uploads/, but `/` matched its
+  # internal route, and that route's ipAllowList passed because tunnel traffic
+  # originates from the in-cluster cloudflared pod.
+  #
+  # On this entrypoint only external-Gateway routes exist, so every path the
+  # tunnel delivers -- including ones Traefik normalizes, like /uploads/../api/
+  # into /api/ -- can only match what was published. Nothing internal is
+  # reachable here by construction, not by allowlist.
+  #
+  # Mirrors websecure: TLS on (the external Gateway listener terminates with the
+  # same wildcard certificate), the same trusted-proxy set so X-Forwarded-For from
+  # cloudflared survives, and no read timeout for long transfers. `expose.default`
+  # is load-bearing: cloudflared dials this port on the traefik Service, and an
+  # entrypoint the Service does not carry is unreachable.
+  tunnel:
+    port: 8444
+    exposedPort: 8444
+    protocol: TCP
+    expose:
+      default: true
+    forwardedHeaders: *forwarded-headers
+    http:
+      tls:
+        enabled: true
+    transport:
+      respondingTimeouts:
+        readTimeout: "0s"
   # The tailnet entrypoint. Every name under the tailnet domain lands here, so that
   # tailnet traffic gets the same Traefik treatment as everything else instead of
   # being proxied straight at a pod. Modelled on the `tailscale` entrypoint in

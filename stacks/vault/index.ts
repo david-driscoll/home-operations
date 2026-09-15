@@ -27,7 +27,7 @@
 import { CloudflareTunnelComponent } from "@components/CloudflareTunnel.ts";
 import { GlobalResources } from "@components/globals.ts";
 import kubernetes from "@pulumi/kubernetes";
-import { discoverExternalHostnames } from "./externalHostnames.ts";
+import { discoverExternalRules } from "./externalHostnames.ts";
 import { KubernetesFluxWebhooksComponent } from "./KubernetesFluxWebhooks.ts";
 
 const globals = new GlobalResources({}, {});
@@ -63,7 +63,7 @@ globals.store.getKubernetesClusters().apply(clusters => {
       new CloudflareTunnelComponent(`${cluster.key}-cloudflare-tunnel`, {
         globals,
         secretPath: "third-party-tokens/cloudflare/tunnel",
-        hostnames: discoverExternalHostnames(cluster),
+        rules: discoverExternalRules(cluster),
       });
     }
   }
