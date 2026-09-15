@@ -12,6 +12,9 @@ resources:
   - ./bazarr/ks.yaml
   # - ./emby/ks.yaml
   - ./jellyfin/ks.yaml
+  # Throwaway PostgreSQL test instance -- see ./jellyfin-pg/ks.yaml and
+  # docs/runbooks/jellyfin-postgres-migration.md. Remove this line to tear it down.
+  - ./jellyfin-pg/ks.yaml
   - ./jellyseerr/ks.yaml
   - ./radarr/ks.yaml
   - ./sonarr/ks.yaml

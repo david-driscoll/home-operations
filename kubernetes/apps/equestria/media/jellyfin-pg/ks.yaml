@@ -1,0 +1,80 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# THROWAWAY TEST INSTANCE. Not a second production Jellyfin.
+#
+# It exists to derisk moving Jellyfin off SQLite and onto PostgreSQL, using the
+# Nichols-HomeLab `jellyfin.pgsql` fork -- a patched Jellyfin 12 server pinned to
+# a PostgreSQL database provider. Jellyfin's own plugin database-provider API is
+# labelled highly experimental upstream, and this fork has effectively no users,
+# so nothing here should be promoted to production on the strength of it looking
+# healthy. See docs/runbooks/jellyfin-postgres-migration.md.
+#
+# NOTHING IN HERE TOUCHES PRODUCTION JELLYFIN. The two share exactly one thing:
+# the `truenas-media` claim, mounted READ-ONLY here (helmrelease.yaml). Separate
+# database, separate role, separate config volume, separate hostname. In
+# particular this does NOT mount `/mnt/stash/data/jellyfin` -- production's
+# metadata, subtitles and trickplay NFS paths -- because a scan here would
+# otherwise write into them.
+#
+# The migration itself (pgloader + the fork's code-migration export) is a manual,
+# one-off procedure run against this instance AFTER it is up and verified empty.
+# Those Jobs are deliberately NOT part of this Kustomization: they truncate the
+# target database, so having Flux able to re-run them on a reconcile is exactly
+# the wrong property. The runbook has them.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app jellyfin-pg
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # truenas-volumes owns the `truenas-media` PV/PVC this mounts read-only.
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: postgres
+      namespace: database
+  path: ./kubernetes/apps/equestria/media/jellyfin-pg
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  # 15m rather than the usual 10m: a first boot against an EMPTY PostgreSQL
+  # database runs the provider's whole EF migration chain before the app serves
+  # anything, and `wait: true` blocks on it.
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    # The database, the login role, and an OpenBao-owned password that rotates
+    # every 30 days. The Deployment reads the connection string out of
+    # jellyfin-pg-env via envFrom and carries reloader.stakater.com/auto, so a
+    # rotation restarts it -- and the container rewrites database.xml with the
+    # new password on every start, so the restart is what applies it.
+    #
+    # ⚠️ Rotation is irreversible from the moment this lands, per
+    # kubernetes/components/postgres/AGENTS.md. Fine for a test instance that is
+    # going to be torn down, but it is why teardown has to drop the OpenBao
+    # static role too.
+    #
+    # ⚠️ EXPECT `stacks/system` TO STALL ON THE MERGE THAT ADDS THIS. Pulumi
+    # discovers this component and creates database/static-roles/jellyfin-pg,
+    # which issues ALTER ROLE immediately -- and it reliably wins the race
+    # against Flux creating the role. The recovery is in components/postgres/ks.yaml.
+    - ../../../../components/postgres
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
