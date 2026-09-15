@@ -189,14 +189,29 @@ const extraPorts: Record<string, Partial<Record<ServiceKind, PortDef[]>>> = {
  * BlackboxProbeFailingCritical rule pages after two minutes. Listing one here
  * drops it while it is still up and healthy, so the removal is a no-op against
  * live metrics. Remove the entry once the device is actually gone.
+ *
+ * `skystar` added 2026-09-15, the opposite way round: it was already dark. Its
+ * host went unreachable on 2026-09-13 23:42 and eight probes -- pve, pbs, dns
+ * (53/853/DoH), ssh x3 -- have paged as `BlackboxProbeFailingCriticalRemote`
+ * ever since, for a cluster whose `clusters/skystar.yaml` is `.disabled` and
+ * whose MCP servers are already commented out of
+ * kubernetes/apps/agents/agent-tools-servers/kustomization.yaml. Gatus dropped
+ * its 20 endpoints on its own once the applications stack next ran; these
+ * probes are Pulumi-built and had no such path. Moving it here is what stops
+ * them. It leaves `remoteServers` empty -- see below.
  */
-const decommissionedServers = new Set(["sgc"]);
+const decommissionedServers = new Set(["sgc", "skystar"]);
 
 /**
  * Off-site. Their probes get `remote: "true"`, which the generic
  * BlackboxProbeFailing rules exclude, and their own alerts wait 2h not 10m.
+ *
+ * EMPTY since 2026-09-15, when skystar moved to the set above. Kept rather than
+ * deleted: it is the mechanism any future off-site host needs, and the 2h
+ * `forDuration` below is the only thing that makes such a host's flapping link
+ * survivable. Nothing else reads it, so an empty set is inert.
  */
-const remoteServers = new Set(["skystar"]);
+const remoteServers = new Set<string>([]);
 
 /** Services this stack must NOT create. Written as the service NAME so a rename
  *  cannot silently un-carve one. See the header for why each is here. */
