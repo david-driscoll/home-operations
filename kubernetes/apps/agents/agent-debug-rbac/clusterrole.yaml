@@ -91,6 +91,12 @@
 #       themselves stay read-only; creating a Job modeled on one does not
 #       need write access to the CronJob object.
 #
+#     - Pulumi Updates/Workspaces (auto.pulumi.com): delete -- the only way
+#       out of a Stack deadlocked on an Update whose Flux artifact no longer
+#       exists (see the rule for the 2026-09-15 case). Both are operator-
+#       created side effects rebuilt on the next reconcile, not desired
+#       state; `stacks` themselves stay read-only, as Flux renders those.
+#
 #     - PersistentVolumeClaims: delete, plus the `/resize` subresource --
 #       the actual fix for a "volume full" diagnosis, and occasionally
 #       outright deletion. Granted with eyes open: this is exactly the class
@@ -171,6 +177,30 @@ rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
     verbs: ["create", "delete"]
+
+  # Pulumi Operator Updates/Workspaces: delete. The documented way out of a
+  # stuck stack, and the reason this rule exists -- on 2026-09-15 the
+  # `equestria` Stack deadlocked with `currentUpdate` pinned to a commit whose
+  # Flux artifact source-controller no longer served, so the Workspace's
+  # `fetch` init container failed `unable to fetch flux artifact: file not
+  # found` on a loop while the Stack controller waited for a Workspace that
+  # could never become ready. Nothing but deleting the Update breaks that, and
+  # an agent that can diagnose it in full could not act on it.
+  #
+  # Narrow on purpose. An Update is a RECORD OF AN ATTEMPT, not desired state:
+  # the operator recreates one from the Stack on the next reconcile, so
+  # deleting it re-plans against the current commit rather than discarding
+  # configuration. Same for a Workspace, which is a pod-shaped side effect the
+  # Stack owns. Deleting one that IS mid-`pulumi up` cancels that run -- the
+  # cost is a partially-applied update the next run reconciles, which is the
+  # same exposure as the pod delete grant above.
+  #
+  # `stacks` (pulumi.com) stay read-only, matching the Flux reasoning: Stacks
+  # are the declarative objects Flux renders from git, and this SA has no
+  # business authoring one. No `create` either -- the operator creates these.
+  - apiGroups: ["auto.pulumi.com"]
+    resources: ["updates", "workspaces"]
+    verbs: ["delete"]
 
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
