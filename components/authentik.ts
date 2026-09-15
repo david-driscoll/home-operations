@@ -115,14 +115,6 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
       })
       .apply(({ application, result }) => {
         const app = this.createAuthentikApplication(application, result?.provider);
-        // A ProxyProvider is only reachable through an Application -- the outpost
-        // resolves an incoming host to a provider by way of the application bound
-        // to it, so the tailnet twin needs its own or it is inert and the tailnet
-        // host still answers "no app for hostname". Same access_policy bindings,
-        // because createAuthentikApplication reads them off the same definition.
-        if ("tailnetProvider" in result && result.tailnetProvider) {
-          this.createAuthentikApplication(application, result.tailnetProvider, "tailnet");
-        }
         const r = pulumi.output(this.addGatusInstances(application, application.spec.gatus ?? [])).apply(defs => {
           const r = Object.assign(result, {
             definition: application,
@@ -520,17 +512,17 @@ export class AuthentikApplicationManager extends pulumi.ComponentResource {
    *   It also renames the app in the portal and points its launch URL at the tailnet
    *   name, so the two entries are tellable apart by a human choosing between them.
    */
-  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource, variant?: "tailnet") {
+  private createAuthentikApplication(definition: ApplicationDefinitionSchema, provider?: pulumi.CustomResource) {
     const baseName = this.resolveResourceName(definition);
-    const resourceName = variant ? `${baseName}-${variant}` : baseName;
+    const resourceName = baseName;
     const args: authentik.ApplicationArgs = {
-      name: variant === "tailnet" ? `${definition.spec.name} (Tailnet)` : definition.spec.name,
+      name: definition.spec.name,
       slug: new random.RandomPet(resourceName, { prefix: resourceName, length: 1 }, { parent: this }).id,
       group: this.cluster.apply(cluster => (definition.spec.category === "System" || cluster.title === definition.spec.category ? `System: ${cluster.title}` : definition.spec.category)),
       metaIcon: definition.spec.icon,
       metaPublisher: this.cluster.title,
       metaDescription: definition.spec.description || "",
-      metaLaunchUrl: variant === "tailnet" ? definition.spec.tailnetUrl : this.resolveLaunchUrl(definition),
+      metaLaunchUrl: this.resolveLaunchUrl(definition),
       openInNewTab: true,
     };
 
