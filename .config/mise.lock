@@ -498,9 +498,9 @@ backend = "aqua:pypa/pipx"
 specifiers = ["1.17.2"]
 
 [[tools."pipx:graphifyy"]]
-version = "0.9.61"
+version = "0.9.62"
 backend = "pipx:graphifyy"
-specifiers = ["0.9.61"]
+specifiers = ["0.9.62"]
 
 [[tools."pipx:yamllint"]]
 version = "1.38.0"
