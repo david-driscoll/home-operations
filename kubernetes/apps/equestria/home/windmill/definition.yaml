@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Windmill
-  category: Applications
+  category: Development
   description: Workflow Automation Platform
   url: &url https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/windmill.svg

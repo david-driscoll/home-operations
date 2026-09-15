@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Homelable
-  category: Applications
+  category: Infrastructure
   description: Homelab network topology map and LAN device discovery
   url: &url https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homelable.svg

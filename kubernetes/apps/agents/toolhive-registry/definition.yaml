@@ -18,7 +18,7 @@ metadata:
   name: ${APP}
 spec:
   name: ToolHive Registry
-  category: Applications
+  category: AI
   description: MCP catalogue API, mirrored from the upstream ToolHive registry
   access_policy:
     groups:

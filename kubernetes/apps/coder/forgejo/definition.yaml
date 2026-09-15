@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Forgejo
-  category: Applications
+  category: Development
   description: Self-hosted git forge — repositories, issues, and Actions
   url: &url https://git.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/forgejo.svg

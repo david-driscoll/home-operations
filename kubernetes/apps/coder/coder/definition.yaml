@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Coder
-  category: Applications
+  category: Development
   description: Self-hosted Cloud Development Environments
   url: &url https://code.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/coder.svg

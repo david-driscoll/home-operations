@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: N8N
-  category: Applications
+  category: Development
   description: Workflow Automation Tool
   url: &url https://${APP}.${ROOT_DOMAIN}
   # The same app under its tailnet name. authentik's ProxyProvider.external_host

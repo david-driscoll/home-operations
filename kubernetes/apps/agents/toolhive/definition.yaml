@@ -12,7 +12,7 @@ metadata:
   name: ${APP}
 spec:
   name: ToolHive
-  category: Applications
+  category: AI
   description: MCP servers, and the OAuth front door in front of them
   access_policy:
     groups:

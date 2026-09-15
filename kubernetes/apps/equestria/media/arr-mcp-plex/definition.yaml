@@ -8,7 +8,6 @@ spec:
   name: arr-mcp (Plex)
   category: Media Management
   description: One MCP server for the whole Plex media stack
-  url: &url https://${APP}.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/plex.svg
   access_policy:
     groups:
@@ -19,10 +18,10 @@ spec:
   authentik:
     proxy:
       mode: "forward_single"
-      externalHost: *url
+      externalHost: https://${APP}.${ROOT_DOMAIN}
   gatus:
     - group: "Applications"
-      url: *url
+      url: https://${APP}.${ROOT_DOMAIN}
       method: GET
       conditions:
         - "[STATUS] == 200"

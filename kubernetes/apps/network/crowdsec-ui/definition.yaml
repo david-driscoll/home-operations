@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: CrowdSec Console
-  category: Applications
+  category: Infrastructure
   description: Alerts, decisions and metrics for the CrowdSec LAPI.
   url: https://${APP}.${CLUSTER_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/crowdsec.svg

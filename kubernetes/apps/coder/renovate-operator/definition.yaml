@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Renovate
-  category: Applications
+  category: Development
   description: Dependency updates for the Forgejo forge
   url: &url https://renovate.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/renovate.svg

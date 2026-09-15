@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: Playerr
-  category: Applications
+  category: Games
   description: Playerr is a self-hosted game library manager and PVR for gaming collections
   url: &url https://${APP}.${ROOT_DOMAIN}
   # The same app under its tailnet name. authentik's ProxyProvider.external_host

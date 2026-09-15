@@ -6,7 +6,7 @@ metadata:
   name: garage
 spec:
   name: Garage (${CLUSTER_TITLE})
-  category: Infrastructure
+  category: ${CLUSTER_TITLE}
   description: Geo-replicated S3 node — backup store (celestia/luna/skystar)
   url: &url https://garage.${CLUSTER_DOMAIN}
   # The same app under its per-host tailnet name, which is what the

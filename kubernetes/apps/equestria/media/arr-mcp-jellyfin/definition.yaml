@@ -8,8 +8,6 @@ spec:
   name: arr-mcp (Jellyfin)
   category: Media Management
   description: One MCP server for the whole Jellyfin media stack
-  url: &url https://${APP}.${ROOT_DOMAIN}
-  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyfin.svg
   access_policy:
     groups:
       # The config UI shows every configured service's API key and can change
@@ -19,10 +17,10 @@ spec:
   authentik:
     proxy:
       mode: "forward_single"
-      externalHost: *url
+      externalHost: https://${APP}.${ROOT_DOMAIN}
   gatus:
     - group: "Applications"
-      url: *url
+      url: https://${APP}.${ROOT_DOMAIN}
       method: GET
       conditions:
         - "[STATUS] == 200"

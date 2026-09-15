@@ -6,7 +6,7 @@ metadata:
   name: ${APP}
 spec:
   name: kube-coder (${KUBE_CODER_USER})
-  category: Applications
+  category: Development
   description: Browser workspace with VS Code, terminal, desktop and CLI agents
   url: &url https://${KUBE_CODER_USER}.dev.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/code-server.svg
