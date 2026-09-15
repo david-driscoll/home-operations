@@ -25,7 +25,7 @@
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/std": "^2.2.0",
     "@pulumi/technitium": "file:../../sdks/technitium",
-    "@pulumi/tls": "^5.2.2",
+    "@pulumi/tls": "^5.6.0",
     "@pulumiverse/unifi": "^0.3.0",
     "cidr-matcher": "^2.1.1",
     "glob": "^13.0.0",
