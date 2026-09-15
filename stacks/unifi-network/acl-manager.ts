@@ -11,7 +11,7 @@ import * as tailscale from "@pulumi/tailscale";
 import { Roles } from "../../components/constants.ts";
 import type { GlobalResources } from "../../components/globals.ts";
 import { applyAllEdits, autogroups, groups, ports, subnets, TailscaleAclManager, type TailscaleSshTestInputItem, tag } from "../../components/tailscale/manager.ts";
-import { getTailscaleIp } from "../../components/tailscale.ts";
+import { getDnsMachines, getTailscaleIp } from "../../components/tailscale.ts";
 
 interface KubernetesCluster {
   tag: TailscaleTags;
@@ -47,16 +47,10 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
   const unifiDns = getTailscaleIp("discord", globals);
   const idpIp = getTailscaleIp("idp", globals);
 
-  // Technitium cluster nodes are all named dns-<cluster> (dns-celestia, dns-luna, ...);
-  // collecting by prefix picks up new nodes automatically as they join the tailnet.
-  const dnsMachines = tailscale.getDevicesOutput({ namePrefix: "dns-" }, { provider: globals.tailscaleProvider }).apply(result =>
-    (result.devices ?? [])
-      .map(device => ({
-        name: device.name.split(".")[0],
-        ip: (device.addresses.find(address => !address.includes(":")) ?? device.addresses[0]) as TailscaleIp,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
+  // Technitium cluster nodes (tag:dns, named dns-<cluster>). Offline nodes stay
+  // in the hosts map: an alias for a node that is down grants nothing, and
+  // dropping it would rewrite the policy every time a node blips.
+  const dnsMachines = getDnsMachines(globals);
 
   return pulumi.all([currentAcl.hujson, nodeExports, unifiDns, idpIp, dnsMachines]).apply(([hujson, allExports, unifiDnsIp, idpAddr, dnsNodes]) => {
     // ── Build hosts map from all exported stacks ──────────────────────────
