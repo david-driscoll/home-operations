@@ -6,9 +6,13 @@ SSO names resolve to the VIP, the Pi standby streams (verified <1 s behind on
 standby opened read-write on the Pi and `amcheck` heap-verified all 824 btree
 indexes (primary `ghcr.io/cloudnative-pg/postgresql:18.6-standard-bookworm`
 amd64, standby `postgres:18.6-bookworm` arm64; clone 2m31s, check 2m50s), so
-the standby is trusted for promotion. Outstanding: PR D (drop the Pi's old
-copy) after the soak, and the phase-6 VIP move test (scale equestria's
-authentik to zero and back). See "As run" at the end for what diverged.
+the standby is trusted for promotion. The VIP move **passed on 2026-09-15**:
+scaling equestria's authentik to zero put the Pi in MASTER 15 s later
+(00:42:32 → 00:42:47), a LAN client on luna got 200 through the VIP from the
+Pi throughout, and equestria preempted it back 30 s after its pods were ready
+(00:45:55), with no failed probe in either direction. Outstanding: PR D (drop
+the Pi's old copy) after the soak. See "As run" at the end for what diverged,
+and "Known limitation" below it.
 
 ## Why, and what it changes about doc 07
 
@@ -232,3 +236,29 @@ Recovery, with David's approval to proceed unattended:
 Lesson for the runbooks: a stacked PR set where merging deploys needs the
 "merge only inside the window" PR to be physically unmergeable until then
 (a draft, or a required check), not a note in its description.
+
+## Known limitation: in-cluster clients never fail over (found 2026-09-15)
+
+Traefik holds the VIP as a Service `externalIP`, and Cilium's kube-proxy
+replacement load-balances Service addresses **on the pod's own egress**. So a
+pod on equestria that connects to `10.10.255.10` is handed to equestria's
+Traefik by eBPF, whatever VRRP says about who owns the address on the LAN.
+During the VIP test the Pi was MASTER and every LAN client got 200 from it,
+while a pod inside the cluster kept getting 503 from equestria's Traefik.
+
+Consequences:
+
+- Clients on the LAN, the IoT VLAN, the tailnet and the other Docker hosts
+  fail over exactly as designed.
+- Clients **inside equestria** — the outposts, the Pulumi Operator's authentik
+  provider, any in-cluster OIDC client using the vanity names — always land
+  on equestria's own authentik. They cannot use the Pi while the cluster is up
+  but its authentik is not.
+- When equestria is down entirely those clients are down too, so the
+  FAILOVER.md scenario loses nothing extra.
+
+The gap is the narrow case "cluster up, `authentik-pg`/authentik on equestria
+down". Mitigations, none implemented: repoint equestria's authentik at the
+promoted Pi standby as part of FAILOVER.md P3 (it is reachable at
+`10.10.10.9`, and the role is the same), or give in-cluster clients a name
+that resolves to the Pi's address rather than the VIP.
