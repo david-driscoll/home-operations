@@ -36,7 +36,7 @@
     "@pulumi/forgejo": "file:sdks/forgejo",
     "@pulumi/github": "^6.8.0",
     "@pulumi/http": "^0.3.2",
-    "@pulumi/kubernetes": "^4.23.0",
+    "@pulumi/kubernetes": "^4.34.1",
     "@pulumi/pbs": "file:sdks/pbs",
     "@pulumi/tailscale": "file:sdks/tailscale",
     "@pulumi/technitium": "file:sdks/technitium",
