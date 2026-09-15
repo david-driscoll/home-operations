@@ -29,10 +29,8 @@ spec:
         - email
         - openid
         - profile
-        # helmrelease.yaml asks for the offline_access scope. Without the
-        # matching mapping authentik simply does not grant it, coder gets no
-        # refresh token, and sessions end at token expiry instead of renewing.
         - offline_access
+        - email_verified
       includeClaimsInIdToken: true
       subMode: user_email
 
