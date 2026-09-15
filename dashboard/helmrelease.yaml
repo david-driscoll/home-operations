@@ -75,17 +75,11 @@ spec:
               tag: 2.3.1@sha256:879f07646aaf6fc5f6ded8d734711a4c8364df3a64ab48091ddd1be9b7151172
             env:
               TZ: "${TIMEZONE}"
-              # Minted by the vault stack from the GitHub App and reflected into
-              # every namespace by emberstack, so it rotates on its own. It is
-              # deliberately NOT part of ${APP}-env: that Secret is assembled
-              # from OpenBao, and putting a self-rotating token behind an
-              # ExternalSecret refresh would pin it to whatever value the last
-              # sync saw.
-              GITHUB_TOKEN:
-                valueFrom:
-                  secretKeyRef:
-                    name: github-token
-                    key: token
+              # No GITHUB_TOKEN. The App token rotates every 30m, and as an env
+              # var the only way to deliver a new one was a pod restart -- 49 a
+              # day. It now reaches the config as include fragments under
+              # /app/config/github/ (the `github` mount below), which dynacat
+              # hot-reloads. Why that and not ${secret:...}: ../github-token.yaml.
             envFrom:
               - secretRef:
                   name: ${APP}-env
@@ -215,6 +209,19 @@ spec:
         globalMounts:
           - path: /app/config/widgets/
             readOnly: true
+      # ${APP}-github (../github-token.yaml): token.yaml + authorization.yaml,
+      # `$include`d by the GitHub widgets. A whole-directory mount, never
+      # subPath -- a subPath mount is never updated after pod start, and the
+      # in-place update is the entire point.
+      github:
+        type: secret
+        name: ${APP}-github
+        defaultMode: 288 # 0440; fsGroup 1000 keeps it readable
+        advancedMounts:
+          dynacat:
+            dynacat:
+              - path: /app/config/github/
+                readOnly: true
       servers-files:
         type: configMap
         name: ${APP}-servers

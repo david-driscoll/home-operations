@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# The GitHub App token as two one-line dynacat config fragments, so a rotation
+# is a config hot-reload instead of a pod restart.
+#
+# WHY NOT AN ENV VAR. `kube-system/github-token` is re-minted every 30m against
+# a 60m life. As `GITHUB_TOKEN` in the container env, the only way dynacat saw a
+# new one was a restart -- both reloaders obliged on every rotation (49 rollouts
+# in 24h), and each one took the `extensions` sidecar down with it to rebuild.
+#
+# WHY NOT `${secret:...}` / `${readFileFromEnv:...}`. dynacat reads those once,
+# at parse time, and its watcher (configFilesWatcher, internal/dynacat/config.go
+# at 2.3.1) only re-parses when the include-expanded config TEXT changes --
+# before variables are expanded. A token file behind a variable would rotate
+# underneath a config that never reloads, and go stale within the hour.
+#
+# WHY THIS WORKS. `$include:` matches at any indentation, not only on list
+# items, so a fragment can be a single mapping line spliced into a widget. The
+# token is literally part of the config text, every included file is watched,
+# and kubelet's atomic swap of a Secret volume (no subPath -- subPath mounts
+# never update) surfaces as the Remove event the watcher already re-parses on.
+#
+# Consumers: resources/widgets/nodes.yaml (token.yaml), resources/staging.yaml
+# (authorization.yaml). Mounted at /app/config/github/ in helmrelease.yaml.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ${APP}-github
+spec:
+  secretStoreRef:
+    # Kubernetes provider, remoteNamespace equestria: reads the emberstack
+    # reflection of kube-system/github-token that already lands here.
+    kind: ClusterSecretStore
+    name: cluster
+  # Must stay well under the 30m re-mint. Worst case a file holds a token for
+  # one rotation plus this interval plus kubelet's volume sync (~1-2m), and a
+  # token minted at T is valid until T+60m.
+  refreshInterval: 5m
+  target:
+    name: ${APP}-github
+    creationPolicy: Owner
+    template:
+      metadata:
+        annotations:
+          # Stakater's `auto` on the dynacat controller also follows volume
+          # mounts, so without this every rotation is still a restart. The ESO
+          # reloader only matches env/envFrom and never sees a volume.
+          reloader.stakater.com/ignore: "true"
+      data:
+        # Repository widgets: `token:` inside each widget mapping.
+        token.yaml: |
+          token: {{ .token }}
+        # custom-api widgets: a line inside `headers:`.
+        authorization.yaml: |
+          Authorization: Bearer {{ .token }}
+  dataFrom:
+    - extract:
+        key: github-token
