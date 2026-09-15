@@ -377,9 +377,39 @@ spec:
     # TikTok requires media URLs to sit under a domain whose ownership is
     # verified in its console.
     #
-    # The result is that the app itself has NO public route at all -- the
-    # external gateway carries only /uploads/, so there is nothing to reach from
-    # the internet but the read-only cdn pod.
+    # ⚠️ THE EXTERNAL /uploads/ ROUTE IS REMOVED -- IT PUBLISHED THE WHOLE APP.
+    #
+    # The premise was that the external gateway carries only /uploads/, so the
+    # internet can reach nothing but the cdn pod. That is false on this estate:
+    #
+    #   1. The tunnel forwards every published hostname to ONE origin,
+    #      https://traefik.network.svc.cluster.local (components/CloudflareTunnel.ts).
+    #   2. Traefik serves BOTH Gateways on the SAME entrypoints (web:80,
+    #      websecure:443). Gateway API attachment does not isolate them there:
+    #      a tunneled request for postiz.<domain>/ matches the INTERNAL route.
+    #   3. That route's only gate is `local-user` -> `internal-network`, an
+    #      ipAllowList on the TCP source address. Tunnel traffic comes from the
+    #      in-cluster cloudflared pod, inside 10.0.0.0/8, so it passes.
+    #
+    # Verified from the internet on 2026-09-15: `/` 307 -> /auth, `/api/` answered
+    # "App is running!", and the public /auth page offered Register / Sign Up.
+    # Open since public DNS for this name became proxied (~22:54Z 2026-09-12).
+    #
+    # Removing the external route takes the hostname out of the tunnel:
+    # stacks/vault/externalHostnames.ts derives the tunnel's ingress list from
+    # routes attached to the external Gateway, so the name falls to the
+    # catch-all 404, and external-dns drops the public record.
+    #
+    # Public media (TikTok / Facebook / Instagram) is therefore unavailable
+    # again. Nothing used it: all four provider credentials were still empty.
+    # Bringing it back needs the tunnel to serve ONLY /uploads/ for this name --
+    # a per-rule `path` on the cloudflared ingress entry, or a Traefik entrypoint
+    # dedicated to the external Gateway that the tunnel targets instead. Both
+    # live outside this app. Do NOT re-add a route on the external gateway for
+    # this hostname until one of them exists.
+    #
+    # The `cdn` controller and RWX claim stay: without a route they expose
+    # nothing, and they are what the public path needs when it returns.
     route:
       # The app. Internal gateway, network-gated, exactly like every other app
       # in this namespace.
@@ -410,38 +440,3 @@ spec:
                   # it would intercept the /settings callback before the app
                   # ever saw the authorization code. Same shape freshrss uses.
                   name: local-user
-
-      # Media only. This is the single path the public internet can reach, and
-      # it does not touch the postiz container at all.
-      external:
-        annotations:
-          # Follows kubernetes/apps/flux-system/flux-instance/httproute.yaml,
-          # the estate's other public route: CNAME to the tunnel and let
-          # Cloudflare proxy it, rather than advertising a LoadBalancer IP.
-          external-dns.kubernetes.io/target: "${TUNNEL_DOMAIN}"
-          external-dns.kubernetes.io/cloudflare-proxied: "true"
-        parentRefs:
-          - name: external
-            namespace: network
-            kind: Gateway
-        hostnames:
-          - "${APP}.${ROOT_DOMAIN}"
-        kind: HTTPRoute
-        rules:
-          # The ONLY rule on this gateway. Anything else on this hostname --
-          # the UI, /api, the login page -- has no route here and gets the
-          # gateway's 404. That is the whole point: the app is not merely
-          # denied publicly, it is not published publicly.
-          - matches:
-              - path:
-                  type: PathPrefix
-                  value: /uploads/
-            backendRefs:
-              - identifier: cdn
-                port: *cdn-port
-            # No filters, deliberately. TikTok and Meta fetch these URLs from
-            # their own infrastructure with no cookies and no client IP of
-            # ours -- any auth or network gate here blocks the publish. The
-            # protection is that the paths are unguessable (32 hex chars), the
-            # backend is a read-only static server with directory listing off,
-            # and it can reach nothing but the uploads subPath.
