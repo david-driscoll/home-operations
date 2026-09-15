@@ -213,6 +213,51 @@ instance:
       target:
         kind: Deployment
         name: source-controller
+    - # Keep superseded artifacts reachable long enough for a SLOW CONSUMER to
+      # fetch one. The defaults are `--artifact-retention-records=2` and
+      # `--artifact-retention-ttl=1m`, which assume every consumer reads an
+      # artifact within a minute of it being published. The Pulumi operator does
+      # not, and that cost four deadlocked Stacks on 2026-09-15.
+      #
+      # THE FAILURE, precisely. pulumi-kubernetes-operator resolves a Stack's
+      # `fluxSource` to a CONCRETE artifact URL, writes it into the Workspace
+      # spec (`spec.flux.url`, digest-pinned) and creates an Update naming that
+      # commit. Only then does the workspace StatefulSet schedule a pod, pull
+      # ghcr.io/pulumi/pulumi-nodejs, and run its `fetch` init container. If
+      # main moved twice in the meantime -- two merges, or one merge plus a
+      # Renovate bump -- the pinned artifact is already swept, and `fetch`
+      # crashloops on `unable to fetch flux artifact: file not found` FOREVER:
+      # the URL is pinned in the Workspace, the Stack controller waits for a
+      # Workspace that can never become ready, and ../../pulumi/update-pruner
+      # deliberately protects `status.currentUpdate`, so nothing reclaims it.
+      # Recovery is a human deleting the Update. It hit equestria, system and
+      # authentik in one evening, and equestria's blocked a new app's OpenBao
+      # database role for hours (see kubernetes/components/postgres/ks.yaml on
+      # why that half has to come from Pulumi).
+      #
+      # 1h/10 is sized against the measured artifact: 6.3 MiB for this repo
+      # (`curl -I` against source-controller, 2026-09-15), so ten records is
+      # ~63 MiB per GitRepository across three of them. The OCIRepositories and
+      # HelmCharts that share this setting are chart tarballs an order of
+      # magnitude smaller. Storage here is the controller's emptyDir -- no PVC
+      # is configured -- so this is node ephemeral storage, not Longhorn.
+      #
+      # This widens the window; it does not close the hole. A workspace that
+      # cannot start within an hour still deadlocks the same way, and the real
+      # fix is upstream: the operator should re-resolve to the current artifact
+      # rather than wait on a pin it can no longer fetch. No upstream issue
+      # covers it as of 2026-09-15 (checked pulumi-kubernetes-operator; #469 is
+      # the v1-era fetch timeout, not this).
+      patch: |
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --artifact-retention-ttl=1h
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: --artifact-retention-records=10
+      target:
+        kind: Deployment
+        name: source-controller
     - # Flux near OOM detection for Helm
       patch: |
         - op: add
