@@ -377,39 +377,32 @@ spec:
     # TikTok requires media URLs to sit under a domain whose ownership is
     # verified in its console.
     #
-    # ⚠️ THE EXTERNAL /uploads/ ROUTE IS REMOVED -- IT PUBLISHED THE WHOLE APP.
+    # ⚠️ THE EXTERNAL /uploads/ ROUTE DEPENDS ON TWO THINGS OUTSIDE THIS APP.
+    # Do not copy this shape for another app without both.
     #
-    # The premise was that the external gateway carries only /uploads/, so the
-    # internet can reach nothing but the cdn pod. That is false on this estate:
+    # The first version of this route (#1620) published the WHOLE app, login and
+    # open registration included, until #1697 removed it. The cause was not the
+    # route but the path to it:
     #
-    #   1. The tunnel forwards every published hostname to ONE origin,
-    #      https://traefik.network.svc.cluster.local (components/CloudflareTunnel.ts).
-    #   2. Traefik serves BOTH Gateways on the SAME entrypoints (web:80,
-    #      websecure:443). Gateway API attachment does not isolate them there:
-    #      a tunneled request for postiz.<domain>/ matches the INTERNAL route.
-    #   3. That route's only gate is `local-user` -> `internal-network`, an
-    #      ipAllowList on the TCP source address. Tunnel traffic comes from the
-    #      in-cluster cloudflared pod, inside 10.0.0.0/8, so it passes.
+    #   1. The tunnel forwarded every hostname to Traefik on 443, and Traefik
+    #      serves BOTH Gateways there -- a listener maps to an entrypoint by port
+    #      alone -- so a tunneled `postiz.<domain>/` matched the INTERNAL route.
+    #   2. That route's `local-user` gate is an ipAllowList on the TCP source, and
+    #      tunnel traffic comes from the in-cluster cloudflared pod, so it passed.
     #
-    # Verified from the internet on 2026-09-15: `/` 307 -> /auth, `/api/` answered
-    # "App is running!", and the public /auth page offered Register / Sign Up.
-    # Open since public DNS for this name became proxied (~22:54Z 2026-09-12).
+    # What now makes it safe (#1698):
     #
-    # Removing the external route takes the hostname out of the tunnel:
-    # stacks/vault/externalHostnames.ts derives the tunnel's ingress list from
-    # routes attached to the external Gateway, so the name falls to the
-    # catch-all 404, and external-dns drops the public record.
+    #   - BOUNDARY: the tunnel dials Traefik's dedicated `tunnel` entrypoint
+    #     (8444), which only the external Gateway listens on. Internal routes are
+    #     never bound there, so no path the tunnel delivers -- including ones
+    #     Traefik normalizes, like /uploads/../api/ -> /api/ -- can reach the app.
+    #   - SECOND LAYER: the tunnel's ingress rule for this hostname is derived from
+    #     THIS route's path match, so cloudflared forwards only ^/uploads/ and
+    #     rejects `..` segments before anything reaches the cluster
+    #     (components/tunnelRules.ts).
     #
-    # Public media (TikTok / Facebook / Instagram) is therefore unavailable
-    # again. Nothing used it: all four provider credentials were still empty.
-    # Bringing it back needs the tunnel to serve ONLY /uploads/ for this name --
-    # a per-rule `path` on the cloudflared ingress entry, or a Traefik entrypoint
-    # dedicated to the external Gateway that the tunnel targets instead. Both
-    # live outside this app. Do NOT re-add a route on the external gateway for
-    # this hostname until one of them exists.
-    #
-    # The `cdn` controller and RWX claim stay: without a route they expose
-    # nothing, and they are what the public path needs when it returns.
+    # Verify from outside after any change here: `/`, `/api/`, `/auth` and
+    # `/uploads/../api/` must 404; only `/uploads/...` may reach the cdn pod.
     route:
       # The app. Internal gateway, network-gated, exactly like every other app
       # in this namespace.
@@ -440,3 +433,35 @@ spec:
                   # it would intercept the /settings callback before the app
                   # ever saw the authorization code. Same shape freshrss uses.
                   name: local-user
+
+      # Media only. The tunnel serves this hostname for ^/uploads/ and nothing
+      # else, derived from the path match below -- see the block above.
+      external:
+        annotations:
+          # CNAME to the tunnel and let Cloudflare proxy it, rather than
+          # advertising a LoadBalancer IP. Same as the Flux webhook route.
+          external-dns.kubernetes.io/target: "${TUNNEL_DOMAIN}"
+          external-dns.kubernetes.io/cloudflare-proxied: "true"
+        parentRefs:
+          - name: external
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # The ONLY rule, and its path is what the tunnel rule is built from --
+          # widening it here widens what the internet can reach.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /uploads/
+            backendRefs:
+              - identifier: cdn
+                port: *cdn-port
+            # No filters, deliberately. TikTok and Meta fetch these URLs from
+            # their own infrastructure with no cookies and no client IP of
+            # ours -- any auth or network gate here blocks the publish. The
+            # protection is that the paths are unguessable (32 hex chars), the
+            # backend is a read-only static server with directory listing off,
+            # and it can reach nothing but the uploads subPath.
