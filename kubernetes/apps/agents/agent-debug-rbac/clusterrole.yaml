@@ -133,6 +133,15 @@ rules:
   - apiGroups: ["apps"]
     resources: ["replicasets/scale"]
     verbs: ["get", "patch", "update"]
+  # `kubectl scale` and HPA-style clients go through the /scale subresource,
+  # which is a separate RBAC resource from the object itself: the full
+  # patch/update grant on Deployments above does NOT cover it. Added
+  # 2026-09-15 when the authentik VIP failover test needed
+  # `scale deploy authentik-server --replicas=0` and the MCP's SA got
+  # "cannot ... deployments/scale". Same verbs as the ReplicaSet grant.
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "statefulsets/scale"]
+    verbs: ["get", "patch", "update"]
 
   - apiGroups: [""]
     resources: ["configmaps"]
