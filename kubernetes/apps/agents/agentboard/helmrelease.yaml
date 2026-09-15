@@ -274,6 +274,17 @@ spec:
               # node worth of memory it does not normally use. Do not treat
               # that as free: a pod that genuinely reaches 12Gi will pressure
               # its neighbours before it is itself evicted.
+              #
+              # BEFORE RAISING THIS AGAIN, look at what is using it. The same
+              # "running low on memory" kills came back on 2026-09-15 at 11.1G
+              # of 12Gi, and the cause was not sessions: 77 orphaned Pulumi
+              # provider trees, now swept by ./resources/entrypoint.sh. Two
+              # things make the number misleading. The cgroup's usage counts
+              # page cache -- ~5G of it was reclaimable `inactive_file` -- and
+              # Node's process.availableMemory() is simply this limit minus that
+              # usage. And summed per-process RSS double-counts shared pages
+              # (10.7G of RSS against 4.9G of real anon). Read
+              # /sys/fs/cgroup/memory.stat's `anon` and `inactive_file`, not RSS.
               limits:
                 memory: 12Gi
 

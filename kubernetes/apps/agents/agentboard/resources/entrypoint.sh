@@ -44,9 +44,13 @@
 set -euo pipefail
 
 echo "==> installing OS packages"
+# `tini` and `procps` are for the process hygiene at the bottom of this file:
+# tini becomes PID 1 so exited children are reaped, and procps supplies the
+# pgrep/pkill the orphaned-provider sweep runs on (the slim image has no ps).
 apt-get update -qq
 apt-get install -y --no-install-recommends \
     tmux git openssh-client ca-certificates curl build-essential \
+    tini procps \
     >/dev/null
 rm -rf /var/lib/apt/lists/*
 
@@ -392,5 +396,38 @@ if [ "$$AGENTBOARD_RESUME_SESSIONS" -gt 0 ] 2>/dev/null; then
 ) &
 fi
 
+# SWEEP ORPHANED PULUMI PROVIDERS.
+#
+# A `pulumi` CLI that dies abruptly -- a tool-call timeout, a killed pane, a
+# Ctrl-C at the wrong moment -- leaves its provider plugins running. They are
+# reparented to PID 1 and nothing ever stops them. On 2026-09-15 this pod held
+# 77 orphaned `pulumi-resource-terraform-provider` trees (166 processes with
+# their `terraform-provider-*` children, ~5.9G RSS, 1.6G of anonymous memory)
+# from eleven runs one to two days earlier, with no pulumi running at all.
+# That pushed the 12Gi cgroup to 11.1G, and Claude Code began killing every
+# background task seconds after it started: "the system is running low on
+# memory".
+#
+# The selector is exactly "provider-shaped AND parented to PID 1 AND older
+# than 10 minutes". A provider serving a live run is a child of that run's
+# `pulumi` CLI, never of PID 1, so it cannot match. Killing only a tree's root
+# is enough: its child is reparented to PID 1 and matches on the next pass.
+# Verified live before this was written, against a fake orphan and a fake
+# same-named child of a live parent.
+#
+# `-f` matches the command line, which a zombie no longer has, so this never
+# wastes signals on the defunct -- reaping those is tini's job, below.
+(
+  while sleep 300; do
+    pkill -TERM -P 1 -O 600 -f '(^|/)(pulumi-resource-|terraform-provider-)' || true
+  done
+) &
+
+# TINI AS PID 1, not agentboard. `exec agentboard` made node PID 1, and node
+# does not reap children it did not spawn -- every process orphaned into this
+# pod (the providers above, finished tmux panes, dead shells) became a zombie
+# that lived until the pod restarted: ~150 of them after two days, 298 once
+# the sweep above had run. `-g` forwards SIGTERM to agentboard's whole process
+# group so a pod shutdown still reaches it.
 echo "==> starting agentboard on :4040"
-exec agentboard --port 4040 --hostname 0.0.0.0
+exec tini -g -- agentboard --port 4040 --hostname 0.0.0.0
