@@ -20,7 +20,7 @@
     "refresh": "mise run vals-run pulumi refresh --yes"
   },
   "dependencies": {
-    "@muhlba91/pulumi-proxmoxve": "^8.0.0",
+    "@muhlba91/pulumi-proxmoxve": "^8.6.0",
     "@pulumi/command": "^1.2.1",
     "@pulumi/kubernetes": "^4.23.0",
     "@pulumi/std": "^2.2.0",
