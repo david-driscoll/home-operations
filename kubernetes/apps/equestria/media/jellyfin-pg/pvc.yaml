@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/persistentvolumeclaim-v1.json
+#
+# The test instance's config/data volume. EMPTY on creation -- it is never
+# pointed at production's config, production's data, or an existing jellyfin.db.
+#
+# A PLAIN PVC, NOT `components/volsync`, which is what every other app in this
+# namespace uses. Three reasons, all specific to this being a throwaway:
+#
+#  1. The container writes the PostgreSQL connection string -- password included,
+#     in the clear -- into /config/config/database.xml on this volume, on every
+#     start. That is the image's design (docker/entrypoint.sh in the fork), not
+#     something this repo can configure away. A volsync ReplicationSource would
+#     copy that file into the restic repository on a schedule.
+#  2. Nothing here is worth restoring. The whole point is that it can be deleted
+#     and rebuilt from the runbook.
+#  3. Teardown stays a `kubectl delete` rather than also pruning snapshots out of
+#     a restic repository.
+#
+# 20Gi, not production's 60Gi. Production's volume is ~62GiB allocated, but most
+# of that is regenerable (keyframes, extracted attachments, logs) and the
+# migration only needs the config XMLs plus /config/data/jellyfin.db. Longhorn
+# supports online expansion if the restore in phase 3 turns out to need more:
+#   kubectl -n equestria patch pvc jellyfin-pg \
+#     -p '{"spec":{"resources":{"requests":{"storage":"40Gi"}}}}'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-pg
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 20Gi
