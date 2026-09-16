@@ -65,6 +65,16 @@ cd "$TOPLEVEL"
 
 [ -d graphify-out ] || exit 0
 
+# A detached rebuild still holds the lock: its output is half-written, so leave
+# it for the next commit's sweep. graphify takes the lock with fcntl.flock,
+# which is the same flock(2) that util-linux `flock` tests, so this checks for a
+# live holder rather than trusting the file's PID (a killed rebuild leaves the
+# file behind). No `flock` binary (macOS) means no check -- the old behaviour.
+if [ -f graphify-out/.rebuild.lock ] && command -v flock >/dev/null 2>&1 &&
+    ! flock -n graphify-out/.rebuild.lock true 2>/dev/null; then
+    exit 0
+fi
+
 STATUS=$(git status --porcelain 2>/dev/null)
 [ -z "$STATUS" ] && exit 0
 
