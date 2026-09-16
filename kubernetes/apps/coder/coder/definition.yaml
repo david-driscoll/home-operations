@@ -29,8 +29,16 @@ spec:
         - email
         - openid
         - profile
+        # helmrelease.yaml asks for the offline_access scope. Without the
+        # matching mapping authentik simply does not grant it, coder gets no
+        # refresh token, and sessions end at token expiry instead of renewing.
         - offline_access
-        - email_verified
+        # NOT the `email_verified` mapping. authentik only evaluates a scope
+        # mapping when the client REQUESTS that scope, and coder's
+        # CODER_OIDC_SCOPES is a fixed openid,profile,email,offline_access --
+        # so mapping it here changed nothing. The built-in `email` mapping
+        # returns `email_verified: False` regardless; helmrelease.yaml sets
+        # CODER_OIDC_IGNORE_EMAIL_VERIFIED instead and explains why.
       includeClaimsInIdToken: true
       subMode: user_email
 
