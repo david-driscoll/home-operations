@@ -71,6 +71,34 @@ spec:
         - namespace: network
           podName: traefik-*
           program: traefik
+          # POLL, DO NOT WATCH. Without this the agents go silently blind on
+          # every Traefik rollout and stay that way until someone restarts them.
+          #
+          # The chart renders this entry to a filenames glob under
+          # /var/log/containers/ and sets `force_inotify: true` unconditionally
+          # (acquis-configmap.yaml), leaving `poll_without_inotify` to default
+          # false. But every path under /var/log/containers/ is a SYMLINK to the
+          # pod's real log, and inotify watches the resolved inode: when Traefik
+          # rolls, the symlink is repointed at a new file and the watch stays on
+          # the dead pod's inode. CrowdSec says so itself, once per file, at
+          # startup:
+          #
+          #   File /var/log/containers/traefik-*_network_traefik-*.log is a
+          #   symlink, but inotify polling is enabled. Crowdsec will not be able
+          #   to detect rotation. Consider setting poll_without_inotify to true
+          #   in your configuration
+          #
+          # Measured cost of ignoring that advice, 2026-09-16: Traefik pods were
+          # 5.1h old, the agents 77h, and `rate(cs_filesource_hits_total[30m])`
+          # was 0 across the fleet -- the WAF/IPS had parsed nothing since the
+          # previous Traefik rollout while every pod reported Ready and every
+          # LAPI heartbeat returned 200. `cs_filesource_hits_total` was not
+          # zero, it was FROZEN (24k-76k, unchanged over 6h and 24h), which is
+          # why CrowdsecAcquisitionStalled (../crowdsec/prometheusrule.yaml) is
+          # written against the rate rather than the value.
+          #
+          # Polling costs a stat() per file per interval, against four files.
+          poll_without_inotify: true
   # ---- console-enrolment guard -------------------------------------------
   # Makes `cscli console enroll` unable to kill the LAPI.
   #
