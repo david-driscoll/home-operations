@@ -144,11 +144,22 @@ rather than continuing.
 
 ### 3.1 Render the load file (offline)
 
-`docker/jellyfindb.load` at `460d74ac`, carried in a ConfigMap and asserted to
-be `sha256:8e06bfa5bb5c3665f12f80659140cea824792c45e6b3c30f14d29865aa7c6973`
-before use. Only the two endpoints are rewritten — `create no tables`,
-`truncate`, the excluded migration tables and the identity-sequence reset stay
-the fork's own file.
+Run [`assets/jellyfin-pg/render.py`](assets/jellyfin-pg/render.py). It carries the
+integrity gates from §2 and renders
+[`assets/jellyfin-pg/jellyfindb.load`](assets/jellyfin-pg/jellyfindb.load) — the
+fork's `docker/jellyfindb.load` at `460d74ac`, committed here byte for byte and
+asserted to be `sha256:8e06bfa5bb5c3665f12f80659140cea824792c45e6b3c30f14d29865aa7c6973`
+before use. Mount both from a ConfigMap at `/load`, or point `LOAD_TEMPLATE` at
+the file. No network access is needed.
+
+Only the two endpoints are rewritten — `create no tables`, `truncate`, the
+excluded migration tables and the identity-sequence reset stay the fork's own
+file.
+
+[`assets/jellyfin-pg/prepare.py`](assets/jellyfin-pg/prepare.py) is the online
+variant: the same gates plus fetching the fork's scripts and the pinned server
+sources, which §3.5 needs. Run it **once, ahead of time**, not at cutover — it is
+the script that hit the Gitea rate limit.
 
 **Percent-encode the password** into the pgloader target URI; an OpenBao password
 containing `/`, `@`, `:` or `#` otherwise re-parses the URI silently.
