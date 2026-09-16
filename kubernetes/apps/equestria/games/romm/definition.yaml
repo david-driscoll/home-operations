@@ -24,7 +24,14 @@ spec:
         - email
         - openid
         - profile
-        - romm
+        # RomM requests `openid profile email ${OIDC_CLAIM_ROLES}` and nothing
+        # else, and externalsecret.yaml sets OIDC_CLAIM_ROLES=groups -- so
+        # `groups` is the scope it actually asks for. The previous `romm` entry
+        # named a scope RomM never requests, so authentik never evaluated it.
+        # The mapping also asserts email_verified, which RomM requires and
+        # authentik's built-in `email` mapping hardcodes to False; see
+        # components/authentik/property-mappings.ts.
+        - groups
       includeClaimsInIdToken: true
       subMode: user_email
   gatus:
