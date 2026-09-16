@@ -86,6 +86,25 @@ spec:
               key: client_secret
         - name: CODER_OIDC_SCOPES
           value: openid,profile,email,offline_access
+        # authentik's built-in `email` scope mapping hardcodes
+        # `"email_verified": False` for every user -- it has no email
+        # verification concept at all, so the claim carries no information
+        # here (the same fact is documented in media/tracearr's definition).
+        # Coder is fail-closed on it: coderd/userauth.go defaults
+        # emailVerified to false and refuses the login with "Verify the %q
+        # email address on your OIDC provider to authenticate!" unless this
+        # is set. Who may sign in is decided by definition.yaml's
+        # access_policy groups, which is the real gate.
+        #
+        # The authentik-side alternative -- the `email_verified` scope
+        # mapping in components/authentik/property-mappings.ts, which returns
+        # True -- needs the scope REQUESTED as well as mapped, and then only
+        # wins because authentik evaluates mappings `order_by("scope_name")`
+        # and deep-merges, so "email_verified" happens to sort after "email".
+        # Not worth depending on alphabetical ordering for a claim that is
+        # false for everyone either way.
+        - name: CODER_OIDC_IGNORE_EMAIL_VERIFIED
+          value: "true"
         - name: CODER_OIDC_SIGN_IN_TEXT
           value: Sign in with Authentik
         - name: CODER_OIDC_ICON_URL
