@@ -114,6 +114,11 @@
 #   be silently overwritten or bypass the whole provenance model), RBAC
 #   objects, Namespace create/delete, and writing the CRDs (as opposed to
 #   their custom resources) themselves.
+#
+#   One qualification on that first item, added with the ExternalSecret rule
+#   below: patching an ExternalSecret is not a Secret write, but it is
+#   adjacent, because an ExternalSecret's spec decides what ESO materialises.
+#   See that rule for the reasoning and the bound.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -160,6 +165,40 @@ rules:
       - notification.toolkit.fluxcd.io
       - image.toolkit.fluxcd.io
     resources: ["*"]
+    verbs: ["patch", "update"]
+
+  # ExternalSecrets: patch/update only -- the `force-sync` annotation, which is
+  # this estate's OWN documented recovery for a stuck credential
+  # (kubernetes/components/postgres/ks.yaml, step 4 of the new-app runbook):
+  #
+  #   kubectl -n database annotate externalsecret ${APP}-postgres \
+  #     force-sync=$(date +%s) --overwrite
+  #
+  # Same shape, and same narrow verbs, as the Flux CRD grant above: enough to
+  # poke a controller into re-resolving, not enough to author an object from
+  # scratch. No create/delete -- Flux renders these.
+  #
+  # WHY IT IS NEEDED. A brand-new app with `components/postgres` races Pulumi
+  # for its OpenBao static role, and the loser is the app's `<app>-env`
+  # ExternalSecret, which can sit on a cached `Secret does not exist` long after
+  # the credential appears -- pod stuck in CreateContainerConfigError, and the
+  # runbook's fix unavailable to the agent diagnosing it. That happened on
+  # 2026-09-15 with `jellyfin-pg` (#1761): every other layer recovered on its
+  # own and the app-side ExternalSecret did not.
+  #
+  # ⚠️ THIS IS A REAL, IF NARROW, PRIVILEGE INCREASE, and the file's own
+  # "Secret writes are not granted" line deserves the qualification. Rewriting
+  # an ExternalSecret's `spec` can point it at a different provider key and
+  # materialise that value into a Secret -- so this is indirect read access to
+  # whatever the referenced store's policy allows, not merely an annotation
+  # poke. It is accepted for two reasons: the READ grant above already covers
+  # every Secret in the cluster, so nothing already mirrored into Kubernetes
+  # becomes newly visible; and the blast radius is bounded by the
+  # ClusterSecretStore's own OpenBao policy rather than by this role. What it
+  # deliberately still does NOT grant is writing a Secret directly -- ESO
+  # remains the only writer, and provenance still runs back to OpenBao.
+  - apiGroups: ["external-secrets.io"]
+    resources: ["externalsecrets"]
     verbs: ["patch", "update"]
 
   - apiGroups: ["policy"]
