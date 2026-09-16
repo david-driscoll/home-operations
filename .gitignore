@@ -70,8 +70,19 @@ talosconfig
 # `cache/` is the AST extraction cache, keyed by content hash. It is derived
 # entirely from tracked source and rebuilds in seconds, but a full run churns
 # thousands of files and several MB into a public repo for no benefit.
+#
+# `.rebuild.lock` and `.pending_changes` are runtime state of the detached
+# post-commit rebuild (graphify/watch.py). The lock file holds the rebuilding
+# PID and is unlinked when the rebuild finishes, so it is present or absent
+# depending on timing -- and left behind with a dead PID if the rebuild is
+# killed. Unignored, graphify-sweep-commit.sh's `git add -A -- graphify-out`
+# committed it and then committed its deletion (9eee3a06, 0123d121). The lock is
+# an flock, so a leftover file is harmless to graphify; it only needs to stay
+# out of git.
 graphify-out/.graphify_python
 graphify-out/.graphify_root
+graphify-out/.rebuild.lock
+graphify-out/.pending_changes
 graphify-out/cache/
 
 # Dated graph snapshots (`graphify-out/YYYY-MM-DD/`).
