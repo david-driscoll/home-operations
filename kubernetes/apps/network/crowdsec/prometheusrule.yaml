@@ -182,13 +182,28 @@ spec:
         # matches nothing produces no series rather than a zero -- hence
         # `or vector(0)`, for the same reason as CrowdsecBouncerNotPolling. The
         # agent-count gate keeps this from duplicating CrowdsecAgentsMissing.
+        #
+        # THE DESCRIPTION USED TO NAME THE WRONG CAUSE. It asserted the glob was
+        # "probably matching nothing", and when this fired for real on
+        # 2026-09-16 that was false in both halves: the glob matched four files
+        # and their counters were non-zero (24k-76k). They were FROZEN, not
+        # absent -- the agents held inotify watches on the inodes of Traefik
+        # pods replaced hours earlier, because /var/log/containers entries are
+        # symlinks and inotify follows the resolved inode. A responder trusting
+        # the old text would have gone looking for a broken glob. The real fix
+        # was `poll_without_inotify: true` (../crowdsec/helmrelease.yaml); a
+        # frozen counter is what this rule actually catches, which is why the
+        # expression is a rate and not a value.
         - alert: CrowdsecAcquisitionStalled
           annotations:
             description: >-
               CrowdSec agents are running and being scraped but have read zero log
-              lines for 30 minutes. The acquisition glob
-              (/var/log/containers/traefik-*_network_*.log) is probably matching
-              nothing. Detection is off even though every pod is Ready.
+              lines for 30 minutes. Most likely the file source is watching dead
+              inodes after a Traefik rollout (check for "is a symlink, but inotify
+              polling is enabled" in the agent logs, and that
+              `poll_without_inotify` is still set); a glob
+              (/var/log/containers/traefik-*_network_*.log) matching nothing does
+              the same thing. Detection is off even though every pod is Ready.
             summary: CrowdSec has stopped reading Traefik logs.
           expr: |
             (sum(rate(cs_filesource_hits_total[30m])) or vector(0)) == 0
