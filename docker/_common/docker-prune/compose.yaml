@@ -1,0 +1,78 @@
+---
+# Reclaim disk from superseded images, on every Dockge host.
+#
+# WHY THIS EXISTS
+# ---------------
+# luna's LXC root sat at 18.2 GiB free of 157.9 GiB (11.5%) on 2026-09-15,
+# firing NodeRootFsFillingUp (<15% free, the `node-filesystem` group in
+# kubernetes/apps/observability/thanos/resources/ruler.yml) and shedding
+# ~1.2 GiB/day -- roughly a fortnight from NodeRootFsCritical.
+#
+# It is not a leak. Measured on luna the same day: 132 images totalling
+# 23.15 GiB, of which only 34 (3.66 GiB) were referenced by a container. The
+# other 98 (19.5 GiB nominal, less on disk where layers are shared) were
+# superseded Renovate bumps. Every image update leaves its predecessor
+# behind and nothing has ever removed one.
+#
+# ZERO of those 98 were DANGLING, which is the trap: `docker image prune`
+# without `--all` only removes untagged leftovers and would have freed
+# nothing here. `--all` -- "not referenced by any container" -- is the flag
+# that matters.
+#
+# WHAT IT DELIBERATELY DOES NOT DO
+# --------------------------------
+#   * No `volume prune`. An unused named volume on these hosts is a stopped
+#     stack's DATA. The /opt/stacks-data bind mounts most stacks use are not
+#     volumes and would survive, but a compose-managed named volume would
+#     not, and nothing inside this container can tell the two apart.
+#   * No `container prune`. A stopped container is exactly what keeps its
+#     image out of `image prune --all`'s reach, which is the behaviour we
+#     want for a stack someone has deliberately stopped in Dockge.
+#
+# `until=168h` FILTERS ON IMAGE CREATION TIME, NOT PULL TIME. So an upstream
+# image built months ago is eligible the moment nothing references it, while
+# an image built locally in the last week is held back -- alpha-site builds
+# pecron-monitor from a git context, and those are the ones that are slow to
+# reproduce. The asymmetry is the point; this is not a seven-day rollback
+# window, and should not be described as one.
+#
+# THE ONE COST: a stack that is stopped rather than idle has no container, so
+# its image can be pruned and the next `up` re-pulls it. That needs working
+# egress, and on a host that is offline at the time it means the stack cannot
+# start until the pull succeeds.
+#
+# Suppress on a host with an empty `.ignore` file in
+# docker/<host>/docker-prune/ -- the mechanism docker/alpha-site/garage
+# already uses.
+services:
+  docker-prune:
+    image: docker:29.8.0-cli@sha256:eccaacfeed644c7de222ff047483568cb988dde95476fbaaf10ea2d04921bb66
+    container_name: docker-prune
+    restart: unless-stopped
+    # A sleep loop, not cron: this image ships no cron daemon, and one
+    # foreground process writing to the container log means Dockge shows
+    # exactly what each pass reclaimed. The first pass runs at container
+    # start, so a freshly booted host tidies up before it drifts again.
+    #
+    # No `$(...)` anywhere in this block on purpose -- compose interpolates
+    # `$` in `command`, so the timestamp comes from date's own format string
+    # rather than a subshell.
+    #
+    # `|| true` on both: a prune racing a `docker compose up` can fail on an
+    # image that gained a container mid-pass, and that must not kill the
+    # loop and leave the host unpruned until someone notices.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          date -u "+%FT%TZ docker-prune: pass starting"
+          docker image prune --all --force --filter until=168h || true
+          docker builder prune --all --force --filter until=168h || true
+          date -u "+%FT%TZ docker-prune: pass complete"
+          sleep 86400
+        done
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      traefik.enable: false
