@@ -56,8 +56,59 @@
 #   * evaluated over the preceding 24h it selects 9 services, and evaluated
 #     instantaneously it selects 4 (jellyseerr, identifiarr, seerr,
 #     toolhive-ui) -- all sustained 502s against pods that are 1/1 Running and
-#     that Gatus reports as 200. Those are real, pre-existing, and were
-#     invisible until this rule was written.
+#     that Gatus reports as 200.
+#
+# ---------------------------------------------------------------------------
+# CORRECTION, 2026-09-16. That last bullet concluded those four were "real,
+# pre-existing, and invisible until this rule was written". They were not real,
+# and the phrase "Gatus reports as 200" was the clue that got read backwards:
+# Gatus IS the client, and it got a 200.
+#
+#   traefik_entrypoint_requests_total{code=~"5.."}  ->  502 rate of ZERO
+#   traefik_service_requests_total{code=~"5.."}     ->  0.0167/s per service
+#
+# 0.0167/s is one per sixty seconds, which is exactly the Gatus probe interval,
+# and for these services the probe is 100% of their traffic. The access log
+# shows the whole story on one line: `OriginStatus:502, DownstreamStatus:200,
+# RetryAttempts:0`, from `User-Agent: Gatus/1.0`, with the backend's own log
+# recording a 200 for the same second.
+#
+# The mechanism is Go's HTTP transport, not Traefik's retry middleware -- hence
+# RetryAttempts:0 and an empty `traefik_service_retries_total`. The backend
+# closes an idle keep-alive connection at ~60s, Traefik's pooled connection
+# loses the race on the next probe, and the transport silently re-dials and
+# succeeds. The SERVICE counter records the dead attempt; the client never sees
+# it. Only services whose sole traffic is a once-a-minute probe show it at all,
+# which is why the selected set looked so arbitrary.
+#
+# So the rule now gates on the ENTRYPOINT counter, which is what the client
+# actually received. The per-service sum still names the culprit; the gate
+# decides whether anyone was hurt. A real outage produces both -- that is what
+# "user-visible" means -- while a lost keep-alive race produces only the former.
+#
+# Two alternatives were rejected. Raising the threshold above 0.0167/s would
+# put it a hair under the FreshRSS incident's own 0.027/s peak, re-breaking the
+# case this rule exists for. Switching to `traefik_router_requests_total`,
+# which carries the client-visible status per router, needs
+# `metrics.prometheus.addRoutersLabels` turned on and pays cardinality across
+# every router in the estate. The underlying 502s could also be removed at
+# source by setting Traefik's transport `idleConnTimeout` below the backends'
+# own idle timeout -- worth doing on its own merits, but it is a global
+# transport change and does not belong in an alerting fix.
+#
+# KNOWN LIMITATION, stated rather than discovered later: the gate is
+# estate-wide, so while a genuine outage holds it open, a keep-alive-race
+# service can fire alongside the real one. That is the acceptable direction to
+# fail -- a spurious NAME in a list during an incident someone is already
+# looking at, versus four alerts firing forever in the quiet. A probe-only
+# service that is genuinely down still trips this on its own: its 5xx reach the
+# client at 0.0167/s, comfortably over the gate's 0.005 floor.
+#
+# Checked against live data at the time of the change:
+#   * new expression selects NOTHING (entrypoint 502 rate is 0).
+#   * the old one selects five, including jellyfin at 0.0286/s -- which is
+#     above the FreshRSS peak, and is why the "just raise the threshold"
+#     option above is not merely inelegant but wrong.
 # ============================================================================
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -71,20 +122,40 @@ spec:
           annotations:
             description: >-
               Traefik service {{$labels.exported_service}} has returned 5xx continuously for
-              30 minutes ({{$value | printf "%.3f"}} req/s). The backend pod is probably Ready
-              and passing its probes -- this alert exists because that is not evidence the app
-              works. Check the pod's own logs, not its probe status.
+              30 minutes ({{$value | printf "%.3f"}} req/s) AND clients are receiving 5xx at
+              the entrypoint. The backend pod is probably Ready and passing its probes -- this
+              alert exists because that is not evidence the app works. Check the pod's own
+              logs, not its probe status.
             summary: A service behind Traefik is persistently returning 5xx.
+          # The `and on()` gate is the whole correction (see the block comment
+          # above). `on()` with an empty label list joins the label-less
+          # entrypoint aggregate against every per-service series, so the gate
+          # is estate-wide: it asks "is the gateway returning 5xx to anyone?"
+          # and the left side answers "which service". Without `on()` the two
+          # sides share no labels and the expression would match nothing and
+          # never fire -- the same trap CrowdsecAgentsMissing documents.
+          #
+          # The gate's own floor is deliberately the same 0.005: error-pages
+          # sits at ~0.0006/s of entrypoint 503 by design (it is the service
+          # that RENDERS errors), and that must not hold the gate open.
           expr: |
-            sum by (exported_service) (
-              rate(
-                traefik_service_requests_total{
-                  code=~"5..",
-                  exported_service!="",
-                  exported_service!~".*error-pages.*"
-                }[15m]
-              )
-            ) > 0.005
+            (
+              sum by (exported_service) (
+                rate(
+                  traefik_service_requests_total{
+                    code=~"5..",
+                    exported_service!="",
+                    exported_service!~".*error-pages.*"
+                  }[15m]
+                )
+              ) > 0.005
+            )
+            and on()
+            (
+              sum(
+                rate(traefik_entrypoint_requests_total{code=~"5.."}[15m])
+              ) > 0.005
+            )
           for: 30m
           labels:
             issue: Traefik service {{$labels.exported_service}} is persistently serving 5xx while its pod looks healthy.
