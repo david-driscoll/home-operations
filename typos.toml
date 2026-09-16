@@ -81,6 +81,9 @@ Mosquitto = "Mosquitto"
 flate = "flate"
 # Home Assistant's env-var prefix (HASS_*).
 HASS = "HASS"
+# StremThru, the Stremio companion service -- split on the case boundary, like
+# Hashi below.
+Strem = "Strem"
 # The first half of "HashiCorp" -- typos splits identifiers on the case
 # boundary, so it never sees the whole word.
 Hashi = "Hashi"

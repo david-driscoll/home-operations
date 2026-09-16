@@ -1,0 +1,260 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app seedstrem
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        initContainers:
+          # Git is authoritative over seedstrem's settings that have no env
+          # override (./resources/config.yaml). Same shape as arr-mcp's
+          # seed-config. seedstrem rewrites this file itself (temp file +
+          # rename), which is why it is copied onto the PVC rather than
+          # mounted read-only in place.
+          seed-config:
+            image: &image
+              repository: ghcr.io/javi11/seedstrem
+              tag: 0.3.0@sha256:2e4a616d91614242e575f6e4a0e66d68286304d5749687c345d8c3499f0cbbee
+              pullPolicy: IfNotPresent
+            command: ["/usr/bin/install"]
+            args: ["-m", "0600", "/config-source/config.yaml", "/config/config.yaml"]
+            securityContext: &securityContext
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 64Mi
+        containers:
+          app:
+            image: *image
+            # The image's entrypoint is the LinuxServer s6 /init, which starts
+            # as root to remap PUID/PGID and then drops to "abc". seedstrem
+            # itself is a static Go binary, so run it directly as 568 like
+            # everything else in this namespace. This is the exact command
+            # the image's own s6 service runs
+            # (docker/root/etc/s6-overlay/s6-rc.d/svc-seedstrem/run).
+            command: ["/seedstrem"]
+            args: ["--config=/config/config.yaml"]
+            env:
+              TZ: ${TIMEZONE}
+              SEEDSTREM_SERVER_LISTEN: ":8080"
+              # Base of the manifest and of every stream URL seedstrem hands
+              # out. The only thing that dereferences those URLs is Jellyfin
+              # (Gelato proxies playback server-side), so the in-cluster
+              # Service is correct and nothing needs a public route.
+              SEEDSTREM_SERVER_EXTERNAL_URL: http://${APP}.${NAMESPACE}.svc.cluster.local:8080
+              SEEDSTREM_DOWNLOADER_TYPE: qbittorrent
+              SEEDSTREM_QBITTORRENT_URL: http://qbittorrent.${NAMESPACE}.svc.cluster.local:8080
+              # Unused (subnet whitelist, see ./externalsecret.yaml) but the
+              # client library sends it on login.
+              SEEDSTREM_QBITTORRENT_USERNAME: admin
+              # Also what the force-start sidecar below selects on.
+              SEEDSTREM_QBITTORRENT_CATEGORY: &category seedstrem
+              SEEDSTREM_PROWLARR_URL: http://prowlarr.${NAMESPACE}.svc.cluster.local:9696
+              # Upstream's 15s default is longer than a Jellyfin search should
+              # wait. Keep AIOStreams' timeout for this addon ABOVE this value,
+              # or AIOStreams gives up before seedstrem answers. No SEEDSTREM_
+              # prefix: this is upstream's actual variable name.
+              PROWLARR_SEARCH_TIMEOUT: 8s
+              SEEDSTREM_ADDON_ENABLE_MOVIES: "true"
+              SEEDSTREM_ADDON_ENABLE_SERIES: "true"
+              SEEDSTREM_ADDON_ENABLE_ANIME: "false"
+              # qBittorrent and seedstrem mount the same NFS export at the same
+              # path, so the mapping is the identity. It still has to be set:
+              # the first mapping's local root is also where the disk-usage
+              # gate measures.
+              SEEDSTREM_PATHS_MAPPINGS: /media/downloads:/media/downloads
+              # Upstream's image default, restated because the entrypoint is
+              # overridden above.
+              SEEDSTREM_STORAGE_DATABASE: /config/seedstrem.db
+              # Stop offering NEW streams once the media share is this full.
+              SEEDSTREM_STORAGE_MAX_DISK_USAGE_PERCENT: "90"
+              SEEDSTREM_LOG_LEVEL: info
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: &port 8080
+                  initialDelaySeconds: 5
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *probes
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                memory: 512Mi
+
+          # Bypass qBittorrent's queue cap for seedstrem's torrents.
+          #
+          # qBittorrent has queueing on (20 active downloads). A torrent
+          # seedstrem adds while that many are active sits in queuedDL, never
+          # fetches metadata, and playback spins until seedstrem's 60s
+          # metadata timeout. qBittorrent has no per-category priority; the
+          # one thing that ignores queue limits is "force start", and
+          # seedstrem does not set it. So:
+          #
+          #   - every seedstrem torrent still downloading and not yet forced
+          #     is force-started;
+          #   - once it completes the flag is cleared, so seeding goes back
+          #     under the normal queue limits instead of piling up forced.
+          #
+          # Only torrents in seedstrem's category are touched. Nothing is
+          # changed in qBittorrent's own configuration, so removing seedstrem
+          # removes this with it. seedstrem never stops a torrent on purpose
+          # (internal/torrents/service.go adds with Stopped: false), so
+          # forcing cannot fight it. Auth: the subnet whitelist again.
+          #
+          # qBittorrent answers compact JSON, so splitting on `},{` yields one
+          # torrent per line. No braces on shell variables: Flux's postBuild
+          # substitution would expand them.
+          force-start:
+            image:
+              repository: curlimages/curl
+              tag: 8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+              pullPolicy: IfNotPresent
+            env:
+              QBT_API: http://qbittorrent.${NAMESPACE}.svc.cluster.local:8080/api/v2/torrents
+              CATEGORY: *category
+              INTERVAL: "5"
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                pick() {
+                  curl -fsS "$QBT_API/info?category=$CATEGORY&filter=$1" \
+                    | sed 's/},{/}\n{/g' \
+                    | grep "\"force_start\":$2" \
+                    | grep -o '"hash":"[0-9a-f]*"' \
+                    | cut -d'"' -f4 \
+                    | tr '\n' '|' \
+                    | sed 's/|$//'
+                }
+                set_force() {
+                  [ -n "$1" ] || return 0
+                  echo "force_start=$2 $1"
+                  curl -fsS -o /dev/null --data-urlencode "hashes=$1" -d "value=$2" "$QBT_API/setForceStart"
+                }
+                while true; do
+                  set_force "$(pick downloading false)" true || true
+                  set_force "$(pick completed true)" false || true
+                  sleep "$INTERVAL"
+                done
+            securityContext: *securityContext
+            resources:
+              requests:
+                cpu: 5m
+                memory: 8Mi
+              limits:
+                memory: 32Mi
+
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # 10000: group ownership on the media share, as qbittorrent and
+        # jellyfin carry.
+        supplementalGroups: [568, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+        advancedMounts:
+          app:
+            seed-config:
+              - path: /config
+            app:
+              - path: /config
+      config-source:
+        type: configMap
+        name: ${APP}-config
+        advancedMounts:
+          app:
+            seed-config:
+              - path: /config-source
+      # Read-only: seedstrem only reads partial files. Deleting a finished
+      # torrent's payload goes through qBittorrent's API, not this mount.
+      downloads:
+        existingClaim: truenas-media
+        advancedMounts:
+          app:
+            app:
+              - path: /media/downloads
+                subPath: downloads
+                readOnly: true
+
+    route:
+      internal:
+        kind: HTTPRoute
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user
