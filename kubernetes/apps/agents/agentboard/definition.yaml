@@ -14,7 +14,7 @@ metadata:
   name: ${APP}
 spec:
   name: Agentboard
-  category: Applications
+  category: AI
   description: Browser/mobile terminal over the in-cluster Claude Code agent runner
   url: &url https://${APP}.agents.${ROOT_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/terminal.svg

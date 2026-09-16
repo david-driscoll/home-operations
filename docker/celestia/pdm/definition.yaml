@@ -7,7 +7,7 @@ metadata:
   name: pdm
 spec:
   name: Proxmox Datacenter Manager
-  category: Infrastructure
+  category: Observability
   url: &url https://pdm.${searchDomain}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg
   access_policy:

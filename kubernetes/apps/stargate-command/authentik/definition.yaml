@@ -10,7 +10,7 @@ spec:
   # alpha-site's copy is ("Authentik", "Infrastructure"); this one differs in
   # both, deliberately.
   name: Authentik (Equestria)
-  category: Infrastructure
+  category: ${CLUSTER_TITLE}
   description: The equestria half of active-active authentik, and its database.
   url: https://authentik.${CLUSTER_DOMAIN}
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg
