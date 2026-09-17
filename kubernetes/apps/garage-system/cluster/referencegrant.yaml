@@ -1,0 +1,34 @@
+---
+# Lets GarageBucket and GarageKey objects declared in `equestria` point their
+# `clusterRef` at the shared GarageCluster in this namespace.
+#
+# The grant MUST live here, in the namespace being referenced -- that is the
+# entire point of the resource. Only someone who can write to `garage-system`
+# can hand out access to the estate's object store, so a tenant namespace
+# cannot self-grant. Without a matching grant the operator refuses the
+# reference outright and the referencing object never reconciles; it does not
+# fail open.
+#
+# `to` is spelled out rather than omitted. Omitting it grants every
+# GarageCluster and GarageBucket in this namespace, and this cluster gaining a
+# second bucket later should not silently widen what `equestria` may reach.
+#
+# Scoped by namespace rather than by object name so that the next app in
+# `equestria` needing object storage does not need this file edited -- the
+# authorisation being granted is "apps in the cluster's own namespace may use
+# the cluster", which does not get finer-grained per app.
+#
+# First consumer: kubernetes/apps/equestria/home/outline/bucket.yaml.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageReferenceGrant
+metadata:
+  name: equestria-apps
+spec:
+  from:
+    - kind: GarageBucket
+      namespace: ${CLUSTER_CNAME}
+    - kind: GarageKey
+      namespace: ${CLUSTER_CNAME}
+  to:
+    - kind: GarageCluster
+      name: ${APP}

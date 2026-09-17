@@ -204,6 +204,17 @@ spec:
         type: externalAuthConfigRef
         externalAuthConfigRef:
           name: homelable
+      # Enable together with `- ./outline.yaml` in
+      # ../agent-tools-servers/kustomization.yaml and the identical block in
+      # ./virtualmcpserver-internal.yaml. Staged here as a comment rather than
+      # left to a note elsewhere because the two halves MUST land together:
+      # the backend carrying an externalAuthConfigRef without being named here
+      # makes vmcp exit 1 at startup, and naming a backend whose
+      # MCPExternalAuthConfig does not exist is the same class of mistake.
+      # toolhive-outline:
+      #   type: externalAuthConfigRef
+      #   externalAuthConfigRef:
+      #     name: outline
 
   serviceType: ClusterIP
 

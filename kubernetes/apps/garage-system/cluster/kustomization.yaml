@@ -6,5 +6,6 @@ resources:
   - ./externalsecret.yaml
   - ./garagecluster.yaml
   - ./backup-key.yaml
+  - ./referencegrant.yaml
   - ./httproute.yaml
   - ./definition.yaml

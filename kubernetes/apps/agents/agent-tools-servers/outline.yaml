@@ -1,0 +1,114 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# ⚠️ NOT YET ENABLED. This file is deliberately commented out of
+# ./kustomization.yaml, and the matching `outgoingAuth.backends` entries are
+# commented out in BOTH ../agent-tools-mcp/virtualmcpserver.yaml and
+# ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+#
+# It cannot be enabled at merge time, because the credential below does not
+# exist until a human has logged into Outline once:
+#
+#   1. Outline must be up and someone must have signed in through authentik
+#      (the first user to sign in becomes the workspace admin).
+#   2. Settings -> Workspace -> AI -> enable MCP. Off by default; with it off
+#      the /mcp endpoint refuses every client.
+#   3. Settings -> API -> create an API key, then seed it:
+#        bao kv put secrets/clusters/equestria/apps/outline/mcp-api-key \
+#          password="<the key>"
+#   4. Uncomment `- ./outline.yaml` in ./kustomization.yaml AND the
+#      `toolhive-outline:` blocks in both VirtualMCPServers, then merge.
+#
+# Enabling it early is not a soft failure. ./ks.yaml carries `wait: true`, so an
+# MCPRemoteProxy that cannot resolve its Secret goes Failed and blocks the
+# reconcile of every other MCP server in this directory -- which has taken
+# agentboard down before.
+#
+# WHY NOT AN npm SERVER. Several third-party Outline MCP packages exist and the
+# ../agent-tools-servers/context7.yaml shape would run any of them. None are
+# needed: Outline 1.10 ships its own MCP server at ${URL}/mcp, Streamable HTTP,
+# authenticated with `Authorization: Bearer <api-key>`. First-party, versioned
+# with the app, and nothing to keep patched.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-outline
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-outline
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        token: "{{ .api_key }}"
+  data:
+    - secretKey: api_key
+      remoteRef:
+        key: clusters/equestria/apps/outline/mcp-api-key
+        property: password
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# Outgoing auth for the proxy below. Outline's MCP endpoint takes a plain
+# bearer token, so `type: bearerToken` rather than the headerInjection shape
+# ./homelable.yaml needs -- the operator emits the `Authorization: Bearer `
+# prefix itself, so the Secret holds the bare key.
+#
+# The CRD requires this to live in the same namespace as the proxy, which it does.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: outline
+spec:
+  type: bearerToken
+  bearerToken:
+    tokenSecretRef:
+      name: toolhive-outline
+      key: token
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `MCPRemoteProxy`, not `MCPServer` -- see ./microsoft-docs.yaml's header for
+# what that CRD is. Outline runs its own MCP server inside the app; ToolHive
+# only fronts it.
+#
+# In-cluster Service, not https://outline.${ROOT_DOMAIN}/mcp: the public
+# hostname would hairpin out through Traefik and back for a call that never
+# needs to leave the pod network. This is why the HelmRelease sets
+# FORCE_HTTPS=false -- with the upstream default Outline would 301 this plain
+# HTTP request to https and the proxy would follow it straight back out.
+#
+# `allowPrivateEndpoint` is REQUIRED for that and leaving it off is not a soft
+# failure: MCPRemoteProxy runs an SSRF guard that blocks RFC1918 addresses and
+# any hostname ending in `cluster.local`, and the proxy goes Failed outright
+# with `remote URL host is not allowed`. See ./homelable.yaml.
+#
+# `metadata.name` is the tool-name prefix. Both VirtualMCPServers aggregate with
+# `conflictResolution: prefix`, so this surfaces to clients as
+# `mcp__agent-tools__toolhive-outline_<tool>`.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolhive-outline
+spec:
+  remoteUrl: http://outline.${CLUSTER_CNAME}.svc.cluster.local:3000/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  externalAuthConfigRef:
+    name: outline
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

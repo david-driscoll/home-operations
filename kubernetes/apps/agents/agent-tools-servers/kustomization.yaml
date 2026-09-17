@@ -58,6 +58,13 @@ resources:
   - ./microsoft-docs.yaml
   - ./home-assistant.yaml
   - ./homelable.yaml
+  # Outline's built-in MCP server. Commented out because its API key cannot
+  # exist until someone has signed into Outline and minted one -- and this
+  # Kustomization is `wait: true`, so a proxy that cannot resolve its Secret
+  # blocks every server in this directory. Enable together with the
+  # `toolhive-outline` blocks in ../agent-tools-mcp/virtualmcpserver.yaml and
+  # ../agent-tools-mcp/virtualmcpserver-internal.yaml. Full steps in the file.
+  # - ./outline.yaml
   # TWO remote proxies in one file, one per media server -- arr-mcp's schema
   # refuses a config naming both jellyfin and plex, and the estate runs both.
   - ./arr-mcp.yaml

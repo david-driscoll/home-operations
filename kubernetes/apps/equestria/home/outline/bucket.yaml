@@ -1,0 +1,81 @@
+---
+# Outline's attachment store: uploaded images, avatars, and every file dragged
+# into a document.
+#
+# WHY THESE LIVE HERE AND NOT IN garage-system. The other bucket in this estate
+# (coder/forgejo-garage) sits beside its GarageCluster, because that cluster is
+# Forgejo's alone. This one references the SHARED cluster in `garage-system`,
+# and the operator writes a GarageKey's credential Secret into the GarageKey's
+# OWN namespace -- so declaring the key next to the cluster would put Outline's
+# credential in a namespace Outline cannot read. Getting it back would take
+# either a ClusterSecretStore for `garage-system` that this estate does not
+# have, or a Reflector-mirrored copy with two owners and no single source of
+# truth. Declared here, the Secret lands in `equestria` where it is consumed.
+#
+# The cross-namespace clusterRef is authorised by the GarageReferenceGrant in
+# kubernetes/apps/garage-system/cluster/referencegrant.yaml. Without it the
+# operator refuses the reference and this bucket never reconciles -- which is
+# the intended behaviour: only an admin of `garage-system` can hand out access
+# to the estate's object store, and a tenant namespace cannot self-grant.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageBucket
+metadata:
+  name: ${APP}
+  annotations:
+    # Opts this bucket into the estate's backup system
+    # (stacks/applications/kubernetes-backups.ts). NOT optional bookkeeping:
+    # FILE_STORAGE=s3 means every attachment a user uploads lives ONLY here,
+    # and this app carries no components/volsync precisely because of that.
+    # Without this annotation the whole attachment corpus is unbacked while
+    # looking perfectly healthy.
+    #
+    # Bucket backups are opt-IN; database backups are opt-OUT. Forgetting the
+    # annotation on a bucket loses data.
+    #
+    # The orchestrator resolves backup credentials from the bucket's
+    # `clusterRef` namespace, not the bucket's own -- so it looks in
+    # `garage-system`, where cluster/backup-key.yaml already publishes the
+    # read-only labelled Secret it needs. (kubernetes-backups.ts:207)
+    driscoll.dev/backup: "true"
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  globalAlias: ${APP}
+  # Retain, not Delete. A Flux prune that removes this object must not take the
+  # objects with it -- and with Garage the hazardous operation is DELETION: a
+  # managed object that will not finalize takes the cluster's reconcile with it.
+  # Orphan the bucket and let a human remove it.
+  deletionPolicy: Retain
+  keyPermissions:
+    - keyRef:
+        name: ${APP}
+      read: true
+      write: true
+      # Owner allows delete-bucket and website configuration. Outline needs
+      # neither; it puts, gets and deletes objects.
+      owner: false
+---
+# Outline's S3 identity.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageKey
+metadata:
+  name: ${APP}
+spec:
+  clusterRef:
+    name: garage
+    namespace: garage-system
+  name: Outline
+  neverExpires: true
+  permissions:
+    # The bucket above is created by the operator, so Outline never needs to.
+    createBucket: false
+  secretTemplate:
+    # Consumed by ./externalsecret.yaml, which maps these keys onto the AWS_*
+    # names Outline reads. The data keys themselves (`access-key-id`,
+    # `secret-access-key`, `endpoint`, `region`, `bucket`) are the operator's
+    # defaults -- do not template them.
+    name: ${APP}-garage-credentials
+    includeEndpoint: true
+    includeRegion: true
+    includeBucketName: true
