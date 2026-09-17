@@ -463,8 +463,8 @@ app.MapGet("/player_api.php", async (string? action, string? category_id, int? v
 
   return action switch
   {
-    "get_live_categories" => Results.Ok(new List<XtreamCategory>() { new XtreamCategory("1", "Live", "", "Live") }),
-    "get_live_streams" => Results.Ok(new List<XtreamChannel>() { new XtreamChannel(1, "Live", "None", "", "") }),
+    "get_live_categories" => Results.Ok(new List<XtreamChannel>() { new XtreamChannel(1, "Live", "None", "url1", "url1") }),
+    "get_live_streams" => Results.Ok(new List<XtreamChannel>() { new XtreamChannel(1, "Live", "None", "url1", "url1") }),
     "get_vod_categories" => await HandleGetVodCategories(),
     "get_series_categories" => await HandleGetSeriesCategories(),
     "get_vod_streams" => await HandleGetVodStreams(),
