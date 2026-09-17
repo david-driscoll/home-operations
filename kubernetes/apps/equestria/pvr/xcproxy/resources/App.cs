@@ -288,7 +288,7 @@ app.MapGet("/player_api.php", async (string? action, string? category_id, int? v
 
   string GetRating(double? voteAverage)
   {
-    return (voteAverage ?? 0).ToString("F1");
+    return ( voteAverage ?? 0 ).ToString("F1");
   }
 
   IReadOnlyList<string> GetBackdrop(string? path)
@@ -429,7 +429,7 @@ app.MapGet("/player_api.php", async (string? action, string? category_id, int? v
       ));
       var epInfos = new List<XtreamSeriesEpisode>();
 
-      var episodeData = (md?.EpisodeGroups?.Results?
+      var episodeData = ( md?.EpisodeGroups?.Results?
         .SelectMany(z => z.Groups ?? [])
         .SelectMany(z => z.Episodes ?? []) ?? []
           ).ToFrozenSet();
@@ -440,7 +440,7 @@ app.MapGet("/player_api.php", async (string? action, string? category_id, int? v
         epInfos.Add(new XtreamSeriesEpisode(
           ep.Id.ToString("D"),
           series.Info.SeriesId,
-          (tmdbEpisode?.EpisodeNumber ?? ep.Episode).ToString("D"),
+          ( tmdbEpisode?.EpisodeNumber ?? ep.Episode ).ToString("D"),
           season,
           tmdbEpisode?.Name ?? ep.Title,
           GetDate(tmdbEpisode?.AirDate),
@@ -463,8 +463,8 @@ app.MapGet("/player_api.php", async (string? action, string? category_id, int? v
 
   return action switch
   {
-    "get_live_categories" => Results.Ok(Array.Empty<string>().ToAsyncEnumerable()),
-    "get_live_streams" => Results.Ok(Array.Empty<string>().ToAsyncEnumerable()),
+    "get_live_categories" => Results.Ok(new List<XtreamCategory>() { new XtreamCategory("Live", "Live", "", "") }),
+    "get_live_streams" => Results.Ok(new List<XtreamChannel>() { new XtreamChannel(1, "None", "None", "", "") }),
     "get_vod_categories" => await HandleGetVodCategories(),
     "get_series_categories" => await HandleGetSeriesCategories(),
     "get_vod_streams" => await HandleGetVodStreams(),
@@ -641,21 +641,21 @@ public record XcProxyConfiguration
     return new XcProxyConfiguration
     {
       Version = envConfig["XC_VERSION"] ?? "xcproxy-2025-09-09k14",
-      MovieM3uUrl = (envConfig["MOVIE_M3U_URL"] ?? "").Trim(),
-      SeriesM3uUrl = (envConfig["SERIES_M3U_URL"] ?? "").Trim(),
-      M3uUrlFallback = (envConfig["M3U_URL"] ?? "").Trim(),
+      MovieM3uUrl = ( envConfig["MOVIE_M3U_URL"] ?? "" ).Trim(),
+      SeriesM3uUrl = ( envConfig["SERIES_M3U_URL"] ?? "" ).Trim(),
+      M3uUrlFallback = ( envConfig["M3U_URL"] ?? "" ).Trim(),
       Username = envConfig["XC_USER"] ?? "U",
       Password = envConfig["XC_PASS"] ?? "P",
       CacheTtlSeconds = int.TryParse(envConfig["CACHE_TTL"], out var ttl) ? ttl : 900,
       MovieCategoryId = envConfig["MOVIE_CAT_ID"] ?? "42926828",
       SeriesCategoryId = envConfig["SERIES_CAT_ID"] ?? "42984329",
-      TmdbApiKey = (envConfig["TMDB_API_KEY"] ?? "").Trim(),
+      TmdbApiKey = ( envConfig["TMDB_API_KEY"] ?? "" ).Trim(),
       TmdbLanguage = envConfig["TMDB_LANG"] ?? "en-US",
       TmdbImageBase = envConfig["TMDB_IMG_BASE"] ?? "https://image.tmdb.org/t/p/w500",
       TmdbImageBackdrop = envConfig["TMDB_IMG_BACKDROP"] ?? "https://image.tmdb.org/t/p/w780",
       EnrichDetails = IsTruthy(envConfig["XC_ENRICH_DETAILS"]),
       MetaCacheFile = envConfig["META_CACHE_FILE"] ?? "/cache/tmdb_cache.json",
-      StreamMode = (envConfig["STREAM_MODE"] ?? "redirect").ToLowerInvariant(),
+      StreamMode = ( envConfig["STREAM_MODE"] ?? "redirect" ).ToLowerInvariant(),
       StreamChunkSize = int.TryParse(envConfig["STREAM_CHUNK"], out var chunk) ? chunk : 65536,
       CategoryPickFirst = IsTruthy(envConfig["CATEGORY_PICK_FIRST"] ?? "true"),
       TmdbOnList = IsTruthy(envConfig["TMDB_ON_LIST"]),
@@ -668,11 +668,11 @@ public record XcProxyConfiguration
         value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
         value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
         value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("on", StringComparison.OrdinalIgnoreCase));
+        value.Equals("on", StringComparison.OrdinalIgnoreCase) );
 
     static IReadOnlyList<string> ParsePreferenceList(string? value, string defaults)
     {
-      var s = (value ?? defaults ?? "").Trim();
+      var s = ( value ?? defaults ?? "" ).Trim();
       return string.IsNullOrEmpty(s)
           ? []
           : s.Split(',')
@@ -744,8 +744,8 @@ class CacheHostedService(PlaylistData playlistData, TmdbEnricher tmdbEnricher, I
 
     static async IAsyncEnumerable<ImmutableList<T>> Infinite<T>(Func<Task<FrozenSet<T>>> itemsFunc, int chunkSize, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-    infinite:
-      var chunks = new Queue<IEnumerable<T>>((await itemsFunc()).Chunk(chunkSize));
+      infinite:
+      var chunks = new Queue<IEnumerable<T>>(( await itemsFunc() ).Chunk(chunkSize));
       while (chunks.Count > 0)
       {
         var chunk = chunks.Dequeue();
@@ -770,12 +770,12 @@ public class PlaylistData(M3uParser m3uParser, IFusionCache cache, XcProxyConfig
 
   public async Task<FrozenSet<MovieItem>> LoadMoviesAsync()
   {
-    return (await cache.GetOrSetAsync("movies", ct => LoadMoviesInternalAsync(), TimeSpan.FromHours(3))).ToFrozenSet();
+    return ( await cache.GetOrSetAsync("movies", ct => LoadMoviesInternalAsync(), TimeSpan.FromHours(3)) ).ToFrozenSet();
   }
 
   public async Task<FrozenSet<SeriesItem>> LoadSeriesAsync()
   {
-    return (await cache.GetOrSetAsync("series", ct => LoadSeriesInternalAsync(), TimeSpan.FromHours(3))).ToFrozenSet();
+    return ( await cache.GetOrSetAsync("series", ct => LoadSeriesInternalAsync(), TimeSpan.FromHours(3)) ).ToFrozenSet();
   }
 
   public async Task<FrozenDictionary<int, EpisodeItem>> LoadEpisodesAsync()
@@ -795,7 +795,7 @@ public class PlaylistData(M3uParser m3uParser, IFusionCache cache, XcProxyConfig
   {
     using var client = new HttpClient();
     var results = new List<SeriesItem>();
-    var set = (await m3uParser.ParseSeries(await client.GetStreamAsync(config.SeriesM3uUrl)).ToListAsync()).ToHashSet();
+    var set = ( await m3uParser.ParseSeries(await client.GetStreamAsync(config.SeriesM3uUrl)).ToListAsync() ).ToHashSet();
     foreach (var item in set.GroupBy(z => z.series.SeriesId))
     {
       var seasons = item
@@ -907,6 +907,13 @@ public record XtreamCategory(
     [property: JsonPropertyName("category_name")] string CategoryName,
     [property: JsonPropertyName("parent_id")] string ParentId,
     [property: JsonPropertyName("type")] string Type);
+
+public record XtreamChannel(
+    [property: JsonPropertyName("stream_id")] int StreamId,
+    [property: JsonPropertyName("stream_type")] string StreamType,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("stream_url")] string StreamUrl,
+    [property: JsonPropertyName("stream_icon")] string StreamIcon);
 
 public record XtreamVodStream(
 
@@ -1248,7 +1255,7 @@ public class M3uParser
       {
         var url = line.Trim();
         var pathId = url.Split('/').Last();
-        var streamId = Math.Abs(("movie:" + pathId).HashId());
+        var streamId = Math.Abs(( "movie:" + pathId ).HashId());
         var poster = meta.ContainsKey("tvg-logo") ? meta["tvg-logo"] : null;
         var year = StringHelpers.GuessYear(title, meta);
         var ext = InferExtension(url);
@@ -1330,8 +1337,8 @@ public class M3uParser
         }
 
 
-        var seriesId = Math.Abs(("series:" + showName.ToLowerInvariant()).HashId());
-        var episodeId = Math.Abs(("ep:" + pathId).HashId());
+        var seriesId = Math.Abs(( "series:" + showName.ToLowerInvariant() ).HashId());
+        var episodeId = Math.Abs(( "ep:" + pathId ).HashId());
         var ext = InferExtension(url);
 
         var show = new SeriesInfo(seriesId, showName, poster);
@@ -1403,7 +1410,7 @@ public static class QualityAndSourceHelpers
 
   public static string ExtractQuality(string title)
   {
-    var t = (title ?? "").Trim().ToLowerInvariant();
+    var t = ( title ?? "" ).Trim().ToLowerInvariant();
     if (t.Contains("2160p") || Regex.IsMatch(t, @"\b4k\b")) return "2160p";
     if (t.Contains("1080p")) return "1080p";
     if (t.Contains("720p")) return "720p";
@@ -1413,7 +1420,7 @@ public static class QualityAndSourceHelpers
 
   public static string ExtractSource(string title)
   {
-    var t = (title ?? "").Trim().ToLowerInvariant();
+    var t = ( title ?? "" ).Trim().ToLowerInvariant();
     foreach (var (name, rx) in SourcePatterns)
     {
       if (rx.IsMatch(t)) return name;
@@ -1423,7 +1430,7 @@ public static class QualityAndSourceHelpers
 
   public static int PreferenceIndex(string value, IReadOnlyList<string> ordered)
   {
-    var normalized = (value ?? "").Trim().ToLowerInvariant();
+    var normalized = ( value ?? "" ).Trim().ToLowerInvariant();
     for (int i = 0; i < ordered.Count; i++)
     {
       if (ordered[i] == normalized) return i;
@@ -1455,7 +1462,7 @@ public static partial class StringHelpers
     var sb = new StringBuilder();
     foreach (var ch in s)
     {
-      if (ch == '\t' || ch == '\n' || (ch >= 0x20 && ch <= 0x10FFFF))
+      if (ch == '\t' || ch == '\n' || ( ch >= 0x20 && ch <= 0x10FFFF ))
         sb.Append(ch);
     }
     s = sb.ToString();
