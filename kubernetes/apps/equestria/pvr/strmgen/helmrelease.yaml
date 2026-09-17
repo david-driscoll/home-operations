@@ -35,59 +35,16 @@ spec:
     controllers:
       app:
         annotations:
-          # Restarts on a config.json change -- including the monthly database
-          # password rotation, which re-renders ${APP}-config.
           reloader.stakater.com/auto: "true"
         strategy: Recreate
-        initContainers:
-          # config.json is rendered by ./externalsecret.yaml. It is copied, not
-          # mounted in place, because STRMGen rewrites the file (the scheduler
-          # stores last_run; the settings page saves edits) by opening it for
-          # writing, which a Secret volume refuses.
-          seed-config:
-            image: &image
-              # Upstream publishes only `latest`, pushed 2025-05-22. The two
-              # commits after it touch the web UI and compose file only;
-              # config.py (the config path this relies on) is unchanged.
+        containers:
+          strmgen:
+            image:
               repository: mercenaryjustice/strmgen
               tag: latest@sha256:a9e94f4f0776bd8c2b4d6cf6b18be3d49dfe3f8175e310bea1814c74c5ee55b8
-              pullPolicy: IfNotPresent
-            command: ["/usr/bin/install"]
-            args: ["-m", "0600", "/config-source/config.json", "/config/config.json"]
-            securityContext: &securityContext
-              runAsNonRoot: true
-              runAsUser: 568
-              runAsGroup: 568
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: false
-              capabilities: { drop: ["ALL"] }
-            resources:
-              requests:
-                cpu: 10m
-                memory: 16Mi
-              limits:
-                memory: 64Mi
-        containers:
-          app:
-            image: *image
-            env:
-              # The daily run (scheduled_hour) is evaluated in local time.
-              TZ: ${TIMEZONE}
-              PYTHONDONTWRITEBYTECODE: "1"
-            probes:
-              liveness: &probes
-                enabled: true
-                custom: true
-                spec:
-                  httpGet:
-                    path: /
-                    port: &port 8808
-                  initialDelaySeconds: 10
-                  periodSeconds: 30
-                  timeoutSeconds: 10
-                  failureThreshold: 5
-              readiness: *probes
-            securityContext: *securityContext
+            envFrom:
+              - secretRef:
+                  name: ${APP}-secret
             resources:
               requests:
                 cpu: 10m
@@ -95,66 +52,30 @@ spec:
               limits:
                 memory: 2Gi
 
-    defaultPodOptions:
-      securityContext:
-        fsGroup: 568
-        fsGroupChangePolicy: OnRootMismatch
-        # 10000: group ownership on the media share.
-        supplementalGroups: [568, 10000]
-        seccompProfile: { type: RuntimeDefault }
-
     service:
-      app:
+      strmgen:
         controller: app
         type: ClusterIP
         ports:
           http:
-            port: *port
-
-    persistence:
-      config-source:
-        type: secret
-        name: ${APP}-config
-        advancedMounts:
-          app:
-            seed-config:
-              - path: /config-source
-      # Writable home for config.json. The app sees the single file at the
-      # fixed path its code loads (strmgen/core/config.py: CONFIG_PATH).
-      config:
-        type: emptyDir
-        advancedMounts:
-          app:
-            seed-config:
-              - path: /config
-            app:
-              - path: /app/strmgen/core/config.json
-                subPath: config.json
-      # The .strm tree goes to /media/strm (output_root). Mounted at /media,
-      # the same as jellyfin and dispatcharr, so every path matches.
-      media:
-        existingClaim: truenas-media
-        advancedMounts:
-          app:
-            app:
-              - path: /media
+            port: &strmgen-port 8808
 
     route:
-      internal:
-        kind: HTTPRoute
+      strmgen:
         parentRefs:
           - name: internal
             namespace: network
             kind: Gateway
         hostnames:
-          - "${APP}.${ROOT_DOMAIN}"
+          - "strmgen.${ROOT_DOMAIN}"
+        kind: HTTPRoute
         rules:
           - backendRefs:
-              - identifier: app
-                port: *port
+              - identifier: strmgen
+                port: *strmgen-port
             filters:
               - type: ExtensionRef
                 extensionRef:
                   group: traefik.io
                   kind: Middleware
-                  name: authenticated-user
+                  name: local-user

@@ -1,17 +1,5 @@
 ---
 # yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
-#
-# STRMGen: turns the VOD groups of an M3U playlist -- as loaded into Dispatcharr
-# (../dispatcharr) -- into .strm files plus TMDB metadata under
-# /media/strm, which Jellyfin scans as ordinary Movies / Shows libraries.
-# docs/runbooks/seedstrem-gelato.md ("IPTV VOD via strmgen") has the flow.
-#
-# ⚠️ NEW-APP ORDERING. The postgres component is (re-)enabled in the same commit
-# as the app, so expect `stacks/system` to fail its first run with
-# `role "strmgen" does not exist` -- Pulumi reliably beats Flux to it. That is
-# the documented new-app case, not a bug. Recovery is in
-# components/postgres/ks.yaml (ORDER OF OPERATIONS): reconcile cluster-apps,
-# wait for the DatabaseRole to apply, then re-request the `system` Stack.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -29,14 +17,10 @@ spec:
   dependsOn:
     - name: truenas-volumes
       namespace: equestria
-    - name: external-secrets
-      namespace: kube-system
-    - name: postgres
-      namespace: database
+    - name: volsync
+      namespace: volsync-system
     - name: tailscale-operator
       namespace: tailscale-system
-    - name: dispatcharr
-      namespace: equestria
   path: ./kubernetes/apps/equestria/pvr/strmgen
   prune: true
   wait: true
@@ -49,16 +33,17 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    # The skipped_streams table. Its database, role and rotating password; the
-    # rotation reaches the app because the config Secret re-renders and
-    # reloader restarts the pod (helmrelease.yaml).
-    - ../../../../components/postgres
-    - ../../../../components/tailscale
-    # NO `volsync`. The only state is the database (CNPG backs it up) and the
-    # .strm tree on the NFS share. config.json is rendered from git + OpenBao
-    # on every start, so there is nothing on a local volume to keep.
+    - ../../../../components/volsync
+    # DROPPED APP (group E, 2026-08-25). Commented out, not deleted, because
+    # this whole ks.yaml is parked -- the parent kustomization has it commented
+    # out too. The Database CR, the database and the role were all removed, so
+    # re-enabling this line does NOT just restore the old state: the Pulumi
+    # `system` stack discovers this component and creates
+    # `database/static-roles/${APP}`, which fails outright until CNPG has
+    # recreated the login role. See the ORDER OF OPERATIONS block in
+    # components/postgres/ks.yaml.
+    # - ../../../../components/postgres
   postBuild:
     substitute:
-      TAILSCALE_MIDDLEWARE: tailscale-user
       APP: *app
       NAMESPACE: *namespace

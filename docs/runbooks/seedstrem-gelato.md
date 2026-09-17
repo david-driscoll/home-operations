@@ -156,66 +156,6 @@ seedstrem-only library needs the category path above to take effect, which
 means turning on qBittorrent's `use_category_paths_in_manual_mode` (a global
 preference). Not done yet.
 
-## IPTV VOD via strmgen (`kubernetes/apps/equestria/pvr/strmgen`)
-
-The playlist's films and series do **not** go through Gelato. Stremio IPTV
-addons key their items on their own IDs (`iptv_*`), and Gelato only works with
-IMDb/TMDB IDs. Instead, strmgen writes `.strm` files plus TMDB metadata that
-Jellyfin scans as ordinary libraries:
-
-```
-M3U playlist ─► Dispatcharr (M3U account; groups)   pvr/dispatcharr, :9191
-                   ▲ API: groups + streams
-strmgen ───────────┘  daily 22:00 → /media/strm/Movies/<group>/<Title (Year)>/…strm + .nfo + art
-                                     /media/strm/TV Shows/<group>/<Show>/Season NN/…strm
-Jellyfin ─ library scan ─► .strm ─► http://dispatcharr.equestria.svc.cluster.local:9191/proxy/ts/stream/<hash>
-```
-
-**Configuration is `externalsecret.yaml`.** strmgen reads only
-`strmgen/core/config.json`. The ExternalSecret renders the whole file from
-upstream's `config.base.json` shape, with secrets filled from:
-
-| Key(s) | Source |
-|---|---|
-| `username`, `password` | `clusters/equestria/apps/dispatcharr/credentials` (the account Dispatcharr's own sidecar uses) |
-| `tmdb_api_key` | `third-party-tokens/tmdb/api-key` → `password` |
-| `database_url`, `postgres_dsn`, `db_*` | `strmgen-postgres` from `components/postgres` (rotating) |
-
-An init container copies the rendered file into an `emptyDir`, mounted with
-`subPath` at the path the code loads. Edits made on strmgen's settings page last
-until the pod restarts. Edit `externalsecret.yaml` to make them stick. A change
-there, or a password rotation, re-renders the Secret and reloader restarts the
-pod.
-
-**Bring-up**
-
-1. In Dispatcharr, add the playlist as an **M3U account** and let it refresh.
-   Note the **group names** its VOD entries land in.
-2. Set `movies_groups` / `tv_series_groups` in `externalsecret.yaml` to match
-   those names (glob patterns; the defaults are upstream's `Movies-*`, `Movie-*`
-   and `Series-*`).
-   - Movie names must match `movie_year_regex`, i.e. `Title (Year)`.
-   - Episode names must match `tv_series_episode_regex`, i.e. `… S01E02`.
-3. **Expect `stacks/system` to fail once** on merge (`role "strmgen" does not
-   exist`). This is the documented new-app case. Recover with the three steps in
-   `kubernetes/components/postgres/ks.yaml` → ORDER OF OPERATIONS.
-4. Open `https://strmgen.<domain>`. Start a run from the UI, or wait for 22:00.
-   Items TMDB cannot match appear on the **Skipped** page.
-5. In Jellyfin (try `jellyfin-pg` first; its `/media` is read-only, which is all
-   a scan needs), add:
-   - a Movies library on `/media/strm/Movies`;
-   - a Shows library on `/media/strm/TV Shows`.
-
-**Caveats**
-
-- **Unmaintained upstream.** strmgen's last commit was 2025-05-26 and only
-  `latest` is published. Dispatcharr here is 0.31.0. If the stream-group or
-  token API has moved on, the first run fails at login or when listing groups,
-  and the pod logs show it.
-- **Playback goes through Dispatcharr's proxy.** That is its TS proxy, built for
-  live streams. Seeking in VOD depends on how Dispatcharr proxies the upstream
-  URL. Test one file before scanning a large library.
-
 ## Verification
 
 - [ ] seedstrem Dashboard: Prowlarr and qBittorrent both pass.
@@ -255,13 +195,6 @@ None of this touches Jellyfin's, qBittorrent's or Prowlarr's own volumes.
    `kubectl -n equestria delete pvc seedstrem aiostreams`.
 3. **qBittorrent**, optional: remove torrents in category `seedstrem` (with or
    without files), then delete the category. Other categories are untouched.
-4. **strmgen**:
-   - Remove its Jellyfin libraries.
-   - Comment `./strmgen/ks.yaml` back out in `pvr/kustomization.yaml`.
-   - Optionally delete `/media/strm` on the share.
-   - The postgres component leaves the `strmgen` database and the OpenBao static
-     role behind. Removing those follows `kubernetes/components/postgres/AGENTS.md`.
-   - Dispatcharr's M3U account is untouched.
-5. **OpenBao**, optional:
+4. **OpenBao**, optional:
    `bao kv metadata delete secrets/clusters/equestria/apps/seedstrem/admin-password`
    and the same for `aiostreams/secret-key`. The Prowlarr key is shared; leave it.
