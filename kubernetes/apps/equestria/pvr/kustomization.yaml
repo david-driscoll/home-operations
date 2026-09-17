@@ -15,4 +15,5 @@ resources:
   - ./teamarr/ks.yaml
   - ./kptv-fast/ks.yaml
   - ./xcproxy/ks.yaml
-  # - ./strmgen/ks.yaml
+  # .strm libraries from Dispatcharr VOD groups. docs/runbooks/seedstrem-gelato.md
+  - ./strmgen/ks.yaml

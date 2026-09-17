@@ -3,19 +3,31 @@
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
-  name: strmgen
+  name: ${APP}
 spec:
   name: STRMGen
   category: Media Management
-  description: STRMGen is a Python-based tool and web API/UI for generating Jellyfin-compatible .strm files (and optional accompanying metadata) from IPTV/M3U playlists and TMDb data.
-  url: &url https://strmgen.${ROOT_DOMAIN}
-  # icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dispatcharr.svg
+  description: Generates Jellyfin .strm libraries from Dispatcharr VOD groups
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dispatcharr.svg
   access_policy:
     groups:
       - media-managers
+  authentik:
+    proxy:
+      # The settings page can rewrite config.json (Dispatcharr and TMDB
+      # credentials included), so the whole app is behind authentik.
+      mode: forward_single
+      externalHost: *url
   gatus:
     - group: "Applications"
-      url: *url
+      url: https://${APP}.${ROOT_DOMAIN}/
       method: GET
       conditions:
         - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}
