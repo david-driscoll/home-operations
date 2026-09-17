@@ -1,0 +1,43 @@
+---
+# The counterpart to kubernetes/apps/garage-system/cluster/referencegrant.yaml,
+# pointing the other way.
+#
+# That grant lets buckets and keys in THIS namespace reference the GarageCluster
+# in `garage-system`. This one lets the estate's read-only backup GarageKey --
+# `garage-system/garage-backup`, which carries `allBuckets: {read: true}` --
+# reference the buckets those apps create here.
+#
+# It is needed because `allBuckets` is not a wildcard the operator waves
+# through: it is enforced per bucket, one reference at a time, and a bucket in
+# another namespace is a cross-namespace reference like any other. Until
+# 2026-09-17 every bucket in this estate sat in the same namespace as its
+# cluster, so this direction had never come up.
+#
+# ⚠️ WITHOUT THIS, A BUCKET ANNOTATED `driscoll.dev/backup: "true"` IS NOT
+# BACKED UP. The failure is quiet in the place you would look: the bucket still
+# reports `phase: Ready` and the app keeps reading and writing it perfectly,
+# because the app's OWN key is fine. Only `status.conditions[type=
+# PermissionsConfigured]` goes False, with `reason: ReferenceGrantDenied`, and
+# stacks/applications/kubernetes-backups.ts still finds the labelled credential
+# in `garage-system` and happily builds a backup plan around a key that Garage
+# will answer 403 to. Observed on equestria/outline the day it shipped.
+#
+# `to` names the kind without a name, so it covers every bucket in this
+# namespace. That is deliberate and matches what the grant is for: the backup
+# key's whole job is "read everything", and a per-bucket list here would mean a
+# new app silently loses its backups until someone remembered to edit this file
+# -- the exact failure this grant exists to prevent.
+#
+# `from` is the namespace, not a key name, for the same reason the sibling grant
+# is namespace-scoped: the authorisation is "the cluster's own namespace may
+# reach in", which does not get finer-grained per key.
+apiVersion: garage.rajsingh.info/v1beta1
+kind: GarageReferenceGrant
+metadata:
+  name: garage-system-keys
+spec:
+  from:
+    - kind: GarageKey
+      namespace: garage-system
+  to:
+    - kind: GarageBucket
