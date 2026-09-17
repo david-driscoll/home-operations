@@ -1,0 +1,135 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app aiostreams
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              # Stable releases only: upstream also pushes a nightly per commit.
+              repository: ghcr.io/viren070/aiostreams
+              tag: v2.34.1@sha256:70c0f2de448bcc1e39dd6a2db3f45585ab4e2d6d35761d2264047d8f38078b74
+              pullPolicy: IfNotPresent
+            env:
+              TZ: ${TIMEZONE}
+              PORT: &port 3000
+              # Used to build the manifest/install URL the configure page hands
+              # out. That URL goes into Gelato, which runs in Jellyfin's pod, so
+              # it is the in-cluster Service -- open the configure page at the
+              # public hostname, copy the manifest URL it produces, done.
+              BASE_URL: http://${APP}.${NAMESPACE}.svc.cluster.local:3000
+              # Relative to the image's WORKDIR (/app): the PVC below.
+              DATABASE_URI: sqlite://./data/db.sqlite
+              LOG_LEVEL: info
+              LOG_FORMAT: json
+            # SECRET_KEY
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  # What the image's own HEALTHCHECK calls
+                  # (scripts/healthcheck.js).
+                  httpGet:
+                    path: /api/v1/status
+                    port: *port
+                  initialDelaySeconds: 10
+                  periodSeconds: 20
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *probes
+            # Distroless Node image; it defaults to root, run it as 568.
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 20m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+
+    defaultPodOptions:
+      securityContext:
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /app/data
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+
+    route:
+      internal:
+        kind: HTTPRoute
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

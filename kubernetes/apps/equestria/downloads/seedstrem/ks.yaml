@@ -1,0 +1,61 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# seedstrem: a Stremio addon that searches Prowlarr and streams torrents
+# through qBittorrent while they download. Its only consumer is AIOStreams
+# (../../media/aiostreams), which Gelato in Jellyfin reads. The whole chain is
+# in docs/runbooks/seedstrem-gelato.md.
+#
+# Not on the Low Power keep-list, same as qbittorrent and prowlarr: it is shed
+# 02:00-09:00 with them, which is also when it would have nothing to talk to.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app seedstrem
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+    - name: qbittorrent
+      namespace: equestria
+    - name: prowlarr
+      namespace: equestria
+  path: ./kubernetes/apps/equestria/downloads/seedstrem
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    - ../../../../components/tailscale
+    # /config holds seedstrem.db (torrent <-> stream bookkeeping) and the
+    # config.yaml the seed-config init container writes. Small; 1Gi is ample.
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      # Mirrors the internal HTTPRoute, which puts the whole app behind
+      # authentik -- same pairing as prowlarr.
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 1Gi

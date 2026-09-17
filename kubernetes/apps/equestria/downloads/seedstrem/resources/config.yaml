@@ -1,0 +1,22 @@
+# seedstrem config.yaml -- MANAGED BY FLUX.
+#
+# The seed-config init container copies this over /config/config.yaml on every
+# start, so edits made in seedstrem's Settings page last only until the next
+# restart. Change this file instead.
+#
+# Only the settings that have NO SEEDSTREM_* environment override live here.
+# Everything with an override (URLs, API key, admin password, addon toggles,
+# path mappings, timeouts) is set in ../helmrelease.yaml, and env wins over this
+# file (internal/config/config.go: Load -> applyEnv). Anything not listed falls
+# back to upstream's defaults (config.example.yaml).
+
+filters:
+  # A stream that has to wait on one or two peers stalls Jellyfin's ffprobe
+  # long before it plays. Five is a floor, not a quality bar.
+  min_seeders: 5
+  # Skip samples and fakes.
+  min_size_mb: 200
+  # 30 GB: allows 1080p remuxes and most 2160p encodes, drops full UHD remuxes
+  # that would take far too long to buffer.
+  max_size_mb: 30000
+  max_results: 20

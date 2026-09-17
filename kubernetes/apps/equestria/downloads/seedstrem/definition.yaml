@@ -1,0 +1,34 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: seedstrem
+  category: Media Management
+  description: Stremio addon that streams Prowlarr torrents through qBittorrent
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # See prowlarr/definition.yaml: pairs with TAILSCALE_MIDDLEWARE: tailscale-user.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/stremio.svg
+  access_policy:
+    groups:
+      - media-managers
+  authentik:
+    proxy:
+      # No API carve-out: the only machine client (AIOStreams) uses the
+      # in-cluster Service, never this hostname.
+      mode: forward_single
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      url: https://${APP}.${ROOT_DOMAIN}/api/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

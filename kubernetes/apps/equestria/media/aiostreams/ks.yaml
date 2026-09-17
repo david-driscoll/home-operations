@@ -1,0 +1,54 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+#
+# AIOStreams: merges Stremio addons behind ONE manifest URL.
+#
+# It exists because Gelato (the Jellyfin plugin) reads exactly one addon URL
+# and needs search catalogs, metadata AND streams from it. seedstrem
+# (../../downloads/seedstrem) only serves streams, so AIOStreams combines it
+# with a TMDB addon. No debrid service is configured. The chain and the UI
+# steps are in docs/runbooks/seedstrem-gelato.md.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app aiostreams
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/media/aiostreams
+  prune: true
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    - ../../../../components/tailscale
+    # /app/data: the SQLite database holding the addon configuration (encrypted
+    # with SECRET_KEY). Losing it means rebuilding the config in the UI and
+    # handing Gelato a new manifest URL.
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      TAILSCALE_MIDDLEWARE: tailscale-user
+      APP: *app
+      NAMESPACE: *namespace
+      VOLSYNC_CAPACITY: 1Gi
