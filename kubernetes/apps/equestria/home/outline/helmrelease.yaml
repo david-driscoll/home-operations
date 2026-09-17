@@ -1,38 +1,229 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
-metadata:
-  name: community-charts
-spec:
-  interval: 1h
-  url: https://community-charts.github.io/helm-charts
----
-# HelmRelease for standalone MeiliSearch (broken out from karakeep)
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template rather than the community-charts `outline` chart this app used
+# while it was parked. Three things that chart cannot do, all of which this app
+# needs:
+#
+#   1. It renders an Ingress, never an HTTPRoute, so `ingress.enabled` was off
+#      and NOTHING served outline.${ROOT_DOMAIN} -- the definition advertised a
+#      URL with no route behind it.
+#   2. Its entrypoint unconditionally rebuilds REDIS_URL from REDIS_HOST/PORT
+#      (`export REDIS_URL="ioredis://$BASE64_JSON"`, files/entrypoint.sh), with
+#      no database index in the JSON. Every deployment lands on Valkey db 0 --
+#      the same index romm, immich, pinepods and dispatcharr already default to
+#      -- and an env override cannot win against an `export` in the entrypoint.
+#   3. It bundles postgresql, redis and minio subcharts this estate replaces
+#      wholesale, and reaches them through a ConfigMap -> ExternalSecret ->
+#      valuesFrom indirection that hid three template-variable typos for months.
+#
+# Going direct also means every environment variable below is one Outline
+# documents, so `.env.sample` upstream is the reference rather than a chart's
+# translation of it.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: outline
+  name: &app outline
 spec:
-  chart:
-    spec:
-      chart: outline
-      version: 0.9.4
-      sourceRef:
-        kind: HelmRepository
-        name: community-charts
+  chartRef:
+    kind: OCIRepository
+    name: app-template
   maxHistory: 3
-  interval: 1h
+  interval: 15m
+  driftDetection:
+    mode: enabled
   timeout: 10m
   install:
     createNamespace: true
+    replace: true
     remediation:
-      retries: 3
+      retries: 7
   upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
     remediation:
-      retries: 3
+      retries: 7
       strategy: rollback
-  valuesFrom:
-    - kind: Secret
-      name: ${APP}-values
-      valuesKey: values.yaml
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate, not RollingUpdate. Outline runs its migrations at boot and
+        # two instances migrating the same database concurrently is the one
+        # thing that can corrupt it. `WEB_CONCURRENCY` below is how this app
+        # scales instead.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: docker.io/outlinewiki/outline
+              tag: 1.10.1@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8
+              pullPolicy: IfNotPresent
+            # Everything secret-derived -- SECRET_KEY, UTILS_SECRET,
+            # DATABASE_URL, the OIDC_* set and the AWS_* set -- comes from
+            # ./externalsecret.yaml. Only non-secret settings are literals here.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+            env:
+              TZ: "${TIMEZONE}"
+              NODE_ENV: production
+              PORT: &port 3000
+              # The canonical, publicly-reachable URL. Outline builds its OIDC
+              # redirect from this and nothing else: `${URL}/auth/oidc.callback`
+              # (plugins/oidc/server/auth/oidcRouter.ts). It must therefore match
+              # a redirect URI registered in ./definition.yaml, or login fails
+              # with a redirect_uri mismatch from authentik.
+              URL: "https://${APP}.${ROOT_DOMAIN}"
+              # TLS terminates at the gateway, so the app itself must not
+              # redirect http -> https. Leaving the default `true` also breaks
+              # the in-cluster MCP endpoint, which is reached over plain HTTP
+              # (see kubernetes/apps/agents/agent-tools-servers/outline.yaml).
+              FORCE_HTTPS: "false"
+              # Divide available memory by ~512Mi for a rough figure. One
+              # process is right until this stops being a single-user wiki.
+              WEB_CONCURRENCY: 1
+              LOG_LEVEL: info
+
+              # ---- Redis / Valkey -------------------------------------------
+              # The shared, passwordless Valkey in `database`. Index 12: 6, 9,
+              # 10 and 11 are taken (dispatcharr, degoog, postiz, tracearr) and
+              # 0 is where every host-only consumer lands by default. A distinct
+              # index keeps a stray FLUSHDB from taking two apps down.
+              REDIS_URL: "redis://valkey.database.svc.cluster.local:6379/12"
+
+              # ---- File storage ---------------------------------------------
+              FILE_STORAGE: s3
+              # Required for Garage: it serves path-style addressing only.
+              # Virtual-hosted style needs `s3Api.rootDomain` plus a wildcard
+              # certificate, neither of which this estate's cluster has.
+              AWS_S3_FORCE_PATH_STYLE: "true"
+              AWS_S3_ACL: private
+              # 250 MiB, the upstream default, stated rather than inherited so
+              # that a change in the image does not silently move it.
+              FILE_STORAGE_UPLOAD_MAX_SIZE: "262144000"
+
+              # ---- OIDC (authentik) -----------------------------------------
+              # Client ID/secret and the three endpoint URIs arrive via the
+              # ExternalSecret; only the presentation knobs are literals.
+              #
+              # OIDC_LOGOUT_URI is set from the provider's end-session endpoint
+              # there. Upstream is explicit that one of OIDC_LOGOUT_URI or
+              # OIDC_DISABLE_REDIRECT must be set or users cannot log out
+              # correctly -- with neither, signing out bounces straight back
+              # through authentik into a new session.
+              OIDC_USERNAME_CLAIM: preferred_username
+              OIDC_DISPLAY_NAME: "${CLUSTER_TITLE}"
+              OIDC_SCOPES: "openid profile email"
+
+              # Do not phone home with usage statistics from a homelab.
+              ENABLE_UPDATES: "false"
+              RATE_LIMITER_ENABLED: "true"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /_health
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *probes
+              # Generous: a cold boot runs database migrations before the
+              # server starts listening, and the first boot against an empty
+              # database runs all of them.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /_health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # The `nodejs` user baked into the upstream image.
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      # No data volume: FILE_STORAGE=s3 puts every attachment and avatar in
+      # Garage, and everything else Outline owns lives in Postgres. This app
+      # deliberately carries no components/volsync -- there is no local state
+      # left to snapshot, and a PVC that exists only to look backed up is worse
+      # than no PVC at all.
+      #
+      # /tmp is still needed: imports and exports stream through os.tmpdir()
+      # before being handed to S3, and the root filesystem is read-only.
+      tmp:
+        type: emptyDir
+        advancedMounts:
+          *app :
+            *app :
+              - path: /tmp
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Outline speaks OIDC
+              # itself, so putting the authentik forward-auth outpost in front
+              # would authenticate twice and break the /auth/oidc.callback hop.
+              # This gate is the LAN check only. Same reasoning as tududi.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

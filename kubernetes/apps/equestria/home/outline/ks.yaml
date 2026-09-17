@@ -1,5 +1,5 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -14,12 +14,25 @@ spec:
     labels:
       app.kubernetes.io/name: *app
       driscoll.dev/name: *app
-  dependsOn: []
+  dependsOn:
+    - name: postgres
+      namespace: database
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+    # Ordering only, NOT readiness: garage-system/cluster/ks.yaml sets
+    # `wait: false`, so this gates on the Kustomization having been applied,
+    # not on the Garage cluster being up. The GarageBucket in ./bucket.yaml
+    # reconciles asynchronously either way.
+    - name: garage
+      namespace: garage-system
   path: ./kubernetes/apps/equestria/home/outline
   prune: true
   force: false
   wait: true
   interval: 1h
+  retryInterval: 2m
   timeout: 10m
   sourceRef:
     kind: GitRepository
@@ -27,20 +40,23 @@ spec:
     namespace: flux-system
   components:
     - ../../../../components/failover/fast-node-eviction
-    # DROPPED APP (group E, 2026-08-25). Commented out, not deleted, because
-    # this whole ks.yaml is parked -- the parent kustomization has it commented
-    # out too. The Database CR, the database and the role were all removed, so
-    # re-enabling this line does NOT just restore the old state: the Pulumi
-    # `system` stack discovers this component and creates
-    # `database/static-roles/${APP}`, which fails outright until CNPG has
-    # recreated the login role. See the ORDER OF OPERATIONS block in
-    # components/postgres/ks.yaml.
-    # - ../../../../components/postgres
+    # ⚠️ THIS APP IS A BRAND-NEW DATABASE, NOT A RETURNING ONE. Outline was
+    # dropped in group E (2026-08-25) and its Database CR, database and login
+    # role were all removed -- so re-enabling this component does not restore
+    # the old state, it creates from scratch. `stacks/system` discovers this
+    # component and creates `database/static-roles/outline`, which fails
+    # outright until CNPG has recreated the login role, and the Pulumi operator
+    # reliably wins that race on new-app day. Expect the `system` stack to go
+    # Stalled/UpdateFailed once; the recovery is the four commands in the ORDER
+    # OF OPERATIONS block in components/postgres/ks.yaml. Read it before merge.
+    - ../../../../components/postgres
     - ../../../../components/tailscale
-    - ../../../../components/volsync
+    # No components/volsync, deliberately. FILE_STORAGE=s3 puts attachments in
+    # Garage (./bucket.yaml, backed up by annotation) and everything else in
+    # Postgres (backed up by the nightly pg_dump). There is no local state left
+    # for restic to snapshot, and a PVC kept only so the app looks backed up is
+    # worse than none -- it hides that the real data moved somewhere else.
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      VOLSYNC_CAPACITY: 5Gi
-      VOLSYNC_ACCESSMODES: ReadWriteOnce

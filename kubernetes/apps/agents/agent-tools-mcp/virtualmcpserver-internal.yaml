@@ -59,6 +59,14 @@ spec:
         type: externalAuthConfigRef
         externalAuthConfigRef:
           name: homelable
+      # MUST match ./virtualmcpserver.yaml's -- see the note there. Both
+      # servers aggregate the same MCPGroup, so both generate the same
+      # `headerValueEnv` and both need the Secret mounted; enabling one without
+      # the other crashloops this one exactly as homelable did on 2026-09-07.
+      # toolhive-outline:
+      #   type: externalAuthConfigRef
+      #   externalAuthConfigRef:
+      #     name: outline
 
   # ClusterIP, and this is load-bearing rather than a default worth eliding --
   # it is half of what keeps this endpoint off the network. The operator

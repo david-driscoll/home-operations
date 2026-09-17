@@ -19,5 +19,5 @@ resources:
   - ./tududi/ks.yaml
   - ./homelable/ks.yaml
   - ./postiz/ks.yaml
-  # - ./outline/ks.yaml
+  - ./outline/ks.yaml
   # - ./collabora/ks.yaml
