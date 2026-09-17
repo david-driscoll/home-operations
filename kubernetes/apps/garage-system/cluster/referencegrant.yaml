@@ -19,6 +19,14 @@
 # the cluster", which does not get finer-grained per app.
 #
 # First consumer: kubernetes/apps/equestria/home/outline/bucket.yaml.
+#
+# ⚠️ THIS GRANT IS HALF OF A PAIR. It covers the outbound direction only --
+# `equestria` reaching in to use the cluster. The estate's read-only backup key
+# lives HERE and carries `allBuckets: {read: true}`, so it reaches the other
+# way, and that needs its own grant in the app's namespace:
+# kubernetes/apps/equestria/shared/garage/referencegrant.yaml. Shipping this one
+# alone leaves every bucket in `equestria` reporting `phase: Ready` while
+# silently not being backed up.
 apiVersion: garage.rajsingh.info/v1beta1
 kind: GarageReferenceGrant
 metadata:
