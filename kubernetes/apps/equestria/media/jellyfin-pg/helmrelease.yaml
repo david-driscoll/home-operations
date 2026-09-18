@@ -243,4 +243,3 @@ spec:
         existingClaim: truenas-media
         globalMounts:
           - path: /media
-            readOnly: true

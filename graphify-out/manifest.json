@@ -4704,10 +4704,10 @@
     "semantic_hash": "4808c00b8b2d3a02fc563298859a96c0"
   },
   "kubernetes/apps/equestria/downloads/kustomization.yaml": {
-    "mtime": 1786679853.847696,
-    "seen": 1789246470.09183,
-    "ast_hash": "dba9adf1bcf5e720b544c8f13707557c",
-    "semantic_hash": "dba9adf1bcf5e720b544c8f13707557c"
+    "mtime": 1789699003.8760653,
+    "seen": 1789699660.326478,
+    "ast_hash": "2d02af2c7ef2fc1438c26478f7049aaf",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/downloads/prowlarr/definition.yaml": {
     "mtime": 1787883485.283025,
@@ -5112,9 +5112,9 @@
     "semantic_hash": "be5e01e89d64b93acea3c69411dc0cf7"
   },
   "kubernetes/apps/equestria/home/kustomization.yaml": {
-    "mtime": 1789239097.1486208,
-    "seen": 1789246470.091864,
-    "ast_hash": "cf6cef77db33c2fc7afcb0006500d1dd",
+    "mtime": 1789699003.87679,
+    "seen": 1789699660.326518,
+    "ast_hash": "4a40d1acc82e62be0fecd3eb6a533fe4",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/meilisearch/externalsecret.yaml": {
@@ -5124,10 +5124,10 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/meilisearch/helmrelease.yaml": {
-    "mtime": 1787426671.205922,
-    "seen": 1789246470.091865,
-    "ast_hash": "9c00eb820d8d328881505fe6016349eb",
-    "semantic_hash": "9c00eb820d8d328881505fe6016349eb"
+    "mtime": 1789699003.8771875,
+    "seen": 1789699660.326519,
+    "ast_hash": "c4d38f2956162ee60cb070194dee36e5",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/meilisearch/ks.yaml": {
     "mtime": 1787014080.3685687,
@@ -5220,33 +5220,27 @@
     "semantic_hash": "0ae5da20b9628d5ca69c2629f7acbca8"
   },
   "kubernetes/apps/equestria/home/outline/externalsecret.yaml": {
-    "mtime": 1788746174.7547135,
-    "seen": 1789246470.091873,
-    "ast_hash": "357cb01134a2e0504af6d8382d4ff649",
+    "mtime": 1789699003.8776157,
+    "seen": 1789699660.3265269,
+    "ast_hash": "d0557c0b230d0d8385d4b4bc237cb247",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/outline/helmrelease.yaml": {
-    "mtime": 1788493476.8866067,
-    "seen": 1789246470.091873,
-    "ast_hash": "5961360a869c4de37135ce7db9362853",
+    "mtime": 1789699003.878058,
+    "seen": 1789699660.3265269,
+    "ast_hash": "735e4446665157c2cc341161230b8c00",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/outline/ks.yaml": {
-    "mtime": 1787757678.347492,
-    "seen": 1789246470.0918741,
-    "ast_hash": "9fc451e4f647134460c8332155d49797",
-    "semantic_hash": "9fc451e4f647134460c8332155d49797"
+    "mtime": 1789699003.878486,
+    "seen": 1789699660.326528,
+    "ast_hash": "022aab0af901d2fb5de878988a4f210c",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/outline/kustomization.yaml": {
-    "mtime": 1786679853.8545554,
-    "seen": 1789246470.0918741,
-    "ast_hash": "d18890321d5d8964dfcf113fdfc5c805",
-    "semantic_hash": "d18890321d5d8964dfcf113fdfc5c805"
-  },
-  "kubernetes/apps/equestria/home/outline/resources/values.yaml": {
-    "mtime": 1789239097.1488407,
-    "seen": 1789246470.091875,
-    "ast_hash": "987a152f2942465dc990d3fe355c48a4",
+    "mtime": 1789699003.878775,
+    "seen": 1789699660.326528,
+    "ast_hash": "e6be7e7d8ea86865097df36cdc5d8a30",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/home/rustdesk/helmrelease.yaml": {
@@ -5676,9 +5670,9 @@
     "semantic_hash": "4cb4408336f31b8e895497eefe68d50c"
   },
   "kubernetes/apps/equestria/media/kustomization.yaml": {
-    "mtime": 1789516202.3552697,
-    "seen": 1789660803.4682088,
-    "ast_hash": "e84dc9617a793168ac048c8a1c43438b",
+    "mtime": 1789699003.8792615,
+    "seen": 1789699660.326578,
+    "ast_hash": "853ef09d509e5c68abcb0154e2a65b57",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/lidarr/definition.yaml": {
@@ -5874,9 +5868,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/radarr/helmrelease.yaml": {
-    "mtime": 1789508974.7065198,
-    "seen": 1789660803.468228,
-    "ast_hash": "503f15984af0bb101b866686c6a48853",
+    "mtime": 1789699003.8796995,
+    "seen": 1789699660.3265972,
+    "ast_hash": "2d0435d8c9ba7ae9f342d06686d2ed69",
     "semantic_hash": ""
   },
   "kubernetes/apps/equestria/media/radarr/ks.yaml": {
@@ -6233,36 +6227,6 @@
     "ast_hash": "862b74b045ab17737246fcafc6182e06",
     "semantic_hash": "862b74b045ab17737246fcafc6182e06"
   },
-  "kubernetes/apps/equestria/pvr/strmgen/definition.yaml": {
-    "mtime": 1787426671.2117243,
-    "seen": 1789246470.091964,
-    "ast_hash": "9ade028573b941935f34148f087e4a69",
-    "semantic_hash": "9ade028573b941935f34148f087e4a69"
-  },
-  "kubernetes/apps/equestria/pvr/strmgen/externalsecret.yaml": {
-    "mtime": 1786679853.8687718,
-    "seen": 1789246470.091964,
-    "ast_hash": "7dc9ca94cd51b13559cfcd2354d08d66",
-    "semantic_hash": "7dc9ca94cd51b13559cfcd2354d08d66"
-  },
-  "kubernetes/apps/equestria/pvr/strmgen/helmrelease.yaml": {
-    "mtime": 1786679853.8688383,
-    "seen": 1789246470.091965,
-    "ast_hash": "5880f423344a2a022324bbc63f60fdf0",
-    "semantic_hash": "5880f423344a2a022324bbc63f60fdf0"
-  },
-  "kubernetes/apps/equestria/pvr/strmgen/ks.yaml": {
-    "mtime": 1787757678.3483825,
-    "seen": 1789246470.091965,
-    "ast_hash": "954f59f109dca2ab766738477d21e511",
-    "semantic_hash": "954f59f109dca2ab766738477d21e511"
-  },
-  "kubernetes/apps/equestria/pvr/strmgen/kustomization.yaml": {
-    "mtime": 1786679853.868961,
-    "seen": 1789246470.091966,
-    "ast_hash": "34e7f36378e6db632d1b3ac5f0a1f1ae",
-    "semantic_hash": "34e7f36378e6db632d1b3ac5f0a1f1ae"
-  },
   "kubernetes/apps/equestria/pvr/teamarr/definition.yaml": {
     "mtime": 1787426671.2118454,
     "seen": 1789246470.091966,
@@ -6312,10 +6276,10 @@
     "semantic_hash": "bc348455a065c7f6bda5f175824912eb"
   },
   "kubernetes/apps/equestria/shared/kustomization.yaml": {
-    "mtime": 1786679853.8699927,
-    "seen": 1789246470.09197,
-    "ast_hash": "14a2e4500fae7bf00f4882c925df8594",
-    "semantic_hash": "14a2e4500fae7bf00f4882c925df8594"
+    "mtime": 1789699003.8802457,
+    "seen": 1789699660.326634,
+    "ast_hash": "bfe1e58858565dbe3be6be36f934e297",
+    "semantic_hash": ""
   },
   "kubernetes/apps/equestria/shared/volumes/ks.yaml": {
     "mtime": 1787014080.3739257,
@@ -6564,10 +6528,10 @@
     "semantic_hash": "0f17edbd889a0a55074d103966a037d5"
   },
   "kubernetes/apps/garage-system/cluster/kustomization.yaml": {
-    "mtime": 1787586527.8405414,
-    "seen": 1789246470.09199,
-    "ast_hash": "cd10cbcea21b296beb84e4a161c55a96",
-    "semantic_hash": "cd10cbcea21b296beb84e4a161c55a96"
+    "mtime": 1789699003.8805828,
+    "seen": 1789699660.3266518,
+    "ast_hash": "2e35ea1ae1905691e7c3a5feaadaf9a2",
+    "semantic_hash": ""
   },
   "kubernetes/apps/garage-system/kustomization.yaml": {
     "mtime": 1787586527.841045,
@@ -10578,9 +10542,9 @@
     "semantic_hash": "315b5084d5e8d48e055e5e5735e1a5a7"
   },
   "kubernetes/apps/agents/agent-tools-mcp/virtualmcpserver.yaml": {
-    "mtime": 1789248119.6925147,
-    "seen": 1789318709.025252,
-    "ast_hash": "cfa35fa985051339a716c5978b3da087",
+    "mtime": 1789699003.8753345,
+    "seen": 1789699660.3263628,
+    "ast_hash": "124df931d2c282ce0b1c7a9cbf84eb0e",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-tools-servers/context7.yaml": {
@@ -10662,9 +10626,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-tools-servers/kustomization.yaml": {
-    "mtime": 1789180056.8336415,
-    "seen": 1789246470.091737,
-    "ast_hash": "4c0df86afe08d0c3506fa97ff1bc9701",
+    "mtime": 1789699003.8757288,
+    "seen": 1789699660.3263721,
+    "ast_hash": "82f29d66084deb82122403104db4d6ae",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-tools-servers/microsoft-docs.yaml": {
@@ -17922,9 +17886,9 @@
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-tools-mcp/virtualmcpserver-internal.yaml": {
-    "mtime": 1789239097.1396813,
-    "seen": 1789246470.091729,
-    "ast_hash": "f3fca1daec106dc2e09eddb9fe4cea3e",
+    "mtime": 1789699003.873552,
+    "seen": 1789699660.3263621,
+    "ast_hash": "247101dc9886a76598f2b2ce7ab62052",
     "semantic_hash": ""
   },
   "kubernetes/apps/agents/agent-tools-servers/homelable.yaml": {
@@ -20469,6 +20433,114 @@
     "mtime": 1789660805.7459846,
     "seen": 1789661493.965872,
     "ast_hash": "2e7f4e836a0a0ac5c36635523f482657",
+    "semantic_hash": ""
+  },
+  "docs/runbooks/seedstrem-gelato.md": {
+    "mtime": 1789699003.7938173,
+    "seen": 1789699660.326356,
+    "ast_hash": "8cbb4ced081d86e57a2590aab0137888",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/agents/agent-tools-servers/outline.yaml": {
+    "mtime": 1789699003.875846,
+    "seen": 1789699660.3263738,
+    "ast_hash": "d047eb59eacc299f1a443fbc9bd8a526",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/definition.yaml": {
+    "mtime": 1789699003.8761647,
+    "seen": 1789699660.326486,
+    "ast_hash": "dc9a332a05644f5333511368115b23df",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/externalsecret.yaml": {
+    "mtime": 1789699505.3217828,
+    "seen": 1789699660.326487,
+    "ast_hash": "7edd402b0bbeed9cb778739455101b88",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/helmrelease.yaml": {
+    "mtime": 1789699625.949822,
+    "seen": 1789699660.326487,
+    "ast_hash": "292e47a5cdf2c096a5cb5d3c3b6566c8",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/ks.yaml": {
+    "mtime": 1789699003.876378,
+    "seen": 1789699660.326487,
+    "ast_hash": "3706895ada45aa2075400b2b50d92be5",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/kustomization.yaml": {
+    "mtime": 1789699003.8764455,
+    "seen": 1789699660.326488,
+    "ast_hash": "83ff8284950b74bc3d649039ce18e690",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/downloads/seedstrem/resources/config.yaml": {
+    "mtime": 1789699003.8765426,
+    "seen": 1789699660.326488,
+    "ast_hash": "b9e2e53374334a3c896457296960e0be",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/home/outline/bucket.yaml": {
+    "mtime": 1789699003.8772717,
+    "seen": 1789699660.326526,
+    "ast_hash": "6a75c85994e484329347505706cb38dd",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/aiostreams/definition.yaml": {
+    "mtime": 1789699003.8788774,
+    "seen": 1789699660.32655,
+    "ast_hash": "c11c4321f4a976fa900036d9884bd546",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/aiostreams/externalsecret.yaml": {
+    "mtime": 1789699003.8789442,
+    "seen": 1789699660.326551,
+    "ast_hash": "f5bdaaff0746e15a419a81c98aef8a29",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/aiostreams/helmrelease.yaml": {
+    "mtime": 1789699003.8790278,
+    "seen": 1789699660.326551,
+    "ast_hash": "7d2fba1323e7c83bf5b541e532945e4b",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/aiostreams/ks.yaml": {
+    "mtime": 1789699003.8790896,
+    "seen": 1789699660.3265522,
+    "ast_hash": "7babbec25e484db21388408b32b66c8f",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/media/aiostreams/kustomization.yaml": {
+    "mtime": 1789699003.8791542,
+    "seen": 1789699660.3265522,
+    "ast_hash": "c2a3f0148208d76f4510149294d978d2",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/shared/garage/ks.yaml": {
+    "mtime": 1789699003.879843,
+    "seen": 1789699660.326632,
+    "ast_hash": "e6c1b0b966137895ca2c8b6739137460",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/shared/garage/kustomization.yaml": {
+    "mtime": 1789699003.8799326,
+    "seen": 1789699660.326633,
+    "ast_hash": "d377fc25711c21828f84171b9b7182d8",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/equestria/shared/garage/referencegrant.yaml": {
+    "mtime": 1789699003.8800268,
+    "seen": 1789699660.326633,
+    "ast_hash": "628cf6376f7ddc0a734ff86e6232e4c7",
+    "semantic_hash": ""
+  },
+  "kubernetes/apps/garage-system/cluster/referencegrant.yaml": {
+    "mtime": 1789699003.880672,
+    "seen": 1789699660.3266518,
+    "ast_hash": "caf7bdc4b894721aadacd763a8c57292",
     "semantic_hash": ""
   }
 }
