@@ -71,7 +71,19 @@ downloading is started again. Remove it rather than stopping it.
 |---|---|
 | `BASE_URL` | `http://aiostreams.equestria.svc.cluster.local:3000`, so the manifest URL it generates is the one Gelato can use |
 | `SECRET_KEY` | ExternalSecret `clusters/equestria/apps/aiostreams/secret-key` → `key`. **Never change it**: it encrypts the stored configs. |
+| `AIOSTREAMS_AUTH` | Rendered `username:password` from `clusters/equestria/apps/aiostreams/credentials`. The app's own login, behind authentik. |
 | `DATABASE_URI` | `sqlite://./data/db.sqlite` on the volsync-backed PVC |
+
+**Logging in to AIOStreams** takes two steps: authentik (group `media-managers`),
+then AIOStreams' own username and password from that OpenBao path:
+
+```bash
+bao kv get -field=password secrets/clusters/equestria/apps/aiostreams/credentials
+```
+
+A saved addon configuration also carries a password **you choose** when saving
+it. That is a lock on that one config, not an account, and it is what reopens it
+for editing later.
 
 ### qBittorrent
 
