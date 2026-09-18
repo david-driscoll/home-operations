@@ -108,6 +108,13 @@ spec:
               # certificate, neither of which this estate's cluster has.
               AWS_S3_FORCE_PATH_STYLE: "true"
               AWS_S3_ACL: private
+              # The bucket's `globalAlias` in ./bucket.yaml, which is `${APP}`
+              # on both sides. A literal rather than a value read out of the
+              # Garage credential Secret, because the operator does not write a
+              # `bucket` key for a key whose permissions are declared from the
+              # bucket side -- the full explanation is on `includeBucketName`
+              # in ./bucket.yaml. It is not a secret either way.
+              AWS_S3_UPLOAD_BUCKET_NAME: "${APP}"
               # 250 MiB, the upstream default, stated rather than inherited so
               # that a change in the image does not silently move it.
               FILE_STORAGE_UPLOAD_MAX_SIZE: "262144000"

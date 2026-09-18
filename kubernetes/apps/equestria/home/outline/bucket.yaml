@@ -78,4 +78,25 @@ spec:
     name: ${APP}-garage-credentials
     includeEndpoint: true
     includeRegion: true
-    includeBucketName: true
+    # NO `includeBucketName`. It would do nothing here, and saying it would is
+    # worse than leaving it out: per the CRD, the bucket name is written "only
+    # if the key references exactly one bucket (via bucketRef or globalAlias);
+    # omitted otherwise" -- and that means a reference from the KEY's own
+    # `spec.bucketPermissions`. This key declares no bucketPermissions, because
+    # the grant is declared from the bucket side above (`keyPermissions`), which
+    # the operator treats as equivalent for ACCESS but not for this. So the key
+    # references zero buckets by its own reckoning and the `bucket` data key is
+    # silently omitted.
+    #
+    # Verified live on 2026-09-17: this Secret contains exactly access-key-id,
+    # secret-access-key, endpoint, host, region, scheme -- and no `bucket`.
+    # The ExternalSecret's `{{ .garage_bucket }}` then failed to render and the
+    # whole thing sat in `SecretSyncedError: could not update secret`, which
+    # names neither the key nor the template.
+    #
+    # ../../../../coder/forgejo-garage/bucket.yaml sets the flag on both of its
+    # keys and gets the same nothing; it never noticed because it hardcodes
+    # `MINIO_BUCKET: forgejo` in its HelmRelease.
+    #
+    # The bucket name is not a secret and is `${APP}` on both sides, so it is
+    # passed as a literal env var in ./helmrelease.yaml instead.
