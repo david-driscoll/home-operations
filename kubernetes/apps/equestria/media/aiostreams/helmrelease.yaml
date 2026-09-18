@@ -56,7 +56,8 @@ spec:
               DATABASE_URI: sqlite://./data/db.sqlite
               LOG_LEVEL: info
               LOG_FORMAT: json
-            # SECRET_KEY
+            # SECRET_KEY and AIOSTREAMS_AUTH (the app's own login, on top of
+            # the authentik proxy) -- see ./externalsecret.yaml.
             envFrom:
               - secretRef:
                   name: ${APP}-env
