@@ -97,7 +97,7 @@ spec:
               PROWLARR_SEARCH_TIMEOUT: 8s
               SEEDSTREM_ADDON_ENABLE_MOVIES: "true"
               SEEDSTREM_ADDON_ENABLE_SERIES: "true"
-              SEEDSTREM_ADDON_ENABLE_ANIME: "false"
+              SEEDSTREM_ADDON_ENABLE_ANIME: "true"
               # qBittorrent and seedstrem mount the same NFS export at the same
               # path, so the mapping is the identity. It still has to be set:
               # the first mapping's local root is also where the disk-usage
@@ -109,6 +109,8 @@ spec:
               # Stop offering NEW streams once the media share is this full.
               SEEDSTREM_STORAGE_MAX_DISK_USAGE_PERCENT: "90"
               SEEDSTREM_LOG_LEVEL: info
+              SEEDSTREM_RSS_ENABLED: "true"
+              SEEDSTREM_RSS_FREELEECH_ONLY: "true"
             envFrom:
               - secretRef:
                   name: ${APP}-env
