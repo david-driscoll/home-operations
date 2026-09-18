@@ -103,6 +103,22 @@ spec:
     name: ${APP}-renovate-credentials
     includeEndpoint: true
     includeRegion: true
+    # ⚠️ THIS FLAG DOES NOTHING HERE, and the Secret has no `bucket` key.
+    # Per the CRD, the bucket name is written "only if the key references
+    # exactly one bucket (via bucketRef or globalAlias)" -- meaning from the
+    # KEY's own `spec.bucketPermissions`. Both keys in this file take their
+    # grant from the bucket side (`keyPermissions` above), so neither
+    # references a bucket by its own reckoning and the name is silently
+    # omitted. Harmless here only because both consumers hardcode the bucket
+    # (`bucket: renovate` in renovate-operator's HelmRelease,
+    # `MINIO_BUCKET: forgejo` in Forgejo's).
+    #
+    # Left in place rather than removed: changing it would rewrite a Secret
+    # two live workloads mount, to no benefit. Do NOT write an ExternalSecret
+    # that reads a `bucket` key from these -- a template referencing a key the
+    # Secret lacks fails the whole ExternalSecret with `could not update
+    # secret`, naming neither the key nor the template. That cost an outage
+    # window on equestria/outline on 2026-09-17.
     includeBucketName: true
 ---
 # Forgejo's own S3 identity.
@@ -126,6 +142,7 @@ spec:
     name: ${APP}-forgejo-credentials
     includeEndpoint: true
     includeRegion: true
+    # Inert -- see the note on the renovate key's `includeBucketName` above.
     includeBucketName: true
 ---
 # The read-only S3 identity the estate's backup system uses for THIS cluster.
