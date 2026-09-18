@@ -192,7 +192,7 @@ spec:
               # moving on its own, and it carries the actual fix — PGDATA below.
               # Leave the renovate guard in place; it is doing its job.
               repository: docker.io/library/postgres
-              tag: 18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+              tag: 18-alpine@sha256:6c538e7206ea40ff740ef27883529390a690b6ead6ba96b44c67a9f7c638e8fd
               pullPolicy: IfNotPresent
             restartPolicy: Always
             env:
