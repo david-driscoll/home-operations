@@ -26,7 +26,7 @@
     "@pulumi/minio": "^0.17.1",
     "@pulumi/random": "^4.21.1",
     "@pulumi/technitium": "file:../sdks/technitium",
-    "@pulumi/tls": "^5.6.0",
+    "@pulumi/tls": "^5.6.1",
     "@pulumiverse/unifi": "^0.3.0",
     "moment": "^2.31.0",
     "node-unifi": "^2.5.1",
