@@ -34,5 +34,5 @@ resources:
   # - ./stremio/ks.yaml
   # Merges the TMDB addon and downloads/seedstrem into the one manifest
   # Gelato (Jellyfin plugin) reads. docs/runbooks/seedstrem-gelato.md
-  - ./aiostreams/ks.yaml
+  # - ./aiostreams/ks.yaml
   - ./pinepods/ks.yaml
