@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@axnic/pulumi-garage": "^1.0.1",
-    "@llamaduck/forgejo-ts": "^15.0.8",
+    "@llamaduck/forgejo-ts": "^15.0.9",
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
     "@pulumi/command": "^1.2.1",
     "@pulumi/forgejo": "file:sdks/forgejo",
