@@ -129,7 +129,7 @@ spec:
               # ./resources/entrypoint.sh's header). `command`/`args` below
               # install mise, tmux and everything else at pod start instead.
               repository: debian
-              tag: 13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+              tag: 13-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
             # Overrides the image's own bash-shell default CMD. The script
             # is the ConfigMap ../kustomization.yaml generates from
             # ./resources/entrypoint.sh, mounted below -- run via `bash
