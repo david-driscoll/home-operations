@@ -70,7 +70,7 @@ spec:
           app:
             image:
               repository: ghcr.io/haveagitgat/tdarr_node
-              tag: 2.87.01@sha256:8685b7a586cd950eb1e4990cf5b07cd2013daa11c9686f69a1654c2001d16b47
+              tag: 2.89.01@sha256:f0acc9d38f36be643c3a5aac4fa351c5dc05ca3992a1110b447616f22a11be19
             env:
               TZ: ${TIMEZONE}
               serverURL: http://tdarr-server.${CLUSTER_CNAME}.svc.cluster.local:8266
