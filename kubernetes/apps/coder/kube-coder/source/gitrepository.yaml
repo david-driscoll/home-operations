@@ -22,7 +22,7 @@ spec:
   timeout: 5m
   url: https://github.com/imran31415/kube-coder.git
   ref:
-    tag: v1.62.0
+    tag: v1.64.0
   ignore: |
     /*
     !/charts/
