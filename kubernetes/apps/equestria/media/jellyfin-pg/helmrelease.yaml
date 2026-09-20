@@ -90,14 +90,41 @@ spec:
               # would surface. See externalsecret.yaml for why it is NOT also
               # spelled into the connection string.
               POSTGRES_COMMAND_TIMEOUT: "30"
+              # Points the Meilisearch plugin at this instance's OWN sidecar,
+              # over the pod's loopback. The plugin prefers MEILI_URL from the
+              # environment over its stored config, so this wins over the
+              # settings page (src/MeilisearchClientHolder.cs).
+              #
+              # The plugin itself is installed out of band through Jellyfin's
+              # plugin UI, as on production -- this HelmRelease configures it
+              # but does not put it on disk. On a rebuilt config volume it has
+              # to be installed again; these variables need no such step.
+              #
+              # ⚠️ ITS OWN, not production's. The plugin names its index after
+              # the server when `Meilisearch Index Name` is blank, and both
+              # servers restored from the same database answer to the same
+              # name -- so a shared Meilisearch would have had the two
+              # instances writing the same index. A sidecar each makes that
+              # unreachable rather than merely unlikely.
+              MEILI_URL: http://127.0.0.1:7700
               PUID: ${PUID}
               PGID: ${PGID}
               TZ: ${TIMEZONE}
             # The whole connection string, as one unit, from the ExternalSecret
-            # next door.
+            # next door -- plus MEILI_MASTER_KEY from ./meilisearch-secret.yaml,
+            # which the plugin reads as its API key.
+            #
+            # The two refs differ on purpose. The connection string is required:
+            # without it there is no database and no server. The Meilisearch key
+            # is `optional: true` so a briefly absent Secret degrades search
+            # instead of stopping the container from being created; the pod's
+            # `reloader.stakater.com/auto` restarts it once the Secret lands.
             envFrom:
               - secretRef:
                   name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-meilisearch
+                  optional: true
             probes:
               # httpGet, unlike production jellyfin's exec probes. Those are exec
               # ONLY because that pod carries an ipvlan interface on the LAN and
@@ -149,6 +176,65 @@ spec:
                 # the ~2.6GiB peak Prometheus recorded for a production jellyfin
                 # pod, and this one serves one viewer at most.
                 memory: 4Gi
+
+          # This instance's own Meilisearch. Same shape and same trade as
+          # production jellyfin's -- read the comment there for why a sidecar
+          # couples this pod's readiness to it, and why that is kept survivable
+          # rather than argued away.
+          meilisearch:
+            image:
+              repository: docker.io/getmeili/meilisearch
+              tag: v1.53.2@sha256:c94e58ca09662dd6e65e8f1b0fd145767be3da7d5422a863a27b8d2b68e090c9
+              pullPolicy: IfNotPresent
+            env:
+              # Loopback only -- nothing outside this pod can reach it. The
+              # master key below is the second layer, not the only one.
+              MEILI_HTTP_ADDR: 127.0.0.1:7700
+              MEILI_DB_PATH: /meili_data/data.ms
+              # `production`: every route requires the master key, and
+              # Meilisearch refuses to start without one of at least 16 bytes.
+              # See media/jellyfin/helmrelease.yaml for why that refusal is
+              # survivable here -- the key is generated in-cluster, created
+              # once and retained, so it does not depend on OpenBao being
+              # reachable when this pod starts.
+              MEILI_ENV: production
+              MEILI_NO_ANALYTICS: "true"
+              # In-place format migration on startup instead of a refusal to
+              # boot after an image bump; see production jellyfin and
+              # equestria/home/meilisearch (vault#102).
+              MEILI_UPGRADE_DB: "true"
+            # MEILI_MASTER_KEY. REQUIRED here -- `production` will not boot
+            # without it, so an optional ref would only convert a clear
+            # "missing Secret" into a crashloop.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-meilisearch
+            probes:
+              # Liveness only, and exec rather than httpGet: the kubelet cannot
+              # dial a loopback bind from outside the pod. `curl` ships in the
+              # image alongside tini.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - curl -fsS --max-time 8 http://127.0.0.1:7700/health >/dev/null
+                  initialDelaySeconds: 15
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 25m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
 
     defaultPodOptions:
       securityContext:
@@ -206,6 +292,15 @@ spec:
         existingClaim: *app
         globalMounts:
           - path: /config
+
+      # advancedMounts, not globalMounts: the index belongs to Meilisearch
+      # alone. Jellyfin reaches it over HTTP, not over the filesystem.
+      meilisearch:
+        existingClaim: ${APP}-meilisearch
+        advancedMounts:
+          app:
+            meilisearch:
+              - path: /meili_data
 
       # /cache, /transcode and /logs are emptyDir: all three are regenerable, and
       # keeping them off the config volume keeps its 20Gi for data that matters.

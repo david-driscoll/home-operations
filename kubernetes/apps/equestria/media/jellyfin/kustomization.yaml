@@ -5,4 +5,6 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./lan-nad.yaml
+  - ./meilisearch-pvc.yaml
+  - ./meilisearch-secret.yaml
   - ./definition.yaml
