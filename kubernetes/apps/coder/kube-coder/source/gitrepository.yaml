@@ -16,7 +16,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: ${APP}
+  name: kube-coder
 spec:
   interval: 1h
   timeout: 5m
