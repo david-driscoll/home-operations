@@ -57,6 +57,22 @@ alertmanager:
 grafana:
   enabled: false
 
+# This release is kube-prometheus-stack with everything but Alertmanager
+# switched off below -- but `defaultRules` is not a subchart and was never in
+# that list, so it kept rendering a full private copy of all ~120 chart alert
+# rules. Verified 2026-09-20: the `kubernetes-apps` group was loaded three
+# times (observability-alertmanager-*, observability-grafana-*,
+# observability-prometheus-*), tripling rule evaluation for no benefit.
+#
+# It went unnoticed because the copies are identical: Alertmanager deduplicates
+# alerts by label set, so three evaluations collapse into one notification. The
+# cost only becomes visible when a rule is CUSTOMISED -- an override in one
+# release fires alongside the other two originals, which is the trap this
+# repo's app-identity work walked into.
+#
+# The prometheus release is the one that owns rules now.
+defaultRules:
+  create: false
 kubeEtcd: &disabled
   enabled: false
 crds: *disabled

@@ -133,6 +133,12 @@ spec:
         - pr0ps-trackmap-panel
         - vonage-status-panel
         - yesoreyeram-infinity-datasource
+    # Not a subchart, so it escaped the disable list below and this release was
+    # rendering its own full copy of the chart's ~120 default alert rules. See
+    # the longer note in observability/alertmanager/values.yaml; the prometheus
+    # release owns rules.
+    defaultRules:
+      create: false
     alertmanager: &disabled
       enabled: false
     kubeEtcd: *disabled
