@@ -217,9 +217,67 @@ static async Task Rclone(RCloneJob job)
     Console.WriteLine($"{job.Name} exited with code {item?.ExitCode} in {item?.RunTime.Humanize()}");
     if (( item?.ExitCode ).HasValue)
     {
+        // A ZERO EXIT MEANS RCLONE COPIED FAITHFULLY, NOT THAT THERE WAS
+        // ANYTHING WORTH COPYING. See DescribeSnapshotlessRepo.
+        var verificationError = item?.ExitCode == 0 ? DescribeSnapshotlessRepo(job) : null;
+        if (verificationError is not null)
+        {
+            Console.WriteLine($"{job.Name} VERIFICATION FAILED: {verificationError}");
+        }
         // sometimes this is exit code 139 (seg fault)
-        await ReportUptime(job, output, error, item);
+        await ReportUptime(job, output, error, item, verificationError);
     }
+}
+
+/// <summary>
+/// Returns a human-readable reason when a copy job "succeeded" into a restic
+/// repository that holds no snapshots, or null when the destination looks real.
+///
+/// WHY THIS EXISTS. `rclone sync` of an empty or snapshot-less source exits 0 --
+/// it copied everything there was, which was nothing. The copy tier reported
+/// that as success=true, so the destination Gatus group went GREEN for
+/// repositories that have never received a single snapshot. On 2026-09-20 the
+/// `Backups: Luna` group showed 8/8 passes for all three *-dockge-docker-prune
+/// plans and 4/4 for equestria-garage-outline while `Backups: Celestia` showed
+/// 0/3 and 0/1 for the very same plans. Anyone triaging from the destination
+/// group alone would have concluded those four were healthy.
+///
+/// This is the same reasoning the estate already applies to the postgres dump
+/// heartbeats -- "restic cannot tell a fresh dump from a fortnight-old one" --
+/// and to mirror.sh's empty-source guard. A copy of nothing is not a backup.
+///
+/// The check is filesystem-level and needs NO repository password: restic's
+/// layout puts one file per snapshot under `snapshots/`, so an empty directory
+/// there means zero snapshots. Every copy job's destination is a LocalBackend
+/// (see BackupPlanDirector's destinationJobTasks/volsyncJobTasks, both
+/// `destinationType: "local"`); anything else is left alone rather than guessed
+/// at, so this can only ever add red, never hide it.
+/// </summary>
+static string? DescribeSnapshotlessRepo(RCloneJob job)
+{
+    if (job.Destination is not LocalBackend local)
+    {
+        return null;
+    }
+
+    var repo = local.Path;
+    if (!Directory.Exists(repo))
+    {
+        return $"rclone reported success but the destination repository '{repo}' does not exist. Nothing was copied, so this plan protects nothing.";
+    }
+
+    var snapshots = System.IO.Path.Combine(repo, "snapshots");
+    if (!Directory.Exists(snapshots))
+    {
+        return $"rclone reported success but '{snapshots}' does not exist, so the destination is not a restic repository. Check whether the SOURCE plan has ever produced a snapshot.";
+    }
+
+    if (!Directory.EnumerateFileSystemEntries(snapshots).Any())
+    {
+        return $"rclone reported success but the destination repository '{repo}' contains ZERO snapshots. The copy is faithful and the source is empty, so this plan protects nothing -- fix the source plan rather than this job.";
+    }
+
+    return null;
 }
 
 static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, string vaultId, string title)
@@ -229,16 +287,23 @@ static async Task<FullItem> GetItemByTitle(OnePasswordConnectClient client, stri
     return item;
 }
 
-static async Task ReportUptime(RCloneJob job, StringBuilder output, StringBuilder error, CommandResult? item)
+static async Task ReportUptime(RCloneJob job, StringBuilder output, StringBuilder error, CommandResult? item, string? verificationError = null)
 {
     try
     {
         using var httpClient = new HttpClient();
-        var success = item?.ExitCode == 0;
+        // A clean exit is necessary but NOT sufficient -- see
+        // DescribeSnapshotlessRepo for why a successful copy of an empty
+        // repository must not report green.
+        var success = item?.ExitCode == 0 && verificationError is null;
         var uriBuilder = new UriBuilder($"$UPTIME_API_URL/api/v1/endpoints/{job.Token}/external");
         if (success)
         {
             uriBuilder.Query = $"success=true";
+        }
+        else if (verificationError is not null)
+        {
+            uriBuilder.Query = $"success=false&error={WebUtility.UrlEncode($"Copy job {job.Name}: {verificationError}\nrclone sync {job.Source.GetRemotePath()} {job.Destination.GetRemotePath()}")}";
         }
         else
         {
