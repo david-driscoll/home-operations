@@ -42,7 +42,9 @@ only for the admin UIs, behind authentik (`media-managers`).
 | `SEEDSTREM_PROWLARR_URL` | env | prowlarr Service |
 | `SEEDSTREM_PROWLARR_API_KEY` | ExternalSecret | `clusters/equestria/apps/prowlarr/api-key` → `apikey` |
 | `SEEDSTREM_SERVER_ADMIN_PASSWORD` | ExternalSecret | `clusters/equestria/apps/seedstrem/admin-password` → `password` |
-| `SEEDSTREM_ADDON_ENABLE_MOVIES/SERIES/ANIME` | env | true / true / false |
+| `SEEDSTREM_META_TMDB_API_KEY` | ExternalSecret | `third-party-tokens/tmdb/api-key` → `password` (the estate's shared TMDB key). Lets indexers that search by TMDb id, not IMDb id, be queried by id instead of free text. |
+| `SEEDSTREM_ADDON_ENABLE_MOVIES/SERIES/ANIME` | env | true / true / true |
+| `SEEDSTREM_RSS_ENABLED` / `_FREELEECH_ONLY` | env | true / true (see below) |
 | `SEEDSTREM_PATHS_MAPPINGS` | env | `/media/downloads:/media/downloads` (identity: both pods mount the same path) |
 | `PROWLARR_SEARCH_TIMEOUT` | env | `8s` (no `SEEDSTREM_` prefix upstream) |
 | `SEEDSTREM_STORAGE_MAX_DISK_USAGE_PERCENT` | env | `90` |
@@ -57,6 +59,21 @@ worth knowing:
   after 72h of seeding.
 - `seeding.full: true`: the whole torrent is downloaded, played file first. For
   a season pack that means the whole pack.
+
+**The RSS grabber is on**, so seedstrem also downloads **without** anyone
+pressing play. Every 15 minutes it polls the Prowlarr indexers for new releases
+and adds up to 5 of them (round-robin across indexers), to build seeding ratio
+and pre-warm streams. With `SEEDSTREM_RSS_FREELEECH_ONLY` it only grabs
+freeleech releases, so the downloads don't count against ratio, and it still
+honours the `filters.min_seeders` floor. What bounds it:
+
+- the 90% disk-usage gate (`SEEDSTREM_STORAGE_MAX_DISK_USAGE_PERCENT`);
+- the 72h `cleanup.seed_time`, which removes grabbed torrents and their files.
+
+It has no size cap of its own: `rss.filters.max_size_mb` is 0 (unbounded) and
+the on-demand `filters.*` do not apply to it. Set
+`SEEDSTREM_RSS_FILTERS_MAX_SIZE_MB` if grabs get too large, or
+`SEEDSTREM_RSS_MAX_GRABS_PER_CYCLE` to slow it down.
 
 **Queue bypass.** qBittorrent queues downloads (20 active). The `force-start`
 sidecar in the seedstrem pod force-starts every downloading torrent in the
@@ -129,9 +146,19 @@ Menu names below are approximate; AIOStreams' UI changes often.
 
 1. Add the **TMDB Addon** preset. No key is needed. It defaults to the public
    `tmdb.elfhosted.com` instance.
-2. Add a **Custom** addon: manifest URL = seedstrem's manifest above.
-   Set its **timeout to 12s**. It must be above seedstrem's 8s Prowlarr search
-   budget, and Gelato itself gives up at 30s. Leave the TMDB addon at about 5s.
+2. Add a **Custom** addon. Its fields, from the preset definition
+   (`packages/core/src/presets/custom.ts`):
+   - **Name**: `seedstrem`.
+   - **Manifest URL**: seedstrem's manifest above.
+   - **Timeout (ms)**: `12000`. The field is in **milliseconds**, so typing
+     `12` gives 12ms and every search times out. It must be above seedstrem's
+     8s Prowlarr search budget, and Gelato itself gives up at 30s. Leave the
+     TMDB addon at about `5000`.
+   - **Resources**: leave empty to inherit `stream` from the manifest, or tick
+     only **Stream**.
+   - **Media Types**: leave empty for all, or tick Movie, Series and Anime. All
+     three are enabled in seedstrem.
+   - **Pin Position**: optional. `Top` lists seedstrem's streams first.
 3. Leave all services (debrid) unconfigured.
 4. **Filters**: keep them permissive to start. AIOStreams parses release names,
    and over-strict filters can hide seedstrem results.
@@ -171,7 +198,10 @@ preference). Not done yet.
 ## Verification
 
 - [ ] seedstrem Dashboard: Prowlarr and qBittorrent both pass.
-- [ ] Browsing and searching in Jellyfin adds **nothing** to qBittorrent.
+- [ ] Browsing and searching in Jellyfin adds nothing to qBittorrent **on its
+      own**. The RSS grabber still adds freeleech releases every 15 minutes, so
+      to check this, look for a torrent matching what you searched, not for an
+      empty `seedstrem` category.
 - [ ] Playing a seedstrem stream adds a torrent in category `seedstrem`.
       `force-start` logs `force_start=true <hash>`, and playback starts before
       the download completes.
