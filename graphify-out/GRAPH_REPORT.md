@@ -1,17 +1,17 @@
-# Graph Report - home-operations  (2026-09-17)
+# Graph Report - home-operations  (2026-09-20)
 
 ## Corpus Check
-- 2077 files · ~1,963,689 words
+- 2077 files · ~1,966,225 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 239 file(s) not represented in the graph (top: .map 146, (none) 46, .toml 19)
 
 ## Summary
-- 26675 nodes · 30874 edges · 2324 communities (1996 shown, 328 thin omitted)
+- 26676 nodes · 30876 edges · 2323 communities (1996 shown, 327 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 697 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `852c9353`
+- Built from commit: `39bde1a4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -206,7 +206,7 @@
 - authentikFrom
 - Promotion Pipeline
 - Promotion Pipeline
-- OnePasswordItem.ts
+- stacks/authentik/index.ts
 - unifi-network/package.json
 - Truenas
 - manifest.json
@@ -686,7 +686,7 @@
 - .claude/skills/cloudflare/references/containers/patterns.md
 - Cron Triggers Patterns
 - DO Storage Configuration
-- BackupPlanDirector.ts
+- ocracoke/index.ts
 - Email Routing Configuration
 - Gotchas & Troubleshooting
 - Common Patterns
@@ -1050,7 +1050,7 @@
 - Patterns
 - Hyperdrive
 - Gotchas & Troubleshooting
-- Durable Objects Configuration
+- .claude/skills/cloudflare/references/do-storage/README.md
 - agent.ts
 - endpointsConnectorAgent.ts
 - Configuration & Deployment
@@ -1235,7 +1235,7 @@
 - Tailscale
 - Technitium / Scripts
 - Terrifi / Scripts
-- Common Errors
+- DockgeLxc
 - Unifi / Scripts
 - Browse the Web (Experimental)
 - Callable Methods
@@ -1335,13 +1335,13 @@
 - pulumi preview as the validation substitute
 - Build AI Agent on Cloudflare
 - .github/skills/reviewer-protocol/SKILL.md
-- R2 API Reference
+- Cloudflare D1 Database
 - Loki Credential-Drift Alert Rules
 - OpenBao secrets/shared/* reorganisation worksheet
 - generate-types.ts
 - Authentik
 - Authentik
-- R2 Configuration
+- Durable Objects Configuration
 - Authentik
 - Authentik
 - Authentik
@@ -1419,7 +1419,7 @@
 - Authentik
 - Authentik
 - Authentik
-- DO Storage Configuration
+- Cloudflare Queues
 - Authentik
 - properties
 - Authentik
@@ -1571,7 +1571,7 @@
 - Authentik
 - Authentik
 - Authentik
-- Common Errors
+- Queues Configuration
 - Authentik
 - Authentik
 - Authentik
@@ -1606,11 +1606,11 @@
 - Authentik
 - Forgejo
 - getGpgKey.ts
-- organization.ts
+- Organization
 - Forgejo
 - Forgejo
 - Forgejo
-- RepositoryActionVariable
+- repositoryActionVariable.ts
 - repositoryWebhook.ts
 - Forgejo
 - Team
@@ -1698,6 +1698,7 @@
 - Wan
 - Unifi
 - Unifi
+- getOrganizationActionVariable.ts
 - Kubernetes Deployment Best Practices
 - Bootstrap Secret Inventory
 - Human-in-the-Loop
@@ -1769,7 +1770,6 @@
 - Intel GPU Device Plugin Lockstep
 - Event Handling
 - Dependency Patterns (from CLAUDE.md)
-- Forgejo
 - Dependency Patterns (from CLAUDE.md)
 - Pbs
 - Pbs
@@ -2021,8 +2021,8 @@
 - Authentik
 - Authentik
 - branchProtection.ts
-- Forgejo
-- repositoryActionSecret.ts
+- deployKey.ts
+- RepositoryActionSecret
 - GotifyNotification
 - sendmailNotification.ts
 - syncJob.ts
@@ -2271,7 +2271,7 @@
 7. `resourceOptsDefaults()` - 28 edges
 8. `getPackage()` - 27 edges
 9. `Context7-aware development` - 27 edges
-10. `FlowsManager` - 26 edges
+10. `resourceOptsDefaults()` - 26 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `dns-celestia Service (bootstrap)` --semantically_similar_to--> `bao-reorg README`  [INFERRED] [semantically similar]
@@ -2458,19 +2458,19 @@
 - **OpenBao Postgres mTLS credential chain** — kubernetes_apps_kube_system_openbao_externalsecret_openbao_pg_client_cert, kubernetes_apps_kube_system_openbao_helmrelease_postgresql_storage_backend, kubernetes_apps_kube_system_openbao_helmrelease_pg_client_cert_volume_mount, kubernetes_apps_kube_system_openbao_replica_helmrelease_pg_uri_certificate_auth, kubernetes_apps_kube_system_openbao_externalsecret_eso_over_reflector [INFERRED 0.95]
 - **Repeated five-range internal/tailnet allowlist** — kubernetes_apps_network_traefik_middleware_internal_network_internal_network, kubernetes_apps_network_traefik_middleware_cloudflare_ips_cloudflare_ips, kubernetes_apps_network_traefik_middleware_fail2ban_fail2ban, kubernetes_apps_network_traefik_middleware_crowdsec_crowdsec_bouncer_plugin [INFERRED 0.95]
 
-## Communities (2324 total, 328 thin omitted)
+## Communities (2323 total, 327 thin omitted)
 
 ### Community 0 - "truenas-types.ts"
 Cohesion: 0.01
-Nodes (236): Alert, AlertDismissRequest, AlertListRequest, AlertRestoreRequest, ApiEventCollection, ApiKeyPlainAuth, App, AppAvailableRequest (+228 more)
+Nodes (235): Alert, AlertDismissRequest, AlertListRequest, AlertRestoreRequest, ApiEventCollection, ApiKeyPlainAuth, App, AppAvailableRequest (+227 more)
 
 ### Community 1 - "resourceOptsDefaults"
 Cohesion: 0.02
 Nodes (112): getApplicationEntitlement(), GetApplicationEntitlementArgs, getApplicationEntitlementOutput(), GetApplicationEntitlementOutputArgs, GetApplicationEntitlementResult, getBrand(), GetBrandArgs, getBrandOutput() (+104 more)
 
 ### Community 2 - "home/index.ts"
-Cohesion: 0.02
-Nodes (100): DockgeLxcArgs, getDockageProperties(), addUptimeGatus(), BackupTask, clientIdPair(), getHostnames(), getTailscaleSection(), getTempFilePath() (+92 more)
+Cohesion: 0.04
+Nodes (40): OpenBaoOidc, ProxmoxHost, getTruenasClient(), AuthLoginWithApiKeyRequest, promisifyOutput(), TruenasVm, TruenasVmArgs, TruenasVmResult (+32 more)
 
 ### Community 3 - "sdks/authentik/index.ts"
 Cohesion: 0.01
@@ -2509,16 +2509,16 @@ Cohesion: 0.04
 Nodes (71): getAccount(), GetAccountArgs, getAccountOutput(), GetAccountOutputArgs, GetAccountResult, getApGroup(), GetApGroupArgs, getApGroupOutput() (+63 more)
 
 ### Community 12 - "GlobalResources"
-Cohesion: 0.04
-Nodes (41): BAO_CREDENTIAL_HINT, baoEnv(), baoEnvUnresolved(), GithubAppCredential, GlobalResources, GlobalResourcesArgs, OpenBaoClusterAuth, OpenBaoClusterAuthArgs (+33 more)
+Cohesion: 0.06
+Nodes (35): BAO_CREDENTIAL_HINT, baoEnv(), baoEnvUnresolved(), GithubAppCredential, GlobalResources, GlobalResourcesArgs, OpenBaoClusterAuth, OpenBaoClusterAuthArgs (+27 more)
 
 ### Community 13 - "unifi/index.ts"
 Cohesion: 0.03
 Nodes (71): DynamicDnsArgs, DynamicDnsState, FirewallPolicyArgs, FirewallPolicyState, FirewallRuleArgs, FirewallRuleState, FirewallZoneArgs, FirewallZoneState (+63 more)
 
 ### Community 14 - "store/bao.ts"
-Cohesion: 0.05
-Nodes (38): BaoClient, CategoryEnum, assertClustersFound(), assertNotDirectory(), BACKUP_PLAN_KEYS, backupPlanKeys(), BaoItem, BaoStore (+30 more)
+Cohesion: 0.04
+Nodes (46): BaoClient, CategoryEnum, assertClustersFound(), assertNotDirectory(), BACKUP_PLAN_KEYS, backupPlanKeys(), BaoItem, BaoStore (+38 more)
 
 ### Community 15 - "properties"
 Cohesion: 0.07
@@ -2542,7 +2542,7 @@ Nodes (57): type, type, enum, type, type, type, type, type (+49 more)
 
 ### Community 20 - "forgejo/index.ts"
 Cohesion: 0.04
-Nodes (47): DeployKeyArgs, DeployKeyState, BranchProtection, Collaborator, DeployKey, getCollaborator, getCollaboratorOutput, getDeployKey (+39 more)
+Nodes (47): BranchProtection, Collaborator, DeployKey, getCollaborator, getCollaboratorOutput, getDeployKey, getDeployKeyOutput, getGpgKey (+39 more)
 
 ### Community 21 - "properties"
 Cohesion: 0.06
@@ -2605,8 +2605,8 @@ Cohesion: 0.18
 Nodes (12): getNodeAttrName(), getSshGrantName(), getSshTestName(), getTestName(), setGrantTest(), setSshTest(), TailscaleSshTestInput, TailscaleTestFactory (+4 more)
 
 ### Community 36 - "DockgeLxc.ts"
-Cohesion: 0.06
-Nodes (54): AuthentikOutputs, RolesKeys, RolesValues, PreSyncArgs, S3PreSyncArgs, SftpPreSyncArgs, baoKvSecret(), BaoKvSecretArgs (+46 more)
+Cohesion: 0.05
+Nodes (75): AuthentikOutputs, RolesKeys, RolesValues, PreSyncArgs, S3PreSyncArgs, SftpPreSyncArgs, baoKvSecret(), BaoKvSecretArgs (+67 more)
 
 ### Community 37 - "properties"
 Cohesion: 0.04
@@ -2713,8 +2713,8 @@ Cohesion: 0.07
 Nodes (35): get4via6(), Get4via6Args, get4via6Output(), Get4via6OutputArgs, Get4via6Result, getAcl(), getAclOutput(), GetAclResult (+27 more)
 
 ### Community 63 - "Cloudflare Workers KV"
-Cohesion: 0.07
-Nodes (26): Bulk Operations, CLI Operations, Create Namespace, KV Configuration, Local Development, REST API, Single Operations, TypeScript Types (+18 more)
+Cohesion: 0.05
+Nodes (36): Bulk Operations, CLI Operations, Create Namespace, KV Configuration, Local Development, REST API, Single Operations, TypeScript Types (+28 more)
 
 ### Community 64 - "Garage Cluster and Flux Instance"
 Cohesion: 0.08
@@ -2886,7 +2886,7 @@ Nodes (31): "Client can't connect to WiFi", Client Groups, Clients, Common Scena
 
 ### Community 106 - "awaitOutput"
 Cohesion: 0.05
-Nodes (28): AuthentikApplicationManager, BackupPlanOrchestrator, awaitOutput(), tailnet-cluster-ops ClusterRole, tailnet-cluster-ops ClusterRoleBinding, rxjs, Application, pulumi (+20 more)
+Nodes (26): AuthentikApplicationManager, BackupPlanOrchestrator, awaitOutput(), rxjs, Application, pulumi, utilities, ProviderOauth2 (+18 more)
 
 ### Community 107 - "crew-commands/SKILL.md"
 Cohesion: 0.06
@@ -2961,7 +2961,7 @@ Cohesion: 0.07
 Nodes (27): Code Interpreter, Commands, Error Handling, Files, Lifecycle, Ports, Sandbox SDK API Reference, Common Patterns from Examples (+19 more)
 
 ### Community 125 - ".claude/skills/cloudflare/references/workers/README.md"
-Cohesion: 0.18
+Cohesion: 0.12
 Nodes (11): Cloudflare Workers, Essential Commands, Handler Signatures, In This Reference, Module Worker Pattern (Recommended), Overview, Quick Start, Reading Order (+3 more)
 
 ### Community 126 - "Gotchas & Troubleshooting"
@@ -3220,9 +3220,9 @@ Nodes (21): Anti-Patterns, Core Patterns, Cross-References, GitHub Actions Pipel
 Cohesion: 0.08
 Nodes (21): Anti-Patterns, Core Patterns, Cross-References, GitHub Actions Pipelines, New Validation Workflow Template, OCI Promotion Pipeline, Workflow Inventory, Artifact Tagging Strategy (+13 more)
 
-### Community 190 - "OnePasswordItem.ts"
-Cohesion: 0.06
-Nodes (22): AuthentikGroups, CategoryEnum, containsUnknown(), OnePasswordItemFieldInput, OnePasswordItemFieldOutput, OnePasswordItemFileInput, OnePasswordItemFileOutput, OnePasswordItemInputs (+14 more)
+### Community 190 - "stacks/authentik/index.ts"
+Cohesion: 0.08
+Nodes (13): AuthentikGroups, GroupDef, Roles, authentikFlows, authentikGroups, _authentikSecret, flows, flowsManager (+5 more)
 
 ### Community 191 - "unifi-network/package.json"
 Cohesion: 0.04
@@ -3449,8 +3449,8 @@ Cohesion: 0.10
 Nodes (20): Anti-Patterns to Flag, Binding access — the most common error, Binding-code consistency, Cloudflare docs, Code Review — Workers, Common config mistakes, Config format, Config Validation (+12 more)
 
 ### Community 247 - "components/package.json"
-Cohesion: 0.09
-Nodes (22): author, description, homepage, @axnic/pulumi-garage, @goauthentik/api, @pulumi/random, @pulumi/technitium, @pulumi/tls (+14 more)
+Cohesion: 0.08
+Nodes (23): author, description, homepage, @axnic/pulumi-garage, @goauthentik/api, @pulumi/random, @pulumi/technitium, @pulumi/tls (+15 more)
 
 ### Community 248 - "Reflect Skill"
 Cohesion: 0.10
@@ -3661,8 +3661,8 @@ Cohesion: 0.11
 Nodes (19): "Cold Starts Are Slow", Common Errors, "Constructor Runs on Every Wake", "CPU Time Exceeded (Terminated)", "deleted_classes Destroys Data", "Durable Object Overloaded (503 errors)", Durable Objects Gotchas, Hibernation Caveats (+11 more)
 
 ### Community 300 - "R2 Gotchas & Troubleshooting"
-Cohesion: 0.15
-Nodes (13): Checksum Limits, Conditional Operations, ETag Format, Key Validation, Limits, List Truncation, Local Development Limits, Multipart Requirements (+5 more)
+Cohesion: 0.11
+Nodes (19): Checksum Limits, Common Errors, Conditional Operations, ETag Format, "Invalid credentials" / S3 SDK, Key Validation, Limits, "List compatibility error" (+11 more)
 
 ### Community 301 - "Common Errors"
 Cohesion: 0.11
@@ -3845,12 +3845,12 @@ Cohesion: 0.05
 Nodes (49): IReadOnlyList, ServerInfo, UserInfo, XtreamChannel, XtreamSeriesDetail, XtreamSeriesEpisode, XtreamSeriesSeason, XtreamSeriesStream (+41 more)
 
 ### Community 346 - "forgejo/utilities.ts"
-Cohesion: 0.22
-Nodes (6): __config, get(), getEnv(), getEnvBoolean(), getEnvNumber(), NOTE: these values are taken from…
+Cohesion: 0.20
+Nodes (7): ref_pulumi_pulumi_runtime, __config, get(), getEnv(), getEnvBoolean(), getEnvNumber(), NOTE: these values are taken from…
 
 ### Community 347 - "forgejo/package.json"
 Cohesion: 0.08
-Nodes (24): dependencies, @pulumi/pulumi, @types/node, typescript, description, @pulumi/pulumi, @types/node, typescript (+16 more)
+Nodes (24): @pulumi/pulumi, @types/node, typescript, dependencies, @pulumi/pulumi, @types/node, typescript, description (+16 more)
 
 ### Community 348 - "pbs/utilities.ts"
 Cohesion: 0.13
@@ -3894,7 +3894,7 @@ Nodes (32): author, bugs, url, dependencies, glob, @muhlba91/pulumi-proxmoxve, @
 
 ### Community 358 - "system/package.json"
 Cohesion: 0.05
-Nodes (40): @llamaduck/forgejo-ts, author, bugs, url, dependencies, @axnic/pulumi-garage, glob, @llamaduck/forgejo-ts (+32 more)
+Nodes (39): author, bugs, url, dependencies, @axnic/pulumi-garage, glob, @llamaduck/forgejo-ts, @muhlba91/pulumi-proxmoxve (+31 more)
 
 ### Community 359 - "vault/package.json"
 Cohesion: 0.09
@@ -4014,7 +4014,7 @@ Nodes (16): 404 on Static Assets, Bindings Not Working, Build Failures, Debuggin
 
 ### Community 388 - "tailnet-egress.ts"
 Cohesion: 0.05
-Nodes (46): GroupDef, dns, dnsServers, Groups, TODO: Pull from tailscale???, Roles, Tailscale, DockgeLxcDefinition (+38 more)
+Nodes (43): dns, dnsServers, Groups, TODO: Pull from tailscale???, Tailscale, RFC-2136, tailnet-cluster-ops ClusterRole, tailnet-cluster-ops ClusterRoleBinding (+35 more)
 
 ### Community 389 - "RealtimeKit Patterns"
 Cohesion: 0.12
@@ -5105,8 +5105,8 @@ Cohesion: 0.29
 Nodes (7): devDependencies, @biomejs/biome, json-schema-to-typescript, tsx, @types/ssh2, typescript, yaml
 
 ### Community 661 - "D1 Patterns & Best Practices"
-Cohesion: 0.07
-Nodes (24): Analytics/Events, Bulk Insert, Caching with KV, Conditional Queries, D1 Patterns & Best Practices, Multi-Tenant SaaS, Pagination, Query Optimization (+16 more)
+Cohesion: 0.17
+Nodes (12): Analytics/Events, Bulk Insert, Caching with KV, Conditional Queries, D1 Patterns & Best Practices, Multi-Tenant SaaS, Pagination, Query Optimization (+4 more)
 
 ### Community 662 - "Email Handling"
 Cohesion: 0.17
@@ -5140,9 +5140,9 @@ Nodes (12): API Data Sync, Batch Processing (Rate-Limited), Cron Triggers Patter
 Cohesion: 0.25
 Nodes (7): CPU Limits, DO Storage Configuration, Initialization, KV-backed (Legacy), Location Control, SQLite-backed (Recommended), TypeScript Setup
 
-### Community 670 - "BackupPlanDirector.ts"
-Cohesion: 0.18
-Nodes (17): AuthentikResourcesArgs, BackupPlanDirector, isS3PreSync(), makeEndpoint(), preSyncCommand(), rcloneRemoteName(), removeRetiredPlans(), renderRcloneConfig() (+9 more)
+### Community 670 - "ocracoke/index.ts"
+Cohesion: 0.05
+Nodes (52): AuthentikResourcesArgs, BackupPlanDirector, isS3PreSync(), makeEndpoint(), preSyncCommand(), rcloneRemoteName(), removeRetiredPlans(), renderRcloneConfig() (+44 more)
 
 ### Community 671 - "Email Routing Configuration"
 Cohesion: 0.17
@@ -5573,8 +5573,8 @@ Cohesion: 0.18
 Nodes (11): Architecture, Cloudflare R2 Data Catalog Skill Reference, Current Status, Decision Tree: Is R2 Data Catalog Right For You?, In This Reference, Limits, Reading Order, See Also (+3 more)
 
 ### Community 778 - "Queues API Reference"
-Cohesion: 0.07
-Nodes (26): Ack/Retry Precedence Rules, Batch Operations, Consumer: Pull-based (HTTP), Consumer: Push-based (Worker), Exponential Backoff, Interfaces, Multiple Queues, Single Consumer, Producer: Send Messages (+18 more)
+Cohesion: 0.22
+Nodes (9): Ack/Retry Precedence Rules, Batch Operations, Consumer: Pull-based (HTTP), Consumer: Push-based (Worker), Exponential Backoff, Interfaces, Multiple Queues, Single Consumer, Producer: Send Messages (+1 more)
 
 ### Community 779 - "Cloudflare R2 SQL Skill Reference"
 Cohesion: 0.18
@@ -5817,8 +5817,8 @@ Cohesion: 0.20
 Nodes (10): Delete Operations, Error Handling, Get with Metadata, KV API Reference, List Operations, Parallel Reads, Performance Considerations, Read Operations (+2 more)
 
 ### Community 840 - "dockge-as Service (bootstrap)"
-Cohesion: 0.32
-Nodes (8): dns-celestia-alerts PrometheusRule, dockge-as-alerts PrometheusRule, dockge-as-ssh Probe, dockge-as Service (bootstrap), equestria-kubeproxy Probe, equestria-kubeproxy Service, tailscale-system services Kustomization, blackbox-probe-alerts PrometheusRule
+Cohesion: 0.28
+Nodes (9): dns-celestia-alerts PrometheusRule, dns-celestia Probe (SOA), dockge-as-alerts PrometheusRule, dockge-as-ssh Probe, dockge-as Service (bootstrap), equestria-kubeproxy Probe, equestria-kubeproxy Service, tailscale-system services Kustomization (+1 more)
 
 ### Community 841 - "Configuration"
 Cohesion: 0.20
@@ -6025,8 +6025,8 @@ Cohesion: 0.20
 Nodes (10): Batch Operations, D1 API Reference, Error Handling, Prepared Statements (Required for Security), Query Execution Methods, Read Replication (Paid Plans), REST API (HTTP) Access, Sessions API (Paid Plans) (+2 more)
 
 ### Community 893 - "R2 Patterns & Best Practices"
-Cohesion: 0.18
-Nodes (11): Batch Delete, Caching with Cache API, Checksum Validation & Storage Transitions, Client-Side Uploads (Presigned URLs), Conditional GET (304 Not Modified), Multipart with Progress, Public Bucket with Custom Domain, r2.dev Public URLs (+3 more)
+Cohesion: 0.06
+Nodes (31): CLI Operations, DELETE, GET (Download), HEAD (Metadata Only), LIST, Multipart Uploads, Presigned URLs (S3 SDK), PUT (Upload) (+23 more)
 
 ### Community 894 - "rbacPermissionUser.ts"
 Cohesion: 0.29
@@ -6592,9 +6592,9 @@ Nodes (9): Architecture, Driver Choice, Hyperdrive, In This Reference, Key Featu
 Cohesion: 0.22
 Nodes (9): Best Practices, Debugging, From Miniflare 2.x to 3+, From unstable_dev to Miniflare, From Wrangler Dev, Gotchas & Troubleshooting, Migration Guides, Miniflare Limitations (+1 more)
 
-### Community 1036 - "Durable Objects Configuration"
-Cohesion: 0.10
-Nodes (18): Cloudflare Durable Objects Storage, Core APIs, In This Reference, Overview, Quick Start, Reading Order, See Also, Storage Backends (+10 more)
+### Community 1036 - ".claude/skills/cloudflare/references/do-storage/README.md"
+Cohesion: 0.11
+Nodes (15): CPU Limits, DO Storage Configuration, Initialization, KV-backed (Legacy), Location Control, SQLite-backed (Recommended), TypeScript Setup, Cloudflare Durable Objects Storage (+7 more)
 
 ### Community 1037 - "agent.ts"
 Cohesion: 0.29
@@ -7332,9 +7332,9 @@ Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 Cohesion: 0.25
 Nodes (7): deps, { execSync }, fs, packageJSON, path, process, types
 
-### Community 1221 - "Common Errors"
-Cohesion: 0.20
-Nodes (10): "429 Rate Limit on Concurrent Writes", Common Errors, Cost Examples, "Inefficient Multiple Gets", KV Gotchas & Troubleshooting, Limits, "Negative Lookup Caching", "Null Reference Error" (+2 more)
+### Community 1221 - "DockgeLxc"
+Cohesion: 0.13
+Nodes (16): defaultDatabaseName(), normalize(), parseDatabasesFile(), parseStackPostgresDeclaration(), POSTGRES_RESERVED_DATABASES, PostgresTenantDeclaration, PostgresTenantResources, renderPostgresEnvLocal() (+8 more)
 
 ### Community 1222 - "Unifi / Scripts"
 Cohesion: 0.25
@@ -7716,9 +7716,9 @@ Nodes (6): Arguments, Build AI Agent on Cloudflare, Example Usage, Instructions,
 Cohesion: 0.29
 Nodes (6): Anti-Patterns, Context, Examples, Patterns, Reviewer Rejection Protocol, Strict Lockout Semantics
 
-### Community 1322 - "R2 API Reference"
-Cohesion: 0.20
-Nodes (10): CLI Operations, DELETE, GET (Download), HEAD (Metadata Only), LIST, Multipart Uploads, Presigned URLs (S3 SDK), PUT (Upload) (+2 more)
+### Community 1322 - "Cloudflare D1 Database"
+Cohesion: 0.17
+Nodes (12): Batch Operations, CLI Commands, Cloudflare D1 Database, Core Query Methods, In This Reference, Overview, Platform Limits, Quick Start (+4 more)
 
 ### Community 1323 - "Loki Credential-Drift Alert Rules"
 Cohesion: 0.29
@@ -7740,9 +7740,9 @@ Nodes (3): Application, ApplicationArgs, ApplicationState
 Cohesion: 0.29
 Nodes (3): ApplicationEntitlement, ApplicationEntitlementArgs, ApplicationEntitlementState
 
-### Community 1328 - "R2 Configuration"
+### Community 1328 - "Durable Objects Configuration"
 Cohesion: 0.20
-Nodes (10): API Token Scopes, Bucket Management, CORS Configuration, Event Notifications, Location Hints, Object Lifecycles, R2 Configuration, S3 SDK Setup (+2 more)
+Nodes (10): Basic Setup, Binding Options, Commands, Durable Objects Configuration, Environment Isolation, Jurisdiction (Data Locality), Limits & Settings, Migrations (+2 more)
 
 ### Community 1329 - "Authentik"
 Cohesion: 0.29
@@ -8052,9 +8052,9 @@ Nodes (3): ProviderMicrosoftEntra, pulumi, utilities
 Cohesion: 0.29
 Nodes (3): ProviderMicrosoftEntra, ProviderMicrosoftEntraArgs, ProviderMicrosoftEntraState
 
-### Community 1406 - "DO Storage Configuration"
-Cohesion: 0.25
-Nodes (7): CPU Limits, DO Storage Configuration, Initialization, KV-backed (Legacy), Location Control, SQLite-backed (Recommended), TypeScript Setup
+### Community 1406 - "Cloudflare Queues"
+Cohesion: 0.22
+Nodes (9): Architecture, Cloudflare Queues, Core Operations, Critical Warnings, In This Reference, Overview, Quick Start, Reading Order (+1 more)
 
 ### Community 1407 - "Authentik"
 Cohesion: 0.29
@@ -8652,9 +8652,9 @@ Nodes (3): SourceOauth, SourceOauthArgs, SourceOauthState
 Cohesion: 0.29
 Nodes (3): SourcePlex, SourcePlexArgs, SourcePlexState
 
-### Community 1558 - "Common Errors"
-Cohesion: 0.33
-Nodes (6): Common Errors, "Invalid credentials" / S3 SDK, "List compatibility error", "Multipart upload failed", "Object not found", "Stream upload failed" / Silent Truncation
+### Community 1558 - "Queues Configuration"
+Cohesion: 0.25
+Nodes (8): CLI Commands, Consumer Configuration (Pull-based), Consumer Configuration (Push-based), Content Type Selection, Create Queue, Producer Binding, Queues Configuration, TypeScript Types
 
 ### Community 1559 - "Authentik"
 Cohesion: 0.29
@@ -8788,10 +8788,6 @@ Nodes (3): Collaborator, CollaboratorArgs, CollaboratorState
 Cohesion: 0.33
 Nodes (5): getGpgKey(), GetGpgKeyArgs, getGpgKeyOutput(), GetGpgKeyOutputArgs, GetGpgKeyResult
 
-### Community 1593 - "organization.ts"
-Cohesion: 0.29
-Nodes (3): Organization, OrganizationArgs, OrganizationState
-
 ### Community 1594 - "Forgejo"
 Cohesion: 0.29
 Nodes (3): OrganizationActionSecret, OrganizationActionSecretArgs, OrganizationActionSecretState
@@ -8803,6 +8799,10 @@ Nodes (3): OrganizationActionVariable, OrganizationActionVariableArgs, Organizat
 ### Community 1596 - "Forgejo"
 Cohesion: 0.29
 Nodes (3): PersonalAccessToken, PersonalAccessTokenArgs, PersonalAccessTokenState
+
+### Community 1597 - "repositoryActionVariable.ts"
+Cohesion: 0.29
+Nodes (3): RepositoryActionVariable, RepositoryActionVariableArgs, RepositoryActionVariableState
 
 ### Community 1598 - "repositoryWebhook.ts"
 Cohesion: 0.29
@@ -9079,6 +9079,10 @@ Nodes (3): WireguardPeer, WireguardPeerArgs, WireguardPeerState
 ### Community 1684 - "Unifi"
 Cohesion: 0.29
 Nodes (3): Wlan, WlanArgs, WlanState
+
+### Community 1685 - "getOrganizationActionVariable.ts"
+Cohesion: 0.33
+Nodes (5): getOrganizationActionVariable(), GetOrganizationActionVariableArgs, getOrganizationActionVariableOutput(), GetOrganizationActionVariableOutputArgs, GetOrganizationActionVariableResult
 
 ### Community 1686 - "Kubernetes Deployment Best Practices"
 Cohesion: 0.33
@@ -9363,10 +9367,6 @@ Nodes (4): Event Handling, Event Subscription Pattern, Event Types, Unsubscribin
 ### Community 1758 - "Dependency Patterns (from CLAUDE.md)"
 Cohesion: 0.40
 Nodes (5): Composed Inputs, Dependency Patterns (from CLAUDE.md), Mock Outputs, Ordering Dependencies, Simple Pass-Through
-
-### Community 1759 - "Forgejo"
-Cohesion: 0.33
-Nodes (5): getTeam(), GetTeamArgs, getTeamOutput(), GetTeamOutputArgs, GetTeamResult
 
 ### Community 1760 - "Dependency Patterns (from CLAUDE.md)"
 Cohesion: 0.40
@@ -10260,9 +10260,9 @@ Nodes (3): GetWebauthnDeviceTypeArgs, GetWebauthnDeviceTypeOutputArgs, GetWebaut
 Cohesion: 0.29
 Nodes (3): BranchProtection, BranchProtectionArgs, BranchProtectionState
 
-### Community 2079 - "repositoryActionSecret.ts"
+### Community 2078 - "deployKey.ts"
 Cohesion: 0.29
-Nodes (3): RepositoryActionSecret, RepositoryActionSecretArgs, RepositoryActionSecretState
+Nodes (3): DeployKey, DeployKeyArgs, DeployKeyState
 
 ### Community 2081 - "sendmailNotification.ts"
 Cohesion: 0.29
@@ -10501,9 +10501,9 @@ Nodes (3): ClusterDefinition CRD (driscoll.dev/v1), Flux Kustomization: applicat
   kubernetes/apps/equestria/media/plex/config.sops.yaml · relation: shares_data_with
 
 ## Knowledge Gaps
-- **15584 isolated node(s):** `Alert`, `ApiEventCollection`, `ApiKeyPlainAuth`, `App`, `AppChartMetadata` (+15579 more)
+- **15583 isolated node(s):** `name`, `description`, `repository`, `main`, `build` (+15578 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 17826 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **328 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **327 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
