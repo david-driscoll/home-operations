@@ -151,18 +151,46 @@ spec:
               # gate is authentik's own: ./definition.yaml binds the app to the
               # `family` group, so nobody else reaches this point.
               OIDC_SIGN_UP_ENABLED: "true"
-              # ⚠️ MUST STAY false, at least until an OIDC user has been made an
-              # admin by hand. Reitti's only ADMIN is the `admin` account that
-              # migration V7 seeds with the password `admin`; OIDC-created users
-              # get Role.USER (UserService.createNewUser). Setting this to true
-              # CLEARS stored passwords on next OIDC login, which would lock the
-              # estate out of Reitti's admin surface entirely.
+              # ⚠️ MUST STAY false until an OIDC user has been made an admin by
+              # hand, and that promotion CANNOT be automated from authentik.
               #
-              # The first thing to do after this app is reachable is log in as
+              # Reitti has no group-to-role mapping. Its whole OIDC surface is
+              # `reitti.security.oidc.enabled`, `...registration.enabled` and
+              # the four Spring client properties -- there is no groups claim,
+              # no admin-group setting. CustomOidcUserService reads only `sub`,
+              # `preferred_username`, `name`, `profile` and `picture`, so a
+              # groups mapping added to ./definition.yaml would be read by
+              # nobody, and UserService.createNewUser hardcodes
+              # `.withRole(Role.USER)`. Later logins refresh the display name,
+              # profile URL and external ID and never touch the role. The
+              # `family` binding in ./definition.yaml therefore governs who can
+              # REACH Reitti, not what they are once inside.
+              #
+              # Reitti's only ADMIN is the `admin` account migration V7 seeds
+              # with the password `admin` (V30 then marks the first user ADMIN).
+              #
+              # What setting this to true actually does -- the mechanism
+              # matters, because the obvious guess is wrong. It does NOT wipe
+              # the admin password: CustomOidcUserService only blanks the
+              # password of a user it MATCHES, so `admin` keeps its hash unless
+              # someone signs in through authentik as an OIDC user literally
+              # named `admin`. The lockout is simpler than that -- WebViewController
+              # hands the login template `localLoginEnabled: false` and the
+              # password form disappears, so the stored hash becomes
+              # unreachable. SetupFilter, which would otherwise redirect an
+              # admin with an empty password to /setup, returns early under this
+              # flag too, so that escape hatch is closed as well. Recovery is
+              # flipping this line back and waiting for a reconcile.
+              #
+              # One guard does exist: OIDC off AND local login disabled makes
+              # the app refuse to start, with IllegalConfigurationException
+              # ("No login possible.") naming this variable.
+              #
+              # First-run order, once this app is reachable: log in as
               # admin/admin, change that password, then log in via authentik and
               # promote that user under Settings > Users. Flyway will not
-              # re-apply V7, so the seeded password is not restored on restart
-              # -- it just stays whatever it was left as.
+              # re-apply V7, so the seeded password is never restored on restart
+              # -- it stays whatever it was left as.
               DISABLE_LOCAL_LOGIN: "false"
 
               # Background data-management endpoints (clean, purge). Off, which
