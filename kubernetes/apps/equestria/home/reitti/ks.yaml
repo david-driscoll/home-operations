@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app reitti
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: postgres
+      namespace: database
+    # Reitti's Spring cache. The shared, passwordless Valkey in `database`;
+    # the index it lands on is claimed in ./helmrelease.yaml.
+    - name: valkey
+      namespace: database
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/reitti
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # ⚠️ BRAND-NEW DATABASE. Reitti has never had a role, a database or an
+    # OpenBao static role, so the new-app ordering trap in
+    # components/postgres/ks.yaml applies in full: `stacks/system` discovers
+    # this component and creates `database/static-roles/reitti`, which issues
+    # `ALTER ROLE ... PASSWORD` immediately and fails with
+    #   ERROR: role "reitti" does not exist (SQLSTATE 42704)
+    # if CNPG has not applied the DatabaseRole yet. The Pulumi operator
+    # reliably wins that race on new-app day, so expect the `system` stack to
+    # go Stalled/UpdateFailed ONCE. Recovery is the four commands in the ORDER
+    # OF OPERATIONS block in components/postgres/ks.yaml -- read it before
+    # merge, not after the stack stalls.
+    #
+    # The database also needs PostGIS, which this app's login role cannot
+    # create for itself; ./kustomization.yaml patches the Database CR that this
+    # component renders. See the long note there.
+    - ../../../../components/postgres
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # 20Gi rather than the 5Gi default because SPATIAL_COVERAGE is on. The
+      # Paikka global administrative-boundary database is a ~4 GB download that
+      # needs ~5 GB once extracted, and it lands at /data/h3 -- on THIS volume,
+      # which is what was asked for. The rest of /data (avatars, imports in
+      # flight) is small beside it.
+      #
+      # Worth knowing before the first backup runs: that boundary database is
+      # re-downloadable, so restic is snapshotting ~5 GB that could be rebuilt
+      # from the internet. The first nightly pays for it; later ones barely do,
+      # because the file only changes when Paikka publishes a new build.
+      VOLSYNC_CAPACITY: 20Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The 2Gi default is sized for the 5Gi default volume. A restic cache too
+      # small for the pack index turns every sync into a re-fetch; 8Gi keeps the
+      # nightly run incremental against a volume this size.
+      VOLSYNC_CACHE_CAPACITY: 8Gi

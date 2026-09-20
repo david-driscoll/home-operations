@@ -20,4 +20,5 @@ resources:
   - ./homelable/ks.yaml
   - ./postiz/ks.yaml
   - ./outline/ks.yaml
+  - ./reitti/ks.yaml
   # - ./collabora/ks.yaml
