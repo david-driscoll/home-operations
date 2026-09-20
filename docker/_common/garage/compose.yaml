@@ -328,7 +328,31 @@ services:
       # Read-only for the same reason sync.sh's source is: a mirror that can
       # write its source can destroy it. Docker auto-creates this bind empty
       # on luna/skystar; mirror.sh never reads it there (no mirror.env).
-      - /data/staging/garage:/staging:ro
+      #
+      # THIS IS A HOST PATH, AND BACKREST'S /data IS NOT ONE. Until 2026-09-20
+      # this read `/data/staging/garage`, i.e. backrest's CONTAINER-side path.
+      # backrest mounts `./data:/data` (docker/_common/backrest/compose.yaml),
+      # and Dockge deploys every stack to `/opt/stacks/<stack>/`, so its
+      # `/data/staging/garage/` is `/opt/stacks/backrest/data/staging/garage/`
+      # on the host. Only `/data/backup` — the restic repos — is a real host
+      # path of that name.
+      #
+      # Docker happily auto-created the wrong `/data/staging/garage` empty, and
+      # mirror.sh's empty-source guard then refused every cycle for 24 days
+      # (cf7c6fba / #1233, 2026-08-27 → 2026-09-20): 0 successful runs, a
+      # healthcheck FailingStreak of 4343, and no ticket. That guard is the
+      # only reason this misconfiguration did not silently DELETE the
+      # garage-mirror bucket instead.
+      #
+      # FOLLOW-UP, deliberately not done here: `/opt/stacks/...` violates the
+      # estate's own rule — "Under /opt/stacks-data, never /opt/stacks —
+      # DockgeLxc rm -rf's the definition directory when a stack is deleted"
+      # (docker/alpha-site/authentik-pg-standby/compose.yaml:48, enforced at
+      # DockgeLxc.ts:1221). backrest's `./data` and `./cache` both sit there
+      # today. Moving them is a migration touching every backup plan's staging
+      # tree, so it is a separate change; this one only stops pointing at a
+      # path that never existed.
+      - /opt/stacks/backrest/data/staging/garage:/staging:ro
       - /opt/stacks-data/garage:/gstate
     entrypoint: ["/bin/sh", "/mirror.sh"]
     # Same shape as garage-sync's: mirror.sh writes "<epoch> ok|failed" after
