@@ -10,6 +10,73 @@ components:
   - ../../components/alerts
   - ../../components/common
   - ../../components/repos/app-template
+# Failed installs and upgrades are RETRIED here, never rolled back -- the same
+# decision equestria made on 2026-09-15, arriving two days late for authentik.
+#
+# WHAT ROLLBACK COST THIS NAMESPACE: Renovate #1821 left authentik's image with
+# two digests in one reference (#1913), so the new pods could not start. The
+# upgrade failed, `remediation.strategy: rollback` then tried to go BACK, the
+# rollback ALSO failed on the worker Deployment, and the release stalled on
+# RetriesExceeded. From 2026-09-18 to 2026-09-20 nothing about authentik was
+# deployable -- and nothing looked wrong, because `cleanupOnFail` removed the
+# broken pods and the old ones kept serving.
+#
+# A retry would have simply re-failed every 5m until #1913 fixed the values,
+# and then succeeded. Rollback turned a bad value into a dead release. Authentik
+# migrates its database on start, which is the same property that made rollback
+# dangerous for kapowarr, jellyfin and immich in the equestria note.
+#
+# ⚠️ THIS IS ONLY SAFE BECAUSE SOMETHING NOW WATCHES. RetryOnFailure never
+# stalls, so a permanently broken release retries quietly forever instead of
+# parking with a loud condition. `FluxResourceNotReady` (#1909, on
+# flux-operator's flux_resource_info) is what turns that back into a signal:
+# ready=False for 30m pages regardless of whether the object stalled or is
+# still retrying. Do not adopt this pattern in a namespace that alert does not
+# cover -- and it covers every namespace, being cluster-wide.
+#
+# ONLY the remediation strategy, NOT equestria's `/spec/replicas` drift-ignore.
+# That half exists because go-kube-downscaler and sablier own replica counts in
+# equestria; stargate-command is in the downscaler's EXCLUSION list
+# (kube-system/go-kube-downscaler/helmrelease.yaml), so nothing here writes
+# replicas and an ignore rule would be cargo-cult.
+#
+# It reaches the HelmReleases indirectly, exactly as equestria's does: this
+# kustomization renders each app's ks.yaml, so the patch injects `spec.patches`
+# into every child, and each child then patches the HelmRelease it builds.
+# Verified additive -- no stargate-command child sets `spec.patches` of its own
+# today. If one ever needs to, a strategic merge REPLACES that list and this has
+# to move.
+patches:
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+    patch: |-
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: not-used
+      spec:
+        patches:
+          - target:
+              group: helm.toolkit.fluxcd.io
+              kind: HelmRelease
+            patch: |-
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: not-used
+              spec:
+                # With a strategy set, helm-controller ignores the per-app
+                # `install/upgrade.remediation` blocks entirely -- authentik's
+                # `retries: 3` becomes inert rather than a second opinion.
+                install:
+                  strategy:
+                    name: RetryOnFailure
+                    retryInterval: 5m
+                upgrade:
+                  strategy:
+                    name: RetryOnFailure
+                    retryInterval: 5m
 resources:
   - ./authentik/ks.yaml
   - ./chrony/ks.yaml
