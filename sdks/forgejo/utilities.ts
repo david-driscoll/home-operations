@@ -101,7 +101,7 @@ export async function getPackage(): Promise<string | undefined> {
 		baseProviderVersion: "0.14.0",
 		baseProviderDownloadUrl: "",
 		packageName: "forgejo",
-		packageVersion: "1.6.0",
-		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3N2YWxhYnMvZm9yZ2VqbyIsInZlcnNpb24iOiIxLjYuMCJ9fQ==",
+		packageVersion: "1.6.1",
+		base64Parameter: "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3N2YWxhYnMvZm9yZ2VqbyIsInZlcnNpb24iOiIxLjYuMSJ9fQ==",
 	});
 }

@@ -1,6 +1,6 @@
 {
     "name": "@pulumi/forgejo",
-    "version": "1.6.0",
+    "version": "1.6.1",
     "description": "A Pulumi provider dynamically bridged from forgejo.",
     "repository": "https://github.com/svalabs/terraform-provider-forgejo",
     "main": "bin/index.js",
@@ -19,8 +19,8 @@
         "version": "0.14.0",
         "parameterization": {
             "name": "forgejo",
-            "version": "1.6.0",
-            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3N2YWxhYnMvZm9yZ2VqbyIsInZlcnNpb24iOiIxLjYuMCJ9fQ=="
+            "version": "1.6.1",
+            "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkudGVycmFmb3JtLmlvL3N2YWxhYnMvZm9yZ2VqbyIsInZlcnNpb24iOiIxLjYuMSJ9fQ=="
         }
     }
 }
