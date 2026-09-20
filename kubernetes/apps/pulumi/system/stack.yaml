@@ -116,8 +116,15 @@ spec:
         # Where the vals initContainer put the binary; the ref+openbao://
         # resolver spawns it (components/store/refs.ts). Locally VALS_BIN is
         # unset and vals comes from mise's PATH.
+        #
+        # This is mise's own layout under MISE_DATA_DIR (=/opt/vals), not a
+        # copied binary: installs/<tool>/<version>/, where `latest` is a symlink
+        # mise writes to the single version installed into this emptyDir.
+        # Naming `latest` rather than `0.45.0` stops this path going stale when
+        # the version in the vals initContainer's args moves -- verified present
+        # on a fresh install, alongside `0` and `0.45`.
         - name: VALS_BIN
-          value: /opt/vals/vals
+          value: /opt/vals/installs/vals/latest/vals
       resources:
         requests:
           cpu: 200m
@@ -133,8 +140,6 @@ spec:
                 path: /var/lib/pulumi-npm-cache
                 type: DirectoryOrCreate
             - name: vals-bin
-              emptyDir: {}
-            - name: mise-data
               emptyDir: {}
             - name: mise-cache
               hostPath:
@@ -154,30 +159,60 @@ spec:
             - name: vals
               # renovate: datasource=docker depName=jdxcode/mise
               image: jdxcode/mise:2026.9.12
-              command: ["/bin/sh", "-ec"]
-              args:
-                - |
-                  ok=""
-                  for attempt in 1 2 3; do
-                    if mise install vals@0.45.0; then ok=1; break; fi
-                    echo "mise install failed (attempt $attempt); retrying" >&2
-                    sleep 3
-                  done
-                  [ -n "$ok" ]
-                  mise exec vals@0.45.0 -- /bin/sh -ec 'cp "$(command -v vals)" /opt/vals/vals'
+              # NO `command:`, and no shell anywhere in this container. The
+              # image's ENTRYPOINT is /usr/local/bin/mise, so `args` below are
+              # mise's own arguments.
+              #
+              # This used to be `command: ["/bin/sh", "-ec"]` wrapping a retry
+              # loop and a `cp`. On 2026-09-20 that took EVERY Pulumi stack in
+              # the estate down at once: mise republished its default image as
+              # DISTROLESS that morning (2026.9.11 rebuilt 03:39Z, 2026.9.12
+              # built 11:47Z), dropping from 8 layers / 849MB on Debian to
+              # 3 layers / 39MB holding exactly three files --
+              # ca-certificates.crt, usr/local/bin/mise and mise. With no
+              # /bin/sh, every workspace pod created after the bump failed to
+              # start at all:
+              #
+              #   runc create failed: unable to start container process:
+              #   exec: "/bin/sh": stat /bin/sh: no such file or directory
+              #
+              # StartError -> CrashLoopBackOff, so the pod sits in
+              # PodInitializing indefinitely WITH EMPTY LOGS -- the process
+              # never ran, so it never wrote any. Do not read that silence as a
+              # hang or a lock wait; read
+              # initContainerStatuses[].lastState.terminated.
+              #
+              # `imagePullPolicy: IfNotPresent` is why it looked intermittent
+              # rather than total: nodes still holding the pre-distroless
+              # 2026.9.11 layers kept working for an hour after the bump, so a
+              # few workspaces succeeded while every freshly-pulled one died.
+              #
+              # Verified on alpha-site against the real distroless image: this
+              # args-only form installs vals with no shell and no coreutils.
+              args: ["install", "vals@0.45.0"]
               env:
+                # Install STRAIGHT INTO the shared emptyDir instead of into a
+                # private dir followed by a copy -- the copy is what needed a
+                # shell. /opt/vals is already mounted into the pulumi container,
+                # so nothing has to move afterwards. Still pod-local; only the
+                # DOWNLOAD cache below is shared between pods.
                 - name: MISE_DATA_DIR
-                  value: /mise-data
+                  value: /opt/vals
                 - name: MISE_CACHE_DIR
                   value: /mise-cache
                 - name: MISE_YES
                   value: "1"
+              # The 3-attempt retry loop is gone with the shell, and is not
+              # missed: the kubelet already restarts a failed init container
+              # with backoff, which is precisely how the crashloop above reached
+              # restartCount 5 on its own.
+              #
               # The workspace pod template pins runAsUser 1000/runAsNonRoot,
               # under which a root-owned hostPath is unwritable — every EACCES
               # in the first rollout was this, not an install race (the pods
               # that "worked" predated the vals init entirely). This one init
-              # runs as root to use the shared cache; the binary it drops is
-              # 0755 root-owned, which uid 1000 executes fine.
+              # runs as root to use the shared cache; the tree it drops is
+              # 0755 root-owned, which uid 1000 traverses and executes fine.
               securityContext:
                 runAsUser: 0
                 runAsGroup: 0
@@ -185,8 +220,6 @@ spec:
               volumeMounts:
                 - name: vals-bin
                   mountPath: /opt/vals
-                - name: mise-data
-                  mountPath: /mise-data
                 - name: mise-cache
                   mountPath: /mise-cache
           containers:
