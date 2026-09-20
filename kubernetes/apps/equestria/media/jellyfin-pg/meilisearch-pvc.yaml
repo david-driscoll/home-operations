@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/persistentvolumeclaim-v1.json
+#
+# The Meilisearch sidecar's index, for the same reasons as production's
+# (media/jellyfin/meilisearch-pvc.yaml): derived data, rewritten constantly,
+# so it lives outside the config volume rather than inside it.
+#
+# 5Gi rather than production's 10Gi. This instance indexes the same library,
+# but it is a throwaway -- if the index ever outgrows the claim the answer is
+# to delete it, not to grow it.
+#
+# ⚠️ NOT COVERED BY THE TEARDOWN IN §5 of docs/runbooks/jellyfin-postgres-migration.md,
+# which predates it. Tearing this instance down means this claim as well; it is
+# pruned with the rest of the Kustomization, but a manual `kubectl delete` of
+# the Deployment alone would leave it behind.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}-meilisearch
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi

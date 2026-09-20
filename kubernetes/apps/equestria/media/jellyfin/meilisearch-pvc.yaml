@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master-standalone-strict/persistentvolumeclaim-v1.json
+#
+# The Meilisearch sidecar's index. A PLAIN PVC, deliberately NOT the
+# `components/volsync` claim the config volume uses, and deliberately not a
+# directory inside that claim either:
+#
+#  1. Everything in it is derived. The plugin rebuilds the index out of
+#     Jellyfin's own database on server start, on a completed library scan and
+#     on its own scheduled task -- so a restored copy buys nothing a rebuild
+#     does not.
+#  2. It is rewritten constantly. Restic dedupes badly against an LMDB store
+#     being written underneath it, so backing this up would grow the repository
+#     on every snapshot for data that is regenerable by definition.
+#
+# 10Gi is more than the index needs -- the documents the plugin ships to
+# Meilisearch are a name, a few ids and some metadata per item, not the media.
+# It is sized not to be the thing that breaks; Longhorn expands online if it
+# ever matters:
+#   kubectl -n equestria patch pvc jellyfin-meilisearch \
+#     -p '{"spec":{"resources":{"requests":{"storage":"20Gi"}}}}'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${APP}-meilisearch
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi

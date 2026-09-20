@@ -49,6 +49,115 @@ spec:
           # equestria namespace. Per-workload exclude beats the namespace toggle
           # (scaler.py define_scope). docs/cluster-consolidation/24-power-states.md
           downscaler/exclude: "true"
+        initContainers:
+          # Longhorn hands out a freshly formatted ext4 volume owned root:root
+          # 0755, and this pod runs as 568 with NO pod-level `fsGroup` -- so
+          # nothing would give 568 a way into the Meilisearch claim.
+          #
+          # `fsGroup: 568` on defaultPodOptions is the usual fix and is what
+          # every other media app here does, but it applies to EVERY volume in
+          # the pod. With `fsGroupChangePolicy: OnRootMismatch` the kubelet
+          # tests the root of each one and treats "no setgid bit, group not
+          # rwx" as a mismatch -- which the 60Gi config volume is -- and then
+          # recursively chowns it before any container starts. That is minutes
+          # of downtime on the next reconcile, paid by production Jellyfin, for
+          # a search index. Chowning one empty directory here costs nothing and
+          # touches nothing else.
+          #
+          # NOT `chown -R`: only the mount point has to change hands, and
+          # Meilisearch creates everything beneath it as 568 itself. A
+          # recursive chown would re-walk the whole index on every pod start.
+          meilisearch-chown:
+            image:
+              repository: busybox
+              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args: ["chown 568:568 /meili_data"]
+            securityContext:
+              # Overrides the pod's `runAsNonRoot: true`. Changing the owner of
+              # a root-owned directory needs CAP_CHOWN, and only uid 0 has it.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"], add: ["CHOWN"] }
+
+          # Installs the plugin, so neither Jellyfin needs a click-through in
+          # the web UI to get it. Jellyfin loads any directory under
+          # <data>/plugins that carries a meta.json, which is exactly what the
+          # release zip contains, and `Meilisearch_<version>` is the directory
+          # name Jellyfin's own installer would have used.
+          #
+          # Runs as 568, unlike the chown above: /config is the app's own
+          # volume and is already owned by it.
+          #
+          # NEVER FATAL, ON PURPOSE. A GitHub outage must not keep production
+          # Jellyfin from starting, so every failure path warns and exits 0.
+          # Jellyfin then comes up with whatever version is already on the
+          # volume, or -- on a first install -- with no plugin at all and its
+          # built-in search. `wget` and `unzip` are busybox applets and the
+          # image ships `ssl_client`, so https needs nothing extra.
+          #
+          # ⚠️ PLUGIN_SHA256 MUST BE BUMPED WITH PLUGIN_VERSION. Renovate can
+          # see the version through the annotation below but cannot rewrite the
+          # checksum, so a lone version bump fails the check and silently keeps
+          # the old plugin (loudly, in this container's log). The value is the
+          # one published beside the zip in the release:
+          #   curl -sSL https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/<ver>/meilisearch_<ver>.sha256
+          meilisearch-plugin:
+            image:
+              repository: busybox
+              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+              pullPolicy: IfNotPresent
+            env:
+              # renovate: datasource=github-releases depName=arnesacnussem/jellyfin-plugin-meilisearch
+              PLUGIN_VERSION: 1.12.1.4
+              PLUGIN_SHA256: e51a8d96af8af31bca5162e2502de3b91db6d3f1749d02fa1e84c20d1de93584
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            command: ["/bin/sh", "-c"]
+            # No braces on the shell variables: Flux's postBuild substitution
+            # replaces ${...} and would blank every one of them.
+            args:
+              - |
+                set -eu
+                mkdir -p /config/plugins
+                DEST=/config/plugins/Meilisearch_$PLUGIN_VERSION
+                if [ -f "$DEST/meta.json" ]; then
+                  echo "meilisearch plugin $PLUGIN_VERSION already installed"
+                  exit 0
+                fi
+                TMP=/config/plugins/.meilisearch.tmp
+                rm -rf "$TMP"
+                mkdir -p "$TMP"
+                URL=https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/$PLUGIN_VERSION/meilisearch_$PLUGIN_VERSION.zip
+                if ! wget -q -O "$TMP/plugin.zip" "$URL"; then
+                  echo "WARNING: could not download $URL -- starting with the plugin directory untouched"
+                  rm -rf "$TMP"
+                  exit 0
+                fi
+                if ! echo "$PLUGIN_SHA256  $TMP/plugin.zip" | sha256sum -c - >/dev/null 2>&1; then
+                  echo "WARNING: $URL does not match PLUGIN_SHA256 -- was the checksum bumped with the version? starting with the plugin directory untouched"
+                  rm -rf "$TMP"
+                  exit 0
+                fi
+                if ! unzip -q "$TMP/plugin.zip" -d "$TMP/plugin"; then
+                  echo "WARNING: could not unpack $URL -- starting with the plugin directory untouched"
+                  rm -rf "$TMP"
+                  exit 0
+                fi
+                rm -f "$TMP/plugin.zip"
+                mv "$TMP/plugin" "$DEST"
+                rm -rf "$TMP"
+                for old in /config/plugins/Meilisearch_*; do
+                  [ "$old" = "$DEST" ] || rm -rf "$old"
+                done
+                echo "installed meilisearch plugin $PLUGIN_VERSION"
+
         containers:
           jellyfin:
             image:
@@ -79,6 +188,20 @@ spec:
               JELLYFIN_LOG_DIR: /logs
               JELLYFIN_PublishedServerUrl: "https://${APP}.${ROOT_DOMAIN}"
               DOTNET_SYSTEM_IO_DISABLEFILELOCKING: "true"
+              # Configures the Meilisearch plugin without touching its settings
+              # page. The plugin reads MEILI_URL (and MEILI_MASTER_KEY, which
+              # this deployment has no use for -- see the sidecar's MEILI_ENV)
+              # straight out of the environment and PREFERS them over whatever
+              # is stored in its own config XML, so there is nothing to click
+              # and nothing to keep in sync with this file.
+              # src/MeilisearchClientHolder.cs, Set().
+              #
+              # 127.0.0.1 because the sidecar binds loopback only. The plugin's
+              # other settings -- index name, matching strategy -- are not
+              # environment-driven and their defaults are what we want: the
+              # index is named after the server, and each Jellyfin here has its
+              # own Meilisearch anyway.
+              MEILI_URL: http://127.0.0.1:7700
               PUID: ${PUID}
               PGID: ${PGID}
               TZ: ${TIMEZONE}
@@ -156,6 +279,90 @@ spec:
                 memory: 8Gi
                 gpu.intel.com/i915: 1
 
+          # The search engine the plugin offloads /Items queries to, in this
+          # pod rather than as its own Deployment so that it shares a network
+          # namespace with Jellyfin and can be bound to loopback.
+          #
+          # ⚠️ THIS COUPLES JELLYFIN'S AVAILABILITY TO MEILISEARCH'S. A pod is
+          # Ready only when every container in it is, endpoints follow pod
+          # readiness, and the HTTPRoute follows the endpoints -- so a
+          # crashlooping or unpullable sidecar takes Jellyfin off the network
+          # even though Jellyfin itself is fine. That is the price of a sidecar
+          # and it is why this one is kept boring: a digest-pinned image,
+          # IfNotPresent so a restart needs no registry, no Secret it must have
+          # to start, and MEILI_UPGRADE_DB below to stop a version bump from
+          # being a refusal to boot. If that trade ever looks wrong, the fix is
+          # to move it to its own controller with a Service -- the plugin only
+          # needs MEILI_URL to point somewhere else.
+          meilisearch:
+            image:
+              repository: docker.io/getmeili/meilisearch
+              tag: v1.53.2@sha256:c94e58ca09662dd6e65e8f1b0fd145767be3da7d5422a863a27b8d2b68e090c9
+              pullPolicy: IfNotPresent
+            env:
+              # 127.0.0.1, NOT the image's 0.0.0.0 default. Containers in a pod
+              # share a network namespace, so Jellyfin reaches this over
+              # loopback while nothing outside the pod can reach it at all --
+              # there is no Service for it and nothing listening on the pod IP.
+              # Note this pod also carries an ipvlan interface on the Home LAN
+              # (jellyfin-lan-net); loopback is per-namespace, so that changes
+              # nothing here, but a 0.0.0.0 bind would have put a search index
+              # of the whole library on the flat LAN.
+              MEILI_HTTP_ADDR: 127.0.0.1:7700
+              MEILI_DB_PATH: /meili_data/data.ms
+              # `development` is a consequence of the loopback bind above, not
+              # carelessness: `production` refuses to start without a >=16 byte
+              # MEILI_MASTER_KEY, and a key guarding a socket no other pod can
+              # open would buy nothing while making this pod unable to start
+              # whenever that Secret is missing. The estate's shared
+              # Meilisearch (equestria/home/meilisearch) is the opposite case
+              # -- it is behind a cluster Service, so it runs `production` with
+              # the key from OpenBao.
+              MEILI_ENV: development
+              MEILI_NO_ANALYTICS: "true"
+              # Migrates the on-disk format in place on startup rather than
+              # refusing to boot after an image bump. One-way -- the previous
+              # binary will not read the store afterwards -- which is the right
+              # trade here twice over: the index is derived data that can be
+              # rebuilt from Jellyfin, and a sidecar that will not start takes
+              # Jellyfin's endpoints with it. Same setting and same reasoning
+              # as equestria/home/meilisearch (vault#102).
+              MEILI_UPGRADE_DB: "true"
+            probes:
+              # Liveness only. A readiness probe here would add nothing -- a
+              # container with no readiness probe is Ready as soon as it is
+              # running, which is already what pod readiness keys off -- while
+              # giving a slow index one more way to pull Jellyfin's endpoints.
+              # Restarting a wedged process is worth having; `curl` is in the
+              # image (the final stage installs it alongside tini), and it has
+              # to be an exec probe because the kubelet cannot dial a loopback
+              # bind from outside the pod.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - curl -fsS --max-time 8 http://127.0.0.1:7700/health >/dev/null
+                  initialDelaySeconds: 15
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 25m
+                memory: 256Mi
+              limits:
+                # Meilisearch memory-maps its store and will happily use what
+                # it is given; the limit is what stops an index rebuild from
+                # competing with Jellyfin's 8Gi on the same node.
+                memory: 1Gi
+
     defaultPodOptions:
       securityContext:
         runAsNonRoot: true
@@ -226,6 +433,19 @@ spec:
         existingClaim: *app
         globalMounts:
           - path: /config
+
+      # advancedMounts, not globalMounts: the index belongs to Meilisearch and
+      # the init container that has to hand it over, and to nothing else.
+      # Jellyfin has no business seeing it -- it talks to Meilisearch over
+      # HTTP, not over the filesystem.
+      meilisearch:
+        existingClaim: ${APP}-meilisearch
+        advancedMounts:
+          jellyfin:
+            meilisearch:
+              - path: /meili_data
+            meilisearch-chown:
+              - path: /meili_data
 
       transcode:
         enabled: true
