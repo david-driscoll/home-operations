@@ -448,7 +448,7 @@ experimental:
     sablier:
       moduleName: "github.com/sablierapp/sablier-traefik-plugin"
       # renovate: datasource=github-releases depName=sablierapp/sablier-traefik-plugin
-      version: "v1.3.1"
+      version: "v1.3.0"
   fastProxy:
     enabled: true
   otlpLogs: true
