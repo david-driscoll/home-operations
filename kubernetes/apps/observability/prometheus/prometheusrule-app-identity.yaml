@@ -1,0 +1,400 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/prometheusrule_v1.json
+#
+# APP IDENTITY ON WORKLOAD ALERTS.
+#
+# The upstream `kubernetes-apps` alerts identify a failure by namespace plus the
+# Kubernetes object name -- `pod="reitti-64c9878b4c-q6r7f"`. That is the pod's
+# name, not the application's, and for a ReplicaSet-owned pod it is the app name
+# plus two random suffixes you have to mentally strip. For an operator-created
+# StatefulSet (`equestria-workspace-0`) it is not the app name at all.
+#
+# These rules re-declare the twelve workload alerts with `app` and
+# `app_instance` labels joined on. The upstream copies are turned off in
+# values.yaml via `defaultRules.disabled` -- if one of these is ever removed
+# from here, RE-ENABLE IT THERE, or the alert simply stops existing.
+#
+# Everything except the join is a VERBATIM copy of upstream (chart-rendered
+# expressions captured live from /api/v1/rules, not transcribed from the docs).
+# `for`, `severity` and all annotations are byte-identical on purpose: the less
+# this fork diverges, the cheaper it is to re-sync when the chart moves.
+#
+# No templated labels are needed. `group_left (app, app_instance)` copies those
+# labels onto the result series, and a rule's result-series labels become the
+# alert's labels automatically -- which is also why they reach Pushover, whose
+# message template renders `.Labels.SortedPairs`.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kubernetes-apps-app-identity
+spec:
+  groups:
+    # -----------------------------------------------------------------------
+    # The identity series, defined ONCE.
+    #
+    # Two properties matter, and both were verified live against 423 pods
+    # before this file was written:
+    #
+    #  1. TOTAL COVERAGE. `group_left` is an INNER join: a missing right-hand
+    #     series does not leave an alert unenriched, it DELETES the alert.
+    #     Unenriched is the intended degradation; disappearing is not.
+    #
+    #     kube-state-metrics emits `kube_<kind>_labels` for every object of an
+    #     allowlisted kind, including objects carrying no labels at all (423
+    #     kube_pod_labels for 423 kube_pod_info), and a `label_replace` whose
+    #     source label is absent is a no-op -- so an unlabelled pod still gets
+    #     a series, just without an `app` label.
+    #
+    #     That holds only while the kind IS allowlisted, which is why each rule
+    #     has a second branch. `kube_<kind>_labels` vanishes entirely for a
+    #     kind that is not in `metricLabelsAllowlist`, so the fallback re-adds
+    #     every object that the first branch missed, keyed off a metric that
+    #     does not depend on the allowlist at all. The `unless` is what keeps
+    #     the two branches disjoint; without it `or` would emit two series per
+    #     object (their label sets differ, so `or` would not drop either) and
+    #     `group_left` would fail with "multiple matches".
+    #
+    #     This is not theoretical. Validating this file against live Prometheus
+    #     before the allowlist change had reached the cluster, KubeJobFailed
+    #     went from 1 series to 0 -- a real alert, silently deleted, with
+    #     nothing to indicate it. The second branch is what makes the rollout
+    #     order of values.yaml versus this file stop mattering.
+    #
+    #  2. EXACTLY ONE SERIES per (namespace, object). `group_left` errors with
+    #     "multiple matches for labels" otherwise, which would take the alert
+    #     out just as completely.
+    #
+    # PRECEDENCE IS ENCODED AS ORDER. label_replace overwrites, so the chain
+    # runs weakest source first and `app.kubernetes.io/name` last, letting the
+    # standard label win wherever both are present.
+    #
+    # `auto.pulumi.com/workspace-name` is in the chain because the Pulumi
+    # operator creates its workspace pods with no app.kubernetes.io labels
+    # whatsoever; that fallback is what turns `equestria-workspace-0` into
+    # `app=equestria`. It is deliberately a fallback and not a special case:
+    # add another operator's convention to the chain rather than to the twelve
+    # alert rules below.
+    - name: app-identity.rules
+      rules:
+        - record: pod:app_identity:info
+          expr: |-
+            max by (namespace, pod, app, app_instance) (
+              label_replace(
+                label_replace(
+                  label_replace(
+                    kube_pod_labels{job="kube-state-metrics"},
+                    "app", "$1", "label_auto_pulumi_com_workspace_name", "(.+)"),
+                  "app", "$1", "label_app_kubernetes_io_name", "(.+)"),
+                "app_instance", "$1", "label_app_kubernetes_io_instance", "(.+)")
+            )
+            or
+            max by (namespace, pod) (
+              kube_pod_info{job="kube-state-metrics"}
+              unless on (namespace, pod) kube_pod_labels{job="kube-state-metrics"}
+            )
+        - record: deployment:app_identity:info
+          expr: |-
+            max by (namespace, deployment, app, app_instance) (
+              label_replace(
+                label_replace(
+                  label_replace(
+                    kube_deployment_labels{job="kube-state-metrics"},
+                    "app", "$1", "label_auto_pulumi_com_workspace_name", "(.+)"),
+                  "app", "$1", "label_app_kubernetes_io_name", "(.+)"),
+                "app_instance", "$1", "label_app_kubernetes_io_instance", "(.+)")
+            )
+            or
+            max by (namespace, deployment) (
+              kube_deployment_metadata_generation{job="kube-state-metrics"}
+              unless on (namespace, deployment) kube_deployment_labels{job="kube-state-metrics"}
+            )
+        - record: statefulset:app_identity:info
+          expr: |-
+            max by (namespace, statefulset, app, app_instance) (
+              label_replace(
+                label_replace(
+                  label_replace(
+                    kube_statefulset_labels{job="kube-state-metrics"},
+                    "app", "$1", "label_auto_pulumi_com_workspace_name", "(.+)"),
+                  "app", "$1", "label_app_kubernetes_io_name", "(.+)"),
+                "app_instance", "$1", "label_app_kubernetes_io_instance", "(.+)")
+            )
+            or
+            max by (namespace, statefulset) (
+              kube_statefulset_metadata_generation{job="kube-state-metrics"}
+              unless on (namespace, statefulset) kube_statefulset_labels{job="kube-state-metrics"}
+            )
+        - record: daemonset:app_identity:info
+          expr: |-
+            max by (namespace, daemonset, app, app_instance) (
+              label_replace(
+                label_replace(
+                  label_replace(
+                    kube_daemonset_labels{job="kube-state-metrics"},
+                    "app", "$1", "label_auto_pulumi_com_workspace_name", "(.+)"),
+                  "app", "$1", "label_app_kubernetes_io_name", "(.+)"),
+                "app_instance", "$1", "label_app_kubernetes_io_instance", "(.+)")
+            )
+            or
+            max by (namespace, daemonset) (
+              kube_daemonset_metadata_generation{job="kube-state-metrics"}
+              unless on (namespace, daemonset) kube_daemonset_labels{job="kube-state-metrics"}
+            )
+        # `job_name`, not `job`. kube-state-metrics names the Job object's
+        # label `job_name` precisely because `job` is already taken by the
+        # scrape target label, and the alerts below join on the former.
+        - record: job:app_identity:info
+          expr: |-
+            max by (namespace, job_name, app, app_instance) (
+              label_replace(
+                label_replace(
+                  label_replace(
+                    kube_job_labels{job="kube-state-metrics"},
+                    "app", "$1", "label_auto_pulumi_com_workspace_name", "(.+)"),
+                  "app", "$1", "label_app_kubernetes_io_name", "(.+)"),
+                "app_instance", "$1", "label_app_kubernetes_io_instance", "(.+)")
+            )
+            or
+            max by (namespace, job_name) (
+              kube_job_created{job="kube-state-metrics"}
+              unless on (namespace, job_name) kube_job_labels{job="kube-state-metrics"}
+            )
+
+    # -----------------------------------------------------------------------
+    # The guard.
+    #
+    # The fallback branch above means the alerts now survive an allowlist
+    # regression -- but they survive it SILENTLY and unenriched, which would
+    # otherwise leave this whole file quietly doing nothing. So the thing to
+    # watch is not "did the recording rule disappear" (it no longer can) but
+    # "does a kind have objects while kube-state-metrics emits no labels
+    # series for it", which is exactly the shape of a lost `metricLabelsAllowlist`
+    # entry after a chart bump or a bad merge.
+    #
+    # Written as `objects > 0 unless labels > 0` per kind rather than
+    # `absent(...)`: absent() on a kind that legitimately holds zero objects
+    # right now -- entirely normal for Jobs -- would be a false page, and a
+    # count comparison alone returns no data when the series is fully gone,
+    # which is the one case worth catching. 30m rides out a kube-state-metrics
+    # restart.
+    - name: app-identity-guard.rules
+      rules:
+        - alert: AppIdentityLabelsMissing
+          annotations:
+            summary: kube-state-metrics stopped emitting labels for a workload kind.
+            description: >-
+              A workload kind has objects but no kube_<kind>_labels series, so
+              the *:app_identity:info recording rules have fallen back to their
+              un-enriched branch and the kubernetes-apps-app-identity alerts no
+              longer carry app/app_instance. Check that `metricLabelsAllowlist`
+              in observability/prometheus/values.yaml still lists pods,
+              deployments, statefulsets, daemonsets and jobs.
+          expr: |-
+            (count(kube_pod_info{job="kube-state-metrics"}) > 0 unless count(kube_pod_labels{job="kube-state-metrics"}) > 0)
+            or (count(kube_deployment_metadata_generation{job="kube-state-metrics"}) > 0 unless count(kube_deployment_labels{job="kube-state-metrics"}) > 0)
+            or (count(kube_statefulset_metadata_generation{job="kube-state-metrics"}) > 0 unless count(kube_statefulset_labels{job="kube-state-metrics"}) > 0)
+            or (count(kube_daemonset_metadata_generation{job="kube-state-metrics"}) > 0 unless count(kube_daemonset_labels{job="kube-state-metrics"}) > 0)
+            or (count(kube_job_created{job="kube-state-metrics"}) > 0 unless count(kube_job_labels{job="kube-state-metrics"}) > 0)
+          for: 30m
+          labels:
+            severity: warning
+
+    # -----------------------------------------------------------------------
+    # The twelve overrides. Upstream expression, parenthesised, with the join
+    # appended. The parentheses are load-bearing on the rules that end in a
+    # comparison or an `unless`: `*` binds tighter than `unless`, so joining
+    # an unparenthesised expression would change which series the `unless`
+    # applies to.
+    #
+    # Multiplying by an info series whose value is always 1 leaves the alert's
+    # own value untouched, so anything templated off `$value` still reads the
+    # same as upstream.
+    - name: kubernetes-apps-app-identity.rules
+      rules:
+        - alert: KubePodCrashLooping
+          annotations:
+            description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff") on cluster {{ $labels.cluster }}.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodcrashlooping
+            summary: Pod is crash looping.
+          expr: |-
+            (
+              max_over_time(kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace=~".*",reason="CrashLoopBackOff"}[5m]) >= 1
+            ) * on (namespace, pod) group_left (app, app_instance) pod:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubePodNotReady
+          annotations:
+            description: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
+            summary: Pod has been in a non-ready state for more than 15 minutes.
+          expr: |-
+            (
+              sum by (namespace, pod, job, cluster) (
+                max by (namespace, pod, job, cluster) (
+                  kube_pod_status_phase{job="kube-state-metrics",namespace=~".*",phase=~"Pending|Unknown"}
+                  or
+                  (kube_pod_status_phase{job="kube-state-metrics",namespace=~".*",phase="Running"} == 1 and on (namespace, pod, cluster) kube_pod_status_ready{condition="true",job="kube-state-metrics",namespace=~".*"} == 0)
+                ) * on (namespace, pod, cluster) group_left () topk by (namespace, pod, cluster) (1, max by (namespace, pod, owner_kind, cluster) (kube_pod_owner{owner_kind!="Job"}))
+              ) > 0
+              unless on (namespace, pod, cluster) kube_pod_status_reason{job="kube-state-metrics",namespace=~".*",reason="SchedulingGated"} == 1
+            ) * on (namespace, pod) group_left (app, app_instance) pod:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeContainerWaiting
+          annotations:
+            description: 'pod/{{ $labels.pod }} in namespace {{ $labels.namespace }} on container {{ $labels.container}} has been in waiting state for longer than 1 hour. (reason: "{{ $labels.reason }}") on cluster {{ $labels.cluster }}.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubecontainerwaiting
+            summary: Pod container waiting longer than 1 hour
+          expr: |-
+            (
+              kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace=~".*",reason!="CrashLoopBackOff"} > 0
+            ) * on (namespace, pod) group_left (app, app_instance) pod:app_identity:info
+          for: 1h
+          labels:
+            severity: warning
+        - alert: KubeDeploymentGenerationMismatch
+          annotations:
+            description: Deployment generation for {{ $labels.namespace }}/{{ $labels.deployment }} does not match, this indicates that the Deployment has failed but has not been rolled back on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentgenerationmismatch
+            summary: Deployment generation mismatch due to possible roll-back
+          expr: |-
+            (
+              kube_deployment_status_observed_generation{job="kube-state-metrics",namespace=~".*"}
+                !=
+              kube_deployment_metadata_generation{job="kube-state-metrics",namespace=~".*"}
+            ) * on (namespace, deployment) group_left (app, app_instance) deployment:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeDeploymentReplicasMismatch
+          annotations:
+            description: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas for longer than 15 minutes on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentreplicasmismatch
+            summary: Deployment has not matched the expected number of replicas.
+          expr: |-
+            (
+              (kube_deployment_spec_replicas{job="kube-state-metrics",namespace=~".*"} > kube_deployment_status_replicas_available{job="kube-state-metrics",namespace=~".*"})
+              and
+              (changes(kube_deployment_status_replicas_updated{job="kube-state-metrics",namespace=~".*"}[10m]) == 0)
+            ) * on (namespace, deployment) group_left (app, app_instance) deployment:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeDeploymentRolloutStuck
+          annotations:
+            description: Rollout of deployment {{ $labels.namespace }}/{{ $labels.deployment }} is not progressing for longer than 15 minutes on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentrolloutstuck
+            summary: Deployment rollout is not progressing.
+          expr: |-
+            (
+              kube_deployment_status_condition{condition="Progressing",job="kube-state-metrics",namespace=~".*",status="false"} != 0
+            ) * on (namespace, deployment) group_left (app, app_instance) deployment:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeStatefulSetReplicasMismatch
+          annotations:
+            description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 15 minutes on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetreplicasmismatch
+            summary: StatefulSet has not matched the expected number of replicas.
+          expr: |-
+            (
+              (kube_statefulset_status_replicas_ready{job="kube-state-metrics",namespace=~".*"} != kube_statefulset_replicas{job="kube-state-metrics",namespace=~".*"})
+              and
+              (changes(kube_statefulset_status_replicas_updated{job="kube-state-metrics",namespace=~".*"}[10m]) == 0)
+            ) * on (namespace, statefulset) group_left (app, app_instance) statefulset:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeStatefulSetGenerationMismatch
+          annotations:
+            description: StatefulSet generation for {{ $labels.namespace }}/{{ $labels.statefulset }} does not match, this indicates that the StatefulSet has failed but has not been rolled back on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetgenerationmismatch
+            summary: StatefulSet generation mismatch due to possible roll-back
+          expr: |-
+            (
+              kube_statefulset_status_observed_generation{job="kube-state-metrics",namespace=~".*"}
+                !=
+              kube_statefulset_metadata_generation{job="kube-state-metrics",namespace=~".*"}
+            ) * on (namespace, statefulset) group_left (app, app_instance) statefulset:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeStatefulSetUpdateNotRolledOut
+          annotations:
+            description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} update has not been rolled out on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetupdatenotrolledout
+            summary: StatefulSet update has not been rolled out.
+          expr: |-
+            (
+              (
+                max by (namespace, statefulset, job, cluster) (
+                  kube_statefulset_status_current_revision{job="kube-state-metrics",namespace=~".*"}
+                  unless
+                  kube_statefulset_status_update_revision{job="kube-state-metrics",namespace=~".*"}
+                )
+                  * on (namespace, statefulset, job, cluster)
+                (
+                  kube_statefulset_replicas{job="kube-state-metrics",namespace=~".*"}
+                    !=
+                  kube_statefulset_status_replicas_updated{job="kube-state-metrics",namespace=~".*"}
+                )
+              )
+              and on (namespace, statefulset, job, cluster) (
+                changes(kube_statefulset_status_replicas_updated{job="kube-state-metrics",namespace=~".*"}[5m]) == 0
+              )
+            ) * on (namespace, statefulset) group_left (app, app_instance) statefulset:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeDaemonSetRolloutStuck
+          annotations:
+            description: DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} has not finished or progressed for at least 15m on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedaemonsetrolloutstuck
+            summary: DaemonSet rollout is stuck.
+          expr: |-
+            (
+              (
+                (kube_daemonset_status_current_number_scheduled{job="kube-state-metrics",namespace=~".*"} != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"})
+                or
+                (kube_daemonset_status_number_misscheduled{job="kube-state-metrics",namespace=~".*"} != 0)
+                or
+                (kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",namespace=~".*"} != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"})
+                or
+                (kube_daemonset_status_number_available{job="kube-state-metrics",namespace=~".*"} != kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",namespace=~".*"})
+              )
+              and
+              (changes(kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",namespace=~".*"}[5m]) == 0)
+            ) * on (namespace, daemonset) group_left (app, app_instance) daemonset:app_identity:info
+          for: 15m
+          labels:
+            severity: warning
+        - alert: KubeJobNotCompleted
+          annotations:
+            description: Job {{ $labels.namespace }}/{{ $labels.job_name }} is taking more than {{ "43200" | humanizeDuration }} to complete on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobnotcompleted
+            summary: Job did not complete in time
+          expr: |-
+            (
+              time() - max by (namespace, job_name, cluster) (
+                kube_job_status_start_time{job="kube-state-metrics",namespace=~".*"}
+                and
+                kube_job_status_active{job="kube-state-metrics",namespace=~".*"} > 0
+              ) > 43200
+            ) * on (namespace, job_name) group_left (app, app_instance) job:app_identity:info
+          labels:
+            severity: warning
+        - alert: KubeJobFailed
+          annotations:
+            description: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Removing failed job after investigation should clear this alert on cluster {{ $labels.cluster }}.
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
+            summary: Job failed to complete.
+          expr: |-
+            (
+              kube_job_failed{job="kube-state-metrics",namespace=~".*"} > 0
+            ) * on (namespace, job_name) group_left (app, app_instance) job:app_identity:info
+          for: 15m
+          labels:
+            severity: warning

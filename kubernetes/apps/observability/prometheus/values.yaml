@@ -3,6 +3,34 @@ ipFamilyPolicy: SingleStack
 ipFamilies:
   - IPv4
 cleanPrometheusOperatorObjectNames: true
+# Twelve of the seventeen `kubernetes-apps` alerts are re-declared in
+# prometheusrule-app-identity.yaml with `app`/`app_instance` joined on, so the
+# chart's own copies are turned off here. Without this BOTH fire: same
+# alertname, same namespace/pod, different label sets, so Alertmanager's
+# deduplication treats them as two distinct alerts and pages twice.
+#
+# This list and that file are a matched pair. Removing a rule from there
+# without removing its line here leaves the alert switched off and nothing
+# watching for it.
+#
+# The five NOT overridden stay on the chart's versions: KubeHpaReplicasMismatch,
+# KubeHpaMaxedOut and KubePdbNotEnoughHealthyPods already carry the object's own
+# name, which is the app name, and the two KubeDaemonSet scheduling alerts
+# likewise.
+defaultRules:
+  disabled:
+    KubeContainerWaiting: true
+    KubeDaemonSetRolloutStuck: true
+    KubeDeploymentGenerationMismatch: true
+    KubeDeploymentReplicasMismatch: true
+    KubeDeploymentRolloutStuck: true
+    KubeJobFailed: true
+    KubeJobNotCompleted: true
+    KubePodCrashLooping: true
+    KubePodNotReady: true
+    KubeStatefulSetGenerationMismatch: true
+    KubeStatefulSetReplicasMismatch: true
+    KubeStatefulSetUpdateNotRolledOut: true
 alertmanager:
   enabled: false
 kubeEtcd:
@@ -201,9 +229,21 @@ kube-state-metrics:
       operator: Exists
       effect: NoSchedule
   fullnameOverride: kube-state-metrics
+  # Feeds the `*:app_identity:info` recording rules in
+  # prometheusrule-app-identity.yaml, which join `app`/`app_instance` onto the
+  # workload alerts so they name the application and not just a pod with two
+  # random suffixes.
+  #
+  # statefulsets, daemonsets and jobs were added 2026-09-20 for exactly that.
+  # THESE KINDS ARE LOAD-BEARING: each has an inner join hanging off it, and
+  # dropping one here does not degrade those alerts, it deletes them. The
+  # AppIdentityRecordingRuleMissing alert exists to catch precisely that.
   metricLabelsAllowlist:
     - pods=[*]
     - deployments=[*]
+    - statefulsets=[*]
+    - daemonsets=[*]
+    - jobs=[*]
     - persistentvolumeclaims=[*]
   customResourceState:
     enabled: true
