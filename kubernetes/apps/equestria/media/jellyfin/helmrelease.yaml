@@ -269,6 +269,33 @@ spec:
               # `strategy` is Recreate here.
               MEILI_ENV: production
               MEILI_NO_ANALYTICS: "true"
+              # ⚠️ THE TWO SETTINGS THAT KEEP THIS INSIDE ITS CGROUP, AND THE
+              # REASON THIS PR'S FIRST DEPLOY TOOK PRODUCTION JELLYFIN DOWN.
+              #
+              # Meilisearch sizes its indexing budget at "2/3 of the available
+              # RAM" and its thread count at "half of the available threads" --
+              # and it reads BOTH from the HOST, not from the container's
+              # cgroup. On fluttershy that is two thirds of a media node's RAM,
+              # so the sidecar budgeted itself tens of gigabytes against a 1Gi
+              # limit, was OOMKilled (exit 137) 37 times, and went into
+              # CrashLoopBackOff. Because a pod is Ready only when every
+              # container is, that took Jellyfin's Service endpoints away while
+              # the jellyfin container itself was healthy and had never
+              # restarted.
+              #
+              # Raising the memory limit alone does NOT fix this -- it only
+              # moves the ceiling the default walks through. The budget has to
+              # be stated, and it is deliberately well under `limits.memory`
+              # below: this is the INDEXING budget, not the process's whole
+              # RSS, which also carries memory-mapped index pages and HTTP
+              # buffers that count against the same cgroup.
+              #
+              # Exceeding the budget is not an error -- Meilisearch spills to
+              # disk and indexes more slowly, which is exactly the trade a
+              # search sidecar should make against taking the media server
+              # offline.
+              MEILI_MAX_INDEXING_MEMORY: 512Mb
+              MEILI_MAX_INDEXING_THREADS: "2"
               # Migrates the on-disk format in place on startup rather than
               # refusing to boot after an image bump. One-way -- the previous
               # binary will not read the store afterwards -- which is the right
@@ -312,12 +339,22 @@ spec:
             resources:
               requests:
                 cpu: 25m
-                memory: 256Mi
+                # 512Mi, not 256Mi: the indexing budget alone is 512Mb, so the
+                # old request was below what this container uses at rest during
+                # a scan and the scheduler was placing it accordingly.
+                memory: 512Mi
               limits:
-                # Meilisearch memory-maps its store and will happily use what
-                # it is given; the limit is what stops an index rebuild from
-                # competing with Jellyfin's 8Gi on the same node.
-                memory: 1Gi
+                # 2Gi, and it is HEADROOM over MEILI_MAX_INDEXING_MEMORY rather
+                # than the thing that bounds indexing -- the env var above does
+                # that. Meilisearch also memory-maps its store, and mapped
+                # pages count against this cgroup, so the limit has to sit
+                # clear of the budget rather than equal to it.
+                #
+                # This was 1Gi and every byte of it was being ignored by the
+                # indexer, which sized itself off the node instead. See
+                # MEILI_MAX_INDEXING_MEMORY above before touching either value:
+                # they are a pair, and raising this one alone fixes nothing.
+                memory: 2Gi
 
     defaultPodOptions:
       securityContext:
