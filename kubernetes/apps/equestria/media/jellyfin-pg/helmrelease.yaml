@@ -199,6 +199,18 @@ spec:
               # reachable when this pod starts.
               MEILI_ENV: production
               MEILI_NO_ANALYTICS: "true"
+              # ⚠️ REQUIRED, not tuning. Meilisearch reads "2/3 of available
+              # RAM" and "half of available threads" from the HOST, not from
+              # the cgroup, so without these it budgets itself the node's
+              # memory and is OOMKilled against the limit below. That is what
+              # happened to production jellyfin on this PR's first deploy --
+              # 37 OOM kills, CrashLoopBackOff, and because pod readiness needs
+              # every container, Jellyfin lost its Service endpoints while its
+              # own container was healthy. This instance never rolled, so it
+              # gets the fix before it can repeat it.
+              # media/jellyfin/helmrelease.yaml carries the full account.
+              MEILI_MAX_INDEXING_MEMORY: 512Mb
+              MEILI_MAX_INDEXING_THREADS: "2"
               # In-place format migration on startup instead of a refusal to
               # boot after an image bump; see production jellyfin and
               # equestria/home/meilisearch (vault#102).
@@ -232,9 +244,11 @@ spec:
             resources:
               requests:
                 cpu: 25m
-                memory: 256Mi
+                memory: 512Mi
               limits:
-                memory: 1Gi
+                # Headroom over MEILI_MAX_INDEXING_MEMORY, not the bound on
+                # indexing -- the env var above is that. The two move together.
+                memory: 2Gi
 
     defaultPodOptions:
       securityContext:
