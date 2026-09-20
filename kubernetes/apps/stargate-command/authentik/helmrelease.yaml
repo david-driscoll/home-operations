@@ -37,9 +37,29 @@ spec:
   values:
     global:
       image:
+        # ⚠️ THE DIGEST LIVES IN `tag`, AND THERE IS NO `digest:` KEY HERE.
+        # Do not add one back. This chart builds the reference as
+        #   {{ repository }}:{{ tag }}{{ if digest }}@{{ digest }}{{ end }}
+        # (templates/server/deployment.yaml), so a `digest:` alongside a tag
+        # that already carries one renders TWO digests:
+        #   ghcr.io/goauthentik/server:2026.8.3@sha256:ab9b4e8c…@sha256:ff8489a5…
+        # which is not a valid image reference.
+        #
+        # That is what stalled this release for two days. Renovate #1821 bumped
+        # `tag` from "2026.8.2" to "2026.8.3@sha256:ab9b4e8c…" -- its
+        # docker:pinDigests behaviour, which treats `tag` as the whole
+        # reference -- and left the separate `digest:` pinned to 2026.8.2's
+        # sha256:ff8489a5…. The rendered pods could never start, the server
+        # Deployment reported 'Failed', the upgrade failed four times, THE
+        # ROLLBACK FAILED TOO, and the HelmRelease stalled on RetriesExceeded.
+        # `cleanupOnFail: true` removed the broken pods, so authentik kept
+        # serving on 2026.8.2 and nothing looked wrong from outside.
+        #
+        # Keeping the digest in `tag` is what makes the next bump safe: it is
+        # the field Renovate actually edits, so tag and digest cannot drift
+        # apart again.
         repository: ghcr.io/goauthentik/server
         tag: "2026.8.3@sha256:ab9b4e8cc4ab3f8d1198d2db6aeea66bafea1963b3f2843589e0d163f97d9849"
-        digest: sha256:ff8489a5af4f4fe415ffd180a8e3c10b120bc2592d13d79dac050d977f7b9ecd
       deploymentAnnotations:
         reloader.stakater.com/auto: "true"
       # Tier 1, like traefik (network/traefik values.yaml): identity has to be
