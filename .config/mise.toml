@@ -79,7 +79,7 @@ vals = "0.46.1"
 # `python` above is also required (pipx builds the venv with it) and was
 # already pinned -- it was simply never installed in the agentboard pod, which
 # is what ../kubernetes/apps/agents/agentboard/resources/entrypoint.sh now fixes.
-pipx = "1.17.4"
+pipx = "1.17.5"
 "pipx:graphifyy" = "0.9.64"
 
 [tasks.codegen]
