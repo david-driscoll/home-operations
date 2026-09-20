@@ -17,12 +17,26 @@
 #  3. Teardown stays a `kubectl delete` rather than also pruning snapshots out of
 #     a restic repository.
 #
-# 20Gi, not production's 60Gi. Production's volume is ~62GiB allocated, but most
+# 40Gi, not production's 60Gi. Production's volume is ~62GiB allocated, but most
 # of that is regenerable (keyframes, extracted attachments, logs) and the
-# migration only needs the config XMLs plus /config/data/jellyfin.db. Longhorn
-# supports online expansion if the restore in phase 3 turns out to need more:
+# migration only needs the config XMLs plus /config/data/jellyfin.db.
+#
+# This started at 20Gi and was expanded online to 40Gi on 2026-09-20, when the
+# phase 3 restore turned out to need the room -- exactly the escape hatch the
+# comment here used to describe. THE DECLARED SIZE MUST TRACK THE VOLUME, in the
+# same change. A PVC cannot be shrunk: a `storage` below `status.capacity` is
+# rejected at admission, and because Flux dry-runs every apply, the stale 20Gi
+# did not merely drift -- it failed the whole Kustomization on
+#
+#   PersistentVolumeClaim "jellyfin-pg" is invalid:
+#   spec.resources.requests.storage: Forbidden:
+#   field can not be less than status.capacity
+#
+# every two minutes, blocking the HelmRelease and ExternalSecret beside it from
+# reconciling at all. If Longhorn expands this volume again:
 #   kubectl -n equestria patch pvc jellyfin-pg \
-#     -p '{"spec":{"resources":{"requests":{"storage":"40Gi"}}}}'
+#     -p '{"spec":{"resources":{"requests":{"storage":"<new size>"}}}}'
+# then edit the value below to match, before the next reconcile.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -32,4 +46,4 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      storage: 20Gi
+      storage: 40Gi
