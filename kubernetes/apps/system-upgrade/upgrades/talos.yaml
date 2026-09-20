@@ -5,7 +5,17 @@ metadata:
   name: talos
 spec:
   talos:
-    # renovate: datasource=docker depName=ghcr.io/siderolabs/installer
+    # Talos v1.14.0 stopped publishing `ghcr.io/siderolabs/installer`; v1.13.10
+    # is the last release that image exists for, so a docker datasource on it
+    # reports "up to date" forever and this field never moves -- which is a
+    # SILENT stall, not a visible one: tuppr reports Completed and there is no
+    # failing alert to notice. Track the releases themselves.
+    #
+    # Only the version string matters here. tuppr resolves the installer per
+    # node from that node's own Image Factory schematic, e.g.
+    # factory.talos.dev/metal-installer/946edf75...:v1.13.10 -- so nothing in
+    # this repo ever referenced the retired image for an actual install.
+    # renovate: datasource=github-releases depName=siderolabs/talos
     version: v1.13.10
   policy:
     rebootMode: default

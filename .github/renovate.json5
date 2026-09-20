@@ -342,8 +342,14 @@
     {
       description: "Siderolabs Talos",
       groupName: "Siderolabs Talos",
+      // `siderolabs/talos` (github-releases), NOT `ghcr.io/siderolabs/installer`:
+      // Talos v1.14.0 retired that image, so the dep name it grouped under no
+      // longer exists. This group silently ran on one leg for eight days --
+      // talosctl went v1.14.0 -> v1.14.1 in #1711 while the OS version stayed
+      // pinned at v1.13.10, which is exactly the divergence the group exists to
+      // prevent.
       matchDepNames: [
-        "ghcr.io/siderolabs/installer",
+        "siderolabs/talos",
         "ghcr.io/siderolabs/talosctl",
       ],
       group: {
@@ -636,12 +642,16 @@
       // field (TalosUpgrade/KubernetesUpgrade) extracted via the custom regex
       // manager. A digest does not belong in that field, so suppress the
       // docker:pinDigests-driven pinDigest updates for these images.
+      //
+      // Only kubelet now. The Talos side moved to the github-releases
+      // datasource when v1.14.0 retired `ghcr.io/siderolabs/installer`, and
+      // pinDigest is a docker-datasource concept -- there is nothing left for
+      // it to match there.
       description: "Don't pin digests on siderolabs upgrade image versions",
       matchDatasources: [
         "docker"
       ],
       matchDepNames: [
-        "ghcr.io/siderolabs/installer",
         "ghcr.io/siderolabs/kubelet",
       ],
       matchUpdateTypes: [
