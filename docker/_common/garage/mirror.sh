@@ -30,12 +30,31 @@ status_file="${state_dir}/.last-run"
 uptime_url="${GARAGE_MIRROR_UPTIME_URL:-}"
 uptime_token="${GARAGE_MIRROR_UPTIME_TOKEN:-}"
 
+# $1 = true|false, $2 = short reason, required when $1 is false.
+#
+# The reason matters. Gatus renders an external endpoint with no `error=` as a
+# blank red row: no message, no condition, no duration -- which is exactly how
+# this endpoint looked for the 24 days it was misconfigured, and part of why
+# nobody chased it. backrest's own error hook already passes `error=`
+# (components/BackupPlanDirector.ts); this brings the mirror in line.
+#
+# Reasons are fixed, hyphenated tokens with no spaces or shell metacharacters.
+# wget cannot URL-encode and busybox has no --data-urlencode, so keeping the
+# vocabulary URL-safe by construction beats hand-rolling an encoder.
 report() {
   [ -n "$uptime_url" ] && [ -n "$uptime_token" ] || return 0
+  # An explicit `if`, not an `&&` chain: this runs under `set -eu`, and a
+  # short-circuiting AND-OR list as a bare statement is exactly the kind of
+  # construct whose set -e behaviour differs between shells. Not worth being
+  # clever about inside the thing that reports backup health.
+  _query="success=$1"
+  if [ "$1" = false ] && [ -n "${2:-}" ]; then
+    _query="${_query}&error=$2"
+  fi
   wget -q -T 15 -O /dev/null \
     --header="Authorization: Bearer ${uptime_token}" \
     --post-data="" \
-    "${uptime_url}/api/v1/endpoints/${uptime_token}/external?success=$1" \
+    "${uptime_url}/api/v1/endpoints/${uptime_token}/external?${_query}" \
     || echo "[mirror] WARN: could not report success=$1 to uptime" >&2
 }
 
@@ -68,7 +87,7 @@ while true; do
   if [ -z "$(ls -A /staging 2>/dev/null)" ]; then
     echo "[mirror] ERROR: /staging is empty — refusing to sync (a mirror of nothing is a delete of everything)" >&2
     printf '%s failed %s\n' "$(date +%s)" "$stamp" >"$status_file"
-    report false
+    report false staging-empty
     sleep "$interval"
     continue
   fi
@@ -80,7 +99,7 @@ while true; do
   else
     echo "[mirror] ERROR: rclone sync failed" >&2
     printf '%s failed %s\n' "$(date +%s)" "$stamp" >"$status_file"
-    report false
+    report false rclone-sync-failed
   fi
 
   sleep "$interval"
