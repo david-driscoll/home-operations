@@ -1,4 +1,9 @@
-# renovate: datasource=docker depName=ghcr.io/siderolabs/installer
+# Talos v1.14.0 stopped publishing `ghcr.io/siderolabs/installer` ("chore: stop
+# publishing installer to ghcr"); v1.13.10 is the last release it exists for, so
+# a docker datasource on it reports "up to date" forever. Track the releases
+# themselves instead -- nothing installs FROM this name anyway, talhelper builds
+# factory.talos.dev URLs from the `schematic:` blocks in talconfig.yaml.
+# renovate: datasource=github-releases depName=siderolabs/talos
 talosVersion: v1.13.10
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
 kubernetesVersion: v1.37.0
