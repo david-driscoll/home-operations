@@ -1,0 +1,69 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+patches:
+  # POSTGIS, declared on the CNPG `Database` rather than left to the app.
+  #
+  # Reitti ships as `dedicatedcode/reitti` against `postgis/postgis` in every
+  # upstream compose file, and it is not optional decoration: migration V71
+  # declares `polygon GEOMETRY(POLYGON, 4326)` on two tables, and the place
+  # repositories (SignificantPlaceJdbcService and friends) issue ST_* calls on
+  # every read. Without the extension the very first Flyway run fails on an
+  # unknown type and the pod crash-loops -- there is no degraded mode.
+  #
+  # `postgis` is an UNTRUSTED extension: only a superuser may CREATE it, and
+  # the role components/postgres hands this app holds `login` and nothing else.
+  # The CNPG operator creates declared extensions as the superuser, which is
+  # exactly the gap this patch fills. `components/postgres/superuser` would
+  # also work and is how immich gets its extensions; it is deliberately not
+  # used, for the same reason media/tracearr gives -- it hands an app a
+  # superuser role for the sake of one CREATE EXTENSION.
+  #
+  # The shared cluster can serve this: since 2026-09-12 it runs
+  # ghcr.io/imusmanmalik/timescaledb-postgis, which carries PostGIS and
+  # pgRouting alongside TimescaleDB (see the `cluster.imageName` note in
+  # kubernetes/apps/database/postgres/app/resources/values.yaml). No new
+  # operand is needed for this app.
+  #
+  # `btree_gist` is listed because migration V95 runs
+  # `CREATE EXTENSION IF NOT EXISTS btree_gist` itself. It is TRUSTED on
+  # PostgreSQL 13+, so the app's own statement would succeed unaided -- it is
+  # declared anyway so the database's full extension set is written down in one
+  # place, and so the pre-creation makes the app's statement a no-op rather
+  # than a race on first boot.
+  #
+  # Mechanism: the two-level patch components/postgres/superuser uses. This
+  # patches the nested `${APP}-postgres` Kustomization that components/postgres
+  # emits, appending to its `spec.patches`; that child then patches the
+  # `Database` it renders into `database`. JSON6902 `add .../-`, never a
+  # strategic merge on `spec.patches` -- a Flux Kustomization has no Go schema,
+  # so a merge REPLACES the list and would silently drop a sibling's entry. And
+  # NOT in ks.yaml's own `spec.patches`: the equestria umbrella injects that
+  # field into every child.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: postgis
+                  ensure: present
+                - name: btree_gist
+                  ensure: present
