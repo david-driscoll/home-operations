@@ -140,6 +140,44 @@ export const BACKUP_STACK_EXCLUDES: Readonly<Record<string, string[]>> = {
   // cache nobody restores. If history ever matters, the fix is a sqlite
   // .backup dump presync — the pg_dump pattern — not removing this line.
   uptime: ["/data/data.db*"],
+
+  // The Authentik Postgres standby on alpha-site. SAME ARGUMENT AS `postgres`
+  // ABOVE, and it was simply never applied here when the stack was added.
+  //
+  // `pgdata/` is the standby's live PGDATA, rewritten continuously by WAL
+  // replay and restartpoints. rclone loses the race against it and the
+  // ON_ERROR_FATAL pre-sync takes the snapshot down with it -- the alpha-site
+  // rclone-sftp server logs the failure verbatim:
+  //
+  //   ERROR : stacks/authentik-pg-standby/pgdata/pgdata/base/16385/50150:
+  //     ReadFileHandle.Read error: low level retry 10/10: unexpected EOF
+  //
+  // (2026-09-16 20:52 and 2026-09-19 05:19, matching the two failed plan runs
+  // exactly.) The runs that "passed" are worse than the ones that failed: they
+  // produced a torn, almost certainly unrestorable file-level copy of a live
+  // cluster, and the PBS copy job on luna faithfully copied it and reported
+  // 12/12 green.
+  //
+  // `/run/**` is the postmaster's unix socket directory -- rclone logs
+  // "Can't transfer non file/directory" for `.s.PGSQL.5432`. That is a NOTICE,
+  // not the failure (it appears on successful runs too), but there is no
+  // reason to walk it.
+  //
+  // WHAT PROTECTS AUTHENTIK'S DATABASE IS NOT THIS PLAN. The primary
+  // authentik-pg CNPG cluster does barman-cloud backups to Minio with
+  // continuous WAL archiving and 30d retention (verified: unbroken daily
+  // Backup objects 2026-09-13 → 2026-09-19). The alpha-site standby is a
+  // FAILOVER mechanism, not a backup one -- FAILOVER.md already frames it that
+  // way.
+  //
+  // Residual, stated plainly: with pgdata excluded this plan protects only
+  // `status/`, i.e. close to nothing. That is honest rather than harmful --
+  // it no longer manufactures green snapshots of an unrestorable artifact.
+  // The proper follow-up is a `pg_dump` on the standby into a `dumps/`
+  // directory left unexcluded (pg_dump runs fine against a hot standby in
+  // recovery, and docker/_common/postgres already uses exactly that pattern).
+  // Until then, do not read this plan's green as "Authentik is backed up".
+  "authentik-pg-standby": ["/pgdata/**", "/run/**"],
 };
 
 /**
@@ -205,7 +243,29 @@ export function listStackBackupTargets(hostDir: string): DockerStackBackupTarget
 
     // Matched before ${APP}/${STACK_NAME} substitution, which is fine: the
     // literal "stacks-data" is present either way ("/opt/stacks-data/${APP}/…").
-    if (!readFileSync(composeFile, "utf-8").includes("stacks-data")) continue;
+    //
+    // COMMENTS ARE STRIPPED FIRST, and that is load-bearing. docker-prune
+    // (#1765) mounts nothing but `/var/run/docker.sock` and writes no artifact,
+    // yet it qualified for a backup plan on all three Dockge hosts purely
+    // because its "WHAT IT DELIBERATELY DOES NOT DO" comment block contains the
+    // sentence "The /opt/stacks-data bind mounts most stacks use are not …".
+    // DockgeLxc then created an empty /opt/stacks-data/docker-prune/, the
+    // pre-sync rclone'd an empty source, and restic failed the plan nightly
+    // with "path /data/staging/<host>/docker-prune/ does not exist" -- the
+    // pecron-monitor signature above, but for a stack that never even declared
+    // a mount. Prose about stacks-data is not a declaration of stacks-data.
+    //
+    // Only WHOLE-LINE comments are removed, deliberately. An inline `#` cannot
+    // be stripped safely without a real YAML parse (it may sit inside a quoted
+    // scalar), and the dangerous direction here is the false NEGATIVE: dropping
+    // a stack that genuinely has state would silently stop backing up real
+    // data. A line whose first non-space character is `#` can never be part of
+    // a value, so this narrowing cannot misclassify in that direction.
+    const composeBody = readFileSync(composeFile, "utf-8")
+      .split("\n")
+      .filter(line => !/^\s*#/.test(line))
+      .join("\n");
+    if (!composeBody.includes("stacks-data")) continue;
 
     if (BACKUP_OPT_OUT_STACKS.has(stack)) continue;
 
