@@ -84,80 +84,6 @@ spec:
               readOnlyRootFilesystem: true
               capabilities: { drop: ["ALL"], add: ["CHOWN"] }
 
-          # Installs the plugin, so neither Jellyfin needs a click-through in
-          # the web UI to get it. Jellyfin loads any directory under
-          # <data>/plugins that carries a meta.json, which is exactly what the
-          # release zip contains, and `Meilisearch_<version>` is the directory
-          # name Jellyfin's own installer would have used.
-          #
-          # Runs as 568, unlike the chown above: /config is the app's own
-          # volume and is already owned by it.
-          #
-          # NEVER FATAL, ON PURPOSE. A GitHub outage must not keep production
-          # Jellyfin from starting, so every failure path warns and exits 0.
-          # Jellyfin then comes up with whatever version is already on the
-          # volume, or -- on a first install -- with no plugin at all and its
-          # built-in search. `wget` and `unzip` are busybox applets and the
-          # image ships `ssl_client`, so https needs nothing extra.
-          #
-          # ⚠️ PLUGIN_SHA256 MUST BE BUMPED WITH PLUGIN_VERSION. Renovate can
-          # see the version through the annotation below but cannot rewrite the
-          # checksum, so a lone version bump fails the check and silently keeps
-          # the old plugin (loudly, in this container's log). The value is the
-          # one published beside the zip in the release:
-          #   curl -sSL https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/<ver>/meilisearch_<ver>.sha256
-          meilisearch-plugin:
-            image:
-              repository: busybox
-              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
-              pullPolicy: IfNotPresent
-            env:
-              # renovate: datasource=github-releases depName=arnesacnussem/jellyfin-plugin-meilisearch
-              PLUGIN_VERSION: 1.12.1.4
-              PLUGIN_SHA256: e51a8d96af8af31bca5162e2502de3b91db6d3f1749d02fa1e84c20d1de93584
-            securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities: { drop: ["ALL"] }
-            command: ["/bin/sh", "-c"]
-            # No braces on the shell variables: Flux's postBuild substitution
-            # replaces ${...} and would blank every one of them.
-            args:
-              - |
-                set -eu
-                mkdir -p /config/plugins
-                DEST=/config/plugins/Meilisearch_$PLUGIN_VERSION
-                if [ -f "$DEST/meta.json" ]; then
-                  echo "meilisearch plugin $PLUGIN_VERSION already installed"
-                  exit 0
-                fi
-                TMP=/config/plugins/.meilisearch.tmp
-                rm -rf "$TMP"
-                mkdir -p "$TMP"
-                URL=https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/$PLUGIN_VERSION/meilisearch_$PLUGIN_VERSION.zip
-                if ! wget -q -O "$TMP/plugin.zip" "$URL"; then
-                  echo "WARNING: could not download $URL -- starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                if ! echo "$PLUGIN_SHA256  $TMP/plugin.zip" | sha256sum -c - >/dev/null 2>&1; then
-                  echo "WARNING: $URL does not match PLUGIN_SHA256 -- was the checksum bumped with the version? starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                if ! unzip -q "$TMP/plugin.zip" -d "$TMP/plugin"; then
-                  echo "WARNING: could not unpack $URL -- starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                rm -f "$TMP/plugin.zip"
-                mv "$TMP/plugin" "$DEST"
-                rm -rf "$TMP"
-                for old in /config/plugins/Meilisearch_*; do
-                  [ "$old" = "$DEST" ] || rm -rf "$old"
-                done
-                echo "installed meilisearch plugin $PLUGIN_VERSION"
-
         containers:
           jellyfin:
             image:
@@ -188,12 +114,17 @@ spec:
               JELLYFIN_LOG_DIR: /logs
               JELLYFIN_PublishedServerUrl: "https://${APP}.${ROOT_DOMAIN}"
               DOTNET_SYSTEM_IO_DISABLEFILELOCKING: "true"
-              # Configures the Meilisearch plugin without touching its settings
-              # page. The plugin reads MEILI_URL and MEILI_MASTER_KEY straight
-              # out of the environment and PREFERS them over whatever is stored
-              # in its own config XML, so there is nothing to click and nothing
-              # to keep in sync with this file.
-              # src/MeilisearchClientHolder.cs, Set().
+              # Configures the Meilisearch plugin. The plugin reads MEILI_URL
+              # and MEILI_MASTER_KEY straight out of the environment and
+              # PREFERS them over whatever is stored in its own config XML, so
+              # these two win over the settings page and cannot drift from the
+              # sidecar they describe. src/MeilisearchClientHolder.cs, Set().
+              #
+              # THE PLUGIN ITSELF IS INSTALLED OUT OF BAND, through Jellyfin's
+              # own plugin UI. Nothing in this HelmRelease puts it on disk or
+              # keeps it at a version -- it lives on the config volume, which
+              # is volsync-backed, and it updates the way any other Jellyfin
+              # plugin does. Only its configuration is declared here.
               #
               # 127.0.0.1 because the sidecar binds loopback only. The plugin's
               # other settings -- index name, matching strategy -- are not

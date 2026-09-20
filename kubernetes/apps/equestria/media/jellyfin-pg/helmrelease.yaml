@@ -43,69 +43,6 @@ spec:
         # Jellyfin processes against one config directory is not a supported
         # state even briefly.
         strategy: Recreate
-        initContainers:
-          # Installs the Meilisearch plugin, same as production jellyfin's
-          # init container of the same name -- see the long comment there for
-          # why it is never fatal and why the checksum has to move with the
-          # version.
-          #
-          # There is NO `meilisearch-chown` counterpart here, and that is not
-          # an omission: this pod sets `fsGroup: ${PGID}` in defaultPodOptions,
-          # so the kubelet hands the Meilisearch claim over on its own.
-          # Production jellyfin has no pod-level fsGroup and cannot cheaply be
-          # given one, which is the only reason it needs the extra container.
-          meilisearch-plugin:
-            image:
-              repository: busybox
-              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
-              pullPolicy: IfNotPresent
-            env:
-              # renovate: datasource=github-releases depName=arnesacnussem/jellyfin-plugin-meilisearch
-              PLUGIN_VERSION: 1.12.1.4
-              PLUGIN_SHA256: e51a8d96af8af31bca5162e2502de3b91db6d3f1749d02fa1e84c20d1de93584
-            securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities: { drop: ["ALL"] }
-            command: ["/bin/sh", "-c"]
-            # No braces on the shell variables: Flux's postBuild substitution
-            # replaces ${...} and would blank every one of them.
-            args:
-              - |
-                set -eu
-                mkdir -p /config/plugins
-                DEST=/config/plugins/Meilisearch_$PLUGIN_VERSION
-                if [ -f "$DEST/meta.json" ]; then
-                  echo "meilisearch plugin $PLUGIN_VERSION already installed"
-                  exit 0
-                fi
-                TMP=/config/plugins/.meilisearch.tmp
-                rm -rf "$TMP"
-                mkdir -p "$TMP"
-                URL=https://github.com/arnesacnussem/jellyfin-plugin-meilisearch/releases/download/$PLUGIN_VERSION/meilisearch_$PLUGIN_VERSION.zip
-                if ! wget -q -O "$TMP/plugin.zip" "$URL"; then
-                  echo "WARNING: could not download $URL -- starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                if ! echo "$PLUGIN_SHA256  $TMP/plugin.zip" | sha256sum -c - >/dev/null 2>&1; then
-                  echo "WARNING: $URL does not match PLUGIN_SHA256 -- was the checksum bumped with the version? starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                if ! unzip -q "$TMP/plugin.zip" -d "$TMP/plugin"; then
-                  echo "WARNING: could not unpack $URL -- starting with the plugin directory untouched"
-                  rm -rf "$TMP"
-                  exit 0
-                fi
-                rm -f "$TMP/plugin.zip"
-                mv "$TMP/plugin" "$DEST"
-                rm -rf "$TMP"
-                for old in /config/plugins/Meilisearch_*; do
-                  [ "$old" = "$DEST" ] || rm -rf "$old"
-                done
-                echo "installed meilisearch plugin $PLUGIN_VERSION"
-
         containers:
           app:
             image:
@@ -155,8 +92,13 @@ spec:
               POSTGRES_COMMAND_TIMEOUT: "30"
               # Points the Meilisearch plugin at this instance's OWN sidecar,
               # over the pod's loopback. The plugin prefers MEILI_URL from the
-              # environment over its stored config, so there is no settings
-              # page to fill in (src/MeilisearchClientHolder.cs).
+              # environment over its stored config, so this wins over the
+              # settings page (src/MeilisearchClientHolder.cs).
+              #
+              # The plugin itself is installed out of band through Jellyfin's
+              # plugin UI, as on production -- this HelmRelease configures it
+              # but does not put it on disk. On a rebuilt config volume it has
+              # to be installed again; these variables need no such step.
               #
               # ⚠️ ITS OWN, not production's. The plugin names its index after
               # the server when `Meilisearch Index Name` is blank, and both
