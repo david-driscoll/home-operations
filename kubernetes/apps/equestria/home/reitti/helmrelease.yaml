@@ -166,8 +166,9 @@ spec:
               # `family` binding in ./definition.yaml therefore governs who can
               # REACH Reitti, not what they are once inside.
               #
-              # Reitti's only ADMIN is the `admin` account migration V7 seeds
-              # with the password `admin` (V30 then marks the first user ADMIN).
+              # Reitti has exactly one ADMIN, created by migrations V7/V30 and
+              # then named by the /setup wizard described at the bottom of this
+              # comment. Everyone who arrives later, via authentik, is a USER.
               #
               # What setting this to true actually does -- the mechanism
               # matters, because the obvious guess is wrong. It does NOT wipe
@@ -186,11 +187,26 @@ spec:
               # the app refuse to start, with IllegalConfigurationException
               # ("No login possible.") naming this variable.
               #
-              # First-run order, once this app is reachable: log in as
-              # admin/admin, change that password, then log in via authentik and
-              # promote that user under Settings > Users. Flyway will not
-              # re-apply V7, so the seeded password is never restored on restart
-              # -- it stays whatever it was left as.
+              # FIRST RUN IS THE /setup WIZARD, NOT admin/admin. This comment
+              # said "log in as admin/admin" until 2026-09-20; that was wrong,
+              # and the live deployment proved it. On first reach, SetupFilter
+              # redirected EVERY path -- including /login -- to /setup, which
+              # serves a form for username, password and displayName and sets
+              # them on the empty-password ADMIN it found. Only /setup, /css,
+              # /js, /images, /img and /actuator/health are exempt from that
+              # redirect, which is also why /actuator/health answered 200 for
+              # Gatus throughout.
+              #
+              # WHY an ADMIN with an empty password exists is NOT established.
+              # Migration V7 -- checked at tag v5.5.0, not just on main --
+              # seeds `admin` with a bcrypt hash of "admin", and no later
+              # migration found blanks it. The observed behaviour is
+              # authoritative here; the mechanism is not, so do not write one
+              # into this file without evidence.
+              #
+              # After the wizard: log in via authentik once, then promote that
+              # user under Settings > Users, because OIDC cannot do it (see the
+              # group note above).
               DISABLE_LOCAL_LOGIN: "false"
 
               # Background data-management endpoints (clean, purge). Off, which
