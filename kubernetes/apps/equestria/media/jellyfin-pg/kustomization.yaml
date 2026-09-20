@@ -6,5 +6,6 @@ resources:
   - ./pvc.yaml
   - ./meilisearch-pvc.yaml
   - ./externalsecret.yaml
+  - ./meilisearch-secret.yaml
   - ./helmrelease.yaml
   - ./definition.yaml

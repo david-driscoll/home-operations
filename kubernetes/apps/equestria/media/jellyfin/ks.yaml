@@ -21,6 +21,13 @@ spec:
       namespace: volsync-system
     - name: tailscale-operator
       namespace: tailscale-system
+    # New with the Meilisearch sidecar: ./meilisearch-secret.yaml generates its
+    # master key through an ESO Password generator, and the sidecar will not
+    # boot without it (`MEILI_ENV: production`). The generator resolves inside
+    # the cluster -- no OpenBao, no network -- but the controller and CRDs still
+    # have to exist before this Kustomization applies either object.
+    - name: external-secrets
+      namespace: kube-system
   path: ./kubernetes/apps/equestria/media/jellyfin
   prune: true
   wait: true

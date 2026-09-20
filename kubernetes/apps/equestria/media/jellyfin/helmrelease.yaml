@@ -189,11 +189,10 @@ spec:
               JELLYFIN_PublishedServerUrl: "https://${APP}.${ROOT_DOMAIN}"
               DOTNET_SYSTEM_IO_DISABLEFILELOCKING: "true"
               # Configures the Meilisearch plugin without touching its settings
-              # page. The plugin reads MEILI_URL (and MEILI_MASTER_KEY, which
-              # this deployment has no use for -- see the sidecar's MEILI_ENV)
-              # straight out of the environment and PREFERS them over whatever
-              # is stored in its own config XML, so there is nothing to click
-              # and nothing to keep in sync with this file.
+              # page. The plugin reads MEILI_URL and MEILI_MASTER_KEY straight
+              # out of the environment and PREFERS them over whatever is stored
+              # in its own config XML, so there is nothing to click and nothing
+              # to keep in sync with this file.
               # src/MeilisearchClientHolder.cs, Set().
               #
               # 127.0.0.1 because the sidecar binds loopback only. The plugin's
@@ -205,6 +204,20 @@ spec:
               PUID: ${PUID}
               PGID: ${PGID}
               TZ: ${TIMEZONE}
+            # MEILI_MASTER_KEY, the same value the sidecar boots with. From
+            # ./meilisearch-secret.yaml, which generates it in-cluster.
+            #
+            # `optional: true`, unlike the sidecar's copy of this. If the
+            # Secret is briefly absent -- a first reconcile, a rebuilt
+            # namespace -- Jellyfin's container still starts and search simply
+            # falls back; a required ref would make the kubelet refuse to
+            # create the container at all. The pod carries
+            # `reloader.stakater.com/auto`, so when the Secret does land the
+            # pod is restarted and both containers pick it up together.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-meilisearch
+                  optional: true
             probes:
               # exec probes on purpose, and NOT tunable back to httpGet while
               # this pod carries the jellyfin-lan-net ipvlan interface.
@@ -310,15 +323,20 @@ spec:
               # of the whole library on the flat LAN.
               MEILI_HTTP_ADDR: 127.0.0.1:7700
               MEILI_DB_PATH: /meili_data/data.ms
-              # `development` is a consequence of the loopback bind above, not
-              # carelessness: `production` refuses to start without a >=16 byte
-              # MEILI_MASTER_KEY, and a key guarding a socket no other pod can
-              # open would buy nothing while making this pod unable to start
-              # whenever that Secret is missing. The estate's shared
-              # Meilisearch (equestria/home/meilisearch) is the opposite case
-              # -- it is behind a cluster Service, so it runs `production` with
-              # the key from OpenBao.
-              MEILI_ENV: development
+              # `production`, which means two things: every route requires the
+              # master key below, and Meilisearch REFUSES TO START without one
+              # of at least 16 bytes. That refusal is the thing to understand
+              # before changing anything here -- this is a sidecar, so a
+              # Meilisearch that will not start makes the pod unready and takes
+              # Jellyfin's endpoints with it.
+              #
+              # That risk is why the key is generated in-cluster rather than
+              # fetched from OpenBao: the Secret resolves with no provider call
+              # and is created once and kept (`CreatedOnce` + `Retain`), so the
+              # window where it could be missing is the moment it is first
+              # applied, inside a rollout this pod was taking anyway --
+              # `strategy` is Recreate here.
+              MEILI_ENV: production
               MEILI_NO_ANALYTICS: "true"
               # Migrates the on-disk format in place on startup rather than
               # refusing to boot after an image bump. One-way -- the previous
@@ -328,6 +346,13 @@ spec:
               # Jellyfin's endpoints with it. Same setting and same reasoning
               # as equestria/home/meilisearch (vault#102).
               MEILI_UPGRADE_DB: "true"
+            # MEILI_MASTER_KEY. REQUIRED here -- no `optional: true`, unlike
+            # Jellyfin's copy of the same ref: `MEILI_ENV: production` will not
+            # boot without it, so letting the container start with the variable
+            # unset would only turn a clear "missing Secret" into a crashloop.
+            envFrom:
+              - secretRef:
+                  name: ${APP}-meilisearch
             probes:
               # Liveness only. A readiness probe here would add nothing -- a
               # container with no readiness probe is Ready as soon as it is
