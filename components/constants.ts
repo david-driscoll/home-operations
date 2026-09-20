@@ -171,5 +171,22 @@ export const Tailscale = {
     ingress: "tag:ingress" as TailscaleTags,
     management: "tag:management" as TailscaleTags,
     observability: "tag:observability" as TailscaleTags,
+
+    // Tailscale PAM (Border0). NOT a tag this repo applies to anything -- the
+    // Tailscale control plane creates it the moment PAM is enabled in the admin
+    // console, and stamps it into tagOwners, grants and autoApprovers.services.
+    //
+    // It is declared here because acl-manager.ts REBUILDS tagOwners and grants
+    // from this file on every run while passing autoApprovers through untouched.
+    // Without an entry here the rebuilt policy keeps
+    // `autoApprovers.services["tag:border0-managed"]` but drops the matching
+    // tagOwners key, and Tailscale rejects the whole PUT:
+    //
+    //   autoApprovers.services["tag:border0-managed"]:
+    //     "tag:border0-managed": does not exist (400)
+    //
+    // That stalled the unifi-network stack for 3.5 days from 2026-09-16.
+    // See configureBorder0Pam() in stacks/unifi-network/acl-manager.ts.
+    border0Managed: "tag:border0-managed" as TailscaleTags,
   } as const,
 } as const;

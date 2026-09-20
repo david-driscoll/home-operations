@@ -193,9 +193,13 @@ export class TailscaleAclManager {
     }
   }
 
-  public setTagOwner(owner: TailscaleTags, tags: TailscaleTags[]): TailscaleAclManager;
+  // `owner` widens to TailscaleSelector for the two-argument form: a tag can be
+  // owned by a group or autogroup, not only by another tag. Tailscale PAM owns
+  // tag:border0-managed via autogroup:admin. The one-argument form stays
+  // TailscaleTags -- it self-registers the key, and only a tag may BE a key.
+  public setTagOwner(owner: TailscaleSelector, tags: TailscaleTags[]): TailscaleAclManager;
   public setTagOwner(owner: TailscaleTags): TailscaleAclManager;
-  public setTagOwner(owner: TailscaleTags, tags?: TailscaleTags[]) {
+  public setTagOwner(owner: TailscaleSelector, tags?: TailscaleTags[]) {
     this.updates.push(context => pulumi.output(setTagOwner(context, owner, [...(tags ?? [])])));
     return this;
   }
@@ -296,7 +300,11 @@ function setExitNode({ acls, policy }: TailscaleAclContext, tag: TailscaleTags) 
 
 function setTagOwner({ acls, policy }: TailscaleAclContext, owner: TailscaleSelector, tags: TailscaleSelector[]) {
   const current = policy.tagOwners ?? {};
-  if (current[owner] === undefined) {
+  // Self-register the owner as a key ONLY when it is a tag. Every key of
+  // tagOwners must be a tag; an owner may also be a group or autogroup
+  // (autogroup:admin owns tag:border0-managed for Tailscale PAM), and writing
+  // `"autogroup:admin": []` as a key would make the whole policy invalid.
+  if (owner.startsWith("tag:") && current[owner] === undefined) {
     current[owner] = [];
     acls = applyAllEdits(acls, ["tagOwners", owner], Array.from(new Set(current[owner].sort())));
   }

@@ -123,6 +123,7 @@ export function assignTailscaleAcls(globals: GlobalResources): pulumi.Output<any
     configureDnsAccess(manager);
     configurePbsAccess(manager);
     configureKubernetesAccess(manager, clusters);
+    configureBorder0Pam(manager);
     createGroupGrants(manager);
 
     // ── General member/admin grants ───────────────────────────────────────
@@ -960,6 +961,75 @@ function configureKubernetesAccess(manager: TailscaleAclManager, clusters: Kuber
       action: "accept",
     },
     rules,
+  );
+}
+
+/**
+ * Tailscale PAM (Border0).
+ *
+ * THIS IS NOT A FEATURE THIS FILE OWNS -- it is a feature the Tailscale control
+ * plane owns, reproduced here so that regenerating the policy does not destroy
+ * it. Enabling PAM in the admin console writes `tag:border0-managed` into three
+ * places in the live policy: `tagOwners`, `grants`, and
+ * `autoApprovers.services`.
+ *
+ * assignTailscaleAcls() blanks `tagOwners` and `grants` and rebuilds them from
+ * code, but passes `autoApprovers` through from the live policy untouched. So
+ * with no entry here the PUT carries a dangling reference and Tailscale rejects
+ * the whole policy:
+ *
+ *   autoApprovers.services["tag:border0-managed"]:
+ *     "tag:border0-managed": does not exist (400)
+ *
+ * That is what stalled this stack for 3.5 days from 2026-09-16T22:17Z (PAM's
+ * enable time) until it hit `up failed 10 times; not retrying`.
+ *
+ * All three pieces are declared, not just the one that broke. Restoring only
+ * `tagOwners` would fix the 400 and then SILENTLY DELETE the PAM grant on the
+ * next successful run, because `grants` is rebuilt from this file -- PAM would
+ * half-work, which is worse than failing loudly.
+ *
+ * If PAM is ever turned off in the console, delete this function and the
+ * `border0Managed` tag; the next run then strips all three for real.
+ */
+function configureBorder0Pam(manager: TailscaleAclManager) {
+  // Mirrors the console's own `"tag:border0-managed": ["autogroup:admin"]`.
+  manager.setTagOwner(autogroups.admin, [tag.border0Managed]);
+
+  // PAM self-approves the service it manages.
+  manager.setService(tag.border0Managed, [tag.border0Managed]);
+
+  // Verbatim from the live policy's PAM stanza. Tailscale's own comment there
+  // reads: "Automatically added by enabling PAM. This grants access to every
+  // user with the Admin role for all PAM services."
+  //
+  // No tests: this grants an app capability rather than host:port reachability,
+  // and the console's own grant carries none.
+  manager.setGrant(
+    "border0-pam-admin-access",
+    {
+      src: [autogroups.admin],
+      dst: [tag.border0Managed],
+      ip: ["*"],
+      app: {
+        "tailscale.com/cap/pam": [
+          {
+            version: "v1",
+            permissions: {
+              ssh: { shell: {}, exec: {}, sftp: {} },
+              database: {},
+              http: {},
+              rdp: {},
+              vnc: {},
+              tcp: {},
+              kubernetes: {},
+              aws_s3: {},
+            },
+          },
+        ],
+      },
+    },
+    () => [],
   );
 }
 
