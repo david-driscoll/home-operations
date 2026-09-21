@@ -1,0 +1,46 @@
+# Replaces the KubeEtcdEncryptionConfig talhelper generates (deleted in
+# cluster.yaml, which talconfig.yaml applies before this file). THIS ONE IS
+# LOAD-BEARING -- getting it wrong makes the apiserver unable to read a single
+# Secret.
+#
+# talhelper 3.1.17 renders this document from talsecret's
+# `secretboxencryptionsecret`, but with the key NAMED `key1` and no `identity`
+# provider. Every Secret in etcd is stored as `k8s:enc:secretbox:v1:key2:...`
+# (the name Talos gave it under v1alpha1's `.cluster.secretboxEncryptionSecret`),
+# and secretbox matches keys BY NAME -- so the rendered config holds the right key
+# material under the wrong label and cannot decrypt anything. Upstream Talos
+# fixed its generator ("fix: generate backwards compatible etcd encryption
+# config", 1.14.0); talhelper 3.1.17 vendors machinery from before that fix.
+#
+# Found the hard way on 2026-09-21: applied to pegasus, its apiserver failed
+# informer sync on "no matching key was found for the provided Secretbox
+# transformer" and stayed NotReady until this exact shape was applied by hand.
+# No data was lost -- all 1241 Secrets still list cleanly through every
+# apiserver -- because a NotReady apiserver drops out of the `kubernetes`
+# endpoints and never took the writes.
+#
+# `identity: {}` is restated as well: the v1alpha1-generated config always
+# carried it as the read fallback for any Secret stored before encryption was
+# turned on.
+#
+# If talhelper ever renders `key2` + identity itself, this file and the delete
+# in cluster.yaml can both go -- check the rendered KubeEtcdEncryptionConfig
+# against /system/secrets/kubernetes/kube-apiserver/encryptionconfig.yaml on a
+# control plane before removing them.
+#
+# The secret is NOT in git. `${TALOS_SECRETBOX_ENCRYPTION_SECRET}` is exported by
+# the `talos:genconfig` task from talsecret.sops.yaml at render time; running
+# `talhelper genconfig` without it fails on the unset variable instead of
+# rendering an empty key.
+apiVersion: v1alpha1
+kind: KubeEtcdEncryptionConfig
+config:
+  resources:
+    - resources:
+        - secrets
+      providers:
+        - secretbox:
+            keys:
+              - name: key2
+                secret: ${TALOS_SECRETBOX_ENCRYPTION_SECRET}
+        - identity: {}
