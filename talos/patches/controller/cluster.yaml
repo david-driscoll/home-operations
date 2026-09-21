@@ -37,6 +37,25 @@ resources:
     memory: 2Gi
   limits:
     memory: 4Gi
+# Restates talconfig.yaml's `additionalApiServerCertSans`, which talhelper
+# 3.1.17 SILENTLY DROPS once talosVersion is 1.14: the SANs used to live in
+# `.cluster.apiServer.certSANs`, the new home is this field, and talhelper maps
+# the talconfig key to neither. Caught in the `apply-config --dry-run` diff,
+# before anything was applied: the rendered config removed `certSANs` and put
+# nothing in its place.
+#
+# Talos adds the machine addresses, hostnames, `kubernetes.*` names and the
+# control-plane endpoint (10.10.206.201) itself, so only the names below are at
+# risk -- and `apiserver.equestria.driscoll.tech` is LOAD-BEARING: it is the
+# `cluster_api` server of the kubeconfig stacks/applications/kubernetes.ts
+# builds, and a cert without it fails TLS for that client.
+#
+# Keep this list in step with `additionalApiServerCertSans` in talconfig.yaml.
+certExtraSANs:
+  - 127.0.0.1
+  - 10.10.206.201
+  - apiserver.equestria.driscoll.tech
+  - k8s-equestria.equestria.svc.cluster.local
 ---
 # Was `.cluster.apiServer.admissionControl: {$patch: delete}`.
 #
