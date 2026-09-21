@@ -27,6 +27,17 @@ spec:
     monitoring:
       serviceMonitor:
         enabled: true
+      # This chart-managed PrometheusRule (TalosUpgradeStuck, TalosUpgradeFailed,
+      # TupprUpgradeBlocked, TupprOperatorAbsent, ...) is the ONLY tuppr
+      # alerting. It is what turns a wedged health check -- which tuppr waits on
+      # forever, whatever `timeout` says -- into a page instead of a silent
+      # stall. Do not disable it.
+      #
+      # A hand-written upgrades/alerts.yaml existed until 2026-09-21 and was
+      # deleted: it was never in that directory's kustomization, so Flux never
+      # applied it, and two of its three rules could not fire anyway
+      # (`phase="Failed"} == 3` on a 0/1 gauge; a `phase="InProgress"` label
+      # tuppr does not emit). The rules here cover the same ground correctly.
       prometheusRule:
         enabled: true
     webhook:

@@ -20,10 +20,34 @@ spec:
   policy:
     rebootMode: default
   healthChecks:
-    # A wedged VolSync mover (e.g. a failed snapshot clone) can hold Synchronizing:
-    # True indefinitely with no built-in timeout of its own. Bound this check so
-    # one stuck backup job can't silently freeze node upgrades for days (2026-07
-    # incident: fluttershy/othalla stayed cordoned a week because of this).
+    # HOW tuppr USES THESE (read from internal/healthcheck/checker.go and the
+    # talosupgrade controller at 0.5.7, then confirmed against the 1.14.1 rollout
+    # on 2026-09-20):
+    #
+    #   * All checks share ONE deadline: the largest `timeout` below (tuppr's
+    #     floor is 10m). The per-check values are not per-check.
+    #   * Every 10s all checks are re-evaluated; the gate opens only when every
+    #     one passes in the same pass.
+    #   * `timeout` does NOT bound the wait. When the deadline passes, tuppr sets
+    #     `HealthChecking` / "Waiting for health checks", requeues after a
+    #     minute and opens a fresh window. It never drains the next node past a
+    #     failing check -- it waits for as long as the check keeps failing.
+    #
+    # So a wedged VolSync mover (e.g. a failed snapshot clone -- the 2026-07
+    # incident, when fluttershy/othalla stayed cordoned a week) still blocks
+    # upgrades indefinitely, and `timeout: 15m` was never going to change that.
+    # What makes it NOT silent is the chart's `TalosUpgradeStuck` alert: 1h in
+    # Upgrading|Rebooting|Draining|HealthChecking. It is enabled via
+    # `monitoring.prometheusRule` in tuppr/helmrelease.yaml; see the note there.
+    #
+    # The timeout message misleads. On expiry tuppr reports only evaluation
+    # ERRORS, and the final pass runs against the already-expired context -- so
+    # every check reads "failed to list resources: context deadline exceeded",
+    # while the check that was actually unsatisfied is not named at all. During
+    # the 1.14.1 rollout that text reported all three checks as broken; the real
+    # cause was the Longhorn check correctly waiting out replica rebuilds
+    # (`tuppr_health_check_failures_total`: check 2 = 573, checks 0 and 1 = 2).
+    # Read that counter, not the message, to see which check is holding.
     - apiVersion: volsync.backube/v1alpha1
       kind: ReplicationSource
       expr: status.conditions.filter(c, c.type == "Synchronizing").all(c, c.status == "False")
@@ -48,7 +72,8 @@ spec:
   # `degraded` 02:00-09:00 every night. The Longhorn health check above is
   # CLUSTER-WIDE (`status.robustness != "degraded"` names no volume), so a
   # nightly degraded volume would have stalled every node drain for seven hours
-  # a night -- and failed on the 15m timeout rather than waited, silently.
+  # a night. (It would have WAITED those hours, re-arming the 15m window each
+  # time -- not failed or skipped the check; see the health-check note above.)
   #
   # That premise is gone. fluttershy and kerfuffle now STAY POWERED overnight
   # (they idle instead of shutting down), the media volumes are back on the
