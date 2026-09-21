@@ -5,6 +5,12 @@
 # factory.talos.dev URLs from the `schematic:` blocks in talconfig.yaml.
 # renovate: datasource=github-releases depName=siderolabs/talos
 talosVersion: v1.14.1
+# Kept in lockstep with kubernetes/apps/system-upgrade/upgrades/kubernetes.yaml.
+# That CR is what actually rolls Kubernetes; this value only sets the images in
+# the config talhelper renders. They drifted once (renovate moved this to
+# v1.37.0 in #1262, the CR stayed on v1.36.4) and the result was a config that
+# would have upgraded Kubernetes as a side effect of `talos:apply`. Realigned
+# 2026-09-21 -- if you change one, change the other in the same PR.
 # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
 kubernetesVersion: v1.37.0
 # renovate: datasource=github-releases depName=prometheus-operator/prometheus-operator

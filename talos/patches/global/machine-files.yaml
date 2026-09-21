@@ -1,3 +1,23 @@
+# STILL v1alpha1 ON PURPOSE, and it is the one thing #1914 could not migrate.
+#
+# Talos 1.14 deprecates `.machine.files` in favour of `CRICustomizationConfig`,
+# and `talosctl validate --strict` promotes that deprecation to a non-zero exit.
+# But talhelper 3.1.17 -- the newest release as of 2026-09-21, there is no later
+# one to bump to -- vendors a machinery build that does not register the new
+# document, and rejects it outright:
+#
+#   error decoding document v1alpha1/CRICustomizationConfig/discard-unpacked-layers:
+#   "CRICustomizationConfig" "v1alpha1": not registered
+#
+# So the choice is a config talhelper cannot render, or a deprecation warning.
+# This keeps the warning; `talos:validate-config` tolerates THIS ONE warning by
+# name and still fails on any other. Revisit when talhelper ships 1.14 support:
+# the replacement is a CRICustomizationConfig whose `name` is anything except
+# the reserved `customization`.
+#
+# `discard_unpacked_layers = false` keeps containerd's unpacked layers on disk
+# so spegel can serve them to other nodes; without it a node advertises layers
+# it has already discarded.
 machine:
   files:
     - op: create
