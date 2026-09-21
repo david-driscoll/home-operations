@@ -1,0 +1,66 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/monitoring.coreos.com/servicemonitor_v1.json
+#
+# Prometheus picks this up without any further wiring: the operator runs with
+# `serviceMonitorSelectorNilUsesHelmValues: false`
+# (apps/observability/prometheus/values.yaml), so ServiceMonitors are selected
+# from every namespace.
+#
+# ONE target, not two. Dawarich has served metrics in-process since 1.7.7 --
+# the web container's /metrics response already concatenates its own rails_*,
+# puma_* and activerecord_* series with the sidekiq_* series it fetches from
+# the Sidekiq container's exporter on :9394. Scraping 9394 separately would
+# double-count and would need that port on the Service, which upstream
+# deliberately avoids.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ${APP}
+spec:
+  selector:
+    matchLabels:
+      # This comes from app-template's own Service template, NOT from ks.yaml's
+      # `commonMetadata` -- that only labels the objects the Kustomization
+      # applies (this ServiceMonitor, the HelmRelease, the ExternalSecrets),
+      # and the Service is created afterwards by Helm. The rendered Service
+      # carries app.kubernetes.io/{name,instance,service}, managed-by,
+      # helm.sh/chart and the two helm.toolkit labels; `name` is the one that
+      # is both stable and unique here.
+      #
+      # Checked against `flate build hr` output rather than assumed. See the
+      # sablier ServiceMonitor for what getting this wrong costs: a silently
+      # absent target, indistinguishable from a dead app, which also disarms
+      # whatever alert was watching it.
+      app.kubernetes.io/name: ${APP}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 1m
+      scrapeTimeout: 30s
+      # ⚠️ REQUIRED. Dawarich wraps /metrics in HTTP basic auth with no
+      # anonymous mode -- an unauthenticated scrape gets 401, not an empty
+      # body. Same Secret the containers read, so the credentials cannot drift.
+      basicAuth:
+        username:
+          name: ${APP}-metrics
+          key: METRICS_USERNAME
+        password:
+          name: ${APP}-metrics
+          key: METRICS_PASSWORD
+      relabelings:
+        # ⚠️ LOAD-BEARING, and not obvious. Prometheus normally scrapes the POD
+        # IP, which means the request arrives with `Host: 10.x.y.z`. Rails host
+        # authorization rejects that with 403: Dawarich exempts only
+        # /api/v1/health from the check
+        # (config.host_authorization in config/environments/production.rb), so
+        # /metrics is still guarded by APPLICATION_HOSTS.
+        #
+        # Rewriting the target to the Service FQDN makes the Host header a name
+        # that ./helmrelease.yaml lists in APPLICATION_HOSTS. The two must stay
+        # in step; changing either alone turns the scrape into a silent 403.
+        #
+        # Safe with a static replacement because this app is single-replica by
+        # construction (Recreate, one ReadWriteOnce volume). If it ever gains
+        # replicas, this collapses them onto one target and needs revisiting.
+        - targetLabel: __address__
+          replacement: ${APP}.${NAMESPACE}.svc.cluster.local:3000
