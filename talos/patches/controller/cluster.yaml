@@ -69,6 +69,20 @@ kind: KubeAdmissionControlConfig
 name: PodSecurity
 $$patch: delete
 ---
+# Was `.cluster.secretboxEncryptionSecret`. The generated document is DELETED
+# here and replaced wholesale by patches/controller/etcd-encryption.yaml, which
+# talconfig.yaml applies after this file. See that file for why -- short
+# version: talhelper 3.1.17 renders the key under the wrong name, and the
+# apiserver then cannot decrypt a single Secret.
+#
+# It has to be delete-then-add, not a merge: a strategic merge APPENDS to
+# `config.resources`, leaving the broken `key1` entry first, and `$patch:
+# replace` is not honoured inside the unstructured `config` field (it is copied
+# through as a literal key). Both were tried.
+apiVersion: v1alpha1
+kind: KubeEtcdEncryptionConfig
+$$patch: delete
+---
 # Was `.cluster.controllerManager.extraArgs`. bind-address on 0.0.0.0 is what
 # lets Prometheus scrape controller-manager; losing it fails silently (the
 # scrape target just goes down), so it is called out here deliberately.
