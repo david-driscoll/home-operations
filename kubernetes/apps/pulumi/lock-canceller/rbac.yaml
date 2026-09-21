@@ -5,7 +5,9 @@ metadata:
   name: pulumi-lock-canceller
   namespace: pulumi
 ---
-# ClusterRole: read Stacks across all namespaces (CRD is cluster-scoped access)
+# ClusterRole: read Stacks across all namespaces (CRD is cluster-scoped access).
+# `patch` is for `kubectl annotate ... pulumi.com/reconciliation-request`, which
+# the job sets after a cancel so a Stalled stack actually re-runs (see cronjob.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -13,7 +15,7 @@ metadata:
 rules:
   - apiGroups: [pulumi.com]
     resources: [stacks]
-    verbs: [get, list]
+    verbs: [get, list, patch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
