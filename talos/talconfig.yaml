@@ -5,6 +5,10 @@ talosVersion: "${talosVersion}"
 kubernetesVersion: "${kubernetesVersion}"
 
 endpoint: https://10.10.206.201:6443
+# On Talos 1.14 talhelper 3.1.17 no longer renders `additionalApiServerCertSans`
+# anywhere -- the apiserver half is restated as `certExtraSANs` in
+# patches/controller/cluster.yaml. It is kept here because the anchor still
+# feeds `additionalMachineCertSans`, which does render. Change both together.
 additionalApiServerCertSans: &sans
   - "127.0.0.1"
   - "10.10.206.201"
