@@ -5,8 +5,21 @@ metadata:
   name: kubernetes
 spec:
   kubernetes:
+    # Kept in lockstep with talos/talenv.yaml's `kubernetesVersion`. These are
+    # two pins for the same thing and they had DRIFTED: renovate moved talenv to
+    # v1.37.0 in #1262 while this one stayed on v1.36.4, so the cluster ran
+    # 1.36.4 while a `talos:apply` would have pushed 1.37.0 static pods and
+    # kubelet -- a Kubernetes minor upgrade smuggled in by a config apply,
+    # outside this CR's control. Realigned to v1.37.0 (2026-09-21) so the
+    # upgrade happens HERE, rolled node-by-node with health checks, which is the
+    # mechanism that is supposed to own it.
+    #
+    # v1.37.0 requires Talos >= 1.14: talhelper rejects "1.37.0 is too new to be
+    # used with Talos 1.13.10". That prerequisite landed with #1914.
+    #
+    # If you change one of these, change the other in the same PR.
     # renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
-    version: v1.36.4
+    version: v1.37.0
   healthChecks:
     - apiVersion: volsync.backube/v1alpha1
       kind: ReplicationSource

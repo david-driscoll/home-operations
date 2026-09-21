@@ -38,9 +38,48 @@ if ((${#configs[@]} == 0)); then
   exit 1
 fi
 
+# `--strict` turns deprecation warnings into a non-zero exit, which is what we
+# want -- EXCEPT for one the repo cannot currently act on. Talos 1.14 deprecates
+# `.machine.files`, but talhelper 3.1.17 (the newest release) will not render the
+# `CRICustomizationConfig` that replaces it, so the warning is unavoidable until
+# talhelper catches up. See talos/patches/global/machine-files.yaml.
+#
+# Tolerating it by EXACT TEXT rather than dropping `--strict` keeps the gate
+# meaningful: a second, different deprecation still fails this task rather than
+# hiding behind a blanket relaxation.
+known_deprecation='.machine.files is deprecated'
+
+failed=0
 for cfg in "${configs[@]}"; do
   printf 'Validating %s\n' "${cfg}"
-  talosctl validate --mode metal --strict --config "${cfg}"
+  if out="$(talosctl validate --mode metal --strict --config "${cfg}" 2>&1)"; then
+    continue
+  fi
+
+  # Drop the known-and-accepted warning, then see whether anything substantive
+  # is left. `grep -v` on the message alone would leave the multi-error wrapper
+  # lines behind, so the residue is checked for real content: any line that
+  # still mentions an error or a warning.
+  # Strip the accepted warning, then the "N error(s) occurred:" wrapper lines
+  # that multierror emits around it (they can be nested and prefixed, e.g.
+  # "* v1alpha1.Config: 1 error occurred:"), then blank lines. Whatever is left
+  # is a real finding.
+  residue="$(printf '%s\n' "${out}" \
+    | grep -v -F "${known_deprecation}" \
+    | grep -viE '[0-9]+ errors? occurred:?[[:space:]]*$' \
+    | grep -vE '^[[:space:]]*\*?[[:space:]]*$' || true)"
+
+  if [[ -z "${residue}" ]]; then
+    printf '  tolerated: %s (talhelper cannot emit CRICustomizationConfig yet)\n' "${known_deprecation}"
+    continue
+  fi
+
+  printf 'talos:validate-config: %s failed validation:\n%s\n' "${cfg}" "${out}" >&2
+  failed=1
 done
+
+if ((failed)); then
+  exit 1
+fi
 
 printf 'Talos config validation passed.\n'

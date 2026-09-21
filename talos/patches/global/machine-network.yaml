@@ -1,13 +1,25 @@
-machine:
-  network:
-    disableSearchDomain: true
-    nameservers:
-      - 9.9.9.9
-      - 149.112.112.112
-      - 10.10.10.9
-      - 10.10.0.1
-      # 10.10.209.202 — Stargate Command's Technitium — removed 2026-08-17.
-      # SGC was decommissioned and its nodes wiped, so this stopped answering
-      # entirely; it was the fifth entry behind four live resolvers, which is
-      # why nothing visibly broke. The remaining four were each verified to
-      # resolve an internal name before this was dropped.
+# Migrated off `.machine.network.*` for Talos 1.14 (#1914). Both fields this
+# file used to set -- `nameservers` and `disableSearchDomain` -- are now owned
+# by the `ResolverConfig` document, and the two sources are MUTUALLY EXCLUSIVE:
+# talhelper emits a ResolverConfig of its own (for hostDNS), so leaving either
+# v1alpha1 field in place fails genconfig outright with
+# "`.machine.network.nameservers` is already set in v1alpha1 config".
+#
+# This document MERGES into the ResolverConfig talhelper already generates --
+# it does not replace it, so the hostDNS block it emits survives. Verified by
+# diffing the rendered config before and after the migration.
+apiVersion: v1alpha1
+kind: ResolverConfig
+nameservers:
+  - address: 9.9.9.9
+  - address: 149.112.112.112
+  - address: 10.10.10.9
+  - address: 10.10.0.1
+  # 10.10.209.202 — Stargate Command's Technitium — removed 2026-08-17.
+  # SGC was decommissioned and its nodes wiped, so this stopped answering
+  # entirely; it was the fifth entry behind four live resolvers, which is
+  # why nothing visibly broke. The remaining four were each verified to
+  # resolve an internal name before this was dropped.
+searchDomains:
+  # Was `.machine.network.disableSearchDomain: true`.
+  disableDefault: true

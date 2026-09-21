@@ -1,31 +1,75 @@
+# Talos 1.14 moved every kube-* component out of `.cluster.*` in v1alpha1 and
+# into its own document (#1914). The old and new forms are MUTUALLY EXCLUSIVE,
+# so this file had to move wholesale: leaving `.cluster.apiServer` et al. in
+# place fails genconfig with "kube-apiserver config is already set in v1alpha1
+# config (.cluster.apiServer)".
+#
+# `.cluster.etcd` and `.cluster.allowSchedulingOnControlPlanes` are NOT part of
+# that move -- they still validate in v1alpha1 on 1.14 and are kept below.
 cluster:
   allowSchedulingOnControlPlanes: false
-  apiServer:
-    admissionControl:
-      $$patch: delete
-    extraArgs:
-      # https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
-      enable-aggregator-routing: true
-    resources:
-      requests:
-        cpu: 200m
-        memory: 2Gi
-      limits:
-        memory: 4Gi
-  controllerManager:
-    extraArgs:
-      bind-address: 0.0.0.0
   coreDNS:
     disabled: true
   etcd:
     extraArgs:
+      # Keeps etcd metrics on 2381. Talos 1.14 split etcd's HTTP endpoints onto
+      # a new port 2383 (they used to share the 2379 client port), but an
+      # explicit listen-metrics-urls overrides that default -- verified on all
+      # three control planes after the 1.14.1 rollout: 2381 serves /metrics and
+      # 2383 is closed. Nothing in the Prometheus scrape config had to change.
       listen-metrics-urls: http://0.0.0.0:2381
       quota-backend-bytes: 4294967296
       election-timeout: 5000
     advertisedSubnets:
       - 10.10.0.0/16
-  proxy:
-    disabled: true
-  scheduler:
-    extraArgs:
-      bind-address: 0.0.0.0
+---
+# Was `.cluster.apiServer.extraArgs` + `.cluster.apiServer.resources`.
+# NOTE: extraArgs values are strings in the new documents, so `true` must be
+# quoted -- an unquoted bool is rejected.
+apiVersion: v1alpha1
+kind: KubeAPIServerConfig
+extraArgs:
+  # https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/
+  enable-aggregator-routing: "true"
+resources:
+  requests:
+    cpu: 200m
+    memory: 2Gi
+  limits:
+    memory: 4Gi
+---
+# Was `.cluster.apiServer.admissionControl: {$patch: delete}`.
+#
+# That deletion no longer has a v1alpha1 path to target -- admission control is
+# its own document now, and talhelper generates one named `PodSecurity`
+# (enforce: baseline, audit/warn: restricted, kube-system exempt). Deleting the
+# DOCUMENT is the equivalent operation; without this the estate silently gains
+# PodSecurity enforcement it has never run with.
+apiVersion: v1alpha1
+kind: KubeAdmissionControlConfig
+name: PodSecurity
+$$patch: delete
+---
+# Was `.cluster.controllerManager.extraArgs`. bind-address on 0.0.0.0 is what
+# lets Prometheus scrape controller-manager; losing it fails silently (the
+# scrape target just goes down), so it is called out here deliberately.
+apiVersion: v1alpha1
+kind: KubeControllerManagerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+# Was `.cluster.scheduler.extraArgs`. Same scrape-visibility reason as above.
+apiVersion: v1alpha1
+kind: KubeSchedulerConfig
+extraArgs:
+  bind-address: 0.0.0.0
+---
+# Was `.cluster.proxy.disabled: true` -- the flag is now `enabled` on the
+# KubeProxyConfig document, inverted.
+#
+# THIS ONE IS LOAD-BEARING. Cilium runs with kube-proxy replacement; the
+# generated KubeProxyConfig defaults to enabled, so dropping the v1alpha1
+# block without restating this would deploy kube-proxy alongside Cilium.
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+enabled: false
