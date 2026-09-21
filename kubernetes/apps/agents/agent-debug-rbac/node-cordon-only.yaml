@@ -1,0 +1,183 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicy_v1.json
+#
+# NARROWS ./clusterrole.yaml's `nodes: patch, update` GRANT TO WHAT IT WAS
+# WRITTEN FOR: cordon and uncordon. Added 2026-09-21.
+#
+# WHY RBAC ALONE IS NOT ENOUGH. RBAC authorises a verb on a resource, never a
+# field. `update` on `nodes` is not "may flip spec.unschedulable" -- it is "may
+# rewrite the Node": its labels (which every nodeSelector/affinity in the
+# estate and Longhorn's own disk-placement keys off), its taints (the one
+# lever that evicts every NoExecute-intolerant pod on it at once), its
+# podCIDR(s) and providerID. That is far broader than the one-line header
+# bullet ("cordon/uncordon ... reversible") it was granted under in #1336,
+# and there is no RBAC rule that can express the narrower thing. The grant
+# itself predates this file and is unchanged by it; this is the limit it
+# should have shipped with.
+#
+# WHY THE GRANT HAS TO BE `update` AND NOT JUST `patch`. The agent reaches the
+# cluster through ../agent-tools-servers/kubernetes.yaml -- Stacklok `mkp`
+# 0.4.3, which has no patch tool. Its `apply_resource` is NOT server-side
+# apply either: pkg/k8s/client.go @ v0.4.3 GETs the object and, if it exists,
+# calls `dynamicClient...Update(ctx, obj, UpdateOptions{})` -- a full PUT of
+# the whole Node. So an mkp cordon is "GET node, set spec.unschedulable,
+# PUT it all back", and only `update` authorises that. `patch` stays for
+# every other client (`kubectl cordon` is a strategic-merge PATCH).
+#
+# WHAT THIS POLICY DOES. For requests from the two identities that hold
+# `agent-debug` (the mkp server's SA and agentboard's own SA -- see
+# matchConditions), an UPDATE on a Node -- which is what a PATCH is too, by
+# the time admission sees it: `object` is the post-patch result -- is denied
+# unless every other writable field is byte-for-byte what it was in
+# `oldObject`. spec.unschedulable is simply the one field not compared.
+#
+#   status        not compared, and does not need to be: `status` is a
+#                 subresource on Node, and a PUT/PATCH to the main resource
+#                 has its status reset to the stored one by the registry
+#                 strategy before admission runs. Writing it needs
+#                 `nodes/status`, which ./clusterrole.yaml does not grant.
+#   spec.taints   compared, and this is the one worth thinking through. The
+#                 `node.kubernetes.io/unschedulable:NoSchedule` taint a cordon
+#                 produces is added AFTERWARDS by the node lifecycle
+#                 controller (TaintNodesByCondition), as its own write -- the
+#                 agent's request never carries it. Uncordon is the mirror
+#                 image: mkp's GET returns the taint, the PUT sends it back
+#                 unchanged, the controller removes it later. Either way
+#                 object.spec.taints == oldObject.spec.taints for the agent's
+#                 own request, so both directions pass. A PUT built on a stale
+#                 GET that raced the controller carries the old
+#                 resourceVersion and fails optimistic concurrency before it
+#                 gets here; if a client ever sent one WITHOUT a
+#                 resourceVersion (Nodes allow unconditional update), this
+#                 comparison is what turns "silently revert the controller's
+#                 taint" into a denial instead.
+#   metadata      labels, annotations, ownerReferences and finalizers are
+#                 compared. name/uid/creationTimestamp are immutable anyway;
+#                 resourceVersion/managedFields/generation are server-owned.
+#   spec.*        podCIDR, podCIDRs, providerID, the deprecated
+#                 externalID/configSource, and podPreemptionPolicy (alpha,
+#                 new in k8s.io/api v0.37.0, feature-gated) -- every other
+#                 NodeSpec field in core/v1 as of v1.37.0, checked against
+#                 the type itself. Listed explicitly because the policy has
+#                 to name each one; there is no "everything but X" form. A
+#                 field absent from the running apiserver's schema is safe to
+#                 list: `object` is dynamically typed at admission time, so
+#                 has() on it is simply false on both sides. A NodeSpec field
+#                 added by a FUTURE minor is NOT covered until listed here --
+#                 re-check `type NodeSpec` when bumping kubernetesVersion.
+#
+# EVERY FIELD READ IS `has()`-GUARDED, for the same reason
+# kubernetes/apps/volsync-system/volsync/mutatingadmissionpolicy.yaml spells
+# out: reading an absent field is an error, not null, and with
+# `failurePolicy: Fail` an erroring expression DENIES. Unguarded, a cordon of
+# a Node with no taints (most of them) would be refused for a reason that has
+# nothing to do with what it changed.
+#
+# WHY IT EXISTS -- the case that motivated it. 2026-09-21: the agent diagnosed
+# `shining-armor` as a node whose pods cannot reach the apiserver ClusterIP
+# (10.196.0.1:443) -- 9 of 9 nightly Job failures landed on that node, 0 of 7
+# anywhere else -- and the zero-cost confirmation was cordoning it before the
+# 02:30 UTC CronJob run and watching the next run land elsewhere and pass. The
+# same argument ./clusterrole.yaml makes for the auto.pulumi.com delete grant:
+# an agent that can diagnose it in full should be able to take the one
+# reversible action that confirms it -- without that action also being "and
+# relabel or retaint any node in the cluster", which is what reaching for the
+# existing grant showed it to be.
+#
+# IF THIS SEEMS TO BLOCK A LEGITIMATE CORDON, read the denial message: it
+# names the field that differed. The likeliest real cause is a client that
+# re-serialises the object lossily (drops an empty-but-present field), not
+# the policy being wrong.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-debug-node-cordon-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      # `nodes` only, not `nodes/*`: the subresources (status, proxy) are not
+      # granted by ./clusterrole.yaml at all, so RBAC already refuses them.
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["nodes"]
+  # Keep in step with every ClusterRoleBinding to `agent-debug`:
+  #   ../agent-tools-servers/kubernetes.yaml  -> agents/toolhive-kubernetes
+  #     (the StatefulSet pod running mkp itself; NOT
+  #     toolhive-kubernetes-proxy-runner, the ToolHive proxy in front of it,
+  #     which carries no agent-debug binding)
+  #   ../agentboard/rbac.yaml                 -> agents/agentboard
+  # A new binding of the role that is not added here gets the unnarrowed
+  # `update` on every Node.
+  matchConditions:
+    - name: is-agent-debug-identity
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:agents:toolhive-kubernetes",
+          "system:serviceaccount:agents:agentboard"
+        ]
+  validations:
+    - expression: >
+        has(object.metadata.labels) == has(oldObject.metadata.labels)
+        && (!has(object.metadata.labels)
+            || object.metadata.labels == oldObject.metadata.labels)
+      message: >-
+        agent-debug may only cordon/uncordon a Node (spec.unschedulable):
+        metadata.labels must not change
+    - expression: >
+        has(object.metadata.annotations) == has(oldObject.metadata.annotations)
+        && (!has(object.metadata.annotations)
+            || object.metadata.annotations == oldObject.metadata.annotations)
+      message: >-
+        agent-debug may only cordon/uncordon a Node (spec.unschedulable):
+        metadata.annotations must not change
+    - expression: >
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)
+        && (!has(object.metadata.ownerReferences)
+            || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)
+        && has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)
+        && (!has(object.metadata.finalizers)
+            || object.metadata.finalizers == oldObject.metadata.finalizers)
+      message: >-
+        agent-debug may only cordon/uncordon a Node (spec.unschedulable):
+        metadata.ownerReferences and metadata.finalizers must not change
+    - expression: >
+        has(object.spec.taints) == has(oldObject.spec.taints)
+        && (!has(object.spec.taints)
+            || object.spec.taints == oldObject.spec.taints)
+      message: >-
+        agent-debug may only cordon/uncordon a Node (spec.unschedulable):
+        spec.taints must not change
+    - expression: >
+        has(object.spec.podCIDR) == has(oldObject.spec.podCIDR)
+        && (!has(object.spec.podCIDR)
+            || object.spec.podCIDR == oldObject.spec.podCIDR)
+        && has(object.spec.podCIDRs) == has(oldObject.spec.podCIDRs)
+        && (!has(object.spec.podCIDRs)
+            || object.spec.podCIDRs == oldObject.spec.podCIDRs)
+        && has(object.spec.providerID) == has(oldObject.spec.providerID)
+        && (!has(object.spec.providerID)
+            || object.spec.providerID == oldObject.spec.providerID)
+        && has(object.spec.externalID) == has(oldObject.spec.externalID)
+        && (!has(object.spec.externalID)
+            || object.spec.externalID == oldObject.spec.externalID)
+        && has(object.spec.configSource) == has(oldObject.spec.configSource)
+        && (!has(object.spec.configSource)
+            || object.spec.configSource == oldObject.spec.configSource)
+        && has(object.spec.podPreemptionPolicy) == has(oldObject.spec.podPreemptionPolicy)
+        && (!has(object.spec.podPreemptionPolicy)
+            || object.spec.podPreemptionPolicy == oldObject.spec.podPreemptionPolicy)
+      message: >-
+        agent-debug may only cordon/uncordon a Node (spec.unschedulable):
+        spec.podCIDR(s), spec.providerID, spec.externalID,
+        spec.configSource and spec.podPreemptionPolicy must not change
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/admissionregistration.k8s.io/validatingadmissionpolicybinding_v1.json
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-debug-node-cordon-only
+spec:
+  policyName: agent-debug-node-cordon-only
+  validationActions: ["Deny"]
