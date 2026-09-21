@@ -53,62 +53,113 @@
 #
 # Verified against live data before this was committed, rather than assumed:
 #   * the FreshRSS outage window peaks at 0.0270 req/s -- comfortably over.
-#   * evaluated over the preceding 24h it selects 9 services, and evaluated
-#     instantaneously it selects 4 (jellyseerr, identifiarr, seerr,
-#     toolhive-ui) -- all sustained 502s against pods that are 1/1 Running and
-#     that Gatus reports as 200.
 #
 # ---------------------------------------------------------------------------
-# CORRECTION, 2026-09-16. That last bullet concluded those four were "real,
-# pre-existing, and invisible until this rule was written". They were not real,
-# and the phrase "Gatus reports as 200" was the clue that got read backwards:
-# Gatus IS the client, and it got a 200.
+# CORRECTED 2026-09-21: key on what the CLIENT got, per route.
 #
-#   traefik_entrypoint_requests_total{code=~"5.."}  ->  502 rate of ZERO
-#   traefik_service_requests_total{code=~"5.."}     ->  0.0167/s per service
+# The first version of this rule alerted on four services (jellyseerr,
+# identifiarr, seerr, toolhive-ui) and called them "real, pre-existing 502s"
+# that Gatus happened to report as 200. That was wrong. Gatus is the client,
+# and it did get a 200. The 502s were never sent to anyone.
 #
-# 0.0167/s is one per sixty seconds, which is exactly the Gatus probe interval,
-# and for these services the probe is 100% of their traffic. The access log
-# shows the whole story on one line: `OriginStatus:502, DownstreamStatus:200,
-# RetryAttempts:0`, from `User-Agent: Gatus/1.0`, with the backend's own log
-# recording a 200 for the same second.
+# The Traefik access log shows it on one line, from `User-Agent: Gatus/1.0`:
+# `DownstreamStatus:200, OriginStatus:502`, with a truncated
+# OriginContentSize (seerr /login: 20474 bytes of a 53827-byte page), while the
+# backend's own log shows the whole page sent. identifiarr sent 405 KB.
 #
-# The mechanism is Go's HTTP transport, not Traefik's retry middleware -- hence
-# RetryAttempts:0 and an empty `traefik_service_retries_total`. The backend
-# closes an idle keep-alive connection at ~60s, Traefik's pooled connection
-# loses the race on the next probe, and the transport silently re-dials and
-# succeeds. The SERVICE counter records the dead attempt; the client never sees
-# it. Only services whose sole traffic is a once-a-minute probe show it at all,
-# which is why the selected set looked so arbitrary.
+# MECHANISM, read from Traefik v3.7.13 source rather than guessed:
+#   1. Gatus asserts only `[STATUS] == 200`, so it closes the connection as
+#      soon as it has the headers.
+#   2. `experimental.fastProxy` is on (values.yaml). Traefik has already
+#      written `200` and part of the body when the write to the gone client
+#      fails. pkg/proxy/fast/proxy.go gets that error back from roundTrip and
+#      calls proxyhttputil.ErrorHandler, which does `WriteHeader(502)`
+#      after the headers have already gone out.
+#   3. Every metrics layer records status through its own
+#      capture.captureResponseWriter, and `WriteHeader` there overwrites the
+#      recorded status unconditionally (pkg/middlewares/capture). The
+#      SERVICE-level capture sits directly around the proxy, so it records
+#      502. That is `traefik_service_requests_total{code="502"}`, and it is
+#      also the access log's OriginStatus.
+#   4. The late 502 does not get further up. Two writers between the service
+#      and the client drop a WriteHeader that arrives after the headers were
+#      sent: the `errors` middleware's codeCatcher (our `error-pages`, which
+#      is in the `local-user` and `authenticated-user` chains) and the
+#      per-entrypoint recovery wrapper (pkg/server/router/router.go). So the
+#      ENTRYPOINT capture, the access log's DownstreamStatus, and the ROUTER
+#      capture on an error-pages route all record 200.
 #
-# So the rule now gates on the ENTRYPOINT counter, which is what the client
-# actually received. The per-service sum still names the culprit; the gate
-# decides whether anyone was hurt. A real outage produces both -- that is what
-# "user-visible" means -- while a lost keep-alive race produces only the former.
+# The rate is one per Gatus check, about 0.0167/s. On these apps that check is
+# nearly all the traffic, so a 15m rate of it sits over 0.005 and stays there.
+# The pages are large, so the body is still being copied when Gatus hangs up.
+# That is why the affected set looked arbitrary. The alert "starts firing" around
+# 13:00 UTC every day because that is when the nightly Low Power shed ends and
+# these apps scale back up. The 15m window refills and `for: 30m` elapses.
 #
-# Two alternatives were rejected. Raising the threshold above 0.0167/s would
-# put it a hair under the FreshRSS incident's own 0.027/s peak, re-breaking the
-# case this rule exists for. Switching to `traefik_router_requests_total`,
-# which carries the client-visible status per router, needs
-# `metrics.prometheus.addRoutersLabels` turned on and pays cardinality across
-# every router in the estate. The underlying 502s could also be removed at
-# source by setting Traefik's transport `idleConnTimeout` below the backends'
-# own idle timeout -- worth doing on its own merits, but it is a global
-# transport change and does not belong in an alerting fix.
+# The 2026-09-16 fix blamed a keep-alive race, which does not match the log
+# (RetryAttempts:0, truncated OriginContentSize). It added
+# `and on() sum(rate(traefik_entrypoint_requests_total{code=~"5.."}[15m])) >
+# 0.005`. Entrypoint metrics have no service or router label, so that gate
+# was estate-wide. Any real 5xx anywhere, such as jellyfin-pg's 500s or
+# dawarich's 503s on 2026-09-21, held it open, and all four artifacts fired
+# alongside it. This happened every day.
 #
-# KNOWN LIMITATION, stated rather than discovered later: the gate is
-# estate-wide, so while a genuine outage holds it open, a keep-alive-race
-# service can fire alongside the real one. That is the acceptable direction to
-# fail -- a spurious NAME in a list during an incident someone is already
-# looking at, versus four alerts firing forever in the quiet. A probe-only
-# service that is genuinely down still trips this on its own: its 5xx reach the
-# client at 0.0167/s, comfortably over the gate's 0.005 floor.
+# ---------------------------------------------------------------------------
+# What the rule keys on now.
 #
-# Checked against live data at the time of the change:
-#   * new expression selects NOTHING (entrypoint 502 rate is 0).
-#   * the old one selects five, including jellyfin at 0.0286/s -- which is
-#     above the FreshRSS peak, and is why the "just raise the threshold"
-#     option above is not merely inelegant but wrong.
+# Both halves are per-route and are joined on the route:
+#
+#   BACKEND half  traefik_service_requests_total{code=~"5.."}
+#                 The backend was reached and a 5xx was recorded on that hop.
+#                 This half keeps the rule's original meaning: the pod is up
+#                 and answering, and answering wrong. A service with no ready
+#                 endpoints has no series here, because a load balancer with no
+#                 servers never reaches a per-server metrics handler. So the
+#                 nightly shed and not-yet-running apps do not count.
+#                 Without this half, a per-route client-status rule fires every
+#                 night: over 7d, ~25 routes each served 400-1700 client 503s,
+#                 almost all to Gatus probing scaled-to-zero apps.
+#
+#   CLIENT half   traefik_router_requests_total{code=~"5.."}
+#                 The status recorded at the router, above its middleware chain.
+#                 Needs `metrics.prometheus.addRoutersLabels` (values.yaml, cost
+#                 noted there). For error-pages routes this is what the client
+#                 got. A backend 5xx that error-pages renders still reaches the
+#                 router as the original 5xx.
+#
+# The join key is `route`. On gateway-API routes the router is named
+# `<base>@kubernetesgateway` and its backend services are
+# `<base>-svc-<ns>-<name>-<idx>@kubernetesgateway`
+# (pkg/provider/kubernetes/gateway/httproute.go). So the backend half derives
+# `route` by stripping the `-svc-...` tail, and the client half uses `router`.
+# Ingress-provider routes (`@kubernetes`) point straight at their service with
+# no WRR hop, so there both halves fall back to `exported_service`. `service`
+# is `exported_service` on BOTH metric families for the reason given at the
+# top of this file.
+#
+# KNOWN LIMITATION. On a route with NO `errors` middleware (for example
+# `local-api`, or a route with no filters), nothing between the router and the
+# service drops the late 502. The router records it too, so the aborted-body
+# artifact can still get through there. Nine routes use `local-api`. None of
+# them showed the artifact at a sustained rate in the 7d checked below. The
+# exact fix would be Loki: key on DownstreamStatus per RouterName. But the
+# error-pages hop overwrites ServiceName and OriginStatus in the access log.
+# Loki then cannot tell "backend answered 5xx" from "no endpoints", and it
+# would fire on the shed every night. The Loki ruler has no Prometheus data to
+# join against.
+#
+# Checked 2026-09-21, emulating over 7d at 5m steps. The backend half came from
+# Thanos. The client half came from Loki DownstreamStatus by RouterName, standing in
+# for router metrics, which do not exist on equestria until this merges:
+#   * OLD rule firing minutes: postiz-internal 3780, identifiarr 1445,
+#     jellyseerr 1445, seerr 1445, jellyfin 205. All of them are artifacts.
+#   * NEW rule firing minutes: 0 for every route.
+#   * NEW expression, before `for:`, still matches real client-visible 5xx:
+#     jellyfin-pg (500s, longest run 25m), jellyfin (20m), plex (15m), reitti
+#     and coder. None lasted the 30m that `for:` requires.
+#
+# After merge, confirm the client half is populated and the key lines up:
+#   count by (router, exported_service) (traefik_router_requests_total{router=~"httproute-equestria-seerr-.*"})
 # ============================================================================
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -122,43 +173,61 @@ spec:
           annotations:
             description: >-
               Traefik service {{$labels.exported_service}} has returned 5xx continuously for
-              30 minutes ({{$value | printf "%.3f"}} req/s) AND clients are receiving 5xx at
-              the entrypoint. The backend pod is probably Ready and passing its probes -- this
-              alert exists because that is not evidence the app works. Check the pod's own
-              logs, not its probe status.
-            summary: A service behind Traefik is persistently returning 5xx.
-          # The `and on()` gate is the whole correction (see the block comment
-          # above). `on()` with an empty label list joins the label-less
-          # entrypoint aggregate against every per-service series, so the gate
-          # is estate-wide: it asks "is the gateway returning 5xx to anyone?"
-          # and the left side answers "which service". Without `on()` the two
-          # sides share no labels and the expression would match nothing and
-          # never fire -- the same trap CrowdsecAgentsMissing documents.
+              30 minutes ({{$value | printf "%.3f"}} req/s), and clients of its route
+              {{$labels.route}} are receiving 5xx too. The backend pod is probably Ready and
+              passing its probes -- this alert exists because that is not evidence the app
+              works. Check the pod's own logs, not its probe status.
+            summary: A service behind Traefik is persistently returning 5xx to its clients.
+          # Two per-route halves joined `on (route)`. See the block comment
+          # above. Left: the backend was reached and answered 5xx. Right: the
+          # route's clients received 5xx. The inner label_replace sets
+          # `route` = exported_service (the ingress-provider fallback), and the
+          # outer one overrides it for gateway-API names. A regex that does not
+          # match leaves the series as it was, so the order matters.
           #
-          # The gate's own floor is deliberately the same 0.005: error-pages
-          # sits at ~0.0006/s of entrypoint 503 by design (it is the service
-          # that RENDERS errors), and that must not hold the gate open.
+          # Both halves use the same 0.005 floor, for the reason in the
+          # "Threshold" section. error-pages is still excluded from the backend
+          # half: it serves 5xx on purpose. When it renders a real backend
+          # error, that error already appears on the backend's own service
+          # series and on the route's router series.
           expr: |
             (
-              sum by (exported_service) (
-                rate(
-                  traefik_service_requests_total{
-                    code=~"5..",
-                    exported_service!="",
-                    exported_service!~".*error-pages.*"
-                  }[15m]
+              sum by (exported_service, route) (
+                label_replace(
+                  label_replace(
+                    rate(
+                      traefik_service_requests_total{
+                        code=~"5..",
+                        exported_service!="",
+                        exported_service!~".*error-pages.*"
+                      }[15m]
+                    ),
+                    "route", "$1", "exported_service", "(.+)"
+                  ),
+                  "route", "$1@kubernetesgateway", "exported_service", "(.+?)-svc-.+@kubernetesgateway"
                 )
               ) > 0.005
             )
-            and on()
+            and on (route)
             (
-              sum(
-                rate(traefik_entrypoint_requests_total{code=~"5.."}[15m])
+              sum by (route) (
+                label_replace(
+                  label_replace(
+                    rate(
+                      traefik_router_requests_total{
+                        code=~"5..",
+                        exported_service!=""
+                      }[15m]
+                    ),
+                    "route", "$1", "exported_service", "(.+)"
+                  ),
+                  "route", "$1", "router", "(.+@kubernetesgateway)"
+                )
               ) > 0.005
             )
           for: 30m
           labels:
-            issue: Traefik service {{$labels.exported_service}} is persistently serving 5xx while its pod looks healthy.
+            issue: Traefik service {{$labels.exported_service}} is persistently serving 5xx to clients while its pod looks healthy.
             severity: warning
         # error-pages is excluded above rather than filtered here: it is the
         # service Traefik forwards to IN ORDER TO render an error, so it serves

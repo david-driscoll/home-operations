@@ -330,6 +330,20 @@ metrics:
   addInternals: true
   prometheus:
     disableAPICheck: true
+    # ROUTER METRICS (`traefik_router_*`) exist for ServiceSustained5xx
+    # (rules/silent-failure-rules.yaml). The service-level `code` is what the
+    # backend hop recorded, and it can read 502 on a request the client got as
+    # a 200. The router-level `code` is recorded above the router's middleware
+    # chain, so for routes behind `error-pages` it is the status the client
+    # received. That rule's header has the full explanation.
+    #
+    # COST, measured 2026-09-21: equestria served 87 distinct routers in 24h
+    # against 68 services, and the traefik_service_* families are ~3.8k series.
+    # On the Dockge hosts, which already run router labels, router series are
+    # 1.3x service series. That puts this at roughly +5k series against a head
+    # of ~1.08M, about 0.5%. Enabling it changes Traefik's container args, so
+    # the Deployment rolls.
+    addRoutersLabels: true
     service:
       enabled: true
     serviceMonitor:
