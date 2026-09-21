@@ -83,6 +83,7 @@ import os
 import pathlib
 import re
 import shutil
+import sqlite3
 import sys
 import xml.etree.ElementTree as ET
 
@@ -384,6 +385,32 @@ def carry(src, dst, dry_run):
     return copied, skipped
 
 
+def checkpoint(db):
+    """Fold a hot copy's WAL into the .db, so the .db alone is complete.
+
+    These came out of a snapshot taken while Jellyfin was running, so recent
+    writes may still be in the -wal beside them -- 3.9 MB of them for
+    infuse_sync.db on 2026-09-21. Copying the .db without doing this silently
+    drops those writes. Runs against the restored COPY in /work, never the
+    target. Returns a short status for the log line.
+    """
+    wal = db.with_name(db.name + "-wal")
+    if not wal.exists():
+        return "no WAL"
+    wal_size = wal.stat().st_size
+    con = sqlite3.connect(str(db))
+    try:
+        busy, _, _ = con.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+        if busy:
+            sys.exit(f"FAIL: {db.name}: wal_checkpoint busy -- the copy is not standalone")
+        quick = con.execute("PRAGMA quick_check").fetchone()[0]
+        if quick != "ok":
+            sys.exit(f"FAIL: {db.name}: quick_check {quick!r} -- the hot copy is torn")
+    finally:
+        con.close()
+    return f"WAL {wal_size / 1048576:.1f} MiB folded in, quick_check ok"
+
+
 def carry_plugin_databases(src, dst, dry_run):
     """The plugins' own SQLite files, which the provider never sees."""
     s = src / "data"
@@ -393,10 +420,21 @@ def carry_plugin_databases(src, dst, dry_run):
     for db in sorted(s.glob("*.db")):
         if db.name in NOT_PLUGIN_DATA:
             continue
+        if dry_run:
+            wal = db.with_name(db.name + "-wal")
+            status = f"WAL {wal.stat().st_size / 1048576:.1f} MiB to fold in" if wal.exists() else "no WAL"
+        else:
+            status = checkpoint(db)
         size = db.stat().st_size
-        log(f"  {db.name:38} {size / 1048576:8.1f} MiB")
+        log(f"  {db.name:38} {size / 1048576:8.1f} MiB  ({status})")
         if not dry_run:
             (dst / "data").mkdir(parents=True, exist_ok=True)
+            # Clear any stale sidecars a previous run or server left, so the
+            # target's copy is not paired with somebody else's WAL.
+            for sidecar in ("-wal", "-shm"):
+                stale = dst / "data" / (db.name + sidecar)
+                if stale.exists():
+                    stale.unlink()
             shutil.copy2(db, dst / "data" / db.name)
         n += 1
     if n == 0:
