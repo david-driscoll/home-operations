@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Dawarich"
+  category: Applications
+  description: "Dawarich — personal location history, imports and visit tracking"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dawarich.svg
+  access_policy:
+    groups:
+      - family
+  authentik:
+    # oauth2, NOT proxy. Dawarich speaks OIDC itself through Devise +
+    # omniauth_openid_connect, so a forward-auth outpost in front would
+    # authenticate twice and break the /users/auth/openid_connect/callback hop.
+    # Same reasoning as ../reitti and ../outline; ./helmrelease.yaml's route
+    # therefore uses the `local-user` middleware, not `authenticated-user`.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # Fixed by Devise's omniauth route, not configurable: the provider is
+        # mounted as `openid_connect`, so the callback is always
+        # /users/auth/openid_connect/callback. OIDC_REDIRECT_URI in
+        # ./helmrelease.yaml names the root-domain one explicitly; the tailnet
+        # twin is registered too so a login started from the tailnet hostname
+        # is not rejected by authentik.
+        - url: "https://${APP}.${ROOT_DOMAIN}/users/auth/openid_connect/callback"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/users/auth/openid_connect/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      # Dawarich keys its accounts on the email address (Devise), so the email
+      # claim has to be in the ID token rather than only at the userinfo
+      # endpoint.
+      includeClaimsInIdToken: true
+      subMode: user_email
+  gatus:
+    - group: "Applications"
+      # /api/v1/health, not `*url`. It is the one path Dawarich exempts from
+      # Rails host authorization
+      # (`config.host_authorization = { exclude: ... '/api/v1/health' }` in
+      # config/environments/production.rb), and it answers without a session.
+      # The body condition is what makes this a check of the APP rather than of
+      # Traefik -- the gateway can serve 200 for a pod that has lost its
+      # database.
+      url: https://${APP}.${ROOT_DOMAIN}/api/v1/health
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == ok"

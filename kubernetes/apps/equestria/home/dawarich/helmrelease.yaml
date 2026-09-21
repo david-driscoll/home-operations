@@ -1,0 +1,372 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: Dawarich publishes no Helm chart, only docker/docker-compose.yml.
+# That file describes four services, and this is where each one went:
+#
+#   dawarich_app      -> the `app` container below (Puma, port 3000)
+#   dawarich_sidekiq  -> the `sidekiq` container below, SAME POD
+#   dawarich_db       -> the shared CNPG cluster, via components/postgres;
+#                        postgis + pgcrypto are declared on the Database CR in
+#                        ./kustomization.yaml
+#   dawarich_redis    -> the shared Valkey in `database`, indices 1/2/3
+#
+# WHY ONE POD RATHER THAN TWO DEPLOYMENTS. Upstream gives app and sidekiq the
+# same three volumes -- public, storage and the watched-imports folder -- and a
+# volsync PVC is ReadWriteOnce, so two Deployments could not both mount it
+# without going ReadWriteMany. They are also genuinely coupled: Sidekiq writes
+# import artefacts that the web process serves.
+#
+# It is safe because only the WEB entrypoint migrates. docker/web-entrypoint.sh
+# runs `rails db:migrate`, `rake data:migrate` and `rails db:seed`;
+# docker/sidekiq-entrypoint.sh only waits for the database to accept a
+# connection and then execs sidekiq. So there is no concurrent-migration race
+# between the two containers. On a FIRST boot the sidekiq container will
+# usually lose the race to the schema and crash-loop for a minute or two with
+# missing-relation errors until the web container finishes migrating; that is
+# expected and self-healing, not a fault to chase.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app dawarich
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the WORKLOAD, where Reloader looks.
+          #
+          # ⚠️ Reloader will NOT cover the ${APP}-oidc case on its own. That
+          # Secret goes from ABSENT to CREATED behind an `optional: true`
+          # secretRef, which Reloader sees as a create rather than a change --
+          # verified on ../reitti on 2026-09-20, where the pod had to be
+          # deleted by hand after the credential landed. Expect to restart this
+          # pod once when SSO first appears.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate, not RollingUpdate: one ReadWriteOnce volume shared by both
+        # containers, and the web container migrates the database at boot.
+        strategy: Recreate
+        containers:
+          # The web process. Listed first so it starts migrating as early as
+          # possible; Kubernetes does not order regular containers, but the
+          # sidekiq container below tolerates arriving first.
+          *app :
+            image:
+              repository: docker.io/freikin/dawarich
+              # Docker Hub only -- there is no GHCR mirror (ghcr.io/freika/
+              # dawarich returns DENIED, checked 2026-09-21).
+              tag: 1.15.0@sha256:56be3eb19c9a1d735217e8c16283a9ec63e47d91d9d70cdd23102181d51b579b
+              pullPolicy: IfNotPresent
+            # Compose sets `entrypoint:` and `command:`; the Kubernetes
+            # spelling is command + args. The script ends in
+            # `exec bundle exec "${@}"`, so args are the Rails invocation.
+            #
+            # `-b 0.0.0.0`, where upstream uses `-b ::`. Deliberate: this
+            # cluster is single-stack IPv4 (pods get one v4 address, confirmed
+            # on the ../reitti pod), so binding the v6 wildcard buys nothing and
+            # depends on IPv6 being enabled in the pod netns with
+            # bindv6only=0. The v4 wildcard has no such dependency.
+            command: ["web-entrypoint.sh"]
+            args: ["bin/rails", "server", "-p", "3000", "-b", "0.0.0.0"]
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-secrets
+              - secretRef:
+                  name: ${APP}-metrics
+              # OIDC_CLIENT_ID / _SECRET / _ISSUER. OPTIONAL, and that is
+              # load-bearing -- see ./externalsecret.yaml. Without it Dawarich
+              # simply renders no SSO button.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env: &appEnv
+              RAILS_ENV: production
+              SELF_HOSTED: "true"
+              TIME_ZONE: "${TIMEZONE}"
+              RAILS_LOG_TO_STDOUT: "true"
+              # Rails host authorization (`config.hosts`). The two public
+              # hostnames, plus the in-cluster Service FQDN -- that last one is
+              # not optional: ./servicemonitor.yaml rewrites the scrape address
+              # to it precisely so /metrics arrives with an allowed Host.
+              # /api/v1/health is exempt from this check upstream, which is why
+              # the kubelet probes below work against the pod IP.
+              APPLICATION_HOSTS: "${APP}.${ROOT_DOMAIN},${APP}.${TAILSCALE_DOMAIN},${APP}.${NAMESPACE}.svc.cluster.local"
+              APPLICATION_PROTOCOL: https
+              # Required in production: Rails builds absolute URLs (mail links,
+              # OIDC redirect default) from it.
+              DOMAIN: "${APP}.${ROOT_DOMAIN}"
+
+              # ---- Redis / Valkey -------------------------------------------
+              # REDIS_URL carries NO database index on purpose. Dawarich passes
+              # `db:` as an explicit option next to `url:` in
+              # config/initializers/sidekiq.rb, config/environments/production.rb
+              # and config/cable.yml, and in redis-rb an explicit `db:` beats
+              # whatever the URL path says -- an index here would be silently
+              # ignored.
+              #
+              # Three indices because Dawarich wants three. 1/2/3 were free:
+              # 0 (immich), 5 (romm), 6 (dispatcharr), 8 (searxng), 9 (degoog),
+              # 10 (postiz), 11 (tracearr), 12 (outline) and 13 (reitti) are
+              # taken. This does NOT continue the estate's usual "next index
+              # up" habit, and could not: only 14 and 15 remained at the top of
+              # a 16-database Valkey and three distinct indices were needed.
+              REDIS_URL: redis://valkey.database.svc.cluster.local:6379
+              RAILS_CACHE_DB: "1"
+              RAILS_JOB_QUEUE_DB: "2"
+              RAILS_WS_DB: "3"
+
+              # ---- Metrics ---------------------------------------------------
+              # In-process since 1.7.7; no exporter sidecar. The web container
+              # serves /metrics on 3000 and folds in the Sidekiq container's
+              # own exporter, which it fetches over HTTP. Upstream defaults that
+              # to the compose hostname `http://dawarich_sidekiq:9394/metrics`,
+              # which resolves to nothing here -- in one pod the two containers
+              # share a network namespace, so localhost is both correct and
+              # keeps 9394 off the Service, as upstream intends.
+              PROMETHEUS_EXPORTER_ENABLED: "true"
+              SIDEKIQ_METRICS_URL: http://localhost:9394/metrics
+
+              # ---- Behaviour -------------------------------------------------
+              # `mi`, not the `km` default, to match an America/New_York
+              # instance. Per-user display preference; change freely.
+              DISTANCE_UNIT: mi
+              # Keep reverse-geocoding results in the database instead of
+              # re-querying the provider for places already resolved.
+              STORE_GEODATA: "true"
+              # One preloaded Puma worker is right for a household instance.
+              WEB_CONCURRENCY: "1"
+              RAILS_MAX_THREADS: "5"
+
+              # ---- Authentication --------------------------------------------
+              # Stated rather than inherited: with SSO configured there is no
+              # reason to leave self-service email signup reachable. It is
+              # already upstream's default.
+              ALLOW_EMAIL_PASSWORD_REGISTRATION: "false"
+              # The login button's label.
+              OIDC_PROVIDER_NAME: "${CLUSTER_TITLE}"
+              # authentik supports PKCE and upstream recommends it for
+              # hardened providers. S256 authorization-code flow.
+              OIDC_PKCE_ENABLED: "true"
+              # Devise mounts the provider as `openid_connect`, so this path is
+              # fixed by the framework rather than chosen. It must match a URI
+              # registered in ./definition.yaml.
+              OIDC_REDIRECT_URI: "https://${APP}.${ROOT_DOMAIN}/users/auth/openid_connect/callback"
+            resources:
+              requests:
+                cpu: 200m
+                memory: 1Gi
+              limits:
+                memory: 4Gi
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: &health /api/v1/health
+                    port: &port 3000
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *probes
+              # Very generous, and it needs to be. A first boot runs every
+              # Rails migration, then the data migrations, then `db:seed` --
+              # and that seed decodes a gzipped countries GeoJSON and inserts a
+              # multipolygon per country before the server starts answering.
+              # 15 minutes before the pod is declared failed.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: *health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 90
+            securityContext: &sc
+              allowPrivilegeEscalation: false
+              # Rails is not happy on a read-only root here and the gain would
+              # be small: bootsnap compiles its cache into tmp/, the entrypoint
+              # rewrites tmp/pids and syncs public_dist/ into public/, and Rails
+              # wants log/. Three of those already live on the PVC; making the
+              # rest read-only would mean several more emptyDirs for no real
+              # benefit.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+          sidekiq:
+            image:
+              repository: docker.io/freikin/dawarich
+              tag: 1.15.0@sha256:56be3eb19c9a1d735217e8c16283a9ec63e47d91d9d70cdd23102181d51b579b
+              pullPolicy: IfNotPresent
+            # sidekiq-entrypoint.sh ignores its arguments and execs
+            # `bundle exec sidekiq` itself; `sidekiq` is passed anyway to match
+            # upstream's compose and to keep `ps` legible.
+            command: ["sidekiq-entrypoint.sh"]
+            args: ["sidekiq"]
+            envFrom:
+              - secretRef:
+                  name: ${APP}-env
+              - secretRef:
+                  name: ${APP}-secrets
+              - secretRef:
+                  name: ${APP}-metrics
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env:
+              # The same block as the web container: upstream sets the shared
+              # variables on both services, and the worker needs the database,
+              # Redis and SECRET_KEY_BASE for identical reasons.
+              <<: *appEnv
+              # Three job threads keep idle memory and the database connection
+              # count low. Raise temporarily for a large import.
+              BACKGROUND_PROCESSING_CONCURRENCY: "3"
+              # The port the Sidekiq process's own WEBrick exporter binds, which
+              # the web container scrapes over localhost. Upstream's default,
+              # stated because SIDEKIQ_METRICS_URL above has to agree with it.
+              PROMETHEUS_EXPORTER_PORT: "9394"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            probes:
+              # Sidekiq serves no unauthenticated HTTP: its only listener is the
+              # metrics exporter, which answers 401 without basic auth, so an
+              # httpGet probe would fail a healthy worker. Upstream's compose
+              # healthcheck is this same process check.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command: ["pgrep", "-f", "sidekiq"]
+                  initialDelaySeconds: 60
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext: *sc
+
+    defaultPodOptions:
+      securityContext:
+        # ROOT AT START, 568 IN PRACTICE -- and that is upstream's own
+        # recommendation rather than a shortcut. Both entrypoints contain a
+        # privilege-drop block that, when the container starts as root AND
+        # PUID/PGID are set, chowns public/storage/tmp/db/log and re-execs the
+        # process under that uid with gosu. Their comment is explicit that this
+        # is preferred over starting unprivileged, "which starts unprivileged
+        # and cannot chown root-owned volumes".
+        #
+        # So the Rails and Sidekiq processes run as 568:568, matching
+        # VOLSYNC_PUID/VOLSYNC_PGID so the restic mover and the app agree on
+        # ownership of every file on the PVC -- a mismatch there only shows up
+        # at RESTORE time. The chown is guarded by a stat check upstream, so it
+        # is a no-op on every boot after the first.
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            # All three are shared by both containers upstream, and both mount
+            # them here for the same reason: Sidekiq writes import artefacts and
+            # Active Storage blobs that the web process then serves.
+            *app :
+              - path: /var/app/public
+                subPath: public
+              - path: /var/app/storage
+                subPath: storage
+              - path: /var/app/tmp/imports/watched
+                subPath: watched
+            sidekiq:
+              - path: /var/app/public
+                subPath: public
+              - path: /var/app/storage
+                subPath: storage
+              - path: /var/app/tmp/imports/watched
+                subPath: watched
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+          # NOT exposed: the Sidekiq exporter on 9394. The web container
+          # aggregates it over localhost and re-serves it on /metrics, which is
+          # how upstream keeps that port internal.
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Dawarich speaks OIDC
+              # itself, so the authentik forward-auth outpost in front would
+              # authenticate twice and break the
+              # /users/auth/openid_connect/callback hop. This gate is the LAN
+              # check only -- same as ../reitti, ../outline and ../tududi.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

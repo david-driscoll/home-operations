@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+  - ./servicemonitor.yaml
+patches:
+  # POSTGIS AND PGCRYPTO, declared on the CNPG `Database` rather than left to
+  # the app's own migrations. Both appear in Dawarich's `db/schema.rb`:
+  #
+  #   enable_extension "pgcrypto"
+  #   enable_extension "postgis"
+  #
+  # `postgis` is UNTRUSTED -- only a superuser may CREATE it, and the role
+  # components/postgres gives this app holds `login` and nothing else, so the
+  # very first `rails db:migrate` would abort. The CNPG operator creates
+  # declared extensions as the superuser, which is the gap this fills. Rails
+  # emits `CREATE EXTENSION IF NOT EXISTS`, so pre-creating them makes the
+  # app's own statements no-ops rather than a conflict.
+  #
+  # `pgcrypto` is trusted on PostgreSQL 13+ and the app could create it
+  # unaided; it is declared anyway so the database's full extension set is
+  # written down in one place, exactly as ../reitti does with `btree_gist`.
+  #
+  # The shared cluster serves both: it runs
+  # ghcr.io/imusmanmalik/timescaledb-postgis, and `postgis 3.6.4` was confirmed
+  # available on the live operand on 2026-09-20 while deploying ../reitti.
+  #
+  # Mechanism: the same two-level JSON6902 patch ../reitti and media/tracearr
+  # use. This appends to the nested `${APP}-postgres` Kustomization's
+  # `spec.patches`; that child then patches the `Database` it renders into
+  # `database`. Never a strategic merge on `spec.patches` -- a Flux
+  # Kustomization has no Go schema, so a merge REPLACES the list and silently
+  # drops any sibling's entry.
+  - target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+      name: .*-postgres$
+    patch: |-
+      - op: add
+        path: /spec/patches/-
+        value:
+          target:
+            group: postgresql.cnpg.io
+            kind: Database
+          patch: |-
+            apiVersion: postgresql.cnpg.io/v1
+            kind: Database
+            metadata:
+              name: not-used
+            spec:
+              extensions:
+                - name: postgis
+                  ensure: present
+                - name: pgcrypto
+                  ensure: present
