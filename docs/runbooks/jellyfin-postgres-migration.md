@@ -439,6 +439,31 @@ is a server that dies before it serves anything (§3.6 has the stack trace).
   normal way to hit this. Every plugin is listed with its ABI and flagged;
   `--strict-abi` makes it fatal.
 
+## Plugin settings are repointed at this instance
+
+A carried plugin configuration still names **production** — a webhook's server
+URL, a sync plugin's callback, the address Streamyfin hands to clients. Left
+alone, `jellyfin-pg`'s plugins would talk to production and send clients there.
+`job.yaml` passes two rewrites to `config-sync.py`:
+
+| From | To |
+| --- | --- |
+| `jellyfin.equestria.svc.cluster.local` | `jellyfin-pg.equestria.svc.cluster.local` |
+| `jellyfin.driscoll.tech` | `jellyfin-pg.driscoll.tech` |
+
+- **Only the text files under `plugins/`** are rewritten: settings XML and
+  JSON. Assemblies are never touched.
+- Only **whole hostnames** match, ignoring case: `myjellyfin.driscoll.tech`,
+  `jellyfin.driscoll.tech.example.com` and the already-correct
+  `jellyfin-pg.driscoll.tech` are left alone. Ports and paths are kept.
+- Files are rewritten as bytes, so the BOM .NET writes survives.
+- The same hostnames under `config/` and inside the plugins' **SQLite
+  databases** are **reported, not rewritten**. A URL stored in a plugin's own
+  database is data that plugin owns, and rewriting it would need that plugin's
+  schema. Read the `warn:` lines and decide.
+- Short forms such as `jellyfin.equestria.svc`, `jellyfin:8096` or a bare IP do
+  not match. Add another `--rewrite-host=OLD=NEW` for any the run turns up.
+
 ## ⚠️ `truenas-media` is no longer read-only
 
 The mount lost `readOnly: true` in 6b8d281c (2026-09-17). The comments in
@@ -502,7 +527,8 @@ important part automatically. Beyond that, the things this run adds:
 - Plugins appear in the dashboard **and are enabled** — an ABI-blocked plugin
   is absent, not broken, and says so only in the log.
 - The plugin catalogue lists the repositories `config-sync.py` printed.
-- Each plugin's settings page shows production's values, not defaults.
+- Each plugin's settings page shows production's values, not defaults, and
+  any URL on it names `jellyfin-pg`, not `jellyfin`.
 - Libraries resolve and their paths point at `/media`.
 - `MEILI_URL` / `MEILI_MASTER_KEY` still come from the environment and outrank
   the carried Meilisearch config, so that plugin points at this pod's own

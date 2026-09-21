@@ -66,6 +66,14 @@ before it serves anything:
   subtitles/      production mounts NFS over data/subtitles and data/trickplay.
   trickplay/      Not carried; Jellyfin recreates both as ordinary directories.
 
+PLUGIN SETTINGS THAT NAME PRODUCTION
+
+A plugin configuration copied from production still points at production --
+jellyfin.equestria.svc.cluster.local, jellyfin.driscoll.tech. --rewrite-host
+OLD=NEW rewrites those in the text files under plugins/ (settings XML/JSON, never
+assemblies), matching whole hostnames only. The same hostnames under config/ and
+in the plugins' SQLite databases are reported, not rewritten.
+
 Run it with jellyfin-pg SCALED TO ZERO and its config PVC mounted at --target.
 Everything outside the carry list is left exactly as it was.
 """
@@ -127,6 +135,14 @@ def parse_args():
     p.add_argument("--no-plugin-data", action="store_true", help="leave the plugins' own SQLite databases behind")
     p.add_argument("--clear-bind-addresses", action="store_true", help="empty LocalNetworkAddresses in network.xml")
     p.add_argument("--strict-abi", action="store_true", help="fail, rather than warn, on a plugin the target cannot load")
+    p.add_argument(
+        "--rewrite-host",
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help="rewrite hostname OLD to NEW in plugin settings (repeatable), "
+        "e.g. jellyfin.driscoll.tech=jellyfin-pg.driscoll.tech",
+    )
     p.add_argument("--chown", default="", help="uid:gid to apply to everything written (e.g. 568:568)")
     p.add_argument("--dry-run", action="store_true", help="report what would happen and write nothing")
     return p.parse_args()
@@ -388,6 +404,80 @@ def carry_plugin_databases(src, dst, dry_run):
     return n
 
 
+# Plugin settings files worth rewriting. Assemblies and anything else binary
+# are never touched -- a byte substitution inside a DLL is a corrupt DLL.
+TEXT_SUFFIXES = {".xml", ".json", ".yaml", ".yml", ".txt", ".conf", ".ini"}
+
+
+def host_pattern(host):
+    """Match `host` as a whole hostname, never as part of a longer one.
+
+    Without the boundaries, `jellyfin.driscoll.tech` would also match inside
+    `myjellyfin.driscoll.tech` or `jellyfin.driscoll.tech.example`, and the
+    already-correct `jellyfin-pg.driscoll.tech` is kept safe only by accident.
+    Bytes, not str: the XML is rewritten in place without a decode/encode round
+    trip, so a BOM or an odd encoding .NET wrote comes through unchanged.
+    """
+    return re.compile(
+        rb"(?<![A-Za-z0-9.-])" + re.escape(host.encode()) + rb"(?![A-Za-z0-9-]|\.[A-Za-z0-9])",
+        re.IGNORECASE,
+    )
+
+
+def rewrite_hosts(root, pairs, dry_run):
+    """Point plugin settings at THIS instance instead of production.
+
+    A carried plugin configuration still names production: a webhook's server
+    URL, a sync plugin's callback, Streamyfin's published address. Left alone,
+    jellyfin-pg's plugins would talk to -- or hand clients links to --
+    production Jellyfin. Only plugins/ is rewritten; server settings under
+    config/ and the plugins' own SQLite databases are scanned and REPORTED, so
+    a reference there is visible rather than silently changed or silently kept.
+    """
+    patterns = [(host_pattern(old), new.encode(), old, new) for old, new in pairs]
+    total = 0
+
+    plugins_dir = root / "plugins"
+    files = []
+    if plugins_dir.is_dir():
+        files = sorted(
+            p for p in plugins_dir.rglob("*")
+            if p.is_file() and p.suffix.lower() in TEXT_SUFFIXES and not PROVIDER_PLUGIN.search(str(p.relative_to(root)))
+        )
+    for path in files:
+        blob = path.read_bytes()
+        out = blob
+        hits = []
+        for rx, new_b, old, new in patterns:
+            out, n = rx.subn(new_b, out)
+            if n:
+                hits.append(f"{old} -> {new} x{n}")
+                total += n
+        if hits:
+            log(f"  {path.relative_to(root)}: {', '.join(hits)}")
+            if not dry_run:
+                path.write_bytes(out)
+    if total == 0:
+        log("  no plugin setting names a production hostname")
+    else:
+        log(f"  {total} reference(s) {'would be ' if dry_run else ''}rewritten")
+
+    # Report-only: outside the plugin settings the rewrite was asked for.
+    report = []
+    config_dir = root / "config"
+    if config_dir.is_dir():
+        report += sorted(p for p in config_dir.rglob("*") if p.is_file() and p.suffix.lower() in TEXT_SUFFIXES)
+    data_dir = root / "data"
+    if data_dir.is_dir():
+        report += sorted(p for p in data_dir.glob("*.db") if p.name not in NOT_PLUGIN_DATA)
+    for path in report:
+        blob = path.read_bytes()
+        found = [old for rx, _, old, _ in patterns if rx.search(blob)]
+        if found:
+            log(f"  warn: {path.relative_to(root)} still names {', '.join(found)} -- NOT rewritten")
+    return total
+
+
 def apply_ownership(dst, spec, dry_run):
     uid, _, gid = spec.partition(":")
     uid, gid = int(uid), int(gid)
@@ -452,6 +542,16 @@ def main():
     network_xml = xml_root / "config" / "network.xml"
     if network_xml.exists():
         rewrite_network_xml(network_xml, args.clear_bind_addresses, args.dry_run)
+
+    if args.rewrite_host:
+        pairs = []
+        for spec in args.rewrite_host:
+            old, sep, new = spec.partition("=")
+            if not sep or not old or not new:
+                sys.exit(f"FAIL: --rewrite-host {spec!r} is not OLD=NEW")
+            pairs.append((old.strip(), new.strip()))
+        log("\n=== hostnames in plugin settings ===")
+        rewrite_hosts(xml_root, pairs, args.dry_run)
 
     if args.chown:
         log("\n=== ownership ===")

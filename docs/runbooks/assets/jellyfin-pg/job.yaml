@@ -260,6 +260,11 @@ spec:
             # stale value turns "this plugin will not load" into silence.
             - --server-version=12.0.0
             - --clear-bind-addresses
+            # Carried plugin settings still name production. Point them at this
+            # instance, or its plugins talk to -- and hand clients links to --
+            # production Jellyfin. Whole-hostname matches, plugins/ only.
+            - --rewrite-host=jellyfin.equestria.svc.cluster.local=jellyfin-pg.equestria.svc.cluster.local
+            - --rewrite-host=jellyfin.driscoll.tech=jellyfin-pg.driscoll.tech
           volumeMounts:
             - { name: scripts, mountPath: /scripts }
             - { name: work, mountPath: /work }
