@@ -105,9 +105,10 @@
 #       dataSourceRef) -- there is no RBAC-level guard against repeating
 #       either, only care at the point of use.
 #
-#     - Nodes: patch/update -- cordon/uncordon. Doesn't touch data or
-#       running pods directly and is reversible, so it is granted even
-#       though nothing above it required node-level access.
+#     - Nodes: patch/update -- cordon/uncordon, and ONLY that since
+#       2026-09-21: RBAC cannot say "only spec.unschedulable", so
+#       ./node-cordon-only.yaml's ValidatingAdmissionPolicy does. See the
+#       rule below.
 #
 #   Still NOT granted: Secret writes (every Secret in this estate is either
 #   ESO-managed from OpenBao or sops-encrypted in git -- a live write would
@@ -248,6 +249,38 @@ rules:
     resources: ["persistentvolumeclaims/resize"]
     verbs: ["patch", "update"]
 
+  # Nodes: patch/update, for cordon/uncordon -- and narrowed to exactly that
+  # by ./node-cordon-only.yaml, which ships in this same Kustomization so the
+  # grant can never be live without its limit.
+  #
+  # WHY `update` AND NOT JUST `patch`. The agent's Kubernetes MCP is Stacklok
+  # `mkp` 0.4.3 (../agent-tools-servers/kubernetes.yaml), which has no patch
+  # tool, and whose `apply_resource` is not server-side apply: at
+  # pkg/k8s/client.go @ v0.4.3 an existing object is written with
+  # `dynamicClient...Update(ctx, obj, UpdateOptions{})` -- a full PUT. An mkp
+  # cordon is therefore GET the Node, set spec.unschedulable, PUT the whole
+  # object back, and `update` is the only verb that authorises it. `patch` is
+  # for every other client (`kubectl cordon`/`uncordon` are strategic-merge
+  # PATCHes).
+  #
+  # WHY IT NEEDED NARROWING. This rule dates from the 2026-08-30 split
+  # (#1336), granted on the one-line reasoning in the header ("reversible,
+  # doesn't touch data"). That is true of cordon; it is not true of what
+  # `update` on `nodes` actually allows, which is rewriting the whole Node --
+  # labels every nodeSelector and Longhorn's disk placement key off, taints
+  # (a NoExecute taint evicts everything intolerant on the node at once),
+  # podCIDR(s), providerID. RBAC has no field-level form, so the VAP compares
+  # the request's object against the stored one and denies any difference
+  # outside spec.unschedulable, for the two identities bound to this role.
+  #
+  # THE CASE THAT SURFACED IT. 2026-09-21: the agent diagnosed `shining-armor`
+  # as a node whose pods cannot reach the apiserver ClusterIP 10.196.0.1:443
+  # -- 9 of 9 nightly Job failures on that node, 0 of 7 anywhere else -- and
+  # the zero-cost confirmation was cordoning it before the 02:30 UTC CronJob
+  # run. Same argument as the auto.pulumi.com rule above: an agent that can
+  # diagnose a fault in full should be able to take the one reversible action
+  # that confirms it. Reaching for this grant to do that is what showed it
+  # was "rewrite any Node", not "cordon one".
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["patch", "update"]
