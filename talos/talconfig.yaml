@@ -441,3 +441,6 @@ controlPlane:
   patches:
     - "@./patches/controller/cluster.yaml"
     - "@./patches/controller/machine-rbac.yaml"
+    # MUST stay after cluster.yaml: that file deletes the generated
+    # KubeEtcdEncryptionConfig and this one adds the corrected replacement.
+    - "@./patches/controller/etcd-encryption.yaml"

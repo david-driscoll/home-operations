@@ -35,4 +35,15 @@ set -Eeuo pipefail
   exit 1
 }
 
+# patches/controller/etcd-encryption.yaml needs the secretbox key, which must not
+# live in git in the clear. Read it from talsecret.sops.yaml -- the file that
+# already holds it -- rather than keeping a second encrypted copy that could
+# drift. Exported for talhelper's `${VAR}` substitution; nothing else sees it.
+TALOS_SECRETBOX_ENCRYPTION_SECRET="$(sops -d --extract '["secrets"]["secretboxencryptionsecret"]' talsecret.sops.yaml)"
+[[ -n "${TALOS_SECRETBOX_ENCRYPTION_SECRET}" ]] || {
+  printf 'talos:genconfig: talsecret.sops.yaml has no secrets.secretboxencryptionsecret.\n' >&2
+  exit 1
+}
+export TALOS_SECRETBOX_ENCRYPTION_SECRET
+
 talhelper genconfig
