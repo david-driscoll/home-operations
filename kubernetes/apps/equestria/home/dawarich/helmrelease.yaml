@@ -114,9 +114,10 @@ spec:
               TIME_ZONE: "${TIMEZONE}"
               RAILS_LOG_TO_STDOUT: "true"
               # Rails host authorization (`config.hosts`). The two public
-              # hostnames, plus the in-cluster Service FQDN -- that last one is
-              # not optional: ./servicemonitor.yaml rewrites the scrape address
-              # to it precisely so /metrics arrives with an allowed Host.
+              # hostnames, plus the in-cluster Service FQDN. The FQDN was added
+              # for a Prometheus scrape of Rails' /metrics, which no longer
+              # happens (see ./servicemonitor.yaml); it is kept so in-cluster
+              # callers of the Service still get an allowed Host.
               # /api/v1/health is exempt from this check upstream, which is HALF
               # of why the kubelet probes below work against the pod IP. It is
               # NOT exempt from force_ssl (APPLICATION_PROTOCOL just below), so
@@ -148,13 +149,18 @@ spec:
               RAILS_WS_DB: "3"
 
               # ---- Metrics ---------------------------------------------------
-              # In-process since 1.7.7; no exporter sidecar. The web container
-              # serves /metrics on 3000 and folds in the Sidekiq container's
-              # own exporter, which it fetches over HTTP. Upstream defaults that
-              # to the compose hostname `http://dawarich_sidekiq:9394/metrics`,
-              # which resolves to nothing here -- in one pod the two containers
-              # share a network namespace, so localhost is both correct and
-              # keeps 9394 off the Service, as upstream intends.
+              # In-process since 1.7.7; no exporter sidecar. Two listeners:
+              #   - the Sidekiq container's own exporter on 9394, which is what
+              #     ./servicemonitor.yaml scrapes;
+              #   - the web container's Rails /metrics on 3000, which folds that
+              #     exporter's output in over HTTP. Prometheus cannot reach it
+              #     (force_ssl redirects the scrape), so nothing scrapes it --
+              #     SIDEKIQ_METRICS_URL is kept so the route still works when
+              #     queried by hand with X-Forwarded-Proto: https.
+              # Upstream defaults SIDEKIQ_METRICS_URL to the compose hostname
+              # `http://dawarich_sidekiq:9394/metrics`, which resolves to
+              # nothing here; the two containers share the pod's network
+              # namespace, so localhost is correct.
               PROMETHEUS_EXPORTER_ENABLED: "true"
               SIDEKIQ_METRICS_URL: http://localhost:9394/metrics
 
@@ -273,9 +279,17 @@ spec:
               # Three job threads keep idle memory and the database connection
               # count low. Raise temporarily for a large import.
               BACKGROUND_PROCESSING_CONCURRENCY: "3"
-              # The port the Sidekiq process's own WEBrick exporter binds, which
-              # the web container scrapes over localhost. Upstream's default,
-              # stated because SIDEKIQ_METRICS_URL above has to agree with it.
+              # The port the Sidekiq process's own WEBrick exporter binds --
+              # Prometheus's scrape target via the Service's `metrics` port,
+              # and what SIDEKIQ_METRICS_URL above fetches over localhost.
+              # Upstream's default, stated because both have to agree with it.
+              #
+              # No bind-address variable is needed or honoured: upstream's
+              # config/initializers/sidekiq.rb starts the exporter in a
+              # Sidekiq `:startup` hook with `BindAddress: '0.0.0.0'` hard-coded
+              # (it calls Rackup::Handler::WEBrick.run itself, so yabeda's
+              # PROMETHEUS_EXPORTER_BIND, read only by start_metrics_server!,
+              # never applies). The pod IP is therefore reachable on 9394.
               PROMETHEUS_EXPORTER_PORT: "9394"
             resources:
               requests:
@@ -357,9 +371,14 @@ spec:
         ports:
           http:
             port: *port
-          # NOT exposed: the Sidekiq exporter on 9394. The web container
-          # aggregates it over localhost and re-serves it on /metrics, which is
-          # how upstream keeps that port internal.
+          # The Sidekiq container's Yabeda exporter, for ./servicemonitor.yaml.
+          # Upstream keeps 9394 internal and re-serves it through Rails'
+          # /metrics, but that route is unscrapable here behind force_ssl.
+          # A Service port targets the pod, not a container; 9394 is only
+          # bound by the sidekiq container, so this lands on it. Still behind
+          # basic auth (Dawarich::MetricsBasicAuth), so nothing is opened up.
+          metrics:
+            port: 9394
 
     route:
       internal:
