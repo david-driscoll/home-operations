@@ -1,0 +1,292 @@
+---
+# The whole SQLite -> PostgreSQL conversion, plugins and settings included, as
+# one staged Job. Every stage is an initContainer, so they run in order and a
+# failure stops the pod rather than letting the next stage work on bad input.
+#
+# APPLY IT BY HAND. This is a one-shot and it is deliberately NOT in a
+# Kustomization: Flux would re-apply it, and `backoffLimit: 0` exists precisely
+# so a half-loaded database is never loaded into twice.
+#
+#   kubectl -n equestria scale deploy/jellyfin-pg --replicas=0
+#   kubectl -n equestria wait --for=delete pod -l app.kubernetes.io/instance=jellyfin-pg --timeout=5m
+#   kubectl -n equestria create configmap jellyfin-pg-migrate \
+#     --from-file=docs/runbooks/assets/jellyfin-pg/ \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/job.yaml
+#   kubectl -n equestria logs -f job/jellyfin-pg-migrate --all-containers --prefix
+#
+# ⚠️ jellyfin-pg MUST BE AT ZERO REPLICAS. Its config PVC is RWO Longhorn, so
+# this pod cannot even schedule while the app holds it -- which is the good
+# failure. The bad one would be two writers on one config directory.
+#
+# Production jellyfin is NOT touched, stopped or scaled. Everything comes out of
+# the volsync restic repository, mounted read-only, with --no-lock.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jellyfin-pg-migrate
+  namespace: equestria
+  labels:
+    driscoll.dev/oneshot: jellyfin-pg-migration
+spec:
+  # A half-loaded database must never be loaded into twice. If a stage fails,
+  # read the log, fix the cause and delete + re-create the Job deliberately.
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        driscoll.dev/oneshot: jellyfin-pg-migration
+    spec:
+      restartPolicy: Never
+      securityContext:
+        # 568/568 is what jellyfin-pg runs as and what owns both the restic
+        # repository's files (components/volsync moverSecurityContext) and the
+        # config PVC. Running as anything else means a chown pass afterwards.
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: { type: RuntimeDefault }
+
+      initContainers:
+        # ---------------------------------------------------------------- 1
+        - name: restore
+          image: docker.io/restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510
+          command: ["/bin/sh", "/scripts/restore.sh"]
+          env:
+            # restic caches under $HOME/.cache by default, and uid 568 has no
+            # home directory in this image -- it would warn on every call and
+            # re-read pack files it had already seen. /work is the emptyDir it
+            # is writing to anyway.
+            - name: RESTIC_CACHE_DIR
+              value: /work/.cache
+          envFrom:
+            # RESTIC_REPOSITORY (/repository/jellyfin) and RESTIC_PASSWORD.
+            - secretRef: { name: jellyfin-volsync-secret }
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: work, mountPath: /work }
+            - { name: repository, mountPath: /repository, readOnly: true }
+          securityContext: &hardened
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+
+        # ---------------------------------------------------------------- 2
+        # Integrity gates on the hot copy (quick_check, foreign_key_check, WAL
+        # checkpoint), the source row counts verify.py will compare against, and
+        # the rendered pgloader load file. Fails closed on all three.
+        - name: render
+          # Stock python, digest-pinned like everything else here. The scripts
+          # are standard library only -- sqlite3, xml.etree, shutil -- so this
+          # image needs nothing added and the pod needs no network to build it.
+          # Digest resolved 2026-09-21; it is the OCI index, whose linux/amd64
+          # child is what these nodes pull.
+          image: &python docker.io/library/python:3.13-alpine@sha256:1a63a53928ce53d2b0baf08092a703f4840ac5dfbd61fd48802dbf48e08c801e
+          command: ["python3", "/scripts/render.py"]
+          env:
+            - name: LOAD_TEMPLATE
+              value: /scripts/jellyfindb.load
+          envFrom:
+            - secretRef: { name: jellyfin-pg-env }
+          volumeMounts: &pyMounts
+            - { name: scripts, mountPath: /scripts }
+            - { name: work, mountPath: /work }
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+
+        # ---------------------------------------------------------------- 3
+        # The target's shape, for stages 4 and 5. is_nullable and the default
+        # flag are new here: gate.py needs them to tell a harmless target-only
+        # column from one that would reject every row. preclean.py reads the
+        # same file and takes only the first four fields, so the two extra
+        # columns are appended rather than inserted.
+        - name: target-dump
+          image: &postgres docker.io/library/postgres:18-alpine@sha256:6c538e7206ea40ff740ef27883529390a690b6ead6ba96b44c67a9f7c638e8fd
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # shellcheck disable=SC1091  # written by the render stage
+              . /work/pg.env && export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
+              psql -At -F'|' -v ON_ERROR_STOP=1 -c "
+                select table_name, column_name, data_type,
+                       coalesce(character_maximum_length::text,''),
+                       is_nullable,
+                       case when column_default is not null then 't' else 'f' end
+                  from information_schema.columns
+                 where table_schema='public'
+                 order by table_name, ordinal_position;" > /work/target-schema.tsv
+              psql -At -v ON_ERROR_STOP=1 -c '
+                select "MigrationId" from "__EFMigrationsHistory" order by 1;
+                ' > /work/target-migrations.txt
+              echo "target-schema.tsv: $(wc -l < /work/target-schema.tsv) columns"
+              echo "target-migrations.txt: $(wc -l < /work/target-migrations.txt) migrations"
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+
+        # ---------------------------------------------------------------- 4
+        # ⚠️ THE STAGE THAT WILL STOP THIS RUN TODAY. Production is Jellyfin
+        # 12.1.0 and jellyfin-pg is 12.0.0, so the source schema is ahead of the
+        # target's. gate.py refuses rather than letting pgloader lose whole
+        # tables quietly. Read its own docstring before overriding anything.
+        - name: gate
+          image: *python
+          command: ["python3", "/scripts/gate.py"]
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+
+        # ---------------------------------------------------------------- 5
+        # varchar truncation and JSON-array -> PostgreSQL-array conversion, on
+        # the restored COPY. ⚠️ The varchar fix is LOSSY; the script prints every
+        # value it changes. Runbook §3.3.
+        - name: preclean
+          image: *python
+          command: ["python3", "/scripts/preclean.py"]
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+
+        # ---------------------------------------------------------------- 6
+        # `truncate` is in the load file, so this is safe to run against the
+        # database the 2026-09-16 trial already filled -- it empties each table
+        # before loading it. __EFMigrationsHistory is excluded and survives.
+        #
+        # REQUIRE A LITERAL CHECK MARK. `Total import time  ✓` means zero
+        # errors. The failing 2026-09-16 run also "finished", reporting 2 in
+        # that column while two tables sat empty.
+        - name: load
+          image: ghcr.io/roxedus/pgloader@sha256:1a7a86ad56623c00ee714ee4969913ed5c6f59ac9785073e2ffd1bea9cc54d31
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              pgloader --verbose --logfile /work/pgloader.log /work/rendered.load \
+                | tee /work/pgloader.out
+              if ! grep -q 'Total import time.*✓' /work/pgloader.out; then
+                echo "FAIL: pgloader did not report a clean import." >&2
+                echo "      A finished run is not a successful one -- see runbook §3.4." >&2
+                exit 1
+              fi
+              echo "load: OK"
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { memory: 4Gi }
+
+        # ---------------------------------------------------------------- 7
+        # Counts to compare against source-counts.json, plus the KeyframeData
+        # tick total -- a present-but-empty array passes a naive row count.
+        - name: target-counts
+          image: *postgres
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # shellcheck disable=SC1091  # written by the render stage
+              . /work/pg.env && export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
+              # One exact count(*) per table. pg_stat_user_tables is used only to
+              # enumerate the tables -- n_live_tup is an estimate and estimates
+              # are exactly what this check must not rely on.
+              psql -At -v ON_ERROR_STOP=1 -c \
+                "select relname from pg_stat_user_tables order by relname;" > /tmp/tables.txt
+              : > /work/target-counts.tsv
+              while read -r t; do
+                [ -n "$t" ] || continue
+                c=$(psql -At -v ON_ERROR_STOP=1 -c "select count(*) from \"$t\";")
+                printf '%s\t%s\n' "$t" "$c" >> /work/target-counts.tsv
+              done < /tmp/tables.txt
+              # A present-but-empty bigint[] passes a row count and loses every
+              # tick value, so the total is carried as its own pseudo-row.
+              ticks=$(psql -At -v ON_ERROR_STOP=1 -c \
+                'select coalesce(sum(array_length("KeyframeTicks",1)),0) from "KeyframeData";' || echo 0)
+              printf '__KeyframeTicks__\t%s\n' "$ticks" >> /work/target-counts.tsv
+              echo "target-counts.tsv: $(wc -l < /work/target-counts.tsv) rows"
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+
+        # ---------------------------------------------------------------- 8
+        - name: verify
+          image: *python
+          command: ["python3", "/scripts/verify.py"]
+          volumeMounts: *pyMounts
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+
+      # ------------------------------------------------------------------- 9
+      # The new half: plugins, plugin repositories, plugin configurations, the
+      # library definitions under root/, and the plugins' own SQLite databases.
+      # Last, because it is the only stage that writes to jellyfin-pg's config
+      # volume, and there is no reason to touch that until the database load has
+      # been verified.
+      #
+      # --metadata-path is required and must be somewhere this pod can write:
+      # jellyfin-pg mounts nothing at production's /metadata, and a MetadataPath
+      # it cannot reach kills the server on startup rather than degrading it.
+      containers:
+        - name: config-sync
+          image: *python
+          command:
+            - python3
+            - /scripts/config-sync.py
+            - --target=/target
+            - --metadata-path=/config/metadata
+            # Keep this in step with the image jellyfin-pg's HelmRelease pins.
+            # It is what the plugin targetAbi check compares against, and a
+            # stale value turns "this plugin will not load" into silence.
+            - --server-version=12.0.0
+            - --clear-bind-addresses
+          volumeMounts:
+            - { name: scripts, mountPath: /scripts }
+            - { name: work, mountPath: /work }
+            - { name: target, mountPath: /target }
+          securityContext: *hardened
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { memory: 2Gi }
+
+      volumes:
+        - name: scripts
+          configMap:
+            name: jellyfin-pg-migrate
+        # 637 MiB of database (2026-09-16 figure -- check it) plus the WAL plus
+        # the config tree and every plugin. This is node ephemeral storage, so
+        # the limit is real: if the pod is evicted for exceeding it, raise this
+        # rather than reaching for a PVC.
+        - name: work
+          emptyDir:
+            sizeLimit: 12Gi
+        # The volsync restic repository, READ-ONLY. Same NFS export the movers
+        # get from volsync-system's MutatingAdmissionPolicy.
+        - name: repository
+          nfs:
+            server: "10.10.10.10"
+            path: /mnt/stash/backup/equestria/volsync
+            readOnly: true
+        - name: target
+          persistentVolumeClaim:
+            claimName: jellyfin-pg

@@ -355,3 +355,155 @@ Production `jellyfin` needs no teardown step, because nothing here changed it.
    `playback_reporting.db` and `streamyfin_plugin.db` are separate SQLite files
    under `/config/data` and are outside both this procedure and the provider's
    scope.
+
+---
+
+# The 2026-09-21 re-run: plugins, repositories and settings included
+
+§1–§5 above describe the 2026-09-16 trial, which deliberately skipped
+`/config/plugins`. This section is the re-run that does not, and it replaces
+§3.1–§3.6 as the procedure to follow. Everything else above still holds.
+
+## ⛔ It does not run today, and the reason is not a bug
+
+| | Server | Image |
+| --- | --- | --- |
+| `jellyfin` | **12.1.0** | `ghcr.io/jellyfin/jellyfin:12.1` |
+| `jellyfin-pg` | **12.0.0** | `git.nicholstech.org/.../jellyfin.pgsql:12.0-nichols.68` |
+
+Both read off `/System/Info/Public` on the live servers. Production moved to
+12.1 in #1727; the fork's pinned build is still the 12.0 one the trial used.
+
+**The source's schema is therefore ahead of the target's.** Every EF migration
+12.1 added exists in production's SQLite and in none of the fork's PostgreSQL
+tables. pgloader is told `create no tables`, so it loads into whatever columns
+are already there and fails the tables where they do not match — which is the
+same shape as the `Devices` and `KeyframeData` losses in §3.3: a run that
+finishes, reports success, and leaves tables empty.
+
+`gate.py` refuses the load for exactly this and prints which columns differ.
+**Do not work around it by adding the columns by hand** — the provider's next
+EF migration will fight them.
+
+The way through is to bring `jellyfin-pg` to a fork build that matches
+production's Jellyfin version, let it run its migrations against an **empty**
+database, and then run this job. That build may not exist yet:
+`git.nicholstech.org` browsing is behind authentik SSO from here and its
+registry API could not be reached to list tags, so **check for a 12.1 tag
+yourself before planning a window**. If there is none, the options are to hold
+the re-run until there is, or to pin production back to 12.0 — a decision about
+production, not about this instance.
+
+## What it carries, and what the trial did not
+
+`config-sync.py` replaces §3.6. It carries the whole config volume rather than
+the XMLs alone:
+
+| | |
+| --- | --- |
+| `config/` | every server setting. **`system.xml` is also where `<PluginRepositories>` lives** — the repository list is a server setting, not a per-plugin one, so it travels with that file. The script prints the repositories it found so "they came across" is visible rather than discovered later in an empty catalogue. |
+| `plugins/` | the plugin assemblies **and** `plugins/configurations/`, which is where each plugin's own settings XML lives |
+| `root/` | the **library definitions** — `root/default/<Library>/options.xml` and the `.mblink` files. Without these the loaded `BaseItems` rows belong to libraries the server does not know it has. |
+| `data/ScheduledTasks/`, `data/collections/`, `data/playlists/` | task triggers, collections, playlists |
+| `data/*.db` | the plugins' **own SQLite databases** — `playback_reporting.db`, `infuse_sync.db`, `streamyfin_plugin.db`. They stay SQLite files on the volume; the provider never sees them. This closes item 6 of "what a real cutover would need". `--no-plugin-data` leaves them behind. |
+
+Refused, each for a reason that would otherwise break something:
+
+- **`config/database.xml`** — production's names the SQLite provider and the
+  entrypoint hard-aborts (`exit 2`) on it. The target's own copy is **held aside
+  across the replace and put back**; declining to copy the source's is not
+  enough, because a carried directory is wiped first.
+- **the provider's plugin directory** — the entrypoint manages it, and it is
+  likewise preserved across the wipe.
+- `data/jellyfin.db` (the thing being converted), `data/library.db`,
+  `metadata/`, `cache/`, `log/`, `transcodes/`.
+
+Nothing outside that carry list is touched.
+
+## ⚠️ Three settings that name paths this pod does not have
+
+A setting pointing at a path the pod cannot write is not a degraded feature; it
+is a server that dies before it serves anything (§3.6 has the stack trace).
+
+- **`MetadataPath`** — production mounts NFS at `/metadata`; `jellyfin-pg`
+  mounts nothing there. `--metadata-path` is **required** for that reason, and
+  `/config/metadata` is the value for this instance. Image paths are stored
+  absolute in the database, so **artwork 404s until a metadata refresh**.
+- **`network.xml` → `LocalNetworkAddresses`** — production's pod carries an
+  ipvlan interface on the Home LAN (`jellyfin-lan-net`, 10.10.206.20).
+  `jellyfin-pg` has no such interface and cannot bind that address. The script
+  reports the list and `--clear-bind-addresses` empties it.
+- **plugin `targetAbi`** — a plugin declares the server ABI it was built
+  against and the server silently declines to load one built for a newer
+  server. Carrying production's plugins onto an older `jellyfin-pg` is the
+  normal way to hit this. Every plugin is listed with its ABI and flagged;
+  `--strict-abi` makes it fatal.
+
+## ⚠️ `truenas-media` is no longer read-only
+
+The mount lost `readOnly: true` in 6b8d281c (2026-09-17). The comments in
+`helmrelease.yaml` and §3.6 above still say it is read-only and are **stale**.
+This matters more for this run than for the trial, because this one carries
+production's **library options** — and those are what decide whether Jellyfin
+writes `.nfo` files and artwork back into the media folders. Inherited options
+mean scans have not written into `/media` so far, but nothing structural stops
+them now, and a delete from this instance deletes real shared media. Decide
+whether that mount should be read-only again **before** scaling the instance
+back up with production's library settings on it.
+
+## Running it
+
+Assets, all under [`assets/jellyfin-pg/`](assets/jellyfin-pg/):
+
+| File | Stage |
+| --- | --- |
+| `restore.sh` | dumps the database, WAL and config tree out of restic, read-only, `--no-lock`. **Locates `jellyfin.db` in the snapshot** rather than assuming a path — §2's `/data/jellyfin.db` and VolSync's mount-at-`/data` cannot both be right. |
+| `render.py` | integrity gates, WAL checkpoint, source row counts, rendered load file (unchanged) |
+| `gate.py` | **new** — refuses a source schema the target does not cover |
+| `preclean.py` | varchar truncation and JSON→PostgreSQL array conversion (unchanged) |
+| `jellyfindb.load` | the fork's load file, checksum-verified (unchanged) |
+| `verify.py` | **new** — per-table source-vs-target counts, plus the KeyframeData tick total |
+| `config-sync.py` | **new** — plugins, repositories, settings, libraries |
+| `job.yaml` | **new** — all of it as one staged Job |
+
+```bash
+kubectl -n equestria scale deploy/jellyfin-pg --replicas=0
+kubectl -n equestria wait --for=delete pod \
+  -l app.kubernetes.io/instance=jellyfin-pg --timeout=5m
+
+kubectl -n equestria create configmap jellyfin-pg-migrate \
+  --from-file=docs/runbooks/assets/jellyfin-pg/ \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n equestria apply -f docs/runbooks/assets/jellyfin-pg/job.yaml
+kubectl -n equestria logs -f job/jellyfin-pg-migrate --all-containers --prefix
+```
+
+The instance must be at **zero replicas**: the config PVC is RWO Longhorn, so
+the pod cannot schedule while the app holds it. That is the good failure; the
+bad one would be two writers on one config directory.
+
+`backoffLimit: 0` and `restartPolicy: Never`, as in §3.4 — a half-loaded
+database must never be loaded into twice. A failed stage means read the log, fix
+the cause, and re-create the Job deliberately.
+
+**§3.5 is not in the Job.** pgloader excludes `__EFMigrationsHistory`, so the
+code-migration history the trial imported survives a re-load and does not need
+repeating. It *does* need repeating if the database is rebuilt empty — which is
+exactly what the version fix above requires — and it needs the fork's
+`export-code-migrations.py` plus the pinned server's `Migrations/**/*.cs`.
+**Cache both before the window**; that fetch is what hit the Gitea rate limit.
+
+## Afterwards
+
+§4's verification still applies, and `verify.py` does its first and most
+important part automatically. Beyond that, the things this run adds:
+
+- Plugins appear in the dashboard **and are enabled** — an ABI-blocked plugin
+  is absent, not broken, and says so only in the log.
+- The plugin catalogue lists the repositories `config-sync.py` printed.
+- Each plugin's settings page shows production's values, not defaults.
+- Libraries resolve and their paths point at `/media`.
+- `MEILI_URL` / `MEILI_MASTER_KEY` still come from the environment and outrank
+  the carried Meilisearch config, so that plugin points at this pod's own
+  sidecar rather than production's. Confirm the index is this instance's.
