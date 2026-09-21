@@ -117,8 +117,11 @@ spec:
               # hostnames, plus the in-cluster Service FQDN -- that last one is
               # not optional: ./servicemonitor.yaml rewrites the scrape address
               # to it precisely so /metrics arrives with an allowed Host.
-              # /api/v1/health is exempt from this check upstream, which is why
-              # the kubelet probes below work against the pod IP.
+              # /api/v1/health is exempt from this check upstream, which is HALF
+              # of why the kubelet probes below work against the pod IP. It is
+              # NOT exempt from force_ssl (APPLICATION_PROTOCOL just below), so
+              # the probes also have to claim HTTPS via X-Forwarded-Proto -- see
+              # the comment on `probes:`.
               APPLICATION_HOSTS: "${APP}.${ROOT_DOMAIN},${APP}.${TAILSCALE_DOMAIN},${APP}.${NAMESPACE}.svc.cluster.local"
               APPLICATION_PROTOCOL: https
               # Required in production: Rails builds absolute URLs (mail links,
@@ -187,6 +190,18 @@ spec:
               limits:
                 memory: 4Gi
             probes:
+              # ⚠️ Every probe below sends `X-Forwarded-Proto: https`, and must.
+              # APPLICATION_PROTOCOL=https turns on `config.force_ssl`, and
+              # ActionDispatch::SSL answers any request Rack does not consider
+              # secure with a 301 to https://<host>/... -- /api/v1/health
+              # included, since upstream exempts it from host authorization
+              # only. The kubelet follows that redirect to the same pod IP and
+              # speaks TLS to Puma's plain-HTTP port, so without the header
+              # every probe fails and Puma logs "Are you trying to open an SSL
+              # connection to a non-SSL Puma?" once per probe. Rack 3.2's
+              # Request#ssl? trusts X-Forwarded-Proto unconditionally (no
+              # trusted-proxy check for the scheme), exactly as it does for the
+              # header Traefik sets on real traffic.
               liveness: &probes
                 enabled: true
                 custom: true
@@ -194,6 +209,9 @@ spec:
                   httpGet:
                     path: &health /api/v1/health
                     port: &port 3000
+                    httpHeaders: &probeHeaders
+                      - name: X-Forwarded-Proto
+                        value: https
                   initialDelaySeconds: 30
                   periodSeconds: 30
                   timeoutSeconds: 10
@@ -211,6 +229,7 @@ spec:
                   httpGet:
                     path: *health
                     port: *port
+                    httpHeaders: *probeHeaders
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 90

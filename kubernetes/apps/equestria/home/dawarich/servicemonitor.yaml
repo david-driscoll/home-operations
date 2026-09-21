@@ -64,3 +64,13 @@ spec:
         # replicas, this collapses them onto one target and needs revisiting.
         - targetLabel: __address__
           replacement: ${APP}.${NAMESPACE}.svc.cluster.local:3000
+      # ⚠️ KNOWN BROKEN, left in place deliberately. /metrics is a Rails route
+      # (mounted in config/routes.rb), so it sits behind ActionDispatch::SSL,
+      # and APPLICATION_PROTOCOL=https turns force_ssl on. A plain-HTTP scrape
+      # gets a 301 to https://<this FQDN>:3000/metrics, which Prometheus follows
+      # into Puma's plain-HTTP port and fails the TLS handshake. The kubelet
+      # probes dodge this with an X-Forwarded-Proto header, but a ServiceMonitor
+      # endpoint has no arbitrary-header field (only proxyConnectHeader, which
+      # is for a CONNECT proxy). Scraping the Sidekiq exporter on 9394 instead
+      # would lose every web-side series. Expect TargetDown here until one of
+      # those trade-offs is chosen.
