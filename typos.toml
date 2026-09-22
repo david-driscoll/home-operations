@@ -70,6 +70,10 @@ extend-ignore-re = [
   # fixture -- "correcting" it to `rootDomain` makes the key valid and the test
   # stops testing anything. Do not let `typos --write-changes` near it.
   "rootDomian",
+  # Navidrome's env-var prefix (ND_MUSICFOLDER, ND_EXTAUTH_*, ...), which typos
+  # reads as a misspelt "AND". A regex rather than an extend-words entry for
+  # `ND`, so a bare "nd" in prose is still caught.
+  "\\bND_[A-Z_]*",
 ]
 
 [default.extend-words]

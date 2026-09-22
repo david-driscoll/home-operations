@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/ingressroute_v1alpha1.json
+#
+# The Subsonic carve-out on the TAILNET route: the twin of the /rest rule on the
+# internal HTTPRoute in ./helmrelease.yaml.
+#
+# Shaped like components/tailscale/api-key -- a second IngressRoute at priority 20
+# in front of the component's catch-all at 10 -- but matching a path rather than
+# X-Api-Key/?apikey, which Subsonic clients never send. They authenticate with
+# u/t/s (or apiKey) query params that Navidrome checks itself, and cannot follow
+# an authentik redirect.
+#
+# `/rest/` with the slash: Traefik's PathPrefix is a plain string prefix, so
+# `/rest` would also match `/restore` or anything else that starts that way.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ${APP}-tailnet-subsonic
+  annotations:
+    kubernetes.io/ingress.class: internal
+spec:
+  entryPoints:
+    - tailscale
+  routes:
+    - kind: Rule
+      priority: 20
+      match: Host(`${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}`) && PathPrefix(`/rest/`)
+      middlewares:
+        - name: tailscale-local
+          namespace: network
+        # ⚠️ Load-bearing. See ./middleware.yaml.
+        - name: ${APP}-strip-extauth
+          namespace: ${NAMESPACE}
+      services:
+        - name: ${APP}
+          port: http

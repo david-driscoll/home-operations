@@ -1,0 +1,36 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Navidrome
+  category: Applications
+  description: Navidrome is a self-hosted music server and Subsonic-compatible streamer
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  # authentik's ProxyProvider holds ONE external host; this is what gives the
+  # outpost an application for the tailnet name too. Pairs with
+  # TAILSCALE_MIDDLEWARE: tailscale-user in ks.yaml -- see media/lidarr.
+  tailnetUrl: https://${TAILSCALE_HOST:=${APP}}.${TAILSCALE_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/navidrome.svg
+  access_policy:
+    groups:
+      - friends
+      - family
+  authentik:
+    # Proxy, not oauth2: Navidrome has no OIDC. It trusts the username the
+    # outpost injects (X-authentik-username, via network/traefik's `outpost`
+    # middleware) and auto-creates the user -- ND_EXTAUTH_* in helmrelease.yaml.
+    proxy:
+      mode: "forward_single"
+      externalHost: *url
+  gatus:
+    - group: "Applications"
+      # /rest is the SSO carve-out, so this reaches Navidrome itself rather than
+      # an authentik login page. Unauthenticated, it answers HTTP 200 with a
+      # Subsonic error body -- enough to prove the pod and the route are up.
+      url: https://${APP}.${ROOT_DOMAIN}/rest/ping.view
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

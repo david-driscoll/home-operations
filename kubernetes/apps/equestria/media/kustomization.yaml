@@ -23,6 +23,7 @@ resources:
   - ./tracearr/ks.yaml
   - ./streamystats/ks.yaml
   - ./lidarr/ks.yaml
+  - ./navidrome/ks.yaml
   - ./mylar/ks.yaml
   - ./watchstate/ks.yaml
   - ./tdarr/ks.yaml
