@@ -405,7 +405,7 @@ the XMLs alone:
 | `plugins/` | the plugin assemblies **and** `plugins/configurations/`, which is where each plugin's own settings XML lives |
 | `root/` | the **library definitions** — `root/default/<Library>/options.xml` and the `.mblink` files. Without these the loaded `BaseItems` rows belong to libraries the server does not know it has. |
 | `data/ScheduledTasks/`, `data/collections/`, `data/playlists/` | task triggers, collections, playlists |
-| `data/*.db` | the plugins' **own SQLite databases** — `playback_reporting.db`, `infuse_sync.db`, `streamyfin_plugin.db`. They stay SQLite files on the volume; the provider never sees them. This closes item 6 of "what a real cutover would need". `--no-plugin-data` leaves them behind. |
+| `data/*.db` | the plugins' **own SQLite databases** — `playback_reporting.db`, `infuse_sync.db`, `streamyfin_plugin.db`. They stay SQLite files on the volume; the provider never sees them. This closes item 6 of "what a real cutover would need". **Each one's WAL is checkpointed into the copy before it is carried**: they are hot copies too, and on 2026-09-21 `infuse_sync.db` had a 3.9 MB WAL beside it that copying the `.db` alone would have dropped. `--no-plugin-data` leaves them behind. |
 
 Refused, each for a reason that would otherwise break something:
 
@@ -482,7 +482,7 @@ Assets, all under [`assets/jellyfin-pg/`](assets/jellyfin-pg/):
 
 | File | Stage |
 | --- | --- |
-| `restore.sh` | dumps the database, WAL and config tree out of restic, read-only, `--no-lock`. **Locates `jellyfin.db` in the snapshot** rather than assuming a path — §2's `/data/jellyfin.db` and VolSync's mount-at-`/data` cannot both be right. |
+| `restore.sh` | dumps the database and config tree out of restic, read-only, `--no-lock`. **The snapshot's root is the volume's root**: VolSync backs up with `restic backup .` from inside `/data`, so production's `/config/data/jellyfin.db` is `/data/jellyfin.db` in the snapshot and `/config/config/system.xml` is `/config/system.xml`. §2's path was right; it only looks like a mount path. Each database comes with its `-wal` but **not** its `-shm`: a hot copy of the shared-memory index can disagree with its WAL, and SQLite rebuilds it. The script **fails closed if `config/system.xml`, `plugins/` or `root/` did not restore**, because restic treats an include that matches nothing as success. |
 | `render.py` | integrity gates, WAL checkpoint, source row counts, rendered load file (unchanged) |
 | `gate.py` | **new** — refuses a source schema the target does not cover |
 | `preclean.py` | varchar truncation and JSON→PostgreSQL array conversion (unchanged) |

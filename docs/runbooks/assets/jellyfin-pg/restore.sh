@@ -3,14 +3,14 @@
 # the volsync restic repository. Read-only against the repository; writes only
 # into /work.
 #
-# WHY A DISCOVERY STEP AND NOT A HARDCODED PATH. The 2026-09-16 run recorded
-# `restic dump latest /data/jellyfin.db` in the runbook, but VolSync's restic
-# mover mounts the SOURCE PVC at /data, and that PVC is Jellyfin's
-# JELLYFIN_DATA_DIR -- so the database is at /data/data/jellyfin.db and the
-# config XMLs at /data/config/. One of the two is wrong and a `restic dump` of a
-# path that does not exist fails with a message that reads like a broken
-# repository. Locating the file in the snapshot costs one `restic ls` and makes
-# the script correct under either layout.
+# THE SNAPSHOT'S ROOT IS THE VOLUME'S ROOT. VolSync's mover mounts the source
+# PVC at /data and runs `restic backup .` from inside it, so the paths `restic
+# ls` prints are relative to the volume, not to the mount -- production's
+# /config/data/jellyfin.db is /data/jellyfin.db in the snapshot, and its
+# /config/config/system.xml is /config/system.xml. Confirmed against the live
+# pod and snapshot 14be3af9 on 2026-09-21. It reads like a mount path and is
+# not one, which is why the database is LOCATED here rather than assumed, and
+# why the config tree is checked for after the restore rather than trusted.
 #
 # Requires, from the jellyfin-volsync-secret Secret:
 #   RESTIC_REPOSITORY   /repository/jellyfin
@@ -51,17 +51,23 @@ echo "data dir:  ${DATA_DIR:-/}"
 echo "=== dumping the database (+ WAL) ==="
 # The WAL matters: this is a HOT copy, taken while Jellyfin was serving. Without
 # it render.py's wal_checkpoint has nothing to fold in and pgloader silently
-# reads the pre-WAL state. -wal and -shm may legitimately be absent if Jellyfin
-# checkpointed before the snapshot, so those two are not fatal.
-restic --no-lock dump "$SNAP" "$DB_PATH" > "$WORK/jellyfin.db"
-for suffix in -wal -shm; do
-  if grep -qxF "${DB_PATH}${suffix}" "$WORK/snapshot-files.txt"; then
-    restic --no-lock dump "$SNAP" "${DB_PATH}${suffix}" > "$WORK/jellyfin.db${suffix}"
-    echo "dumped ${DB_PATH}${suffix}"
+# reads the pre-WAL state. The WAL may legitimately be absent if Jellyfin
+# checkpointed before the snapshot, so that is not fatal.
+#
+# NOT the -shm. It is a shared-memory index into the WAL, and a hot copy of one
+# can disagree with the WAL it was copied beside; SQLite rebuilds it from the
+# WAL when it is missing, which is the safe direction. The proven 2026-09-16
+# run took the .db and the -wal only.
+dump_with_wal() {  # $1 = path in the snapshot, $2 = local destination
+  restic --no-lock dump "$SNAP" "$1" > "$2"
+  if grep -qxF "${1}-wal" "$WORK/snapshot-files.txt"; then
+    restic --no-lock dump "$SNAP" "${1}-wal" > "${2}-wal"
+    echo "dumped $1 (+ WAL)"
   else
-    echo "no ${DB_PATH}${suffix} in snapshot (Jellyfin checkpointed before the backup)"
+    echo "dumped $1 (no WAL in the snapshot)"
   fi
-done
+}
+dump_with_wal "$DB_PATH" "$WORK/jellyfin.db"
 
 echo "=== dumping the config tree ==="
 # THE HALF THE 2026-09-16 RUN SKIPPED. `restic restore --target` rather than
@@ -72,6 +78,11 @@ echo "=== dumping the config tree ==="
 # metadata/, cache/, log/ and transcodes/ are deliberately NOT in the include
 # list -- metadata alone is tens of gigabytes of artwork, and all four are
 # regenerable. config-sync.py decides what of this actually lands on the target.
+#
+# Includes ONLY. restic refuses `--include` and `--exclude` together ("exclude
+# and include patterns are mutually exclusive") -- which is how the first live
+# run of this script died, 2026-09-21. None of these directories holds
+# jellyfin.db, so there was never anything to exclude.
 mkdir -p "$WORK/snapshot"
 restic --no-lock restore "$SNAP" --target "$WORK/snapshot" \
   --include "${DATA_DIR}/config" \
@@ -79,19 +90,33 @@ restic --no-lock restore "$SNAP" --target "$WORK/snapshot" \
   --include "${DATA_DIR}/root" \
   --include "${DATA_DIR}/data/ScheduledTasks" \
   --include "${DATA_DIR}/data/collections" \
-  --include "${DATA_DIR}/data/playlists" \
-  --exclude "${DATA_DIR}/data/jellyfin.db*" \
-  --exclude "${DATA_DIR}/data/library.db*"
+  --include "${DATA_DIR}/data/playlists"
+
+# FAIL CLOSED ON AN EMPTY RESTORE. An include that matches nothing is not an
+# error to restic, so a layout this script misreads would restore nothing and
+# config-sync.py would then carry nothing -- a green run with none of the
+# settings or plugins this run exists for.
+for must in config/system.xml plugins root; do
+  if [ ! -e "$WORK/snapshot${DATA_DIR}/$must" ]; then
+    echo "FAIL: $must did not restore -- the snapshot layout is not what this script expects." >&2
+    echo "      top level of the snapshot:" >&2
+    grep -E '^/[^/]+$' "$WORK/snapshot-files.txt" >&2 || true
+    exit 1
+  fi
+done
 
 # The plugin SQLite databases sit loose in data/ beside jellyfin.db, so they
-# cannot be pulled in by a directory include without dragging the 637 MiB
-# library database along with them. One dump each instead.
-for f in $(grep -E "^${DATA_DIR}/data/[^/]+\.db$" "$WORK/snapshot-files.txt" \
-           | grep -vE '/(jellyfin|library)\.db$' || true); do
-  mkdir -p "$WORK/snapshot${DATA_DIR}/data"
-  restic --no-lock dump "$SNAP" "$f" > "$WORK/snapshot${f}"
-  echo "plugin database: $f"
-done
+# cannot be pulled in by a directory include without dragging the library
+# database along with them. One dump each -- WITH its WAL, for the same reason
+# as jellyfin.db: on 2026-09-21 infuse_sync.db had a 3.9 MB WAL beside it, and
+# copying the .db alone would have dropped those writes. config-sync.py
+# checkpoints each one before it copies it.
+mkdir -p "$WORK/snapshot${DATA_DIR}/data"
+grep -E "^${DATA_DIR}/data/[^/]+\.db$" "$WORK/snapshot-files.txt" \
+  | grep -vE '/(jellyfin|library)\.db$' \
+  | while IFS= read -r f; do
+      dump_with_wal "$f" "$WORK/snapshot${f}"
+    done
 
 # Where config-sync.py should look. Written rather than recomputed so the two
 # scripts cannot disagree about the layout.
