@@ -1,0 +1,26 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/traefik.io/middleware_v1alpha1.json
+#
+# Strips the ExtAuth header from requests that did NOT go through authentik.
+#
+# Navidrome runs with ND_EXTAUTH_USERHEADER=X-authentik-username and trusts it
+# from any Traefik pod (ND_EXTAUTH_TRUSTEDSOURCES). On the authentik chain that is
+# safe: forwardAuth's `authResponseHeaders` OVERWRITE whatever the client sent.
+#
+# The /rest carve-out skips authentik, so nothing overwrites it there -- and the
+# Subsonic API honours the header too (server/subsonic/middlewares.go calls
+# server.UsernameFromExtAuthHeader before it ever looks at u/t/s). Without this, any
+# client on the LAN or tailnet could send `X-authentik-username: <admin>` to /rest
+# and be that user, no password asked.
+#
+# Setting a customRequestHeaders entry to "" is Traefik's documented way to
+# REMOVE a header. Used by both the internal HTTPRoute's /rest rule and
+# ./tailnet-subsonic.yaml, so there is one definition of what gets stripped.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ${APP}-strip-extauth
+spec:
+  headers:
+    customRequestHeaders:
+      X-authentik-username: ""

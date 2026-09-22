@@ -1,0 +1,201 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app navidrome
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 1h
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: -1
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: -1
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        # SQLite on a RWO volume: never two pods at once.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/navidrome/navidrome
+              tag: 0.64.1@sha256:df22d661b8d0322c33754d999b567150df9e131a47ae53be71fed0154bf8cef5
+              pullPolicy: IfNotPresent
+            # Every key is Navidrome's config name upper-cased, dots to
+            # underscores, prefixed `ND_`. https://www.navidrome.org/docs/usage/configuration-options/
+            env:
+              TZ: ${TIMEZONE}
+              ND_PORT: &port 4533
+              ND_MUSICFOLDER: /music
+              ND_DATAFOLDER: /data
+              # Off the volsync PVC: artwork and transcode caches are
+              # regenerable and would otherwise be backed up every night.
+              ND_CACHEFOLDER: /cache
+              ND_LOGLEVEL: info
+              ND_BASEURL: https://${APP}.${ROOT_DOMAIN}
+              # -- Authentication: authentik in front, ExtAuth behind it.
+              # The outpost sets X-authentik-username (network/traefik's `outpost`
+              # middleware lists it in authResponseHeaders); Navidrome logs that
+              # user in and creates them on first sight. The FIRST user created
+              # this way becomes the Navidrome admin (server/auth.go,
+              # handleLoginFromHeaders) -- so the first person to open the UI
+              # after this lands should be the estate owner.
+              #
+              # TrustedSources is the whole pod CIDR because Traefik's pod IPs
+              # are not stable. ./ciliumnetworkpolicy.yaml is what narrows that
+              # to Traefik; ./middleware.yaml is what keeps the /rest bypass from
+              # forwarding a client-supplied header. All three go together.
+              ND_EXTAUTH_TRUSTEDSOURCES: ${CLUSTER_NETWORK}
+              ND_EXTAUTH_USERHEADER: X-authentik-username
+              ND_EXTAUTH_LOGOUTURL: https://${APP}.${ROOT_DOMAIN}/outpost.goauthentik.io/sign_out
+              # -- Scanning. The default schedule is "0" (never), leaving only
+              # the startup scan and the filesystem watcher -- and inotify does
+              # not see changes made on the NAS side of an NFS mount, which is
+              # where lidarr's imports come from. So: poll hourly (incremental,
+              # cheap) and turn the watcher off rather than have it hold
+              # inotify watches over the whole library for nothing.
+              ND_SCANNER_SCHEDULE: "@every 1h"
+              ND_SCANNER_WATCHERWAIT: "0"
+              # Public share links live under /share/, which is behind authentik
+              # here -- a recipient without an account would hit a login page.
+              # Off until that path gets a carve-out of its own.
+              ND_ENABLESHARING: "false"
+              ND_ENABLEINSIGHTSCOLLECTOR: "false"
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec: &spec
+                  httpGet:
+                    path: /ping
+                    port: *port
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probes
+              # The first scan of a large library runs at startup; give it room
+              # before liveness can kill it.
+              startup:
+                <<: *probes
+                spec:
+                  <<: *spec
+                  periodSeconds: 10
+                  failureThreshold: 60
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 568
+              runAsGroup: 568
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 1Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # Same groups lidarr runs with, so whatever it can write under
+        # /media/music this can read.
+        supplementalGroups: [44, 109, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /data
+      cache:
+        type: emptyDir
+        sizeLimit: 2Gi
+        globalMounts:
+          - path: /cache
+      tmp:
+        type: emptyDir
+        globalMounts:
+          - path: /tmp
+      truenas-media:
+        existingClaim: truenas-media
+        globalMounts:
+          # Read-only: Navidrome never writes to the library, and lidarr owns it.
+          - path: /music
+            subPath: music
+            readOnly: true
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          # Subsonic API: network gate only. Clients (Symfonium, DSub, Feishin,
+          # ...) authenticate against Navidrome with its own per-user password
+          # and cannot follow an authentik redirect. FIRST, so it wins over the
+          # catch-all. The tailnet twin is ./tailnet-subsonic.yaml.
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /rest
+            backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+              # ⚠️ Load-bearing. See ./middleware.yaml.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: ${APP}-strip-extauth
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: authenticated-user

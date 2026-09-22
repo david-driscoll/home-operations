@@ -9,6 +9,7 @@ resources:
   # two Seerr hostnames suggest. See each app's externalsecret.yaml header.
   - ./arr-mcp-jellyfin/ks.yaml
   - ./arr-mcp-plex/ks.yaml
+  - ./aurral/ks.yaml
   - ./bazarr/ks.yaml
   # - ./emby/ks.yaml
   - ./jellyfin/ks.yaml
@@ -23,6 +24,7 @@ resources:
   - ./tracearr/ks.yaml
   - ./streamystats/ks.yaml
   - ./lidarr/ks.yaml
+  - ./navidrome/ks.yaml
   - ./mylar/ks.yaml
   - ./watchstate/ks.yaml
   - ./tdarr/ks.yaml

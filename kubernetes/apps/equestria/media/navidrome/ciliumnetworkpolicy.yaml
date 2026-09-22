@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+#
+# Only Traefik may talk to Navidrome.
+#
+# ND_EXTAUTH_TRUSTEDSOURCES is ${CLUSTER_NETWORK}, the whole pod CIDR, because
+# Traefik's pod IPs churn on every rollout and Navidrome takes CIDRs, not
+# selectors. Taken alone that trusts EVERY pod in the cluster to name any user,
+# admin included. This policy narrows it back to what was meant: a connection can
+# only arrive from Traefik, and Traefik either overwrites the header (authentik
+# chain) or strips it (./middleware.yaml).
+#
+# Selecting the pod puts it into default-deny for ingress. Kubelet probes arrive
+# from the node (`host` entity), which is allowed explicitly rather than left to
+# Cilium's allow-localhost default. Node IPs are not in ${CLUSTER_NETWORK}, so
+# that path is never trusted for ExtAuth either.
+#
+# Gatus and every client reach Navidrome through Traefik (LAN and tailnet both
+# land on the one `traefik-network` deployment), so nothing else needs a rule.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ${APP}
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      # The app-template pod only -- not a volsync mover that might share the
+      # name label and needs no ingress policy.
+      app.kubernetes.io/controller: app
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: network
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-network
+      toPorts:
+        - ports:
+            - port: "4533"
+              protocol: TCP
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "4533"
+              protocol: TCP
