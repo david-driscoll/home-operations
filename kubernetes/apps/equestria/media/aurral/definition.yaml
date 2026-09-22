@@ -1,0 +1,59 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: Aurral
+  category: Media Management
+  description: Music discovery, requests and flows on top of Lidarr
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/aurral.svg
+  access_policy:
+    groups:
+      - family
+      - media-managers
+  authentik:
+    # oauth2, NOT proxy. Aurral has native OIDC (openid-client), so the
+    # forward-auth outpost in front of it would authenticate twice. The route in
+    # ./helmrelease.yaml therefore uses `local-user`, same as reitti and tududi.
+    oauth2:
+      clientType: confidential
+      allowedRedirectUris:
+        # ONE hostname only. Aurral does not derive the callback from the
+        # request: it sends the fixed OIDC_REDIRECT_URI, and its transaction
+        # cookie is set on whichever host started the login. A login started on
+        # the tailnet name would come back to this host without that cookie and
+        # fail with "OIDC login session expired" -- so registering the tailnet
+        # callback would only make that failure reachable. SSO is on
+        # ${ROOT_DOMAIN}; the tailnet route still serves the API and /rest
+        # (Subsonic) clients.
+        - url: "https://${APP}.${ROOT_DOMAIN}/sso/callback"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+      # Required for admin mapping, not cosmetic. Aurral reads the groups claim
+      # from the ID TOKEN specifically -- fetchEffectiveClaims merges userinfo
+      # and then puts the ID token's value for OIDC_GROUPS_CLAIM back on top --
+      # so without this, OIDC_ADMIN_GROUPS never matches. authentik's `profile`
+      # mapping is what supplies `groups`.
+      includeClaimsInIdToken: true
+  gatus:
+    - group: "Applications"
+      # /api/health/live is exempt from auth (middleware/auth.js) and answers
+      # {"status":"ok"} without touching Lidarr, so it checks the app rather
+      # than the login redirect.
+      url: https://${APP}.${ROOT_DOMAIN}/api/health/live
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].status == ok"
+      # Nightly Low Power shed (docs/cluster-consolidation/24-power-states.md).
+      # This service is scaled to 0 between 02:00 and 09:00, so a failed check in
+      # that window is expected rather than an incident.
+      maintenance-windows:
+        - start: "02:00"
+          duration: 7h
+          timezone: ${TIMEZONE}

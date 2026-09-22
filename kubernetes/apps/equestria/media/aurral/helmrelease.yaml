@@ -1,0 +1,199 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: Aurral publishes no Helm chart, only docker-compose.yml. That
+# file is one container with two mounts, and this is where each went:
+#
+#   ./config:/config  -> the volsync PVC `${APP}`
+#   MEDIA_ROOT:/data  -> truenas-media at /media/{music,downloads}, the SAME
+#                        container paths Lidarr uses (../lidarr/helmrelease.yaml).
+#                        Aurral opens the paths Lidarr reports verbatim, so
+#                        matching them is what makes "Test library access" pass
+#                        with no Remote Path Mapping.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app aurral
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      app:
+        annotations:
+          # ${APP}-oidc does not exist on first boot (see ./externalsecret.yaml),
+          # so the restart that turns SSO on is Reloader's job.
+          reloader.stakater.com/auto: "true"
+        # Recreate: SQLite on a ReadWriteOnce volume.
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/lklynet/aurral
+              # Upstream tags releases without the `v` (2.9.1, not v2.9.1).
+              tag: 2.9.1@sha256:5690b43d50c76f81af3d0163ae05061f3227e8631da5bffbdd67c0d6407a334e
+              pullPolicy: IfNotPresent
+            envFrom:
+              # OIDC_ENABLED, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER,
+              # OIDC_LOGOUT_URL. Optional -- see ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env:
+              TZ: ${TIMEZONE}
+              # No PUID/PGID. The entrypoint only reads them when started as
+              # root, to chown and drop to that uid. Started as 568 (below) it
+              # skips straight to `exec node`, and fsGroup makes /config
+              # writable instead.
+              #
+              # Stated rather than left to the entrypoint's mount sniffing: with
+              # it set, the /config-vs-/app/backend/data probe never runs.
+              AURRAL_DATA_DIR: /config
+              # uid 568 has no passwd entry, so HOME would be `/`, which is not
+              # writable. yt-dlp and the bundled beets matcher both write caches
+              # under $HOME.
+              HOME: /tmp
+              # Express `trust proxy` hop count. 1 is upstream's default when
+              # unset; stated so X-Forwarded-For from Traefik -- the one hop in
+              # front of this pod -- is visibly the thing being trusted, and
+              # nothing further upstream is.
+              TRUST_PROXY: "1"
+              AURRAL_PUBLIC_URL: https://${APP}.${ROOT_DOMAIN}
+
+              # ---- OIDC (the rest lives in ${APP}-oidc) ---------------------
+              # Must match ./definition.yaml's one redirect URI exactly.
+              OIDC_REDIRECT_URI: https://${APP}.${ROOT_DOMAIN}/sso/callback
+              OIDC_SCOPES: openid profile email
+              OIDC_USERNAME_CLAIM: preferred_username
+              # Admin comes from authentik `admins`, the same group crowdsec-ui
+              # and grafana key on. This is the ONLY way to keep an OIDC user an
+              # admin: ensureExternalUser rewrites the stored role to the
+              # resolved one on every OIDC login, so promoting someone by hand in
+              # Settings > Users is undone the next time they sign in.
+              OIDC_GROUPS_CLAIM: groups
+              OIDC_ADMIN_GROUPS: admins
+              OIDC_DEFAULT_ROLE: user
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec: &spec
+                  httpGet:
+                    # Unauthenticated, static {"status":"ok"}; no Lidarr call.
+                    path: /api/health/live
+                    port: &port 3001
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness: *probes
+              # First boot runs the SQLite migrations and warms the discovery
+              # cache; five minutes before the pod is declared failed.
+              startup:
+                <<: *probes
+                spec:
+                  <<: *spec
+                  periodSeconds: 10
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Not read-only: the image was built to run as `nodejs`/root and
+              # nothing upstream documents every path it writes outside /config.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+                memory: 384Mi
+              limits:
+                # Node, plus ffmpeg and the beets matcher it shells out to
+                # during imports.
+                memory: 2Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # 568 matches Lidarr and VOLSYNC_PUID/PGID, so files Aurral writes into
+        # /media/downloads/aurral are owned the same as everything else on the
+        # share, and the restic mover agrees on /config.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        # Same supplemental groups as Lidarr, for the NFS share.
+        supplementalGroups: [44, 109, 10000]
+        seccompProfile: { type: RuntimeDefault }
+
+    service:
+      app:
+        controller: app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    persistence:
+      config:
+        existingClaim: ${APP}
+        globalMounts:
+          - path: /config
+      tmp:
+        type: emptyDir
+        sizeLimit: 2Gi
+        globalMounts:
+          - path: /tmp
+      truenas-media:
+        existingClaim: truenas-media
+        globalMounts:
+          # Set Settings > Download clients > Downloads Folder to
+          # /media/downloads/aurral on first run.
+          - path: /media/downloads
+            subPath: downloads
+          - path: /media/music
+            subPath: music
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - backendRefs:
+              - identifier: app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Aurral does its own
+              # OIDC, so forward-auth in front would authenticate twice. This is
+              # the LAN gate only. Same as reitti, tududi, outline.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
