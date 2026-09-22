@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app aurral
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    # truenas-media: Aurral reads the files Lidarr reports and writes its own
+    # Downloads Folder, so it needs the same shares Lidarr mounts.
+    - name: truenas-volumes
+      namespace: equestria
+    - name: external-secrets
+      namespace: kube-system
+    - name: volsync
+      namespace: volsync-system
+    - name: tailscale-operator
+      namespace: tailscale-system
+  path: ./kubernetes/apps/equestria/media/aurral
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # No components/postgres: Aurral's only store is SQLite (plus the Honker
+    # queue beside it) in /config, which is what volsync backs up.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # /config holds the SQLite database, sessions, the 256MB image-proxy
+      # cache (AURRAL_IMAGE_PROXY_MAX_BYTES default) and, unless it is moved in
+      # Settings > Download clients > yt-dlp, the yt-dlp staging directory
+      # /config/_staging. 10Gi leaves room for staging; the media itself never
+      # lands here.
+      VOLSYNC_CAPACITY: 10Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
