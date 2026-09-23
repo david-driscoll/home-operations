@@ -1,0 +1,769 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: OpenCloud publishes no chart this estate can use. The
+# `opencloud-eu/helm` charts are community-maintained and bundle a Keycloak, a
+# MinIO and a Postgres that would all duplicate something already running here.
+# So this is built from the topology upstream's ADMIN DOCS actually describe --
+# the compose files in github.com/opencloud-eu/opencloud-compose -- with the
+# Kubernetes-specific details cross-checked against that helm chart.
+#
+# Where each compose service went:
+#
+#   opencloud   -> the `app` container. Single binary, `opencloud server`, every
+#                  service in one process.
+#   radicale    -> the `radicale` SIDECAR (radicale/radicale.yml)
+#   collabora   -> the `collabora` CONTROLLER below (weboffice/collabora.yml)
+#   ldap-server -> DELIBERATELY ABSENT. See OC_EXCLUDE_RUN_SERVICES.
+#   keycloak    -> authentik, via ./definition.yaml
+#   traefik     -> the cluster's Gateway; see `route` at the bottom
+#   yjs, tika, opensearch, clamav -> not deployed. yjs is collaborative-cursor
+#                  sugar for the text editor, tika/opensearch are full-text
+#                  search over file CONTENTS (OpenCloud indexes filenames
+#                  without them), clamav is antivirus. All optional, all
+#                  additional running services; none was asked for.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app opencloud
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 15m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the WORKLOAD, which is where Reloader looks. It matters more than
+          # usual here: ${APP}-oidc does not exist on first boot (see
+          # ./externalsecret.yaml), so the restart that turns SSO on is entirely
+          # Reloader's job.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate, not RollingUpdate. The data volume is ReadWriteOnce, and
+        # two OpenCloud processes against one decomposed-driver storage tree is
+        # not a supported configuration -- the second would not just fail to
+        # start, it would write.
+        strategy: Recreate
+        initContainers:
+          # Longhorn hands out a freshly formatted ext4 volume owned root:root.
+          # `fsGroup: 568` below makes it group-writable, but the three
+          # subPath directories inside it do not exist yet, and a subPath mount
+          # whose source directory is missing is CREATED BY THE KUBELET AS ROOT
+          # -- after fsGroup has already been applied. The app then cannot write
+          # its own config directory.
+          #
+          # Creating them here, as 568, is what breaks that ordering. Cheap and
+          # idempotent: three mkdir -p against an already-correct tree.
+          init-dirs:
+            image:
+              repository: busybox
+              tag: 1.38.0@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args: ["mkdir -p /mnt/config /mnt/data /mnt/radicale"]
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+        containers:
+          *app :
+            image:
+              # `opencloud`, NOT `opencloud-rolling`. Upstream's compose file
+              # defaults to the rolling tag; that is the right default for a
+              # demo and the wrong one for GitOps, where the point of a pinned
+              # digest is that nobody upstream can move this deployment.
+              repository: docker.io/opencloudeu/opencloud
+              tag: 7.2.4@sha256:6d992ccc5f1cbc7b2a9b272ba25f879b1b159c2d7ed7f5527e09059f16295697
+              pullPolicy: IfNotPresent
+            # `init` THEN `server`, with the failure swallowed -- upstream's own
+            # entrypoint, verbatim from docker-compose.yml.
+            #
+            # `opencloud init` generates the machine secrets (JWT signing key,
+            # transfer secret, machine-auth API key) into
+            # /etc/opencloud/opencloud.yaml. It EXITS NON-ZERO when that file
+            # already exists, which after the first boot is every boot -- hence
+            # `|| true`. That is not sloppiness: it is how the command signals
+            # "already initialised", and the config lives on the PVC so the
+            # generated secrets survive restarts.
+            command: ["/bin/sh", "-c"]
+            args: ["opencloud init || true; opencloud server"]
+            envFrom:
+              # IDM_ADMIN_PASSWORD -- required on first start, always present.
+              - secretRef:
+                  name: ${APP}-env
+              # OC_OIDC_ISSUER and WEB_OIDC_CLIENT_ID. OPTIONAL, and that is
+              # load-bearing: the authentik credential only exists once
+              # stacks/applications has read ./definition.yaml and created the
+              # provider, which is after this pod first boots. With the Secret
+              # absent OpenCloud starts without an issuer and Reloader restarts
+              # it when the Secret lands. See ./externalsecret.yaml.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env:
+              TZ: "${TIMEZONE}"
+
+              # ---- Identity of this deployment -------------------------------
+              # OC_URL is what OpenCloud believes it is reachable at: it is
+              # baked into the web UI's config.json, the WebDAV endpoints handed
+              # to sync clients, and every public share link. Only the canonical
+              # hostname belongs here -- the tailnet name from
+              # components/tailscale works because OpenCloud honours the
+              # forwarded headers, and is registered as a redirect URI in
+              # ./definition.yaml for the same reason.
+              OC_URL: "https://${APP}.${ROOT_DOMAIN}"
+              OC_LOG_LEVEL: info
+              OC_LOG_COLOR: "false"
+              OC_LOG_PRETTY: "false"
+
+              # TLS terminates at Traefik; the hop from the Gateway to this pod
+              # is plain HTTP inside the cluster network.
+              PROXY_TLS: "false"
+              # Every internal certificate in this estate is issued by the
+              # homelab CA, which this image's trust store does not carry. The
+              # alternative to this flag is mounting the CA bundle into three
+              # containers; the traffic it relaxes never leaves the cluster.
+              OC_INSECURE: "true"
+              # No HTTP Basic fallback. OIDC is the only way in.
+              PROXY_ENABLE_BASIC_AUTH: "false"
+
+              # ---- Which services run ----------------------------------------
+              # `idp` ONLY -- NOT `idm,idp`, and the difference is the whole
+              # shape of this deployment.
+              #
+              # OpenCloud splits login from the user directory. `idp` is the
+              # built-in OIDC provider, replaced here by authentik. `idm` is
+              # LibreIDM, an embedded LDAP server that IS the user directory --
+              # OpenCloud has no relational database, so users have to live
+              # somewhere, and it is here.
+              #
+              # Upstream's idm/external-idp.yml excludes BOTH and stands up an
+              # OpenLDAP alongside. That is the documented layout for an estate
+              # that already runs LDAP. The other documented layout -- external
+              # OIDC with the built-in idm kept -- is this one, and it is what
+              # lets this app be a single pod with no second directory to back
+              # up, rotate or restore. PROXY_AUTOPROVISION_ACCOUNTS below is
+              # what writes authentik users into it on first login.
+              OC_EXCLUDE_RUN_SERVICES: idp
+              # The WOPI server. Not started by default; runs in-process here
+              # rather than as the separate `collaboration` deployment the helm
+              # chart uses, because a second pod buys nothing at this scale.
+              OC_ADD_RUN_SERVICES: collaboration
+
+              # The service registry and event bus: NATS, started by the same
+              # binary and bound to loopback. Nothing outside this pod speaks to
+              # it, which is why no Service publishes 9233.
+              MICRO_REGISTRY_ADDRESS: "127.0.0.1:9233"
+              NATS_NATS_HOST: "0.0.0.0"
+              NATS_NATS_PORT: "9233"
+              # The app drivers reach the REVA gateway over gRPC on this
+              # address; the collaboration service is one of them.
+              GATEWAY_GRPC_ADDR: "0.0.0.0:9142"
+
+              # ---- Storage ----------------------------------------------------
+              # `decomposed`: upstream's default and best-tested driver. Files
+              # are stored as content-addressed blobs plus a metadata tree
+              # rather than as a browsable directory hierarchy -- worth knowing
+              # before anyone goes looking for their documents inside a restic
+              # restore. (`posix` lays them out as real files and was
+              # considered; decomposed was chosen for being the default.)
+              STORAGE_USERS_DRIVER: decomposed
+              STORAGE_SYSTEM_DRIVER: decomposed
+              # Raised from the 4MB default: the gRPC hop carries file metadata
+              # for a whole space in one message, and a large share tree exceeds
+              # it. Value from upstream's helm chart.
+              OC_GRPC_MAX_RECEIVED_MESSAGE_SIZE: "102400000"
+              # 10GB. The archiver builds "download this folder as a zip" in
+              # memory-mapped temp space; the default is small enough that
+              # downloading a photo directory fails with an unhelpful error.
+              FRONTEND_ARCHIVER_MAX_SIZE: "10000000000"
+
+              # ---- authentik / OIDC -------------------------------------------
+              # OC_OIDC_ISSUER and WEB_OIDC_CLIENT_ID arrive from ${APP}-oidc.
+              #
+              # Create an OpenCloud account the first time an authentik user
+              # logs in. The gate on WHO reaches this point is authentik's own:
+              # ./definition.yaml binds the app to `family` and `admins`.
+              PROXY_AUTOPROVISION_ACCOUNTS: "true"
+              # `preferred_username`, not `sub`. Upstream's compose uses `sub`
+              # so that renaming a user in the IdP does not orphan their files;
+              # the cost is that every OpenCloud username is an opaque UUID, in
+              # share dialogs and space memberships alike. The helm chart makes
+              # the opposite choice and this follows it -- legible names, at the
+              # price of "do not rename people in authentik".
+              PROXY_USER_OIDC_CLAIM: preferred_username
+              PROXY_AUTOPROVISION_CLAIM_USERNAME: preferred_username
+              PROXY_USER_CS3_CLAIM: username
+              # Serve authentik's discovery document at OpenCloud's OWN
+              # /.well-known/openid-configuration. This is how the desktop and
+              # mobile clients find the IdP: the user types only the OpenCloud
+              # URL, and the client discovers everything else from there.
+              PROXY_OIDC_REWRITE_WELLKNOWN: "true"
+              # "none" means "validate the access token by calling authentik's
+              # userinfo endpoint", as opposed to "jwt", which verifies a
+              # signature locally.
+              #
+              # Deliberate, and the safer of the two: `jwt` only works if the
+              # authentik provider issues SIGNED JWT access tokens, and an
+              # authentik OAuth2 provider with no signing key issues opaque
+              # ones, against which local verification simply fails. "none"
+              # works either way. It is also what upstream's authentik
+              # integration thread recommends, because `jwt` breaks the mobile
+              # clients. The cost is a userinfo round trip per token.
+              PROXY_OIDC_ACCESS_TOKEN_VERIFY_METHOD: "none"
+              # Space-separated here (Go), unlike the comma-separated spellings
+              # some other apps in this estate want. `groups` is not optional --
+              # it carries the role claim ./resources/proxy.yaml maps.
+              WEB_OIDC_SCOPE: "openid profile email groups"
+
+              # ---- Roles ------------------------------------------------------
+              # The actual admins->admin / family->user table lives in
+              # ./resources/proxy.yaml, because it is a nested structure with no
+              # environment-variable spelling. These four flags are what hand
+              # the decision over to it.
+              PROXY_ROLE_ASSIGNMENT_DRIVER: oidc
+              PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM: groups
+              # ⚠ With the oidc driver, this MUST be false. Left true, every
+              # user is granted the default role on creation and the claim
+              # mapping never gets to demote or promote anyone -- so the
+              # `admins` mapping silently does nothing.
+              GRAPH_ASSIGN_DEFAULT_USER_ROLE: "false"
+              SETTINGS_SETUP_DEFAULT_ASSIGNMENTS: "false"
+              # No hardcoded bootstrap administrator. The empty value is
+              # meaningful: it tells OpenCloud that admin-ness comes from the
+              # claim mapping and nowhere else.
+              OC_ADMIN_USER_ID: ""
+              # Do not try to reconcile an incoming OIDC username against an
+              # existing IDM entry by string match -- the external ID is
+              # authoritative. Without this, two authentik users whose names
+              # differ only in case can collide onto one account.
+              GRAPH_USERNAME_MATCH: "none"
+
+              # Profile fields are owned by authentik, so OpenCloud must not
+              # offer to edit them: the change would be written to IDM and then
+              # overwritten at the user's next login, which looks exactly like
+              # data loss.
+              FRONTEND_READONLY_USER_ATTRIBUTES: "user.onPremisesSamAccountName,user.displayName,user.mail,user.passwordProfile,user.accountEnabled,user.appRoleAssignments"
+              # Where the "edit your account" link in OpenCloud's UI points.
+              WEB_OPTION_ACCOUNT_EDIT_LINK_HREF: "https://${OIDC_ISSUER}/if/user/"
+              # Used ONLY to build the CSP header, per upstream's comment. The
+              # real issuer comes from ${APP}-oidc. ${OIDC_ISSUER} is this
+              # estate's bare authentik hostname.
+              IDP_DOMAIN: "${OIDC_ISSUER}"
+
+              # One authentik provider serves every client. Upstream's Keycloak
+              # realm ships four (web, OpenCloudDesktop, OpenCloudIOS,
+              # OpenCloudAndroid); this estate models one provider per app, so
+              # all four native clients are pointed at the `web` client whose
+              # redirect URIs ./definition.yaml collects. WebFinger is what
+              # tells each client which id to use.
+              WEBFINGER_WEB_OIDC_CLIENT_ID: web
+              WEBFINGER_WEB_OIDC_CLIENT_SCOPES: "openid profile email groups"
+              WEBFINGER_DESKTOP_OIDC_CLIENT_ID: web
+              WEBFINGER_DESKTOP_OIDC_CLIENT_SCOPES: "openid profile email groups offline_access"
+              WEBFINGER_ANDROID_OIDC_CLIENT_ID: web
+              WEBFINGER_ANDROID_OIDC_CLIENT_SCOPES: "openid profile email groups offline_access"
+              WEBFINGER_IOS_OIDC_CLIENT_ID: web
+              WEBFINGER_IOS_OIDC_CLIENT_SCOPES: "openid profile email groups offline_access"
+
+              # ---- Collabora / WOPI -------------------------------------------
+              # Only used to build the CSP header's frame-src, same as
+              # IDP_DOMAIN above. ./resources/csp.yaml is the file that actually
+              # carries it, because this deployment supplies its own.
+              COLLABORA_DOMAIN: "collabora.${ROOT_DOMAIN}"
+              # Where COLLABORA fetches the document from -- a server-to-server
+              # call out of the collabora pod, NOT something the browser
+              # requests.
+              #
+              # The public hostname is safe here precisely because that call is
+              # server-to-server: it leaves the collabora pod, reaches the
+              # `internal` Gateway, and passes the `local-user` middleware
+              # because internal-network's allow-list already contains
+              # ${CLUSTER_NETWORK} and ${SERVICE_NETWORK}
+              # (kubernetes/apps/network/traefik/middleware/internal-network.yaml).
+              COLLABORATION_WOPI_SRC: "https://${APP}.${ROOT_DOMAIN}"
+              # ⚠ Must match `default_app` in ./resources/app-registry.yaml.
+              # They are two spellings of one identifier and changing either
+              # alone breaks every file association SILENTLY -- no error, files
+              # just stop opening.
+              COLLABORATION_APP_NAME: "CollaboraOnline"
+              COLLABORATION_APP_PRODUCT: "Collabora"
+              COLLABORATION_APP_ADDR: "https://collabora.${ROOT_DOMAIN}"
+              COLLABORATION_APP_ICON: "https://collabora.${ROOT_DOMAIN}/favicon.ico"
+              # Both for the same reason as OC_INSECURE: the collaboration
+              # service calls Collabora's discovery endpoint, and the CS3
+              # datagateway, over homelab-CA certificates.
+              COLLABORATION_APP_INSECURE: "true"
+              COLLABORATION_CS3API_DATAGATEWAY_INSECURE: "true"
+              # Route "secure view" (open read-only, no download) to Collabora.
+              FRONTEND_APP_HANDLER_SECURE_VIEW_APP_ADDR: eu.opencloud.api.collaboration
+              # The eight sharing roles secure view needs to exist as options.
+              # Opaque UUIDs, copied verbatim from upstream's
+              # weboffice/collabora.yml -- they are OpenCloud's own built-in
+              # role ids, not anything generated for this deployment. Omitting
+              # them leaves the secure-view option missing from the share
+              # dialog with no error anywhere.
+              GRAPH_AVAILABLE_ROLES: "b1e2218d-eef8-4d4c-b82d-0f1a1b48f3b5,a8d5fe5e-96e3-418d-825b-534dbdf22b99,fb6c3e19-e378-47e5-b277-9732f9de6e21,58c63c02-1d89-4572-916a-870abc5a1b7d,2d00ce52-1fc2-4dbc-8b95-a73b73395f5a,1c996275-f1c9-4e71-abdf-a42f6495e960,312c0871-5ef7-4b3a-85b6-0e4074c64049,aa97fe03-7980-45ac-9e50-b325749fd7e6"
+
+              # ---- Config files -----------------------------------------------
+              # The other two files in ./resources/ are found by name in
+              # /etc/opencloud; only the CSP path has to be named explicitly.
+              PROXY_CSP_CONFIG_FILE_LOCATION: /etc/opencloud/csp.yaml
+
+              # ---- Sharing ----------------------------------------------------
+              # A public link with no password is a URL that works for anyone
+              # who ever sees it, including in a forwarded email. Requiring one
+              # is upstream's default and is kept.
+              OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD: "true"
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                # OpenCloud is Go, so this is a real ceiling rather than a heap
+                # hint. Upstream reports ~400MB steady-state for the
+                # single-binary deployment; the headroom is for the in-process
+                # NATS and for concurrent uploads buffering.
+                memory: 3Gi
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Anonymous by design -- the one endpoint the proxy serves
+                    # without an OIDC session.
+                    path: /health
+                    port: &port 9200
+                  initialDelaySeconds: 0
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *probes
+              # Generous on purpose. A COLD boot is `opencloud init` generating
+              # keys, then every one of the ~25 in-process services registering
+              # with NATS, then the storage tree being laid out. 10 minutes
+              # before the pod is declared failed.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 60
+            securityContext:
+              allowPrivilegeEscalation: false
+              # NOT read-only: `opencloud init` writes opencloud.yaml, and the
+              # binary keeps ephemeral state outside the two mounted volumes.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+
+          radicale:
+            image:
+              # opencloudeu's fork, not the upstream `radicale/radicale` image.
+              # It is the one the integration is written against and is what
+              # upstream's radicale/radicale.yml pulls.
+              repository: docker.io/opencloudeu/radicale
+              tag: v3.8.0@sha256:e15d4b2f303300128bdb58038c6b6ad5f4fc4f02d3e829797cd4ff081f1f1719
+              pullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+            probes:
+              # No HTTP probe. Radicale answers 401 to an unauthenticated
+              # request on every path -- including /, and there is no health
+              # endpoint -- so an httpGet probe would have to treat 401 as
+              # healthy, which makes it indistinguishable from a probe that
+              # succeeds because the process is wedged. A TCP connect is an
+              # honest statement of what is actually being checked.
+              liveness: &radicaleProbes
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 5232
+                  initialDelaySeconds: 10
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness: *radicaleProbes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+
+      collabora:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        strategy: RollingUpdate
+        initContainers:
+          # FONTS. Collabora's own image ships a minimal set, which is why a
+          # .docx opened in a stock CODE container reflows and repaginates.
+          #
+          # Upstream's answer (weboffice/collabora.yml) is to apt-install fonts
+          # ON THE DOCKER HOST and bind-mount /usr/share/fonts/truetype in.
+          # There is no host to install onto here, so the equivalent is to build
+          # the font set in an init container and hand it over in an emptyDir.
+          #
+          # These are METRIC-IDENTICAL substitutes, not lookalikes: character
+          # widths and line heights match the Microsoft originals exactly, so
+          # pagination, line breaks and table layout in .docx/.xlsx survive a
+          # round trip. Only the glyph outlines differ.
+          #
+          #   fonts-liberation2        Arial, Times New Roman, Courier New
+          #   fonts-crosextra-carlito  Calibri  (Office's default since 2007)
+          #   fonts-crosextra-caladea  Cambria
+          #   fonts-dejavu, fonts-noto-core   broad Unicode coverage
+          #
+          # ttf-mscorefonts-installer -- the genuine Microsoft fonts -- is
+          # deliberately NOT here. It downloads from SourceForge at pod start,
+          # which would make every Collabora restart depend on a third party
+          # being up, in exchange for glyph shapes rather than layout accuracy.
+          # Adding it is a one-line change if that ever matters.
+          fonts:
+            image:
+              repository: docker.io/library/debian
+              tag: trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
+              pullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                set -eu
+                export DEBIAN_FRONTEND=noninteractive
+                apt-get update -qq
+                apt-get install -y --no-install-recommends -qq \
+                  fonts-liberation2 \
+                  fonts-crosextra-carlito \
+                  fonts-crosextra-caladea \
+                  fonts-dejavu \
+                  fonts-noto-core
+                # Flatten into the mount point. Collabora scans this directory
+                # recursively, but a flat copy keeps `fc-list` output legible
+                # and avoids shipping the per-package doc/licence trees.
+                find /usr/share/fonts -type f \( -name '*.ttf' -o -name '*.otf' \) \
+                  -exec cp -n {} /fonts/ \;
+                echo "installed $(ls -1 /fonts | wc -l) font files"
+            securityContext:
+              # apt needs to write /var/lib/apt and /var/cache; this container
+              # holds no credential and its only persistent output is the
+              # emptyDir of font files.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+        containers:
+          app:
+            image:
+              repository: docker.io/collabora/code
+              tag: 26.04.4.1.1@sha256:1efda3043e8b9cb437d1b6c6efe20cc3753760e634de012b8dac391da488bf97
+              pullPolicy: IfNotPresent
+            # `generate-proof-key` before the server, from upstream's helm
+            # chart. The WOPI proof key is how Collabora signs its callbacks so
+            # OpenCloud can tell a genuine request from a forged one.
+            #
+            # Regenerating it on every start is fine and is what the chart does:
+            # OpenCloud's collaboration service re-reads the public half from
+            # Collabora's discovery endpoint each time it connects. (Upstream's
+            # compose persists it in a volume instead, to avoid interrupting
+            # in-flight editing sessions across a restart -- not worth a second
+            # PVC here.)
+            command: ["/bin/bash", "-c"]
+            args: ["coolconfig generate-proof-key && /start-collabora-online.sh"]
+            envFrom:
+              # `username` / `password` for the admin console at
+              # /browser/dist/admin/admin.html.
+              - secretRef:
+                  name: ${APP}-collabora
+            env:
+              # The WOPI host allow-list. Collabora refuses to load a document
+              # whose WOPISrc is not named here -- this is what stops an
+              # arbitrary internet host from using this Collabora as a free
+              # rendering service. Must match COLLABORATION_WOPI_SRC above.
+              aliasgroup1: "https://${APP}.${ROOT_DOMAIN}"
+              # The image generates a self-signed certificate at start unless
+              # told not to. TLS terminates at Traefik, so it would be a
+              # certificate nothing ever presents.
+              DONT_GEN_SSL_CERT: "YES"
+              extra_params: >-
+                --o:ssl.enable=false
+                --o:ssl.ssl_verification=false
+                --o:ssl.termination=true
+                --o:welcome.enable=false
+                --o:net.frame_ancestors=${APP}.${ROOT_DOMAIN}
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                # Collabora forks a LibreOffice core process per open document.
+                # This ceiling is roughly "a handful of documents at once";
+                # exceeding it kills the newest editing session, not the server.
+                memory: 2Gi
+            probes:
+              liveness: &coolProbes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # The WOPI discovery document -- served unauthenticated, and
+                    # the exact thing OpenCloud fetches, so a passing probe
+                    # means the integration works rather than merely that a
+                    # socket is open.
+                    path: /hosting/discovery
+                    port: &coolPort 9980
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+                  timeoutSeconds: 10
+                  failureThreshold: 5
+              readiness: *coolProbes
+            securityContext:
+              # ROOT, and there is no non-root spelling of this image: coolwsd
+              # starts as root to build the per-document jails and drops to the
+              # `cool` user for the forked LibreOffice kits.
+              runAsNonRoot: false
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              # coolwsd rewrites /etc/coolwsd/coolwsd.xml from extra_params on
+              # every start and builds its jail templates under /opt/cool.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                # ⚠ FIRST ADDED CAPABILITY IN THIS REPO. Nothing blocks it --
+                # PodSecurity admission is deleted cluster-wide at the Talos
+                # level (talos/patches/controller/cluster.yaml) and there is no
+                # Kyverno or ValidatingAdmissionPolicy -- but it is new ground,
+                # so: coolwsd builds a chroot per open document and populates it
+                # with device nodes (/dev/null, /dev/random, /dev/urandom),
+                # which needs CAP_MKNOD.
+                #
+                # This is the NARROW option. Upstream's compose asks for
+                # SYS_ADMIN plus unconfined seccomp AND apparmor; upstream's own
+                # helm chart asks for MKNOD alone, and that is what is used
+                # here. If a future CODE release needs more, prefer adding one
+                # named capability over widening to SYS_ADMIN.
+                add: ["MKNOD"]
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # 568/568 rather than the image's own 1000: it matches
+        # VOLSYNC_PUID/VOLSYNC_PGID, so the restic mover and the app agree on
+        # the ownership of every file on the PVC. A mismatch there is only
+        # discovered at RESTORE time, which is the worst moment to find it.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      # ONE volsync PVC, three subPaths. See the table in ./ks.yaml for why:
+      # a single claim means one restic snapshot is a consistent picture of
+      # config, files and calendars together.
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            init-dirs:
+              - path: /mnt
+            *app :
+              # opencloud.yaml and the machine secrets `opencloud init` writes.
+              - path: /etc/opencloud
+                subPath: config
+              # User files, spaces and metadata -- the 50Gi this app is sized
+              # for.
+              - path: /var/lib/opencloud
+                subPath: data
+            radicale:
+              - path: /var/lib/radicale
+                subPath: radicale
+
+      # The three config files, generated by ./kustomization.yaml.
+      #
+      # ⚠ THE KEY IS `files`, NOT `config`, AND THE NAME IS LOAD-BEARING.
+      #
+      # These mount INSIDE /etc/opencloud, which is itself the `data` PVC's
+      # `config` subPath above. For the nesting to work the PVC has to be
+      # mounted FIRST -- a bind mount onto /etc/opencloud/proxy.yaml that
+      # happens before /etc/opencloud itself is mounted is simply hidden
+      # underneath it, and OpenCloud starts with none of this config and no
+      # error to say so.
+      #
+      # app-template emits volumeMounts in ALPHABETICAL order of these
+      # persistence keys. `config` sorted before `data` and produced exactly
+      # that broken order; `files` sorts after it and produces the order
+      # upstream's own helm chart hardcodes. Renaming this key back to anything
+      # sorting before `data` silently breaks the deployment.
+      #
+      # The files themselves are read-only and never reach the PVC, which is
+      # the point: they are declarative config, not state.
+      files:
+        type: configMap
+        name: ${APP}-config
+        advancedMounts:
+          *app :
+            *app :
+              - path: /etc/opencloud/proxy.yaml
+                subPath: proxy.yaml
+                readOnly: true
+              - path: /etc/opencloud/csp.yaml
+                subPath: csp.yaml
+                readOnly: true
+              - path: /etc/opencloud/app-registry.yaml
+                subPath: app-registry.yaml
+                readOnly: true
+            radicale:
+              # Radicale wants an EXTENSIONLESS path; the key is named
+              # radicale.conf only so the configMapGenerator entry is legible.
+              - path: /etc/radicale/config
+                subPath: radicale.conf
+                readOnly: true
+
+      # Radicale's root filesystem is read-only and it writes a lock file and
+      # its collection cache outside /var/lib/radicale.
+      radicale-tmp:
+        type: emptyDir
+        sizeLimit: 256Mi
+        advancedMounts:
+          *app :
+            radicale:
+              - path: /tmp
+
+      # Built by the `fonts` init container, consumed by coolwsd.
+      #
+      # BOTH mount points are required, and this is the detail that makes or
+      # breaks the whole fonts exercise. Upstream's compose bind-mounts the host
+      # font directory to both paths for the same reason:
+      #
+      #   /usr/share/fonts/truetype/more        what coolwsd itself sees
+      #   /opt/cool/systemplate/.../more        the TEMPLATE every per-document
+      #                                         chroot is copied from
+      #
+      # Mount only the first and `fc-list` in the container shows the fonts
+      # while documents still render without them, because the LibreOffice kit
+      # runs inside a jail built from systemplate and never sees them.
+      fonts:
+        type: emptyDir
+        sizeLimit: 512Mi
+        advancedMounts:
+          collabora:
+            fonts:
+              - path: /fonts
+            app:
+              - path: /usr/share/fonts/truetype/more
+              - path: /opt/cool/systemplate/usr/share/fonts/truetype/more
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+        # NO port for 5232. Radicale trusts the X-Remote-User header
+        # unconditionally, so reaching it without going through OpenCloud's
+        # proxy is a complete authentication bypass. Pod-local is the
+        # containment. See ./resources/proxy.yaml.
+      collabora:
+        controller: collabora
+        type: ClusterIP
+        ports:
+          http:
+            port: *coolPort
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: OpenCloud speaks OIDC
+              # itself, so the authentik forward-auth outpost in front would
+              # authenticate twice and break the /oidc-callback.html hop. This
+              # gate is the LAN check only. Same reasoning as outline, tududi
+              # and reitti -- and the reason the old `collabora` app, which was
+              # configured with an authentik forward-auth proxy, could not be
+              # reused for this.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user
+      collabora:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "collabora.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - identifier: collabora
+                port: *coolPort
+            filters:
+              # `local-user` here too, and it carries TWO kinds of traffic: the
+              # user's browser loading the editor iframe, and Collabora's own
+              # WOPI callback to OpenCloud in the other direction. Both are
+              # covered because internal-network's allow-list includes the pod
+              # and service CIDRs alongside the LAN ranges.
+              #
+              # It must NOT be `authenticated-user`: the iframe carries no
+              # authentik session cookie, so the outpost would redirect it to a
+              # login page that cannot render inside the frame.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

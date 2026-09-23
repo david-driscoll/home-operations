@@ -1,0 +1,92 @@
+---
+# Mimetype registry, mounted at /etc/opencloud/app-registry.yaml.
+#
+# This is the file the "Collabora and MS Office formats" admin doc asks for. It
+# does exactly two things per entry:
+#
+#   default_app     which editor opens an existing file of this type
+#   allow_creation  whether the type appears in OpenCloud's "New" menu
+#
+# Without it, OpenCloud registers the ODF types against Collabora and leaves
+# .docx/.xlsx/.pptx openable-but-not-creatable, which is the gap the doc is
+# about. The FONTS half of the same problem is handled in ../helmrelease.yaml's
+# `fonts` init container: this file decides that Collabora is asked to render a
+# .docx, the fonts decide whether the result paginates like the original.
+#
+# Derived from opencloud-eu/opencloud-compose's config/euro-office/app-registry.yaml
+# with `Euro-Office` replaced by `Collabora` throughout -- that is the only
+# difference, and it is why the OOXML entries below look like the ODF ones.
+#
+# `Collabora` must match COLLABORATION_APP_NAME in ../helmrelease.yaml. They are
+# two spellings of one identifier; changing either alone silently disables every
+# association here, with no error -- files simply stop opening.
+app_registry:
+  mimetypes:
+    # PDF: no default_app and no creation. OpenCloud's built-in preview handles
+    # viewing, and Collabora's PDF editing is not something to make the default.
+    - mime_type: application/pdf
+      extension: pdf
+      name: PDF
+      description: PDF document
+      icon: ''
+      default_app: ''
+      allow_creation: false
+
+    # --- OpenDocument ---------------------------------------------------
+    - mime_type: application/vnd.oasis.opendocument.text
+      extension: odt
+      name: OpenDocument
+      description: OpenDocument text document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+    - mime_type: application/vnd.oasis.opendocument.spreadsheet
+      extension: ods
+      name: OpenSpreadsheet
+      description: OpenDocument spreadsheet document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+    - mime_type: application/vnd.oasis.opendocument.presentation
+      extension: odp
+      name: OpenPresentation
+      description: OpenDocument presentation document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+    - mime_type: application/vnd.oasis.opendocument.graphics
+      extension: odg
+      name: OpenGraphics
+      description: OpenDocument graphics document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+
+    # --- Office Open XML ------------------------------------------------
+    # The point of this file. Collabora renders these with the metric-compatible
+    # fonts installed by ../helmrelease.yaml's `fonts` init container: Carlito
+    # for Calibri, Caladea for Cambria, Liberation for Arial/Times New Roman.
+    # Character widths and line heights match the Microsoft originals exactly,
+    # so pagination and table layout survive a round trip -- only the glyph
+    # outlines differ.
+    - mime_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      extension: docx
+      name: Microsoft Word
+      description: Microsoft Word document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+    - mime_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      extension: xlsx
+      name: Microsoft Excel
+      description: Microsoft Excel document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true
+    - mime_type: application/vnd.openxmlformats-officedocument.presentationml.presentation
+      extension: pptx
+      name: Microsoft PowerPoint
+      description: Microsoft PowerPoint document
+      icon: ''
+      default_app: Collabora
+      allow_creation: true

@@ -1,0 +1,68 @@
+---
+# Content-Security-Policy OpenCloud serves on its own pages, mounted at
+# /etc/opencloud/csp.yaml and named by PROXY_CSP_CONFIG_FILE_LOCATION in
+# ../helmrelease.yaml.
+#
+# Derived from opencloud-eu/opencloud-compose's config/opencloud/csp.yaml, with
+# its COLLABORA_DOMAIN, ONLYOFFICE_DOMAIN and COMPANION_DOMAIN placeholders
+# resolved to what this estate actually runs: Collabora and authentik, no
+# OnlyOffice, no Companion.
+#
+# ⚠ Those three names are written WITHOUT the dollar-brace wrapper on purpose.
+# This file is the source of a ConfigMap, so Flux's postBuild envsubst rewrites
+# it -- INCLUDING inside comments. A live substitution here would either expand
+# to nothing and eat the surrounding text, or bake a real cluster value into a
+# comment. `scripts/eso-values-lint` enforces this.
+#
+# ⚠ THE TWO HOSTS BELOW ARE WHY THIS FILE EXISTS. OpenCloud's default CSP is
+# `default-src: none` plus `self`, which blocks BOTH of the cross-origin things
+# this deployment depends on:
+#
+#   - frame-src collabora.<domain>  -- without it the document editor iframe is
+#     refused by the browser and opening a .odt/.docx shows an empty frame with
+#     a CSP violation in the console and nothing in the server logs.
+#   - connect-src <authentik>       -- the silent token renewal in
+#     oidc-silent-redirect.html is an XHR to authentik. Without it login works
+#     and then the session dies at the first token expiry.
+#
+# The two substitutions in the directives below are the real, intended ones:
+# ROOT_DOMAIN, and OIDC_ISSUER -- which in this estate is the bare authentik
+# hostname (canterlot.driscoll.tech), not a URL. Flux expands them when it
+# renders the ConfigMap.
+directives:
+  child-src:
+    - "'self'"
+  connect-src:
+    - "'self'"
+    - "blob:"
+    - "https://${OIDC_ISSUER}/"
+  default-src:
+    - "'none'"
+  font-src:
+    - "'self'"
+  frame-ancestors:
+    - "'self'"
+  frame-src:
+    - "'self'"
+    - "blob:"
+    - "https://collabora.${ROOT_DOMAIN}/"
+  img-src:
+    - "'self'"
+    - "data:"
+    - "blob:"
+    - "https://collabora.${ROOT_DOMAIN}/"
+  manifest-src:
+    - "'self'"
+  media-src:
+    - "'self'"
+  object-src:
+    - "'self'"
+    - "blob:"
+  script-src:
+    - "'self'"
+    - "'unsafe-inline'"
+  style-src:
+    - "'self'"
+    - "'unsafe-inline'"
+  worker-src:
+    - "'self'"

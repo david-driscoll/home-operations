@@ -1,0 +1,95 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "OpenCloud"
+  category: Applications
+  description: "OpenCloud — file sync and share, with Collabora document editing and Radicale CalDAV/CardDAV"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/opencloud.svg
+  access_policy:
+    groups:
+      # `admins` is listed ALONGSIDE `family`, not instead of it. This binding
+      # governs who may REACH the app; ./resources/proxy.yaml maps the same
+      # groups to OpenCloud roles once they are inside. Without `admins` here,
+      # an administrator who is not also in `family` would be refused at
+      # authentik before the role mapping ever ran -- locked out of the app
+      # they administer.
+      - family
+      - admins
+  authentik:
+    # oauth2, NOT proxy. OpenCloud speaks OIDC itself (its `proxy` service is an
+    # OIDC relying party), so the forward-auth outpost in front of it would
+    # authenticate twice and break the /oidc-callback.html hop. Same reasoning
+    # as outline, tududi and reitti; ./helmrelease.yaml's routes therefore use
+    # the `local-user` middleware rather than `authenticated-user`.
+    oauth2:
+      # PUBLIC, not confidential. OpenCloud's web UI is a browser SPA doing
+      # authorization-code + PKCE -- there is nowhere in it to keep a client
+      # secret, and the desktop and mobile clients are native apps with the
+      # same problem. `clientType: public` is what makes authentik accept PKCE
+      # without one.
+      clientType: public
+      # `web` is not decorative. It is the client id OpenCloud's own web UI
+      # hardcodes as its default, and the value ./helmrelease.yaml hands every
+      # WEBFINGER_*_OIDC_CLIENT_ID so that one authentik provider serves the
+      # browser, desktop and mobile clients alike. Upstream's Keycloak realm
+      # ships four separate clients (web, OpenCloudDesktop, OpenCloudIOS,
+      # OpenCloudAndroid); this estate's ApplicationDefinition models one
+      # provider per app, so the four clients' redirect URIs are collapsed onto
+      # this single public client below.
+      clientId: web
+      allowedRedirectUris:
+        # --- browser (the `web` client) ---------------------------------
+        # All three are required. `/` is where authentik returns after a
+        # top-level login, oidc-callback.html completes the code exchange, and
+        # oidc-silent-redirect.html is the hidden iframe that renews the token
+        # without bouncing the user. Omitting the last one produces a session
+        # that works until the first token expiry and then silently logs out.
+        - url: "https://${APP}.${ROOT_DOMAIN}/"
+        - url: "https://${APP}.${ROOT_DOMAIN}/oidc-callback.html"
+        - url: "https://${APP}.${ROOT_DOMAIN}/oidc-silent-redirect.html"
+        # The tailnet hostname components/tailscale gives this app. OpenCloud
+        # builds its redirect_uri from the request's forwarded headers, so
+        # whichever hostname the user arrived on is the one authentik is asked
+        # to return to -- both have to be registered or tailnet logins fail
+        # with redirect_uri_mismatch.
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/oidc-callback.html"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/oidc-silent-redirect.html"
+        # --- native clients ---------------------------------------------
+        # Fixed, app-baked values taken from upstream's Keycloak realm
+        # (config/keycloak/clients/*.json in opencloud-eu/opencloud-compose).
+        # They are compiled into the published desktop and mobile apps and
+        # cannot be configured, so they are reproduced verbatim.
+        #
+        # The desktop client runs a throwaway loopback listener on a random
+        # port, which is why the two http:// entries carry no port and are
+        # matched as a prefix.
+        - url: "http://127.0.0.1"
+          matching_mode: regex
+        - url: "http://localhost"
+          matching_mode: regex
+        - url: "oc://android.opencloud.eu"
+        - url: "oc://ios.opencloud.eu"
+      propertyMappings:
+        - openid
+        - profile
+        - email
+        # LOAD-BEARING, not optional garnish. ./resources/proxy.yaml assigns
+        # OpenCloud roles from the `groups` claim (admins -> admin,
+        # family -> user) and ./helmrelease.yaml sets
+        # GRAPH_ASSIGN_DEFAULT_USER_ROLE=false, so without this mapping every
+        # user authenticates successfully and then lands with NO role at all --
+        # a blank OpenCloud with no spaces and no way to make one.
+        - groups
+      includeClaimsInIdToken: true
+  gatus:
+    - group: "Applications"
+      url: *url
+      method: GET
+      conditions:
+        - "[STATUS] == 200"

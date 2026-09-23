@@ -1,0 +1,82 @@
+---
+# OpenCloud's `proxy` service config, mounted at /etc/opencloud/proxy.yaml.
+# It does two unrelated jobs, which is why one small file carries both.
+#
+# 1. role_assignment -- who is an admin.
+# 2. additional_policies -- the CalDAV/CardDAV routes to the Radicale sidecar.
+
+# ---------------------------------------------------------------------------
+# 1. Role assignment from the authentik `groups` claim.
+#
+# ../helmrelease.yaml sets PROXY_ROLE_ASSIGNMENT_DRIVER=oidc and
+# GRAPH_ASSIGN_DEFAULT_USER_ROLE=false, so THIS TABLE is the only thing that
+# gives anyone a role. Get it wrong and every user logs in successfully and
+# then sees an OpenCloud with no spaces and no way to create one.
+#
+# ORDER MATTERS: the first matching entry wins, so `admin` is listed first.
+# Somebody in both `admins` and `family` is an admin; reversing these two lines
+# would quietly demote every administrator to a plain user.
+#
+# The claim is delivered by the `groups` property mapping in
+# ../definition.yaml -- that mapping and this file have to be changed together.
+role_assignment:
+  driver: oidc
+  oidc_role_mapper:
+    role_claim: groups
+    role_mapping:
+      - role_name: admin
+        claim_value: admins
+      - role_name: user
+        claim_value: family
+
+# ---------------------------------------------------------------------------
+# 2. Calendar and contacts, forwarded to the Radicale sidecar.
+#
+# Upstream's config/radicale/config in opencloud-eu/opencloud-compose points
+# these at `http://radicale:5232`, a second container on the compose network.
+# Here Radicale is a SIDECAR in this same pod, so the backend is localhost and
+# no Service exposes port 5232.
+#
+# That difference is a security property, not a cosmetic one. Radicale's auth
+# type is `http_x_remote_user`: it trusts the X-Remote-User header completely
+# and performs no authentication of its own. Anything that can open a TCP
+# connection to it can act as any user. On the compose network that is every
+# other container; here it is only this pod. Do NOT add a Service port for
+# 5232, and do not move Radicale to its own Deployment without first replacing
+# this auth type.
+#
+# `skip_x_access_token: true` -- Radicale has no idea what an OpenCloud access
+# token is; the proxy has already authenticated the request and the only thing
+# it needs to pass on is the username.
+#
+# `X-Script-Name` tells Radicale which path prefix it is mounted under, so the
+# hrefs in its multistatus responses come back as /caldav/... rather than /...
+# Without it clients follow the reply straight back to OpenCloud's own root and
+# get a 404 on every collection.
+additional_policies:
+  - name: default
+    routes:
+      - endpoint: /caldav/
+        backend: http://localhost:5232
+        remote_user_header: X-Remote-User
+        skip_x_access_token: true
+        additional_headers:
+          - X-Script-Name: /caldav
+      - endpoint: /.well-known/caldav
+        backend: http://localhost:5232
+        remote_user_header: X-Remote-User
+        skip_x_access_token: true
+        additional_headers:
+          - X-Script-Name: /caldav
+      - endpoint: /carddav/
+        backend: http://localhost:5232
+        remote_user_header: X-Remote-User
+        skip_x_access_token: true
+        additional_headers:
+          - X-Script-Name: /carddav
+      - endpoint: /.well-known/carddav
+        backend: http://localhost:5232
+        remote_user_header: X-Remote-User
+        skip_x_access_token: true
+        additional_headers:
+          - X-Script-Name: /carddav
