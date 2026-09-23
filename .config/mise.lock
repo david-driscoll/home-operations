@@ -704,9 +704,9 @@ url = "https://github.com/pypa/pipx/releases/download/1.17.6/pipx.pyz"
 url_api = "https://api.github.com/repos/pypa/pipx/releases/assets/582499741"
 
 [[tools."pipx:graphifyy"]]
-version = "0.9.65"
+version = "0.9.66"
 backend = "pipx:graphifyy"
-specifiers = ["0.9.65"]
+specifiers = ["0.9.66"]
 
 [[tools."pipx:yamllint"]]
 version = "1.38.0"
@@ -1109,44 +1109,44 @@ url = "https://github.com/crate-ci/typos/releases/download/v1.50.2/typos-v1.50.2
 url_api = "https://api.github.com/repos/crate-ci/typos/releases/assets/565798642"
 
 [[tools.vals]]
-version = "0.46.1"
+version = "0.47.0"
 backend = "aqua:helmfile/vals"
-specifiers = ["0.46.1"]
+specifiers = ["0.47.0"]
 
 [tools.vals."platforms.linux-arm64"]
-checksum = "sha256:db4a8a9e4fac8dbb87c0b35013e2b856f7890ca88399c5e5f758abef28d74a69"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439213"
+checksum = "sha256:835f3d5d438ab92ce7929498b6fe0543d1972efde39cfd956b1ecda3dc6adff7"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292727"
 
 [tools.vals."platforms.linux-arm64-musl"]
-checksum = "sha256:db4a8a9e4fac8dbb87c0b35013e2b856f7890ca88399c5e5f758abef28d74a69"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439213"
+checksum = "sha256:835f3d5d438ab92ce7929498b6fe0543d1972efde39cfd956b1ecda3dc6adff7"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292727"
 
 [tools.vals."platforms.linux-x64"]
-checksum = "sha256:b6d05226623d46e6c79d7040650dbb447e73ef61e7afaacd00365ad3275c1a6d"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439286"
+checksum = "sha256:b327e52811c0c84c5adad26bf2536491e07fc75018a84a66109e1e5325a3d833"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292795"
 
 [tools.vals."platforms.linux-x64-musl"]
-checksum = "sha256:b6d05226623d46e6c79d7040650dbb447e73ef61e7afaacd00365ad3275c1a6d"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439286"
+checksum = "sha256:b327e52811c0c84c5adad26bf2536491e07fc75018a84a66109e1e5325a3d833"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292795"
 
 [tools.vals."platforms.macos-arm64"]
-checksum = "sha256:3308ea1e2c9470cda5b420c859aeec9fcc15dbfb7a2a02a34c3bf36d3e49077f"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439214"
+checksum = "sha256:a76255090319c61e701d32633d4d89ccc7891f1e4bd3c1c8fa6bc38184df3fd4"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292723"
 
 [tools.vals."platforms.macos-x64"]
-checksum = "sha256:edd1f3d6795aee7f212d0b090f869cbffc0123335e16293766d68fc08c478bd4"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439211"
+checksum = "sha256:cd4bccad994fe37afed3ad2150378e713a10122421b95bcd709c2f6d3f9d0c3c"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292724"
 
 [tools.vals."platforms.windows-x64"]
-checksum = "sha256:83ecc3bd22868217f89f96af8a81684dd684bee482a44b401fe99307cd2625b6"
-url = "https://github.com/helmfile/vals/releases/download/v0.46.1/vals_0.46.1_windows_amd64.tar.gz"
-url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/556439277"
+checksum = "sha256:bdb7e5e08d73637ccb57083f42961b4385e4a3270891f812dc53f8d1807847c8"
+url = "https://github.com/helmfile/vals/releases/download/v0.47.0/vals_0.47.0_windows_amd64.tar.gz"
+url_api = "https://api.github.com/repos/helmfile/vals/releases/assets/578292791"
 
 [[tools.yq]]
 version = "4.53.6"
