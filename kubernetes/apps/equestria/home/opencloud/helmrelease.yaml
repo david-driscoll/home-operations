@@ -513,18 +513,46 @@ spec:
               repository: docker.io/collabora/code
               tag: 26.04.4.1.1@sha256:1efda3043e8b9cb437d1b6c6efe20cc3753760e634de012b8dac391da488bf97
               pullPolicy: IfNotPresent
-            # `generate-proof-key` before the server, from upstream's helm
-            # chart. The WOPI proof key is how Collabora signs its callbacks so
-            # OpenCloud can tell a genuine request from a forged one.
+            # ⚠ NO `command`/`args` OVERRIDE, DELIBERATELY. Do not reintroduce
+            # one from upstream's helm chart or compose file -- they are written
+            # against an OLDER CODE image than the tag pinned above.
             #
-            # Regenerating it on every start is fine and is what the chart does:
+            # `docker image inspect` of 26.04.4.1.1 (config blob
+            # sha256:685eb640…, the digest the kubelet reports for the running
+            # container) gives:
+            #
+            #   Entrypoint: /usr/bin/coolwsd --use-env-vars
+            #               --o:sys_template_path=/opt/cool/systemplate
+            #               --o:child_root_path=/opt/cool/child-roots
+            #               --o:file_server_root_path=/usr/share/coolwsd
+            #               --o:cache_files.path=/opt/cool/cache
+            #               --o:logging.color=false
+            #               --o:stop_on_config_change=true
+            #   Cmd:  <none>
+            #   User: 1001
+            #
+            # So this image execs coolwsd DIRECTLY. There is no
+            # /start-collabora-online.sh wrapper and no /bin/bash -- the first
+            # revision of this file carried the chart's
+            # `command: ["/bin/bash", "-c"]` and the container crash-looped with
+            #
+            #   exec: "/bin/bash": stat /bin/bash: no such file or directory
+            #
+            # at exit 128, producing NO logs at all (it never started), while
+            # OpenCloud logged a 503 against
+            # https://collabora.<domain>/hosting/discovery every 30s.
+            #
+            # `--use-env-vars` is already in that entrypoint, which is what
+            # makes the `extra_params`, `aliasgroup1`, `username` and `password`
+            # variables below take effect without any wrapper.
+            #
+            # The WOPI proof key needs no explicit `coolconfig generate-proof-key`
+            # either: coolwsd generates one at startup when none exists, and
             # OpenCloud's collaboration service re-reads the public half from
-            # Collabora's discovery endpoint each time it connects. (Upstream's
-            # compose persists it in a volume instead, to avoid interrupting
-            # in-flight editing sessions across a restart -- not worth a second
-            # PVC here.)
-            command: ["/bin/bash", "-c"]
-            args: ["coolconfig generate-proof-key && /start-collabora-online.sh"]
+            # /hosting/discovery each time it connects. Pre-generating it, as
+            # upstream's compose does into a named volume, only buys persistence
+            # across restarts so in-flight editing sessions are not interrupted
+            # -- not worth a second PVC here.
             envFrom:
               # `username` / `password` for the admin console at
               # /browser/dist/admin/admin.html.
@@ -573,12 +601,22 @@ spec:
                   failureThreshold: 5
               readiness: *coolProbes
             securityContext:
-              # ROOT, and there is no non-root spelling of this image: coolwsd
-              # starts as root to build the per-document jails and drops to the
-              # `cool` user for the forked LibreOffice kits.
-              runAsNonRoot: false
-              runAsUser: 0
-              runAsGroup: 0
+              # 1001, which is the `cool` user the IMAGE ITSELF declares
+              # (`User: 1001` in its config blob). This has to be stated
+              # explicitly because `defaultPodOptions` below pins the pod to
+              # 568 for the volsync mover's benefit -- that is right for the
+              # OpenCloud pod, which owns the backed-up PVC, and wrong here,
+              # where the only volume is an emptyDir of fonts and every path
+              # coolwsd writes (/etc/coolwsd, /opt/cool) is owned by 1001 in
+              # the image.
+              #
+              # An earlier revision of this file ran it as root with a comment
+              # claiming there was "no non-root spelling of this image". That
+              # was wrong: the image is built to run unprivileged as 1001, and
+              # coolwsd declines to run as root.
+              runAsNonRoot: true
+              runAsUser: 1001
+              runAsGroup: 1001
               allowPrivilegeEscalation: false
               # coolwsd rewrites /etc/coolwsd/coolwsd.xml from extra_params on
               # every start and builds its jail templates under /opt/cool.
