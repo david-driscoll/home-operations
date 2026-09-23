@@ -21,6 +21,6 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^2.0.0",
-    "@pulumi/kubernetes": "^4.34.1"
+    "@pulumi/kubernetes": "^4.34.2"
   }
 }

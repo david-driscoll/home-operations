@@ -22,7 +22,7 @@
   "dependencies": {
     "@muhlba91/pulumi-proxmoxve": "^8.6.0",
     "@pulumi/command": "^1.2.1",
-    "@pulumi/kubernetes": "^4.34.1",
+    "@pulumi/kubernetes": "^4.34.2",
     "@pulumi/std": "^2.3.2",
     "glob": "^13.0.6"
   }
