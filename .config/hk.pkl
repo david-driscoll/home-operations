@@ -1,6 +1,13 @@
-amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Config.pkl"
 
-import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Builtins.pkl"
+
+// These two package URLs MUST move with `hk` in .config/mise.toml across a
+// major version. Renovate bumps the binary but not these URLs: hk 2.0.1
+// evaluating the v1.55.0 package fails every hook with
+// `union property 'command' has no selected default`, which aborts every
+// commit and push in the repo. (hk 1.58.1 does load the v2.0.1 package, so
+// the URL can lead the binary, never trail it across a major.)
 
 // hk hook configuration — consolidated from the two competing configs that
 // both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603),
