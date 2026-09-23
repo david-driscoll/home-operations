@@ -120,7 +120,6 @@ resources:
   - ./downloads
   - ./games
   - ./home
-  - ./idp
   - ./media
   - ./pvr
   - ./shared

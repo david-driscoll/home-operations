@@ -23,10 +23,9 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: authentik
-        # Lives with the authentik-remote-cluster release; cross-namespace
-        # sourceRefs are how every CNPG HelmRelease here reaches cloudnative-pg's
-        # repository too.
-        namespace: equestria
+        # Lives with the authentik-remote-cluster release, which is now in this
+        # namespace too (moved from `equestria` with the outpost it manages).
+        namespace: stargate-command
   install:
     remediation:
       retries: 3
@@ -123,7 +122,7 @@ spec:
         - name: AUTHENTIK_LOG_LEVEL
           value: info
         # Do not let this worker auto-register the cluster it runs in as an
-        # outpost integration. equestria's outposts are already managed through
+        # outpost integration. The cluster's outpost is already managed through
         # the authentik-remote-cluster ServiceAccount (stacks/applications), and a
         # second "Local Kubernetes Cluster" connection would reconcile the same
         # namespace from a different identity.
@@ -147,7 +146,7 @@ spec:
     geoip:
       enabled: false
     # No ServiceAccount of its own: the outpost-management identity is the
-    # authentik-remote-cluster release in `equestria`, and with
+    # authentik-remote-cluster release (also in this namespace), and with
     # AUTHENTIK_OUTPOSTS__DISCOVER=false this worker never talks to the API.
     serviceAccount:
       create: false
