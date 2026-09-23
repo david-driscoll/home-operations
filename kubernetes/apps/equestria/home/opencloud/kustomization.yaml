@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./definition.yaml
+  - ./externalsecret.yaml
+configMapGenerator:
+  # The three OpenCloud config files plus Radicale's, mounted by
+  # ./helmrelease.yaml's `config` persistence entry.
+  #
+  # `disableNameSuffixHash: true` because ./helmrelease.yaml names this
+  # ConfigMap literally, and a hashed name would not exist under the name it
+  # asks for. The trade-off is the usual one: editing a file here does NOT
+  # change the ConfigMap's name, so nothing about the change is visible to the
+  # Deployment -- which is why the workload carries
+  # `reloader.stakater.com/auto: "true"`. Reloader watches the ConfigMap's
+  # CONTENT and restarts the pod when it changes.
+  - name: ${APP}-config
+    files:
+      - resources/proxy.yaml
+      - resources/csp.yaml
+      - resources/app-registry.yaml
+      - resources/radicale.conf
+    options:
+      disableNameSuffixHash: true

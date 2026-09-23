@@ -23,4 +23,11 @@ resources:
   - ./reitti/ks.yaml
   - ./mealie/ks.yaml
   - ./dawarich/ks.yaml
-  # - ./collabora/ks.yaml
+  - ./opencloud/ks.yaml
+  # ./collabora was DELETED here, not merely left commented out. It had never
+  # been deployed -- commented out since it was added in 6d477397, and confirmed
+  # absent from the cluster -- and it was configured behind an authentik
+  # forward-auth proxy, which cannot serve OpenCloud: the editor iframe carries
+  # no authentik session cookie, so the outpost would redirect it to a login
+  # page that cannot render inside a frame. Collabora now lives inside
+  # ./opencloud, tuned for WOPI and gated with `local-user` instead.

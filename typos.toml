@@ -95,3 +95,7 @@ Hashi = "Hashi"
 # this way by the vendor. It is a lookup key in pecron-monitor's tsl_cache --
 # "correcting" it makes the entry match nothing on the device.
 standy = "standy"
+# OpenDocument Format -- the OASIS standard behind .odt/.ods/.odp, named in
+# equestria/home/opencloud's app-registry comments. typos splits the acronym
+# and reads it as a misspelt "OF".
+ODF = "ODF"

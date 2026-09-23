@@ -1,0 +1,63 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/refs/heads/main/kustomize.toolkit.fluxcd.io/kustomization_v1.json
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app opencloud
+  namespace: &namespace equestria
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: volsync
+      namespace: volsync-system
+    - name: external-secrets
+      namespace: kube-system
+  path: ./kubernetes/apps/equestria/home/opencloud
+  prune: true
+  force: false
+  wait: true
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../../components/failover/fast-node-eviction
+    # NO components/postgres, and that is not an oversight. OpenCloud has no
+    # relational database at all: users live in the built-in LDAP (idm), file
+    # metadata lives beside the blobs on the PVC, and the service registry /
+    # event bus is the NATS server the single binary starts on 127.0.0.1:9233.
+    # The only stateful thing here is the volume below.
+    - ../../../../components/tailscale
+    - ../../../../components/volsync
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace
+      # 50Gi as requested. This one volume carries EVERYTHING that has to
+      # survive a restart -- see the three subPaths in ./helmrelease.yaml:
+      #
+      #   config    -> /etc/opencloud     opencloud.yaml, written by `opencloud
+      #                                   init`: JWT secret, transfer secret,
+      #                                   machine-auth API key
+      #   data      -> /var/lib/opencloud user files (decomposed driver), spaces
+      #   radicale  -> /var/lib/radicale  calendars and address books
+      #
+      # One PVC rather than three means one restic snapshot is a consistent
+      # picture of the whole app: a restore cannot land file blobs from one
+      # night next to a space index from another.
+      VOLSYNC_CAPACITY: 50Gi
+      VOLSYNC_ACCESSMODES: ReadWriteOnce
+      # The 8Gi default is sized for the 5Gi default volume. A restic cache too
+      # small to hold the pack index turns every nightly run into a re-fetch of
+      # the whole repository; 10Gi keeps a volume this size incremental.
+      VOLSYNC_CACHE_CAPACITY: 10Gi
