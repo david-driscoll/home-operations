@@ -136,9 +136,16 @@ system:
 #   versions:
 #     naomi: arcade
 
-# The folder name where your roms are located
-# filesystemz:
-#   roms_folder: 'roms' # For example if your folder structure is /home/user/library/roms_folder
+# Library layout. RomM 5.3.0 no longer auto-detects it and refuses to start
+# until it is declared. The library (truenas-media games/roms, mounted at
+# /romm/library) is laid out as <platform>/roms/<game> -- the old "structure B",
+# which is what RomM's startup check detected. Do not add `roms_folder` or
+# `firmware_folder` here: both were removed in 5.3.0 and either one also blocks
+# startup. See https://docs.romm.app/latest/getting-started/folder-structure/
+filesystem:
+  structure:
+    default: "{platform}/roms/{game}"
+    firmware: "{platform}/bios"
 #   skip_hash_calculation: false # Skip file hash calculations on low power devices (eg. Raspberry PI)
 
 # scan:
