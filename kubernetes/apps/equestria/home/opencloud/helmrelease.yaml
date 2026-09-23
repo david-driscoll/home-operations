@@ -461,8 +461,28 @@ spec:
               - |
                 set -eu
                 export DEBIAN_FRONTEND=noninteractive
-                apt-get update -qq
-                apt-get install -y --no-install-recommends -qq \
+                # ⚠ APT::Sandbox::User=root IS REQUIRED HERE, and its absence is
+                # not a warning -- it is a hard failure.
+                #
+                # apt drops privileges to the `_apt` user (uid 42) before running
+                # its download methods, which needs CAP_SETUID and CAP_SETGID.
+                # This container runs as uid 0 with `drop: ["ALL"]`, so that
+                # drop fails and apt dies with:
+                #
+                #   E: Method gave invalid 400 URI Failure message:
+                #      Failed to setgroups - setgroups (1: Operation not permitted)
+                #   E: Method http has died unexpectedly!
+                #
+                # which looks like a network fault and is not one. Telling apt
+                # to stay root is the fix that costs nothing; the alternative is
+                # granting SETUID/SETGID, and this container downloads fonts
+                # over plain HTTP into an emptyDir -- it should not hold
+                # capabilities it can avoid.
+                APT_OPTS="-o APT::Sandbox::User=root"
+                # shellcheck disable=SC2086
+                apt-get $APT_OPTS update -qq
+                # shellcheck disable=SC2086
+                apt-get $APT_OPTS install -y --no-install-recommends -qq \
                   fonts-liberation2 \
                   fonts-crosextra-carlito \
                   fonts-crosextra-caladea \
@@ -483,6 +503,9 @@ spec:
               runAsGroup: 0
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
+              # Stays at ALL-dropped. apt would normally need SETUID/SETGID to
+              # sandbox its download methods as `_apt`; APT::Sandbox::User=root
+              # in the script above removes that need instead of granting them.
               capabilities: { drop: ["ALL"] }
         containers:
           app:
