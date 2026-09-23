@@ -107,11 +107,15 @@ spec:
                 CUTOFF_EPOCH=$(date -u -d "-$${RETENTION_DAYS} days" +%s)
                 echo "Reclaiming orphaned VolumeSnapshotContents older than $${RETENTION_DAYS} days (cutoff epoch $${CUTOFF_EPOCH})"
 
-                live_vscs=$(kubectl get volumesnapshots.snapshot.storage.k8s.io -A \
-                  -o custom-columns='VSC:.status.boundVolumeSnapshotContentName' --no-headers 2>/dev/null \
-                  | grep -v '<none>' || true)
+                # The VolumeSnapshot list is the safety check: a VSC absent from
+                # it gets deleted. So a failed list must fail the job, never read
+                # as "no live snapshots" -- plain out=$(...) under `set -e`, and
+                # only the grep (which exits 1 on no matches) is allowed to fail.
+                vs=$(kubectl get volumesnapshots.snapshot.storage.k8s.io -A --request-timeout=60s \
+                  -o custom-columns='VSC:.status.boundVolumeSnapshotContentName' --no-headers)
+                live_vscs=$(echo "$vs" | grep -v '<none>' || true)
 
-                out=$(kubectl get volumesnapshotcontents \
+                out=$(kubectl get volumesnapshotcontents --request-timeout=60s \
                   -o custom-columns='NAME:.metadata.name,CREATED:.metadata.creationTimestamp,POLICY:.spec.deletionPolicy,PHASE:.metadata.deletionTimestamp' \
                   --no-headers)
                 count=0
@@ -130,15 +134,20 @@ spec:
                   fi
                   echo "Reclaiming orphaned VolumeSnapshotContent $name (created $created, policy $policy)"
                   if [ "$policy" != "Delete" ]; then
-                    kubectl patch volumesnapshotcontent "$name" --type=merge -p '{"spec":{"deletionPolicy":"Delete"}}'
+                    kubectl patch volumesnapshotcontent "$name" --request-timeout=60s --type=merge -p '{"spec":{"deletionPolicy":"Delete"}}'
                   fi
-                  kubectl delete volumesnapshotcontent "$name" --wait=false
+                  kubectl delete volumesnapshotcontent "$name" --request-timeout=60s --wait=false
                   sleep 1
                 done
                 echo "Done."
+            # Not 64Mi. The kubectl binary alone is ~56Mi and page cache is
+            # charged to the cgroup that first reads it, so a cold-cache pod
+            # needs ~95Mi. At 64Mi it never OOMs -- it thrashes re-reading its
+            # own text pages until activeDeadlineSeconds. That was every failure
+            # on shining-armor (virtio disk, large read-ahead) since 2026-09-15.
             resources:
               requests:
                 cpu: 10m
-                memory: 32Mi
+                memory: 128Mi
               limits:
-                memory: 64Mi
+                memory: 256Mi
