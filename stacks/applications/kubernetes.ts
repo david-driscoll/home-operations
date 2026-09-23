@@ -12,6 +12,13 @@ import { concatMap, from, lastValueFrom, map, toArray } from "rxjs";
 import * as yaml from "yaml";
 import { kubernetesBackups } from "./kubernetes-backups.ts";
 
+/**
+ * Where the cluster's authentik proxy outpost runs, and where the
+ * authentik-remote-cluster release that manages it lives. Must be excluded from
+ * go-kube-downscaler (kube-system/go-kube-downscaler/helmrelease.yaml).
+ */
+const OUTPOST_NAMESPACE = "stargate-command";
+
 export async function kubernetesApplications(globals: GlobalResources, outputs: AuthentikOutputs, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   const provider = new pk8s.Provider(`${clusterDefinition.key}-provider`, {
     kubeconfig: clusterDefinition.kubeConfig,
@@ -157,7 +164,14 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
           // log_level: "trace",
           object_naming_template: `authentik-outpost`,
           kubernetes_replicas: 1,
-          kubernetes_namespace: clusterDefinition.key,
+          // stargate-command, not the cluster's app namespace. The app namespace
+          // (`equestria`) is go-kube-downscaler's nightly shed list, and this
+          // Deployment is created by authentik -- not Flux -- so it carried no
+          // `downscaler/exclude` and was scaled to 0 every night 06:00-13:00 UTC.
+          // Every forwardAuth route in the cluster (keep-list apps and
+          // observability included) then timed out for seven hours. It belongs
+          // with authentik itself in the Tier-1 namespace the downscaler excludes.
+          kubernetes_namespace: OUTPOST_NAMESPACE,
           kubernetes_ingress_class_name: "internal",
           kubernetes_ingress_annotations: {
             "traefik.ingress.kubernetes.io/router.middlewares": "network-default-cors@kubernetescrd",
@@ -223,9 +237,11 @@ export async function kubernetesApplications(globals: GlobalResources, outputs: 
  */
 async function outpostKubeConfig(coreApi: kubernetes.CoreV1Api, clusterDefinition: pulumi.Unwrap<ReturnType<GlobalResources["store"]["getKubernetesCluster"]>>) {
   // Created by the authentik-remote-cluster HelmRelease in the target cluster,
-  // in the namespace named for the cluster (kubernetes/apps/<key>/idp/).
+  // in the outpost's namespace (kubernetes/apps/stargate-command/authentik-remote-cluster/).
+  // The chart's Role is namespaced, so the ServiceAccount can only manage an
+  // outpost in the namespace the release itself lives in -- the two move together.
   const secretName = "authentik-remote-cluster";
-  const secret = await coreApi.readNamespacedSecret({ name: secretName, namespace: clusterDefinition.key });
+  const secret = await coreApi.readNamespacedSecret({ name: secretName, namespace: OUTPOST_NAMESPACE });
 
   const field = (key: string) => {
     const value = secret.data?.[key];

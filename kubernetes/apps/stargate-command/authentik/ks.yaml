@@ -36,7 +36,7 @@ spec:
       namespace: kube-system
     # Owns the `authentik` HelmRepository the authentik HelmRelease pulls from.
     - name: authentik-remote-cluster
-      namespace: equestria
+      namespace: stargate-command
   prune: true
   # Same reason as database/postgres: an ownership change must never
   # cascade-delete the Cluster CR and its PVCs

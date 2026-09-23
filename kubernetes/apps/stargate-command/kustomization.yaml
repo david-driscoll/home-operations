@@ -79,6 +79,7 @@ patches:
                     retryInterval: 5m
 resources:
   - ./authentik/ks.yaml
+  - ./authentik-remote-cluster/ks.yaml
   - ./chrony/ks.yaml
   - ./matter/ks.yaml
   - ./mosquitto/ks.yaml
