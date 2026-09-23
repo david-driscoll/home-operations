@@ -1,6 +1,13 @@
-amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Config.pkl"
 
-import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.0.1/hk@2.0.1#/Builtins.pkl"
+
+// These two package URLs MUST move with `hk` in .config/mise.toml across a
+// major version. Renovate bumps the binary but not these URLs: hk 2.0.1
+// evaluating the v1.55.0 package fails every hook with
+// `union property 'command' has no selected default`, which aborts every
+// commit and push in the repo. (hk 1.58.1 does load the v2.0.1 package, so
+// the URL can lead the binary, never trail it across a major.)
 
 // hk hook configuration — consolidated from the two competing configs that
 // both landed on main (root `hk.pkl` from #601, `.config/hk.pkl` from #603),
@@ -215,6 +222,24 @@ local linters = new Mapping<String, Step> {
   // macOS checkouts are case-insensitive; Linux CI runners are not. This
   // catches the pair of files that collide only on the developer's machine.
   ["check-case-conflict"] = Builtins.check_case_conflict
+  // Added with hk 2.0. Both are `hk util` subcommands, so they need no extra
+  // pin in .config/mise.toml, and both are pure reads.
+  //
+  // `destroyed-symlinks` catches a tracked symlink that has been turned into
+  // a regular file holding its target path. That is what a checkout on a
+  // filesystem or tool that does not keep symlinks leaves behind (Windows
+  // without core.symlinks, some sync/copy tools), and committing it quietly
+  // breaks every consumer of the link.
+  ["destroyed-symlinks"] = Builtins.destroyed_symlinks
+  // The repo has no submodules and every tool here (Flux, flate, Renovate,
+  // worktrees on a shared PVC) assumes a single tree. A stray gitlink from
+  // `git add` over a nested clone would otherwise commit silently.
+  ["forbid-submodules"] = Builtins.forbid_submodules
+  // Deliberately NOT enabled: `check_executables_have_shebangs` and
+  // `check_shebang_scripts_are_executable`. On 2026-09-23 they reported ~45
+  // existing files -- mostly ConfigMap-mounted scripts and .dib/.cs files
+  // that are correctly non-executable, and YAML committed with +x. Enabling
+  // them needs a cleanup pass (or step excludes) first.
 }
 
 exclude = excludes
