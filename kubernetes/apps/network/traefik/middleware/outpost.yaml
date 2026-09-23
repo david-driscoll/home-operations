@@ -6,7 +6,11 @@ metadata:
   name: outpost
 spec:
   forwardAuth:
-    address: http://authentik-outpost.${CLUSTER_CNAME}:9000/outpost.goauthentik.io/auth/traefik
+    # stargate-command, not ${CLUSTER_CNAME}: the outpost moved out of the
+    # nightly-shed `equestria` namespace (stacks/applications/kubernetes.ts,
+    # OUTPOST_NAMESPACE), where go-kube-downscaler scaled it to 0 06:00-13:00 UTC
+    # and every forwardAuth route timed out with it.
+    address: http://authentik-outpost.stargate-command:9000/outpost.goauthentik.io/auth/traefik
     authResponseHeaders:
       - X-authentik-username
       - X-authentik-groups
