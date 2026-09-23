@@ -101,8 +101,30 @@ while true; do
         echo "[backup] dumped ${db_name}"
       else
         rm -f "${out_dir}/${db_name}-${stamp}.dump.tmp"
-        echo "[backup] ERROR: dump of ${db_name} failed" >&2
-        failures=$((failures + 1))
+        # A database that was DROPPED between the listing above and its dump is
+        # not a failed backup -- there is nothing left to back up. That is not
+        # hypothetical: a stack deploy starts this loop and postgres-provision
+        # together, so an `ensure: absent` tombstone drops its database while
+        # the first cycle is running. On 2026-09-23 alpha-site's cycle listed
+        # `authentik`, provision dropped it a second later, and the dump failed
+        # with "database does not exist" -- a red heartbeat that would have
+        # stayed red for a full interval. Re-check, and only count a failure for
+        # a database that is still there.
+        #
+        # `if ! still=...` rather than a bare assignment: `set -e` would end the
+        # loop on a psql that cannot connect. Unreachable counts as a failure.
+        # The query goes in on stdin, not -c: psql does not interpolate :'db'
+        # in a -c string, and :'db' is what quotes the name safely.
+        if ! still=$(printf '%s\n' "SELECT 1 FROM pg_database WHERE datname = :'db';" \
+            | psql -tA -d postgres -v db="$db_name"); then
+          still=1
+        fi
+        if [ -z "$still" ]; then
+          echo "[backup] ${db_name} was dropped mid-cycle; nothing to dump"
+        else
+          echo "[backup] ERROR: dump of ${db_name} failed" >&2
+          failures=$((failures + 1))
+        fi
       fi
     done
   else
