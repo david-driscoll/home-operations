@@ -67,6 +67,7 @@ spec:
               SONARR__LOG__DBENABLED: "True"
               SONARR__LOG__LEVEL: info
               SONARR__PORT: &port 8989
+              SONARR__SERVER__ALLOWEDHOSTS: "${APP}.${ROOT_DOMAIN},${APP}.${NAMESPACE}.svc.cluster.local,${APP}.${NAMESPACE}.svc,${APP}"
               TZ: ${TIMEZONE}
             # SONARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB}, from the
             # ExternalSecret next door. envFrom rather than five secretKeyRefs
