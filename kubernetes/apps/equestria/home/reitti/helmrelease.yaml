@@ -74,7 +74,7 @@ spec:
               # no GHCR mirror. `5` and `latest` both resolve here today -- the
               # exact version is pinned instead so an upstream retag cannot move
               # this deployment.
-              tag: 5.5.0@sha256:c971835b33144d0ae21ed6e2cbac98064f92befa7c7e68f7bb7f2ae674f3f181
+              tag: 5.5.1@sha256:cb9d666b927dd2ca4a519ea5d2ab3ee5e6c1a54baee819b75cb44e768ffefd8e
               pullPolicy: IfNotPresent
             envFrom:
               # POSTGIS_* -- always present.
