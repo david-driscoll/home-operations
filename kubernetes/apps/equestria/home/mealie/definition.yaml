@@ -1,0 +1,102 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: "Mealie"
+  category: Applications
+  description: "Mealie — recipe manager, meal planner and shopping list"
+  url: &url https://${APP}.${ROOT_DOMAIN}
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mealie.svg
+  access_policy:
+    groups:
+      - family
+      - friends
+      # NOT decoration. ./helmrelease.yaml sets OIDC_ADMIN_GROUP=admins, and a
+      # group can only grant Mealie admin to someone authentik lets through the
+      # application binding in the first place. Without this an `admins` member
+      # who is not also in family/friends is refused at authentik and never
+      # reaches the claim that would have promoted them.
+      - admins
+  authentik:
+    # oauth2, NOT proxy. Mealie speaks OIDC itself (authlib, /api/auth/oauth),
+    # so a forward-auth outpost in front would authenticate twice and break the
+    # /api/auth/oauth/callback hop. Same reasoning as outline, tududi and
+    # reitti; ./helmrelease.yaml's route therefore uses the `local-user`
+    # middleware rather than `authenticated-user`.
+    oauth2:
+      clientType: confidential
+      # Mealie's redirect is `{BASE_URL}/login` -- built in
+      # routes/auth/auth.py's `oauth_login` as
+      # `URLPath("/login").make_absolute_url(base)`, where `base` is
+      # settings.BASE_URL whenever BASE_URL has been changed from its
+      # `http://localhost:8080` default (settings.is_default_base_url). It HAS
+      # been changed, in ./helmrelease.yaml, so in practice only the first URL
+      # below is ever sent.
+      #
+      # The tailnet pair is registered anyway: it costs nothing, and it is what
+      # makes ${APP}.${TAILSCALE_DOMAIN} work if BASE_URL is ever dropped and
+      # the code falls back to `request.base_url` (i.e. Traefik's forwarded
+      # headers). Removing them would turn that into a login failure discovered
+      # by a remote user rather than by a reconcile.
+      allowedRedirectUris:
+        - url: "https://${APP}.${ROOT_DOMAIN}/login"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/login"
+        # `?direct=1` is the RP-initiated-logout return, documented at
+        # https://mealie.io/documentation/getting-started/authentication/oidc-v2/.
+        # It is a SECOND entry rather than a wildcard because authentik's
+        # default matching_mode is `strict` and the query string is part of the
+        # matched value. Omit it and signing out fails at the end-session
+        # endpoint rather than at login, which is the confusing half of getting
+        # this wrong.
+        - url: "https://${APP}.${ROOT_DOMAIN}/login?direct=1"
+        - url: "https://${APP}.${TAILSCALE_DOMAIN}/login?direct=1"
+      propertyMappings:
+        - email
+        - openid
+        - profile
+        # `groups` carries TWO things Mealie needs, and both are load-bearing
+        # (see components/authentik/property-mappings.ts):
+        #
+        #   1. The `groups` claim -- a list of authentik group NAMES. Mealie's
+        #      OIDC_GROUPS_CLAIM defaults to `groups`, and OIDC_ADMIN_GROUP in
+        #      ./helmrelease.yaml matches against it by name.
+        #   2. `email_verified: True`. Mealie's OIDC_REQUIRES_EMAIL_VERIFICATION
+        #      defaults to true and it refuses a login whose claim is not true;
+        #      authentik's BUILT-IN `email` mapping hardcodes it to FALSE. This
+        #      mapping is what overrides that -- authentik evaluates a
+        #      provider's mappings with order_by("scope_name") and deep-merges
+        #      each result, so "groups" lands after "email" and wins. The same
+        #      collision is documented at length for RomM in that file.
+        #
+        # Mealie only REQUESTS this scope when a group is configured: auth.py
+        # builds `f"openid email profile {groups_claim}"` with groups_claim
+        # empty unless OIDC_USER_GROUP or OIDC_ADMIN_GROUP is set. Dropping
+        # OIDC_ADMIN_GROUP from ./helmrelease.yaml would therefore silently take
+        # (2) away as well and break every login, not just promotion.
+        - groups
+      # Mealie reads its claims from `token["userinfo"]`, which authlib fills
+      # from the ID TOKEN, and only falls back to the userinfo endpoint after a
+      # MissingClaimException. Putting the claims in the ID token means the
+      # first path succeeds; the fallback also passes `use_default_groups=True`,
+      # which quietly changes group handling, so it is worth not taking.
+      includeClaimsInIdToken: true
+      # `subMode` is deliberately NOT set, unlike immich next door. Mealie never
+      # reads `sub`: OpenIDProvider looks accounts up by OIDC_USER_CLAIM, which
+      # defaults to `email`, and its only other reads are the name and groups
+      # claims. Pinning a sub format here would suggest a coupling that does not
+      # exist.
+  gatus:
+    - group: "Applications"
+      # /api/app/about, not `*url`. It is unauthenticated -- it is what the
+      # image's own HEALTHCHECK curls -- so it answers 200 with a real verdict
+      # from the app instead of the login page that `/` serves to everyone. The
+      # body condition is what makes this a check of MEALIE rather than of
+      # Traefik: the gateway can serve 200 for a pod that has lost its database.
+      url: https://${APP}.${ROOT_DOMAIN}/api/app/about
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].production == true"

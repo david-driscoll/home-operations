@@ -1,0 +1,262 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+#
+# app-template: Mealie publishes no Helm chart, only the compose file in the
+# docs. That compose has ONE service since v2 -- the api/frontend split that
+# older guides describe was folded into a single image -- so there is one
+# container here and no sidecar.
+#
+# The compose file's `postgres` service is the shared CNPG cluster instead, via
+# components/postgres. Mealie needs no extension on it (it is plain SQLAlchemy
+# + alembic), so unlike reitti there is no Database patch in
+# ./kustomization.yaml.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app mealie
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 3
+  interval: 15m
+  driftDetection:
+    mode: enabled
+  timeout: 10m
+  install:
+    createNamespace: true
+    replace: true
+    remediation:
+      retries: 7
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 7
+      strategy: rollback
+  rollback:
+    force: true
+    cleanupOnFail: true
+    recreate: true
+  uninstall:
+    keepHistory: false
+  values:
+    fullnameOverride: *app
+    controllers:
+      *app :
+        annotations:
+          # On the WORKLOAD, which is where Reloader looks. It matters more than
+          # usual here: ${APP}-oidc does not exist on first boot (see
+          # ./externalsecret.yaml), so the restart that turns SSO on is entirely
+          # Reloader's job.
+          reloader.stakater.com/auto: "true"
+        replicas: 1
+        # Recreate, not RollingUpdate. Two reasons, either sufficient: the data
+        # volume is ReadWriteOnce, and Mealie runs its alembic migrations at
+        # boot -- two instances migrating one database concurrently is the one
+        # thing that can corrupt it.
+        strategy: Recreate
+        containers:
+          *app :
+            image:
+              repository: ghcr.io/mealie-recipes/mealie
+              tag: v3.27.0@sha256:ba24b88462380fb59a6c7d04c6d9e607e0b6b04e31306592181186bcdab1952b
+              pullPolicy: IfNotPresent
+            envFrom:
+              # DB_ENGINE and the POSTGRES_* set -- always present.
+              - secretRef:
+                  name: ${APP}-env
+              # OIDC_AUTH_ENABLED, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET,
+              # OIDC_CONFIGURATION_URL. OPTIONAL, and that is load-bearing: the
+              # authentik credential only exists once stacks/applications has
+              # read ./definition.yaml and created the provider, which is after
+              # this pod first boots. With the Secret absent, OIDC_AUTH_ENABLED
+              # falls back to its `False` default, Mealie's OIDC_FEATURE stays
+              # disabled and it serves local login; Reloader restarts it when
+              # the Secret lands.
+              - secretRef:
+                  name: ${APP}-oidc
+                  optional: true
+            env:
+              TZ: "${TIMEZONE}"
+              API_PORT: &port 9000
+              # The canonical, publicly-reachable URL. Mealie uses it for
+              # notification links AND to build the OIDC redirect:
+              # `URLPath("/login").make_absolute_url(BASE_URL)` in
+              # routes/auth/auth.py, taken whenever BASE_URL differs from its
+              # `http://localhost:8080` default. Both hostnames are registered
+              # in ./definition.yaml, but with this set it is always the first
+              # one that gets used.
+              BASE_URL: "https://${APP}.${ROOT_DOMAIN}"
+              LOG_LEVEL: info
+              # The container's entrypoint (docker/entry.sh) compares `id -u`
+              # against PUID: equal means it prints the ids and carries on,
+              # ROOT means it re-execs under gosu after chown -R /app. 568 is
+              # the uid this pod already runs as (defaultPodOptions below), so
+              # it takes the first branch -- no root, no chown of the PVC on
+              # every boot. PGID matches for the same reason.
+              PUID: 568
+              PGID: 568
+              # Mealie has no invite-less signup worth having here: authentik
+              # decides who exists, via OIDC_SIGNUP_ENABLED below. This flag is
+              # the OTHER one -- the open registration form -- and it stays off.
+              ALLOW_SIGNUP: "false"
+              # ⚠️ MUST STAY true. It is what keeps the username+password form
+              # on the login page, and that form is the ONLY way in until an
+              # authentik user has been promoted to Mealie admin.
+              #
+              # Unlike reitti, that promotion IS automatic here: OIDC_ADMIN_GROUP
+              # below makes any `admins` member an admin on first SSO login. So
+              # the intended sequence is: first boot -> log in locally as
+              # changeme@example.com / MyPassword -> change that password
+              # immediately -> log in via authentik as an `admins` member ->
+              # confirm that account is an admin -> only THEN consider flipping
+              # this to "false".
+              #
+              # Flipping it early locks the local admin out with no OIDC admin
+              # to replace it, and recovery is editing this line and waiting for
+              # a reconcile.
+              ALLOW_PASSWORD_LOGIN: "true"
+              # The name on the SSO button.
+              OIDC_PROVIDER_NAME: authentik
+              # New authentik users get a Mealie account on first login. The
+              # gate is authentik's own: ./definition.yaml binds the app to
+              # family/friends/admins, so nobody else reaches this point.
+              OIDC_SIGNUP_ENABLED: "true"
+              # Matched against the `groups` claim, which is a list of authentik
+              # group NAMES (components/authentik/property-mappings.ts). This is
+              # the whole reason ./definition.yaml requests the `groups` scope --
+              # auth.py only appends OIDC_GROUPS_CLAIM to the requested scopes
+              # when OIDC_USER_GROUP or OIDC_ADMIN_GROUP is set, so removing
+              # this line stops the scope being requested at all and takes the
+              # mapping's `email_verified: True` down with it. See the long note
+              # in ./definition.yaml before touching it.
+              #
+              # OIDC_USER_GROUP is deliberately NOT set: authentik's application
+              # binding already decides who may reach Mealie, and a second list
+              # here would be a copy of it that drifts.
+              OIDC_ADMIN_GROUP: admins
+              # Safe to leave at its `true` default -- ./definition.yaml's
+              # `groups` mapping asserts email_verified. Stated rather than
+              # inherited because the failure mode of the claim going missing is
+              # a 401 with nothing in the UI to explain it.
+              OIDC_REQUIRES_EMAIL_VERIFICATION: "true"
+              # `false`: the login page still renders, so the local form stays
+              # reachable while ALLOW_PASSWORD_LOGIN is true. These two flags
+              # have to move together -- auto-redirect with the password form
+              # still on is merely an extra click; auto-redirect ON with the
+              # form gone is the lockout described above with no page left to
+              # notice it from.
+              OIDC_AUTO_REDIRECT: "false"
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    # Unauthenticated, and the same path the image's own
+                    # HEALTHCHECK curls.
+                    path: /api/app/about
+                    port: *port
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 4
+              readiness: *probes
+              # Generous on purpose: a cold boot downloads nothing but does run
+              # every alembic migration, and against an empty database that is
+              # all of them. 5 minutes before the pod is declared failed.
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/app/about
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+            securityContext:
+              allowPrivilegeEscalation: false
+              # NOT read-only, and this is the considered answer rather than the
+              # lazy one. Mealie's own writes are confined to /app/data (the PVC
+              # below) -- including data/.secret, the session-signing key it
+              # generates on first boot and must be able to create -- but the
+              # entrypoint is a bash script that sources the venv and the
+              # recipe scraper shells out to ffmpeg and yt-dlp, none of which
+              # are auditable to a fixed set of paths. PYTHONDONTWRITEBYTECODE=1
+              # is baked into the image, so the usual .pyc culprit is already
+              # gone; what is left is not worth a crash-loop discovered in
+              # production.
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        # 568/568 rather than the image's own 911: it matches
+        # VOLSYNC_PUID/VOLSYNC_PGID, so the restic mover and the app agree on
+        # the ownership of every file on the PVC. A mismatch there is only
+        # discovered at RESTORE time, which is the worst moment to find it.
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    persistence:
+      data:
+        existingClaim: ${APP}
+        advancedMounts:
+          *app :
+            *app :
+              # $MEALIE_HOME/data -- a VOLUME in the image. Recipe images,
+              # uploaded assets, backups and data/.secret all land here. The
+              # recipes themselves are in Postgres; this volume is the half that
+              # a database restore alone would not bring back.
+              - path: /app/data
+
+    service:
+      *app :
+        controller: *app
+        type: ClusterIP
+        ports:
+          http:
+            port: *port
+
+    route:
+      internal:
+        parentRefs:
+          - name: internal
+            namespace: network
+            kind: Gateway
+        hostnames:
+          - "${APP}.${ROOT_DOMAIN}"
+        kind: HTTPRoute
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /
+            backendRefs:
+              - name: *app
+                port: *port
+            filters:
+              # `local-user`, not `authenticated-user`: Mealie speaks OIDC
+              # itself, so the authentik forward-auth outpost in front would
+              # authenticate twice and break the /api/auth/oauth/callback hop.
+              # This gate is the LAN check only. Same reasoning as outline,
+              # tududi and reitti.
+              - type: ExtensionRef
+                extensionRef:
+                  group: traefik.io
+                  kind: Middleware
+                  name: local-user

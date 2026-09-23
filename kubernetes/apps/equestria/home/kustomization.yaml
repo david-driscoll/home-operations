@@ -21,5 +21,6 @@ resources:
   - ./postiz/ks.yaml
   - ./outline/ks.yaml
   - ./reitti/ks.yaml
+  - ./mealie/ks.yaml
   - ./dawarich/ks.yaml
   # - ./collabora/ks.yaml
