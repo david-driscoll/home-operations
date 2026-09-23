@@ -73,6 +73,19 @@ spec:
     remediation:
       retries: 7
   upgrade:
+    # CLIENT-SIDE apply, on purpose. cert-manager-cainjector writes
+    # clientConfig.caBundle into every webhook entry with its own SSA field
+    # manager, so it co-owns each entry's `name` key. When a chart release DROPS
+    # a webhook entry (0.37.0 removed the dlb/fpga ones and gated the sgx pod
+    # mutator on manager.devices.sgx), helm-controller's server-side apply only
+    # releases its own fields: the entry survives as {name, caBundle} and the
+    # API server rejects it (sideEffects/admissionReviewVersions/clientConfig
+    # "Required value" on exactly the removed indices). `upgrade.force` cannot
+    # help — Flux ignores it under SSA.
+    # Helm's three-way strategic merge patch keys webhooks by name and emits
+    # `$patch: delete` for entries gone from the new manifest, removing them
+    # whole while leaving the injected caBundle on the survivors untouched.
+    serverSideApply: disabled
     crds: CreateReplace
     cleanupOnFail: true
     remediation:
