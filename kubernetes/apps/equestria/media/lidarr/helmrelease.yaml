@@ -68,7 +68,7 @@ spec:
               LIDARR__LOG__DBENABLED: "True"
               LIDARR__LOG__LEVEL: info
               LIDARR__PORT: &port 8686
-              LIDARR__SERVER__ALLOWEDHOSTS: "${APP}.${ROOT_DOMAIN},${APP}.${NAMESPACE}.svc.cluster.local,${APP}.${NAMESPACE}.svc,${APP}"
+              LIDARR__SERVER__ALLOWEDHOSTS: "*"
             # LIDARR__POSTGRES__{HOST,PORT,USER,PASSWORD,MAINDB}, from the
             # ExternalSecret next door. envFrom rather than five secretKeyRefs
             # so the whole connection moves as one unit, and because the
