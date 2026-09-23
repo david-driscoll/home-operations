@@ -447,8 +447,22 @@ function rcloneRemoteName(planName: string) {
 /**
  * The CONDITION_SNAPSHOT_START hook body: mirror the source onto backrest's
  * staging path so restic has a local tree to snapshot.
+ *
+ * The `mkdir -p` in front is load-bearing. `rclone sync` from an EMPTY source
+ * exits 0 and never creates the destination root (verified against rclone
+ * 1.75.1), so the hook "succeeds" and restic then fails the plan with
+ * `path ... does not exist`. That is what equestria-garage-outline did from
+ * 2026-09-18 until Outline's first upload on 2026-09-23: the bucket was
+ * declared, annotated and still empty, and every nightly run went red on a
+ * directory rclone had no reason to make. An empty staging tree snapshots as an
+ * empty snapshot -- the correct backup of an empty source -- and
+ * `skipIfUnchanged` keeps the repeats free.
  */
 function preSyncCommand(plan: BackupPlanItem): string {
+  return `mkdir -p '${plan.path}' && ${syncCommand(plan)}`;
+}
+
+function syncCommand(plan: BackupPlanItem): string {
   const preSync = plan.preSync!;
 
   if (isS3PreSync(preSync)) {
