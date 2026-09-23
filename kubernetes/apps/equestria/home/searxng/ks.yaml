@@ -17,8 +17,6 @@ spec:
   dependsOn:
     - name: external-secrets
       namespace: kube-system
-    - name: volsync
-      namespace: volsync-system
   path: ./kubernetes/apps/equestria/home/searxng
   prune: true
   wait: true
@@ -32,10 +30,16 @@ spec:
   components:
     - ../../../../components/failover/fast-node-eviction
     - ../../../../components/tailscale
-    - ../../../../components/volsync
+    # NO components/volsync. Its PVC was mounted at /var/cache/searxng and
+    # nothing in this deployment ever wrote there: every nightly mover since
+    # 2026-03 logged "Directory is empty skipping backup", so the restic repo
+    # never got a snapshot and the `VolSync: Celestia` / `VolSync: Luna` copy
+    # jobs went red on a backup of nothing. The only runtime state SearXNG keeps
+    # lives in Valkey (settings.yml, db 8), and the settings are a ConfigMap in git. The
+    # cache is an emptyDir in helmrelease.yaml now; if a favicon resolver is
+    # ever enabled its cache is rebuildable and still does not need a backup.
     - ../../../../components/sablier
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      VOLSYNC_CAPACITY: 5Gi

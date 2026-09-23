@@ -93,8 +93,9 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
 
     persistence:
-      data:
-        existingClaim: ${APP}
+      # Scratch, not a PVC: see the note on components in ks.yaml.
+      cache:
+        type: emptyDir
         globalMounts:
           - path: /var/cache/searxng/
       config:
