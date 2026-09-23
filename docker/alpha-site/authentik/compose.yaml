@@ -179,13 +179,18 @@ services:
 #
 # NO LONGER WHAT AUTHENTIK CONNECTS TO. Since phase 2 of
 # docs/authentik-active-active/PLAN.md the .env points at stargate-command/authentik-pg,
-# and nothing in this stack uses the ${PGAPP_*} tokens any more. The block stays
-# so the frozen pre-cutover copy -- the soak's rollback path -- keeps a working
-# login role. Deleting the block would orphan that database rather than drop it
-# (dockerStackPostgres.ts: removed means RETAIN), so retirement goes through
-# `ensure: absent` in phase 4, once the soak has passed.
+# and nothing in this stack uses the ${PGAPP_*} tokens any more.
+#
+# TOMBSTONE (phase 4b). `ensure: absent` DROPS the frozen pre-cutover copy on the
+# shared postgres at the next deploy -- that copy was the soak's rollback path,
+# so this merges only after the soak passed. Once `docker logs
+# postgres-provision` shows the drop, delete this block, and with no tenants
+# left the shared postgres on this host can be gated off with
+# docker/alpha-site/postgres/.ignore. Not before: a tombstone on a host whose
+# postgres stack is gated is a hard error in DockgeLxc.
 x-postgres:
   database: authentik
+  ensure: absent
 
 # The SSO names resolve to the keepalived VIP, not to this Dockge host (phase 7
 # of docs/authentik-active-active/PLAN.md). Each stays the CNAME DockgeLxc has
