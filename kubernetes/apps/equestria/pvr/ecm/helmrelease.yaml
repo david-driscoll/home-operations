@@ -119,16 +119,19 @@ spec:
               # BOTH entries are needed, because ToolHive's MCPRemoteProxy
               # (kubernetes/apps/agents/agent-tools-servers/ecm.yaml) sends
               # two different Hosts. `initialize` goes to the remoteUrl, so
-              # Host is the Service name. The proxy then PINS the session to
-              # the pod it reached -- it records the backend pod IP and sends
-              # every follow-up there, with Host rewritten to that IP (0.51.1,
+              # Host is the `ecm-mcp` Service name. The proxy then PINS the
+              # session to the address that connection reached and sends every
+              # follow-up there, with Host rewritten to it (0.51.1,
               # pkg/transport/proxy/transparent: sessionMetadataBackendURL).
-              # With the Service name alone, initialize succeeds and every
-              # later call in the session 400s -- the vMCP marks the backend
-              # unavailable. The pod IP changes on every restart, hence the
-              # downward API rather than a literal.
+              # The pod IP changes on every restart, hence the downward API.
+              #
+              # That pinned address is only the pod IP because `ecm-mcp` is
+              # HEADLESS (service.mcp below). Through a ClusterIP, Cilium's
+              # socket-level LB makes getpeername() report the Service IP, so
+              # follow-ups arrived with Host=<ClusterIP> and 400'd -- seen live
+              # after #2018. Do not point the proxy at the `ecm` Service.
               - name: MCP_ALLOWED_HOSTS
-                value: ${APP}.${NAMESPACE}.svc.cluster.local,$(POD_IP)
+                value: ${APP}-mcp.${NAMESPACE}.svc.cluster.local,$(POD_IP)
             probes:
               # Liveness only, on the socket. The sidecar's /health fails closed
               # while no key is configured (fresh install, or after a Revoke),
@@ -165,11 +168,24 @@ spec:
 
     service:
       app:
+        # Pinned: with a second Service (`mcp` below) app-template suffixes
+        # every Service's name with its identifier, which would rename this
+        # one from `ecm` to `ecm-app` and break everything addressing `ecm`.
+        forceRename: ${APP}
         controller: app
         type: ClusterIP
         ports:
           http:
             port: *port
+      # The MCP sidecar's own Service, HEADLESS on purpose: DNS answers with
+      # the pod IP, so ToolHive pins sessions to an address the sidecar's
+      # Host allowlist accepts. See MCP_ALLOWED_HOSTS above. Renders as
+      # `ecm-mcp` -- upstream's compose service name too.
+      mcp:
+        controller: app
+        type: ClusterIP
+        clusterIP: None
+        ports:
           mcp:
             port: *mcpPort
 

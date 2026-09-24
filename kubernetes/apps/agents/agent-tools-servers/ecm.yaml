@@ -69,11 +69,13 @@ spec:
 # ECM's MCP server is a sidecar in ECM's own pod (it shares a credential
 # directory with the backend), so ToolHive only fronts it.
 #
-# In-cluster Service on the sidecar's port, plain HTTP. The sidecar's
-# DNS-rebinding guard only accepts Host headers on its allowlist; the proxy
-# rewrites Host to this URL's host, which is why the HelmRelease sets
-# MCP_ALLOWED_HOSTS to exactly `ecm.equestria.svc.cluster.local`. Change one,
-# change the other -- a mismatch is a 421 on every call.
+# The sidecar's HEADLESS `ecm-mcp` Service, plain HTTP -- not the `ecm`
+# ClusterIP. The proxy pins each session to the address its initialize
+# connection reached and sends follow-ups there with Host set to it; through a
+# ClusterIP, Cilium reports the Service IP, which the sidecar's DNS-rebinding
+# allowlist rejects (400 Invalid Host header). Headless resolves to the pod IP,
+# which MCP_ALLOWED_HOSTS admits via the downward API, next to this URL's host.
+# Change one, change the other.
 #
 # `allowPrivateEndpoint` is REQUIRED for a `cluster.local` host -- see
 # ./homelable.yaml.
@@ -89,7 +91,7 @@ kind: MCPRemoteProxy
 metadata:
   name: toolhive-ecm
 spec:
-  remoteUrl: http://ecm.equestria.svc.cluster.local:6101/mcp
+  remoteUrl: http://ecm-mcp.equestria.svc.cluster.local:6101/mcp
   allowPrivateEndpoint: true
   transport: streamable-http
   groupRef:
