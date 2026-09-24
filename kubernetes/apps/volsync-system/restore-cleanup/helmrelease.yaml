@@ -76,6 +76,29 @@ spec:
               - -c
               - |
                 set -eu
+                # In-cluster auth, spelled out: kubectl's auto-detection falls back
+                # to localhost:8080 on shining-armor. See kube-system/vsc-retention.
+                SA=/var/run/secrets/kubernetes.io/serviceaccount
+                [ -r "$SA/token" ] || { echo "No service-account token at $SA" >&2; exit 1; }
+                export KUBECONFIG=/tmp/kubeconfig
+                cat > "$KUBECONFIG" <<EOF
+                apiVersion: v1
+                kind: Config
+                clusters:
+                  - name: in-cluster
+                    cluster:
+                      server: https://kubernetes.default.svc
+                      certificate-authority: $SA/ca.crt
+                users:
+                  - name: sa
+                    user:
+                      tokenFile: $SA/token
+                contexts:
+                  - name: in-cluster
+                    context: {cluster: in-cluster, user: sa}
+                current-context: in-cluster
+                EOF
+
                 # Delete ReplicationDestination objects whose one-time bootstrap
                 # restore has completed (spec.trigger.manual == status.lastManualSync
                 # == "restore-once", the value set by components/volsync-restore).
