@@ -35,6 +35,15 @@ spec:
           podSelector:
             matchLabels:
               app: ws-david
+        # Traefik, for ./httproute.yaml -- the bearer door for clients off
+        # the cluster. The gateway's `local-api` middleware limits that to
+        # the LAN and the tailnet; the bearer still decides the profile.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: network
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
         # The per-profile MCPRemoteProxies of ../toolport-mcp -- the OAuth door's
         # path in. ToolHive labels every proxy pod it runs this way.
         - namespaceSelector:
