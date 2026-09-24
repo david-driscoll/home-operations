@@ -130,9 +130,10 @@ docker/         # Docker/Dockge stack configs per cluster
 
 If you are running **inside the agentboard pod** — `env | grep -q STAKATER_AGENTBOARD`,
 or `/etc/resolv.conf` searches `agents.svc.cluster.local` — then **use the
-`agent-tools` MCP server available inside that container**. It is ~357 tools
+`agent-tools` MCP server available inside that container**. It is ~890 tools
 across GitHub, Kubernetes, Proxmox (x5), UniFi, Docker (x4), Tailscale, Pulumi,
-OpenBao and Postgres, and it is the intended way to reach the estate from here.
+OpenBao, Postgres, the *arr stack, ECM and Teamarr (IPTV — see
+`docs/kubernetes/iptv.md`), and it is the intended way to reach the estate from here.
 
 - The pod resolves `agent-tools` to a cluster-internal, **unauthenticated**
   Service. Off-cluster clients keep the authenticated external hostname; the
