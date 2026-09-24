@@ -3,15 +3,16 @@
 #
 # The EXTERNAL door to ../toolport: a ToolHive VirtualMCPServer that gives
 # toolport the one thing it lacks -- an OAuth authorization server, federated
-# to authentik -- and publishes it on the TAILNET ONLY.
+# to authentik -- published at toolport-mcp.agents.<root domain> on the
+# internal gateway, reachable from the LAN and over Tailscale (./httproute.yaml).
 #
-#   tailnet client --OAuth--> vmcp-toolport (this) --bearer per profile-->
+#   client --OAuth--> vmcp-toolport (this) --bearer per profile-->
 #     MCPRemoteProxy toolport-<profile> --> toolport:8765 --> ToolHive backends
 #
 # toolport itself only speaks static bearer tokens, which is fine for
 # agentboard (in-namespace, NetworkPolicy-gated) but not for a laptop. Each
 # profile is one MCPRemoteProxy carrying that profile's token, so a signed-in
-# tailnet user sees every profile, prefixed `toolport-<profile>_…`.
+# user sees every profile, prefixed `toolport-<profile>_…`.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -51,22 +52,7 @@ spec:
       kind: VirtualMCPServer
       failed: status.phase == 'Failed'
       current: status.phase == 'Ready' || status.phase == 'Degraded'
-  components:
-    # Tailnet ONLY: this app has no HTTPRoute on the internal gateway, so the
-    # tailnet Ingress this component emits is its sole way in.
-    - ../../../components/tailscale
   postBuild:
     substitute:
       APP: *app
       NAMESPACE: *namespace
-      TAILSCALE_HOST: toolport-mcp
-      # The operator-created vMCP Service, `vmcp-<VirtualMCPServer name>`.
-      TAILSCALE_SERVICE: vmcp-toolport
-      TAILSCALE_PORT: "4483"
-      # The bare tailnet ipAllowList, NOT `tailscale-local`: that chain adds
-      # error-pages, which rewrites the 401s and JSON error bodies MCP OAuth
-      # discovery depends on -- the tailnet twin of why ../agent-tools-mcp
-      # uses `local-api` rather than `local-user`. And never `tailscale-user`:
-      # a browser forward-auth hop cannot be followed by an MCP client, and
-      # the vMCP does its own OAuth.
-      TAILSCALE_MIDDLEWARE: tailscale-network

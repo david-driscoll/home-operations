@@ -11,5 +11,5 @@ metadata:
 spec:
   type: inline
   inline:
-    issuer: https://toolport-mcp.${TAILSCALE_DOMAIN}
+    issuer: https://toolport-mcp.agents.${ROOT_DOMAIN}
     jwksAllowPrivateIP: true

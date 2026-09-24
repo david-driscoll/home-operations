@@ -35,7 +35,7 @@ spec:
           podSelector:
             matchLabels:
               app: ws-david
-        # The per-profile MCPRemoteProxies of ../toolport-mcp -- the tailnet door's
+        # The per-profile MCPRemoteProxies of ../toolport-mcp -- the OAuth door's
         # path in. ToolHive labels every proxy pod it runs this way.
         - namespaceSelector:
             matchLabels:

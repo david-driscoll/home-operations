@@ -309,9 +309,9 @@ replacement. Four differences matter to an agent:
     its `MCPExternalAuthConfig` only when a vMCP calls it; a direct call gets a 401
     from the backend. `homelable` is left out because it needs `X-API-Key`, and
     toolport can only send `Authorization: Bearer`.
-- **External door.** `kubernetes/apps/agents/toolport-mcp` is a vMCP whose four
+- **External door.** `kubernetes/apps/agents/toolport-mcp` is a vMCP whose
   backends are toolport itself, one MCPRemoteProxy per profile token. It is
-  published **on the tailnet only** (`toolport-mcp.<tailnet>`), with the same
+  published on the internal gateway (`toolport-mcp.agents.<root domain>`, LAN + Tailscale), with the same
   authentik-federated OAuth as `agent-tools-mcp`.
 
 New entries in the repo's `.mcp.json` need the same one-time project-server

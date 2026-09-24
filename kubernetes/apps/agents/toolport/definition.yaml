@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
 #
-# Internal-only: no route, no authentik block. The tailnet door is
+# Internal-only: no route, no authentik block. The OAuth door is
 # ../toolport-mcp. No gatus check either: every HTTP route answers 401 without a
 # bearer, and gatus cannot reach an in-cluster Service (see the commented-out
 # TCP check in apps/database/valkey/definition.yaml).

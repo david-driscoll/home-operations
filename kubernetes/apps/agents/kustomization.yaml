@@ -51,9 +51,10 @@ resources:
   - ./agent-tools-mcp/ks.yaml
   - ./agent-tools-servers/ks.yaml
   # toolport: a profile-scoped aggregator over those same backends (postgres,
-  # infrastructure, media, research), trialled alongside agent-tools as its
+  # infrastructure, networking, home, media, research), trialled alongside
+  # agent-tools as its
   # eventual replacement. ./toolport is the gateway (in-cluster, bearer per
-  # profile); ./toolport-mcp is its tailnet-only OAuth door, a vMCP whose four
+  # profile); ./toolport-mcp is its OAuth door (LAN + Tailscale), a vMCP whose
   # backends are toolport itself, one per profile.
   - ./toolport/ks.yaml
   - ./toolport-mcp/ks.yaml

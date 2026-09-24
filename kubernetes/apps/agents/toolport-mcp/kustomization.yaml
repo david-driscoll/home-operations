@@ -7,4 +7,5 @@ resources:
   - ./mcpoidcconfig.yaml
   - ./remoteproxies.yaml
   - ./virtualmcpserver.yaml
+  - ./httproute.yaml
   - ./definition.yaml

@@ -1,10 +1,10 @@
 ---
 # No `yaml-language-server: $schema=` line -- see ../agent-tools-servers/docs.yaml.
 #
-# The tailnet door to toolport. Modelled line for line on
+# The OAuth door to toolport. Modelled line for line on
 # ../agent-tools-mcp/virtualmcpserver.yaml (read its comments for the why of
-# each auth-server field); what differs is the hostname -- tailnet, not the
-# internal gateway -- and the group.
+# each auth-server field); what differs is the hostname
+# (toolport-mcp.agents.<root domain>, ./httproute.yaml) and the group.
 #
 # Tool names come out as `toolport-<profile>_<toolport tool>`, e.g.
 # `toolport-infrastructure_toolport_search_tools`: conflictResolution `prefix`
@@ -21,10 +21,10 @@ spec:
     type: oidc
     oidcConfigRef:
       name: toolport
-      audience: https://toolport-mcp.${TAILSCALE_DOMAIN}/mcp
-      resourceUrl: https://toolport-mcp.${TAILSCALE_DOMAIN}/mcp
+      audience: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
+      resourceUrl: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
   authServerConfig:
-    issuer: https://toolport-mcp.${TAILSCALE_DOMAIN}
+    issuer: https://toolport-mcp.agents.${ROOT_DOMAIN}
     upstreamProviders:
       - name: authentik
         type: oauth2
@@ -40,7 +40,7 @@ spec:
           clientSecretRef:
             name: toolhive-oidc
             key: client-secret
-          redirectUri: https://toolport-mcp.${TAILSCALE_DOMAIN}/oauth/callback
+          redirectUri: https://toolport-mcp.agents.${ROOT_DOMAIN}/oauth/callback
           scopes:
             - openid
             - profile

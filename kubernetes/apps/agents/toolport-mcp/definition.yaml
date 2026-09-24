@@ -3,8 +3,7 @@
 #
 # No `authentik:` block: the vMCP runs its own OAuth server federated to the
 # shared `toolhive` client (../toolhive/definition.yaml), exactly like
-# ../agent-tools-mcp. No gatus: it lives on the tailnet only, and no gatus
-# check in this repo probes a tailnet host.
+# ../agent-tools-mcp, whose gatus checks these mirror.
 apiVersion: driscoll.dev/v1
 kind: ApplicationDefinition
 metadata:
@@ -12,8 +11,34 @@ metadata:
 spec:
   name: toolport MCP
   category: AI
-  description: Tailnet-only, OAuth-protected door to the toolport profiles (postgres, infrastructure, networking, home, media, research)
+  description: OAuth-protected door to the toolport profiles (postgres, infrastructure, networking, home, media, research)
   icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
   access_policy:
     groups:
       - admins
+  gatus:
+    - name: toolport MCP rejects unauthenticated
+      group: "Applications"
+      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      conditions:
+        - "[STATUS] == 401"
+    - name: toolport MCP protected-resource metadata
+      group: "Applications"
+      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-protected-resource/mcp
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].resource == https://toolport-mcp.agents.${ROOT_DOMAIN}/mcp"
+        - "[BODY].authorization_servers[0] == https://toolport-mcp.agents.${ROOT_DOMAIN}"
+    - name: toolport MCP authorization server
+      group: "Applications"
+      url: https://toolport-mcp.agents.${ROOT_DOMAIN}/.well-known/oauth-authorization-server
+      method: GET
+      conditions:
+        - "[STATUS] == 200"
+        - "[BODY].issuer == https://toolport-mcp.agents.${ROOT_DOMAIN}"
+        - "[BODY].registration_endpoint == https://toolport-mcp.agents.${ROOT_DOMAIN}/oauth/register"

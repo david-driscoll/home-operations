@@ -116,6 +116,6 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
   anyway -- servers and profiles are changed in
   `kubernetes/apps/agents/toolport/resources/registry.json`.
 - **Where it is reachable.** In agentboard the profile entries are already in
-  `.mcp.json`, each sending its profile's bearer. Off-cluster, the tailnet-only
-  OAuth door is `https://toolport-mcp.<tailnet>/mcp`; there every profile
+  `.mcp.json`, each sending its profile's bearer. Off-cluster (LAN or Tailscale), the
+  OAuth door is `https://toolport-mcp.agents.<root domain>/mcp`; there every profile
   appears at once, prefixed `toolport-<profile>_`.
