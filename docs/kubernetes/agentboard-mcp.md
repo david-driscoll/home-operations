@@ -74,7 +74,7 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 
 ## What is behind the door
 
-~357 tools, prefixed by backend. Names are the same on both doors:
+~890 tools, prefixed by backend. Names are the same on both doors:
 
 | Prefix | Tools | Prefix | Tools |
 |---|---|---|---|
@@ -83,6 +83,17 @@ covers sessions started from `$HOME` or from a directory with no `.mcp.json`.
 | `toolhive-tailscale_` | 19 | `toolhive-unifi-{network,protect,access}_` | 5 each |
 | `toolhive-docker-{luna,celestia,alpha-site}_` | 19 each | `toolhive-kubernetes_` | 5 |
 | `toolhive-microsoft-docs_` | 3 | `toolhive-{postgres,openbao,degoog,context7}_` | 2 each |
+| `toolhive-ecm_` | ~197 | `toolhive-teamarr_` | ~180 |
+| `toolhive-arr-mcp-{plex,jellyfin}_` | 38 each | `toolhive-homelable_` | 58 |
+| `toolhive-home-assistant_` | ~21 | | |
+
+`toolhive-teamarr_`'s set is built from Teamarr's live `/openapi.json` when its
+pod starts (destructive tools hidden), so the count moves with Teamarr's version
+and is only fixed until the next restart. `toolhive-home-assistant_`'s depends on
+what Home Assistant exposes. `toolhive-ecm_`, `toolhive-arr-mcp-*_` and
+`toolhive-teamarr_` all front `equestria` apps and fail 02:00-09:00, when that
+namespace is shed. For what the ECM and Teamarr tools are for — and which ECM
+write tools currently fail with a 401 — see [iptv.md](iptv.md).
 
 Note `toolhive-kubernetes_*` is the working Kubernetes path from this pod. The
 separate `kubernetes` entry in `.mcp.json` is an `npx kubernetes-mcp-server`

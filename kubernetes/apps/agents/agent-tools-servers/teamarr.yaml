@@ -1,0 +1,110 @@
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# teamarr-mcp (github.com/lukeeexd/teamarr-mcp, ghcr.io/lukeeexd/teamarr-mcp)
+# -- Teamarr's sports-EPG API as MCP tools: teams, templates, event groups,
+# channels, EPG generation. A Python FastMCP server that speaks Streamable HTTP
+# natively at /mcp, so like ./degoog.yaml this needs no stdio-proxy plumbing
+# -- only the /tmp emptyDir below.
+#
+# An MCPServer RUNNING THE IMAGE, not an MCPRemoteProxy in front of a sidecar
+# the way ./ecm.yaml and ./arr-mcp.yaml are: teamarr-mcp is stateless. It holds
+# no config file, no volume and no credential, so there is nothing that has to
+# live next to Teamarr in `equestria`.
+#
+# NO SECRET. Teamarr has no API auth, so TEAMARR_API_KEY stays unset and there
+# is no ExternalSecret and no MCPExternalAuthConfig -- and therefore no
+# `outgoingAuth.backends` entry in either ../agent-tools-mcp VirtualMCPServer
+# (those are only for backends carrying an externalAuthConfigRef; see
+# the homelable note there). If Teamarr ever grows auth, all three halves land
+# together.
+#
+# DESTRUCTIVE TOOLS OFF, by decision: default write mode (READ_ONLY unset), so
+# agents can create and edit, but TEAMARR_MCP_ENABLE_DESTRUCTIVE is "false"
+# spelled out rather than left to the default, which hides every DELETE plus
+# backup/restore, restore-defaults, channel reset and the cache clears. Flip it
+# here, deliberately, if that ever changes.
+#
+# THE TOOL SET IS BUILT FROM TEAMARR'S LIVE /openapi.json AT STARTUP, not at
+# call time. After a Teamarr upgrade (kubernetes/apps/equestria/pvr/teamarr),
+# restart this pod or it keeps serving the old version's tools. If Teamarr is
+# unreachable when this pod starts -- which includes any start inside the
+# window below -- it falls back to the spec bundled in the image (Teamarr
+# 2.17.0) and stays on it until the next restart. `teamarr_info` reports which
+# spec it loaded.
+#
+# TEAMARR_URL is the in-cluster ClusterIP address, not the public
+# https://teamarr.${ROOT_DOMAIN} -- that route sits behind the `local-user`
+# middleware, and this traffic never leaves the cluster network anyway.
+#
+# EXPECTED TO BE UNREACHABLE 02:00-09:00: Teamarr sheds nightly with the rest
+# of `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
+# ./ecm.yaml's and ./arr-mcp.yaml's backends. This pod stays up through the
+# window; a tool call in it fails rather than answering from a cache.
+#
+# `latest@sha256:` because upstream publishes only `latest`/`main`; Renovate's
+# kubernetes manager keeps the digest current.
+#
+# NO oidcConfigRef/authServerRef -- see ./kubernetes.yaml's
+# header. This server joins ../agent-tools-mcp's MCPGroup instead.
+#
+# `metadata.name` is the tool-name prefix: clients see
+# `mcp__agent-tools__toolhive-teamarr_<tool>`.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPServer
+metadata:
+  name: toolhive-teamarr
+spec:
+  image: ghcr.io/lukeeexd/teamarr-mcp:latest@sha256:15adb331f93b99d3e6ac4b8626662d60d638d1ff75f586853a498f9e38836807
+  transport: streamable-http
+  proxyPort: 8000
+  mcpPort: 8000
+  groupRef:
+    name: agent-tools
+
+  env:
+    - name: TEAMARR_URL
+      value: http://teamarr.equestria.svc.cluster.local:9195
+    # "http", NOT "streamable-http": the image's config.py accepts exactly
+    # {"http", "stdio"} and refuses to start on anything else. "http" IS
+    # FastMCP's Streamable HTTP transport, served at /mcp. The operator's own
+    # MCP_TRANSPORT/MCP_PORT injections are different names and are ignored.
+    - name: TEAMARR_MCP_TRANSPORT
+      value: http
+    - name: TEAMARR_MCP_HOST
+      value: 0.0.0.0
+    # Must match `mcpPort` above.
+    - name: TEAMARR_MCP_PORT
+      value: "8000"
+    - name: TEAMARR_MCP_ENABLE_DESTRUCTIVE
+      value: "false"
+    - name: TEAMARR_MCP_LOG_LEVEL
+      value: INFO
+    # The operator's read-only root filesystem leaves the image user's home
+    # (/home/mcp) unwritable; point anything that wants a cache at the
+    # emptyDir below instead.
+    - name: HOME
+      value: /tmp
+
+  # Same /tmp emptyDir as ./docs.yaml, for the same reason: the operator runs
+  # MCP server pods with a read-only root filesystem regardless of what this
+  # file says. The operator also forces uid/gid 1000, which is the image's own
+  # `mcp` user, so nothing else needs overriding.
+  podTemplateSpec:
+    spec:
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      containers:
+        # `mcp` is the operator's fixed container name -- see ./docs.yaml.
+        - name: mcp
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 384Mi
