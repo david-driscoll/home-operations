@@ -329,9 +329,8 @@
       // The gateway image (docker, kubernetes/apps/agents/toolport) and the
       // vendored skill (github-releases, .claude/skills/toolport/SKILL.md)
       // are one upstream release: the skill documents the meta-tools that
-      // exact gateway exposes. One PR, so .github/workflows/
-      // toolport-skill-sync.yaml can refresh the skill body in the same
-      // branch the image moves in.
+      // exact gateway exposes. One PR, so `mise run toolport-skill-sync`
+      // refreshes the skill body in the same branch the image moves in.
       description: "toolport Group",
       groupName: "toolport",
       matchPackageNames: [
@@ -900,9 +899,8 @@
       // segment" pattern verbatim.
       //
       // A bump here is HALF a change on its own (same shape as the Pulumi.yaml
-      // manager above): only the URL moves. .github/workflows/
-      // toolport-skill-sync.yaml finishes it on Renovate's branch by running
-      // `mise run toolport-skill-sync`.
+      // manager above): only the URL moves. Finish it on Renovate's branch
+      // with `mise run toolport-skill-sync` before merging.
       description: "Vendored toolport skill (.claude/skills/toolport/SKILL.md)",
       customType: "regex",
       managerFilePatterns: [

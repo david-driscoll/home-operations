@@ -85,3 +85,24 @@ configMapGenerator:
       - bash_profile=./resources/bash_profile
     options:
       disableNameSuffixHash: true
+  # User-wide Claude Code skills, mounted under ~/.claude/skills/ by
+  # ./helmrelease.yaml's `skills` persistence. Sourced straight from the repo's
+  # own .claude/skills/ -- ONE copy, the one sessions in the checkout already
+  # load, delivered at the deployed git revision rather than fetched at boot.
+  #
+  # The path leaves this directory; Flux's kustomize-controller builds with
+  # LoadRestrictionsNone, and components/common's cluster-versions env file is
+  # the precedent. A local `kubectl kustomize` needs
+  # `--load-restrictor LoadRestrictionsNone` for the same reason.
+  #
+  # Substitution OFF: a skill is prose that may one day quote a dollar-brace
+  # template, and Flux's envsubst must not rewrite (or, in strict mode, fail
+  # on) it -- which also means the NAME must be literal, not ${APP}-based.
+  # disableNameSuffixHash because ./helmrelease.yaml mounts it by name.
+  - name: agentboard-skills
+    files:
+      - toolport-SKILL.md=../../../../.claude/skills/toolport/SKILL.md
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

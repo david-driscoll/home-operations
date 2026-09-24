@@ -205,29 +205,11 @@ mise prune --yes || echo "WARNING: mise prune failed; old tool versions remain o
 mise cache prune || true
 npm cache clean --force >/dev/null 2>&1 || true
 
-# USER-WIDE SKILLS. Claude Code loads ~/.claude/skills/<name>/SKILL.md for
-# every session regardless of its working directory -- unlike the repo's
-# .claude/skills, which only a session inside the checkout sees. The toolport
-# skill (how to drive toolport's lazy search/call meta-tools) is fetched from
-# the repo's own copy on main, $$TOOLPORT_SKILL_URL in ../helmrelease.yaml, so
-# there is exactly one copy to keep current and Renovate keeps that one in
-# step with the gateway image.
-#
-# NON-FATAL and replace-on-success only: download to a temp file and move it
-# over the old copy, so an offline boot keeps the last good skill rather than
-# leaving an empty or half-written one on the PVC.
-if [ -n "$${TOOLPORT_SKILL_URL:-}" ]; then
-  echo "==> installing toolport skill (user-wide)"
-  skill_dir=/root/.claude/skills/toolport
-  mkdir -p "$$skill_dir"
-  if curl -fsSL --max-time 30 "$$TOOLPORT_SKILL_URL" -o "$$skill_dir/SKILL.md.tmp" \
-     && [ -s "$$skill_dir/SKILL.md.tmp" ]; then
-    mv "$$skill_dir/SKILL.md.tmp" "$$skill_dir/SKILL.md"
-  else
-    rm -f "$$skill_dir/SKILL.md.tmp"
-    echo "WARNING: could not fetch the toolport skill; keeping any previous copy" >&2
-  fi
-fi
+# User-wide skills (~/.claude/skills/toolport/SKILL.md) are NOT installed here
+# any more: ../helmrelease.yaml mounts them from the `-skills` ConfigMap, built
+# from the repo's .claude/skills/ at the deployed revision. They used to be
+# curl'd from main at boot, which could drift from what was deployed and
+# failed on an offline boot.
 
 # NO TMUX SESSION IS CREATED HERE, and that is a deliberate reversal. This
 # used to be

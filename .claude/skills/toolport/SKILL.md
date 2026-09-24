@@ -6,14 +6,16 @@ description: Use when you need homelab tools through toolport -- the toolport-in
 <!--
 Vendored from upstream. Renovate bumps the version in the URL below together
 with the ghcr.io/btsouth/toolport-gateway image (the `toolport` group in
-.github/renovate.json5); `mise run toolport-skill-sync` then replaces
-everything between the BEGIN/END markers with that version's text, and
-.github/workflows/toolport-skill-sync.yaml does it on Renovate's PR for you.
+.github/renovate.json5). A bump moves only the URL: run
+`mise run toolport-skill-sync` on that PR to replace everything between the
+BEGIN/END markers with the new version's text (`--check` reports staleness).
 Edit ONLY outside the markers: the frontmatter above and the estate section
-below are ours; the body in between is overwritten on every bump.
+below are ours; the body in between is overwritten on every sync.
 
-agentboard installs this same file user-wide at boot, from main
-(TOOLPORT_SKILL_URL in kubernetes/apps/agents/agentboard/helmrelease.yaml).
+agentboard mounts this same file user-wide, at
+~/.claude/skills/toolport/SKILL.md, via the `agentboard-skills` ConfigMap
+(kubernetes/apps/agents/agentboard/kustomization.yaml). Any edit here reaches
+every agentboard session on the next deploy.
 
 renovate: datasource=github-releases depName=btsouth/toolport
 source: https://raw.githubusercontent.com/btsouth/toolport/v1.20.0/packaging/agent-plugin/toolport/skills/toolport/SKILL.md
