@@ -24,7 +24,7 @@ spec:
     - "toolport-mcp.agents.${ROOT_DOMAIN}"
   rules:
     - backendRefs:
-        - name: vmcp-toolport
+        - name: vmcp-toolport-mcp
           port: 4483
       filters:
         - type: ExtensionRef
