@@ -65,11 +65,9 @@ resources:
   # `toolhive-outline` blocks in ../agent-tools-mcp/virtualmcpserver.yaml and
   # ../agent-tools-mcp/virtualmcpserver-internal.yaml. Full steps in the file.
   # - ./outline.yaml
-  # ECM's MCP sidecar. Commented out for the same reason as outline.yaml: its
-  # key only exists once an ECM admin has pressed Regenerate Key. Enable
-  # together with the `toolhive-ecm` blocks in both VirtualMCPServers. Full
-  # steps in the file.
-  # - ./ecm.yaml
+  # ECM's MCP sidecar. Its key is minted by an ECM admin and seeded into
+  # OpenBao by hand -- see the file's header before rotating it.
+  - ./ecm.yaml
   # TWO remote proxies in one file, one per media server -- arr-mcp's schema
   # refuses a config naming both jellyfin and plex, and the estate runs both.
   - ./arr-mcp.yaml
