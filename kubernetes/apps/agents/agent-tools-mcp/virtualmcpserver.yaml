@@ -230,14 +230,13 @@ spec:
       #   type: externalAuthConfigRef
       #   externalAuthConfigRef:
       #     name: outline
-      # Same two-halves rule, for `- ./ecm.yaml` in
-      # ../agent-tools-servers/kustomization.yaml (and the twin block in the
-      # other VirtualMCPServer). headerInjection, not bearerToken -- see
-      # ../agent-tools-servers/ecm.yaml for why.
-      # toolhive-ecm:
-      #   type: externalAuthConfigRef
-      #   externalAuthConfigRef:
-      #     name: ecm
+      # ECM's MCP sidecar -- ../agent-tools-servers/ecm.yaml. Same rule as the
+      # bearer-token backends above; keep in step with the twin block in the
+      # other VirtualMCPServer.
+      toolhive-ecm:
+        type: externalAuthConfigRef
+        externalAuthConfigRef:
+          name: ecm
 
   serviceType: ClusterIP
 

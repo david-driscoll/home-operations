@@ -1,33 +1,24 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
 #
-# ⚠️ NOT YET ENABLED -- same shape and same reason as ./outline.yaml. This file
-# is commented out of ./kustomization.yaml, and the matching
-# `outgoingAuth.backends.toolhive-ecm` entries are commented out in BOTH
-# ../agent-tools-mcp/virtualmcpserver.yaml and
-# ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+# ECM's MCP client key. Human-minted, NOT generated here: ECM creates the key
+# itself and never displays or logs the value, so the only way to learn it is
+# to issue a new one from the UI. To (re)seed it:
 #
-# The credential below cannot exist until a human has minted it. ECM generates
-# its MCP client key itself and never displays or logs the generated value --
-# the only way to learn it is to issue a new one from the UI:
-#
-#   1. The ECM pod must be running WITH its MCP sidecar
-#      (kubernetes/apps/equestria/pvr/ecm/helmrelease.yaml, container `mcp`).
-#   2. Sign in to https://ecm.<root domain> as an ECM admin ->
+#   1. Sign in to https://ecm.<root domain> as an ECM admin ->
 #      Settings -> MCP Integration -> Regenerate Key. Copy the key it shows.
 #      This is ECM's MCP key, NOT the Dispatcharr API key.
-#   3. Seed it:
-#        bao kv put secrets/clusters/equestria/apps/ecm/mcp-api-key \
-#          password="<the key>"
-#   4. Uncomment `- ./ecm.yaml` in ./kustomization.yaml AND the `toolhive-ecm:`
-#      blocks in both VirtualMCPServers, then merge.
+#   2. bao kv put secrets/clusters/equestria/apps/ecm/mcp-api-key \
+#        password="<the key>"
 #
-# Any later Regenerate or Revoke in the ECM UI invalidates the seeded copy
-# immediately -- repeat step 3 after one. A restart does not: the key lives on
-# ECM's config claim (the `mcp-secrets` subPath), not in an emptyDir.
+# Any Regenerate or Revoke in the ECM UI invalidates the seeded copy
+# immediately -- every ECM tool call is a 401 until step 2 is repeated. A
+# restart does not: the key lives on ECM's config claim (the `mcp-secrets`
+# subPath), not in an emptyDir.
 #
-# Enabling early is not a soft failure. ./ks.yaml carries `wait: true`, so an
-# MCPRemoteProxy whose Secret cannot resolve blocks every server here.
+# Deleting that OpenBao item is not a soft failure either. ./ks.yaml carries
+# `wait: true`, so an MCPRemoteProxy whose Secret cannot resolve blocks every
+# server here.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -56,17 +47,9 @@ spec:
 # No `yaml-language-server: $schema=` line -- see ./docs.yaml.
 #
 # `headerInjection` carrying a literal `Authorization: Bearer <key>`, NOT
-# `type: bearerToken`, although bearerToken is the purpose-built type for
-# exactly this header. The VirtualMCPServers cannot convert it: both report
-#
-#   DiscoveredAuthConfig-toolhive-arr-mcp-plex: ConversionFailed
-#   "failed to convert MCPExternalAuthConfig: unsupported auth type: bearerToken"
-#
-# (same for arr-mcp-jellyfin and home-assistant, checked live 2026-09-24), and
-# a backend whose auth fails to convert is dropped from the aggregate entirely
-# -- none of those three appear in `discoveredBackends`. headerInjection is
-# the type ./homelable.yaml proves works end to end, so ECM uses it with the
-# prefix baked into the Secret.
+# `type: bearerToken`: ToolHive 0.51.1's vMCP has no bearerToken converter and
+# silently drops such a backend from agent-tools. See ./arr-mcp.yaml's auth
+# config for the full account.
 apiVersion: toolhive.stacklok.dev/v1beta1
 kind: MCPExternalAuthConfig
 metadata:
