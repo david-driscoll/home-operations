@@ -7,10 +7,10 @@
     { "id": "postgres", "name": "Postgres", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-postgres-proxy.agents.svc.cluster.local:8080/mcp" },
 
     { "id": "kubernetes", "name": "Kubernetes", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-kubernetes-proxy.agents.svc.cluster.local:8080/mcp" },
-    { "id": "proxmox-twilight-sparkle", "name": "Proxmox twilight-sparkle", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-twilight-sparkle-proxy.agents.svc.cluster.local:8080/mcp" },
-    { "id": "proxmox-celestia", "name": "Proxmox celestia", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-celestia-proxy.agents.svc.cluster.local:8080/mcp" },
-    { "id": "proxmox-luna", "name": "Proxmox luna", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-luna-proxy.agents.svc.cluster.local:8080/mcp" },
-    { "id": "proxmox-alpha-site", "name": "Proxmox alpha-site", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-alpha-site-proxy.agents.svc.cluster.local:8080/mcp" },
+    { "id": "proxmox-twilight-sparkle", "name": "Proxmox twilight-sparkle", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-twilight-sparkle-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-celestia", "name": "Proxmox celestia", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-celestia-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-luna", "name": "Proxmox luna", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-luna-proxy.agents.svc.cluster.local:8000/mcp" },
+    { "id": "proxmox-alpha-site", "name": "Proxmox alpha-site", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-proxmox-alpha-site-proxy.agents.svc.cluster.local:8000/mcp" },
     { "id": "docker-celestia", "name": "Docker celestia", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-celestia-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "docker-luna", "name": "Docker luna", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-luna-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "docker-alpha-site", "name": "Docker alpha-site", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-docker-alpha-site-proxy.agents.svc.cluster.local:8080/mcp" },
@@ -32,12 +32,13 @@
       "url": "http://arr-mcp-jellyfin.equestria.svc.cluster.local:6060/mcp",
       "env": [{ "key": "ARR_JELLYFIN_TOKEN", "secret": true }]
     },
+    { "id": "teamarr", "name": "Teamarr", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-teamarr-proxy.agents.svc.cluster.local:8000/mcp" },
     { "id": "ecm", "name": "Enhanced Channel Manager", "transport": "http", "source": "manual", "url": "http://ecm-mcp.equestria.svc.cluster.local:6101/mcp", "env": [{ "key": "ECM_TOKEN", "secret": true }] },
 
     { "id": "context7", "name": "Context7", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-context7-proxy.agents.svc.cluster.local:8080/mcp" },
     { "id": "microsoft-docs", "name": "Microsoft Learn", "transport": "http", "source": "manual", "url": "https://learn.microsoft.com/api/mcp" },
     { "id": "nuget", "name": "NuGet", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-nuget-proxy.agents.svc.cluster.local:8080/mcp" },
-    { "id": "degoog", "name": "degoog", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-degoog-proxy.agents.svc.cluster.local:8080/mcp" }
+    { "id": "degoog", "name": "degoog", "transport": "http", "source": "manual", "url": "http://mcp-toolhive-degoog-proxy.agents.svc.cluster.local:4443/mcp" }
   ],
   "profiles": [
     { "id": "postgres", "name": "Postgres", "enabledServerIds": ["postgres"] },
@@ -48,7 +49,7 @@
     },
     { "id": "networking", "name": "Networking", "enabledServerIds": ["unifi-network", "unifi-protect", "unifi-access", "tailscale"] },
     { "id": "home", "name": "Home", "enabledServerIds": ["home-assistant"] },
-    { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm"] },
+    { "id": "media", "name": "Media", "enabledServerIds": ["arr-plex", "arr-jellyfin", "ecm", "teamarr"] },
     { "id": "research", "name": "Research", "enabledServerIds": ["context7", "microsoft-docs", "nuget", "degoog"] }
   ],
   "activeProfileId": "infrastructure",

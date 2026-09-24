@@ -302,8 +302,10 @@ replacement. Four differences matter to an agent:
   installs user-wide at boot) explains how to use them.
 - **Two backend paths.**
   - MCPServer backends (stdio or HTTP) are reached through their ToolHive proxy
-    Services (`mcp-toolhive-<name>-proxy:8080`), which hold the credentials inside
-    the pod.
+    Services (`mcp-toolhive-<name>-proxy`), which hold the credentials inside
+    the pod. The Service listens on the MCPServer's **`proxyPort`**, not always
+    8080: proxmox and teamarr use 8000, degoog uses 4443. Copy the port from the
+    server's manifest when adding one to `registry.json`.
   - MCPRemoteProxy backends are called **directly** with toolport's own bearer
     (`toolport/externalsecret.yaml`, `toolport-backends`). A remote proxy applies
     its `MCPExternalAuthConfig` only when a vMCP calls it; a direct call gets a 401

@@ -1,6 +1,6 @@
 ---
 name: toolport
-description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, GitHub, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
+description: Use when you need homelab tools through toolport -- the toolport-infrastructure, toolport-networking, toolport-home, toolport-media, toolport-postgres or toolport-research MCP servers (Kubernetes, Proxmox, Docker, UniFi, Tailscale, GitHub, Pulumi, OpenBao, Home Assistant, the *arr stack, ECM, Teamarr, every Postgres database, docs search). Covers the search-then-call workflow toolport's lazy discovery requires; search a profile before concluding a capability is unavailable.
 ---
 
 <!--
@@ -93,7 +93,7 @@ ToolHive-run MCP backends `agent-tools` aggregates. So:
     `docker-{celestia,luna,alpha-site}`, `github`, `pulumi`, `openbao`
   - `toolport-networking`: `unifi-{network,protect,access}`, `tailscale`
   - `toolport-home`: `home-assistant`
-  - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`
+  - `toolport-media`: `arr-plex`, `arr-jellyfin`, `ecm`, `teamarr`
   - `toolport-postgres`: `postgres` -- every database in the estate, one
     DBHub source each. Its tools are per database:
     `postgres__execute_sql_<db>` and `postgres__search_objects_<db>`, with `-`
