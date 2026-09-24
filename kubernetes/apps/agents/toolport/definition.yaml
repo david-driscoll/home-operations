@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# Internal-only: no route, no authentik block. The tailnet door is
+# ../toolport-mcp. No gatus check either: every HTTP route answers 401 without a
+# bearer, and gatus cannot reach an in-cluster Service (see the commented-out
+# TCP check in apps/database/valkey/definition.yaml).
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: toolport
+  category: AI
+  description: Profile-scoped MCP gateway (postgres, infrastructure, media, research) over the ToolHive backends
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins

@@ -3,6 +3,26 @@
     "agent-tools": {
       "type": "http",
       "url": "http://vmcp-agent-tools-internal.agents.svc.cluster.local:4483/mcp"
+    },
+    "toolport-infrastructure": {
+      "type": "http",
+      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
+      "headers": { "Authorization": "Bearer $${TOOLPORT_TOKEN_INFRASTRUCTURE}" }
+    },
+    "toolport-media": {
+      "type": "http",
+      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
+      "headers": { "Authorization": "Bearer $${TOOLPORT_TOKEN_MEDIA}" }
+    },
+    "toolport-postgres": {
+      "type": "http",
+      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
+      "headers": { "Authorization": "Bearer $${TOOLPORT_TOKEN_POSTGRES}" }
+    },
+    "toolport-research": {
+      "type": "http",
+      "url": "http://toolport.agents.svc.cluster.local:8765/mcp",
+      "headers": { "Authorization": "Bearer $${TOOLPORT_TOKEN_RESEARCH}" }
     }
   }
 }

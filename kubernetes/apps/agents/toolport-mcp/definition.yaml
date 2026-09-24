@@ -1,0 +1,19 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/david-driscoll/home-operations/refs/heads/main/schemas/definition.schema.json
+#
+# No `authentik:` block: the vMCP runs its own OAuth server federated to the
+# shared `toolhive` client (../toolhive/definition.yaml), exactly like
+# ../agent-tools-mcp. No gatus: it lives on the tailnet only, and no gatus
+# check in this repo probes a tailnet host.
+apiVersion: driscoll.dev/v1
+kind: ApplicationDefinition
+metadata:
+  name: ${APP}
+spec:
+  name: toolport MCP
+  category: AI
+  description: Tailnet-only, OAuth-protected door to the toolport profiles (postgres, infrastructure, media, research)
+  icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/toolhive.svg
+  access_policy:
+    groups:
+      - admins

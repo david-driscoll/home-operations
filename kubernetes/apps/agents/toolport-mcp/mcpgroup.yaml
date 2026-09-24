@@ -1,0 +1,12 @@
+---
+# No `yaml-language-server: $schema=` line -- see ../agent-tools-servers/docs.yaml.
+#
+# The four toolport-<profile> MCPRemoteProxies in ./remoteproxies.yaml, and
+# nothing else. Kept apart from `agent-tools` so the tailnet door exposes
+# toolport's profiles only, never the raw ToolHive catalogue.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPGroup
+metadata:
+  name: toolport
+spec:
+  description: toolport profiles (postgres, infrastructure, media, research), for the tailnet-only toolport-mcp door

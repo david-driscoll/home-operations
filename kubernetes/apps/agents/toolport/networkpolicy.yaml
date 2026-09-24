@@ -1,0 +1,57 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/master/networkpolicy-networking-k8s-io-v1.json
+#
+# Who may reach toolport at all. The bearer tokens decide WHICH profile a
+# caller gets; this decides whether the connection is accepted in the first
+# place. Plain http, no TLS -- confidentiality rests on this policy, exactly as
+# it does for ../agent-tools-mcp/networkpolicy.yaml's internal vMCP.
+#
+# Selecting the pod makes it deny-by-default for ingress, so any new client
+# (monitoring included) has to be added here explicitly.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ${APP}-allow-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ${APP}
+      app.kubernetes.io/controller: ${APP}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # agentboard -- the agent runner, via its mcp.json entries.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentboard
+        # The kube-coder workspace, same as agent-tools-internal allows.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ws-david
+          podSelector:
+            matchLabels:
+              app: ws-david
+        # The four MCPRemoteProxies of ../toolport-mcp -- the tailnet door's
+        # path in. ToolHive labels every proxy pod it runs this way.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+          podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [mcpremoteproxy]
+              - key: toolhive-name
+                operator: In
+                values:
+                  - toolport-postgres
+                  - toolport-infrastructure
+                  - toolport-media
+                  - toolport-research
+      ports:
+        - protocol: TCP
+          port: 8765

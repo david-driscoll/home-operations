@@ -22,6 +22,26 @@
       "type": "http",
       "url": "${AGENT_TOOLS_MCP_URL:-https://agent-tools-mcp.agents.driscoll.tech/mcp}"
     },
+    "toolport-infrastructure": {
+      "type": "http",
+      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "headers": { "Authorization": "Bearer ${TOOLPORT_TOKEN_INFRASTRUCTURE:-}" }
+    },
+    "toolport-media": {
+      "type": "http",
+      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "headers": { "Authorization": "Bearer ${TOOLPORT_TOKEN_MEDIA:-}" }
+    },
+    "toolport-postgres": {
+      "type": "http",
+      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "headers": { "Authorization": "Bearer ${TOOLPORT_TOKEN_POSTGRES:-}" }
+    },
+    "toolport-research": {
+      "type": "http",
+      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "headers": { "Authorization": "Bearer ${TOOLPORT_TOKEN_RESEARCH:-}" }
+    },
     "crew_state": {
       "command": "crew",
       "args": ["state-mcp"],

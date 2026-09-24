@@ -1,0 +1,33 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./externalsecret.yaml
+  - ./helmrelease.yaml
+  - ./networkpolicy.yaml
+  - ./definition.yaml
+configMapGenerator:
+  # toolport's registry TEMPLATE -- servers, profiles, httpClients with hash
+  # placeholders. Kept as a real .json file so `jq` and editors can check it.
+  # Substitution stays ON: the home-assistant URL needs ${ROOT_DOMAIN}.
+  #
+  # disableNameSuffixHash because ./helmrelease.yaml mounts it by literal name;
+  # Reloader (the controller's `reloader.stakater.com/auto`) is what rolls the
+  # pod when it changes, not a hash suffix.
+  - name: ${APP}-registry
+    files:
+      - registry.json=./resources/registry.json
+    options:
+      disableNameSuffixHash: true
+  # The initContainer script that turns the template into the live registry.
+  # Substitution OFF -- it is shell, and Flux's envsubst would read its
+  # `${profile}` etc. as unset substitution variables and fail the build in
+  # strict mode. Same split as apps/volsync-system/lock-canceller.
+  - name: ${APP}-seed
+    files:
+      - seed-registry.sh=./resources/seed-registry.sh
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled

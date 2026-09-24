@@ -326,6 +326,22 @@
       },
     },
     {
+      // The gateway image (docker, kubernetes/apps/agents/toolport) and the
+      // vendored skill (github-releases, .claude/skills/toolport/SKILL.md)
+      // are one upstream release: the skill documents the meta-tools that
+      // exact gateway exposes. One PR, so .github/workflows/
+      // toolport-skill-sync.yaml can refresh the skill body in the same
+      // branch the image moves in.
+      description: "toolport Group",
+      groupName: "toolport",
+      matchPackageNames: [
+        "/btsouth/toolport/"
+      ],
+      group: {
+        commitMessageTopic: "{{{groupName}}} group",
+      },
+    },
+    {
       description: "Flux Operator Group",
       groupName: "Flux Operator",
       matchPackageNames: [
@@ -874,6 +890,28 @@
       // registry.opentofu.org serves the same /v1/providers API, so terrifi
       // resolves through the identical datasource with only the host swapped.
       registryUrlTemplate: "https://{{{registryHost}}}",
+    },
+    {
+      // The vendored toolport skill pins its upstream source by URL in a
+      // header comment. A Markdown file is outside the annotated-deps manager
+      // below (.env/.sh/.yaml only), and widening that to every *.md in the
+      // repo would scan hundreds of docs for one annotation -- so this
+      // matches the single file, reusing that manager's "versioned path
+      // segment" pattern verbatim.
+      //
+      // A bump here is HALF a change on its own (same shape as the Pulumi.yaml
+      // manager above): only the URL moves. .github/workflows/
+      // toolport-skill-sync.yaml finishes it on Renovate's branch by running
+      // `mise run toolport-skill-sync`.
+      description: "Vendored toolport skill (.claude/skills/toolport/SKILL.md)",
+      customType: "regex",
+      managerFilePatterns: [
+        "/(^|/)\\.claude/skills/toolport/SKILL\\.md$/",
+      ],
+      matchStrings: [
+        "datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n.+/(?<currentValue>(v|\\d)[^/]+)",
+      ],
+      datasourceTemplate: "{{#if datasource}}{{{datasource}}}{{else}}github-releases{{/if}}",
     },
     {
       description: "Process annotated dependencies",

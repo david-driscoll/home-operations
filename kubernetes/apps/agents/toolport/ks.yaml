@@ -1,0 +1,46 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+#
+# toolport -- a profile-scoped MCP gateway over the same backends agent-tools
+# aggregates. ToolHive stays the backend RUNTIME (MCPServer pods, stdio->HTTP
+# bridging, per-backend credentials); toolport only replaces the aggregation
+# layer. See ./resources/registry.json for which server lands in which profile.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: &app toolport
+  namespace: &namespace agents
+  labels:
+    app.kubernetes.io/name: *app
+    driscoll.dev/name: *app
+spec:
+  targetNamespace: *namespace
+  commonMetadata:
+    labels:
+      app.kubernetes.io/name: *app
+      driscoll.dev/name: *app
+  dependsOn:
+    - name: external-secrets
+      namespace: kube-system
+    # Ordering only: toolport's registry points at the MCPServer proxy
+    # Services this Kustomization creates. toolport tolerates a backend that
+    # is down (it just reports it disconnected), so this is not a health gate.
+    - name: agent-tools-servers
+      namespace: *namespace
+  path: ./kubernetes/apps/agents/toolport
+  prune: true
+  wait: true
+  force: false
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  components:
+    - ../../../components/failover/fast-node-eviction
+  postBuild:
+    substitute:
+      APP: *app
+      NAMESPACE: *namespace

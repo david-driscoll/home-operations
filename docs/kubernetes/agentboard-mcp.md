@@ -275,6 +275,41 @@ minutes**, which is exactly the restart loop `agentboard/helmrelease.yaml`
 records as having been removed on purpose. If it is ever enabled, those
 workloads need `reloader.stakater.com/ignore: "true"` first.
 
+## toolport, the profile-scoped alternative (trial)
+
+`kubernetes/apps/agents/toolport` runs [toolport](https://github.com/btsouth/toolport)
+over the **same** ToolHive backends, alongside `agent-tools`, as its intended
+replacement. Four differences matter to an agent:
+
+- **Profiles, not one catalogue.** There are four MCP entries,
+  `toolport-{infrastructure,media,postgres,research}`, both in
+  `agentboard/resources/mcp.json` and in the repo's `.mcp.json`. They all point at
+  one endpoint, `http://toolport.agents.svc.cluster.local:8765/mcp`. The bearer
+  token in each entry's `headers` (`TOOLPORT_TOKEN_<PROFILE>`, from the `toolport`
+  Secret) decides which servers that entry can see. The profile membership is in
+  `toolport/resources/registry.json`.
+- **Lazy discovery.** Each profile exposes toolport's meta-tools
+  (`toolport_search_tools`, `toolport_call_tool`, `toolport_run_script`,
+  `toolport_fetch_result`, `toolport_status`), not hundreds of tools. The
+  `toolport` skill (`.claude/skills/toolport/SKILL.md`, which agentboard also
+  installs user-wide at boot) explains how to use them.
+- **Two backend paths.**
+  - MCPServer backends (stdio or HTTP) are reached through their ToolHive proxy
+    Services (`mcp-toolhive-<name>-proxy:8080`), which hold the credentials inside
+    the pod.
+  - MCPRemoteProxy backends are called **directly** with toolport's own bearer
+    (`toolport/externalsecret.yaml`, `toolport-backends`). A remote proxy applies
+    its `MCPExternalAuthConfig` only when a vMCP calls it; a direct call gets a 401
+    from the backend. `homelable` is left out because it needs `X-API-Key`, and
+    toolport can only send `Authorization: Bearer`.
+- **External door.** `kubernetes/apps/agents/toolport-mcp` is a vMCP whose four
+  backends are toolport itself, one MCPRemoteProxy per profile token. It is
+  published **on the tailnet only** (`toolport-mcp.<tailnet>`), with the same
+  authentik-federated OAuth as `agent-tools-mcp`.
+
+New entries in the repo's `.mcp.json` need the same one-time project-server
+approval as the `Pending approval` row below.
+
 ## Troubleshooting
 
 Check what the client actually resolved — the URL, not just the status:
