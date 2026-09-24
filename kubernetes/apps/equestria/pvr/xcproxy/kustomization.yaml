@@ -5,6 +5,7 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./externalsecret.yaml
+  - ./playlists.sops.yaml
 configMapGenerator:
   - files:
       - App.cs=./resources/App.cs
