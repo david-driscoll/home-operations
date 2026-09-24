@@ -30,6 +30,12 @@ import xml.etree.ElementTree as ET
 SKIP_GROUPS = {"24/7 Streams"}
 WEST_SHIFT_HOURS = 3
 
+# West channels whose network no longer publishes a West schedule anywhere
+# (mybunny, epgshare01, gracenote, provider EPG), so they carry the national
+# guide on purpose. Reported separately instead of as mislinks. Keyed by
+# channel number; see docs/kubernetes/iptv.md "East / West rules".
+KNOWN_NO_WEST_GUIDE = {256, 258, 260, 266, 268, 270, 272, 274, 278, 280}
+
 
 def fetch(url: str, expect: bytes, timeout: int = 180) -> bytes:
     # Dispatcharr occasionally answers with the error-pages HTML while it
@@ -118,6 +124,7 @@ def main() -> None:
             print(f"  {c['number']:>6.0f}  {c['name']}  (guide says: Channel No Longer Available)")
 
     print("\n== West channels vs their East partner")
+    known: list[str] = []
     east = {base_name(c["name"]): c for c in channels if not re.search(r"\bwest\b", c["name"], re.I)}
     for c in channels:
         if not re.search(r"\(west\)", c["name"], re.I):
@@ -127,8 +134,13 @@ def main() -> None:
             print(f"  {c['number']:>6.0f}  {c['name']:<36} no East partner in lineup")
             continue
         offset = west_offset(programmes[c["tvg-id"]], programmes[partner["tvg-id"]])
-        if offset != WEST_SHIFT_HOURS:
+        if offset != WEST_SHIFT_HOURS and int(c["number"]) in KNOWN_NO_WEST_GUIDE:
+            known.append(f"{c['number']:.0f}")
+        elif offset != WEST_SHIFT_HOURS:
             print(f"  {c['number']:>6.0f}  {c['name']:<36} offset {'none' if offset is None else f'{offset:+d}h'} (want +{WEST_SHIFT_HOURS}h) -- check its EPG link")
+
+    if known:
+        print(f"  (no West guide exists upstream, national guide on purpose: {', '.join(known)})")
 
     print("\n== Logos missing or not resolving")
     with concurrent.futures.ThreadPoolExecutor(8) as pool:

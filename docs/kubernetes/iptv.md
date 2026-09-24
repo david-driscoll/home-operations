@@ -55,6 +55,7 @@ files. **The flavour decides which tvg-ids match** — a channel linked to
 | 63-94 | United States | Locals: Raleigh, Wilmington, Greensboro, Minneapolis, Denver, LA, Seattle |
 | 103-114 | Canada | Toronto + Edmonton locals |
 | 200-282 | Movies | HBO/Cinemax/Starz/Showtime/MGM+/MoviePlex etc., **East and West as separate channels** |
+| 283-305 | Movies | Added 2026-09-24: The Movie Channel + Xtra, IndiePlex E/W, SundanceTV E/W, IFC, HBO Latino, ScreenPix x4, Showtime/SHOxBET/MGM+ **West** feeds, Cinemax Classics, Cinemax Spanish |
 | 409-422 | Sports | Teamarr-managed **team** channels (one per team per league) |
 | 512-645 | USA Premium | Cable networks; `(West)` variants next to their East channel |
 | 1000+ | Sports | Teamarr **event** channels, created and deleted per game |
@@ -75,13 +76,32 @@ A West channel is the East network time-shifted 3 hours. To keep them correct:
    EPG row — that is the fingerprint of a West channel pointed at the wrong
    guide. Intentional shares: alt feeds (`Aspire (A)`, `PixL (S)`...) and
    East/West pairs that have no West row anywhere (below).
-3. **No West row exists** in either mybunny source for USA Network, TNT, VH1 and
-   SYFY. USA, TNT and SYFY West now use epgshare01 (source 11)'s
-   `*.HD.(Pacific).us2` rows and check out at +3h. That file also has
-   `FXX.HD.(Pacific).us2`, `HBO.Drama.us2`, `HBO.Hits.us2`,
-   `Starz.in.Black.HD.us2` and `MGM+.Drive-In.us2`. Nothing found has a VH1
-   West guide, so VH1 West still shows the East guide (3 hours early).
-4. **Check it with `scripts/iptv-audit.py`**, not by eye. It pairs each West
+3. **Where West rows live.** mybunny (source 9) has `<name>west.us` for most
+   networks. For the rest, look in **epg.guru's gracenote US file (source 2)**:
+   its `(Pacific)` rows are keyed by Gracenote station id (VH1 HD (Pacific) is
+   `64634`, HBO Movies HD (Pacific) is `59847`, the Showtime family's `*HD
+   (Pacific)` rows...). epgshare01 (source 11) supplies USA/TNT/SYFY West
+   (`*.HD.(Pacific).us2`). To search source 2, grep the display names; don't
+   parse it. It is served **uncompressed, ~3.2 GB, despite the `.gz` name**:
+
+   ```bash
+   curl -so gn.xml https://cdn.epg.guru/7daygracenote/UnitedStates.xml.gz
+   LC_ALL=C grep -A3 -iE '<display-name>VH1[^<]*</display-name>' gn.xml
+   ```
+
+   Gracenote also tracks **renames**: HBO Family is now *HBO Movies*, Starz
+   Kids & Family is *Starz Kids*, 5StarMAX is *Cinemax Classics*, MAX Latino is
+   *Cinemax Spanish*, and Showtime's main channel is *Paramount+ with Showtime*.
+   ThrillerMAX, OuterMAX and MovieMAX no longer exist.
+4. **Some West feeds were dropped upstream.** No source (mybunny, epgshare01,
+   gracenote, the provider's own EPG) has a West schedule for Starz in Black
+   or the Starz multiplex channels (Cinema, Comedy, Edge, Encore Action / Black
+   / Classic / Family / Suspense). mybunny marks their `*west.us` rows
+   "Channel No Longer Available". The provider's `... WEST` streams still play,
+   so those channels are linked to the national gracenote row. Their guide
+   matches East (+0h), which the audit script reports. That is expected, not
+   a mislink.
+5. **Check it with `scripts/iptv-audit.py`**, not by eye. It pairs each West
    channel with its East partner and reports any whose guide is not the East
    guide shifted +3h (matched on identically titled programmes that line up to
    the minute). Rerun-heavy channels would match anything on titles alone.
@@ -106,7 +126,7 @@ A West channel is the East network time-shifted 3 hours. To keep them correct:
   with no logo and no owner. They were converted to Teamarr-managed teams
   (template 2, `team_channel_logo_url` → game-thumbs) so Teamarr sets and keeps
   the logo. By the late review only 4 of them were still in Teamarr; see
-  *State after the 2026-09-24 late review*.
+  *State after the 2026-09-24 changes*.
 - **Teamarr `dispatcharr.epg_id` was 5** (IPTorrents EPG) instead of 6, so every
   generation refreshed the 35k-channel provider guide and looked for its own
   `teamarr-*` rows there. `cleanup_unused_logos` was off, leaving hundreds of
@@ -133,56 +153,47 @@ Levers, cheapest first:
 - **2 is the plan's real limit** (confirmed 2026-09-24), so `max_streams: 2` on
   M3U account 5 is correct. Don't raise it: the provider would refuse the
   third connection instead of Dispatcharr.
-- Give single-stream West channels a second stream from **TvPass (M3U 10, 3
-  connections)** where it carries the network. Failover then has somewhere to go.
+- **TvPass (M3U 10, 3 connections) as backup.** TvPass carries ~50
+  East/national channels and **no West feeds**. On 2026-09-24 its stream was
+  appended as the last stream on every lineup channel it carries (34 channels,
+  including FX/FXX/FXM, Starz East, USA, LMN, IFC, TSN 1-5, the LA and NY
+  locals). When both IPTorrents slots are busy, those East channels fail over
+  to TvPass instead of failing. That leaves the IPTorrents slots for the West
+  and premium channels only IPTorrents has. When adding a channel TvPass
+  carries, add its TvPass stream last.
 - Lower Dispatcharr's channel shutdown delay (Settings -> Proxy) so a slot is
   released soon after the viewer leaves.
 
-## State after the 2026-09-24 late review
+## State after the 2026-09-24 changes
 
-`scripts/iptv-audit.py` against the live output, plus Dispatcharr's DB:
+Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`):
 
-| Area | Finding |
+| Area | State |
 | --- | --- |
-| Guide, regular channels | 5 channels with no guide: 103 Comedy Central (CA), 111 CTV2 Toronto, 209 FilmRise Western, 546 CW (Philly), 2013 ESPN 3. |
-| Guide, dead rows | The linked row's programmes all read **"Channel No Longer Available"** on 222 HBO Family (East), 279 Starz Kids & Family (East), 623 Smithsonian, and **seven Starz West channels** (256, 258, 260, 266, 268, 270, 272). mybunny (source 9) is marking those feeds as discontinued. Check whether the streams still carry them before re-linking; if they don't, retire the channels. |
-| West guides | Still wrong: 643 VH1 West and 278 Starz in Black West show the East schedule (+0h). No East overlap to compare (check by hand): 223 HBO Family W, 229 HBO Drama W, 231 HBO Hits W, 280 Starz Kids & Family W. 238 MoreMAX West has no guide at all. The other 20 West channels are correct at +3h. |
-| West streams | Most West channels have **one** stream, all from IPTorrents. See *Connection budget*. |
-| Logos | All channels outside 24/7 have a resolving logo (228 HBO Drama (East) had none overnight and had one by 09:00). |
-| Teamarr teams | During the late review Teamarr had only **4** teams (Hurricanes 409, Oilers 412, Elks 413, Oil Kings 414). The Panthers (410), Hornets (411) and Tar Heels (415-422) channels had 404 logos, and were then deleted from Dispatcharr overnight; team ids 16-25 had been created and deleted. The 10 teams were re-added on 2026-09-24 09:00 (ids 26-35, template 2). All 14 channels are Teamarr-managed with working logos, **except 415**: a bare orphan channel (Dispatcharr id 301105, no EPG, no streams, profile 3 only) holds the number, so Teamarr reports *"Requested channel number 415 is already occupied"*. Delete that channel and generate again. |
-| Teamarr schedule | `cron_expression: 0 6,18 * * *`, but 06:00 is inside the 02:00-09:00 shed, so only the 18:00 run ever happens. Event channels for early games are created at most once a day. |
-| Movies | 81 channels. The provider also carries, not in the lineup: The Movie Channel + TMC Xtra, IndiePlex East/West, Hallmark Movies & Mysteries (East/West), Sundance (+West), IFC, AMC, HBO Latino, ScreenPix (x4), Showtime **West** variants, MGM+ West, Lifetime Movie Favorites. |
-| Auto channel sync | M3U 5 has auto channel sync on: it created 132 channels at 00:04. Check which group they land in before they turn into unguided clutter. |
+| TvPass backups | TvPass stream appended to 28 more channels (6 already had one). See *Connection budget*. |
+| Teamarr | `epg.cron_expression` moved from `0 6,18 * * *` (06:00 was inside the shed, so it never ran) to **`0 10,18 * * *`**. Racing template (13) now has `event_channel_logo_url: {league_code}/leaguelogo.png` and `program_art_url: {league_code}/leaguethumb.png`. game-thumbs serves real league marks there and answers `400` for an unknown league. |
+| Team channels | Panthers (410), Hornets (411) and the Tar Heels sports (416-422) re-added as Teamarr teams 26-35 (template 2), with logos. **415 is still blocked** by a bare orphan channel (Dispatcharr id 301105, no EPG, no streams) holding the number, so Teamarr reports *"Requested channel number 415 is already occupied"*. Delete it and generate. |
+| Dead guides re-linked (source 2) | 643 VH1 West → VH1 HD (Pacific) `64634`, now a real West guide. 222/223 HBO Family E/W → HBO Movies `59845`/`59847`. 279 Starz Kids & Family (East) → `19635`. 623 Smithsonian → Smithsonian HD Network `58532`. The eight Starz multiplex West channels → their national HD rows (see *East / West rules* 4). |
+| East/West pairs moved to gracenote (source 2) | So each pair's two feeds come from one source and line up at +3h: FX 210/563 → `58574`, FX West 211 → `59814`; HBO Drama 228/229 → `59363`/`59366`; HBO Hits 230/231 → `59368`/`59355` (229-231 had **no link at all**); MoreMAX 237/238 → Cinemax Hits `59373`/`59375` (238 had been linked to an empty provider row). |
+| USA West fixed again | 641 had drifted onto a same-named row in the provider EPG (source 5, which copies the East schedule) instead of epgshare01's. Now linked by row id to source 11. See Traps. |
+| Still on the national guide | 256-274 Starz multiplex West, 278 Starz in Black West, 280 Starz Kids West: no West schedule exists anywhere. `scripts/iptv-audit.py` lists them in `KNOWN_NO_WEST_GUIDE` and reports them separately from mislinks. |
+| Dead stream | 280 Starz Kids & Family (West): primary stream failed a probe, and the network was rebranded. Candidate for removal. |
+| Movies | 23 channels added at 283-305 (see *Channel map*). Every primary stream was probed OK one at a time before creation. Each has a logo from the guide row, a primary + backup stream where the provider has one, and a gracenote/mybunny/epgshare01 guide row. |
+| New-channel gotcha | `ecm_create_channel` puts a new channel in **every** channel profile, including Locals (2). Movie channels belong in 1/3/4/7, so the 23 were removed from Locals with `ecm_apply_profile_to_channels(profile_id=2, enabled=false)`. Do the same for any channel you add. |
+| Guide gaps not yet fixed | 103 Comedy Central (CA), 111 CTV2 Toronto, 209 FilmRise Western, 546 CW (Philly), 2013 ESPN 3. |
 
 ## Plan (open work)
 
-Ordered by what the user notices first. `[UI]` means ECM's MCP cannot do it (see Traps).
+`[UI]` means ECM's MCP cannot do it (see Traps).
 
-1. **Playback of West/premium: connection budget.** The IPTorrents plan is 2
-   connections and `max_streams` already matches, so the fix is spreading load
-   and freeing slots sooner: shorten the proxy shutdown delay `[UI]`, and add a
-   TvPass (3 connections) backup stream to every West/premium channel it carries
-   (`ecm_bulk_search_streams`, `provider_id=10`), ordered after the IPTorrents
-   stream. Dispatcharr then fails over when both IPTorrents slots are busy.
-2. **Team channels.** ~~Re-add Panthers, Hornets and the Tar Heels to
-   Teamarr~~ (done 2026-09-24). Remaining: delete the bare channel 301105 at
-   415 and generate. Move Teamarr's cron to `0 10,18 * * *` so both runs
-   happen outside the shed.
-3. **Event-channel logos.** Give template 13 (Racing Event) an
-   `event_channel_logo_url`. It is the only event template without one.
-4. **Guide gaps.** For each row in *Guide, dead rows*, check whether the
-   stream still carries that feed. If it does, re-link to a live row (for
-   Starz West, epgshare01 or the IPTorrents EPG `*west.us`). If it doesn't,
-   delete the channel. Link VH1 West / Starz in Black West to a real West row
-   (`Starz.in.Black.HD.us2` exists; VH1 has none, so accept the East guide or
-   drop the channel). Fix the five unguided regular channels, then
-   `ecm_refresh_epg` each touched source.
-5. **Logos.** Clean as of 2026-09-24 09:15. Keep it that way with the audit script; *Set Logo from EPG* in the ECM UI `[UI]` for regular channels.
-6. **Movies.** Add the missing networks in *Movies* at 283+ (TMC, IndiePlex,
-   Hallmark M&M, Sundance, IFC, AMC, HBO Latino, ScreenPix, Showtime West,
-   MGM+ West), each with an East/West pair where the provider has one, a
-   primary + backup stream, and a guide row checked by the audit script.
-7. **Guardrails.** Rename EPG sources 1-4/10 off "epg.jesmann.com" and
+1. Delete the orphan channel 301105 at 415, then run a Teamarr generation.
+2. Shorten Dispatcharr's proxy shutdown delay `[UI]` so IPTorrents slots free
+   sooner after a viewer leaves.
+3. Decide on 280 Starz Kids & Family (West) (dead stream, rebranded network).
+   Optionally rename 222/223 to *HBO Movies* and 279 to *Starz Kids*
+   (`ecm_update_channel` hits the 401 bug, so use the UI `[UI]`).
+4. Fix the five unguided regular channels above.
+5. **Guardrails.** Rename EPG sources 1-4/10 off "epg.jesmann.com" and
    source 9 off "trial" `[UI]`. Move ECM's 03:00 probe to after 09:00. Run
    `scripts/iptv-audit.py` after every change and whenever the guide looks off.
 
@@ -190,6 +201,19 @@ Ordered by what the user notices first. `[UI]` means ECM's MCP cannot do it (see
 
 The MCP route (`toolhive-ecm_*`, `toolhive-teamarr_*` from agentboard) is the
 quickest; the UI does the same.
+
+**From a laptop where `agent-tools` wants an OAuth login** (or the `toolport-*`
+profiles time out), use the in-cluster vMCP. It is unauthenticated and needs
+only kubectl:
+
+```bash
+kubectl -n agents port-forward svc/vmcp-agent-tools-internal 14483:4483
+# then speak streamable-HTTP MCP to http://127.0.0.1:14483/mcp
+```
+
+Tools that change several things at once (`apply_profile_to_channels`,
+`delete_channel`...) return a preview and a `confirmation_token` first. Repeat
+the identical call with the token within 300 s to apply it.
 
 ### "Something looks off" -- start here
 
@@ -275,6 +299,16 @@ it, then generate again.
   `claim_context`, so the backend call goes out without credentials. Workarounds:
   `assign_channel_numbers` for renumbering, `link_channel_epg` for EPG links,
   `refresh_epg` (single source), and the UI for logos.
+- **The same `tvg_id` can exist in several EPG sources.** The provider EPG
+  (source 5) re-publishes other guides' ids, e.g. `USA.Network.HD.(Pacific).us2`
+  exists in both source 5 (with the *East* schedule) and epgshare01 (source 11).
+  `ecm_link_channel_epg(tvg_id=...)` picks one of them without telling you.
+  **Link by `epg_data_id`** whenever the id isn't unique, and check the source.
+  Read-only: `EPGData.objects.filter(tvg_id=...)` in `manage.py shell` on the
+  dispatcharr pod.
+- **Linking doesn't load programmes.** After `ecm_link_channel_epg`, run
+  `ecm_refresh_epg` on that row's source. Source 2 (gracenote US) takes a few
+  minutes because the file is ~3.2 GB.
 - **ECM MCP cannot touch EPG sources, M3U accounts or backups** (403 "a human
   operator admin is required") — deliberate and hard-coded. Those are UI jobs.
 - **ECM's scheduled probe runs at 03:00**, inside the shed window, so it has
