@@ -117,29 +117,3 @@ spec:
         serviceAccount:
           name: "external-secrets"
           namespace: kube-system
----
-# yaml-language-server: $schema=https://homelab-schemas-epg.pages.dev/external-secrets.io/clustersecretstore_v1.json
-#
-# Secrets in `agents`, readable as a source by other ExternalSecrets. First
-# consumer: kubernetes/apps/agents/toolport, whose registry ExternalSecret
-# (Periodic) hashes the client tokens minted by a CreatedOnce generator
-# ExternalSecret beside it -- the two refresh policies cannot share one
-# ExternalSecret, so the second reads the first's Secret through this store.
-apiVersion: external-secrets.io/v1
-kind: ClusterSecretStore
-metadata:
-  name: agents
-spec:
-  provider:
-    kubernetes:
-      remoteNamespace: agents
-      server:
-        caProvider:
-          type: ConfigMap
-          name: kube-root-ca.crt
-          namespace: kube-system
-          key: ca.crt
-      auth:
-        serviceAccount:
-          name: "external-secrets"
-          namespace: kube-system
