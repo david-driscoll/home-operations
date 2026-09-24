@@ -67,6 +67,14 @@ spec:
       #   type: externalAuthConfigRef
       #   externalAuthConfigRef:
       #     name: outline
+      # Same two-halves rule, for `- ./ecm.yaml` in
+      # ../agent-tools-servers/kustomization.yaml (and the twin block in the
+      # other VirtualMCPServer). headerInjection, not bearerToken -- see
+      # ../agent-tools-servers/ecm.yaml for why.
+      # toolhive-ecm:
+      #   type: externalAuthConfigRef
+      #   externalAuthConfigRef:
+      #     name: ecm
 
   # ClusterIP, and this is load-bearing rather than a default worth eliding --
   # it is half of what keeps this endpoint off the network. The operator

@@ -1,0 +1,122 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/external-secrets.io/externalsecret_v1.json
+#
+# ⚠️ NOT YET ENABLED -- same shape and same reason as ./outline.yaml. This file
+# is commented out of ./kustomization.yaml, and the matching
+# `outgoingAuth.backends.toolhive-ecm` entries are commented out in BOTH
+# ../agent-tools-mcp/virtualmcpserver.yaml and
+# ../agent-tools-mcp/virtualmcpserver-internal.yaml.
+#
+# The credential below cannot exist until a human has minted it. ECM generates
+# its MCP client key itself and never displays or logs the generated value --
+# the only way to learn it is to issue a new one from the UI:
+#
+#   1. The ECM pod must be running WITH its MCP sidecar
+#      (kubernetes/apps/equestria/pvr/ecm/helmrelease.yaml, container `mcp`).
+#   2. Sign in to https://ecm.<root domain> as an ECM admin ->
+#      Settings -> MCP Integration -> Regenerate Key. Copy the key it shows.
+#      This is ECM's MCP key, NOT the Dispatcharr API key.
+#   3. Seed it:
+#        bao kv put secrets/clusters/equestria/apps/ecm/mcp-api-key \
+#          password="<the key>"
+#   4. Uncomment `- ./ecm.yaml` in ./kustomization.yaml AND the `toolhive-ecm:`
+#      blocks in both VirtualMCPServers, then merge.
+#
+# Any later Regenerate or Revoke in the ECM UI invalidates the seeded copy
+# immediately -- repeat step 3 after one. A restart does not: the key lives on
+# ECM's config claim (the `mcp-secrets` subPath), not in an emptyDir.
+#
+# Enabling early is not a soft failure. ./ks.yaml carries `wait: true`, so an
+# MCPRemoteProxy whose Secret cannot resolve blocks every server here.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: toolhive-ecm
+spec:
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: openbao
+  refreshPolicy: Periodic
+  refreshInterval: 4m
+  target:
+    name: toolhive-ecm
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      data:
+        # The WHOLE header value, prefix included -- see the auth config below.
+        authorization: "Bearer {{ .api_key }}"
+  data:
+    - secretKey: api_key
+      remoteRef:
+        key: clusters/equestria/apps/ecm/mcp-api-key
+        property: password
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `headerInjection` carrying a literal `Authorization: Bearer <key>`, NOT
+# `type: bearerToken`, although bearerToken is the purpose-built type for
+# exactly this header. The VirtualMCPServers cannot convert it: both report
+#
+#   DiscoveredAuthConfig-toolhive-arr-mcp-plex: ConversionFailed
+#   "failed to convert MCPExternalAuthConfig: unsupported auth type: bearerToken"
+#
+# (same for arr-mcp-jellyfin and home-assistant, checked live 2026-09-24), and
+# a backend whose auth fails to convert is dropped from the aggregate entirely
+# -- none of those three appear in `discoveredBackends`. headerInjection is
+# the type ./homelable.yaml proves works end to end, so ECM uses it with the
+# prefix baked into the Secret.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPExternalAuthConfig
+metadata:
+  name: ecm
+spec:
+  type: headerInjection
+  headerInjection:
+    headerName: Authorization
+    valueSecretRef:
+      name: toolhive-ecm
+      key: authorization
+
+---
+# No `yaml-language-server: $schema=` line -- see ./docs.yaml.
+#
+# `MCPRemoteProxy` -- see ./microsoft-docs.yaml's header for what that CRD is.
+# ECM's MCP server is a sidecar in ECM's own pod (it shares a credential
+# directory with the backend), so ToolHive only fronts it.
+#
+# In-cluster Service on the sidecar's port, plain HTTP. The sidecar's
+# DNS-rebinding guard only accepts Host headers on its allowlist; the proxy
+# rewrites Host to this URL's host, which is why the HelmRelease sets
+# MCP_ALLOWED_HOSTS to exactly `ecm.equestria.svc.cluster.local`. Change one,
+# change the other -- a mismatch is a 421 on every call.
+#
+# `allowPrivateEndpoint` is REQUIRED for a `cluster.local` host -- see
+# ./homelable.yaml.
+#
+# EXPECTED TO BE UNREACHABLE 02:00-09:00: ECM sheds nightly with the rest of
+# `equestria` (docs/cluster-consolidation/24-power-states.md), exactly like
+# ./arr-mcp.yaml's backends.
+#
+# `metadata.name` is the tool-name prefix: clients see
+# `mcp__agent-tools__toolhive-ecm_<tool>`.
+apiVersion: toolhive.stacklok.dev/v1beta1
+kind: MCPRemoteProxy
+metadata:
+  name: toolhive-ecm
+spec:
+  remoteUrl: http://ecm.equestria.svc.cluster.local:6101/mcp
+  allowPrivateEndpoint: true
+  transport: streamable-http
+  groupRef:
+    name: agent-tools
+  externalAuthConfigRef:
+    name: ecm
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      memory: 128Mi

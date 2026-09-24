@@ -55,12 +55,90 @@ spec:
                   timeoutSeconds: 10
                   failureThreshold: 5
               readiness: *probes
+            env:
+              # Pinned rather than left to the image default: the MCP sidecar
+              # below reads files ECM writes owner-only (0600), and refuses any
+              # it does not own, so the two identities must match exactly.
+              PUID: "1000"
+              PGID: "1000"
+              # Where ECM publishes the sidecar's credentials. Without this it
+              # defaults to /config, and the sidecar would need the whole config
+              # volume -- settings.json, the audit journal, TLS keys, backups --
+              # to read two files. See persistence.config below.
+              MCP_SECRETS_DIR: &mcpSecrets /run/secrets/ecm-mcp
+              # Settings -> MCP Integration probes http://$MCP_HOST:6101/health.
+              # The default is `ecm-mcp`, upstream's Compose service name, which
+              # resolves to nothing here -- that probe failing is exactly why the
+              # settings page reported MCP as unavailable. Same pod, so localhost.
+              MCP_HOST: localhost
             resources:
               requests:
                 cpu: 50m
                 memory: 128Mi
               limits:
                 memory: 512Mi
+
+          # ECM's MCP server. Not a mode of the main image -- a separate image
+          # built from the same release (mcp-server/ upstream), which upstream
+          # runs as the `ecm-mcp` service in docker-compose.mcp.yml. Keep its
+          # tag in step with the app image above; the two share a backend
+          # contract.
+          #
+          # A second container in this pod rather than its own Deployment
+          # because it shares a directory with ECM (the credential projection
+          # on the RWO config claim) and talks to it on localhost.
+          #
+          # Reached in-cluster only, by ToolHive's MCPRemoteProxy in the
+          # `agents` namespace (kubernetes/apps/agents/agent-tools-servers/
+          # ecm.yaml) and from there through the agent-tools VirtualMCPServer.
+          # No HTTPRoute: agent-tools is the one front door for MCP clients.
+          mcp:
+            image:
+              repository: ghcr.io/motwakorb/enhancedchannelmanager-mcp
+              tag: "0.18@sha256:4312802781d7e82b6d860520d16f2af99a2bd6b78a07880bcc26cb4569ab7b07"
+            env:
+              MCP_SECRETS_DIR: *mcpSecrets
+              ECM_URL: http://localhost:6100
+              MCP_PORT: "6101"
+              MCP_BIND_ADDRESS: 0.0.0.0
+              # DNS-rebinding allowlist on the Host header. Defaults are
+              # localhost + `ecm-mcp` only, so anything else gets a 421. The
+              # ToolHive proxy rewrites Host to its remoteUrl's host, so this is
+              # the in-cluster Service name the proxy dials. No port, no scheme.
+              MCP_ALLOWED_HOSTS: ${APP}.${NAMESPACE}.svc.cluster.local
+            probes:
+              # Liveness only, on the socket. The sidecar's /health fails closed
+              # while no key is configured (fresh install, or after a Revoke),
+              # and a failing readiness probe on ANY container takes the whole
+              # pod out of the Service -- the ECM UI would go down with it.
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: &mcpPort 6101
+                  initialDelaySeconds: 10
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 1000
+              runAsNonRoot: true
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
 
     service:
       app:
@@ -69,12 +147,36 @@ spec:
         ports:
           http:
             port: *port
+          mcp:
+            port: *mcpPort
 
     persistence:
       config:
         existingClaim: ${APP}
-        globalMounts:
-          - path: /config
+        advancedMounts:
+          app:
+            app:
+              - path: /config
+              # The MCP credential projection: `api-key` (the client key) and
+              # `mcp-service.json` (the sidecar's private backend keys). On the
+              # claim, not an emptyDir, so the client key survives restarts and
+              # the nightly shed -- the copy seeded into OpenBao for the
+              # agent-tools proxy must keep matching it. A subPath so the
+              # sidecar sees this directory and nothing else of /config.
+              - path: *mcpSecrets
+                subPath: mcp-secrets
+            mcp:
+              - path: *mcpSecrets
+                subPath: mcp-secrets
+                readOnly: true
+      mcp-tmp:
+        type: emptyDir
+        medium: Memory
+        sizeLimit: 16Mi
+        advancedMounts:
+          app:
+            mcp:
+              - path: /tmp
 
     route:
       app:
