@@ -54,7 +54,10 @@ channel linked to `21103` needs a gracenote file.
 | --- | --- | --- |
 | 1-22 | United States | News + a few nationals |
 | 63-94 | United States | Locals: Raleigh, Wilmington, Greensboro, Minneapolis, Denver, LA, Seattle |
-| 103-114 | Canada | Toronto + Edmonton locals |
+| 103-118 | Canada | Edmonton/Alberta: CTV Comedy (103), locals, CTV2 Alberta, OMNI Prairies, CityNews Alberta, CBC News Edmonton |
+| 120-128 | Canada | Toronto/Ontario: OMNI 1/2, CHCH, TVO, YES TV, CP24, CityNews and CBC News Toronto (the big-four Toronto locals stay at 108-113) |
+| 130-137 | Canada | National news: CBC News Network, CTV News Channel, Global National, CityNews 24/7, CPAC, BNN Bloomberg, Weather Network, APTN |
+| 140-199 | Canada | English specialty: CTV/Corus/Rogers entertainment, lifestyle, factual, Crave/HBO/Starz/Super Channel, kids |
 | 200-282 | Movies | HBO/Cinemax/Starz/Showtime/MGM+/MoviePlex etc., **East and West as separate channels** |
 | 283-305 | Movies | Added 2026-09-24: The Movie Channel + Xtra, IndiePlex E/W, SundanceTV E/W, IFC, HBO Latino, ScreenPix x4, Showtime/SHOxBET/MGM+ **West** feeds, Cinemax Classics, Cinemax Spanish |
 | 409-414 | Sports | Teamarr-managed **team** channels (one per team per league) |
@@ -187,6 +190,54 @@ Applied through the ECM and Teamarr MCPs (`toolhive-ecm_*`, `toolhive-teamarr_*`
 | Renames | 222/223 → *HBO Movies (East/West)*, 279 → *Starz Kids*, matching the networks' current names. |
 | Audit | `scripts/iptv-audit.py` is clean: every channel outside 24/7 has a guide and a resolving logo, and every West channel with an East partner is at +3h. |
 
+## Canada rebuild (2026-09-24, later)
+
+The Canada group was rebuilt from 12 channels to 84: Edmonton + Alberta-wide,
+Toronto + Ontario-wide, national news, and English specialty. French and
+Calgary/Ottawa/London locals are out of scope on purpose. Station lists came
+from [Wikipedia's list of Canadian TV stations](https://en.wikipedia.org/wiki/List_of_television_stations_in_Canada).
+
+- **Streams:** every channel's candidate streams were probed one at a time. Each
+  channel has at most 4, with the probe-verified ones first; streams that failed
+  a probe were dropped. Only the main provider carries Canadian streams (the
+  backup has TSN and nothing else), so no Canada channel has a backup stream.
+  Naming families that probed well: `CA <Name> (FL)`, `CA <Name> (D)` and
+  `(CA) (PRIME|CITY|GLB) <Name> (FHD)`.
+- **Fixed on the old 103-114:**
+  - 109 Citytv Toronto carried a *CityNews Toronto* stream (the 24/7 news
+    loop, not CITY-DT).
+  - 105/112 Global News Edmonton/Toronto were both linked to Global **BC1**'s
+    guide.
+  - 103's guide link had gone.
+  - 111 still pointed at CHWI (Windsor).
+  - 107 and 109 had `[Unk]` names.
+- **CTV2 Toronto *is* CKVR Barrie.** Gracenote's *CTV Two - Toronto* row is
+  CKVR, so 111 carries both the `CTV2 TORONTO` and `CTV2 Barrie` streams. Don't
+  add a separate Barrie channel.
+- **Guides:**
+  - Most channels use Gracenote Canada station ids, linked by `epg_data_id` to
+    rows in source 1 (see Traps).
+  - HGTV Canada, T+E, Discovery Science, Animal Planet and HBO Canada 2 have no
+    Gracenote Canada row and use mybunny's `*.ca` rows.
+  - **No guide exists** for the 24/7 news loops: 105 Global News Edmonton, 112
+    Global News Toronto, 118 CBC News Edmonton, 128 CBC News Toronto and 132
+    Global News National. mybunny maps them onto the over-the-air stations'
+    guides, which is the wrong schedule. They are deliberately left unlinked, so
+    Dispatcharr gives them its placeholder programmes (titled with the channel
+    name). The audit doesn't flag them.
+- **Dropped:**
+  - OWN Canada (no Canadian guide).
+  - ABC Spark (both streams failed their probes).
+  - Family Channel (its only guide, mybunny `familychannel.ca`, reads
+    "Channel No Longer Available").
+  - Yes TV Edmonton (CKES) and OMNI Edmonton (CJEO) as separate feeds (the
+    provider has neither; OMNI Prairies is the Alberta OMNI feed).
+- **Profiles:** Canada channels are in Plex, UHF and Cable, and not in Locals or
+  DebUHF. New channels were set to match.
+- **`[Unk]` suffixes:** 156 channel names across all groups ended in `[Unk]`. The
+  suffix was stripped by a name-only bulk rename. No current ECM rule, stream
+  name or repo file produces it, so it was a leftover from an earlier import.
+
 ## Plan (open work)
 
 `[UI]` means ECM's MCP cannot do it (see Traps).
@@ -313,6 +364,15 @@ it, then generate again.
   **Link by `epg_data_id`** whenever the id isn't unique, and check the source.
   Read-only: `EPGData.objects.filter(tvg_id=...)` in `manage.py shell` on the
   dispatcharr pod.
+- **Gracenote station ids repeat across the gracenote sources.** Canadian
+  border stations (CBLT, CFTO, CITY, OMNI, TVO, YES TV) are also in Gracenote
+  US and US Locals. On 2026-09-24 a `tvg_id` link sent 7 Canada channels to
+  the US sources. Relink by the Canada row's `epg_data_id`.
+- **`ecm_match_channels_epg` against the provider/aggregator sources
+  OOM-kills ECM.** ECM's limit is 512Mi, and the provider EPG alone is 37k
+  channels. While ECM restarts, every call returns "All connection attempts
+  failed", and probes report that as an error, not a failure. Match against
+  one small source, or grep the XMLTV yourself and use `link_channel_epg`.
 - **Linking doesn't load programmes.** After `ecm_link_channel_epg`, run
   `ecm_refresh_epg` on that row's source. Gracenote US takes a few minutes
   because the file is several GB.
