@@ -56,7 +56,7 @@ go = "1.27.1"
 "pipx:yamllint" = "1.38.0"
 "npm:typescript" = "5.9.3"
 node = "24.21.0"
-pulumi = "3.263.0"
+pulumi = "3.264.0"
 "github:microsoft/apm" = { version = "v0.31.0", bin = "apm" }
 "github:eljulians/skillfile" = { version = "v1.9.2", bin = "skillfile" }
 "github:home-operations/flate" = "v0.6.5"
