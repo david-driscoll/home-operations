@@ -284,9 +284,14 @@ replacement. Four differences matter to an agent:
 - **Profiles, not one catalogue.** There is one MCP entry per profile,
   `toolport-{infrastructure,networking,home,media,postgres,research}`, both in
   `agentboard/resources/mcp.json` and in the repo's `.mcp.json`. They all point at
-  one endpoint, `http://toolport.agents.svc.cluster.local:8765/mcp`. The bearer
-  token in each entry's `headers` (`TOOLPORT_TOKEN_<PROFILE>`, from the `toolport`
-  Secret) decides which servers that entry can see. The profile membership is in
+  one endpoint, `${TOOLPORT_URL}`. agentboard sets that to the in-cluster
+  `http://toolport.agents.svc.cluster.local:8765/mcp`. Off the cluster it
+  defaults to `https://toolport.agents.driscoll.tech/mcp`, the same gateway
+  exposed through the internal Traefik gateway (`toolport/httproute.yaml`),
+  which accepts only LAN and Tailscale clients. The bearer token in each
+  entry's `headers` (`TOOLPORT_TOKEN_<PROFILE>`, from the `toolport` Secret)
+  decides which servers that entry can see. Off the cluster, you have to export
+  those variables yourself. The profile membership is in
   `toolport/resources/registry.json`.
   - `toolport-postgres` reaches **every** database, not only `postgres`. Its
     DBHub backend (`agent-tools-servers/postgres.yaml`) runs one source per

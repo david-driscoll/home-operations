@@ -24,42 +24,42 @@
     },
     "toolport-infrastructure": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_INFRASTRUCTURE:-}"
       }
     },
     "toolport-networking": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_NETWORKING:-}"
       }
     },
     "toolport-home": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_HOME:-}"
       }
     },
     "toolport-media": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_MEDIA:-}"
       }
     },
     "toolport-postgres": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_POSTGRES:-}"
       }
     },
     "toolport-research": {
       "type": "http",
-      "url": "${TOOLPORT_URL:-http://toolport.agents.svc.cluster.local:8765/mcp}",
+      "url": "${TOOLPORT_URL:-https://toolport.agents.driscoll.tech/mcp}",
       "headers": {
         "Authorization": "Bearer ${TOOLPORT_TOKEN_RESEARCH:-}"
       }
