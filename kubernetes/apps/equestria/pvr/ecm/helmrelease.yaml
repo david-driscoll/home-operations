@@ -96,16 +96,39 @@ spec:
             image:
               repository: ghcr.io/motwakorb/enhancedchannelmanager-mcp
               tag: "0.18@sha256:4312802781d7e82b6d860520d16f2af99a2bd6b78a07880bcc26cb4569ab7b07"
+            # A list, not a map: app-template renders a map alphabetically, and
+            # MCP_ALLOWED_HOSTS below expands $(POD_IP), which Kubernetes only
+            # resolves when POD_IP is defined EARLIER in the list.
             env:
-              MCP_SECRETS_DIR: *mcpSecrets
-              ECM_URL: http://localhost:6100
-              MCP_PORT: "6101"
-              MCP_BIND_ADDRESS: 0.0.0.0
-              # DNS-rebinding allowlist on the Host header. Defaults are
-              # localhost + `ecm-mcp` only, so anything else gets a 421. The
-              # ToolHive proxy rewrites Host to its remoteUrl's host, so this is
-              # the in-cluster Service name the proxy dials. No port, no scheme.
-              MCP_ALLOWED_HOSTS: ${APP}.${NAMESPACE}.svc.cluster.local
+              - name: MCP_SECRETS_DIR
+                value: *mcpSecrets
+              - name: ECM_URL
+                value: http://localhost:6100
+              - name: MCP_PORT
+                value: "6101"
+              - name: MCP_BIND_ADDRESS
+                value: 0.0.0.0
+              - name: POD_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              # DNS-rebinding allowlist on the Host header (hostnames/IPs, no
+              # port or scheme). Defaults are localhost + `ecm-mcp` only;
+              # anything else is rejected with `400 Invalid Host header`.
+              #
+              # BOTH entries are needed, because ToolHive's MCPRemoteProxy
+              # (kubernetes/apps/agents/agent-tools-servers/ecm.yaml) sends
+              # two different Hosts. `initialize` goes to the remoteUrl, so
+              # Host is the Service name. The proxy then PINS the session to
+              # the pod it reached -- it records the backend pod IP and sends
+              # every follow-up there, with Host rewritten to that IP (0.51.1,
+              # pkg/transport/proxy/transparent: sessionMetadataBackendURL).
+              # With the Service name alone, initialize succeeds and every
+              # later call in the session 400s -- the vMCP marks the backend
+              # unavailable. The pod IP changes on every restart, hence the
+              # downward API rather than a literal.
+              - name: MCP_ALLOWED_HOSTS
+                value: ${APP}.${NAMESPACE}.svc.cluster.local,$(POD_IP)
             probes:
               # Liveness only, on the socket. The sidecar's /health fails closed
               # while no key is configured (fresh install, or after a Revoke),
