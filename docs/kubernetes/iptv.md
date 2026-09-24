@@ -32,7 +32,8 @@ disabled; `custom` (1) is in an error state and unused.
 | 9 | mybunny.tv trial (`mybunny.tv/epg.xml`) | Most national cable/premium rows, including the `*west.us` rows. **Named "trial" — if it stops refreshing, ~150 channels lose their guide.** |
 | 6 | Teamarr (`teamarr.driscoll.tech/api/v1/epg/xmltv`) | Event + team channels. Teamarr's `dispatcharr.epg_id` must be **6**. |
 | 3 | US Locals — `cdn.epg.guru/7daygracenote/UnitedStates-Locals.xml.gz` | Local stations, keyed by **Gracenote station id** (`21103`, `43730`...) |
-| 2 | US — `cdn.epg.guru/7dayiptv/UnitedStates.xml.gz` | National channels, keyed `name.us` |
+| 2 | US — `cdn.epg.guru/7daygracenote/UnitedStates.xml.gz` | National channels, keyed by Gracenote station id |
+| 11 | epgshare01 — `epgshare01.online/epgshare01/epg_ripper_US2.xml.gz` | Pacific (West) feeds and a few premium channels, keyed `Name.With.Dots.us2` |
 | 1 | Canada — `cdn.epg.guru/7daygracenote/Canada.xml.gz` | Canadian locals (103-114), keyed by Gracenote station id. The `7dayiptv/` flavour keys by name (`2MMaroc(2MAROC).ca`) and matches none of them. |
 | 4 | UK — `cdn.epg.guru/7dayiptv/UnitedKingdom.xml.gz` | Unused |
 | 7 | Twitch (Twitcharr) | Channel 9000 |
@@ -73,12 +74,14 @@ A West channel is the East network time-shifted 3 hours. To keep them correct:
    EPG row — that is the fingerprint of a West channel pointed at the wrong
    guide. Intentional shares: alt feeds (`Aspire (A)`, `PixL (S)`...) and
    East/West pairs that have no West row anywhere (below).
-3. **No West row exists** in either mybunny source for USA Network, TNT, VH1 and
-   SYFY. Those West channels currently share the East guide, which is **3 hours
-   early**. epgshare01's `epg_ripper_US2.xml.gz` has `USA.Network.HD.(Pacific).us2`,
-   `TNT.HD.(Pacific).us2`, `Syfy.HD.(Pacific).us2` and `FXX.HD.(Pacific).us2`
-   (plus `HBO.Drama.us2`, `HBO.Hits.us2`, `Starz.in.Black.HD.us2`,
-   `MGM+.Drive-In.us2`). Nothing found has a VH1 West guide.
+3. **mybunny has no West row** for USA Network, TNT, SYFY, FXX or VH1. The
+   first four are linked to epgshare01 (source 11, `epg_ripper_US2.xml.gz`):
+   `USA.Network.HD.(Pacific).us2`, `TNT.HD.(Pacific).us2`,
+   `Syfy.HD.(Pacific).us2`, `FXX.HD.(Pacific).us2`. epgshare01 also carries
+   BBC News NA, CSPAN3, Fuse, LMN, MGM+ Drive-In and Starz in Black.
+   **VH1 West shares the East guide (3 hours early)** — only epg.guru's
+   `7dayiptv` flavour has `VH1(Pacific)(VH1P).us`, and source 2 uses the
+   gracenote flavour. Starz in Black West likewise shares its East row.
 
 ## What went wrong in 2026-09 (so it is recognisable next time)
 
